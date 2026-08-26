@@ -2037,3 +2037,87 @@ handled.
 
 **Pattern:** a completeness claim written as prose in the docstring of the function whose
 incompleteness it is describing.
+
+---
+
+### KI-BP-20260826-1340 — Every worktree writes its own manifest for one shared deploy tree, so any build invalidates every other worktree's ground truth
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 5
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
+- **Where:** `<worktree>/.leafcutter` (a symlink to `leafcutter-ai/.leafcutter`, shared
+  workspace-wide), `<worktree>/.build_manifest.json` (per-worktree),
+  `scripts/build_helpers.py` (`write_build_manifest`),
+  `templates/scripts/commit_guardian/check_output_drift.py` (`_resolve_manifest_path`)
+
+**On the id.** This entry uses a timestamped id rather than the next sequential number,
+deliberately. The sequential scheme has collided repeatedly under concurrent sessions —
+`KI-BP-015` was recorded twice in one day, `KI-CG-016` had to be renumbered to `017` after a
+concurrent session claimed it, `KI-BO-025/026/027` collided on rebase, and `KI-CG-012` still
+carries a documented ID COLLISION note. A timestamp cannot collide. This is the same class of
+problem the entry itself describes, which is why it is worth breaking the convention here.
+
+**Symptom.** `.build_manifest.json` is written per worktree, but the deploy tree it describes
+is a single directory shared by every worktree on the machine. Each worktree's manifest
+therefore claims authorship of a tree any other worktree can rebuild out from under it. There
+is no ownership record, no provenance, and no staleness check — a manifest cannot tell that
+the tree it is describing was last written by someone else.
+
+The drift gate then compares this worktree's recorded hashes against another worktree's
+deployed bytes and reports the difference as drift: a true statement about the tree and a
+false statement about the branch.
+
+**Observed five times on 2026-08-25 / 26.**
+
+1. `check-output-drift` reported `drifted=27`. Twenty-six were files the branch never touched —
+   `git diff origin/main...HEAD` showed no change to `templates/agents/adr-author.md` or the
+   other nine agent templates flagged.
+2. Later the same run reported `drifted=55`, again cleared to `drifted=0` by a single rebuild
+   from the correct worktree.
+3. Three failures in `unit_tests/commit_guardian/test_ge_120_doc_types_deployed_resolution.py`,
+   which read the shared tree. Its `doc_type_validators.py` had been rewritten while the
+   `doc_types.json` beside it was a week older — the tree was internally inconsistent, mixing
+   two builds. They passed again later with no code change.
+4. `unit_tests/commit_guardian/test_bp_100k_4.py`'s real-registry test flipped red three
+   separate times while the source registry held the fix throughout, each time because a build
+   from the main checkout redeployed main's pre-fix `commit_guardian.json` over it. Fixed by
+   pointing the test at the source registry via `HOOK_TEST_CONFIG`; the note in that test's
+   docstring records the reasoning.
+5. Seventeen orphaned files (12 of them `.py` under `scripts/commit_guardian/`) sat in the
+   shared deploy tree with no template in any worktree and no git history in any commit —
+   another session's uncommitted work, leaked in and reported as coverage gaps against an
+   unrelated branch.
+
+**Why this is worse than it looks.** Every observation above is a false positive, but the
+mechanism produces false negatives just as easily: a worktree whose templates genuinely
+drifted can be handed a tree freshly rebuilt from another branch whose bytes happen to match
+its manifest. The gate would report clean on a tree it has no basis to vouch for. Silent, and
+in the permissive direction.
+
+It also compounds `KI-BP-011`: because the gates are not enforced in CI, a contributor who
+hits the false-positive form learns to distrust gate output — precisely the wrong habit.
+
+**Related, same root cause, different surface.** A concurrent session removed an active
+worktree mid-drive on 2026-08-26, snapshotting first as `8cd1e3c0` (`WIP SNAPSHOT ... not for
+merge`, author `manual`, made with `git add -A --no-verify`). Nothing was lost, but a foreign
+commit appeared on the branch and one subagent's edits were silently absent afterwards. On the
+same day an uncommitted known-issues entry in the main checkout was overwritten by
+`4c47882a`. Any shared mutable state in this workspace — the deploy tree, the main checkout's
+working tree, a worktree's existence — is writable by a session that does not know you exist.
+
+**Why this is filed rather than fixed.** The fix is an ownership decision, not a bug fix.
+Either the deploy tree stops being shared (each worktree gets its own `.leafcutter/`, at real
+disk and build-time cost across a large worktree fleet), or the manifest records which
+worktree and commit produced the tree so a mismatched reader can say "this tree is not mine"
+instead of reporting drift.
+
+**Fix direction.** Record provenance in the manifest as data: the absolute path of the tree
+written, the worktree/branch and commit SHA that wrote it, and the build timestamp. Have both
+drift gates compare that provenance against their own before comparing a single hash, and emit
+a distinct verdict — not `drifted` — when the tree was last built by someone else. A gate that
+cannot vouch for the tree must say so rather than attributing another branch's bytes to this
+one. Until then: treat any drift report in a worktree as unproven until you have rebuilt the
+deploy tree from that worktree and re-run the gate.
+
+**Pattern:** a check that reports a confident verdict about state it does not own.
