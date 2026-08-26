@@ -1,24 +1,25 @@
 id: BO-1000c-1a
 components:
   - build_orchestration
-title: "Background finalize appends each progress line to a durable, pollable run-progress journal as it happens"
+title: "A background finalize run leaves a durable, in-flight-readable record of its progress that the workflow body does not write itself"
 component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
   Given the finalize-feature workflow is running in the background while the
     user remains in the main conversation,
-  When the workflow emits a start-of-step or per-step-outcome progress line,
-  Then that same line is appended, at the moment it is emitted, to a durable
-    run-progress record for the run that a caller outside the background run can
-    read while the run is still in flight,
-  And the record preserves the emission order of the lines and is written
-    incrementally over the run rather than only flushed once at the end.
+  When the workflow dispatches an agent for a step,
+  Then a durable record of that dispatch exists for the run, readable by a
+    caller outside the background run while the run is still in flight,
+  And the records preserve dispatch order and accumulate over the run rather
+    than appearing only once it ends,
+  And the workflow body itself writes no run-progress file and loads no module
+    loader or filesystem primitive to do so.
 depends_on: [BO-1000c, BO-1000a-1, BO-1000b-1]
 doc_links:
   - path: docs/architecture/components/finalize.md
@@ -56,39 +57,112 @@ it_requirements:
       convention. ADR-001 build.py round-trip parity on the template workflow.
 delivers_to:
   agent: llm-expert
-  contract: "A durable append-only run-progress journal for the run at a launcher-locatable path (keyed by worktree/run id). Each entry is one human-readable progress line (a start-of-step or per-step-outcome line) in emission order, written incrementally while the run is in flight. Consumed by BO-1000c-1b (poll + relay), BO-1000c-2 (over-time delivery), and BO-1000c-2-i (halting-step line)."
+  contract: >-
+    CONTRACT CHANGED 2026-08-18 — see amended_by. The run-progress record is the E2
+    engine's own per-run journal at <transcriptDir>/journal.jsonl, NOT a file this
+    workflow writes. Each entry is a {"type":"started"} / {"type":"result"} record
+    pair per agent() dispatch, in dispatch order, accumulating while the run is in
+    flight. Consumers BO-1000c-1b (poll + relay), BO-1000c-2 (over-time delivery)
+    and BO-1000c-2-i (halting-step line) must locate the engine journal rather than
+    a worktree-keyed path, and must work at per-agent-dispatch granularity: the
+    engine journal does not persist log() output, so the human-readable per-step
+    narrate()/outcome() text lines are NOT recoverable from it. Those three ACs
+    need re-reading against this contract before they are built.
 expects_from:
   ac_id: BO-1000b-1
   contract: "The start-of-step (BO-1000a-1) and per-step-outcome (BO-1000b-1) lines as they are emitted, which this AC also appends to the journal."
 test_required: true
 test_spec:
-  - name: test_progress_line_appended_to_journal_at_moment_it_is_emitted
+  - name: test_no_module_loader_or_custom_journal_helper_remains
     target_dir: unit_tests/workflows/
     framework: unittest
     type: behavioral
-    description: "When the workflow emits a start-of-step or per-step-outcome line, that same line is appended to the durable run-progress journal at the moment it is emitted."
-  - name: test_journal_readable_by_external_caller_while_run_in_flight
+    description: "The workflow body contains no require( call, no appendJournal helper and no journalPath declaration — an absence/regression guard against the dead mechanism reappearing."
+  - name: test_every_reached_step_has_at_least_one_agent_dispatch
     target_dir: unit_tests/workflows/
     framework: unittest
     type: behavioral
-    description: "A caller outside the background run can read the run-progress journal entries while the run is still in flight, before it completes."
-  - name: test_journal_preserves_emission_order
+    description: "Executing the real finalize-feature.js under the E2 harness, every numbered step that is reached produces at least one agent dispatch — the unit the engine journal records."
+  - name: test_agent_dispatches_appear_in_step_order
     target_dir: unit_tests/workflows/
     framework: unittest
     type: behavioral
-    description: "The journal preserves the emission order of the progress lines."
-  - name: test_journal_written_incrementally_not_only_at_end
+    description: "Agent dispatches observed from the executed workflow appear in step order, so the engine journal's record order reflects run order."
+  - name: test_agent_dispatch_records_are_still_readable_after_the_run_ends
     target_dir: unit_tests/workflows/
     framework: unittest
     type: behavioral
-    description: "The journal is written incrementally over the course of the run (append-as-you-go), not flushed only once at the end."
+    description: "Dispatch records remain readable after the workflow subprocess has exited, so the record is durable rather than in-memory only."
+  - name: test_renaming_narrate_does_not_change_dispatch_based_coverage
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "Renaming the internal narrate helper throughout a copy of the script leaves dispatch-based coverage unchanged — the coverage does not depend on internal helper naming."
 origin_agent: it-po-v3
 created: 2026-07-10
 amended_by:
   - reason: it-po-test-contract
     note: "Added test_spec (4 behavioral tests derived from the Gherkin Then-clauses) and test_required: true so the approved code AC declares its test contract; criteria and all prior fields unchanged."
+  - reason: "redefinition — mechanism was unimplementable as written"
+    by: BrainCandy
+    at: 2026-08-18
+    note: >-
+      criteria, test_spec and the delivers_to contract are all REWRITTEN. This is a
+      requirement change, not a clarification. The original criteria required the
+      workflow body to append each progress line to a durable file it wrote itself.
+      That is impossible under ADR-030: the E2 engine injects only
+      agent/parallel/pipeline/phase/log/args/workflow/budget into a workflow body —
+      no filesystem primitive and no module loader. The shipped implementation
+      called require('fs') inside a try/catch that logged a WARNING and let the run
+      report success, so the AC was marked work_status: done while the mechanism had
+      never once written a line. Confirmed by the vm-sandboxed harness added in the
+      same ticket, under which require('fs') throws ReferenceError.
+      Decided by BrainCandy on 2026-08-18: delete the custom mechanism and redefine
+      the AC onto the journal the engine already writes at
+      <transcriptDir>/journal.jsonl. Granularity drops from per-step to per-agent
+      deliberately — a live journal was inspected and holds 68 started / 64 result
+      records for one run, and no log() output. Rejected alternatives, so this is not
+      relitigated: an agent()-dispatched write preserves per-step granularity but
+      costs ~18 extra dispatches per finalize run; softening the assertions was
+      refused because it leaves the AC unimplemented while marked done.
+      Downstream impact: BO-1000c-1b, BO-1000c-2 and BO-1000c-2-i consume this
+      contract and must be re-read against it before they are built.
+      Full decision record in ticket 09 of EPIC-BuildPipelinePhantomRemediation.
+  - reason: "title corrected to match the amended criteria; work_status honesty"
+    by: BrainCandy
+    at: 2026-08-26
+    note: >-
+      Two corrections while landing the 2026-08-18 redefinition, which had been
+      authored but never merged and sat unpushed on a local branch for eight days.
+
+      TITLE. The previous title — "Background finalize appends each progress line
+      to a durable, pollable run-progress journal as it happens" — still described
+      the mechanism the redefinition deleted, and directly contradicted the amended
+      criteria clause "the workflow body itself writes no run-progress file". A
+      title that promises the opposite of its own criteria is a phantom-done vector
+      in its own right: readers and the AC-store scanners surface the title, not the
+      Gherkin. Retitled to state the redefined obligation.
+
+      WORK_STATUS done -> in_progress. The redefinition kept work_status: done. Of
+      the five test_spec descriptors it declares, only the first
+      (test_no_module_loader_or_custom_journal_helper_remains) is implemented by
+      this change. The other four execute the real workflow under a vm-sandboxed E2
+      harness that does not exist on main; that harness is BP-1100b-4 and lands
+      separately. Marking this done on one of five descriptors would mint a fresh
+      phantom-done in the act of repairing one. Flip to done when the harness and
+      the remaining four land.
+
+      Also replaced the ten presence-only tests this file was covered by. Every one
+      read finalize-feature.js as text and asserted appendJournal / journalPath /
+      fs.appendFileSync were PRESENT — all ten passed for the entire life of the
+      defect, because the strings were there and the code never ran. Nine of the ten
+      fail against the corrected source, each demanding the dead mechanism be
+      restored. That is M1 in docs/reference/false-green-mechanisms.md, and it is
+      why the replacement is an ABSENCE assertion: a presence assertion stays green
+      on dead code, an absence assertion cannot.
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/workflows/test_bo_1000c_1a.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-InFlightVisibility/12_TICKET-20260720-BO-1000c-1a.md
 change_target: pipeline
