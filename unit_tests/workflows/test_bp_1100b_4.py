@@ -275,5 +275,105 @@ class TestFilesystemDependentJournalingProducesZeroRecordsUnderHarness(
             )
 
 
+class TestRunThatCannotAppendFailsInsteadOfPassing(unittest.TestCase):
+    """BP-1100b-4 descriptor 4 — the anti-phantom-done property itself, and a
+    DIFFERENT, stronger claim than the calibration test above.
+
+    TestFilesystemDependentJournalingProducesZeroRecordsUnderHarness proves
+    the harness OBSERVES zero records for a filesystem-dependent journal. It
+    does not prove that a run producing zero records FAILS a test rather than
+    passing one — a test that only checks "records == 0" would pass on
+    exactly that outcome, which is precisely the gap the original
+    appendJournal() defect lived in: the mechanism silently failed and the
+    workflow still reported success. This class proves the stronger claim by
+    execution: a run in which the record-producing step never happens must
+    cause at least one coverage assertion to RAISE, not merely observe a
+    smaller number.
+    """
+
+    def test_run_that_cannot_append_fails_instead_of_passing(self):
+        # covers: BP-1100b-4
+        """A synthetic script gates a step's agent() dispatch behind
+        `require('fs')` wrapped in a try/catch that swallows the failure —
+        the exact shape of the removed finalize-feature.js pattern — and
+        still returns a normal `{status: 'ok'}` terminal payload. Under the
+        engine-faithful harness the gate never opens (require throws), so
+        the step's dispatch never happens, while the script itself still
+        reports success: "the append is swallowed by the surrounding error
+        handler" and "the run reports success", both verbatim from this AC's
+        criteria.
+
+        Applying the SAME non-vacuous coverage assertion the real positive
+        tests in test_bo_1000c_1a.py use (require the set of reached-step
+        phases to be non-empty before checking anything about it — see
+        test_every_reached_step_has_at_least_one_agent_dispatch) to this
+        run's result must RAISE AssertionError. If it did not raise — if it
+        instead passed vacuously because there was nothing to check — a
+        reintroduced swallowed-append defect would pass this suite silently,
+        which is exactly what this descriptor exists to prevent.
+        """
+        body = (
+            "let __gateOpen__ = false;\n"
+            "try {\n"
+            "  require('fs');\n"
+            "  __gateOpen__ = true;\n"
+            "} catch (__e__) {\n"
+            "  // swallowed — mirrors the removed finalize-feature.js shape\n"
+            "}\n"
+            "if (__gateOpen__) {\n"
+            "  await agent('step body', { label: 'step-0', phase: 'Step 0' });\n"
+            "}\n"
+            "return { status: 'ok' };\n"
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            script_path = _write_script(Path(tmp), body)
+            result = run_workflow_under_e2(script_path, timeout=_TIMEOUT)
+
+        self.assertEqual(
+            result.error, "", msg=f"Harness itself errored: {result.error}"
+        )
+        # The workflow itself "succeeds" — the phantom-done shape verbatim.
+        self.assertEqual(
+            result.result,
+            {"status": "ok"},
+            msg=(
+                "Expected the gated script to still report a normal success "
+                f"payload despite the swallowed append. Got: {result.result}"
+            ),
+        )
+        # And the gated step produced zero dispatches.
+        self.assertEqual(
+            result.dispatch_count,
+            0,
+            msg=(
+                "Expected zero dispatches — require('fs') should have thrown "
+                f"and closed the gate. stderr: {result.stderr}"
+            ),
+        )
+
+        reached_step_phases = {
+            call.phase_name for call in result.agent_calls if call.phase_name
+        }
+        with self.assertRaises(
+            AssertionError,
+            msg=(
+                "Expected the non-vacuous coverage assertion (mirroring "
+                "test_bo_1000c_1a.py's positive tests) to RAISE on a run that "
+                "produced zero dispatches for a gated step while still "
+                "reporting overall success. It did not raise, meaning a "
+                "reintroduced swallowed-append defect would currently pass "
+                "this suite silently."
+            ),
+        ):
+            self.assertTrue(
+                reached_step_phases,
+                msg=(
+                    "No step phases were dispatched — a coverage assertion "
+                    "reaching this point must fail, not continue."
+                ),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

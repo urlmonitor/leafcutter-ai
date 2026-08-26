@@ -186,11 +186,24 @@ amended_by:
       test_bo_1000c_1a.py entry, since the harness fidelity is a load-bearing
       part of what makes the four executed tests meaningful evidence rather than
       a false green (see BP-1100b-4's own test_rationale).
+  - reason: "correction — covered_by must list files that genuinely carry # covers: BO-1000c-1a tags, not files that merely relate"
+    by: python-coder
+    at: 2026-08-26
+    note: >-
+      Per coordinator review: covered_by had been extended to name
+      unit_tests/_workflow_engine_harness.py (a production module, not a test —
+      it cannot carry a `# covers:` tag at all) and
+      unit_tests/workflows/test_bp_1100b_4.py (which carries only
+      `# covers: BP-1100b-4` tags, none for this AC). Both are removed.
+      covered_by is now unit_tests/workflows/test_bo_1000c_1a.py only — the
+      single file that genuinely contains `# covers: BO-1000c-1a` tags (5:
+      the absence guard plus the four executed tests). The harness's role as a
+      load-bearing dependency is real but is a doc_links relationship
+      ("modifies"/"describes"), not a covers-tag claim; conflating the two is
+      exactly the imprecision this correction removes.
 superseded_by: null
 covered_by:
   - unit_tests/workflows/test_bo_1000c_1a.py
-  - unit_tests/_workflow_engine_harness.py
-  - unit_tests/workflows/test_bp_1100b_4.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-InFlightVisibility/12_TICKET-20260720-BO-1000c-1a.md
 change_target: pipeline

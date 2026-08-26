@@ -235,6 +235,7 @@ class TestStepDispatchesStillReachableAndOrderedAfterJournalRemoval(unittest.Tes
 
     def test_every_reached_step_has_at_least_one_agent_dispatch(self):
         # covers: BO-1000c-1a
+        # covers: BP-1100b-4
         """Every numbered step the run actually reaches must correspond to at
         least one real agent() dispatch tagged with that step's phase — the
         same per-dispatch granularity the E2 engine's own journal.jsonl
@@ -276,6 +277,7 @@ class TestStepDispatchesStillReachableAndOrderedAfterJournalRemoval(unittest.Tes
 
     def test_agent_dispatches_appear_in_step_order(self):
         # covers: BO-1000c-1a
+        # covers: BP-1100b-4
         """The agent() dispatches captured by the harness — the same signal
         the E2 engine's own journal.jsonl is keyed on — appear in the order
         the steps actually completed (monotonically non-decreasing step
@@ -305,6 +307,7 @@ class TestStepDispatchesStillReachableAndOrderedAfterJournalRemoval(unittest.Tes
 
     def test_agent_dispatch_records_are_still_readable_after_the_run_ends(self):
         # covers: BO-1000c-1a
+        # covers: BP-1100b-4
         """The harness's HarnessResult (including agent_calls) is only ever
         constructed AFTER the Node.js subprocess running finalize-feature.js
         has exited (run_workflow_under_e2() blocks on subprocess.run(), then
@@ -348,6 +351,7 @@ class TestCoverageDoesNotDependOnInternalHelperNaming(unittest.TestCase):
 
     def test_renaming_narrate_does_not_change_dispatch_based_coverage(self):
         # covers: BO-1000c-1a
+        # covers: BP-1100b-4
         """Runs a temp copy of finalize-feature.js with every occurrence of
         `narrate` renamed to `narrateRenamedForTest` (function definition and
         every call site, consistently) and confirms the same numbered steps
