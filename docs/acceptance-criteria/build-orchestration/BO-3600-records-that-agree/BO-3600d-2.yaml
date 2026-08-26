@@ -1,0 +1,88 @@
+id: BO-3600d-2
+title: "A verdict is one of three resolutions or an explicit not-yet-decided, and nothing else is accepted"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an outstanding conflict,
+  When a verdict is recorded against it that the finished claim was false,
+  Then the requirement returns to unfinished by the same transition used when a
+    finished record loses its proof, carrying the reason and the date,
+    And the verdict is recorded against the conflict's identity.
+
+  Given an outstanding conflict,
+  When a verdict is recorded against it that the fault was already fixed,
+  Then the fault entry is retired on evidence, and the verdict is recorded against
+    the conflict's identity.
+
+  Given an outstanding conflict where neither record is wrong and the requirement
+    promised more than was built,
+  When a verdict of narrowing is recorded,
+  Then the requirement's wording is narrowed,
+    And the narrowing is recorded as an amendment stating why,
+    And it is not recorded in a form that reads as an ordinary edit,
+  So a governance change is never mistakeable for a silent relaxation.
+
+  Given an outstanding conflict,
+  When a verdict is recorded that is none of those three,
+  Then it is refused, naming the four states a conflict may be in.
+
+  Given an outstanding conflict recorded as not yet decided,
+  When the reconciliation runs again,
+  Then the conflict is still listed as outstanding carrying that state,
+  So not-yet-decided is a recorded state and never the absence of one.
+depends_on:
+  - BO-3600d
+  - BO-3600d-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400b.yaml
+    relationship: related
+    status: exists
+    relevance: "The demotion transition to be reused for the first verdict — a finished record returns to unfinished carrying the reason and the date. Do not build a second way of taking a done badge away."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3600-records-that-agree/BO-3600b.yaml
+    relationship: related
+    status: exists
+    relevance: "The retirement act invoked by the second verdict, with its evidence bar and its preservation of the entry's text."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The amended_by field, where a narrowing of a requirement is already required to be recorded so it is not mistaken for a silent relaxation."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3600d-2-i
+implemented_by: []
+notes: |
+  THREE RESOLUTIONS AND A FOURTH STATE, all four named by BO-3600d and all three
+  resolutions already practised by hand in the material behind this goal. The BA is
+  told not to invent a fourth resolution, and the closed set in the fourth scenario
+  is how that instruction becomes enforceable rather than advisory.
+
+  A VERDICT PATH THAT FORCES AN ANSWER PRODUCES BAD ANSWERS, which is why
+  not-yet-decided is a first-class state. Its cost is contained by BO-3600d-2-i,
+  which makes deferral visible and ageing rather than free.
+
+  The third scenario carries the discipline from KI-BO-028's handover ticket: five
+  of its eight records offered narrowing as the honest outcome, and narrowing a
+  criterion is a governance change. The clause about not reading as an ordinary edit
+  is the load-bearing half — an amendment nobody can distinguish from a typo fix is
+  a silent relaxation with extra steps.
+
+  This record chooses the verdict; BO-3600b-3 keeps the two acts from bleeding into
+  each other once chosen.

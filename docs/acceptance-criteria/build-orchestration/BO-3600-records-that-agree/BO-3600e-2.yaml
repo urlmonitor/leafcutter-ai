@@ -1,0 +1,76 @@
+id: BO-3600e-2
+title: "A run that could not examine everything reports incomplete, and only a full pass reports clean"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run in which some records present in the store could not be read,
+  When the reconciliation reports,
+  Then it states how many records it could not read and names them,
+    And its result reads as incomplete,
+    And it does not state that no conflicts were found.
+
+  Given a run in which every record present was read,
+  When the reconciliation reports and no pairing disagreed,
+  Then its result reads as clean,
+    And the clean result states the number of records it covers,
+  So a clean result is a claim about a known population rather than an absence of
+    output.
+
+  Given a run in which the number of records examined is smaller than the number
+    present,
+  When the reconciliation reports,
+  Then the result reads as incomplete even where every record it did examine
+    agreed,
+  So partial coverage cannot produce a clean verdict.
+
+  Given a run that could not read the store at all,
+  When the reconciliation reports,
+  Then it reports that it could not run, naming why,
+    And it produces no clean result and no conflict count,
+  So a reconciliation that did not happen is never mistaken for one that found
+    nothing.
+depends_on:
+  - BO-3600e
+  - BO-3600e-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — the contradiction stood for weeks because nothing looked. A check whose failure mode is a clean report reproduces that silence while making it harder to doubt."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3600-records-that-agree/BO-3600a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The same absent-evidence rule applied per pairing rather than per run. Together they close both scales: a pairing that could not be decided, and a population that could not be covered."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ABSENCE OF EVIDENCE IS NOT SUCCESS, at the scale of the whole run. This is the
+  clause that makes BO-3600e-1's counts consequential: counting how many records
+  were examined is only useful if a shortfall changes the verdict.
+
+  The third scenario is the one an implementation will get wrong first. Examining
+  most of the store and finding nothing feels like a clean result and is not one —
+  the eight records behind this goal were exactly the kind of long-untouched records
+  a partial pass tends to miss.
+
+  The fourth scenario separates a failed run from a successful empty one, which are
+  identical from the outside unless one of them says so.

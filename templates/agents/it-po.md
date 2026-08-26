@@ -18,7 +18,7 @@ description: |
   This agent operates on AC YAML files directly.
 model: opus
 name: it-po
-tools: Read, Write, Bash, Skill  # No source code access — uses architecture docs and registries only.
+tools: Read, Write, Edit, Bash, Skill  # No source code access — uses architecture docs and registries only. Edit is required by the covered_by update protocol.
 portable: true
 requires_verification: true
 signoff: false

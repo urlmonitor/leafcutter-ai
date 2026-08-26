@@ -1,0 +1,67 @@
+id: BO-100e-4
+title: "One branch failing does not withhold the later layers of an unrelated branch"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a set of work containing two independent chains — A followed by B, and
+    C followed by D — where B's only prerequisite is A and D's only prerequisite
+    is C, and neither chain has any prerequisite in common with the other,
+    And A ends unsuccessfully while C finishes successfully,
+  When the run looks again for eligible work,
+  Then D is built in this same run,
+    And B is not built,
+    And the run does not end at the moment A fails,
+  So a failure in one part of the work costs only the work behind it.
+
+  Given the same set of work,
+  When the run ends,
+  Then it has built C and D and not A or B,
+    And the pieces it did not build are the pieces behind the failure and no others,
+  So the run's shortfall is explained entirely by the failed prerequisite.
+
+  Given a set of work in which every piece is behind a single prerequisite that
+    fails,
+  When the run looks again for eligible work,
+  Then nothing further is eligible, the run ends, and it does not report that it
+    finished the work,
+  So the containment rule does not become a way for a run that built nothing to
+    end quietly.
+depends_on:
+  - BO-100e
+  - BO-100e-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-025 — the run that did substantial correct work on 17 pieces. Any widening that abandons the run on the first failure would be a regression against that, not a fix."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The batch loop and its failure handling — where 'stop the whole run' and 'stop this branch' are distinguished."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE CHEAP WRONG FIX THIS CLOSES: making the loop terminate by ending the run at
+  the first failure. That satisfies BO-100e-2 trivially and destroys the value
+  BO-100e-1 buys, because a 37-piece body of work with one failing piece would then
+  build less than today's single-pass behaviour does.
+
+  The third scenario keeps the containment rule honest: containment must not turn a
+  run that built nothing into a run that ends without saying so. What it says is
+  BO-300d's subject; that it does not claim success is this record's.

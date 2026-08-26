@@ -108,7 +108,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/10_TICKET-20260826-ACD-2100b-3-i.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -138,3 +139,4 @@ notes: |
   collection, treat it as empty" removes the unhandled failure, passes the last Then
   clause, and reproduces the false absence verdict the first two clauses forbid -- so
   a test written only against the crash would sign this off.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

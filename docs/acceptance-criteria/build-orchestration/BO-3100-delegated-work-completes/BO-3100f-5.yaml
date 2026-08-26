@@ -1,0 +1,77 @@
+id: BO-3100f-5
+title: "A state diagram shows the outcomes a step can end in, and that stopped short is not reachable from skipped"
+component: build-orchestration
+components:
+  - documentation_system
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader deciding how a run will report a step that could not finish,
+  When they open the state diagram for a step's outcome,
+  Then it shows each outcome a step can end in as a distinct state, including
+    completed, skipped and stopped short,
+    And it shows what causes each transition into those states,
+    And it shows no transition between skipped and stopped short in either
+      direction.
+
+  Given the diagram,
+  When it is compared against the outcomes a real run records,
+  Then every state the diagram shows is one a real run records,
+    And every outcome a real run records appears in the diagram,
+    And every transition the diagram shows can be produced by a real run.
+
+  Given the diagram,
+  When a reader looks for what a step ending in stopped short does to the run's
+    leading outcome value,
+  Then the diagram shows that value being withheld from success while any step is in
+    that state,
+    And it shows no transition by which a step leaves the stopped-short state
+      because the run decided the step was not required,
+  So the diagram cannot be read as permitting a stop to be resolved by dropping the
+    step.
+depends_on:
+  - BO-3100f
+  - BO-3100f-3
+  - BO-3100f-4
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the state diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The page that defines per-step outcomes and the completed-step record; the new outcome and its diagram must be reachable from it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The existing skipped outcome the diagram must show as it already is, rather than redefining it."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-3100f's documentation_triggers: [state-diagram].
+
+  A state diagram is the right artifact here precisely because the defect is a
+  vocabulary defect: the value of the picture is the absent transitions. The third
+  scenario makes the absence of the drop-the-step escape a documented property
+  rather than an omission a later reader fills in.
+
+  The second scenario is what stops this being a picture of an intention — states
+  and transitions are reconciled against what real runs record, in both directions.
+
+  assigned_agent deliberately unset — the diagram surface belongs to the IT Product
+  Owner's assignment pass.

@@ -1,0 +1,75 @@
+id: BO-3600c-4
+title: "A reference entry states what a fault record must carry to be checkable, and what a clean check does not prove"
+component: build-orchestration
+components:
+  - documentation_system
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given someone recording a new fault,
+  When they read the reference entry for the fault register,
+  Then it states what a reference must carry to be checkable — a requirement named
+    by its id, and a place named together with what is expected to be found there,
+    And it states what happens to a reference that carries less than that: reported
+      as unverifiable rather than as sound.
+
+  Given the reference entry,
+  When someone records an entry exactly as it describes and the check is run,
+  Then the references in that entry are decided as the entry says they will be,
+  So the documented format is verified against the check rather than asserted.
+
+  Given the reference entry,
+  When a reader looks for what an unflagged entry means,
+  Then it states that an unflagged entry means only that the kinds of staleness the
+    check looks for were not found in it,
+    And it names the kinds it does not look for,
+  So no reader takes an unflagged entry for a true one.
+
+  Given the reference entry,
+  When the flag kinds it documents are compared against the flag kinds the check
+    emits,
+  Then every kind it documents is one the check emits, and every kind the check
+    emits appears in it,
+  So the documented vocabulary cannot drift from the emitted one.
+depends_on:
+  - BO-3600c
+  - BO-3600c-2
+  - BO-3600c-3
+doc_links:
+  - path: docs/reference/
+    relationship: describes
+    status: exists
+    relevance: "Where the reference entry lands."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The register whose entry format the reference documents; the anchor requirement in BO-3600c-2 is a change to how entries are written and belongs described alongside them."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-3600c's documentation_triggers: [reference-doc].
+
+  This entry has a job beyond description: BO-3600c-2 makes an entry without an
+  identifying anchor unverifiable, and that only improves the register if the people
+  writing entries know what an anchor is. Undocumented, the check would spend its
+  first year reporting the whole register as unverifiable.
+
+  The third scenario carries BO-3600c-3's scope declaration into the documentation,
+  where a reader meets it before they rely on a result rather than after.
+
+  assigned_agent deliberately unset — the reference surface belongs to the IT
+  Product Owner's assignment pass.

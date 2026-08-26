@@ -1,0 +1,68 @@
+id: BO-3600a-1-i
+title: "A pairing the reconciliation could not decide is reported as undecided, never as agreement"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fault entry whose status cannot be read — it is absent, or written in a
+    form the reconciliation does not recognise — and whose body names requirement R,
+  When the two records are reconciled,
+  Then the pairing is reported as undecided, naming the entry and stating that its
+    status could not be read,
+    And it is not reported as agreeing,
+    And it is not silently omitted from the output.
+
+  Given a fault entry naming a requirement id the reconciliation cannot look up,
+  When the two records are reconciled,
+  Then the pairing is reported as undecided, naming the unresolvable reference,
+    And it is not reported as agreeing.
+
+  Given a run in which the requirement records could not be read at all,
+  When the reconciliation runs,
+  Then it reports that it could not perform the comparison, and states why,
+    And it does not report that no conflicts were found,
+  So a run that examined nothing is never presented as a run that found nothing.
+
+  Given a run in which every pairing was decided,
+  When the reconciliation reports,
+  Then nothing is reported as undecided,
+  So undecided is reserved for pairings the reconciliation genuinely could not
+    settle.
+depends_on:
+  - BO-3600a-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — the contradiction stood because nothing read the two records against each other. A reconciliation that reads them and cannot decide must say so, or it recreates the same silence with a green tick on top."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ABSENT EVIDENCE IS NOT AGREEMENT — binding across this tree, and this is the
+  record that states it for the detection half. A check whose failure mode is
+  reporting "no conflicts" is worse than no check, because it converts an unknown
+  into a reassurance.
+
+  The third scenario is the strongest form and the one worth building first: a
+  reconciliation that cannot read one side of the pair must fail loudly. BO-3600e-2
+  carries the same rule at the whole-store scale; this record carries it per pairing.
+
+  Note this is the reconciliation being unable to DECIDE, which is different from
+  the fault entry pointing at something that no longer exists — that is BO-3600c,
+  and a reference that cannot be resolved is reported by both, from different ends.

@@ -121,7 +121,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - ACD-2100a-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/02_TICKET-20260826-ACD-2100a-2.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -167,3 +168,4 @@ notes: |
   is not. Search bounding is stated as a policy constraint rather than an algorithm --
   an unbounded upward walk is the obvious first implementation and it is the one that
   reaches unrelated repositories on a developer machine.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

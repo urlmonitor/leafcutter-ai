@@ -1,0 +1,73 @@
+id: BO-3600a-4
+title: "A component diagram shows both records feeding one comparison, and that neither is written by it"
+component: build-orchestration
+components:
+  - documentation_system
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader deciding whether a particular disagreement would be caught,
+  When they open the component diagram for the reconciliation,
+  Then it shows the fault register and the requirement store as two separate
+    inputs to one comparison,
+    And it shows the comparison producing conflicts as its only output,
+    And it shows no arrow by which the comparison writes to either input.
+
+  Given the diagram,
+  When it is compared against what the reconciliation actually reads and writes,
+  Then every input it shows is one the reconciliation reads,
+    And no input the reconciliation reads is missing from it,
+    And the absence of a write path is true of the running reconciliation.
+
+  Given the diagram,
+  When a reader looks for where a conflict goes once it is raised,
+  Then the diagram shows the place a verdict against it is recorded as a distinct
+    element, separate from the comparison,
+  So the picture cannot be read as one in which detection and disposition are the
+    same thing.
+depends_on:
+  - BO-3600a
+  - BO-3600a-1
+  - BO-3600a-2
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the component diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page covering the requirement store and the work driven from it; the new diagram must be reachable from it. Note there is no ac-store component page — this is the nearest owning surface."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the requirement record the diagram shows as one of the two inputs."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies one half of BO-3600a's documentation_triggers: [component-diagram,
+  reference-doc]; BO-3600a-5 satisfies the other.
+
+  The diagram's load-bearing content is the missing write arrow — BO-3600a-2's
+  no-adjudication rule made visible. A diagram that showed the comparison writing
+  back would document a design this tree forbids.
+
+  The second scenario reconciles the picture against the running system in both
+  directions, so it cannot document an intended architecture.
+
+  assigned_agent deliberately unset — the diagram surface belongs to the IT Product
+  Owner's assignment pass.

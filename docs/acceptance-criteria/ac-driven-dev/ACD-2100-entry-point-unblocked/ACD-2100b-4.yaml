@@ -113,7 +113,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/11_TICKET-20260826-ACD-2100b-4.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -146,3 +147,4 @@ notes: |
   already demonstrates a fifth outcome the enumeration misses; a guard keyed to the
   list of four is fail-open on it. All three expects_from edges have depends_on mirrors
   already in place, so the sequencer will honour them.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

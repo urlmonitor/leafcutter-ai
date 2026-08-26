@@ -1,0 +1,82 @@
+id: BO-3600b-2
+title: "Work whose delivery is recorded only in the fault log is not offered as ready work without that being said"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement that reads unfinished,
+    And a fault entry recording the same defect, whose status reads resolved and
+      which carries evidence that the behaviour was delivered,
+  When the two records are reconciled,
+  Then that pairing is reported as a conflict, in the same way as the opposite
+    pairing,
+    And the report states that the delivery is recorded against the fault entry
+      while the requirement reads unfinished.
+
+  Given that same requirement while the conflict stands undecided,
+  When work is selected as ready to be picked up,
+  Then the outstanding conflict is presented alongside it,
+    And it cannot be picked up without the conflict having been shown,
+  So the requirement is not selected again and again on the strength of a state
+    another record contradicts.
+
+  Given a requirement that reads unfinished with no resolved fault entry recording
+    its delivery,
+  When work is selected as ready to be picked up,
+  Then it is offered as ready with no conflict attached,
+  So ordinary unfinished work is unaffected.
+
+  Given the conflict is decided and the requirement is brought into agreement with
+    the fault entry,
+  When work is next selected as ready,
+  Then that requirement is no longer offered as ready work,
+  So the waste ends when the disagreement does.
+depends_on:
+  - BO-3600b
+  - BO-3600a-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400e-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The worked instance: the same defect was tracked as KI-BO-003 and as this requirement, was fixed under the fault id on 2026-08-18, and the requirement sat unfinished for a week while the build lane kept selecting it as ready work. Its own words — two registries tracked one defect and neither closed the other."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The fault register that holds the delivery record in this direction."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE FORGOTTEN DIRECTION, and the one with a measured cost: a week of a build lane
+  repeatedly selecting work that had already shipped. A tree that only demoted false
+  finished claims would make the store more pessimistic rather than more true and
+  would leave this waste untouched.
+
+  The second scenario is deliberately "shown alongside", not "blocked". Blocking
+  would make an undecided conflict able to stop work entirely, which is how a
+  detector gets switched off. Showing it makes the waste impossible to repeat
+  unknowingly, which is what BO-2400e-4 actually cost.
+
+  The third and fourth scenarios are the controls: ordinary unfinished work is
+  untouched, and the annotation disappears when the disagreement is resolved rather
+  than persisting as decoration.
+
+  The verdict that resolves the conflict belongs to BO-3600d; this record only
+  requires that the conflict travels with the work while it stands.
