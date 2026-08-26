@@ -111,7 +111,7 @@ def _is_marker_at_line_start(line: str, start: int) -> bool:
 # PRECISION REGRESSION" section and unit_tests/test_build_placeholder_detection_recall_floor.py's
 # "GE-122b (bullet-required precision fix)" section for the full test coverage this
 # regex and its helper below satisfy.
-_LEADING_BULLET_REQUIRED = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s*")
+_LEADING_BULLET_REQUIRED = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
 
 
 def _is_marker_after_bullet(line: str, start: int) -> bool:
@@ -136,6 +136,107 @@ def _is_marker_after_bullet(line: str, start: int) -> bool:
 # before this match", not "this specific marker word following `<!--`". See
 # _is_within_html_comment_marker for the GE-122 rationale.
 _HTML_COMMENT_OPENER_IMMEDIATELY_BEFORE = re.compile(r"<!--\s*$")
+
+
+# BO-2200b-3-ii: quoting a marker is not carrying one.
+#
+# MEASURED PER MARKER, BEFORE AND AFTER. Recorded here because the defect this
+# fixes was not a bad regex — it was a false-positive cost measured for
+# PLACEHOLDER (2 hits) and asserted for all six markers, which left the marker
+# responsible for two thirds of all hits untightened while the comment claimed
+# there was nothing to gain. Repeating that as one aggregate number would
+# reproduce the defect in a new place. Scan of 5,634 md/yaml files, this repo:
+#
+#     marker            before   after   delta
+#     todo:                 31      22      -9
+#     todo (bare)           16      12      -4
+#     <!-- question:        16      16       0
+#     replace with           3       3       0
+#     placeholder            2       2       0
+#     TOTAL                 68      55     -13
+#
+# All 13 removals were verified individually as false positives: Mermaid state
+# transitions, count fields, quoted grep evidence, and Gherkin lines naming the
+# markers — every one of them inside a fence or after heading text. Zero genuine
+# markers were lost; the one case that WAS initially lost
+# (ui-context.template.md:39) is why the heading rule starts at `##`.
+#
+# Note what the numbers do NOT show: `placeholder` is unchanged at 2, so the
+# emphasis fix below has no measured effect on this corpus. It was found by
+# probing rather than in the wild and is pinned by test, not by this table. Say
+# so rather than implying the table validates it.
+#
+# The two rules below are LINE-CONTEXT rules, applied to every marker before its
+# own validator runs. They are deliberately NOT positional rules on the marker
+# itself -- see the warning in _is_marker_in_reportable_context about why a
+# positional rule on `TODO:` would be the wrong fix.
+#
+# A fenced block is the block-level form of the inline-code (`backtick`)
+# exemption the validators already apply. It cannot be recognised per-line: the
+# scan loop has to carry the open/closed state across lines, which is why this
+# lives in _scan_text_for_placeholders rather than in a validator.
+#
+# A fence must be CLOSED BY THE SAME CHARACTER it was opened with. That is real
+# markdown, and it is also load-bearing here rather than pedantry: the
+# commit-guardian register quotes a compiler diagnostic inside a ``` block whose
+# caret line reads `~~~~~~~~~~~~~~~~~~^~~`. A rule that treats any ``` or ~~~ run
+# as a delimiter counts that line as a fence, inverts the open/closed parity for
+# the remaining ~1100 lines of the file, and re-reports every marker the fence
+# rule was added to suppress. The first version of this fix did exactly that and
+# the real-register test caught it -- a synthetic fixture would not have, because
+# nobody writes a stray caret underline into a fixture.
+_FENCE_DELIMITER = re.compile(r"^\s*(?P<fence>`{3,}|~{3,})")
+
+# A marker sitting AFTER other heading text is part of a title. One that OPENS
+# the heading text is a stub and must still be reported -- a blanket heading
+# exclusion would let `## TODO: fill this in` through.
+#
+# LEVEL 2 AND DEEPER ONLY, and that bound is deliberate. A single `#` is
+# indistinguishable from a comment in YAML, shell, Python and the YAML-ish blocks
+# markdown templates embed. Including H1 dropped a genuine marker in
+# `templates/docs/ui-context.template.md:39`:
+#
+#       # - TODO: add your own design/brand/style-guide doc path(s) here, if any.
+#
+# -- a commented-out list item in a config template, where `# ` parsed as the
+# heading and the TODO sat after it. `##`..`######` carry no such ambiguity. The
+# cost of the bound is a residual false positive on an H1 whose *title* mentions a
+# marker after other words; that shape does not occur in this repo, and it is the
+# cheaper of the two errors: a missed marker ships a stub, a spurious one is
+# merely noise. (BO-2200b-3-ii.)
+_MARKDOWN_HEADING = re.compile(r"^\s*#{2,6}\s+")
+
+
+def _is_marker_in_reportable_context(line: str, start: int) -> bool:
+    """Return False when the line's own shape makes this marker a quotation.
+
+    Applies to EVERY marker, ahead of the per-marker validator.
+
+    WARNING TO A FUTURE EDITOR. The heading rule below exists because
+    `### KI-BO-021 -- TODO: ...` was reported as a stub. The tempting cure is
+    to require `TODO:` to sit at a marker position (line start, after a bullet,
+    after a comment introducer). Do NOT do that. The gate's single most
+    important true positive is the roadmap sentinel a freshly installed
+    CLAUDE.md carries:
+
+        Current outcome: TODO: Replace with the single must-achieve outcome ...
+
+    Its marker is mid-line after ordinary prose, so any positional rule on the
+    colon markers silently drops it. That case is pinned by
+    test_canonical_mid_line_todo_marker_still_reported precisely so this
+    reasoning cannot be lost. (BO-2200b-3-ii, KI-CG-033.)
+
+    Args:
+        line: The full source line.
+        start: Index in `line` where the marker match begins.
+
+    Returns:
+        True when the marker may be reported subject to its own validator.
+    """
+    heading = _MARKDOWN_HEADING.match(line)
+    if heading is not None:
+        return start == heading.end()
+    return True
 
 
 def _is_within_html_comment_marker(line: str, match: re.Match[str]) -> bool:
@@ -450,10 +551,28 @@ def _scan_text_for_placeholders(text: str, path: Path, target_root: Path) -> lis
         line behaviour.
     """
     hits: list[dict[str, Any]] = []
+    open_fence_char: str | None = None
     for lineno, line in enumerate(text.splitlines(), start=1):
+        # BO-2200b-3-ii: skip fenced code blocks, and the fence lines themselves.
+        # A fence closes only on its OWN character -- see _FENCE_DELIMITER.
+        fence = _FENCE_DELIMITER.match(line)
+        if fence is not None:
+            fence_char = fence.group("fence")[0]
+            if open_fence_char is None:
+                open_fence_char = fence_char
+                continue
+            if fence_char == open_fence_char:
+                open_fence_char = None
+                continue
+        if open_fence_char is not None:
+            continue
         for pattern, validator in _MARKER_RULES:
             match = pattern.search(line)
-            if match and validator(line, match):
+            if (
+                match
+                and _is_marker_in_reportable_context(line, match.start())
+                and validator(line, match)
+            ):
                 hits.append({
                     "path": str(path.relative_to(target_root)),
                     "line": lineno,
