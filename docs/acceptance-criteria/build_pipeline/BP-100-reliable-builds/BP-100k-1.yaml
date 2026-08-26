@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -89,9 +89,13 @@ amended_by:
     entry: "Added test_spec (4 behavioral descriptors, one per Then-clause: manifest yields a fingerprint for a non-agent template family; the executed gate emits match then drift for it; the gate never reports it as absent from the manifest; the recorded key set equals the build's real copy set) and test_rationale. Added one it_requirements constraint recording the Bundle A1 shared-diff/serialization rule with BP-100k-2 over scripts/build_helpers.py. Every descriptor runs the build and then executes the gate as a process — no grep over the writer's source. criteria, assigned_agent (python-coder), estimated_complexity (M), reference_file_path, delivers_to, expects_from, doc_links, readiness and work_status left unchanged."
     by: it-po
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/build_guards/test_bp_100k_1.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/07_bp100k12_manifest_records_what_the_gates_compare.md
+  - scripts/build_helpers.py
+  - unit_tests/build_guards/test_bp_100k_1.py
+  - unit_tests/build_guards/test_bp_100k_2.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: "Verified defect, 2026-08-13. Found only after GE-118b made the drift hooks actually run (they had been silently no-opping on an unresolvable manifest path). write_build_manifest() in scripts/build_helpers.py populates its Direction-A template_hashes section from templates/agents/*.md alone, so check_build_drift.py emits 'INFO — <path> not in manifest (new template — run build.py before committing built outputs)' for every other template it inspects, e.g. every templates/scripts/commit_guardian/*.py. Those templates are therefore never drift-checked. Distinct from GE-118b (manifest path resolution) and from BP-100b-6 (category-level parity across the four infrastructure layers, which does not assert per-artifact manifest records)."

@@ -1,0 +1,117 @@
+id: INF-700b-2-i
+components:
+  - infrastructure
+  - commit_guardian
+  - skill_registry
+title: "The reference gate still refuses from a fresh consumer install, not only from the package's own checkout"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b-2.yaml"
+criteria: |
+  Given a consumer project that has installed the package and run its build,
+  And the deployed tree in that consumer project is the only tree the gate can
+    run from,
+  When a template in that deployed tree names a skill directory that was not
+    deployed,
+  And the consumer commits that change,
+  Then the gate runs from the deployed layout and refuses the commit,
+  And it does not exit zero because a module it imports, a configuration file
+    it reads, or the repository root it computes was absent or wrong in the
+    deployed layout,
+  And the same gate run over a consistent deployed tree exits zero,
+  And the difference between the two runs is observed in the consumer project,
+    not in the package's own working tree.
+depends_on:
+  - INF-700b-2
+doc_links:
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: constrains
+    status: exists
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/bootstrap-installer.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE CHECKER IS NOT DEPLOYED TODAY. scripts/check_skill_refs.py lives outside templates/, so no consumer install receives it, while every guardian hook the manifest invokes resolves under {{config.output_root}}/scripts/commit_guardian/. The script must be relocated or mirrored into templates/scripts/commit_guardian/ and added to the build deploy manifest in the same change that registers the hook, per the standing rule 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest' — a hook whose target is absent from the deployed layout raises ModuleNotFoundError at hook runtime while its source-tree unit tests stay green."
+  - "ROOT RESOLUTION. The script currently computes its root as Path(__file__).resolve().parent.parent, which in a symlinked .leafcutter deployment resolves into the PACKAGE checkout rather than the consumer project — so it would scan the package's own templates and pass while the consumer's tree is broken. It must resolve the root through the shared helper templates/scripts/commit_guardian/_resolve_root.py find_project_root(), which prefers `git rev-parse --show-toplevel` for exactly this reason."
+  - "LAYOUT-AWARE SKILL RESOLUTION — the largest gap, and the one most likely to produce a false green. load_skill_names() reads <root>/templates/skills/. A consumer install HAS NO templates/ directory: build.py deploys skills to .claude/skills/ and the package tree to .leafcutter/. Verified on this workspace's own deployed layout, where .claude/skills/ holds the deployed bundles and no templates/ exists beside them. The known-skill set and the scanned template set must both be resolved from whichever layout is present."
+  - "SILENCE IS NOT A PASS. A run that resolves no skills directory, or that scans zero Markdown files, must FAIL (the script's existing exit 2 for an unreadable skills dir is the right shape) and must never print the OK line. Today a consumer run would find no templates/skills/, return None from load_skill_names and exit 2 — which is accidentally correct; make it deliberate and test it, because the tempting 'fix' is to treat a missing directory as an empty known-set, which turns every reference into a violation, and the next tempting fix after that is to treat it as a pass."
+  - "The scanned surface in a deployed layout is .claude/agents/*.md and .claude/skills/**/*.md, matching the surfaces the package deploys. A reference written as `.claude/skills/<name>` must resolve against the deployed skills directory, and a reference written as `templates/skills/<name>` must still resolve in the package checkout — the existing regex already accepts both spellings and must keep doing so."
+  - "PROOF MUST BE OBSERVED IN A CONSUMER-SIMULATION TREE, not in this repository's working tree. Build into a temporary target directory with `python scripts/build.py --target-dir <tmp>` and exercise the gate there. A test that runs from the package checkout cannot distinguish a layout-aware gate from a layout-blind one, because in the package checkout both layouts happen to resolve."
+  - "This AC must not change what the gate considers a violation. It changes only where the gate can run. If deployed-layout support changes the set of reported references in the package checkout, that is a regression in INF-700b-2, not a feature of this AC."
+test_spec:
+  - name: test_gate_refuses_dangling_reference_from_a_deployed_consumer_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "Builds into a temporary consumer root, plants a deployed agent template naming an undeployed skill, runs the gate as the hook invokes it and asserts a non-zero exit naming the file and skill."
+  - name: test_gate_exits_zero_over_a_consistent_deployed_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "The same consumer root with every named skill deployed exits zero and reports no violation."
+  - name: test_gate_fails_rather_than_passes_when_no_skills_directory_resolves
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A root with neither templates/skills/ nor .claude/skills/ exits non-zero and prints no OK line, so an unresolvable layout can never be read as a clean tree."
+  - name: test_gate_scans_the_consumer_root_not_the_package_checkout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "With a broken consumer tree and a clean package tree both present, the gate reports the consumer tree's violation — proving root resolution went through find_project_root and not __file__."
+  - name: test_checker_is_present_in_the_deployed_tree_after_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After a build into a temporary target, the checker resolves at the path the hook entry invokes, catching a deploy-manifest omission before it becomes a merge-blocking ModuleNotFoundError."
+test_rationale: |
+  Every descriptor runs against a built temporary consumer root rather than the
+  repository's own tree, because in the package checkout a layout-blind gate
+  and a layout-aware one behave identically — that coincidence is precisely
+  what let two earlier deployed-hook defects ship green. The third descriptor
+  is the false-green guard: this repository has twice shipped a gate that
+  exited zero because the thing it was meant to read was absent, so the
+  no-skills-directory case is tested as a failure requirement rather than left
+  to incidental behaviour. The fifth is the deploy-manifest check the standing
+  rule demands, and it must run after a real build, not against a manifest
+  listing.
+delivers_to: null
+expects_from:
+  ac_id: INF-700b-2
+  contract: "The wired gate — hook manifest entry, CI job and required status check — whose deployed-layout reachability this AC verifies, plus the disposition of the three research-agent references that would otherwise make every consumer run red on first use"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Named the three concrete deployed-layout hazards the criteria describe abstractly: the checker is not in templates/ so it is never deployed; it computes its root from __file__ and would scan the package checkout through a symlinked .leafcutter; and it resolves skills at templates/skills/, a directory that does not exist in a consumer install where skills deploy to .claude/skills/. Added the silence-is-not-a-pass requirement because the natural repair for the third hazard (treat a missing directory as an empty known-set) produces either a storm of false violations or, on the next repair, a vacuous pass."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Included because this repository has shipped this exact failure twice: a hook
+  dependency omitted from the build deploy manifest crashed the deployed hook
+  while its unit tests passed against the source tree, and hooks importing a
+  helper absent from a consumer layout no-opped silently. A gate that only
+  refuses in the package's own checkout does not protect the consumer install
+  where the dangling reference was originally reported.
+change_target: pipeline
+risk_surface: contract_boundary

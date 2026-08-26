@@ -115,7 +115,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/06_TICKET-20260826-ACD-2100a-5.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -152,3 +153,4 @@ notes: |
   ACD-2100a-2's fallback is a filesystem search, and a search re-run at every one of
   the five sites turns a resolution fix into a startup regression that nobody would
   attribute to this tree.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

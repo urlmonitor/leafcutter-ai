@@ -62,6 +62,8 @@ from build_phases import (
     build_product_truth,
     detect_deploy_collisions,
     _compute_phase_mappings,
+    check_command_reachability,
+    AC_STORE_DEPLOY_MAP,
 )
 from registry_validator import validate_agent_registry
 from project_context_discovery import (  # noqa: F401 — re-exported for callers
@@ -88,6 +90,7 @@ from build_referential_integrity import (
     check_referential_integrity,
     format_integrity_report,
     extract_script_path_refs_with_sources,
+    compute_intra_package_closure,
 )
 from build_config_scaffolds import build_config_scaffolds
 from build_ac_store_scaffold import build_ac_store_scaffold
@@ -328,25 +331,33 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
     return 0
 
 
-def _manifest_ac_store_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/ac_store/<name>`` entries for all non-.pyc source files.
+def _manifest_ac_store_scripts(package_root: Path) -> set[str]:  # noqa: ARG001
+    """Return ``scripts/ac_store/<name>`` entries for every AC_STORE_DEPLOY_MAP entry.
 
-    Scans ``package_root/scripts/ac_store/`` and returns one manifest entry per
-    file, matching what ``build_ac_store`` deploys to the target project.
+    Derives Set C (the guard's model of what has been deployed) directly from
+    ``build_phases.AC_STORE_DEPLOY_MAP`` -- the SAME constant ``build_ac_store``
+    iterates to perform the actual copy -- per BP-900g-5's fifth
+    it_requirement: "Make the manifest derive FROM the deploy_map so the two
+    cannot diverge."
+
+    Before this (BP-900g-8), this function scanned every file physically
+    present in ``package_root/scripts/ac_store/`` regardless of whether
+    ``build_ac_store`` actually deployed it. That made the guard's view of
+    "deployed" really mean "exists in the source directory" -- structurally
+    incapable of detecting a file present in source but absent from the deploy
+    map, which is exactly the defect class BP-900g-8 closes
+    (``_component_migration_map.py`` was such a file).
 
     Args:
-        package_root: Absolute path to the leafcutter package root.
+        package_root: Present for interface parity with the other
+            ``_manifest_*`` helpers; unused because ``AC_STORE_DEPLOY_MAP`` is
+            already resolved relative to ``build_phases.PACKAGE_ROOT``.
 
     Returns:
-        Set of ``scripts/ac_store/<name>`` strings, or empty set when absent.
+        Set of ``scripts/ac_store/<name>`` strings, one per
+        ``AC_STORE_DEPLOY_MAP`` entry.
     """
-    result: set[str] = set()
-    src = package_root / "scripts" / "ac_store"
-    if src.is_dir():
-        for f in src.iterdir():
-            if f.is_file() and f.suffix != ".pyc":
-                result.add(f"scripts/ac_store/{f.name}")
-    return result
+    return {f"scripts/ac_store/{dest_name}" for _src_rel, dest_name in AC_STORE_DEPLOY_MAP}
 
 
 def _manifest_commit_guardian_scripts(package_root: Path) -> set[str]:
@@ -583,6 +594,22 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         if (templates_scripts / fname).is_file():
             manifest.add(f"scripts/{fname}")
 
+    # scripts/release/check_changelog_presence.py: deployed by the dedicated
+    # _deploy_fast_lane_release_dependency() helper (called from
+    # build_build_orchestration_scripts) rather than a generic glob, because it
+    # is fast_lane.py's own module-scope import dependency, not a
+    # build_orchestration script itself. It was previously absent from this
+    # manifest even though the build genuinely deploys it -- AC BP-900g-8's
+    # closure guard surfaced this the moment compute_intra_package_closure()
+    # started resolving the sys.path.insert()-based import pattern
+    # build_dataflow.py and fast_lane.py both use to reach it (the same
+    # reference shape goal_to_epic.py's sibling-module load uses), which
+    # otherwise fails every build with a false-positive "undeployed
+    # dependency" finding for a file the build already ships.
+    release_src = package_root / "scripts" / "release"
+    if (release_src / "check_changelog_presence.py").is_file():
+        manifest.add("scripts/release/check_changelog_presence.py")
+
     return manifest
 
 
@@ -619,12 +646,19 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
     """
     source_paths: set[str] = set()
 
-    # ac_store: source namespace equals deploy namespace.
-    src_ac = package_root / "scripts" / "ac_store"
-    if src_ac.is_dir():
-        for f in src_ac.iterdir():
-            if f.is_file() and f.suffix != ".pyc":
-                source_paths.add(f"scripts/ac_store/{f.name}")
+    # ac_store: derived from AC_STORE_DEPLOY_MAP's own SOURCE column (the SAME
+    # constant _manifest_ac_store_scripts derives the deploy-namespace side
+    # from), so this set and the deployable set stay 1:1 by construction —
+    # test_guard_source_paths_match_deployable_set enforces this. Before
+    # BP-900g-8 this scanned every file physically present in
+    # scripts/ac_store/, which is a STRICT SUPERSET of what AC_STORE_DEPLOY_MAP
+    # actually deploys (e.g. audit_authoring_components.py exists in source but
+    # is not, and should not be, deployed) — that divergence is exactly why
+    # _manifest_ac_store_scripts needed the same fix (BP-900g-5's fifth
+    # it_requirement).
+    for src_rel, _dest_name in AC_STORE_DEPLOY_MAP:
+        if (package_root / src_rel).is_file():
+            source_paths.add(src_rel)
 
     # commit_guardian: source is under templates/scripts/commit_guardian/.
     src_cg = package_root / "templates" / "scripts" / "commit_guardian"
@@ -709,6 +743,13 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
         for f in templates_scripts.glob("*.py"):
             if f.is_file():
                 source_paths.add(f"templates/scripts/{f.name}")
+
+    # scripts/release/check_changelog_presence.py: source namespace equals
+    # deploy namespace (see the matching block in
+    # _get_source_deployable_scripts) -- must be registered here too or
+    # test_guard_source_paths_match_deployable_set fails on cardinality.
+    if (package_root / "scripts" / "release" / "check_changelog_presence.py").is_file():
+        source_paths.add("scripts/release/check_changelog_presence.py")
 
     return source_paths
 
@@ -956,6 +997,145 @@ def _check_tracked_source_guard(package_root: Path) -> int:
     return 1
 
 
+_AC_STORE_DEST_TO_SOURCE: dict[str, str] = {
+    dest_name: src_rel for src_rel, dest_name in AC_STORE_DEPLOY_MAP
+}
+
+# Deploy-path prefix -> owning build_phases.py phase function name, used only
+# to attribute a closure-guard finding to the phase that would have to carry
+# the missing dependency (AC BP-900g-8's Gherkin requires naming the phase).
+# Attribution is diagnostic, not load-bearing for the pass/fail verdict.
+_CLOSURE_GUARD_PHASE_BY_PREFIX: tuple[tuple[str, str], ...] = (
+    ("scripts/ac_store/", "build_ac_store"),
+    ("scripts/commit_guardian/", "build_commit_guardian"),
+    ("scripts/feedback/", "build_feedback"),
+    ("scripts/knowledge/", "build_knowledge_scripts"),
+    ("scripts/build_orchestration/", "build_build_orchestration_scripts"),
+)
+
+
+def _phase_for_deploy_path(deploy_path: str) -> str:
+    """Return the build_phases.py phase function name that owns *deploy_path*.
+
+    Args:
+        deploy_path: A ``scripts/<...>`` deploy-namespace path, e.g. one
+            returned in a script's intra-package closure.
+
+    Returns:
+        The best-effort ``build_<name>`` phase function name responsible for
+        deploying paths with this prefix. Falls back to a joined label naming
+        the remaining candidate phases when no prefix matches, since
+        attribution here is diagnostic rather than authoritative.
+    """
+    for prefix, phase in _CLOSURE_GUARD_PHASE_BY_PREFIX:
+        if deploy_path.startswith(prefix):
+            return phase
+    for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
+        if deploy_path.startswith(f"scripts/{dir_name}/"):
+            return "build_agent_support_scripts"
+    if deploy_path in {f"scripts/{f}" for f in AGENT_SUPPORT_SCRIPT_FILES}:
+        return "build_agent_support_scripts"
+    return "build_workflow_tools or build_template_standalone_scripts"
+
+
+def _source_file_for_deploy_path(package_root: Path, deploy_path: str) -> tuple[Path, Path] | None:
+    """Resolve a Set-B deploy path to the (source_file, closure_root) pair to analyse.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+        deploy_path: A ``scripts/<...>`` entry from ``_get_source_deployable_scripts``.
+
+    Returns:
+        A ``(source_file, root)`` pair where *root* is the directory
+        ``compute_intra_package_closure`` should resolve *source_file*'s
+        dependencies against so the returned strings land directly in the
+        SAME deploy namespace as *deploy_path* itself -- or None when no real
+        source file can be located for *deploy_path* (should not happen for a
+        well-formed manifest; the guard skips rather than crashes).
+    """
+    if deploy_path.startswith("scripts/ac_store/"):
+        dest_name = deploy_path[len("scripts/ac_store/"):]
+        src_rel = _AC_STORE_DEST_TO_SOURCE.get(dest_name)
+        if src_rel is not None:
+            return package_root / src_rel, package_root
+
+    # Template-mirrored categories (commit_guardian, feedback, template-standalone):
+    # source lives under templates/<deploy_path>; stripping the templates/
+    # prefix on the CLOSURE ROOT (not the path itself) makes the returned
+    # dependency strings land directly in deploy namespace.
+    templated = package_root / "templates" / deploy_path
+    if templated.is_file():
+        return templated, package_root / "templates"
+
+    # Everything else (build_orchestration, knowledge, agent-support,
+    # workflow-tool scripts): source and deploy namespaces coincide directly
+    # under package_root.
+    direct = package_root / deploy_path
+    if direct.is_file():
+        return direct, package_root
+
+    return None
+
+
+def _check_intra_package_closure_guard(package_root: Path) -> int:
+    """Preflight guard: exit non-zero when a deployed script's own dependency is not deployed.
+
+    Implements AC BP-900g-8's binding-direction rule: for every script this
+    build WILL deploy (Set B, from ``_get_source_deployable_scripts``),
+    compute its DERIVED, TRANSITIVE intra-package dependency closure (Set A,
+    via ``compute_intra_package_closure`` -- AST-based static analysis of
+    imports, relative imports, and ``importlib.util.spec_from_file_location``
+    dynamic loads) and verify Set B contains it. This is derived from the
+    code, never a hand-maintained list: a module a deployed script starts
+    importing tomorrow is picked up automatically on the next run.
+
+    This guard runs BEFORE ``_run_phases()`` writes any output, alongside
+    ``_check_script_reference_guard`` and ``_check_tracked_source_guard``, so
+    no partial deployment is written when a dependency is missing.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        0 if every deployed script's resolved dependencies are themselves
+        deployed. 1 if one or more are missing (build must abort; each
+        finding is written to stderr naming the deployed script, the missing
+        dependency, and the deploy phase that would have to carry it).
+    """
+    deployable = _get_source_deployable_scripts(package_root)
+
+    findings: list[tuple[str, str, str]] = []
+    for deploy_path in sorted(deployable):
+        resolved = _source_file_for_deploy_path(package_root, deploy_path)
+        if resolved is None:
+            continue
+        source_file, root = resolved
+        if not source_file.is_file():
+            continue
+        closure = compute_intra_package_closure(source_file, root)
+        for dep in sorted(closure - deployable):
+            findings.append((deploy_path, dep, _phase_for_deploy_path(dep)))
+
+    if not findings:
+        return 0
+
+    for deployed_script, missing_dep, phase in findings:
+        print(
+            "[CLOSURE GUARD] UNDEPLOYED DEPENDENCY: deployed script "
+            f"'{deployed_script}' resolves '{missing_dep}' (via import, "
+            "relative path, or dynamic loader), but no deploy phase ships "
+            f"it. It belongs in the '{phase}' phase's deploy declaration "
+            "(scripts/build_phases.py).",
+            file=sys.stderr,
+        )
+    print(
+        "[CLOSURE GUARD] Build aborted: every intra-package dependency a "
+        "deployed script resolves must itself be deployed (AC BP-900g-8).",
+        file=sys.stderr,
+    )
+    return 1
+
+
 def _read_package_version(package_root: Path) -> str:
     """Read the package version from config/version.json.
 
@@ -1089,6 +1269,55 @@ def _check_deploy_collision_guard(output_root: Path, config: dict) -> int:
         print(
             f"[COLLISION GUARD]  target:  {c['target']}\n"
             f"[COLLISION GUARD]  sources:\n  {sources_str}",
+            file=sys.stderr,
+        )
+    return 1
+
+
+def _check_command_reachability_guard(output_root: Path, config: dict) -> int:
+    """Post-deploy guard: abort the build when a command handoff target does not resolve (BP-900g-1).
+
+    Runs AFTER the deploy phases have written real files to ``output_root``
+    (unlike ``_check_deploy_collision_guard``, which runs on planned mappings
+    before any write). Calls ``check_command_reachability(output_root,
+    config)`` to scan every deployed command's ``Workflow(...)``/
+    ``Skill(...)`` handoff targets against the TRUE post-deploy layout:
+    name-form targets resolve via the deployed workflow/skill registry
+    (BP-900g-1-i), path-form targets resolve only as a literal relative path
+    against output_root (BP-900g-1). Whether a name-form workflow reference
+    is skipped is decided from the declared ``config["workflows"]["enabled"]``
+    value, not from whether the workflows output happens to exist on disk
+    (BP-100k-7) — ``config`` must be the SAME configuration object the build
+    itself used to decide whether to produce that output.
+
+    This is the COMMAND-SIDE analogue of the BP-811 ``.claude/workflows``
+    shim guardrail; it does not modify or re-parent BP-811.
+
+    Args:
+        output_root: Absolute path to the consolidated, already-deployed
+            output directory (e.g. ``<target>/.leafcutter``).
+        config: The build's merged configuration dict — the same object used
+            to decide whether ``build_workflow_scripts()`` produced output,
+            so the guard and the producer can never disagree.
+
+    Returns:
+        0 if every extracted target resolves (build may proceed).
+        1 if one or more targets are unresolvable (build must abort).
+    """
+    verdicts = check_command_reachability(output_root, config)
+    if not verdicts:
+        return 0
+
+    print(
+        "[REACHABILITY GUARD] Build aborted: unresolvable command handoff "
+        "target(s) detected.",
+        file=sys.stderr,
+    )
+    for v in verdicts:
+        print(
+            f"[REACHABILITY GUARD]  command: {v['command']}\n"
+            f"[REACHABILITY GUARD]  target:  {v['target']} (kind={v['kind']})\n"
+            f"[REACHABILITY GUARD]  reason:  {v['reason']}",
             file=sys.stderr,
         )
     return 1
@@ -1513,12 +1742,17 @@ def main(argv: list[str] | None = None) -> int:
     # when templates reference scripts that will not be deployed (BP-900b-3).
     # Tracked-source guard: exit non-zero when any deployable script source is
     # present on disk but not committed to git (BP-900f-1/f-2/f-3).
-    # Both guards skip under --validate-only since they are deployment preflights,
-    # not config correctness checks.
+    # Intra-package closure guard: exit non-zero when a script this build WILL
+    # deploy resolves (via import, relative import, or dynamic loader) a
+    # sibling module that no deploy phase ships (BP-900g-8).
+    # All three guards skip under --validate-only since they are deployment
+    # preflights, not config correctness checks.
     if not args.validate_only:
         if _check_script_reference_guard(package_root):
             return 1
         if _check_tracked_source_guard(package_root):
+            return 1
+        if _check_intra_package_closure_guard(package_root):
             return 1
 
     if args.validate_only:
@@ -1630,6 +1864,15 @@ def main(argv: list[str] | None = None) -> int:
 
     total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
 
+    # Command-reference reachability guard (BP-900g-1 / BP-900g-1-i): after
+    # the deploy phases have written real files, scan every deployed
+    # command's Workflow()/Skill() handoff targets against the TRUE
+    # post-deploy layout and abort the build if any target does not resolve.
+    # Skipped under --dry-run, where no files were actually written to
+    # output_root to scan.
+    if not args.dry_run and _check_command_reachability_guard(output_root, config):
+        return 1
+
     uptodate = get_uptodate_count()
     if args.dry_run:
         print(f"Total files to write: {GREEN}{total}{RESET}")
@@ -1721,6 +1964,20 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-26 [python-coder/BP-900g-8 review-fix]: Registered
+#   scripts/release/check_changelog_presence.py in both
+#   _get_source_deployable_scripts() and _get_source_paths_for_guard() (source
+#   namespace equals deploy namespace for this file). This file was already
+#   genuinely deployed by _deploy_fast_lane_release_dependency() but absent
+#   from the declarative manifest the BP-900g-8 closure guard checks Set B
+#   against. That gap was invisible until build_referential_integrity.py's
+#   compute_intra_package_closure() was fixed (same commit) to resolve the
+#   `sys.path.insert(0, <dir>)` + plain-import reference shape:
+#   build_dataflow.py and fast_lane.py both reach check_changelog_presence.py
+#   via exactly that pattern, and once the closure correctly saw it, every
+#   build failed with a false-positive "undeployed dependency" finding for a
+#   file the build already ships. Fixing the manifest (not the deploy logic,
+#   which was already correct) restores `build.py --target-dir` to exit 0.
 # - 2026-05-13 15:30 [epic-supervisor/T03]: Added build_precommit_config to (#EPIC-LeafcutterMVP/01)
 #   the phase dispatch list. Reads hooks_manifest from commit_guardian.json
 #   template and emits/merges .pre-commit-config.yaml at the consumer project
@@ -1869,4 +2126,32 @@ if __name__ == "__main__":
 #   Writes LEAFCUTTER_VERSION file to target_root so deployed consumers can
 #   determine the package version without reading the source package directly.
 #   Fallback: "unknown" on any read error. (#EPIC-AcPipelineConsolidation/12)
+# - 2026-08-18 18:30 [python-coder]: Added _check_command_reachability_guard() and
+#   wired it into main() after _run_phases() (skipped under --dry-run).
+#   Imports check_command_reachability from build_phases. Aborts the build
+#   with a non-zero exit when a deployed command's Workflow()/Skill() handoff
+#   target does not resolve against the real post-deploy layout, naming the
+#   command, target, kind, and reason on stderr. This wires the BP-900g-1 /
+#   BP-900g-1-i command-reference reachability guard into the real build so
+#   the guardrail is enforced, not merely callable.
+#   (#EPIC-BuildPipelinePhantomRemediation/06)
+# - 2026-08-25 [python-coder/BP-900g-8]: Added _check_intra_package_closure_guard(),
+#   a third preflight (alongside _check_script_reference_guard and
+#   _check_tracked_source_guard) that computes, for every script this build will
+#   deploy, its DERIVED transitive intra-package dependency closure via
+#   build_referential_integrity.compute_intra_package_closure (AST-based static
+#   analysis of imports, relative imports, and importlib.util.spec_from_file_location
+#   dynamic loads -- never a hand-maintained list) and fails the build when a
+#   resolved dependency is not itself in the deployable set. Also rewrote
+#   _manifest_ac_store_scripts to derive from build_phases.AC_STORE_DEPLOY_MAP
+#   (imported here) instead of scanning every file physically present in
+#   scripts/ac_store/ -- the latter made the guard's "deployed" set really mean
+#   "exists in source", which could never detect a file present in source but
+#   absent from the real deploy map (BP-900g-5's fifth it_requirement). Running
+#   the new guard against the real deploy map (before this ticket's two new
+#   AC_STORE_DEPLOY_MAP entries) surfaced both generate_ticket_from_ac.py's
+#   missing _component_migration_map.py (the AC's cited instance) and a second,
+#   previously-undiscovered instance: validate_ac_schema.py's missing
+#   _ac_components.py -- concrete evidence the mechanism is derived rather than
+#   an enumeration of the one known case. (#BP-900g-8)
 # ====================================================================

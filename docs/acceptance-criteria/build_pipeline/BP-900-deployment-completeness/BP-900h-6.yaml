@@ -59,7 +59,7 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: context
     status: exists
-    relevance: "KI-BO-4 — the install does not scaffold two of the four namespace roots. This job is what would have caught it before release."
+    relevance: "KI-BO-030 — the install does not scaffold two of the four namespace roots. This job is what would have caught it before release."
   - path: docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122d-3-ii.yaml
     relationship: context
     status: exists
@@ -99,7 +99,7 @@ it_requirements:
     blocks an adopter over content a plain install never creates is invisible to every static
     check in BP-900a..BP-900h-2.
 
-    Two known conditions this step is sized against, both already filed: KI-BO-4 (the install
+    Two known conditions this step is sized against, both already filed: KI-BO-030 (the install
     does not scaffold two of the four namespace roots) and the four commit-guardian checks that
     are deployed and registered nowhere. The first would surface here as a blocked first commit;
     the second as an empty executed-guard record.

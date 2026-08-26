@@ -1,0 +1,126 @@
+id: INF-700c-1-i
+components:
+  - infrastructure
+  - knowledge_system
+title: "A line that is not a record does not derail the run and is never written as knowledge"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c-1.yaml"
+criteria: |
+  Given the file the writer reads contains a line that is not a JSON object —
+    for example a stray fragment of markup left behind by a hand-composed
+    append,
+  And well-formed knowledge records carrying real learning text appear both
+    before and after that line,
+  When the writer reads the file,
+  Then it does not stop at the malformed line,
+  And every well-formed record before it and after it is processed,
+  And the malformed line's content is not written to any knowledge surface, in
+    whole or in part,
+  And the run reports the malformed line with its line number and a count of
+    such lines, separately from records written and records carrying no
+    learning,
+  And the malformed line is left in the file rather than removed, so the damage
+    remains inspectable,
+  And the run's outcome distinguishes "read the whole file" from "stopped part
+    way through".
+depends_on:
+  - INF-700c-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "PARTIALLY SATISFIED ALREADY — implement the gap, do not rewrite the loop. scripts/knowledge/harvest_learnings.py already catches json.JSONDecodeError, logs a WARNING and continues (lines 299-303), so the 'does not stop' and 'records after it are processed' clauses hold today. What does NOT exist is any durable trace: no line number is recorded, no counter is incremented, and HarvestResult carries no field for it — so a caller cannot tell a clean file from one with a corrupt line, and the run's outcome cannot distinguish a whole read from a truncated one. Add the counter, the line numbers and the summary segment; leave the continue-on-error control flow alone."
+  - "The malformed-line count must be a fifth bucket on HarvestResult, disjoint from routed, previously_processed, skipped_unknown, write_failures and the no-learning-text bucket INF-700c-1 adds. It counts LINES, not records, and must therefore be excluded from the record-total invariant INF-700c-1 asserts rather than folded into it."
+  - "Line numbers must be 1-based and must match the file on disk, so a reader can open the file at that line. Count blank lines when numbering: the current loop skips empties with a `continue` before any numbering exists, and a numbering scheme derived from the enumeration of non-blank lines would point at the wrong place."
+  - "The malformed line's content must not reach any knowledge surface in whole or in part, and must not be echoed at full length into the run's own output either. The existing warning truncates to 80 characters (line[:80]); keep a bounded excerpt, because a malformed line can be arbitrarily long and the file it came from is a shared stream."
+  - "The file must not be repaired, rewritten, de-duplicated or line-removed. The harvester is a reader; ADR-011 chose a retained sink precisely so a corrected rule can be re-run over it, and a reader that edits its input destroys that property. This also protects the shared stream's other consumers."
+  - "OUTCOME DISTINGUISHABILITY is the clause with no current implementation. A run that read every line and a run that aborted part-way must be distinguishable from the run's reported outcome alone — not inferred from a count that happens to look small. Do not introduce a new exit code for the presence of malformed lines: a corrupt line is a data condition, not a run failure, and exit codes 0/1/2/3/4 are already allocated (4 = write failure and/or state not persisted, outranking 3)."
+  - "Must also handle a line that parses as JSON but is not an object — a bare string, number, list or null. json.loads succeeds on all of these and the subsequent .get() call raises AttributeError, which the current except clause does not catch, so such a line would abort the whole run. This is the same class of defect as the one the AC names and must be closed with it."
+test_spec:
+  - name: test_malformed_line_does_not_stop_the_read
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Well-formed records placed before and after a non-JSON line are both processed in a single run."
+  - name: test_malformed_line_is_reported_with_its_one_based_line_number
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The result names the malformed line's number as it appears in the file, including when blank lines precede it."
+  - name: test_malformed_line_count_is_separate_from_the_other_buckets
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The malformed count is distinct from routed, no-learning-text and skipped_unknown, and counts lines rather than records."
+  - name: test_malformed_line_content_is_never_written_to_a_knowledge_surface
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "No destination file contains any substring of the malformed line after the run."
+  - name: test_sink_file_is_byte_identical_after_the_run
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The malformed line is still present and the sink is unmodified, so the damage stays inspectable."
+  - name: test_json_scalar_line_is_treated_as_malformed_rather_than_crashing
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A line containing a bare JSON string, number or list is counted as malformed and does not raise AttributeError from the .get() call."
+  - name: test_run_over_the_real_stream_reports_the_content_fragment_at_line_19
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Against a copy of the real telemetry stream shape, the run reports one malformed line at line 19 and still processes the well-formed record on line 20."
+test_rationale: |
+  The sixth descriptor covers a failure the AC's wording does not reach but the
+  same defect class produces: json.loads succeeds on a bare scalar, so a line
+  like `"done"` slips past the JSONDecodeError handler and crashes on the next
+  attribute access — a reader that survives `</content>` can still be killed by
+  a quoted word. The seventh reproduces the exact on-disk shape rather than a
+  constructed one, because the live corruption sits immediately above a
+  well-formed record and it is that adjacency, not the corruption alone, that
+  makes an abort-on-error reader look like a clean short run.
+delivers_to: null
+expects_from:
+  ac_id: INF-700c-1
+  contract: "The per-record eligibility rule and its result buckets, which this AC extends with a line-level malformed count for input that is not a record at all"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Recorded that the resilience half of this AC is already satisfied by the existing continue-on-JSONDecodeError path, so the real work is the reporting half — line numbers, a fifth counter, and an outcome that distinguishes a whole read from a truncated one, none of which exists. Added the JSON-scalar case: json.loads accepts a bare string or number and the subsequent .get() raises AttributeError outside the caught exception type, so a line that is valid JSON but not an object still aborts the run today. Forbade a new exit code, since 0/1/2/3/4 are allocated and a corrupt input line is a data condition."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Not hypothetical. Line 19 of the live sink is the literal string
+  "</content>" — free-hand appending by agents has already put a non-parseable
+  line into the file, and a well-formed knowledge record sits on the line
+  immediately after it. Any reader that aborts on the first parse error would
+  silently drop everything below line 19 while reporting a clean short run.
+change_target: code
+risk_surface: contract_boundary

@@ -1,0 +1,113 @@
+id: AR-200b-1
+title: "An agent template that names a mutating tool as the way to do a mandatory step declares that tool"
+component: agent-registry
+components:
+  - agent_registry
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the set of agent templates the build can dispatch,
+    And a template whose body instructs its agent to use a named state-mutating
+      tool to carry out a step the template marks mandatory,
+  When each such template's declared tools are compared against the tools its own
+    body instructs it to use,
+  Then every template declares each mutating tool its body instructs it to use,
+    And a template that instructs a tool it does not declare is reported, naming
+      the template, the tool, and the tools it does declare,
+    And the comparison derives BOTH sides from the templates themselves, so a
+      newly added template with the same mismatch is reported without anyone
+      editing the check,
+    And prose that merely discusses the underlying action -- "do not edit the
+      file" -- is not read as an instruction to use the tool of that name, so the
+      check does not flag every template in the registry,
+  So an instruction naming the safe route is one the agent can actually follow,
+    rather than one it silently substitutes a riskier route for.
+depends_on:
+  - AR-200b
+doc_links:
+  - path: templates/agents/product-owner.md
+    relationship: modifies
+    status: exists
+    relevance: "Instance 1. Section S6b, marked mandatory, says to update the parent using an `Edit` call that modifies ONLY the covered_by field; `tools:` granted Read, Write, Bash, Skill."
+  - path: templates/agents/business-analyst.md
+    relationship: modifies
+    status: exists
+    relevance: "Instance 2. Same S6b instruction, same four tools, no Edit."
+  - path: templates/agents/it-po.md
+    relationship: modifies
+    status: exists
+    relevance: "Instance 3. Its covered_by update protocol says to use an `Edit` call that modifies ONLY covered_by and to overwrite nothing else; same four tools, no Edit."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The parent covered_by update protocol the three templates implement — the source of the obligation, and why a surgical edit rather than a rewrite is the specified route."
+  - path: unit_tests/commit_guardian/test_agent_verification_consistency.py
+    relationship: describes
+    status: exists
+    relevance: "Prior art: a registry-consistency test asserting a rule across every template rather than a hardcoded list."
+assigned_agent: llm-expert
+estimated_complexity: S
+declares_side_effect: false
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/agents/product-owner.md
+  n_location_rule: "all -- every agent template whose body names a mutating tool for a mandatory step; THREE violate it today (product-owner, business-analyst, it-po), and the check must be derived rather than enumerated so the fourth is caught on arrival"
+  required_skills:
+    - llm-expert
+  post_write_commands:
+    - "python -m pytest unit_tests/commit_guardian/ -q"
+    - "python scripts/build.py --target-dir . --dry-run"
+  constraints:
+    - "GRANT THE CAPABILITY, DO NOT DELETE THE INSTRUCTION. The tempting fix is to remove the 'use an Edit call' line from the three templates, which makes the rule pass while leaving the agents doing whole-file rewrites on untracked, unrecoverable AC YAML. That trades a caught contradiction for an uncaught hazard. This is AR-200a-1 constraint 1 in its second form."
+    - "REQUIRES_VERIFICATION IS ALREADY SATISFIED HERE. All three templates already declare requires_verification: true because they already hold Write, so adding Edit does not trip registry_validator.py rule A. Verified by a dry-run build: zero errors. Do not assume this for a fourth instance that holds no mutating tool yet."
+    - "DERIVE BOTH SIDES, DO NOT HARDCODE THE THREE NAMES. A test naming product-owner, business-analyst and it-po passes forever and would not have caught any of them before they shipped."
+    - "MATCH THE INSTRUCTION, NOT THE BARE WORD. `Edit` as a tool name and 'edit' as ordinary English are different things. A detector matching the bare word flags most of the registry and is worse than no detector, because a noisy rule gets disabled. Match instruction phrasings against the backticked tool name, case-sensitively, and carry a control case proving benign prose does not fire."
+    - "SCOPE TO MUTATING TOOLS. A body naming a read-only tool it does not hold is also a bug, but a harmless one: the agent cannot proceed, loudly. The gap worth a gate is the one where the agent CAN proceed by a riskier route, and does."
+    - "GUARD THE SCAN ITSELF. A rule that resolves to zero templates passes forever. This repo shipped exactly that in validate_ac_schema.py, where a bare directory argument matched nothing, printed a success line and exited 0 for eight days (KI-ACS-001). Assert the scan reached the registry."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_ar200b1_every_mandated_tool_is_in_the_allowlist
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Derive, for every template in templates/agents/, the set of mutating tools its body instructs it to use and the set its frontmatter grants, and assert the first is a subset of the second. Must fail against the pre-fix tree naming all three violators."
+  - name: test_ar200b1_detector_fires_on_a_synthetic_violator
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Feed the detector a synthetic template that mandates Edit and grants only Read and Bash, and assert it is flagged. Load-bearing: once the three real instances are fixed the criterion test can never fail again on the current tree, so without this the rule decays into proving only that the loop runs."
+  - name: test_ar200b1_detector_does_not_fire_on_generic_english
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Feed the detector a template whose prose says 'do not edit the file' and grants no Edit, and assert nothing is flagged. Without this control the cheapest way to pass the criterion test is a detector that matches the bare word and flags the whole registry."
+  - name: test_ar200b1_rule_scans_the_whole_registry
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Assert the scan reaches the full agent registry and that most templates declare a tools: allowlist, so a glob that silently resolves to nothing cannot present as a pass."
+test_rationale: |
+  The criterion test alone is insufficient and would be a phantom gate: after the
+  three instances are fixed it passes on any tree, including one where the
+  detector was quietly broken. The synthetic-violator test is what keeps the
+  detector honest, and the generic-English control is what stops the cheapest
+  passing implementation -- a bare substring match -- from being adopted. The
+  scan-reach test closes the third way this class of rule goes vacuous, which
+  this repository has already shipped once.

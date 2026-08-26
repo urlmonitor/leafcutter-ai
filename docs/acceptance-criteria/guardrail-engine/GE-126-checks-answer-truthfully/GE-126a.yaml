@@ -1,0 +1,94 @@
+id: GE-126a
+title: "Pointing a check at your own file makes it inspect that file"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Hand a check your file and it inspects that file or refuses.
+
+  When you name the work you want examined, the check examines it — a violation
+  in the file you handed over is found and refused. A check that will not or
+  cannot use what you gave it says so and does not report a pass.
+depends_on:
+  - GE-126
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-018's compounding paragraph: _get_staged_ac_paths() ignores argv entirely, so passing a path does not make the check examine it. KI-CG-001 and KI-CG-012 record the same trap on the other AC checks and are context, not scope."
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: modifies
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126a-1
+  - GE-126a-2
+  - GE-126a-3
+  - GE-126a-4
+  - GE-126a-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE VERIFICATION PATH ITSELF, WHICH IS WHY IT IS FIRST. Someone
+  reaching for this route is by definition trying to confirm a check would have
+  blocked something, and the current failure mode returns exactly the answer they
+  were hoping for. Every "I verified the hook" claim in this repository's history
+  rests on this contract, and the contract is not currently honoured.
+
+  THE ACCEPTANCE SHAPE IS A PAIR AND BOTH ARMS ARE MANDATORY.
+    - Hand the check a file that genuinely violates its rule. It must refuse.
+      A test that hands over a clean file proves nothing, because a check that
+      dropped the argument entirely also passes it.
+    - Hand the check a path that resolves to nothing. It must say the targets it
+      was named could not be resolved and must not report a pass. An explicitly
+      provided target that matches nothing is a caller error, never a pass.
+  A one-armed L2 here is the defect reproducing itself: the second arm is the
+  only one that distinguishes "honoured your argument" from "ignored it and found
+  nothing to complain about".
+
+  THE BOUNDARY THAT MUST NOT BE CROSSED, and it is the most likely regression. A
+  run with NO targets at all, in a context where nothing is in scope — an
+  ordinary commit-time invocation where no matching file is staged — still
+  reports an ordinary pass. The rule fires on targets that were NAMED but not
+  resolved, never on an empty scope. GE-120a-4 states this boundary for the
+  agent-side store validator in the same words; state it again here rather than
+  cross-referencing it, because a fix that makes empty-scope runs fail breaks
+  every commit-time invocation of the whole AC check family.
+
+  FENCE — DO NOT CLOSE THIS AS A DUPLICATE OF GE-120a-4, AND DO NOT CLOSE
+  GE-120a-4 WITH THIS. GE-120a-4's surface is scripts/ac_store/validate_ac_schema.py,
+  which its own it_requirements confirm is source-only, absent from the deploy set
+  and ADR-013-exempt from the template round-trip. This L1's surface is the
+  deployed commit-guardian checks, which carry that obligation in full. Same
+  sentence, two different files, two different fixes.
+
+  THE SEAM QUESTION IS IN SCOPE BUT ITS REPAIR IS NOT. KI-CG-012 records that the
+  environment seams these checks offer disagree on both variable name and
+  separator, so the wrong spelling resolves to nothing and exits 0. Decide at L2
+  whether "the targets you named" includes the environment seam as well as the
+  command line — it should, because both are the same promise — but do NOT take
+  on unifying the seam across the family here. That is its own work.
+
+  DO NOT SETTLE THIS WITH A PRINTED COUNT. A check can echo the number of files
+  it was handed and still have inspected a different set. The observable is the
+  verdict on a file known to violate, not a line of output about the file.

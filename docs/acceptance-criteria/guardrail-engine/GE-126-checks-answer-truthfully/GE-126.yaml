@@ -1,0 +1,241 @@
+id: GE-126
+title: "You can verify for yourself that a check actually inspected your work"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Verify a check yourself and its answer means something.
+
+  The checks that protect your work can be interrogated directly — you hand one
+  your file, or you run it where its source lives, or you follow the written
+  procedure for adding a new one. Today each of those routes can return a clean,
+  confident answer from a check that inspected nothing, and that answer is
+  indistinguishable from a real one. Three checks are known to behave this way
+  because three happened to be looked at; how many of the roughly seventy others
+  do is not something anyone can currently find out. After this goal, a check
+  handed your work inspects it or refuses, a copy of a check that can never
+  enforce anything says so instead of passing, adding a new check tells you when
+  its registration is incomplete, and the whole family can be asked which of its
+  members are still able to pass without looking at anything.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-018, KI-CG-019 and KI-CG-020 are the three recorded, directly reproduced defects this goal exists to close, each with verbatim commands, output and line numbers. Read all three before decomposing. Do not restate their measurements at a higher confidence than they record."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: context
+    status: exists
+    relevance: "M5 and M8 name the two shapes here — a validator reporting success having checked nothing, and instrumentation measuring a proxy. KI-CG-018 adds a variant worth carrying through decomposition: the instrument meant to defeat M8 placed where the M8 path cannot reach it."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+    relevance: "Sibling goal, deliberately NOT the parent and deliberately NOT restated here. GE-120 owns the general policy that a check which cannot run says so, including its mechanical enforcement leg (GE-120a-2, GE-120a-2-i). This goal owns the interrogation surface GE-120 does not reach and the three named instances GE-120 cannot accept. See the ADD-VS-CREATE note. Neither may be closed as a duplicate of the other."
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126a
+  - GE-126b
+  - GE-126c
+  - GE-126d
+  - GE-126e
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE SHAPE DECISION, MADE EXPLICITLY: POINT FIXES PLUS AN INVENTORY, NOT A NEW
+  GENERAL RULE. The authoring brief asked whether these three defects are three
+  point repairs or one positive obligation on every check — that it states what
+  it inspected, and that "could not inspect" is a distinct non-passing outcome.
+  The answer is neither of those two, and the reason is a store fact rather than
+  a preference.
+
+    THE GENERAL RULE ALREADY EXISTS AND IS THE PLAN OF RECORD. GE-120 ("Trust
+    that a green check actually checked something") is readiness: approved,
+    priority: high, roadmap_phase phase_1, decomposed to five L1s with L2 and L3
+    children, with tickets generated under
+    EPIC-TrustThatAGreenCheckActuallyChecked. It already carries every clause the
+    proposed general rule would have carried:
+      - GE-120a   "A check that cannot do its job says so instead of passing"
+      - GE-120a-1 "A check that could not perform its inspection reports a
+                  degraded outcome, not a clean pass"
+      - GE-120a-4 "An inspection that resolved none of the targets it was given
+                  does not report success"
+      - GE-120a-2 + GE-120a-2-i — the per-check blocks-or-announces disposition,
+                  and a check registered without one is named as a gap rather
+                  than silently defaulted. That pair IS the mechanical
+                  enforceability leg, which is the thing a general rule usually
+                  lacks.
+    Writing a second general rule here would not be a duplicate in the harmless
+    sense. It would be a competing statement of an approved, high-priority,
+    entirely UNBUILT one, and the first thing a builder would have to do is
+    decide which of the two to satisfy.
+
+    THE THREE INSTANCES CANNOT BE FILED UNDER GE-120, AND THAT IS MECHANICAL.
+    unit_tests/commit_guardian/test_ge_122e_1.py asserts that
+    git diff origin/main -- docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/
+    is EMPTY, so neither a new child file nor an appended covered_by entry is
+    possible without turning that guard red. Independently, every GE-120a..e is
+    already at the five-L2 cap. This is the fourth consecutive time in this
+    component that the semantically obvious parent has turned out to be frozen or
+    capped (GE-119, GE-118c, GE-125, now this). The standing advice to read the
+    guard tests over a candidate parent BEFORE choosing it held again.
+
+    SO WHAT THIS GOAL ADDS, AND WHY IT IS NOT A RESTATEMENT. GE-120's subject is
+    the verdict a check reaches DURING A COMMIT. All three defects here are about
+    what you get when you INTERROGATE the guard system yourself — hand a check a
+    file, run the copy of a check that sits where its source lives, or follow the
+    documented procedure for registering a new one. KI-CG-018 says this plainly:
+    "In pre-commit the working directory is the repository root, so the gate does
+    run there — its practical blast radius is ad-hoc verification, agent
+    self-checks, and any CI step that invokes it from elsewhere." That is a
+    different surface with a different reader, and it is the surface every
+    verification step in this repository depends on. A false answer here is worse
+    than a false answer at commit time, because it is the answer someone went
+    looking for.
+
+    AND ONE L1 CARRIES THE GENERALITY THE BRIEF ASKED ABOUT, IN THE ONLY FORM
+    THAT IS ENFORCEABLE. GE-126e converts "three of roughly seventy were looked
+    at" into a measured, repeatable census of which checks can still return a
+    clean answer from a path on which they inspected nothing. That is a general
+    obligation expressed as a fact anyone can go and check, rather than as a rule
+    nobody can mechanically verify — the trade the brief named, resolved in
+    favour of the checkable side.
+
+  L1 CUT — BY GUARANTEE, NOT BY DEFECT. Do NOT re-cut at L1 as one L1 per known
+  issue. The mapping is deliberately not one-to-one:
+    - GE-126a — honour the targets you were handed. KI-CG-018's ignored argv.
+    - GE-126b — say what you inspected before you report anything. KI-CG-018's
+      two early returns and the diagnostic stranded downstream of both.
+    - GE-126c — a copy that can never enforce anything refuses. KI-CG-019.
+    - GE-126d — registration is complete or the omission is named. KI-CG-020.
+    - GE-126e — the census, which is what makes the other four a floor rather
+      than an anecdote.
+  KI-CG-018 splits across GE-126a and GE-126b on purpose. They are two
+  independent failures with two independent fixes: a check can honour a file it
+  was handed and still exit silently when nothing is staged, and a check can
+  announce its file count perfectly and still drop the path you gave it. Merging
+  them lets an implementer satisfy the merged record by fixing whichever half is
+  easier.
+
+  KI-CG-020 IS A DIFFERENT DEFECT AND IS KEPT ANYWAY. It is registration
+  completeness, not fail-open behaviour, and its symptom is reduced protection
+  (no autofix attempt) rather than a false pass. It belongs here because its
+  shape is this goal's shape exactly: an enumeration everyone trusts that is
+  missing an item, so following the documented procedure to completion and
+  getting a green check_hook_parity is a true-looking answer to "is my new check
+  properly registered" that is false. If a reviewer disagrees, the alternative
+  home is a build-pipeline or skills-system record — but it must not be dropped,
+  and it must not be folded into GE-126c.
+
+  THE BAR FOR EVERY THEN CLAUSE BELOW THIS RECORD — load-bearing, restate it in
+  each L2. An acceptance criterion here that could be closed by an implementation
+  which does not actually run is this defect reproducing itself one level up.
+  Two specific traps, both named in the authoring brief:
+    - "The check emits a diagnostic line" is NOT an acceptance criterion. A check
+      can print a count and have counted the wrong thing. Bind the observable to
+      the inspection: same check, same files, two working directories, and the
+      outcomes must differ in a way that names WHY.
+    - A test that greps the source for a string passes on dead code. Every L2
+      here must execute the check out of process against a file that genuinely
+      violates the rule, and assert the check refuses it. The known-good control
+      is the one recorded in KI-CG-012: re-run with a deliberately invalid file
+      alongside the real ones and confirm the invalid one is named.
+
+  INHERITED AND NOT REPEALED — the deliberate fail-open convention. This
+  component fails open on an internal error (crash, parse failure, git failure)
+  with a stderr warning so that a script bug never blocks an unrelated commit. It
+  is written into the ac-store PROJECT_CONTEXT, into the ac-schema reference, and
+  is approved in its own right as GE-116a-1-iii. This goal does NOT repeal it and
+  must not be decomposed as "never fail open". The line GE-120 drew applies here
+  unchanged: failing open on ONE bad input while the check still ran is fine;
+  reporting SUCCESS for a check that never ran is not. The unit of the rule is
+  visibility, not blocking. Whether a cannot-answer condition should also BLOCK
+  is a per-check decision to be made explicitly at L2 — with one exception this
+  goal does take a position on, recorded in GE-126c.
+
+  EVIDENCE, WITH CONFIDENCE LABELS — carry them through and do not upgrade them.
+    - DIRECTLY OBSERVED AND REPRODUCED, TWICE, BY TWO AGENTS INDEPENDENTLY on
+      2026-08-25: check_ac_governance run against a worktree holding 31 staged AC
+      records produced no output at all and exit 0 from one working directory,
+      and the parsed_files line plus exit 0 from another. Same check, same file,
+      same exit code; only the working directory differed, and only the second
+      run inspected anything. Recorded in KI-CG-018 with the verbatim commands.
+    - DIRECTLY OBSERVED, ONCE: the templates/ copy of check_ac_parent_covered_by
+      printing "cannot import derive_parent_id ...; skipping check (fail-open)"
+      and exiting 0, while the deployed copy imports cleanly and runs. Recorded
+      in KI-CG-019 with the verbatim invocation.
+    - READ FROM SOURCE AND NOT DISPUTED: the seven-entry blocking_hook_ids
+      allowlist in templates/scripts/precommit-autofix.json, and
+      precommit-autofix/SKILL.md Step 4 stating the consequence for a hook absent
+      from it. Recorded in KI-CG-020.
+    - NOT MEASURED, AND THIS IS THE POINT OF GE-126e: the number of the roughly
+      seventy checks under templates/scripts/commit_guardian/ that share this
+      shape. Three are known because three were looked at while doing other work.
+      No criterion anywhere in this tree may state or imply a count until
+      GE-126e has produced one.
+
+  RELATED RECORDS THAT ARE OUT OF SCOPE AND MUST NOT BE CLOSED AS DUPLICATES.
+    - GE-120a-4 ("An inspection that resolved none of the targets it was given
+      does not report success") governs scripts/ac_store/validate_ac_schema.py,
+      an agent-side dev tool its own record confirms is SOURCE-ONLY and
+      ADR-013-exempt from the template round-trip. GE-126a governs the argv
+      contract of the deployed commit-guardian checks, which do carry that
+      obligation. Same sentence, different surface, different fix. Neither
+      closes the other.
+    - GE-120b-1-i ("A working copy with no deployed layout at all still does not
+      pass silently") requires the message to name an UNBUILT WORKSPACE. That
+      diagnosis is wrong for KI-CG-019, where the workspace is fully built and
+      the reader ran a copy that is a build source rather than a gate. GE-126c
+      exists because the correct message names the copy, not the workspace.
+    - KI-CG-001 (index-scoped AC hooks), KI-CG-012 (two test seams with two
+      names and two separators) and KI-CG-006 are the same family and are NOT in
+      scope here. GE-126e's census will very likely surface them again; it
+      should report them, not repair them.
+
+  PRECEDENT TO REUSE, NAMED SO THE BA DOES NOT REINVENT IT.
+    - ACS-100i-9 is the shape for anything enforced in two places: one shared
+      helper imported by both entry points, one format string so the two
+      messages are identical rather than merely similar, and explicitly no
+      second copy of the list in the schema. GE-126d needs exactly this.
+    - ACS-100i-10 is the shape for GE-126e: it turned "a record that declares no
+      producer" from a silence discovered one ticket at a time into a state you
+      can ask the store about, and — directly relevant here — it required the
+      answer to be reported alongside the number of records looked at, so that a
+      run which looked at nothing says so rather than reporting nothing wrong.
+    - ADR-035 (fast-lane closed producer roster) is the precedent for GE-126d's
+      allowlist: a roster made data while staying closed.
+
+  IDENTIFIER. GE-126 was verified free on both ADR-029 tests on 2026-08-26 — no
+  file and no citation under docs/, tickets/, templates/ or unit_tests/. Per this
+  component's standing rule, re-verify at MERGE time rather than trusting this
+  sentence: id allocation in this store is known-broken (KI-ACD-008) and three
+  duplicate identifiers were minted here on 2026-08-18 by checking free-ness
+  while writing. GE-124 remains retired-by-citation and must not be reissued.
+
+  delivers_to AND expects_from ARE NULL BECAUSE NOTHING IS ENRICHED YET, not
+  because these records are terminal. Contracts between records are an L2/L3
+  field the IT PO fills. The PO stage does not author them, and a null here
+  carries no claim either way — see BP-1100b-5 for why that distinction is worth
+  stating rather than leaving to inference.
+
+  Authored at the PO stage of /plan-feature; L0 and L1 only. No L2, no test_spec,
+  no it_requirements and no declares_side_effect were written here, by design.

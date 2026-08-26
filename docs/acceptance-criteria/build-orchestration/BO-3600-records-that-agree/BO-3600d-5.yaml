@@ -1,0 +1,79 @@
+id: BO-3600d-5
+title: "A reference entry states the four states a conflict can be in and what each verdict commits you to"
+component: build-orchestration
+components:
+  - documentation_system
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given someone deciding a conflict for the first time,
+  When they read the reference entry for conflict verdicts,
+  Then it states the four states a conflict can be in,
+    And for each of the three resolutions it states which record changes, what is
+      recorded about the change, and what does not change,
+    And it states that not-yet-decided is a recorded state that keeps the conflict
+      outstanding rather than a way of dismissing it.
+
+  Given the reference entry,
+  When each verdict it describes is recorded against a real conflict,
+  Then the records change as the entry says they will,
+  So the entry is verified against the behaviour rather than against an intention.
+
+  Given the reference entry,
+  When a reader looks for what happens after a conflict is resolved,
+  Then it states that a resolved conflict is not re-raised while the facts behind
+    the decision hold, and is raised again when they change,
+  So nobody records a resolution believing it is permanent.
+
+  Given the reference entry,
+  When the states it documents are compared against the states a conflict can
+    actually be recorded in,
+  Then the two sets are the same,
+  So a fifth state cannot exist in the system while being absent from the entry,
+    nor be documented while unavailable.
+depends_on:
+  - BO-3600d
+  - BO-3600d-2
+  - BO-3600d-3
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+    relevance: "Where the amended_by field and the requirement lifecycle already live; the narrowing verdict is recorded there and the reference material belongs alongside it."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The register whose entries are retired by the second verdict, and the source of the three resolutions as they were practised by hand in KI-BO-028's handover."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the reference-doc half of BO-3600d's documentation_triggers.
+
+  The entry is aimed at the person holding a conflict and deciding what to do, which
+  is a governance act: narrowing a requirement changes what the project promises,
+  and doing it without knowing that is how a silent relaxation happens. The "what
+  does not change" clause is as important as the rest — BO-3600b-3 keeps the two
+  acts separate, and a reader who does not know that will expect a retirement to
+  also settle the requirement.
+
+  The fourth scenario is the anti-drift clause in both directions, and it is the one
+  that keeps this entry from becoming another record that can quietly disagree with
+  the system it describes — which would be an unusually poor outcome for this
+  particular tree.
+
+  assigned_agent deliberately unset — the reference surface belongs to the IT
+  Product Owner's assignment pass.

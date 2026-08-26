@@ -105,7 +105,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/03_TICKET-20260826-ACD-2100a-2-i.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -132,3 +133,4 @@ notes: |
   way it is satisfiable by construction rather than by cleanup-on-error, and a
   cleanup-on-error implementation is itself a new failure path that can leave residue
   when it crashes.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

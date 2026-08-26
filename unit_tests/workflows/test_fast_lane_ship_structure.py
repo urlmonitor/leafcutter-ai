@@ -310,24 +310,38 @@ class TestLifecycleWiringInWorkflow(unittest.TestCase):
             "stuck in in_progress. No 'release' reference was found in the file.",
         )
 
-        # Verify `release` appears near a failure return path: the release call
-        # should be close to at least one early-return block in the JS.
-        return_positions = [
-            i for i in range(len(content)) if content[i : i + 8] == "return {"
+        # Every halting path that can occur after the claim must have its own
+        # named release dispatch. Asserting the labels is a weak structural
+        # smoke check BY DESIGN — the real proof that these fire, and that they
+        # dispatch an agent permitted to run the command, is
+        # unit_tests/workflows/test_bo2400f_10i_release_wiring.py, which
+        # EXECUTES the workflow under the E2 harness and inspects the recorded
+        # dispatches for each of these nine scenarios in turn.
+        #
+        # This replaced a source-text PROXIMITY heuristic: it took the first
+        # literal "release" anywhere in the file and required it within 2000
+        # characters of some "return {". That assertion corresponded to nothing
+        # real — a bare mention in a comment satisfied it — and it broke the
+        # moment an explanatory comment mentioned the word earlier in the file,
+        # on a commit that made the release path MORE correct. CLAUDE.md's
+        # "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" names this
+        # exact shape.
+        expected_release_labels = [
+            "release-on-context-bundle-fail",
+            "release-on-test-writer-fail",
+            "release-on-red-baseline-fail",
+            "release-on-coder-fail",
+            "release-on-coverage-fail",
+            "release-on-review-no-verdict-fail",
+            "release-on-review-high-findings-fail",
+            "release-on-changelog-fail",
+            "release-on-commit-fail",
         ]
-        release_pos = content.find("release")
-
-        has_release_near_return = any(
-            abs(release_pos - rp) <= 2000 for rp in return_positions
-        )
-
-        self.assertTrue(
-            has_release_near_return,
-            "The `release` call must appear near a failure/abort return block "
-            "(within 2000 chars of a 'return {' statement — BO-2400f-10). "
-            "Workflow abort paths must release claimed ACs before returning. "
-            f"release_pos={release_pos}, "
-            f"nearest return_pos={min(return_positions, key=lambda rp: abs(release_pos - rp)) if return_positions else 'none'}",
+        missing = [label for label in expected_release_labels if label not in content]
+        self.assertFalse(
+            missing,
+            "Every post-claim halting path needs its own named release dispatch "
+            f"(BO-2400f-10). Missing from fast-lane-ship.js: {missing}",
         )
 
     def test_ac9_mark_done_subcommand_invoked_at_commit_phase(self) -> None:

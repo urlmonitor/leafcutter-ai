@@ -1,0 +1,135 @@
+id: BO-3600
+title: "Two records of the same system can never quietly disagree"
+component: build-orchestration
+components:
+  - build_orchestration
+  - ac_store
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  When one record says finished and another says broken, you hear about it.
+
+  This project keeps more than one written account of the same system: what has
+  been delivered, and what is known to be wrong with it. Each account is written
+  by hand, at a different moment, by someone reading a different part of the
+  system. Today neither can correct the other, so the two drift apart and both go
+  on being believed — work reads as finished while a fault filed against that very
+  work sits open beside it, and faults stay open long after the thing they
+  describe was fixed.
+
+  After this goal, a disagreement between two accounts of the same thing is
+  surfaced by the system rather than discovered by whoever happens to read both.
+  The remedy is not that people record things more carefully; it is that a
+  contradiction between two records cannot persist unnoticed, so nobody has to
+  hold both accounts in their head to spot that one of them is wrong.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — the finding that produced this goal: eight requirement records read done while faults filed in this same register falsified them, and nothing detected the contradiction."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the requirement record and its work_status — one half of the pair this goal reconciles."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3600a
+  - BO-3600b
+  - BO-3600c
+  - BO-3600d
+  - BO-3600e
+implemented_by: []
+notes: |
+  Authored 2026-08-26 (product-owner) from the standing gap behind KI-BO-028,
+  after per-record verification of the eight requirement records that entry names.
+
+  THE FINDING THAT PRODUCED THIS GOAL, and the reason it is a goal rather than a
+  repair ticket. On 2026-08-25 a triage found eight requirement records reading
+  `done` while faults recorded in the same register falsified them. All eight were
+  flipped back to `todo` by the very commit that filed the entry (704cf588,
+  PR #553), so the individual instances are already reconciled. What is NOT fixed
+  is the reason the contradiction was able to stand at all: nothing reads the two
+  records against each other, so the only thing that ever caught it was a person
+  reading sixty-five register entries by hand. Re-verified 2026-08-26 at a0126851:
+  the contradiction shape is live again on other records (BO-2400d-3 and
+  BO-2400d-1-i both read `done` while KI-BO-012, status open, names them).
+
+  BINDING CONSTRAINT ON DECOMPOSITION — the remedy must be checkable, never
+  advisory. Any criterion whose enforcement reduces to "the author should also
+  update the other record" must be REJECTED at L2. That discipline has already
+  been tried and failed: KI-BO-028's own body carries a list of five corrections
+  to sibling entries found in passing (a status line reading "open — no AC" while
+  its body discusses four ACs; an evidence line stale since 2026-08-19; line
+  numbers shifted by PR #541), none of which any process had noticed. A register
+  entry naming a requirement id, while that requirement reads done, is a
+  MECHANICALLY DETECTABLE contradiction — two structured references to the same
+  thing carrying incompatible states. That detectability is what makes this a
+  goal and not a plea for care.
+
+  IT RUNS IN BOTH DIRECTIONS, and the second direction is the one people forget.
+  BO-2400e-4's own notes record it plainly: the same defect was tracked as a fault
+  (KI-BO-003) and as a requirement, it was fixed under the fault id on 2026-08-18,
+  and "two registries tracked one defect and neither closed the other" — so the
+  requirement sat unfinished for a week while the behaviour it demanded was
+  already shipped, and the build lane kept selecting it as ready work. A goal that
+  only demoted false `done` claims would leave that half untouched and would make
+  the store more pessimistic rather than more true.
+
+  BOUNDARIES — four adjacent trees this must NOT be folded into or duplicate.
+  All four were read before authoring; each is a different question:
+  - TQ-400 (durable done-proof) is the CLOSEST and is a genuine partial. It
+    re-checks finished work over time and gives it a supported path back out of
+    done. But its evidence is the test verdict — does a passing test carrying the
+    coverage tag exist. That verdict cannot see any of the six defects verified
+    here: BO-2300a-2's covering test runs the real workflow and passes while never
+    asserting the clause that is false, and BO-2200c-5's producer and consumer
+    disagree about a line format that no test compares. A written fault record is
+    an INDEPENDENT evidence source that no verdict rule currently reads.
+    DEPEND ON TQ-400b for the demotion transition; do not build a second way of
+    taking a done badge away.
+  - BO-2500 (mechanical done-proof) is proof AT MARK TIME. It cannot help once a
+    record is already marked.
+  - BP-1100 (phantom-done prevention) is the same mark-time guarantee at the
+    ticket/epic altitude. BP-1100b-5 in particular would catch the specific
+    presence-only-test mechanism behind three of the six — build it, but note it
+    is a test-quality guard, not a cross-record reconciler.
+  - BO-2800 (gate value measurement) asks whether an existing check earns its
+    keep. This goal creates a check that does not exist yet.
+
+  PRECEDENT FOR THE SHAPE, in this same component: BO-3100a reconciles the agent
+  registry against the agent templates, and its notes state the principle exactly
+  — "a check that reads only one of them cannot see the drift, because the drift
+  IS the disagreement between them". That is the identical mechanic on a different
+  pair of records. Cite it; do not re-derive it.
+
+  NAMESPACE RATIONALE, recorded honestly because it is arguable. Filed under
+  build-orchestration on the component-choice rule in this component's
+  PROJECT_CONTEXT (a gate that FIRES during a drive or at commit time belongs
+  here) and because the register that produced the finding is this component's.
+  `ac-store` (ACS) would also have been defensible — the subject is the store's own
+  credibility — and is the re-home candidate if this tree grows a
+  schema-and-governance-heavy child set. TQ-400 was considered as a home for these
+  as a sixth L1 and rejected: its five children are all facets of one machine (the
+  store-wide test sweep), its own amended_by already calls it "the most overcrowded
+  of the five" and "the first candidate for a PO-owned split", and a reconciler
+  grafted under it would make "the sweep" ambiguous.
+
+  ID ALLOCATION. BO-3600 was allocated explicitly rather than taken as the next
+  free hundred, because three agents were authoring concurrently and the
+  next-free-number convention has already shipped a duplicate id to main
+  (KI-BO-024, whose most recent recurrence was KI-BO-028's own renumbering).

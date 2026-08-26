@@ -103,7 +103,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/16_TICKET-20260826-ACD-2100c-3-i.md
 change_target: pipeline
 risk_surface: safety
 notes: |
@@ -130,3 +131,4 @@ notes: |
   dispatching on the action satisfies "the answer is not applied" in the reported
   result while having already taken a side effect. The fourth test is built to catch
   exactly that, which is why it supplies a destructive choice from another decision.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

@@ -132,12 +132,22 @@ const PR_SCHEMA = {
   },
 };
 
+// BO-2400c-1-iii (2026-08-25 amendment, KI-BO-019): the reply shape now
+// carries `bytes` and `location` alongside `bundle`/`obtained`, because a
+// producer that cannot inline the full text still needs a way to report what
+// it DID do (assemble successfully, N bytes, written to <path>) without that
+// report being mistaken for the content. `bundle` is the ONLY field the lane
+// accepts as content; `bytes`/`location` are read only to build an honest
+// halt message when `bundle` turns out to be a reference, never merged into
+// what is threaded to the test-writer/coder dispatches.
 const CONTEXT_BUNDLE_SCHEMA = {
   type: "object",
   required: ["obtained"],
   properties: {
     bundle: { type: "string" },
     obtained: { type: "boolean" },
+    bytes: { type: ["integer", "null"] },
+    location: { type: ["string", "null"] },
     message: { type: "string" },
   },
 };
@@ -147,6 +157,189 @@ const CONTEXT_BUNDLE_SCHEMA = {
 // Kept as a single named constant here so the usability check below and any
 // future consumer cannot drift from the CLI's own default.
 const CACHE_BREAKPOINT_MARKER = "<!-- CACHE_BREAKPOINT -->";
+
+// ---------------------------------------------------------------------------
+// BO-2400c-1-iii (2026-08-25 amendment) — the four-state classification of
+// the context-bundle-assembling dispatch's reply. Location 2 of 3 (the other
+// two are the dispatch prompt above the "Context Bundle" phase and the halt
+// payload that consumes this classification's `.message`).
+//
+// KI-BO-019: run wf_bd4984e8-438 assembled a real, well-formed 141,933-byte
+// bundle and returned `obtained: true` with a truncated preview plus a path
+// because the full text was too large to inline. The pre-amendment gate
+// folded "obtained falsy", "bundle empty", and "marker absent" into a single
+// boolean, so that reply took the same branch as a genuinely-absent bundle
+// and halted saying "the context bundle was not obtained" — wrong, and
+// actively misleading given the assembly had, in fact, succeeded.
+//
+// Reference-rejection MUST be evaluated BEFORE the marker/incompleteness
+// check (it-po enrichment note): a locator that happens to contain the
+// marker substring, or that merely MENTIONS the marker while describing
+// itself, must still be refused as a reference — never reclassified as
+// incomplete content because a naive marker-first check found the substring.
+// ---------------------------------------------------------------------------
+
+const CONTEXT_BUNDLE_STATE_NOT_OBTAINED = "not_obtained";
+const CONTEXT_BUNDLE_STATE_REFERENCE = "reference";
+const CONTEXT_BUNDLE_STATE_INCOMPLETE = "incomplete";
+const CONTEXT_BUNDLE_STATE_USABLE = "usable";
+
+/**
+ * isContextBundleLocatorString — deterministic, scheme-agnostic locator test
+ * on the returned string itself: a `file:` URI scheme, a leading `/`
+ * (absolute POSIX path), or a drive-letter root (`C:\`, `C:/`). Never a
+ * plausibility heuristic and never a length threshold — a 47-character path
+ * and a 47-character bundle fragment must be separable by this rule alone
+ * (BO-2400c-1-iii's LANE-RECEIVES constraint). The observed production
+ * failure value, `file:/tmp/bo2400f13-bundle/bundle_output.txt`, matches the
+ * first branch.
+ *
+ * Pure function: no agent(), no I/O — safe to extract and execute directly.
+ *
+ * @param {*} text - The candidate string (the reply's `bundle` field).
+ * @returns {boolean}
+ */
+function isContextBundleLocatorString(text) {
+  if (typeof text !== "string") return false;
+  var trimmed = text.trim();
+  return (
+    /^file:/i.test(trimmed) ||
+    /^\//.test(trimmed) ||
+    /^[a-zA-Z]:[\\/]/.test(trimmed)
+  );
+}
+
+/**
+ * findTruncatedPreviewLocation — third reference signal, for a producer that
+ * did NOT cooperate with the schema.
+ *
+ * The two signals above both depend on the producer: either it returns a bare
+ * locator as `bundle`, or it fills in `location`. The reply actually observed
+ * on 2026-08-26 did neither. It returned `{obtained, bundle, message}` where
+ * `bundle` OPENED WITH REAL BUNDLE CONTENT and then explained, in prose, that
+ * the full 141,933 bytes were on disk at a path. `location` did not exist yet,
+ * so nothing populated it. Both signals missed and a reference was reported as
+ * incomplete content — the wrong one of the three states BO-2400c-1-iii
+ * requires the halt to distinguish.
+ *
+ * A schema is a request, not a guarantee. An agent that truncates an oversized
+ * payload and says where it put it is behaving sensibly, and detection cannot
+ * rest solely on it having noticed a field.
+ *
+ * So: look for an absolute path in text that ALSO carries elision or
+ * pointer-to-elsewhere language. Both halves are required — the assembled
+ * bundle is full of legitimate file paths, so a path alone means nothing here.
+ *
+ * WHY A HEURISTIC IS SAFE AT THIS POINT, which is the load-bearing part: this
+ * runs only AFTER the usable check has already failed. A reply carrying the
+ * marker is classified USABLE and never reaches here. So every reply this sees
+ * is halting the run no matter what, and the only thing at stake is which
+ * failure name it is given. A false positive relabels one doomed reply; it
+ * cannot dispatch an unbundled prompt or turn a failure into a pass.
+ *
+ * @param {string} text - The returned `bundle` string.
+ * @returns {string|null} The referenced location, or null when not a preview.
+ */
+function findTruncatedPreviewLocation(text) {
+  if (typeof text !== "string" || text.length === 0) return null;
+  var saysElsewhere =
+    /\[\s*\.\.\./.test(text) ||
+    /\btruncat/i.test(text) ||
+    /\bwritten to\b/i.test(text) ||
+    /\bretrieve it from\b/i.test(text) ||
+    /\bfull text\b/i.test(text) ||
+    /\bon disk at\b/i.test(text);
+  if (!saysElsewhere) return null;
+  var pathMatch = text.match(/(?:file:\/\/)?(\/[^\s"'`,;)\]]+)/);
+  return pathMatch ? pathMatch[1] : null;
+}
+
+/**
+ * classifyContextBundle — the SINGLE construction site for both the
+ * four-state classification and each failure state's self-naming message
+ * (BO-2400c-1-iii). Fails closed exactly like the review verdict and
+ * red-baseline gate_passed checks elsewhere in this file: `obtained` is read
+ * as a plain JS falsy check, so a missing key, a null reply, or an explicit
+ * `obtained: false` all take the NOT_OBTAINED branch identically.
+ *
+ * Reference detection does not rely on the `bundle` string alone: a producer
+ * that cannot inline ~20 KB of text may instead return prose ABOUT what it
+ * did (a truncated preview naming a path) with the real size/location
+ * reported separately in `bytes`/`location` — the schema's whole reason for
+ * carrying those fields apart from `bundle`. A truthy `location` is
+ * therefore an independent reference signal alongside a locator-shaped
+ * `bundle` string; either one is sufficient, and this check runs BEFORE the
+ * marker/incompleteness check so a locator that also contains (or merely
+ * mentions) the marker substring is still refused as a reference rather than
+ * being reclassified as incomplete content.
+ *
+ * Pure function: no agent(), no I/O — safe to extract and execute directly.
+ *
+ * @param {*} bundleResult - The raw reply from the context-bundle dispatch.
+ * @param {string} marker - The literal breakpoint marker to check for.
+ * @returns {{state: string, message: string}}
+ */
+function classifyContextBundle(bundleResult, marker) {
+  var obtained = !!(bundleResult && bundleResult.obtained);
+  if (!obtained) {
+    return {
+      state: CONTEXT_BUNDLE_STATE_NOT_OBTAINED,
+      message:
+        "The context bundle was never obtained: the prompt-caching layer's " +
+        "assembling dispatch failed, declined, or nothing usable came back " +
+        "— nothing came back that the lane can use. The run halts rather " +
+        "than falling back to prompts composed some other way " +
+        `(BO-2400c-1-iii). Detail: ${JSON.stringify(bundleResult)}`,
+    };
+  }
+
+  var bundleText = typeof bundleResult.bundle === "string" ? bundleResult.bundle : "";
+  var reportedLocation =
+    typeof bundleResult.location === "string" && bundleResult.location
+      ? bundleResult.location
+      : null;
+  var reportedBytes =
+    typeof bundleResult.bytes === "number" ? bundleResult.bytes : null;
+
+  var previewLocation =
+    bundleText.includes(marker) ? null : findTruncatedPreviewLocation(bundleText);
+
+  if (isContextBundleLocatorString(bundleText) || reportedLocation || previewLocation) {
+    var location = reportedLocation || previewLocation || bundleText.trim();
+    var bytesPhrase =
+      reportedBytes !== null ? `${reportedBytes} bytes` : "an unreported size";
+    return {
+      state: CONTEXT_BUNDLE_STATE_REFERENCE,
+      message:
+        "The context bundle assembly SUCCEEDED, but what came back to the " +
+        `lane is a reference, not the content: it reports ${bytesPhrase} at ` +
+        `location "${location}". The lane cannot follow a reference because ` +
+        "it cannot read a filesystem (BO-2400c-1-iii) — the assembling step " +
+        "must return the bundle text itself, not a pointer to it.",
+    };
+  }
+
+  // Real content, not a locator — but still incomplete when the breakpoint
+  // marker is absent, or when a layer was empty. assemble_context_bundle()
+  // joins every layer with exactly one blank line ("\n\n"); an empty layer
+  // collapses two such joins back-to-back, producing a run of 4+ consecutive
+  // newline characters that never occurs when every layer is non-empty. This
+  // is a property of the real, on-disk assembly function's own layering
+  // rule, not a hand-typed re-implementation of it.
+  var hasEmptyLayerGap = /\n{4,}/.test(bundleText);
+  if (bundleText.length === 0 || !bundleText.includes(marker) || hasEmptyLayerGap) {
+    return {
+      state: CONTEXT_BUNDLE_STATE_INCOMPLETE,
+      message:
+        "The context bundle was obtained but is incomplete: the cache " +
+        "breakpoint marker is absent, or one of its layers is empty. The " +
+        "run halts rather than falling back to prompts composed some other " +
+        `way (BO-2400c-1-iii). Detail: ${JSON.stringify(bundleResult)}`,
+    };
+  }
+
+  return { state: CONTEXT_BUNDLE_STATE_USABLE, message: "" };
+}
 
 const REVIEW_SCHEMA = {
   type: "object",
@@ -167,6 +360,21 @@ const CHANGELOG_SCHEMA = {
     status: { type: "string", enum: ["ok", "error"] },
     entry_added: { type: "boolean" },
     entry_path: { type: ["string", "null"] },
+    message: { type: "string" },
+  },
+};
+
+// BO-2400f-10-ii: the release dispatches MUST carry a schema. Without one the
+// engine returns the agent's final text as a STRING, so `reply.released` is
+// undefined and buildReleaseOutcomeFields can never reach its success branch —
+// every release, including a wholly successful one, reports as failed. That is
+// how this shipped: the covering tests stubbed the reply as an object, which
+// the engine only ever produces when a schema is declared.
+const RELEASE_SCHEMA = {
+  type: "object",
+  required: ["released"],
+  properties: {
+    released: { type: "array", items: { type: "string" } },
     message: { type: "string" },
   },
 };
@@ -226,6 +434,106 @@ function buildFastLaneDeliveryOutcome(prUrl, unsatisfiedRequiredChecks) {
       "Pull request opened but blocked: the following required check(s) are not satisfied: " +
       unsatisfied.join(", ") +
       ". The work is committed and the pull request exists — satisfy the named check(s) before merge; do not rebuild.",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// buildReleaseOutcomeFields — the SINGLE construction site for the
+// release-outcome fields merged into every one of the nine halting payloads
+// (BO-2400f-10-ii). Fails CLOSED: only a reply shaped like
+// { "released": [...] } — the release CLI's own JSON stdout
+// (scripts/build_orchestration/fast_lane.py's `release` subcommand) — counts
+// as a successful release. A refusal (e.g. the observed
+// {"status": "refused", "reason": "..."} shape from run wf_bd4984e8-438,
+// KI-BO-020), a null/empty reply, or a reply missing the "released" key are
+// all reported as NOT released, with every id this run claimed carried in
+// unreleased_ac_ids — never inferred from the mere fact that the dispatch ran.
+//
+// Pure function: no agent(), no I/O — safe to extract and execute directly.
+// ---------------------------------------------------------------------------
+
+// Shape (a) per BO-2400f-10-i's it_requirements: dispatch an executor whose
+// declared config/agent_registry.json entry does not explicitly forbid
+// running shell commands (permits_shell !== false) — status-checker's entry
+// declares permits_shell: false and is a structural charter mismatch
+// (KI-BO-020). python-coder's entry declares no such restriction and is
+// already dispatched elsewhere in this exact workflow (context-bundle,
+// coder, changelog) to run Bash commands that mutate on-disk state, so it is
+// reused here rather than inventing a new agent template — authoring one is
+// llm-expert's surface, out of scope for this single-coder-phase build
+// (documented at sign-off).
+const RELEASE_EXECUTOR_AGENT_TYPE = "python-coder";
+
+/**
+ * buildReleaseOutcomeFields
+ * @param {*} releaseReply - The raw reply from the release-phase dispatch.
+ * @param {string[]} claimedIds - The ids THIS run claimed (claimResult.claimed).
+ * @param {string} executorAgentType - The agentType actually dispatched.
+ * @returns {{fields: object, note: string}}
+ */
+function coerceReleaseReply(releaseReply) {
+  // The release dispatches declare RELEASE_SCHEMA, so the engine normally hands
+  // back a validated object. Accept a JSON string too: a schema-less dispatch
+  // (or any future caller that forgets the schema) returns the agent's final
+  // text verbatim, and reading a real, successful release as a failure is the
+  // worse error — it tells the operator to go unstick criteria that are already
+  // todo, and it hides the fact that the release worked.
+  if (typeof releaseReply !== "string") return releaseReply;
+  var text = releaseReply.trim();
+  var start = text.indexOf("{");
+  var end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end < start) return releaseReply;
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch (err) {
+    return releaseReply;
+  }
+}
+
+function buildReleaseOutcomeFields(releaseReply, claimedIds, executorAgentType) {
+  var claimed = claimedIds || [];
+  var reply = coerceReleaseReply(releaseReply);
+  var releasedIds =
+    reply && Array.isArray(reply.released)
+      ? reply.released
+      : null;
+
+  if (releasedIds !== null) {
+    var unreleasedOnSuccess = claimed.filter(
+      (id) => releasedIds.indexOf(id) === -1
+    );
+    return {
+      fields: {
+        release_attempted: true,
+        released_ac_ids: releasedIds,
+        unreleased_ac_ids: unreleasedOnSuccess,
+        release_executor: executorAgentType,
+        release_error: null,
+      },
+      note:
+        unreleasedOnSuccess.length === 0
+          ? `Release: succeeded — ${releasedIds.join(", ") || "(none claimed)"} returned to todo.`
+          : `Release: partially succeeded — ${releasedIds.join(", ")} returned to todo; ` +
+            `${unreleasedOnSuccess.join(", ")} left at in_progress; a later run aimed at ` +
+            `those ids will be refused while they remain in_progress.`,
+    };
+  }
+
+  var errorDetail = releaseReply
+    ? JSON.stringify(releaseReply)
+    : "no reply from the release dispatch";
+  return {
+    fields: {
+      release_attempted: false,
+      released_ac_ids: [],
+      unreleased_ac_ids: claimed,
+      release_executor: executorAgentType,
+      release_error: errorDetail,
+    },
+    note:
+      `Release: refused or unreadable (${errorDetail}) — ` +
+      `${claimed.join(", ") || "(none)"} left at in_progress; a later run aimed at ` +
+      `those ids will be refused while they remain in_progress.`,
   };
 }
 
@@ -556,10 +864,19 @@ const bundleResult = await agent(
   `Step 2 — Run this single Bash command:\n` +
   `   python3 ${bundleScript} assemble-bundle --architecture <path> ` +
   `--conventions <path> --high-level <path> --acs <path> --prior-tests <path>\n\n` +
-  `Return JSON: { "bundle": "<the command's stdout, verbatim>", "obtained": true, ` +
+  `SIZE EXPECTATION: the assembled bundle is roughly twenty kilobytes (~20 KB) ` +
+  `of text — small enough to return in full. The ask is to return that text ` +
+  `ITSELF, as text, in the "bundle" field below — NOT a path to it, NOT a ` +
+  `preview of it, and NOT a summary of it. A reply that names where the text ` +
+  `can be found instead of containing the text is refused as a reference and ` +
+  `is never treated as usable content, no matter how accurately it describes ` +
+  `what was assembled.\n\n` +
+  `Return JSON: { "bundle": "<the command's stdout, verbatim, as text>", ` +
+  `"obtained": true, "bytes": <stdout length in bytes>, "location": null, ` +
   `"message": "bundle assembled" } on a zero exit.\n` +
   `If the command exits non-zero, or any layer cannot be obtained, return ` +
-  `{ "bundle": "", "obtained": false, "message": "<what failed>" } — never fabricate a bundle.`,
+  `{ "bundle": "", "obtained": false, "bytes": null, "location": null, ` +
+  `"message": "<what failed>" } — never fabricate a bundle.`,
   {
     agentType: "python-coder",
     schema: CONTEXT_BUNDLE_SCHEMA,
@@ -568,45 +885,40 @@ const bundleResult = await agent(
   }
 );
 
-// Fail closed exactly like the review verdict and red-baseline gate_passed
-// checks elsewhere in this file: `obtained` is read as a plain JS falsy
-// check, so a missing key, a null response, or an explicit obtained: false
-// all behave identically — never a default-true, never an `|| ''` that turns
-// an unreadable bundle into an empty-but-truthy string. The bundle text
-// itself must also be non-empty and carry the breakpoint marker; an assembly
-// that silently dropped a stable layer would still look non-empty without
-// this check (BO-2400c-1-ii/-iii).
-const contextBundleObtained = !!(bundleResult && bundleResult.obtained);
+// Four-state classification (BO-2400c-1-iii, 2026-08-25 amendment) — see
+// classifyContextBundle()'s own doc comment for the fail-closed reasoning and
+// why reference-rejection runs before the marker/incompleteness check.
+const contextBundleClassification = classifyContextBundle(
+  bundleResult, CACHE_BREAKPOINT_MARKER
+);
+const contextBundleUsable =
+  contextBundleClassification.state === CONTEXT_BUNDLE_STATE_USABLE;
 const contextBundle =
-  contextBundleObtained && typeof bundleResult.bundle === "string"
+  contextBundleUsable && typeof bundleResult.bundle === "string"
     ? bundleResult.bundle
     : "";
-const contextBundleUsable =
-  contextBundleObtained &&
-  contextBundle.length > 0 &&
-  contextBundle.includes(CACHE_BREAKPOINT_MARKER);
 
 if (!contextBundleUsable) {
-  await agent(
+  const releaseReplyContextBundle = await agent(
     `You are the release-phase agent. The context-bundle phase failed after claiming.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-context-bundle-fail", phase: "Resolve" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-context-bundle-fail", phase: "Resolve" }
+  );
+  const releaseOutcomeContextBundle = buildReleaseOutcomeFields(
+    releaseReplyContextBundle, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
-    message:
-      "The context bundle was not obtained — the prompt-caching layer's " +
-      "assembling dispatch failed, returned nothing usable, or the bundle " +
-      "was empty or missing the cache breakpoint marker. The run halts " +
-      "rather than falling back to prompts composed some other way " +
-      `(BO-2400c-1-iii). Detail: ${JSON.stringify(bundleResult)}`,
+    message: `${contextBundleClassification.message} ${releaseOutcomeContextBundle.note}`,
     failing_phase: "context-bundle",
+    context_bundle_state: contextBundleClassification.state,
     worktree_path: worktreePath,
     branch,
     built_ac_ids: acIds,
     classification: "halt",
+    ...releaseOutcomeContextBundle.fields,
   };
 }
 
@@ -655,21 +967,26 @@ const testWriterResult = await agent(
 );
 
 if (!testWriterResult || testWriterResult.status !== "ok") {
-  await agent(
+  const releaseReplyTestWriter = await agent(
     `You are the release-phase agent. The test-writer phase failed after claiming.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-test-writer-fail", phase: "Test Writer" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-test-writer-fail", phase: "Test Writer" }
+  );
+  const releaseOutcomeTestWriter = buildReleaseOutcomeFields(
+    releaseReplyTestWriter, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
     message:
       "test-writer phase did not return ok. " +
-      `Detail: ${JSON.stringify(testWriterResult)}`,
+      `Detail: ${JSON.stringify(testWriterResult)} ` +
+      releaseOutcomeTestWriter.note,
     failing_phase: "test-writer",
     worktree_path: worktreePath,
     classification: "halt",
+    ...releaseOutcomeTestWriter.fields,
   };
 }
 
@@ -677,12 +994,15 @@ if (!testWriterResult || testWriterResult.status !== "ok") {
 // skew between this workflow and an older/newer fast_lane.py) fails closed
 // exactly like an explicit gate_passed: false — never treated as passing.
 if (!testWriterResult.gate_passed) {
-  await agent(
+  const releaseReplyRedBaseline = await agent(
     `You are the release-phase agent. The red-baseline gate failed after claiming.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-red-baseline-fail", phase: "Test Writer" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-red-baseline-fail", phase: "Test Writer" }
+  );
+  const releaseOutcomeRedBaseline = buildReleaseOutcomeFields(
+    releaseReplyRedBaseline, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
@@ -690,11 +1010,13 @@ if (!testWriterResult.gate_passed) {
       "verify_red_baseline gate failed: test-writer reported gate_passed=false. " +
       `Reason: ${testWriterResult.reason || "unknown"}. ` +
       `Green-at-baseline: ${JSON.stringify(testWriterResult.green_at_baseline || [])}. ` +
-      "At least one newly-added scoped test must be red before the coder is dispatched.",
+      "At least one newly-added scoped test must be red before the coder is dispatched. " +
+      releaseOutcomeRedBaseline.note,
     failing_phase: "test-writer",
     gate: "verify_red_baseline",
     worktree_path: worktreePath,
     classification: "halt",
+    ...releaseOutcomeRedBaseline.fields,
   };
 }
 
@@ -729,32 +1051,40 @@ const coderResult = await agent(
 );
 
 if (!coderResult || coderResult.status !== "ok") {
-  await agent(
+  const releaseReplyCoder = await agent(
     `You are the release-phase agent. The coder phase failed after claiming.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-coder-fail", phase: "Coder" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-coder-fail", phase: "Coder" }
+  );
+  const releaseOutcomeCoder = buildReleaseOutcomeFields(
+    releaseReplyCoder, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
     message:
       "python-coder phase did not return ok. " +
-      `Detail: ${JSON.stringify(coderResult)}`,
+      `Detail: ${JSON.stringify(coderResult)} ` +
+      releaseOutcomeCoder.note,
     failing_phase: "python-coder",
     worktree_path: worktreePath,
     classification: "halt",
+    ...releaseOutcomeCoder.fields,
   };
 }
 
 // Gate is the arbiter: no commit, no PR unless green AND coverage hold (BO-2400f-4).
 if (!coderResult.green || !coderResult.coverage_ok) {
-  await agent(
+  const releaseReplyCoverage = await agent(
     `You are the release-phase agent. The green+coverage gate failed after claiming.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-coverage-fail", phase: "Coder" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-coverage-fail", phase: "Coder" }
+  );
+  const releaseOutcomeCoverage = buildReleaseOutcomeFields(
+    releaseReplyCoverage, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
@@ -762,12 +1092,14 @@ if (!coderResult.green || !coderResult.coverage_ok) {
       "verify_green_and_coverage gate failed: " +
       `green=${coderResult.green}, coverage_ok=${coderResult.coverage_ok}. ` +
       `Uncovered ACs: ${JSON.stringify(coderResult.uncovered_ac_ids || [])}. ` +
-      "No PR is opened — fix failing tests and/or add AC coverage.",
+      "No PR is opened — fix failing tests and/or add AC coverage. " +
+      releaseOutcomeCoverage.note,
     failing_phase: "python-coder",
     gate: "verify_green_and_coverage",
     uncovered_ac_ids: coderResult.uncovered_ac_ids || [],
     worktree_path: worktreePath,
     classification: "halt",
+    ...releaseOutcomeCoverage.fields,
   };
 }
 
@@ -832,46 +1164,57 @@ const reviewHighFindings =
     : [];
 
 if (!reviewVerdictUsable) {
-  await agent(
+  const releaseReplyReviewNoVerdict = await agent(
     `You are the release-phase agent. No usable review verdict was obtained before commit.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-review-fail", phase: "Review" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-review-no-verdict-fail", phase: "Review" }
+  );
+  const releaseOutcomeReviewNoVerdict = buildReleaseOutcomeFields(
+    releaseReplyReviewNoVerdict, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
     message:
       "No review verdict was obtained from pr-reviewer before commit — an unread review " +
       "is never treated as a clean pass. The run halts rather than committing on an " +
-      `unusable verdict. Detail: ${JSON.stringify(reviewResult)}`,
+      `unusable verdict. Detail: ${JSON.stringify(reviewResult)} ` +
+      releaseOutcomeReviewNoVerdict.note,
     failing_phase: "review",
     worktree_path: worktreePath,
     branch,
     built_ac_ids: acIds,
     classification: "halt",
+    ...releaseOutcomeReviewNoVerdict.fields,
   };
 }
 
 if (reviewHighFindings.length > 0) {
-  await agent(
+  const releaseReplyReviewHighFindings = await agent(
     `You are the release-phase agent. A high-confidence review finding blocked the run before commit.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-review-fail", phase: "Review" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-review-high-findings-fail", phase: "Review" }
+  );
+  const releaseOutcomeReviewHighFindings = buildReleaseOutcomeFields(
+    releaseReplyReviewHighFindings, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
     message:
       "Review blocked the run before commit — high-confidence finding(s): " +
-      reviewHighFindings.join(" | "),
+      reviewHighFindings.join(" | ") +
+      " " +
+      releaseOutcomeReviewHighFindings.note,
     high_findings: reviewHighFindings,
     failing_phase: "review",
     worktree_path: worktreePath,
     branch,
     built_ac_ids: acIds,
     classification: "halt",
+    ...releaseOutcomeReviewHighFindings.fields,
   };
 }
 
@@ -952,12 +1295,15 @@ if (changelogRequired) {
   );
 
   if (!changelogEntryOk) {
-    await agent(
+    const releaseReplyChangelog = await agent(
       `You are the release-phase agent. The changelog phase failed after claiming.\n\n` +
       `Release all claimed ACs back to todo by running this single Bash command:\n` +
       `   ${releaseInvocation}\n\n` +
       `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-      { agentType: "status-checker", label: "release-on-changelog-fail", phase: "Changelog" }
+      { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-changelog-fail", phase: "Changelog" }
+    );
+    const releaseOutcomeChangelog = buildReleaseOutcomeFields(
+      releaseReplyChangelog, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
     );
     const changelogHaltReason =
       changelogResult && changelogResult.status === "ok"
@@ -969,13 +1315,15 @@ if (changelogRequired) {
         `Changelog phase did not produce a verified entry (reason: ${changelogHaltReason}). ` +
         "No pull request is opened — the built work is committed nowhere and the claim is " +
         `released; built ACs: ${batchIds} on branch ${branch}. ` +
-        `Detail: ${JSON.stringify(changelogResult)}`,
+        `Detail: ${JSON.stringify(changelogResult)} ` +
+        releaseOutcomeChangelog.note,
       failing_phase: "changelog",
       reason: changelogHaltReason,
       built_ac_ids: acIds,
       branch,
       worktree_path: worktreePath,
       classification: "halt",
+      ...releaseOutcomeChangelog.fields,
     };
   }
 }
@@ -1023,22 +1371,27 @@ if (!commitResult || commitResult.status !== "ok") {
   // done on disk (e.g. a stale-todo mark_done, or a pre-commit hook rejecting
   // the commit). Nothing was committed, so roll the whole run's claims back to
   // todo — releasing done_ids=[] resets even already-done claims (BO-2400f-10).
-  await agent(
+  const releaseReplyCommit = await agent(
     `You are the release-phase agent. The commit phase failed after claiming and ` +
     `marking done, but nothing was committed.\n\n` +
     `Roll all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-commit-fail", phase: "Commit" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-commit-fail", phase: "Commit" }
+  );
+  const releaseOutcomeCommit = buildReleaseOutcomeFields(
+    releaseReplyCommit, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
     message:
       "Commit phase did not succeed — no PR opened. " +
-      `Detail: ${JSON.stringify(commitResult)}`,
+      `Detail: ${JSON.stringify(commitResult)} ` +
+      releaseOutcomeCommit.note,
     failing_phase: "commit",
     worktree_path: worktreePath,
     classification: "halt",
+    ...releaseOutcomeCommit.fields,
   };
 }
 

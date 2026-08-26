@@ -1,0 +1,77 @@
+id: BO-3600e-1
+title: "The comparison covers every record present, not only the records in the change being made"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing a fault entry and a requirement that disagree, where
+    neither record has been touched for months and neither is part of the change
+    being made,
+  When the reconciliation runs,
+  Then that pairing is reported,
+    And it is reported whether or not any change is in flight.
+
+  Given a run in which nothing at all has been changed,
+  When the reconciliation runs,
+  Then it still examines every record present and reports the pairings it finds,
+  So the reconciliation is not scoped to a change and its silence is not the silence
+    of having been given nothing to look at.
+
+  Given any run of the reconciliation,
+  When its output is read,
+  Then it states how many fault entries and how many requirement records it
+    examined,
+    And a run that examined none is distinguishable from a run that examined all of
+      them and found nothing.
+
+  Given a store whose number of records grows,
+  When the reconciliation runs,
+  Then the number it reports examining grows with it,
+  So coverage is observed to track the store rather than being asserted once.
+depends_on:
+  - BO-3600e
+  - BO-3600a-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — found only because a person read all sixty-five entries across five registers by hand. Every one of the eight records had been finished weeks earlier and nothing in any subsequent change touched them, so nothing scoped to a change in flight could have found any of them."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400a.yaml
+    relationship: related
+    status: exists
+    relevance: "The identical scoping argument for the test-based done-proof sweep — a verdict already computable but only ever computed over staged files. Reuse whatever whole-store traversal it produces; this record owns scope, not what counts as proof."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE OBVIOUS PLACE TO HANG THIS CHECK IS THE WRONG ONE. A change-scoped reconciler
+  would have found none of the eight records behind this goal, and this repo has the
+  failure on record twice: the AC hooks that read only the commit index and so never
+  see a parent they were written to check, and the population-versus-change scoping
+  filed as KI-CG-001.
+
+  THE COUNTS ARE THE LOAD-BEARING CLAUSE. A change-scoped reconciler and a
+  whole-store one produce identical output on a clean store — both say nothing —
+  so without the examined counts this criterion cannot be falsified by an
+  implementation that quietly kept the narrow scope. The fourth scenario makes the
+  count track reality rather than being a constant printed once.
+
+  VERIFY BY EXECUTION over a real store with a real standing pair, not a fixture
+  assembled to match the check.

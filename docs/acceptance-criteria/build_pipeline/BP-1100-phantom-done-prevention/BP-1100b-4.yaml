@@ -505,6 +505,9 @@ covered_by:
   - unit_tests/workflows/test_bo_1000c_1a.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/09_bp1100b45_presence_only_assertions_stop_counting.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/workflows/test_bo_1000c_1a.py
+  - templates/workflows-js/finalize-feature.js
 change_target: code
 risk_surface: internal
 notes: |

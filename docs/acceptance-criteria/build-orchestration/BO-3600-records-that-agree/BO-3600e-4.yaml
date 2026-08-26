@@ -1,0 +1,76 @@
+id: BO-3600e-4
+title: "The outstanding count falls only when a conflict is decided, never when one is excluded"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an outstanding count of twelve conflicts,
+  When a verdict is recorded against one of them,
+  Then the outstanding count reads eleven.
+
+  Given the same outstanding count of twelve,
+  When one of the conflicts stops being reported because it was excluded, filtered
+    out, or because the comparison was narrowed so it no longer matches,
+  Then the outstanding count still reads twelve,
+    And the excluded conflict is reported as excluded, naming what excluded it and
+      when,
+  So narrowing the check never looks like progress.
+
+  Given a run in which the comparison has been narrowed since the previous run,
+  When it reports,
+  Then it states that its scope changed and how many previously reported conflicts
+    fall outside the new scope,
+  So a change in what is looked for is never invisible in the numbers.
+
+  Given a conflict that stops being reported because the two records now agree,
+  When the run reports,
+  Then the outstanding count falls and the conflict is not reported as excluded,
+  So genuine resolution and suppression are distinguishable in the count and in the
+    output.
+depends_on:
+  - BO-3600e
+  - BO-3600e-3
+  - BO-3600d-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — its dominant mechanism is a check whose result looks like coverage while the thing it was meant to catch goes unexamined. A burn-down achieved by exclusion is that mechanism applied to the burn-down itself."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3600-records-that-agree/BO-3600d-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The one legitimate reason a decided conflict stops being reported, and the transition that raises it again when the facts change. Everything else that stops a conflict being reported is an exclusion under this record."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  NO CRITERION MAY BE SATISFIED BY RELAXING AN OBLIGATION — binding across this
+  whole set, and this is where it bites hardest, because a visible count creates a
+  direct incentive to make it smaller. The cheapest way to burn down a backlog of
+  conflicts is to stop counting some of them.
+
+  The second and third scenarios make exclusion a reported event rather than a
+  quieter number, and the fourth keeps the honest path distinguishable from it. A
+  count that falls for two different reasons without saying which is a count nobody
+  can act on.
+
+  Note the interaction with BO-3600d-2-i: deferral does not reduce the count either,
+  it ages within it. Between the two records, the only ways the number goes down are
+  a recorded verdict and the records coming into agreement.

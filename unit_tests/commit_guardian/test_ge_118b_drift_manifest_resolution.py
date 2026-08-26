@@ -396,8 +396,14 @@ class TestBuildDriftComparesWithCorrectlyPlacedManifest(unittest.TestCase):
         original_hash = hashlib.sha256(original_content.encode("utf-8")).hexdigest()
 
         # Manifest key format matches build_helpers.write_build_manifest():
-        # relative to repo_root (package_root.parent), forward-slash posix.
-        manifest_key = "leafcutter-ai/templates/agents/example.md"
+        # relative to the manifest's OWN directory, forward-slash posix. Here
+        # _write_real_manifest() puts it in package_root, so keys are relative
+        # to package_root — not to its parent. Corrected under BP-100k-3, which
+        # made the gates resolve their base as manifest_path.parent rather than
+        # inferring a layout; the previous "leafcutter-ai/..." prefix assumed the
+        # manifest always sat one level below the base, which is false whenever
+        # the build writes it to target_root.
+        manifest_key = "templates/agents/example.md"
         manifest_content = json.dumps({manifest_key: original_hash, "output_mappings": {}})
         manifest_path = _write_real_manifest(package_root, manifest_content)
 

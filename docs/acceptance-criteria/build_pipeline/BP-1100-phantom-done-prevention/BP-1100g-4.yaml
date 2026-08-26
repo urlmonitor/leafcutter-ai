@@ -58,7 +58,7 @@ doc_links:
     relevance: "The hooks manifest a commit-time refusal must be registered in. A check that exists but is not registered is inert — the fast-lane incident, where a runner never executed its own gates."
 assigned_agent: python-coder
 estimated_complexity: L
-declares_side_effect: true
+declares_side_effect: false
 it_requirements:
   reference_file_path: "scripts/commit_guardian/commit_guardian.json"
   n_location_rule: "1"
@@ -162,10 +162,35 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: derivation-agreement
+  by: testing-expert
+  at: 2026-08-26
+  note: 'declares_side_effect true -> false. check-ac-schema''s validate_declares_side_effect
+    blocked on the authored value disagreeing with derive_declares_side_effect, which
+    reads this record''s own Then clause and returns False. The derivation is correct
+    and the authored value was opinion, which is the thing BO-2900g-2 exists to prevent
+    ("never authored by opinion"). This AC''s Then clause asserts a REFUSAL, and a
+    refusal leaves the system deliberately UNCHANGED -- it is the absence of a durable
+    write, not one. The it-po note below argues a commit-time refusal "leaves the system
+    in a different state"; that phrase is in the derivation''s vocabulary but the clause
+    does not say it, and stretching it here would make the marker mean "has any observable
+    output", which the BO-2900g-2 constraints reject as indistinguishable from marking
+    nothing. criteria untouched -- the authored requirement is the fixed point and the
+    boolean yields to it. Pre-existing since 2026-08-17; surfaced only now because the
+    AC hooks read the staged index, so the disagreement was structurally invisible until
+    this record was staged. NOTE: user-surface-smoker still runs for this work. It is
+    conditional on the TICKET''s user_facing_surface field, not on this flag, and
+    TICKET-20260826-BP-1100g-4.md sets user_facing_surface: pre_commit_hook with a
+    ## Smoke Fixture block -- the AC''s own note that the refusal message is what the
+    smoker''s placeholder control exists to check is honoured, by the field that actually
+    routes it. Gap worth its own AC, not fixed here: declares_side_effect is the only
+    lever the generator has for routing the smoker, and it cannot express "user-facing
+    output that is a refusal rather than a durable effect".'
 superseded_by: null
 covered_by:
   - BP-1100g-4-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260826-BP-1100g-4.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |

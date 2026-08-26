@@ -1,0 +1,71 @@
+id: BO-300d-5
+title: "A reference entry states the unbuilt-work causes, what establishes each, and which distinctions the run cannot make"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an operator reading a closing report that names unbuilt pieces,
+  When they look up the reference entry for the report's unbuilt-work section,
+  Then it lists every cause the report can state,
+    And for each cause it states what the run relies on to establish it,
+    And for each cause it states the action the report gives,
+    And it states plainly that the run cannot distinguish work it never selected
+      from work that arrived after it started, and why.
+
+  Given the reference entry,
+  When each cause it lists is compared against the causes a real run emits,
+  Then every cause the entry lists is one a run can emit,
+    And every cause a run emits appears in the entry,
+  So the entry cannot document a taxonomy the run does not implement, nor omit one
+    it does.
+
+  Given the reference entry,
+  When a reader looks for what a report with no unbuilt-work section means,
+  Then the entry states that its absence means the run accounted for every piece
+    and built them all,
+  So an absent section is documented as a positive claim rather than left ambiguous.
+depends_on:
+  - BO-300d
+  - BO-300d-2
+  - BO-300d-4
+doc_links:
+  - path: docs/reference/
+    relationship: describes
+    status: exists
+    relevance: "Where the reference entry lands, alongside the existing completion-output material."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-026 — the reader who followed a confident cause and went looking for a change that never happened is the reader this entry is written for."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-300d's documentation_triggers: [reference-doc].
+
+  The second scenario is what makes this checkable rather than a request for prose:
+  the documented taxonomy is compared against what a run actually emits in both
+  directions, so an entry describing an intended vocabulary fails.
+
+  The third scenario matters more than it looks: the whole value of BO-300d-4's
+  control case is that a clean report MEANS something. If the reference entry does
+  not say what its absence asserts, the operator has to guess, and the control case
+  buys nothing.
+
+  assigned_agent deliberately unset — the reference surface belongs to the IT
+  Product Owner's assignment pass.

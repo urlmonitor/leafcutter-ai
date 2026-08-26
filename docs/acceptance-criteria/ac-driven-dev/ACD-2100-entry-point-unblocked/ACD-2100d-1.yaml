@@ -44,6 +44,22 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The deployed angle and the BP-811 case it cites -- an AC that asserted the copy tier and never the reachability tier is the exact mistake this record's last clause forbids."
+  - path: scripts/build_phases.py
+    relationship: implements
+    status: exists
+    relevance: "EDIT SURFACE. The installer's deploy declarations. The deployed route reads its charter registry at startup and no phase deploys that file, so the installed copy halts at a gate the source copy passes; this record's Then clause cannot hold for a consumer until the manifest here carries it."
+  - path: unit_tests/_installed_route_probe.py
+    relationship: creates
+    status: planned
+    relevance: "EDIT SURFACE, DOES NOT EXIST YET. This record's principal deliverable: install into a temporary target, start a run there in a fresh process, report that run's own recorded stopping point. ACD-2100d-3 imports it from the portability test package, so it belongs at the unit_tests root beside the repository's other shared harnesses rather than inside either test package."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: implements
+    status: exists
+    relevance: "EDIT SURFACE. The only mechanism in the repository that starts a workflow run in a fresh Node process against an arbitrary script path. Its built-in default for the workspace-setup permission gate is resolved by walking up from the script's own directory, which succeeds for the source copy and fails for an installed copy -- so unmodified it starts the two runs under unequal gate conditions."
+  - path: unit_tests/portability/test_acd_2100d_1.py
+    relationship: creates
+    status: planned
+    relevance: "EDIT SURFACE, DOES NOT EXIST YET. The four test_spec descriptors below; target_dir is the portability package and the generated ticket names this exact path."
 assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:
@@ -54,6 +70,9 @@ it_requirements:
   - "This record must not restate what ACD-2100a, b or c require. Its subject is that the copy the user runs is the copy that does it; a child that reads as 'sibling behaviour X but in the deployed layout' duplicates coverage and splits one behaviour's evidence across two L1s."
   - "Must satisfy the repository error-handling policy in any harness code that ships under scripts/ or unit_tests/."
   - "Any dependency the deployed route needs at runtime must be in the build deploy manifest. A dependency that is not deployed raises at runtime while every source-tree test passes -- this repo has that failure twice over in CLAUDE.md."
+  - "THE DEPLOY GAP THIS RECORD IS ABOUT IS ALREADY LIVE, AND IT IS WHY scripts/build_phases.py IS AN EDIT SURFACE HERE. The deployed route resolves the charter that guards its workspace-setup step by reading .leafcutter/config/agent_registry.json at startup, and no build phase deploys that file -- a real build leaves the deployed config directory holding only the commit-guardian tree and the feedback categories. The gate fails closed on an unreadable registry, so the installed copy halts before the first user question while the source copy, which resolves the same registry from the package root, does not. Until the deploy declarations in scripts/build_phases.py carry that dependency, the Then clause above cannot hold for any consumer install."
+  - "THE TWO RUNS MUST BE STARTED UNDER EQUAL HARNESS CONDITIONS, NOT MERELY EQUAL DIRECTORY CONDITIONS. unit_tests/_workflow_engine_harness.py resolves its built-in default response for the workspace-setup permission gate by walking up from the script's own directory looking for the package's agent registry. That walk succeeds for the source copy and fails for a copy installed under a temporary target, so an unmodified harness would start the two runs against different gate conditions and report a parity failure that is an artifact of the harness rather than of the installed artifact. Equalise the harness environment across both runs, or the verdict is unattributable -- the same defect the same-starting-conditions clause exists to prevent."
+  - "The harness is this record's principal deliverable and ACD-2100d-3 consumes it, so it must be importable from the portability test package without living inside it. Place it at the unit_tests root beside the repository's existing shared harnesses, and give it a stopping-point vocabulary stable enough for ACD-2100d-3 to compare two of its results against each other."
 test_spec:
   - name: test_installed_and_source_copies_both_reach_the_first_user_question
     target_dir: unit_tests/portability/
@@ -108,7 +127,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/19_TICKET-20260826-ACD-2100d-1.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
@@ -144,3 +164,76 @@ notes: |
   depends_on only (KI-ACD-015, open), so nothing stops this being scheduled first. The
   it-po does not own depends_on and has not edited it; the recommended edit is to add
   ACD-2100a-5 to this record's depends_on before the tree is approved.
+
+  IT PO ENRICHMENT -- 2026-08-26 (files_touched backfill).
+
+  WHY THIS RECORD PRODUCED AN EMPTY files_touched. The generated ticket's surface is
+  derived by generate_ticket_from_ac.py as the union of two sources: path tokens found
+  in it_requirements prose that exist on disk, and doc_links whose relationship is one
+  of constrains / creates / implements / modifies / specifies. Every doc_link on this
+  record was "describes", and no it_requirement named a path, so the union was empty.
+  Every sibling that DID get a surface (a-1 through a-5, b-1 through b-5, c-1 through
+  c-5) carries at least one "implements" doc_link. The enrichment below closes that at
+  the cause, so a regeneration reproduces the same four paths.
+
+  THE FOUR PATHS, AND WHY EACH ONE IS THERE.
+
+  scripts/build_phases.py -- not speculative. Verified on 2026-08-26 in this worktree:
+  the deployed route runs `cat .leafcutter/config/agent_registry.json` on its startup
+  path, and a `find` over a freshly built .leafcutter tree returns no agent_registry.json
+  at all. The gate that reads it fails closed on any unreadable or unparseable response,
+  so the installed copy halts before the first user question for a reason that has
+  nothing to do with the route's own logic. That is precisely the failure mode this
+  record's deploy-manifest requirement names, it is live today, and the deploy
+  declarations that fix it live in this file and nowhere else. Without this path the
+  ticket has no surface on which its own Then clause can be made true.
+
+  unit_tests/_installed_route_probe.py -- new. The AC's own it-po note sizes this record
+  L because the harness does not exist. It must be importable from the portability test
+  package (ACD-2100d-3 calls it twice) without living inside it, so it goes at the
+  unit_tests root, which is where this repository already keeps its two shared
+  cross-package harnesses. Named in doc_links with relationship "creates" because a file
+  that does not exist yet is filtered out of prose extraction by the generator's
+  on-disk-existence gate and can only enter the surface through a doc_link.
+
+  unit_tests/_workflow_engine_harness.py -- existing, and a genuine edit surface rather
+  than a dependency. It exposes run_workflow_under_e2(script_path, ...), the only thing
+  in the repository that starts a workflow run in a fresh Node process against an
+  arbitrary script path, which is what makes "run the installed copy" possible at all.
+  But its _default_label_responses_for_script helper resolves the workspace-setup
+  permission gate's default by walking up from the script's own directory looking for the
+  package agent registry. That walk succeeds for the source copy and fails for a copy
+  under a temporary target, so an unmodified harness supplies a permitted default to one
+  run and nothing to the other. The deployed run would then halt at the charter gate and
+  the test would report a parity failure that is entirely an artifact of the harness. A
+  coder who did not read this helper would ship that false red and then "fix" it by
+  weakening the assertion.
+
+  unit_tests/portability/test_acd_2100d_1.py -- the four descriptors. target_dir on every
+  descriptor is the portability package and the generator already names this exact path
+  in the ticket's Test Requirements block; listing it makes the ticket's declared surface
+  and its declared tests agree.
+
+  PATHS CONSIDERED AND REJECTED.
+
+  templates/workflows-js/plan-feature.js -- rejected. This record observes the route; it
+  does not change it. Making the source copy reach the first question is ACD-2100a-3 and
+  a-5's work, which is exactly what the sequencing caveat above is about. Including it
+  would let an a-family edit pass this ticket's scope gate unchallenged.
+
+  .leafcutter/workflows/plan-feature.js -- rejected. Untracked build output (`git ls-files
+  .leafcutter/` is empty). It is this record's observation target, never an edit surface;
+  editing it is the exact defect ACD-2100d-2 exists to catch, and the 2026-08-18 incident
+  in ACD-2100d-2's notes is what happens when someone does.
+
+  scripts/ci/check_consumer_install.py -- rejected here, taken by ACD-2100d-3. It installs
+  into a temporary target but never starts a run, and d-3 is the record that owns wiring
+  a standing gate. Splitting that surface across both records would give two tickets
+  authority over one file for two different reasons.
+
+  AUTHORING CONSTRAINT WORTH KNOWING FOR THE NEXT PASS. The generator extracts any
+  slash-bearing token from it_requirements prose whose file exists on disk, including bare
+  directories such as "templates/" or "unit_tests/". Illustrative path mentions therefore
+  leak into files_touched. The prose above is written to name only the paths that belong
+  in the surface; everything else is referred to descriptively on purpose.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

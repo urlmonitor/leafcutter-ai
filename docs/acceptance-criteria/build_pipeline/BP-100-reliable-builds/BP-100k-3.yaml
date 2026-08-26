@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -117,8 +117,13 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-100k-3-i
+  - unit_tests/commit_guardian/test_bp_100k_3.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/08_bp100k3_drift_gates_report_gaps_not_passes.md
+  - templates/scripts/commit_guardian/_drift_exemptions.py
+  - templates/scripts/commit_guardian/check_build_drift.py
+  - templates/scripts/commit_guardian/check_output_drift.py
+  - templates/scripts/commit_guardian/commit_guardian.json
 change_target: pipeline
 risk_surface: contract_boundary
 notes: "Verified defect, 2026-08-13. Today both gates emit an INFO line for an artifact they cannot compare ('not in manifest (new template — run build.py before committing built outputs)' in check_build_drift.py; 'not in output_mappings (intentional one-off or newly added output; run build.py to register it)' in check_output_drift.py) and then exit as if the run were clean, so a deliberate exemption and an accidental omission are indistinguishable and both read as success. Complements GE-118b, which covers the whole-manifest-missing case; this AC covers the per-artifact case."

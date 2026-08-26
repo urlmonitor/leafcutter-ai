@@ -12,6 +12,7 @@ TICKET: TICKET-20260602-FixWorkflowNestedClaudeDir
 
 from __future__ import annotations
 
+import shutil
 import sys
 from pathlib import Path
 
@@ -174,32 +175,90 @@ def test_install_shims_does_not_use_nested_claude_path(
 
 
 # ---------------------------------------------------------------------------
-# Test D — _compute_output_mappings() records output_root/workflows/<name>, not .claude/
+# Test D — _compute_output_mappings() keys workflow JS at the path the gate scans
 # ---------------------------------------------------------------------------
 
 def test_compute_output_mappings_workflow_js_uses_correct_output_key(
     tmp_path, workflows_js_fixture
 ):
-    """_compute_output_mappings() must record workflow JS outputs under
-    <target_root>/workflows/<name>, not <target_root>/.claude/workflows/<name>.
-    """
-    fake_target = tmp_path / ".leafcutter"
-    fake_target.mkdir(parents=True)
+    """_compute_output_mappings() must key workflow JS outputs at
+    <target_root>/.claude/workflows/<name> — the shim-resolved path.
 
-    package_root = tmp_path / "leafcutter"
+    NOTE (BP-100k-2, 2026-08-18): this assertion was inverted until BP-100k-2.
+    It previously required the key NOT to contain '.claude/workflows', which
+    conflated two different things:
+
+      * where the build WRITES the file — `output_root/workflows/<name>`, the
+        BP-811 fix that Test A above still guards; and
+      * how the manifest KEYS that output for lookup.
+
+    The output-drift gate resolves a staged file against the mapping, and
+    `check_output_drift.py` scans `repo_root / ".claude" / "workflows"` (see
+    its `_OUTPUT_DIRS`). So a mapping keyed at the un-prefixed write path is
+    never found by the gate for any staged workflow JS, and the gate reports
+    the file as unregistered — which BP-100k-2 exists to eliminate.
+
+    Keying at the shim path is therefore correct and Test A is unaffected: the
+    file is still written to `output_root/workflows/`, and `install_shims()`
+    exposes it at `.claude/workflows/`. Do not re-invert this without first
+    re-reading `_OUTPUT_DIRS` in check_output_drift.py.
+    """
+    # Consumer-install layout: the package sits UNDER the target root, which is
+    # the only arrangement that occurs in practice (self-host has
+    # package_root == target_root; a consumer has target_root/leafcutter-ai).
+    # The previous fixture put the package at tmp/leafcutter and the target at
+    # tmp/.leafcutter — siblings, a layout that exists nowhere. It only worked
+    # while output_mappings keys were computed relative to package_root.parent;
+    # keys are now relative to target_root, since that is what every output
+    # path is actually built from and therefore the only base they can be
+    # correctly relative to.
+    target_root = tmp_path
+    package_root = target_root / "leafcutter-ai"
     package_root.mkdir()
     (package_root / "config").mkdir()
-    (package_root / "scripts").mkdir()
+    # A real package always ships a full scripts/ tree alongside templates/ —
+    # _compute_output_mappings() dynamically loads scripts/build_phases.py
+    # (via _load_build_phases_module) to enumerate the agents/commands/
+    # workflows/hooks family, so an empty scripts/ dir here is unrealistic
+    # and previously made that load fail with
+    # "No such file or directory: '.../scripts/build_phases.py'" — the
+    # try/except around it silently degraded to skipping that whole section
+    # rather than raising, which is exactly the failure mode this fixture
+    # must NOT paper over: copy the REAL scripts/ tree (mirroring
+    # unit_tests/build_guards/test_bp_100k_2.py's
+    # _build_synthetic_full_package()) so the fixture exercises the same
+    # dynamic-load path a real package does.
+    shutil.copytree(
+        _SCRIPTS_DIR, package_root / "scripts", ignore=shutil.ignore_patterns("__pycache__")
+    )
 
     tpl_dir = package_root / "templates"
     wf_js_dir = tpl_dir / "workflows-js"
     wf_js_dir.mkdir(parents=True)
     (wf_js_dir / "build-feature.js").write_text("// wf", encoding="utf-8")
 
+    # The workflow-js section of _compute_output_mappings() is gated on the
+    # PRE-shim output_root/workflows/<name> path already existing on disk
+    # (BP-100k-6 interaction fix: a fixture that never deployed a family must
+    # not get a phantom manifest entry for it). A real build always runs
+    # build_workflow_scripts() before write_build_manifest(), so that file is
+    # already there; simulate that here rather than invoking the real deploy
+    # phase (which also runs a `claude --version` floor-gate subprocess probe
+    # this unit test should not depend on).
+    output_root = target_root / ".leafcutter"
+    (output_root / "workflows").mkdir(parents=True)
+    (output_root / "workflows" / "build-feature.js").write_text("// wf", encoding="utf-8")
+
     mappings = build_helpers._compute_output_mappings(
         package_root=package_root,
-        target_root=fake_target,
-        config={},
+        target_root=target_root,
+        # workflows.enabled must be true here. build_workflow_scripts() writes
+        # nothing when the toggle is off, so the manifest must not predict
+        # workflow-js outputs in that case — claiming an output the build would
+        # not produce is the same phantom-coverage defect in the other
+        # direction. Asserting these keys exist under config={} was asserting
+        # the pre-fix behaviour.
+        config={"workflows": {"enabled": True}},
     )
 
     # Collect all output keys that relate to workflow JS
@@ -210,11 +269,11 @@ def test_compute_output_mappings_workflow_js_uses_correct_output_key(
     )
 
     for key in workflow_js_keys:
-        # The key should not contain '.claude/workflows' — it should be just 'workflows'
-        assert ".claude/workflows" not in key, (
-            f"_compute_output_mappings() emitted broken output key '{key}' containing "
-            "'.claude/workflows' — fix not applied to _compute_output_mappings()"
-        )
-        assert "workflows/" in key, (
-            f"_compute_output_mappings() output key '{key}' does not contain 'workflows/'"
+        # The key must be the shim-resolved path the output-drift gate scans.
+        assert ".claude/workflows/" in key, (
+            f"_compute_output_mappings() emitted output key '{key}' without "
+            "'.claude/workflows/'. check_output_drift.py scans "
+            "repo_root/.claude/workflows, so a key at any other path is never "
+            "matched against a staged workflow JS file and the gate reports it "
+            "as unregistered (BP-100k-2)."
         )

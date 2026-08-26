@@ -30,7 +30,7 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [BO-300a, BO-300b, BO-300c]
+covered_by: [BO-300a, BO-300b, BO-300c, BO-300d]
 implemented_by:
   - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md
 change_target: code

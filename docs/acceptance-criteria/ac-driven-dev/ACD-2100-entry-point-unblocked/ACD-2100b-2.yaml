@@ -114,7 +114,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/08_TICKET-20260826-ACD-2100b-2.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -145,3 +146,4 @@ notes: |
   rule. Sized S rather than M: the outcome is one branch on an existing failure path,
   and the expensive part of this L1 (four distinguishable outcomes proved by four runs)
   is charged to ACD-2100b-4.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

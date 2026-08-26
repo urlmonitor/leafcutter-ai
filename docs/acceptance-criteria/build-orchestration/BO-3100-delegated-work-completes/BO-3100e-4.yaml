@@ -1,0 +1,76 @@
+id: BO-3100e-4
+title: "A sequence diagram shows the step's own declared result being looked for after the step ends"
+component: build-orchestration
+components:
+  - documentation_system
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader trying to understand why a step that reported success was not
+    counted as done,
+  When they open the sequence diagram for the per-step result check,
+  Then it shows, in order: the step's declaration being read, the step being
+    dispatched, the step returning a report and recording a positive verdict, the
+    declared result being looked for directly, the result being absent, and the step
+    not being recorded among the completed steps,
+    And it shows the step's own report as an input the judgement does not read when
+      deciding.
+
+  Given the diagram,
+  When it is compared against a real build in which a step reported success without
+    producing its declared result,
+  Then every interaction the diagram shows occurred in that build, in the order
+    shown,
+    And the diagram shows no interaction that did not occur.
+
+  Given the diagram,
+  When a reader looks for where the expected result comes from,
+  Then the diagram shows it being read from the step's own declaration and from
+    nowhere else,
+  So the diagram cannot be read as describing a checker that holds a list of steps.
+depends_on:
+  - BO-3100e
+  - BO-3100e-1
+  - BO-3100e-2
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the sequence diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page the new diagram must be reachable from."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100b-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The adjacent sequence diagram for the generic exit-time emptiness judgement. The two must be distinguishable at a glance, or a reader will take one for coverage of the other."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies one half of BO-3100e's documentation_triggers: [sequence-diagram,
+  reference-doc]; BO-3100e-5 satisfies the other.
+
+  The second scenario is what makes this checkable: compared against an executed
+  build, so a diagram of an intended design fails.
+
+  The third scenario carries the derived-expectation constraint into the diagram,
+  because a diagram showing a checker consulting a table of known steps would
+  document the very design BO-3100e forbids.
+
+  assigned_agent deliberately unset — the diagram surface belongs to the IT Product
+  Owner's assignment pass.

@@ -1,0 +1,78 @@
+id: BO-3100f-4
+title: "Stopping short is never resolved by removing the step from what the run owed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run whose set of steps to perform is fixed before the first step starts,
+    And one of those steps stops short while the run is going,
+  When the run reaches its end,
+  Then that step is still counted among the steps the run was supposed to perform,
+    And the set of steps the run was supposed to perform is the same set at the end
+      as at the start,
+    And the step is not reclassified as one that was not required, not marked
+      optional, and not dropped from that set.
+
+  Given the same run,
+  When its outcome is returned,
+  Then the number of steps performed is smaller than the number it was supposed to
+    perform,
+    And the run does not lead with a success value,
+  So a run cannot reach a clean report by shrinking what it owed.
+
+  Given a run in which a step stops short and the run then decides that step was not
+    required after all,
+  When the run returns its outcome,
+  Then that decision does not remove the step from the set the run was supposed to
+    perform and does not restore the success value,
+    And the decision itself is reported, naming the step and the obligation it
+      would have removed,
+  So an attempt to resolve a stop by relieving the obligation is visible rather than
+    silent.
+
+  Given a run in which no step stopped short and every step it was supposed to
+    perform was performed,
+  When the run returns its outcome,
+  Then the two counts are equal and the run leads with a success value,
+  So the comparison is a real comparison and not a permanent shortfall.
+depends_on:
+  - BO-3100f
+  - BO-3100f-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-007 — the failure being fixed is a loud blocker becoming a silent gap. Dropping the step performs that conversion deliberately."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100a.yaml
+    relationship: related
+    status: exists
+    relevance: "The precedent recorded in AR-200a-1's constraint 1: when five step templates could not meet an obligation, the tempting fix was to delete the obligation rather than grant the capability. Any solution here that makes a step easier to omit has failed."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  CLAUSE 3 OF THREE, and BO-3100f says it is the one absent everywhere. It is the
+  clause that makes the other two durable: without it, the cheapest way to stop a
+  stopped step spoiling the run's verdict is to decide the step was never needed.
+
+  The counted comparison — steps supposed to perform against steps performed — is
+  what makes this checkable by executing a run rather than by reading intentions.
+  The fourth scenario keeps that comparison honest in the other direction.
+
+  NOT A RELAXATION, binding across this whole tree: no criterion may be satisfied by
+  removing an obligation. This record is that constraint written as behaviour.

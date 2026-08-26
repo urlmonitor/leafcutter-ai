@@ -1,0 +1,77 @@
+id: BO-100e-2
+title: "The run stops when a fresh look finds nothing further it can build, and says so rather than circling"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run over a set of work in which, after some pieces have been built, every
+    remaining piece carries a prerequisite that cannot be satisfied within this run,
+  When the run looks again at which work is eligible and finds none,
+  Then the run ends,
+    And it ends after a number of looks bounded by the number of pieces in the set,
+    And it does not look again after a look that produced no newly eligible work
+      and no piece finished in between,
+    And it states that it ended because nothing further could be built, naming the
+      remaining pieces,
+  So a run that cannot make further progress terminates rather than circling.
+
+  Given a run over a four-deep chain in which every layer does become eligible in
+    turn,
+  When the run proceeds,
+  Then the run ends only after the look that follows the last piece finishing
+    returns nothing further,
+    And the run does not end at the first look that returns nothing new while a
+      piece is still in progress,
+  So ending early on a momentarily empty look is as much a failure of this criterion
+    as never ending at all.
+
+  Given any completed run,
+  When the run's own record of how it proceeded is read,
+  Then it states how many times it looked again for newly eligible work and how many
+    pieces each look released,
+    And a run that looked exactly once is distinguishable in that record from a run
+      that looked repeatedly and found nothing after the first,
+  So a re-look that never happens cannot be mistaken for one that happened and found
+    nothing.
+depends_on:
+  - BO-100e
+  - BO-100e-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-025's fix direction — 'loop the planner until it returns an empty batch set'. Termination is the half of that sentence that can turn a shortfall into a hang."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The batch loop whose exit condition this criterion fixes."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-100e-2-i
+implemented_by: []
+notes: |
+  TERMINATION IS PART OF THE CRITERION, not a detail — BO-100e says so explicitly. A
+  loop that never returns empty is a hang, and a hang is a worse outcome than the
+  shortfall being fixed, because the shortfall at least ends.
+
+  The second scenario exists because the cheapest way to guarantee termination is to
+  stop at the first empty look, which reintroduces KI-BO-025 exactly: at the moment
+  the first layer is still in progress, nothing else is eligible.
+
+  The third scenario is the anti-silence clause. Without it, a run that never
+  re-looked and a run that re-looked and found nothing produce identical output, and
+  the criterion cannot be falsified by a build that quietly kept the old behaviour.
