@@ -1839,36 +1839,54 @@ worktree pointing at it.
 `.leafcutter` to the same workspace-root directory". That is false, and the entry contradicted
 itself three paragraphs later.** Measured:
 
+Resolving each worktree's `.leafcutter` with `readlink -f` rather than reading the link text:
+
 ```text
-git worktree list                                            ->  67 worktrees
-.leafcutter symlink -> leafcutter/.leafcutter                ->  12
-.leafcutter symlink -> leafcutter/leafcutter-ai/.leafcutter  ->   4
-.leafcutter is a private real directory                      ->  48
+symlink, resolving to leafcutter/.leafcutter   ->  ~20   (one shared inode)
+private real directory                         ->  ~47
+no .leafcutter at all                          ->    5
 ```
 
-Three of the symlinks are transient, created by one session on 2026-08-26 and pointing at a
-scratch build under `/tmp`.
+A few of the symlinks are transient, created by one session on 2026-08-26 and pointing at a
+scratch build under `/tmp`. Absolute counts drift by the hour as worktrees come and go — two
+probes minutes apart returned 72 and 73 — so **treat the shape as the finding and re-measure
+the numbers before relying on them**.
 
-The real topology is worse than the one originally claimed, in a way that matters for the fix:
+The distribution matters more than the total:
 
-- There is not one shared root but **two** — `leafcutter/.leafcutter` and
-  `leafcutter-ai/.leafcutter` — so "rebuild the shared tree" is ambiguous before it is
-  attempted, and fixing one leaves the other's dozen consumers untouched.
-- The **majority (48) are private frozen directories**, not shares. Those cannot be corrected
-  by any rebuild of a shared root; each holds whatever the build wrote when that worktree was
-  created, indefinitely. That is KI-BP-004, and it is the dominant case rather than the
-  exception this entry originally implied.
+- **The symlinked population really does share one root.** `leafcutter-ai/.leafcutter` is
+  itself a symlink to `leafcutter/.leafcutter`, so link text that appears to name two roots
+  resolves to a single inode. "Rebuild the shared tree" is unambiguous and reaches all of them.
+- **The larger group (~47) are private real directories**, not shares. Those cannot be
+  corrected by any rebuild of a shared root; each holds whatever the build wrote when that
+  worktree was created. That is KI-BP-004, and it is the *more common* case rather than the
+  exception this entry originally implied — though "frozen indefinitely" overstates it for the
+  roughly one-third created within the last two days.
+- **Five have no `.leafcutter` at all** — including `deploy-main2`, which this entry names
+  further down as a plausible overwrite source. A worktree with no deployed tree cannot have
+  written one, which weakens that particular attribution.
 
-So the population splits three ways with nothing distinguishing them from inside a worktree,
-and a remedy aimed at any one of the three silently misses the other two. The collage claim
-below is unaffected — it concerns what happens *within* a shared root, and was verified
-directly against one.
+So a remedy aimed at the shared root fixes the shared population and silently misses the
+private one. The collage claim below is unaffected — it concerns what happens *within* the
+shared root, and was verified directly against it.
 
-**How the error happened, since it is the same failure this register documents.** The "58"
-came from a `git worktree list` count, and the "all resolving to the same directory" was
-assumed rather than measured — while the very next section of this entry described a worktree
-with a private frozen copy that the author had found by hand. A counter-example was written
-down three paragraphs from a claim it falsifies, and neither was checked against the other.
+**How the error happened — twice, which is the instructive part.** The "58" came from a
+`git worktree list` count, and "all resolving to the same directory" was assumed rather than
+measured, while the very next section of this entry described a worktree with a private frozen
+copy the author had found by hand. A counter-example sat three paragraphs from a claim it
+falsifies and neither was checked against the other.
+
+**The first correction then introduced a second false claim, in the same shape.** It reported
+"not one shared root but **two**", derived from counting the *raw link text* of each symlink —
+which really does split into two spellings. One `readlink -f` shows both resolve to a single
+inode, because `leafcutter-ai/.leafcutter` is itself a symlink to `leafcutter/.leafcutter`.
+The correction fixed the magnitude and broke the mechanism, and it argued the remedy was
+harder than it is.
+
+Both errors are the same move: **a property established on part of a set, asserted of the
+whole**, where the discriminating command is about one line long. Worth stating plainly in an
+entry whose subject is deployed trees that are not what they appear to be — the register is
+not exempt from the failure it documents, and this one has now demonstrated that twice.
 
 The install accounting confirms the write happened rather than being skipped. Today's
 corrective build reported `6 installed (3 unchanged)` — exactly matching the observed mtime

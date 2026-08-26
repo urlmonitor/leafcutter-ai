@@ -1114,7 +1114,7 @@ broken. Whichever reading wins here, negation handling is needed regardless.
 
 ### KI-CG-014 — `declares_side_effect` derivation is negation-blind, so an AC asserting that nothing is written is forced to declare that something is
 
-- **Severity:** medium → **high** (see "Third and fourth sightings" below)
+- **Severity:** medium → **high** (see "Second and third sightings" below)
 - **Status:** open
 - **Occurrences:** 3
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
@@ -1155,7 +1155,7 @@ Whatever the fix, `validate_declares_side_effect()` should not be able to leave 
 with no acceptable value. A disagreement between an authored `false` and a derived `true` is
 currently reported as the author's error; sometimes, as here, it is the derivation's.
 
-**Third and fourth sightings, hours later, same AC family — and the reason this is now high.**
+**Second and third sightings, hours later, same AC family — and the reason this is now high.**
 An IT-PO enrichment pass over the 22-record `ACS-1100` tree hit the identical wall twice more:
 
 - **`ACS-1100a-2`** — *"a record whose identifier **is written** with surrounding quotes"*.

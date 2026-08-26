@@ -1596,15 +1596,22 @@ spread across this entry, `KI-ACD-019`, and the reopened-AC changelogs, and no s
 holds all of them. Recorded here because this entry is the closest thing the register has to
 that list.
 
-**The fourth concentration.** This entry names three: presence-only assertions over JavaScript
-source (M1), population-vs-change scoping (`KI-CG-001`), and a producer never round-tripped
-through its consumer (`BO-2200c-5`). `BO-1000c-1a` adds a fourth, filed as **`KI-BO-031`**: an
-*entire test file*, all ten tests, presence-only against one source file — where the shape is
-the file's whole design rather than one weak test among stronger ones, so the AC looked
-comprehensively covered precisely because coverage was measured by count. Nine of the ten fail
-against the corrected source, each demanding the dead mechanism be restored. Its countermeasure
-— a single **absence** assertion, which a behavioural test cannot substitute for when the
-reintroduction is inert — is recorded there.
+**A further concentration, and a note on the count.** Earlier drafts of this addendum said
+"this entry names three" concentrations and called the new one the fourth. It does not: this
+entry names **one** mechanism plus a closing Pattern line, and `BO-2200c-5` appears only in a
+**Where** list. The taxonomy of three — presence-only assertions over JavaScript source (M1),
+population-vs-change scoping (`KI-CG-001`), and a producer never round-tripped through its
+consumer (`BO-2200c-5`) — comes from the 2026-08-25 triage's own working notes, not from this
+register, and counting a fourth against a set this entry never stated was retro-fitting.
+
+Stated properly: `BO-1000c-1a` exhibits a concentration **not among those three**, filed as
+**`KI-BO-031`** — a test file where nine of ten tests are presence-only against one source
+file, so the shape is close to the file's whole design rather than one weak test among stronger
+ones, and the AC looked comprehensively covered precisely because coverage was measured by
+count. Nine of the ten fail against the corrected source, each demanding the dead mechanism be
+restored; the tenth, an absence assertion, survives. Its countermeasure — a single **absence**
+assertion, which a behavioural test cannot substitute for when the reintroduction is inert —
+is recorded there.
 
 ---
 
@@ -1792,15 +1799,27 @@ branch state).
 
 ---
 
-### KI-BO-031 — An entire test file, all ten tests, asserted only that strings were present in the source it covered — so the AC looked comprehensively covered because coverage was measured by count
+### KI-BO-031 — Nine of a file's ten tests asserted only that strings were present in the source they covered — so the AC looked comprehensively covered because coverage was measured by count
 
 - **Severity:** high
 - **Status:** **closed in source** — fixed and merged 2026-08-26, PR #573 (squash `d97eb399`).
   **Not yet closed at the point of use** — see the deployment caveat below.
 - **Occurrences:** 1
 - **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
-- **Where:** `unit_tests/workflows/test_bo_1000c_1a.py` (all ten tests, pre-#573) against
-  `templates/workflows-js/finalize-feature.js` · AC `BO-1000c-1a`
+- **Where:** `unit_tests/workflows/test_bo_1000c_1a.py` (nine of its ten tests, pre-#573)
+  against `templates/workflows-js/finalize-feature.js` · AC `BO-1000c-1a`
+
+**Correction — it was nine of ten, and the tenth is the entry's best evidence.**
+`test_ac2_no_overwrite_of_journal_file` asserts `assertFalse(_OVERWRITE_JOURNAL_ANTI_PATTERN
+.search(js))` — an **absence** assertion, not a presence one. It is also precisely the one of
+the ten that **survives** the corrected source: the observed run was 9 failed, 1 passed, and
+the one that passed is the one shaped differently.
+
+That turns this entry's countermeasure from a proposal into a measurement. The argument below
+is that absence assertions hold where presence assertions rot; the file already contained one
+of each kind, and under a change that deleted the mechanism, the nine presence assertions all
+demanded it back while the single absence assertion stayed correct. The evidence was in the
+original test run and went unremarked.
 
 **Deployment caveat — "closed" means closed on `main`, and that is not the same thing.**
 Hours after `d97eb399` merged, the deployed copy still contained the deleted mechanism:
