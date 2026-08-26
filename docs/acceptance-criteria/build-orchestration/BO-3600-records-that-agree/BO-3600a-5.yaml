@@ -1,0 +1,70 @@
+id: BO-3600a-5
+title: "A reference entry states what makes a conflict, and what a clean result does and does not assert"
+component: build-orchestration
+components:
+  - documentation_system
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given someone reading a reported conflict for the first time,
+  When they look up the reference entry for the reconciliation,
+  Then it states the condition that raises a conflict — an open fault naming a
+    requirement that reads finished — and states that neither half alone raises one,
+    And it states that the reconciliation does not decide which record is wrong, and
+      where that decision is recorded instead,
+    And it states what a pairing reported as undecided means and what to do about it.
+
+  Given the reference entry,
+  When the conditions it documents are reproduced against a real store,
+  Then the reconciliation behaves as the entry says it will,
+  So the entry is verified against the behaviour rather than against an intention.
+
+  Given the reference entry,
+  When a reader looks for what a run reporting no conflicts asserts,
+  Then it states that a clean result asserts only that every pairing the run could
+    examine was examined and none disagreed,
+    And it states that a run which could not examine everything reports that rather
+      than reporting clean,
+  So a clean result is never read as a guarantee the two records agree everywhere.
+depends_on:
+  - BO-3600a
+  - BO-3600a-1
+  - BO-3600a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+    relevance: "Where the requirement half of the pair is defined; the reference material for the reconciliation belongs alongside it."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The fault register — the other half of the pair, and the surface whose entry structure the reference must describe for the comparison to be reproducible by hand."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the reference-doc half of BO-3600a's documentation_triggers.
+
+  The third scenario is the reason this entry is worth writing at all. This whole
+  goal exists because a clean-looking state was believed; a reference entry that
+  does not bound what a clean result asserts would hand the reader the same
+  false assurance in a new place.
+
+  The second scenario keeps the entry honest by reproducing its documented
+  conditions against a real store rather than asserting them.
+
+  assigned_agent deliberately unset — the reference surface belongs to the IT
+  Product Owner's assignment pass.

@@ -1,0 +1,83 @@
+id: BO-3600b
+title: "Fixing something retires the record of it being broken"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  When the work lands, the fault log stops saying it is still open.
+
+  A fault whose subject has since been delivered no longer reads as an outstanding
+  problem. The list of what is wrong with the system shrinks as things are fixed,
+  so it stays worth reading — and work is never left sitting in the queue because
+  the only record that it had already been done was kept somewhere else.
+depends_on:
+  - BO-3600
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The register that accumulates. KI-BO-028 notes in passing that it 'only ever accumulates' and had to say explicitly which of its entries were no longer broken."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400e-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The worked instance of this direction: the same defect was tracked as KI-BO-003 and as this requirement, was fixed under the fault id, and the requirement sat unfinished for a week afterwards while the build lane kept selecting it as ready work."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3600b-1
+  - BO-3600b-2
+  - BO-3600b-3
+  - BO-3600b-4
+implemented_by: []
+documentation_triggers:
+  - state-diagram
+notes: |
+  THE FORGOTTEN DIRECTION. BO-3600a stops the store overstating what exists; this
+  one stops the fault log overstating what is broken. A tree that shipped only the
+  first half would make the project more pessimistic rather than more true, and
+  would leave the specific waste BO-2400e-4 documents: a requirement selected as
+  ready work, repeatedly, for a week after the behaviour it demanded had shipped.
+
+  In that record's own words — "two registries tracked one defect and neither
+  closed the other". The two directions are the same missing capability seen from
+  each end, which is why they are siblings under one goal rather than two goals.
+
+  THE COST OF GETTING THIS WRONG IS ASYMMETRIC, and the BA should weight it that
+  way. Wrongly leaving a fault open wastes a reader's attention. Wrongly closing
+  one deletes the only written record that something is broken, and this register
+  is where the project's hard-won findings live. Closure must be evidenced, and
+  where the evidence is ambiguous the entry stays open with the ambiguity noted.
+  BO-3600d is where that verdict is recorded.
+
+  Boundary: retiring a fault entry is NOT the same as demoting a requirement, and
+  the two must not share one mechanism by accident. Demotion is TQ-400b's
+  transition and must be reused, not rebuilt.
+
+  DECOMPOSED 2026-08-26 (business-analyst). Four L2 children, one cap slot left
+  free deliberately: BO-3600b-1 (retirement only on evidence, entry text preserved,
+  ambiguity recorded instead of retiring; + BO-3600b-1-i, a multi-subject entry is
+  retired only when every subject is delivered), BO-3600b-2 (the BO-2400e-4 waste:
+  a requirement whose delivery is recorded only in the fault log carries the
+  conflict with it when offered as ready work), BO-3600b-3 (retiring and demoting
+  are separate acts, neither a side effect of the other, and demotion reuses
+  TQ-400b's transition), BO-3600b-4 (state diagram). The asymmetric-cost rule
+  produces the one deliberate inconsistency in this tree, recorded on
+  BO-3600b-1-i: an unresolvable reference counts AGAINST retiring here, while
+  BO-3600a-1-i treats the same unknown as grounds to report a pairing undecided.
+  Both err towards keeping a finding alive.

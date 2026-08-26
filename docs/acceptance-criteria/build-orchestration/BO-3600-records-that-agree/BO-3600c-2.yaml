@@ -1,0 +1,72 @@
+id: BO-3600c-2
+title: "A fault entry pointing at a place that no longer holds what it describes is flagged"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fault entry naming a file that no longer exists in the project,
+  When the register is checked,
+  Then the entry is flagged as pointing at a file that is not there, naming the
+    entry and the file.
+
+  Given a fault entry naming a file and a position within it, together with the
+    thing it says is at that position,
+    And the file still exists but the thing it names is no longer at that position,
+  When the register is checked,
+  Then the entry is flagged as carrying a position that has moved,
+    And the flag is distinguishable from the flag for a file that is not there.
+
+  Given a fault entry naming a file, a position, and the thing at that position,
+    where the thing is still at that position,
+  When the register is checked,
+  Then the entry is not flagged,
+  So the check does not fire on every entry that mentions a file.
+
+  Given a fault entry naming a file and a position but naming nothing that would
+    identify what is at that position,
+  When the register is checked,
+  Then the position is reported as one the check cannot verify, rather than as
+    correct and rather than as stale,
+  So a reference the check has no means of deciding is never reported as sound.
+depends_on:
+  - BO-3600c
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028's correction list — KI-BO-022 and KI-BO-023 carried line numbers that PR #541 had shifted; both defects were unchanged and only the addresses moved. The easiest of the five to detect mechanically."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3600c-2-i
+implemented_by: []
+notes: |
+  A BARE POSITION IS NOT CHECKABLE AND THE FOURTH SCENARIO SAYS SO RATHER THAN
+  PRETENDING OTHERWISE. A line number on its own is satisfied by whatever happens to
+  be on that line, so a check that only confirms the position exists would report
+  KI-BO-022 as sound while it points at unrelated code. What makes the class
+  decidable is an entry that records what it expects to find there as well as where.
+
+  That is a requirement on the entry format as much as on the check, and it is
+  stated as behaviour rather than as an instruction to authors: an entry without an
+  identifying anchor is reported as unverifiable, which is a visible cost that
+  produces better entries, rather than a rule people are asked to remember.
+
+  The third scenario is the noise control: the register mentions files constantly,
+  and a check that flagged them all would be switched off within a week.

@@ -1,23 +1,21 @@
 id: BO-1000c-1a
 components:
   - build_orchestration
-title: "A background finalize run leaves a durable, in-flight-readable record of its progress that the workflow body does not write itself"
+title: "A background finalize run leaves a durable, ordered record of each agent dispatch that remains readable after the run process exits, which the workflow body does not write itself"
 component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Given the finalize-feature workflow is running in the background while the
-    user remains in the main conversation,
+  Given the finalize-feature workflow is running under the E2 engine,
   When the workflow dispatches an agent for a step,
-  Then a durable record of that dispatch exists for the run, readable by a
-    caller outside the background run while the run is still in flight,
-  And the records preserve dispatch order and accumulate over the run rather
-    than appearing only once it ends,
+  Then a durable record of that dispatch exists for the run and remains
+    readable after the run process has exited,
+  And the records preserve dispatch order,
   And the workflow body itself writes no run-progress file and loads no module
     loader or filesystem primitive to do so.
 depends_on: [BO-1000c, BO-1000a-1, BO-1000b-1]
@@ -134,6 +132,11 @@ amended_by:
     note: >-
       Two corrections while landing the 2026-08-18 redefinition, which had been
       authored but never merged and sat unpushed on a local branch for eight days.
+      Landed independently on main without visibility into the same-day 2026-08-25
+      re-scope entry below, authored on the EPIC-BuildPipelinePhantomRemediation
+      branch; both branches' amended_by history is kept for the full audit trail,
+      and the re-scope + ac-reconcile entries below are the ones that govern the
+      final criteria, title, and work_status recorded at the top of this file.
 
       TITLE. The previous title — "Background finalize appends each progress line
       to a durable, pollable run-progress journal as it happens" — still described
@@ -160,10 +163,72 @@ amended_by:
       restored. That is M1 in docs/reference/false-green-mechanisms.md, and it is
       why the replacement is an ABSENCE assertion: a presence assertion stays green
       on dead code, an absence assertion cannot.
+  - reason: "re-scope — the load-bearing clause was untestable at this level"
+    by: BrainCandy
+    at: 2026-08-25
+    note: >-
+      criteria NARROWED and work_status reverted to todo. The 2026-08-18
+      redefinition above correctly moved the mechanism onto the engine journal,
+      but left in place a clause the coverage cannot reach: "readable by a
+      caller outside the background run WHILE THE RUN IS STILL IN FLIGHT", and
+      "accumulate over the run rather than appearing only once it ends".
+      An adversarial review found the AC was marked done on tests that cannot
+      verify either phrase — the test module's own docstring states that no
+      test in it, or anywhere at the unit level, can execute a real run and read
+      back a real journal.jsonl produced by production code. The three
+      substitute tests read HarnessResult.agent_calls, which is parsed from a
+      single JSON blob AFTER subprocess.run returns; one is named
+      test_agent_dispatch_records_are_still_readable_after_the_run_ends. That
+      observation model falsifies the in-flight clause rather than verifying it.
+      The review also showed the AC was not discriminating: deleting the E2
+      engine's journal.jsonl entirely leaves all five tests green, because four
+      of them assert only that finalize dispatches agents in monotonic step
+      order — true before this work and unrelated to journaling.
+      Decided by BrainCandy on 2026-08-25: keep in this AC only what the unit
+      layer genuinely proves — durability after process exit, dispatch order,
+      and the absence guard on require()/appendJournal/journalPath (the one
+      clause that does discriminate against the pre-fix file). The in-flight
+      pollability requirement is NOT dropped: it moves to a new sibling AC so it
+      stays visible and open rather than being absorbed by a narrowed parent.
+      Rejected alternative: building an integration harness that launches a real
+      background run and polls journal.jsonl mid-flight. That would verify the
+      original clause directly and remains the right long-term answer, but it is
+      new test infrastructure and does not belong inside a remediation epic.
+  - by: ac-reconcile
+    at: 2026-08-26
+    note: >-
+      work_status set to done from verified evidence, against the NARROWED
+      criteria recorded in the 2026-08-25 entry above (durability after process
+      exit, dispatch order, and the require()/appendJournal/journalPath absence
+      guard — the in-flight pollability clause was moved out to BO-1000c-4 and
+      is NOT claimed here). Five tests carrying "# covers: BO-1000c-1a" exist in
+      unit_tests/workflows/test_bo_1000c_1a.py and all pass under
+      AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests run clean
+      apart from the unrelated test_ge_122e_1.py failure from another branch).
+      implemented_by extended with the real source file; the pre-existing ticket
+      path entry is left in place rather than replaced.
+  - reason: "merge resolution — reconcile independent same-day corrections from origin/main"
+    by: conflict-resolver
+    at: 2026-08-26
+    note: >-
+      origin/main's title-correction entry above (also 2026-08-26) was authored
+      on main independently of, and without visibility into, this branch's
+      2026-08-25 re-scope and its own 2026-08-26 ac-reconcile entry. Both
+      histories are preserved here for the audit trail, but the values that
+      govern this file going forward are the ones in the re-scope/ac-reconcile
+      entries: the narrowed criteria (durability after process exit, dispatch
+      order, and the require()/appendJournal/journalPath absence guard — the
+      in-flight clause moved to BO-1000c-4), work_status: done, and a title
+      updated to state only what the narrowed criteria claims. main's title
+      ("...in-flight-readable record...") was written against the un-narrowed
+      criteria and would misstate this AC's scope now that the in-flight clause
+      has moved out; retitled again accordingly rather than restoring main's
+      wording verbatim.
 superseded_by: null
 covered_by:
   - unit_tests/workflows/test_bo_1000c_1a.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-InFlightVisibility/12_TICKET-20260720-BO-1000c-1a.md
+- templates/workflows-js/finalize-feature.js
 change_target: pipeline
 risk_surface: internal

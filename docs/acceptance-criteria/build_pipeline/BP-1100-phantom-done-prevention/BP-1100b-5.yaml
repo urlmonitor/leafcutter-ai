@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -203,9 +203,13 @@ amended_by:
     entry: "User decision after three independent readings (product-owner, business-analyst, it-po, run in parallel and blind to each other). FOUR CHANGES. (1) criteria: added a fifth Then clause to scenario 1 requiring that the change is REFUSED, not merely reported. The business-analyst found that this AC's title says 'is rejected before the change is accepted' while no criterion and none of the then-eleven test_spec descriptors asserted rejection — every Then asserted only what is or is not reported, so a hook that printed a perfect report and exited 0 satisfied all four scenarios and all eleven descriptors. In the AC whose whole purpose is phantom-done prevention, the blocking behaviour existed in exactly one place in the record: the delivers_to contract prose, which no test reads. Siblings BP-1100g-4 and BP-100k-3 both already assert exit status. (2) test_spec: added a twelfth descriptor, test_unwaived_violation_refuses_the_change_and_a_clean_change_does_not, pairing non-zero exit on an unwaived violation with zero exit on the waived and clean cases. (3) delivers_to: python-coder -> null. Deliberate and terminal, not unenriched — see notes. (4) depends_on: added BP-100k-3, moving the SERIALIZATION constraint from prose into the only field the sequencer reads. criteria's four Given/When/Then scenarios are otherwise byte-unchanged; title, req_status, work_status, readiness and assigned_agent untouched."
     by: BrainCandy
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_bp_1100b_5.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/09_bp1100b45_presence_only_assertions_stop_counting.md
+  - templates/scripts/commit_guardian/check_presence_only_assertions.py
+  - templates/scripts/commit_guardian/_presence_only_scanner.py
+  - templates/scripts/commit_guardian/commit_guardian.json
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |

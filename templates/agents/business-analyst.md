@@ -11,7 +11,7 @@ description: |
   This agent operates exclusively at L2/L3 and produces AC YAML files.
 model: opus
 name: business-analyst
-tools: Read, Write, Bash, Skill  # Write scoped to docs/acceptance-criteria/ only.
+tools: Read, Write, Edit, Bash, Skill  # Write/Edit scoped to docs/acceptance-criteria/ only. Edit is required by S6b.
 portable: true
 requires_verification: true
 signoff: false
