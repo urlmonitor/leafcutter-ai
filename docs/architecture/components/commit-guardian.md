@@ -5,11 +5,11 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-08-18
+last_updated: 2026-08-26
 components:
   - commit_guardian
 related_docs:
-  - docs/architecture/adrs/ADR-034-whole-collection-uniqueness-pass.md
+  - docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md
   - docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
   - docs/architecture/diagrams/c3-006-whole-collection-uniqueness-pass.md
@@ -56,7 +56,7 @@ number (never one per claimant file), every claimant path, and a mandatory per-n
 `inspected_count` that distinguishes a real pass from a pass over nothing. Six sibling
 ACs under goal `GE-122` consume that verdict object directly rather than a CLI's printed
 text. See the [data-flow diagram](../diagrams/c3-006-whole-collection-uniqueness-pass.md)
-and the governing [ADR-034](../adrs/ADR-034-whole-collection-uniqueness-pass.md).
+and the governing [ADR-037](../adrs/ADR-037-whole-collection-uniqueness-pass.md).
 
 The decision-record namespace of that pass adopts `check_adr_collision.py`'s existing
 staged-vs-`origin/main`-vs-in-flight-branch comparison rather than reimplementing it. That

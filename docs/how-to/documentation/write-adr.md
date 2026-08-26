@@ -4,7 +4,7 @@ description: "Canonical guide for authoring ADRs in this repo: genre definition,
 type: how-to
 status: active
 created: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-26
 components:
   - documentation_system
   - commit_guardian
@@ -129,7 +129,7 @@ Every ADR body follows this order. Do not omit a section; do not reorder them.
    future reader understands why this was worth writing down.
 3. **Decision** — the committed choice, numbered as sub-decisions when the ADR binds
    more than one behavior (see §6 for language rules). Each numbered sub-decision
-   should be independently citable (e.g. "per ADR-034 §3").
+   should be independently citable (e.g. "per ADR-037 §3").
 4. **Consequences** — split into **Positive**, **Negative**, and **Operational**
    subsections. A Consequences section with only positives is a sign the tradeoffs
    were not examined honestly.
@@ -287,7 +287,7 @@ Before declaring the ADR done, confirm:
 
 - [`docs/conventions/adr-numbering.md`](../../conventions/adr-numbering.md) — the number-allocation and collision-avoidance procedure that precedes this guide's Step 2.
 - [ADR-029 — ADR Number Collision Prevention](../../architecture/adrs/ADR-029-adr-number-collision-prevention.md) — worked example of an amended ADR (see its Amendment 1 for a real Status-table-plus-amendment-section pattern).
-- [ADR-034 — Whole-Collection Uniqueness Pass](../../architecture/adrs/ADR-034-whole-collection-uniqueness-pass.md) — worked example of a new ADR authored via this guide, including a six-consumer contract and ten rejected alternatives.
+- [ADR-037 — Whole-Collection Uniqueness Pass](../../architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md) — worked example of a new ADR authored via this guide, including a six-consumer contract and ten rejected alternatives.
 - [How to write a reference doc](write-reference.md) — the sibling guide for lookup-genre documentation.
 - `templates/agents/adr-author.md` — the agent template that loads this guide as its mandatory pre-flight step.
 - `scripts/adr_refs.py` — the retrospective audit (duplicates, gaps, dangling numbers, broken slugs) used to verify a number is genuinely free.

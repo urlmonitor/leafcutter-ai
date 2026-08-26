@@ -1,10 +1,10 @@
 ---
-title: "ADR-034: Whole-Collection Uniqueness Pass — Verdict-Object Contract and Decision-Namespace Guard Registration"
+title: "ADR-037: Whole-Collection Uniqueness Pass — Verdict-Object Contract and Decision-Namespace Guard Registration"
 description: "Decision to express numbered-artifact uniqueness as one importable whole-collection pass returning a fixed verdict object — one finding per contested number, with a mandatory per-namespace inspected count — to adopt rather than reimplement the existing decision-number comparison, and to separate whole-collection inspection from diff-scoped commit disposition."
 type: "adr"
 status: "active"
 created: "2026-08-18"
-last_updated: "2026-08-18"
+last_updated: "2026-08-26"
 deciders:
   - BrainCandy
 components:
@@ -24,7 +24,7 @@ related_code:
   - scripts/adr_refs.py
 ---
 
-# ADR-034: Whole-Collection Uniqueness Pass — Verdict-Object Contract and Decision-Namespace Guard Registration
+# ADR-037: Whole-Collection Uniqueness Pass — Verdict-Object Contract and Decision-Namespace Guard Registration
 
 ## Status
 
@@ -34,6 +34,7 @@ related_code:
 | Date | 2026-08-18 |
 | Author | adr-author, on the handoff from `architect-review` recorded in ticket `GE-122a-1` |
 | Supersedes | None |
+| Renumbered | 2026-08-26 — authored as `ADR-034`. While this branch was in flight, `main` independently minted `ADR-034-knowledge-write-ownership`; git could not see the collision (different filenames) and the diff-scoped `check_adr_collision` hook does not fire on it. This decision moved to the next genuinely free number, 037, verified via `scripts/adr_refs.py`'s "Unclaimed numbers" audit. `ADR-034` now resolves solely to knowledge-write-ownership. |
 | Context ADRs | [ADR-029](ADR-029-adr-number-collision-prevention.md) (decision-number collision prevention, incl. Amendment 1), [ADR-001](ADR-001-self-hosting-boundary.md) (self-hosting boundary) |
 
 ## Context

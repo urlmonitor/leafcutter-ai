@@ -1,5 +1,5 @@
 {
-  "adr_id": "ADR-034",
+  "adr_id": "ADR-037",
   "affected_files": [
     "templates/scripts/commit_guardian/check_identifier_uniqueness.py",
     "templates/scripts/commit_guardian/check_adr_collision.py",

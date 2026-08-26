@@ -6,7 +6,7 @@ flight_level: L3-Component
 diagram_type: data_flow
 status: active
 created: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-26
 root: true
 components:
   - commit_guardian
@@ -15,7 +15,7 @@ related_code:
   - templates/scripts/commit_guardian/check_adr_collision.py
   - templates/scripts/commit_guardian/commit_guardian.json
 related_docs:
-  - docs/architecture/adrs/ADR-034-whole-collection-uniqueness-pass.md
+  - docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md
   - docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
   - docs/architecture/components/commit-guardian.md
 tags:
@@ -33,7 +33,7 @@ separate diff-scoped filter (`compute_commit_disposition`) turns into a commit-t
 block/report decision without re-walking the collection. Six sibling acceptance
 criteria under goal `GE-122` read the verdict object directly; none of them re-walk
 the collection or shell out to a CLI. This diagram is the contract map for that
-fan-out, recorded by [ADR-034](../adrs/ADR-034-whole-collection-uniqueness-pass.md).
+fan-out, recorded by [ADR-037](../adrs/ADR-037-whole-collection-uniqueness-pass.md).
 
 ---
 
@@ -109,7 +109,7 @@ graph TD
   walks all four namespaces exactly once per invocation, regardless of what is staged.
   `compute_commit_disposition` filters the single resulting verdict against the current
   git change set — it never triggers a second collection walk. This split is
-  [ADR-034 §3](../adrs/ADR-034-whole-collection-uniqueness-pass.md#3-inspection-is-whole-collection-disposition-is-diff-scoped).
+  [ADR-037 §3](../adrs/ADR-037-whole-collection-uniqueness-pass.md#3-inspection-is-whole-collection-disposition-is-diff-scoped).
 - **The decision namespace is adopted, not reimplemented.** `check_adr_collision.py`
   already performed the staged-vs-`origin/main`-vs-in-flight-branch comparison before
   this pass existed; it is registered as the `check-decision-number-uniqueness` hook in
@@ -125,7 +125,7 @@ graph TD
   23 diagrams from a pass over an empty or misconfigured root — `GE-122d-3` and
   `GE-122e-3` both assert on it directly.
 - **Six downstream consumers read the object, not a CLI.** Per
-  [ADR-034 §1](../adrs/ADR-034-whole-collection-uniqueness-pass.md#1-the-pass-will-be-a-library-not-a-hook),
+  [ADR-037 §1](../adrs/ADR-037-whole-collection-uniqueness-pass.md#1-the-pass-will-be-a-library-not-a-hook),
   every consumer imports `run_uniqueness_pass` / `compute_commit_disposition` and reads
   the typed return value; none of them shell out and parse the CLI's printed report.
 
@@ -133,7 +133,7 @@ graph TD
 
 ## Cross-Links
 
-- **Governing ADR:** [ADR-034 — Whole-Collection Uniqueness Pass](../adrs/ADR-034-whole-collection-uniqueness-pass.md)
+- **Governing ADR:** [ADR-037 — Whole-Collection Uniqueness Pass](../adrs/ADR-037-whole-collection-uniqueness-pass.md)
 - **Adopted decision-namespace ADR:** [ADR-029 — ADR Number Collision Prevention](../adrs/ADR-029-adr-number-collision-prevention.md) (incl. Amendment 1 — fail-closed-on-read-failure rule this pass also follows)
 - **Component doc:** [Commit Guardian](../components/commit-guardian.md)
 - **Implementation:** [`templates/scripts/commit_guardian/check_identifier_uniqueness.py`](../../../templates/scripts/commit_guardian/check_identifier_uniqueness.py)

@@ -4,9 +4,12 @@ description: Index of all Architecture Decision Records (ADRs) for the leafcutte
   package, listing each decision's number, status, title, and date.
 type: reference
 created: '2026-08-13'
-last_updated: '2026-08-13'
+last_updated: '2026-08-26'
 status: active
+components:
+- documentation_system
 ---
+
 # Architecture Decision Records
 
 This directory contains Architecture Decision Records (ADRs) for the leafcutter-ai
@@ -25,7 +28,7 @@ python scripts/adr_refs.py --index --write
 
 | # | Status | Title | Date |
 |---|--------|-------|------|
-| [ADR-001](ADR-001-self-hosting-boundary.md) | Accepted | Self-Hosting Boundary — Config-Driven Path Resolution | 2026-05-19 |
+| [ADR-001](ADR-001-self-hosting-boundary.md) | Active | Self-Hosting Boundary — Config-Driven Path Resolution | 2026-08-13 |
 | [ADR-002](ADR-002-dual-platform-compilation.md) | Active | Dual Platform Compilation for AI Agents | 2026-05-22 |
 | [ADR-003](ADR-003-test-source-of-truth-discipline.md) | Accepted | Tests Are Mirrors of Production Contracts — Contract Shrinkage During Test Repair Requires Explicit Authorization | 2026-05-22 |
 | [ADR-004](ADR-004-consolidated-output-root.md) | Active | Consolidated Output Root — All build.py Artifacts Under .leafcutter/ | 2026-05-27 |
@@ -35,7 +38,7 @@ python scripts/adr_refs.py --index --write
 | [ADR-008](ADR-008-ac-store-schema-id-format-enforcement.md) | Accepted | AC Store — YAML Schema, ID Format, and Bidirectional Enforcement Model | 2026-06-04 |
 | [ADR-009](ADR-009-itpo-no-source-code-access.md) | Accepted | IT Product Owner v3 — Source Code Access Restriction | 2026-06-05 |
 | [ADR-010](ADR-010-ac-store-as-authoritative-backlog.md) | Accepted | AC Store as Authoritative Backlog — Source-of-Truth Inversion | 2026-06-05 |
-| [ADR-011](ADR-011-learning-emission-sink.md) | Active | Learning Emission Sink — Separate knowledge_emissions.jsonl vs Reuse agent_telemetry.jsonl | 2026-06-05 |
+| [ADR-011](ADR-011-learning-emission-sink.md) | Active | Learning Emission Sink — Separate knowledge_emissions.jsonl vs Reuse | 2026-06-05 |
 | [ADR-012](ADR-012-retire-create-ticket-js.md) | Accepted | Retire create-ticket.js — /plan-feature + /build-ac as Canonical Ticket-Creation Path | 2026-06-16 |
 | [ADR-013](ADR-013-portable-skill-script-deployment-boundary.md) | Accepted | Portable Skill Script Deployment Boundary — Consumer-Facing vs Package-Internal | 2026-06-17 |
 | [ADR-014](ADR-014-exception-guard-enforcement-scope.md) | Accepted | Exception-Handling Guard Enforcement Scope | 2026-06-17 |
@@ -58,3 +61,7 @@ python scripts/adr_refs.py --index --write
 | [ADR-031](ADR-031-worktree-quality-gate-guard.md) | Active | Worktree Quality Gate Guard — Execution-Proof Fail-Closed Design | 2026-07-06 |
 | [ADR-032](ADR-032-tiered-parallel-code-smell-review.md) | Active | Tiered Parallel Code-Smell Review (Modern-12 Bucket Split + Depth-1 Orchestration) | 2026-08-11 |
 | [ADR-033](ADR-033-agent-model-tiers.md) | Active | Agent Model Tiers and Gatekeeper Escalation | 2026-08-13 |
+| [ADR-034](ADR-034-knowledge-write-ownership.md) | Active | Knowledge Write Ownership — the Harvester Writes, Agents Only Emit | 2026-08-25 |
+| [ADR-035](ADR-035-fast-lane-closed-producer-roster.md) | Active | The Fast Lane's Producer Roster Becomes Data, But Stays Closed | 2026-08-25 |
+| [ADR-036](ADR-036-documentation-dispatch-caller-boundary.md) | Active | Documentation Dispatch Is Caller-Dependent — documentation-expert Is a Human Entry Point, Never an AC's assigned_agent | 2026-08-26 |
+| [ADR-037](ADR-037-whole-collection-uniqueness-pass.md) | Active | Whole-Collection Uniqueness Pass — Verdict-Object Contract and Decision-Namespace Guard Registration | 2026-08-18 |
