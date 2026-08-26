@@ -2316,3 +2316,87 @@ other register entries, and defined zero times. The citations here have been rep
 plain description. Whoever owns `build-orchestration.md` should either write the entry or
 retire the id; a reference that resolves to nothing is indistinguishable from one whose target
 was deleted, and readers cannot tell which they are looking at.
+
+---
+
+### KI-BP-20260826-1421 — a worktree provisioned with a `/tmp` hook tree loses every package gate when `/tmp` is cleared, and pre-commit's own error message recommends disabling the gates to make it go away
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 2 (same session, 2026-08-26)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** the documented worktree provisioning fix in `CLAUDE.md` → "Worktree pre-commit
+  config" · `pre-commit`'s missing-config error path
+
+**Background.** A fresh worktree has no `.pre-commit-config.yaml` and no populated
+`.leafcutter`, so every package hook is skipped unless provisioned. `CLAUDE.md` prescribes a
+symlink to the main tree's `.leafcutter`. Where the shared tree is untrustworthy — see
+`KI-BP-20260826-1331`, the per-file collage — the natural alternative is to build a clean tree
+to a scratch directory and symlink at that instead.
+
+**Symptom.** Do that with a scratch directory under `/tmp` and the provisioning silently
+expires. Twice in one session, a hook tree built to `/tmp/lc-build-check` was gone by the next
+commit:
+
+```text
+$ ls /tmp/lc-build-check/
+exit: 2
+
+$ git commit …
+No .pre-commit-config.yaml file was found
+- To temporarily silence this, run `PRE_COMMIT_ALLOW_NO_CONFIG=1 git ...`
+- To permanently silence this, install pre-commit with the --allow-missing-config option
+```
+
+The `.leafcutter` symlink still exists and still looks right in `ls -la`; it points into a
+directory that no longer does. Nothing about the symlink indicates it is dangling until a hook
+tries to run.
+
+**The dangerous part is the remediation advice, not the wipe.** This particular failure is
+**fail-closed** — the commit is refused, loudly. That is the good outcome. But the first
+suggestion pre-commit prints is `PRE_COMMIT_ALLOW_NO_CONFIG=1`, which converts it into the
+**silent skip** this repository already has an entry for: every package hook bypassed, commit
+succeeds, no output. An operator — or an agent — following the tool's own advice turns a
+refusal into exactly the fail-open state `KI-BP-004` and the `CLAUDE.md` checklist exist to
+prevent. The escape hatch is one environment variable and it is printed at the moment of
+maximum incentive to use it.
+
+Both times, the fix was to rebuild the tree, not to set the variable. Recorded because that is
+a judgement call made twice under time pressure, and it will not always go that way.
+
+**Cause not established — and one plausible culprit is ruled out.** `wsl-reclaim.timer` runs
+hourly and fired at `14:02:32`, minutes before the second failure, which is suggestive. It is
+not the cause: `~/.local/bin/wsl-reclaim` contains **no reference to `/tmp`**, walks only
+`$PROJECT_ROOT`, and applies a 24-hour age floor (`AGE_MIN=1440`), while the deleted tree was
+minutes old and outside that root.
+
+Both disappearances also coincided with a Claude Code process exit, which is the other
+candidate — but coincidence is all that has been established. Naming a mechanism here on the
+strength of the timing alone would be the same error this register documents repeatedly, so it
+is left open. What is established is the operational fact: **in this environment, `/tmp` does
+not reliably survive a session boundary**, and anything a worktree depends on for gate
+enforcement must not live there.
+
+**Fix direction.** Three, in increasing order of value:
+
+1. **Do not provision hook trees under `/tmp`.** A persistent path works —
+   `/home/henzeh/projects/worktrees/.hooktree` is in use now. Cheap, immediate, and the
+   documented `CLAUDE.md` procedure should say so rather than leaving the location to the
+   operator.
+2. **Make a dangling `.leafcutter` detectable before commit time.** A symlink whose target has
+   vanished is indistinguishable from a healthy one by inspection; the pre-drive checklist's
+   `ls <worktree-root>/.leafcutter` passes on a broken link. `ls -L` or `test -e` would not.
+3. **Never accept `PRE_COMMIT_ALLOW_NO_CONFIG`.** Whatever else changes, an environment
+   variable that disables every gate should not be reachable by following an error message.
+   If the repo cannot stop pre-commit printing it, the checklist should name it explicitly as
+   a thing not to do, and say why.
+
+**Pattern:** provisioning that expires without a signal, plus a tool whose remediation advice
+for the loud failure is to convert it into a quiet one.
+
+**Related.** `KI-BP-004` (a worktree's deployed hooks frozen at build time — the same
+provisioning surface failing by staleness rather than absence). `KI-BP-20260826-1331` (the
+shared-root collage, which is *why* a scratch tree gets built in the first place — fixing that
+removes the incentive that leads here). `KI-BP-003` (`config/doc_types.json` missing from the
+deployed tree, which makes `check-doc-frontmatter` fail on every commit from a freshly built
+scratch tree and trains operators to reach for `SKIP=`).
