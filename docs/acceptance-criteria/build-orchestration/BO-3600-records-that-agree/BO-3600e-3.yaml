@@ -1,0 +1,76 @@
+id: BO-3600e-3
+title: "The conflicts already present when the check starts are measured, visible, and treated like any other"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the reconciliation is run for the first time over a store that already
+    contains disagreeing pairs,
+  When it reports,
+  Then the number of conflicts present at that moment is recorded as the starting
+    population,
+    And every one of them is listed with the same detail as a conflict found later.
+
+  Given a subsequent run,
+  When it reports,
+  Then it states the current number of outstanding conflicts and the starting
+    population it is measured against,
+  So progress is legible without anyone keeping their own tally.
+
+  Given a conflict that was present in the starting population and one raised
+    afterwards,
+  When both are reported,
+  Then neither is exempted, deferred by default, or reported with less detail than
+    the other,
+  So being old is not a reason to be ignored.
+
+  Given a store whose starting population is large,
+  When the reconciliation runs,
+  Then it still reports every conflict rather than a sample or a capped list,
+    And it does not stop the work of the project on account of them,
+  So the backlog is neither hidden nor turned into a blockade.
+depends_on:
+  - BO-3600e
+  - BO-3600e-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028's finding is itself the starting population in miniature: eight records found by hand in one pass, and the contradiction shape live again on other records the next day."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3600-records-that-agree/BO-3600d-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The ageing of undecided conflicts, which is what stops the outstanding count being held flat by deferral rather than by decisions."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE EXISTING BACKLOG IS PART OF THE DELIVERY, not a follow-up — BO-3600e says so.
+  A check switched on over a store with a large standing population either blocks
+  everything or is immediately suppressed, and the fourth scenario names both
+  failure modes so neither can be chosen quietly.
+
+  The third scenario is the one that gets skipped in practice: grandfathering the
+  starting population is the natural way to make a new check comfortable, and it
+  would exempt precisely the records this goal exists for, since every one of the
+  eight behind it was old.
+
+  This record owns measurement and visibility. The rule that the count may only fall
+  by decision is BO-3600e-4, and the verdicts themselves are BO-3600d's.

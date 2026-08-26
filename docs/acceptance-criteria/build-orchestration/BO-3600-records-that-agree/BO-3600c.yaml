@@ -1,0 +1,84 @@
+id: BO-3600c
+title: "A fault record that points at something no longer true is caught"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Stale references inside the fault log are found, not inherited.
+
+  A recorded fault that points at a requirement, a file or a place that has since
+  moved or ceased to exist is flagged as needing attention. A reader can act on
+  what the log says without first checking whether it is still true, and a
+  finding does not quietly rot into a wrong instruction.
+depends_on:
+  - BO-3600
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028's own correction list — five stale claims found in sibling entries during a single pass, none of which any process had detected."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3600c-1
+  - BO-3600c-2
+  - BO-3600c-3
+  - BO-3600c-4
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: |
+  WHY THIS SITS UNDER THE SAME GOAL. BO-3600a and BO-3600b compare two records
+  and act on the disagreement. Both are worthless if one of the two records is
+  itself untrustworthy — a conflict raised against a stale reference is noise, and
+  a check that produces noise gets switched off. This L1 is the precondition that
+  makes the other two believable.
+
+  THE EVIDENCE IS IN THE FINDING ITSELF, and it is unusually concrete because one
+  triage pass surfaced five instances as a side effect of doing something else:
+    - KI-BO-011 said the class it describes "has no AC and is the reason this
+      entry stays open", while BO-2900a-3 specifies it precisely and is `todo`.
+    - KI-BO-011's evidence line — "BO-2500d-1 also names the orphan in its
+      implemented_by" — had been stale since 2026-08-19.
+    - KI-BO-012's status line read "open — no AC" while its own body discusses
+      four ACs.
+    - KI-BO-013's headline claim, "test_required: false is honoured by nothing",
+      is contradicted by two places in check_done_proof.py.
+    - KI-BO-022 and KI-BO-023 carried line numbers that PR #541 had shifted.
+  Five in one pass, in a register of sixty-five entries. That is a rate, not an
+  accident, and the last of the five is the easiest kind to detect mechanically.
+
+  SCOPE THE AMBITION AT L2. The five above are not equally checkable. A moved line
+  number and a named-but-nonexistent requirement id are decidable by lookup; a
+  headline whose claim is overstated is not. The BA should specify the decidable
+  classes and say plainly which kinds of staleness are out of reach, rather than
+  writing a criterion that only a reader could satisfy.
+
+  DECOMPOSED 2026-08-26 (business-analyst). Four L2 children, one cap slot left
+  free: BO-3600c-1 (a named requirement that does not exist, distinguished from one
+  that has been retired, flagged per reference rather than per entry), BO-3600c-2
+  (a place that no longer holds what the entry says is there — which requires an
+  entry to record WHAT it expects at a position, since a bare line number is
+  satisfied by whatever happens to be on it; + BO-3600c-2-i, a subject that moved
+  says where it went and never asserts a deletion), BO-3600c-3 (the check declares
+  which kinds of staleness it looks for and which it does not, so an unflagged
+  entry is never read as a true one), BO-3600c-4 (reference entry). The overstated
+  headline of KI-BO-013 is the named out-of-reach class and is deliberately not
+  given a criterion — BO-3600c-3 makes that boundary visible in every result
+  instead.

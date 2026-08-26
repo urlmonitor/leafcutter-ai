@@ -6,7 +6,7 @@ component: build-pipeline
 level: L1
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 # 6 L2 children = 5 behavioral guards + 1 mandatory sequence-diagram doc AC
@@ -77,3 +77,38 @@ notes: |
   re-derive. Sibling boundaries: BP-1100a = pre-dispatch scope completeness;
   BP-1100e = declared-vs-actual files after work. BP-1100f = proof of real
   effect/intent vs dispatch topology.
+
+  REOPENED 2026-08-26 (was work_status: done, readiness: approved, priority: high).
+  Decision by the human operator (BrainCandy); recorded by the operator's main loop,
+  not by any phase agent. No agent sign-off is forged here.
+
+  REASON. This L1's benefit claim is materially broader than its six children
+  deliver, and it is the claim a reader will take as coverage of KI-BO-007. The
+  criteria promise that when the pipeline hands work to an automated helper "it
+  confirms the change actually happened -- the real result exists and can be
+  observed -- rather than treating 'a step took place' as proof on its own." That
+  is KI-BO-007's fix direction stated in benefit language. The issue is open, at
+  severity high, with two recorded occurrences.
+
+  The children split the wrong way for that promise. BP-1100f-1, f-3 and f-4 check
+  the instruction going IN -- pre-dispatch payload, and intent-versus-surface
+  contradiction. f-6 is the mandatory sequence diagram. Only f-5 sits on the effect
+  side, and it is a routing hook keyed on `declares_side_effect`, a field set on 35
+  of ~2,888 records. So nothing among the children asserts that a phase produced
+  the specific result that phase exists to produce, which is exactly the gap
+  KI-BO-007's anchor run demonstrates: the pull-request agent drafted its PR, wrote
+  into the ticket record, halted before pushing, and returned cleanly. Files
+  changed. Nothing it existed to produce came into being.
+
+  `implemented_by` is also empty, so the delivering commit is not traceable from
+  the store and the done claim could not be audited from the record alone.
+
+  The six children are NOT reopened. Each did its own job; the defect is in this
+  L1's scope, not in their delivery. Do not reconcile this by narrowing the
+  criteria to match what f-1..f-6 already do -- that would relax the requirement
+  to fit the implementation, which is the inverse of the fix. The effect-side gap
+  is specified by BO-3100e and BO-3100f (authored 2026-08-26 against KI-BO-007);
+  this record should close when a child of this L1 asserts the effect side, or by
+  an explicit, recorded decision that BO-3100e/f supersede that half.
+
+  Found by the product-owner agent during a KI-BO-007 coverage review, 2026-08-26.

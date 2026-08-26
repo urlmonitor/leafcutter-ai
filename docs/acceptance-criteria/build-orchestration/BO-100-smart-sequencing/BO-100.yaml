@@ -28,7 +28,7 @@ origin_agent: business-analyst-v3
 created: 2026-06-04
 amended_by: []
 superseded_by: null
-covered_by: [BO-100a, BO-100b, BO-100c, BO-100d]
+covered_by: [BO-100a, BO-100b, BO-100c, BO-100d, BO-100e]
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

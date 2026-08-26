@@ -1,0 +1,82 @@
+id: BO-300d-2
+title: "A cause is stated only where the run can establish it, and is stated as undetermined where it cannot"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run whose closing report names four unbuilt pieces,
+    And piece P was in the set the plan was built from and the run holds no record
+      of having completed it and no recorded outcome for it,
+    And piece Q was in the set the plan was built from and the run holds a recorded
+      outcome for it saying the work stopped short of finishing,
+    And piece R was not in the set the plan was built from,
+    And piece S was not in the set the plan was built from either,
+  When the run produces its closing report,
+  Then P is reported as planned and not finished,
+    And Q is reported as stopped part-way, naming what the recorded outcome says
+      stopped it,
+    And both R and S are reported with their cause not determined, stated in those
+      terms,
+    And no piece is reported as having been added to the body of work after the run
+      started, because the run holds nothing that could establish that,
+    And no piece is reported as having been passed over deliberately, for the same
+      reason.
+
+  Given the same run,
+  When the closing report is read,
+  Then for every cause it states, the thing the run relied on to establish that
+    cause is one the run holds — membership of the set the plan was built from, its
+    own record of what it completed, or a recorded outcome for that piece,
+    And no stated cause rests on a comparison the run did not make.
+
+  Given a run in which the set the plan was built from cannot be read back at all,
+  When the run produces its closing report,
+  Then every unbuilt piece is reported with its cause not determined,
+    And the report states that the set the plan was built from could not be read,
+  So a missing input produces an acknowledged gap and never a confident cause.
+depends_on:
+  - BO-300d
+  - BO-300d-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-026 — twenty pieces filed under 'added to the epic after the plan was fixed' when all twenty had been there before the run began. Its 2026-08-26 review note establishes that no snapshot of the body of work at plan time exists anywhere in the data flow, so that cause is not establishable at all."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Amended 2026-08-26 to read that a cause is stated for a piece of unbuilt work only where the drive can establish that cause from what it holds. This record sits on top of that clause and applies it to every unbuilt piece rather than only to the ones the re-read surfaced."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-300d-2-i
+implemented_by: []
+notes: |
+  THE ESTABLISHABLE SET IS FIXED AND IS NOT A DESIGN CHOICE AT L2. Plan membership
+  plus the completed record gives "planned and not finished"; a recorded outcome for
+  the piece gives "stopped part-way"; anything else gives "cause not determined".
+  Splitting "never selected" from "arrived after the run started" would need a
+  plan-time listing of the body of work, and there is no such value — asking for it
+  at L2 would reproduce the defect this record exists to fix.
+
+  NOT A RELAXATION. "Cause not determined" is an obligation to be explicit, not a
+  licence to omit the piece: the piece is still named, still counted (BO-300d-1) and
+  still carries an action (BO-300d-3). A report that drops undetermined pieces
+  rather than labelling them fails this record.
+
+  The phrase "discovered after planning" survives as stale terminology in
+  BO-300a-5-i and BO-300a-5-iii. It is deliberately not used here and must not be
+  reintroduced.

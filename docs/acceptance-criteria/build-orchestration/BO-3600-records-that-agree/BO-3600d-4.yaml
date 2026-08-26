@@ -1,0 +1,76 @@
+id: BO-3600d-4
+title: "A state diagram shows a conflict's states and that none of them is disappearance"
+component: build-orchestration
+components:
+  - documentation_system
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader wanting to know what happens to a conflict once it is raised,
+  When they open the state diagram for a conflict's lifecycle,
+  Then it shows the states a conflict can be in — raised, not yet decided, and one
+    state per recorded resolution,
+    And it shows the transition out of each state and what causes it,
+    And it shows no transition by which a conflict leaves the diagram without a
+      recorded state.
+
+  Given the diagram,
+  When it is compared against the states real conflicts occupy and the transitions
+    they make,
+  Then every state it shows is one a real conflict occupies,
+    And every transition a real conflict makes appears in it.
+
+  Given the diagram,
+  When a reader looks for how a resolved conflict can become live again,
+  Then it shows the transition back from a resolution to raised, and states that it
+    is caused by one of the two records changing,
+  So the safety valve is documented rather than discovered.
+
+  Given the diagram,
+  When a reader looks for a fifth resolution,
+  Then the diagram shows none,
+  So the closed set of outcomes is legible from the picture.
+depends_on:
+  - BO-3600d
+  - BO-3600d-1
+  - BO-3600d-2
+  - BO-3600d-3
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the state diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page the diagram must be reachable from; there is no ac-store component page."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies one half of BO-3600d's documentation_triggers: [state-diagram,
+  reference-doc]; BO-3600d-5 satisfies the other.
+
+  The whole point of the L1 is that a conflict cannot vanish, so a state diagram is
+  the artifact that either shows that or exposes that it is not true: an exit with
+  no destination state is exactly what the picture makes obvious and prose does not.
+
+  The third and fourth scenarios pin BO-3600d-3's re-raise transition and
+  BO-3600d-2's closed outcome set into the diagram, so a later reader cannot infer
+  a fifth verdict or assume a resolution is permanent.
+
+  assigned_agent deliberately unset — the diagram surface belongs to the IT Product
+  Owner's assignment pass.

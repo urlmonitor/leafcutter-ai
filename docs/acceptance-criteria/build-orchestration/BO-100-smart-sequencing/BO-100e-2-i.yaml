@@ -1,0 +1,59 @@
+id: BO-100e-2-i
+title: "Prerequisites that can never be satisfied — a cycle, or a prerequisite outside the set — end the run with the cause named"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a set of work in which piece P's prerequisite is Q, Q's is R, and R's is P,
+    so the three can never become eligible,
+  When the run looks for eligible work,
+  Then the run ends rather than looking again indefinitely,
+    And it names the three pieces and states that their prerequisites refer to one
+      another in a loop,
+    And none of the three is built.
+
+  Given a set of work in which piece S's prerequisite names a piece that is not in
+    this run's set at all,
+  When the run looks for eligible work,
+  Then S is not built, the run ends, and it states that S's prerequisite is not part
+    of this run's set, naming the prerequisite,
+    And this is reported differently from a prerequisite that is in the set and has
+      not yet finished.
+
+  Given a set of work containing both a loop and pieces outside it that can be built,
+  When the run proceeds,
+  Then the pieces outside the loop are built,
+    And only the pieces in the loop are left unbuilt,
+  So an unsatisfiable prerequisite costs the run the work behind it and nothing else.
+depends_on:
+  - BO-100e-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-025 — the run this widening applies to; the cycle case is the failure mode the widening itself introduces."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Today's single-pass behaviour is immune to a prerequisite loop because it never
+  asks a second time. Asking repeatedly introduces the loop as a live hazard, so it
+  is specified with the widening rather than after it.
+
+  The third scenario is the containment clause: an unsatisfiable prerequisite must
+  not become a reason to abandon the whole run, which would be a regression against
+  the 17 pieces today's behaviour does build.

@@ -1,0 +1,93 @@
+id: BO-100e
+title: "One run carries the work through every layer of its prerequisites"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Start the build once and it finishes the whole thing, however deeply layered.
+
+  A run keeps going until there is genuinely nothing further it can build: work
+  that only becomes eligible once earlier work is finished is picked up within
+  the same run, without being asked again. How many layers of prerequisites the
+  work happens to have changes how long the run takes — never how many times
+  you have to start it.
+depends_on:
+  - BO-100
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-025 — the observed failure this criterion answers: a 37-piece body of work was driven, 17 pieces were built, and every piece with a prerequisite was left untouched because eligibility was decided once and never revisited."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The delivery topology this criterion changes: how much of a layered body of work a single drive is expected to carry."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-100e-1
+  - BO-100e-2
+  - BO-100e-3
+  - BO-100e-4
+  - BO-100e-5
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+notes: |
+  ORIGIN. KI-BO-025 (severity high, 2026-08-25). Driving a 37-piece body of work,
+  17 pieces were built and 20 were not; the 20 were exactly those carrying a
+  prerequisite. Eligibility was decided once, at the start, when nothing was yet
+  finished — so only prerequisite-free work could ever qualify. Work N layers deep
+  therefore needs N separate manual starts.
+
+  THIS IS THE AMBITIOUS HALF OF A PAIR, AND THE PAIR IS NOT AN EITHER/OR. The
+  other half is BO-300d: a run that leaves work behind must say so, say how much,
+  and say what to do. BO-300d is the floor and holds whether or not this criterion
+  is ever built — a run can still stop early for reasons that have nothing to do
+  with layering. Do not treat BO-300d as superseded if this ships, and do not
+  treat this as optional because BO-300d exists: telling the operator to start the
+  same command five times is honest, but it is not the product we want.
+
+  SCOPE BOUNDARY — this is about work that was ALREADY THERE and never taken on.
+  Work that appears in the middle of a run is a different case, deliberately
+  settled the other way: BO-300a-5 (done) requires such work to be reported and
+  left outstanding, precisely because absorbing it would give a run no stopping
+  point. Nothing here reopens that. "Keeps going until nothing further can be
+  built" means the set of work fixed when the run started, not a set that grows
+  underneath it.
+
+  DECOMPOSITION WARNING for the BA. The load-bearing case is a chain, not a
+  fan-out: work whose prerequisite is satisfied only by something built earlier in
+  the same run. A scenario in which everything is eligible at the start passes
+  trivially on today's behaviour and proves nothing. Per CLAUDE.md "Gate /
+  Workflow ACs — Verify Behaviorally, Not by Grep", coverage must execute the real
+  drive and observe the later layers actually being taken on; finding a repeated
+  eligibility check in the source cannot tell whether its answer is ever used.
+  Termination is part of the criterion, not a detail: a run that cannot build any
+  of the remaining work must end and say so, not circle.
+
+  DECOMPOSED 2026-08-26 (business-analyst). Five L2 children, which is this L1's
+  full child cap:
+    - BO-100e-1 — the four-deep chain is carried by one start, in order
+      (+ BO-100e-1-i: only a successful prerequisite makes its dependants eligible).
+    - BO-100e-2 — the run stops on a look that releases nothing, and cannot circle
+      (+ BO-100e-2-i: loops and prerequisites outside the set end the run, named).
+    - BO-100e-3 — the set is fixed at the start; mid-run additions are not absorbed.
+    - BO-100e-4 — one branch's failure does not withhold an unrelated branch.
+    - BO-100e-5 — the sequence diagram (documentation_triggers).
+  What the run SAYS about the work it left behind is deliberately absent here; that
+  is BO-300d in full, and BO-100e-2/e-4 only require that the run does not claim to
+  have finished.

@@ -1,0 +1,77 @@
+id: BO-3600a-3
+title: "Conflicts the check was never told about are found, and yesterday's list is not what it reports"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store in which every conflicting pair known at the time the check was
+    built has been reconciled, so none of them still disagrees,
+    And a fault entry is then recorded, open, naming a requirement that reads
+      finished, where neither the entry nor the requirement is named anywhere in the
+      check itself,
+  When the reconciliation runs,
+  Then that new pairing is reported as a conflict.
+
+  Given the same store,
+  When the reconciliation runs,
+  Then no pairing is reported merely because it appeared in an earlier run's output,
+    And a pairing that no longer disagrees is not reported,
+  So the output describes the store as it is now and not as it was.
+
+  Given a fault entry and a requirement whose identifiers appear nowhere in the
+    check, in any form,
+  When they are made to disagree and the reconciliation runs,
+  Then the conflict is reported,
+  So the check is exercised on a pair it cannot have been written against.
+
+  Given the check,
+  When the number of conflicts it reports is compared against the number of
+    disagreeing pairs present in the store,
+  Then the two are equal,
+  So the check is not reporting a sample, a fixed list, or the first few it finds.
+depends_on:
+  - BO-3600a
+  - BO-3600a-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — the eight records it names were all reconciled by PR #553 before this goal was authored, and the contradiction shape reappeared on other records within a day. A check written against the named instances would already be finding nothing."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The evidence for deriving a rule rather than enumerating instances: written as a rule over every declaration, that check found five violators where the report named one."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BO-3600a's notes say it directly: use the live instances as the fixture, do NOT
+  hard-code them, since they will be resolved and the check must keep finding new
+  ones. This record is the test of that instruction, and the third scenario is its
+  sharpest form — a pair whose identifiers the check has never seen.
+
+  The fourth scenario is the completeness clause. Without it, a check that reports
+  the first conflict it finds passes every other scenario here while leaving the
+  store as unreconciled as before. BO-3600e owns the SCOPE of the traversal; this
+  clause owns the completeness of the reporting within whatever was traversed.
+
+  The second scenario matters because a detector whose output is a growing list of
+  historical findings is one a reader stops opening — the fate BO-3600d's notes
+  record for every long-lived detector in this repo that lacked a disposition path.
