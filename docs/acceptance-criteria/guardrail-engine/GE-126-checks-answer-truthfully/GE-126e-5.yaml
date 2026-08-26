@@ -1,0 +1,166 @@
+id: GE-126e-5
+title: "The first measured answer is published with the question that produced it"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the census has been run over the real registered set for the first time,
+  When a reader consults the reference material for the check family,
+  Then it records that measurement: how many checks were examined how many were classified as
+    instances how many could not be executed the date and the commit it was measured at,
+  And it states the procedure that produced the classification — a genuine violation handed to
+    each check and two runs from two working directories compared — so a reader can repeat the
+    measurement rather than take the number on trust,
+  And it states that the figure describes the registered set at that commit and will move
+    which is why it carries a date,
+  And it names the census as the way to obtain a current figure so nobody quotes the recorded
+    one as though it were current,
+  And no statement anywhere in the reference material asserts a number for this defect that did
+    not come from a census run.
+
+  Coverage note: covered by a check that the recorded figures match the output of a census run
+  at the recorded commit and that the recorded procedure is the one the census performs. A
+  reference stating a figure no run produced is the failure this criterion pins and it is
+  detectable by re-running at that commit.
+depends_on:
+  - GE-126e
+  - GE-126e-1
+  - GE-126e-2
+  - GE-126e-3
+doc_links:
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: modifies
+    status: exists
+    relevance: "Where the mechanism is named. The measured prevalence of it in this check family belongs beside the mechanism rather than in a known-issues entry."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "The register this census replaces as a discovery mechanism. Several entries in it belong to this family and every one was found while doing something else."
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-10.yaml
+    relationship: context
+    status: exists
+    relevance: "The precedent for turning a silence into a state you can ask about and for reporting the answer alongside the number of records looked at. Read-only reference."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Where the census itself is documented by GE-126e-4. The published figure must route to it for how to obtain a current one rather than restating the invocation."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "Every figure published must come from an actual census run and the commit it was measured at must be recorded beside it, so a later reader can re-run at that commit and either confirm or refute the number."
+  - "The count that circulates informally today - roughly seventy checks of which three are known instances - came from three checks being looked at while doing other work. It is not a measurement and must not be published as one, in the reference or anywhere else."
+  - "The reference must name the census as the route to a current figure and must route to the component documentation for how to invoke it rather than restating the invocation. A second copy of the invocation will drift, and this component has a recorded instance of a documented defence against store rot that was itself a no-op for eight days and reported clean the whole time."
+  - "The published procedure must be the procedure the census actually performs - a genuine violation handed to each check and two runs from two working directories compared. A figure whose method is unstated cannot be disagreed with, and a figure nobody can disagree with does not get corrected when it goes stale."
+  - "The unexecutable count must be published alongside the other two. Publishing examined and found without it presents a boundary of the measurement as if it were part of the result."
+  - "The no-unmeasured-figure clause is a deletion obligation as well as a prohibition: assert that no statement anywhere in the reference material asserts a number for this defect that did not come from a census run."
+  - "Frontmatter and doc-type conventions must satisfy check_doc_frontmatter and check_doc_types_agents at the commit that lands the page."
+test_spec:
+  - name: test_the_published_figures_match_a_census_run_at_the_recorded_commit
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "the census entry point at the commit named in the reference"
+    description: "The examined, instance and unexecutable counts are read out of the shipped reference, the census is re-run at the recorded commit, and the figures are compared. A reference stating a figure no run produced fails here."
+  - name: test_the_published_procedure_is_the_one_the_census_performs
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The classification procedure the reference describes - a genuine violation, two working directories, the outcomes compared - is checked against what the census actually does, so a reader following the published method reproduces the published number."
+  - name: test_no_figure_for_this_defect_appears_that_no_census_run_produced
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "No statement in the reference material asserts a count for this defect family other than the one carried with its commit and date - in particular the informally circulating three-of-about-seventy is absent."
+  - name: test_the_reference_names_the_census_as_the_route_to_a_current_figure
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the route to the census named in the reference"
+    description: "The route the reference names for obtaining a current figure is followed and produces a census run - so the recorded figure cannot quietly become the answer."
+test_rationale: |
+  The failure this record pins is a published number nobody can check, and it is
+  detectable in exactly one way: re-run the census at the recorded commit and compare.
+  That makes the first descriptor an integration test rather than a docs assertion, and
+  it is why GE-126e-2 is required to emit a machine-readable report — without that, this
+  comparison becomes a parsing exercise and gets skipped. The second descriptor closes
+  the gap between a published number and a published method: a figure produced one way
+  and described another is not reproducible even when the number is right. The third is
+  the L0's standing rule made mechanical and it names the specific unmeasured figure that
+  circulates informally today. The fourth stops the recorded figure becoming the answer,
+  by requiring the escape route to actually work.
+delivers_to: null
+expects_from:
+  - ac_id: GE-126e-2
+    contract: "The machine-readable census report - examined count, instance count with names, unexecutable count with names, commit and date. The reference publishes exactly these fields and the coverage re-runs the census at the recorded commit to compare."
+  - ac_id: GE-126e-1
+    contract: "The classification procedure - a genuine violation handed to each check, two runs from two working directories, the outcomes compared. The reference publishes this as the method behind the number."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  SATISFIES THE reference-doc LEG of GE-126e's documentation_triggers. The component-diagram
+  leg is GE-126e-4.
+
+  THE FIRST MEASURED NUMBER IS A DELIVERABLE — the L1 says so and this record is where it is
+  delivered. It is the thing that turns this goal from three repairs to three checks that
+  happened to be looked at into a statement about the family.
+
+  UNTIL IT EXISTS NO RECORD IN THIS TREE MAY STATE OR IMPLY HOW WIDESPREAD THE DEFECT IS, which
+  is why this criterion also forbids the reference asserting a figure from any other source.
+  The count that circulates informally today came from three checks being looked at while doing
+  other work, and repeating it as though it were a measurement is how an observation gets
+  upgraded past its evidence.
+
+  THE PROCEDURE IS PUBLISHED WITH THE NUMBER because a figure whose method is unstated cannot
+  be disagreed with, and a figure nobody can disagree with does not get corrected when it goes
+  stale.
+
+  NAMING THE CENSUS AS THE ROUTE TO A CURRENT FIGURE is what keeps the recorded one from
+  becoming the answer. This component has a recorded instance of a documented defence against
+  store rot that was itself a no-op for eight days and reported clean the whole time.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL and it is the last record in the whole tree: it publishes a measurement. Nothing
+  in this tree reads the published figure, and the L0's standing rule forbids any other
+  record here restating it. DO NOT REFILL.
+
+  THIS RECORD IS THE REASON GE-126e-2's REPORT MUST BE MACHINE-READABLE. The coverage note
+  requires re-running the census at the recorded commit and comparing against the published
+  figures. Against a human-formatted report that comparison is a parsing exercise inside a
+  documentation test, which is a test that gets written loosely or skipped. The obligation is
+  carried as an it_requirement on GE-126e-2 rather than here, because that is where it is
+  actionable - noted here so a reviewer can see the two records are load-bearing for each
+  other.
+
+  THE INFORMALLY CIRCULATING FIGURE IS NAMED EXPLICITLY IN it_requirements AND IN A TEST
+  DESCRIPTOR. 'Roughly seventy checks of which three are known' has been repeated through
+  this tree's authoring as context, correctly labelled every time as three checks that
+  happened to be looked at. The moment it appears in reference material it stops carrying
+  that label. The third descriptor asserts its absence rather than trusting the author to
+  remember.
+
+  AGENT — documentation-expert. Verify the page is on disk before accepting the sign-off.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

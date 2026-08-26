@@ -1,0 +1,148 @@
+id: GE-126a-5
+title: "The target contract a check owes its caller is written down once"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a person or an agent deciding what a check is obliged to do with the targets it
+    is handed,
+  When they consult the reference material for this check family,
+  Then it states the contract in one place: a target named by any honoured route is
+    examined a target named and not resolved is reported and never passed and a scope
+    that names no target at all is an ordinary pass,
+  And it names the routes through which a target may be named for the check that
+    carries this contract today rather than describing the routes in general terms,
+  And the reference records that this contract governs the interrogation surface and
+    does not by itself decide whether a commit is blocked,
+  And any statement elsewhere in the reference material that a check may pass on an
+    argument it did not read is removed rather than qualified,
+  And the reference names the recorded observation that motivated the contract together
+    with its date so a later reader can tell a rule from an opinion.
+
+  Coverage note: covered by a test that reads the contract's three clauses from the
+  reference and asserts the deployed check's observed behaviour on each of the three
+  cases matches the clause. A test that asserts only that the reference contains the
+  words does not cover this criterion.
+depends_on:
+  - GE-126a
+  - GE-126a-1
+  - GE-126a-2
+  - GE-126a-3
+doc_links:
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: modifies
+    status: exists
+    relevance: "M5 and M8 are the named mechanisms. The argument-ignored variant belongs beside them or on a reference page this one routes to."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-9.yaml
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The named precedent for anything enforced in two places - one shared source, one format string, explicitly no second copy of the list. Read-only reference; do not edit it from this tree."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The reference must state that the contract is owed by the DEPLOYED copy, and route to this ADR for the source-versus-deployed distinction rather than restating it."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "The three clauses must be written so a test can read them out of the shipped document and drive one behavioural case per clause. A prose paragraph that states all three in one sentence cannot be walked, and the coverage note demands that it is."
+  - "The reference must name check_ac_governance explicitly and must not assert the contract holds for any other member of the family. GE-126e is what would establish that; asserting it now ships an unmeasured claim as documentation, which is how this defect family propagates (L0 standing rule)."
+  - "The dated observation must be recorded as a dated observation - the date and what was run - not paraphrased as a rule. This component has repeatedly had measurements repeated at higher confidence than they were recorded at."
+  - "The removal clause is a deletion obligation: assert the superseded statement is ABSENT from the reference material, not merely that the contract has been added."
+  - "The contract must be stated once. If any other document needs it, that document routes to this one rather than restating it - ACS-100i-9's finding is that two paraphrases of one rule become two rules."
+  - "The reference must state that the contract governs the interrogation surface and does not by itself decide whether a commit is blocked, so a reader does not infer that the component's deliberate fail-open convention (GE-116a-1-iii) has been repealed."
+  - "Frontmatter and doc-type conventions must satisfy check_doc_frontmatter and check_doc_types_agents at the commit that lands the page."
+test_spec:
+  - name: test_each_documented_clause_is_driven_against_the_deployed_check
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "The test reads the three contract clauses out of the shipped reference and, for each, runs the deployed check in the case that clause describes - named-and-resolved, named-and-unresolved, nothing-named - asserting the observed outcome matches the clause."
+  - name: test_named_and_resolved_clause_is_proven_by_a_refusal_not_a_pass
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The first clause's case is driven with a record that genuinely violates the rule, so 'is examined' is proven by a refusal. Driving it with a clean record proves nothing - a check that dropped the argument also passes that."
+  - name: test_reference_names_only_the_repaired_check_and_asserts_nothing_wider
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The reference names check_ac_governance as the carrier of the contract and makes no claim about any other member of the family or about the family as a whole."
+  - name: test_pass_on_an_unread_argument_advice_is_absent_from_the_reference
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "No statement remains anywhere in the reference material that a check may report success on an argument it did not read - the deletion is asserted, not just the addition."
+test_rationale: |
+  The distinguishing risk for a reference page is that it states a contract the code
+  does not honour, and no amount of string assertion detects that. Reading the clauses
+  out of the shipped document and driving one behavioural case per clause is what binds
+  the two, and it is why the first descriptor is an integration test against the
+  deployed copy rather than a docs unit test. The second descriptor exists because the
+  natural case for "a named target is examined" is a clean record, and a clean record
+  is passed identically by a check that never read it — the same trap GE-126a-1 names.
+  The third descriptor enforces the L0's no-widening rule mechanically rather than
+  leaving it to a reviewer's memory.
+delivers_to: null
+expects_from:
+  ac_id: GE-126a-3
+  contract: "The enumerated set of honoured target routes for check_ac_governance and the outcome value each of the four seam states produces. The reference states these as the contract; it may not describe them generically and may not name a route the check does not honour."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  SATISFIES THE reference-doc LEG of GE-126a's documentation_triggers. The how-to leg is
+  GE-126a-4.
+
+  ONE PLACE IS THE REQUIREMENT AND IT IS NOT STYLISTIC. ACS-100i-9 is the precedent: a
+  rule enforced in two places needs one statement of it and one message format so the
+  two are identical rather than merely similar. A contract restated in prose beside the
+  behaviour that implements it drifts, and this component has the drift to prove it.
+
+  NAMING ONE CHECK RATHER THAN THE FAMILY IS DELIBERATE. Only one check's argv contract
+  is being repaired by this L1. The reference must not assert the contract already holds
+  across the family — GE-126e is what establishes how many members honour it. Widen this
+  reference when that census reports rather than in anticipation of it.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: its output is reference prose read by people and agents. GE-126a-4 is the
+  sibling how-to leg of the same L1, not a downstream consumer of this page, and no code
+  record in this tree reads the reference. DO NOT REFILL.
+
+  AGENT — documentation-expert. Surfaces are docs/reference/ pages only. As with
+  GE-126a-4, verify the page is on disk before accepting the sign-off.
+
+  THE CLAUSES MUST BE WALKABLE — this is the one it_requirement that shapes how the page
+  is written rather than what it says. The coverage note demands one behavioural case
+  per clause; a single dense paragraph makes that impossible and would force the test
+  back into string matching, which is the failure mode the L1 named.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

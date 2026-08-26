@@ -1,0 +1,163 @@
+id: GE-126a-3
+title: "Naming your targets through the test seam carries the same promise as the command line"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the deployed AC-governance check offers an environment seam through which a
+    caller names the records it should examine instead of deriving them from the
+    staged set,
+  When the seam names one record that genuinely violates the rule the check enforces,
+  Then the check refuses that record exactly as it does when the same record is named
+    on the command line — same outcome value and the same record named,
+  And when the seam names a target that resolves to nothing the check reports that
+    target as unresolved and does not report the ordinary success outcome,
+  And when the seam is set to a value the check cannot interpret as a list of targets
+    at all it reports that it could not interpret what it was given and does not report
+    the ordinary success outcome — because a caller who spelled the seam wrongly is
+    a caller who named targets that were never examined,
+  And when the seam is not set at all the check derives its scope as it does today and
+    an empty derived scope is still an ordinary pass.
+
+  Coverage note: covered only by out-of-process runs of the deployed check driving each
+  of the four seam states against a record known to violate the rule. The
+  uninterpretable-value arm is the one that matters most and is the one a test suite
+  will omit by default: today a caller who uses the wrong spelling or the wrong
+  separator resolves to nothing and receives the ordinary success outcome.
+depends_on:
+  - GE-126a
+  - GE-126a-1
+  - GE-126a-2
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-012 records that the environment seams across this check family disagree on both variable name and separator so the wrong spelling resolves to nothing and exits 0. That observation motivates this criterion. Repairing the disagreement ACROSS the family is explicitly not in scope here."
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: modifies
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Where the check family's environment seams are described. The seam this record binds is one member of a family the same doc covers - read it before choosing a spelling."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. All four seam states are asserted against the deployed copy."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Every assertion must be made against the copy the build deploys under .leafcutter/. The seam is precisely the route ad-hoc verification uses, and ad-hoc verification runs the deployed copy."
+  - "The seam and argv must produce the SAME outcome value for the same input, not two similar ones. Assert equality of the two outcome values in one test rather than asserting each against a literal - two literals that happen to agree today are the drift shape ACS-100i-9 exists to prevent."
+  - "The seam's accepted spelling and separator must not change in this record. KI-CG-012 records that the family disagrees on both; unifying them is separate work and a change here would silently break every existing caller of this one seam while that work is unscheduled."
+  - "An uninterpretable seam value must be distinguishable from an unset seam. Today both resolve to an empty collection and both return the ordinary success value; only the first is a caller error."
+  - "Must not change the exit status of any commit-time invocation that passes today; the commit-time path leaves the seam unset and must remain an ordinary pass with an empty derived scope."
+  - "Error handling must follow the four rules in CLAUDE.md. A malformed seam value is caller input, not an internal error, and must not be routed through the fail-open warning path that GE-116a-1-iii preserves for genuine internal failures."
+test_spec:
+  - name: test_seam_named_violating_record_is_refused_identically_to_argv
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "One record missing origin_agent named through the environment seam, and the same record named on argv, produce the same outcome value and name the same record - asserted by comparing the two runs to each other, not each to a literal."
+  - name: test_seam_target_resolving_to_nothing_reports_unresolved
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A seam value naming a path that does not exist returns the unresolved-target outcome value GE-126a-2 introduced, not the ordinary success value."
+  - name: test_uninterpretable_seam_value_is_reported_and_not_passed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A seam set to a value the check cannot read as a list of targets - the wrong separator and a non-path string are both exercised - reports that it could not interpret the value and does not return the ordinary success outcome. This is today's silent false pass."
+  - name: test_unset_seam_still_derives_scope_and_empty_scope_still_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "With the seam absent from the environment the check derives its scope as before; an empty derived scope returns the ordinary success outcome, preserving GE-126a-2-i."
+test_rationale: |
+  Three of the four seam states already return the ordinary success value today, and a
+  test written per-state against a literal would let the seam and the argv path drift
+  into two nearly-identical vocabularies — which is how KI-CG-012 arose in the first
+  place. The first descriptor therefore compares the two runs to each other rather than
+  to expected constants. The third descriptor is the record's reason for existing: a
+  caller who misspells the separator is, today, indistinguishable from a caller whose
+  targets were all clean, and that is the exact route agents and ad-hoc verification
+  take. A suite that omits it leaves the seam a false-pass surface while the argv path
+  is repaired.
+delivers_to:
+  agent: documentation-expert
+  contract: "The enumerated set of honoured target routes for check_ac_governance - argv and the environment seam under its current spelling and separator - together with the four seam states and the outcome value each produces. GE-126a-4 documents these as the procedure a reader follows and GE-126a-5 states them as the reference contract. Both must name the routes for this one check rather than describing routes in general terms."
+expects_from:
+  - ac_id: GE-126a-1
+    contract: "The resolved-target collection populated from argv, and the refusal outcome value a judged violating member produces. The seam must populate the same collection and reach the same value."
+  - ac_id: GE-126a-2
+    contract: "The unresolved-target outcome value. A seam target that resolves to nothing must produce this same value rather than a fourth similar one."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  DECISION THE L1 ASKED FOR EXPLICITLY: the environment seam IS part of "the targets you
+  named". The L1 says it should be, because both are the same promise, and this record
+  is where that decision is recorded. A caller who names targets through the seam is
+  doing the same thing as a caller who names them on the command line and is entitled to
+  the same guarantee.
+
+  AND THE DECISION THE L1 EXPLICITLY WITHHELD: unifying the seam's name and separator
+  across the whole check family is NOT taken on here. That is its own work, recorded as
+  KI-CG-012. This criterion binds one check's seam to one check's argv contract and
+  nothing wider.
+
+  THE UNINTERPRETABLE-VALUE ARM IS THE POINT OF THIS RECORD. A seam that silently
+  resolves a misspelled value to an empty list turns every verification attempt made
+  through it into a false pass, and the seam is precisely the route agents and ad-hoc
+  verification use. This is the same shape as GE-126a-2 arriving through a different
+  door — a target named and not resolved — and it is why the L1 refuses to let the seam
+  be treated as a lesser surface.
+
+  BOUNDARY PRESERVED: the unset seam is not a named target. An unset seam with an empty
+  derived scope remains an ordinary pass, per GE-126a-2-i.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND CROSSES AN AGENT BOUNDARY. This is the one place in the
+  GE-126a branch where a python-coder record hands something to documentation-expert:
+  the enumerated route set and the four seam states. Both GE-126a-4 and GE-126a-5 are
+  written against that enumeration, and both are forbidden by their own criteria from
+  describing the routes generically. If the coder changes which routes are honoured,
+  the two documentation records change with it — that is why this is a contract and not
+  a note.
+
+  THE CONTRACT IS DELIBERATELY NOT A PROMISE ABOUT THE FAMILY. GE-126a-5 must name the
+  routes for THIS check. The contract above says "for check_ac_governance" for that
+  reason; widening it would breach the L0's rule that no record here may state anything
+  about the other checks until GE-126e has measured them.
+
+  AGENT AND ORDERING. python-coder. Ordering lives in depends_on. The two expects_from
+  edges are documentation of data shape only and are invisible to the sequencer
+  (KI-ACD-015).
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

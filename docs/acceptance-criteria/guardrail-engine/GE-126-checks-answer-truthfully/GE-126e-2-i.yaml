@@ -1,0 +1,161 @@
+id: GE-126e-2-i
+title: "A list too long to act on in one pass is a successful run and never a blocked commit"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fixture set in which most of the checks are instances — more than anyone would
+    repair in one pass,
+  When the census runs,
+  Then it completes and reports every instance it found and its own run is a success rather
+    than a failure so the size of the finding is information and not an error,
+  And no check any check's configuration or any registration data is altered by the run: the
+    files it read are byte-identical afterwards,
+  And no commit is gated on the census having found nothing so a developer with unrelated work
+    in progress is never blocked by a backlog they did not create,
+  And the report identifies the instances it found in a form that can be worked through
+    afterwards rather than only as a total,
+  And the recorded members of adjacent defect families that the census re-surfaces are
+    reported like any other instance and are neither repaired nor suppressed by it.
+
+  Coverage note: covered by running the census over a heavily seeded fixture set and asserting
+  it completes successfully, that the fixture files are unchanged afterwards, and that the
+  instances are individually identified. The unchanged-files assertion is what separates
+  reporting from repairing and it is a comparison of file contents rather than a claim in the
+  report.
+depends_on:
+  - GE-126e-2
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-017 is the precedent this record acts on: a detector that already existed reported five unreachable checks and was skipped rather than acted on, because its verdict arrived as a commit blocker. Other recorded members of this family are the ones the census will re-surface and must not repair."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Establishes which gates are mandatory at which point in the lifecycle. The census is deliberately not one of them, and this is the surface that decision has to be legible against."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The census is an on-demand report and must not be registered as a gating check. It must not appear in the blocking hook set, and no commit may be conditioned on its findings - a verdict that arrives as a blocker on unrelated work gets bypassed, and this component has the recorded instance (KI-CG-017)."
+  - "The run's own success must be independent of how many instances it found. A large finding is information; treating it as a failed run is the natural instinct and is what makes the measurement unusable as a baseline."
+  - "The no-mutation guarantee must be asserted by comparing file contents before and after, not by the census reporting that it changed nothing. A census that quietly patched what it found would make the next run's number meaningless."
+  - "The no-mutation guarantee has a subtlety the checks themselves create: several checks under census WRITE when they run. Executing them against a disposable copy is what makes the guarantee achievable, and the assertion must be made against the real registration data and check sources - the inputs the census read - rather than against the disposable copies."
+  - "Instances must be individually identifiable in a form that can be worked through later - each with the two working directories and two outcomes GE-126e-1 records - not summarised into a total. A total cannot be prioritised and a list that cannot be prioritised is a list nobody starts."
+  - "Recorded members of adjacent defect families that the census re-surfaces are reported like any other instance. They are neither repaired nor suppressed, and no allowlist of known-already findings may be introduced - an allowlist is a second enumeration and would hide a regression the day one of them was supposedly fixed."
+  - "Error handling must follow the four rules in CLAUDE.md."
+test_spec:
+  - name: test_a_heavily_seeded_fixture_set_completes_as_a_successful_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "the census entry point"
+    description: "A fixture set in which most checks are instances completes, reports every instance, and the run's own outcome is success - the size of the finding is information rather than an error."
+  - name: test_the_inputs_the_census_read_are_byte_identical_afterwards
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "The registration data and every check source the census read are hashed before and after the run and are unchanged - asserted by comparing bytes, never by believing the report. This is what separates reporting from repairing."
+  - name: test_no_commit_is_gated_on_the_censuss_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    surface_invoked: "git commit in a scratch repository with the deployed pre-commit chain installed"
+    description: "With the census's findings non-empty, a commit of unrelated work completes; the census is absent from the blocking hook set and is not invoked by the chain."
+  - name: test_each_instance_is_individually_identified_and_re_runnable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Every instance in the heavily seeded run is named with the two working directories and two outcomes that produced its classification, so a reader can re-run any one of them by hand rather than receiving only a total."
+test_rationale: |
+  Two opposite failures are available here and each is invisible to the other's test. The
+  first is treating a large finding as a failed run, which is the natural instinct when a
+  quality measurement returns a big number and which would make the baseline unusable —
+  the heavily seeded fixture set is what forces the question. The second is the census
+  quietly repairing what it finds, which would make the next run's number meaningless;
+  that is asserted by hashing the inputs before and after, deliberately not by reading a
+  claim in the report, because the report is the thing under suspicion. The e2e commit
+  descriptor exists because this component has a recorded case (KI-CG-017) of a working
+  detector being bypassed purely because its verdict arrived as a commit blocker, and a
+  unit test cannot show that the census is absent from the chain.
+delivers_to: null
+expects_from:
+  ac_id: GE-126e-2
+  contract: "The census report and its counts. This record constrains how that report is DELIVERED - on demand, non-gating, non-mutating, and itemised - rather than what it contains."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE DECISION THE L1 ASKED FOR ON WHERE THE CENSUS RUNS AND HOW LOUDLY, taken with
+  the precedent it named in view. The census reports on demand and does not gate a commit. A
+  verdict that arrives as a blocker on unrelated work gets skipped, and this component has a
+  recorded instance of exactly that outcome — a working detector whose findings were bypassed
+  because of how they were delivered.
+
+  IT REPORTS AND DOES NOT REPAIR, ASSERTED BY COMPARING FILES RATHER THAN BY BELIEVING THE
+  REPORT. A census that quietly patched what it found would make the next run's number
+  meaningless and would silently take on work nobody scoped.
+
+  A LONG LIST IS A SUCCESSFUL OUTCOME — the L1 says so explicitly and this record makes it
+  mechanical, because the natural instinct when a quality measurement returns a large number
+  is to treat the run as failed. The list is the input to prioritising the rest of this
+  family, not a regression.
+
+  THE ADJACENT RECORDED DEFECTS ARE OUT OF SCOPE AND STAY OUT. The census will very likely
+  surface several already-recorded members of this family and possibly a great many unrecorded
+  ones. Reporting them is the deliverable; repairing them is other work.
+
+  IT IS AN L3 BECAUSE IT CONSTRAINS THE DELIVERY of GE-126e-2's report rather than adding a
+  measurement. It is nonetheless the clause that decides whether the census is used at all.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: it constrains how GE-126e-2's report is delivered - non-gating, non-mutating,
+  itemised. A delivery constraint has no downstream consumer; the report itself is
+  GE-126e-2's deliverable and is already contracted from there to GE-126e-5. DO NOT REFILL.
+
+  NO ALLOWLIST OF KNOWN-ALREADY FINDINGS. The sixth it_requirement is mine rather than the
+  BA's and it anticipates the first thing that will be proposed once the census returns a
+  long list: suppress the ones we already know about. That allowlist would be a second
+  enumeration of the population - the exact shape GE-126d is closing - and it would hide a
+  regression on the day one of those findings was supposedly repaired.
+
+  THE NO-MUTATION ASSERTION HAS A TRAP WORTH NAMING. Several checks under census write when
+  they run, so a naive before-and-after hash of everything will fail for reasons that are
+  not the census's fault. The assertion belongs on the INPUTS the census read - registration
+  data and check sources - with the executions themselves confined to disposable copies per
+  GE-126e-1's second it_requirement. Stated in the fourth it_requirement so the coder does
+  not discover it as a flaky test.
+
+  A NOTE ON WHAT THE CENSUS WILL LIKELY SURFACE. GE-126e-1's notes record one specific
+  candidate observed during authoring (check_ac_limits.py). It is named there and not here,
+  and neither record widens scope to repair it - this record is the one that makes 'report
+  it and move on' the mechanically enforced behaviour.
+
+  AGENT — python-coder.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

@@ -1,0 +1,148 @@
+id: GE-126d-1-i
+title: "A roster entry naming a check that no longer exists is named too"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the roster the autofix loop reads names a check that is absent from the manifest —
+    a check that was removed or renamed while its roster entry stayed behind,
+  When the registration parity check runs,
+  Then it names that roster entry and states that it refers to a check the manifest does
+    not contain,
+  And it reports this as a warning without blocking so a removal in progress is not
+    prevented,
+  And in the same run a roster entry that does name a check present in the manifest is left
+    unmentioned,
+  And the report distinguishes this finding from the missing-membership finding so a reader
+    can tell an entry with no check from a check with no entry without comparing the two
+    lists by hand.
+
+  Coverage note: covered by running the parity check over a fixture registration set
+  carrying one stale roster entry and one sound one and asserting the stale entry is named
+  and the sound one is not. The two findings must be distinguishable in the output; a
+  single undifferentiated "these do not match" report does not cover this criterion.
+depends_on:
+  - GE-126d-1
+doc_links:
+  - path: templates/scripts/commit_guardian/check_hook_parity.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/precommit-autofix.json
+    relationship: related
+    status: exists
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-020 records the direction that was observed. The reverse direction is unobserved and is pinned here because the same enumeration carries both risks."
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. A roster made data while staying closed. Both directions of drift are the price of a closed roster and are what makes checking it worthwhile."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The two findings must be separable by a caller that reads the report structurally rather than by eye. They have different remedies - a check with no entry is a decision the author must make, an entry with no check is cleanup - and an undifferentiated mismatch report makes the reader reconstruct which is which."
+  - "This finding must warn and must not block, because a removal in progress legitimately produces it mid-change. Blocking here would make the parity check obstruct the very operation that creates the state."
+  - "The comparison must be run in both directions over the same pair of populations - manifest and roster - rather than by a second independent traversal. Two traversals are two enumerations and they drift, which is the shape this L1 exists to close."
+  - "The parity check must be run out of process over an isolated fixture tree, never against the repository's own manifest or roster."
+  - "This direction is unobserved. It is specified as a consequence of making the roster a checked enumeration, not as a defect anybody has reproduced, and nothing in the implementation or its documentation may present it as an observation."
+  - "Error handling must follow the four rules in CLAUDE.md."
+test_spec:
+  - name: test_roster_entry_naming_an_absent_check_is_named_by_the_parity_check
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_hook_parity.py"
+    description: "A fixture roster carrying an entry for a check the manifest does not contain causes the parity check to name that entry and state that its check is absent from the manifest."
+  - name: test_a_sound_roster_entry_is_not_named_in_the_same_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "In the same fixture tree, a roster entry naming a check the manifest does contain is absent from the report - the discriminating control against a parity check that names every entry."
+  - name: test_the_two_directions_are_reported_as_distinguishable_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "A fixture tree carrying both a check with no roster entry and a roster entry with no check yields two findings a caller can tell apart structurally, not one undifferentiated mismatch report."
+  - name: test_a_stale_roster_entry_warns_and_does_not_block
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "The outcome value with a stale entry present equals the outcome value over a clean fixture set, so a removal in progress is not obstructed by the check that reports it."
+test_rationale: |
+  Both halves of this record are negative or comparative and neither is covered by the
+  obvious positive test. A parity check that names every roster entry passes the first
+  descriptor and fails the second; a parity check that names none passes the second and
+  fails the first. The third descriptor is the one that carries the record's actual
+  content — the two directions have different remedies, and an implementation that emits
+  one undifferentiated "these lists do not match" message satisfies both of the first
+  two while leaving the reader to reconstruct which is which by hand, which is the work
+  the finding exists to save. Running out of process against an isolated fixture tree
+  matters more here than elsewhere because the alternative is mutating the repository's
+  real roster.
+delivers_to: null
+expects_from:
+  ac_id: GE-126d-1
+  contract: "The roster as a fourth registration leg the parity check reads, and the warning-not-block outcome for a finding about it. This record adds the reverse direction of the same manifest-versus-roster comparison."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE OBSERVED DEFECT HAS A MIRROR AND THE MIRROR IS SILENT IN THE SAME WAY. KI-CG-020
+  records a check present in the manifest and absent from the roster. The opposite — a
+  roster entry that outlives its check — produces a roster that reads as protecting
+  something it no longer protects, which is the same enumeration-drift shape this L1 exists
+  to close and is equally invisible today.
+
+  IT IS AN L3 BECAUSE IT IS THE OTHER DIRECTION of GE-126d-1's comparison rather than a
+  separate obligation, and because it is unobserved: it is written as a consequence of
+  making the roster a checked enumeration, not as a defect anybody has reproduced. Carry
+  that distinction — do not record it as an observation.
+
+  THE DISTINGUISHABILITY CLAUSE MATTERS because the two findings have different remedies.
+  A check with no entry is a decision the author must make; an entry with no check is
+  cleanup.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: it adds the second direction of a comparison its parent already reports. No
+  record in this tree consumes the stale-entry finding, and GE-126d-5's reference
+  describes the legs rather than the individual findings. DO NOT REFILL.
+
+  ONE TECHNICAL CONSTRAINT THE BA COULD NOT SEE, and it is the third it_requirement: the
+  two directions must come from ONE comparison over the two populations, not from two
+  independent traversals. Two traversals are two enumerations of the same pair of lists,
+  and they drift - which is precisely the defect this L1 exists to close, reintroduced
+  inside its own fix.
+
+  THE UNOBSERVED LABEL IS CARRIED FORWARD DELIBERATELY. The BA marked this direction as
+  reasoned rather than reproduced, and the fifth it_requirement forbids the
+  implementation or its documentation presenting it as an observation. This component's
+  standing failure is measurements repeated at higher confidence than they were recorded
+  at.
+
+  AGENT AND SIZE. python-coder, S - the second direction of a comparison the parent
+  already builds.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

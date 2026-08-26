@@ -1,0 +1,194 @@
+id: GE-126d-3
+title: "The legs of registration are one list that the procedure and the parity check both read"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the places a check must be registered are declared once as data,
+  When a further leg is added to that declaration and nothing else in the repository is
+    edited,
+  Then the documented procedure an author follows presents the new leg as a step without
+    its text having been edited,
+  And the registration parity check reports a fixture check that has omitted the new leg
+    without its logic having been edited,
+  And the sentence the parity check prints about a missing leg and the sentence the
+    procedure shows the author for that same leg are produced from one wording so the
+    author recognises the report as being about the step they skipped,
+  And removing a leg from the declaration stops both surfaces mentioning it in the same
+    way,
+  And a fixture check registered on every leg the declaration names is reported by the
+    parity check as complete so the declaration is what completeness is measured against
+    rather than a number written into either surface.
+
+  Coverage note: covered by adding a leg to the declaration in a fixture tree and asserting
+  both surfaces change with no other edit, and by asserting the two wordings are the same
+  string rather than two similar strings. A test that counts the legs mentioned in the
+  procedure document does not cover this criterion — a hardcoded count in a test is the
+  second copy of the list this criterion exists to prevent.
+depends_on:
+  - GE-126d
+  - GE-126d-1
+  - GE-126d-2
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-9.yaml
+    relationship: context
+    status: exists
+    relevance: "The precedent to copy exactly: one shared source imported by both entry points, one format string so the two messages are identical rather than merely similar, and explicitly no second copy of the list. Read-only reference."
+  - path: templates/skills/create-hook/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "The procedure that enumerates the legs in its own prose today. That prose is the second copy this criterion removes."
+  - path: templates/scripts/commit_guardian/check_hook_parity.py
+    relationship: modifies
+    status: exists
+    relevance: "The parity check that enumerates the legs in code today. Same list, second copy."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. A roster made data while staying closed - the design shape for turning the leg enumeration into a declaration without opening it."
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. A new declaration file that a deployed hook and a portable skill both read has to be in the deploy set for both. This ADR is where that obligation is defined."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The component page the declaration becomes the source for; GE-126d-5 renders the leg list there."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "One declaration, read by both surfaces. Neither the procedure's prose nor the parity check's logic may carry its own copy of the leg list, and no test may carry a third copy as a hardcoded count - the coverage note names that explicitly."
+  - "The message about a missing leg and the step the procedure shows for that leg must come from ONE format string, so the two are identical rather than merely similar. ACS-100i-9's finding is that two paraphrases of one requirement read to an author as two different requirements."
+  - "Completeness must be measured against the declaration, never against a count. A parity check that knows there are four legs is a third copy of the list wearing a number."
+  - "The declaration file must be deployed to every layout that reads it. Both a deployed commit-guardian hook and a portable skill consume it, so a source-tree-only declaration leaves the deployed parity check with no legs at all - and a parity check with no legs reports every check as complete, which is this tree's defect arriving through the build (CLAUDE.md, 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest'; ADR-013)."
+  - "The procedure surface is templates/skills/create-hook/SKILL.md, a skill body rather than an ordinary document. Its rendered form must be verified as the build produces it, not only as the template reads, because the author sees the deployed skill."
+  - "The add-a-leg exercise must be performed in an isolated fixture tree. Adding a leg to the repository's real declaration during a test would change what every real check is measured against."
+  - "Error handling must follow the four rules in CLAUDE.md. A declaration that cannot be read is a condition the parity check must report, not one it may fail open on - failing open here reports every check as complete."
+test_spec:
+  - name: test_adding_a_leg_to_the_declaration_moves_both_surfaces_with_no_other_edit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_hook_parity.py and the rendered create-hook procedure"
+    description: "A leg is added to the declaration in a fixture tree and nothing else is edited; the rendered procedure presents it as a step and the parity check reports a fixture check that omitted it. This is the only honest test of single-sourcing - asserting the two surfaces currently agree passes on two hardcoded lists that happen to match."
+  - name: test_removing_a_leg_stops_both_surfaces_mentioning_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The reverse edit removes the leg from both surfaces with no other change - a surface that renders from the declaration on add but keeps a stale entry on remove is caught here."
+  - name: test_the_parity_message_and_the_procedure_step_are_the_same_string
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The wording the parity check emits for a missing leg and the wording the procedure shows for that leg are compared to each other for equality, not each to a literal - two similar strings fail."
+  - name: test_a_fixture_registered_on_every_declared_leg_is_reported_complete
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A fixture check registered on every leg the declaration names is reported complete, and the same tree with the declaration unreadable does NOT report it complete - a declaration that fails open reports every check as complete, which is this tree's own defect."
+  - name: test_the_declaration_is_present_and_readable_in_the_built_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: "scripts/build.py --target-dir <temp>"
+    description: "After a real build into a temporary target, the deployed parity check reads a non-empty leg list from the deployed declaration - a source-tree-only declaration leaves the deployed check measuring against nothing."
+test_rationale: |
+  Asserting that the two surfaces currently agree is the test everybody writes and it
+  passes on two hardcoded lists that happen to match — which is the state the repository
+  is in today, and the state that produced KI-CG-020. Only the add-a-leg exercise can
+  distinguish single-sourcing from coincidence, and only the remove-a-leg exercise
+  catches a renderer that grows entries but never drops them. The same-string descriptor
+  is a comparison between the two producers rather than against expected text, per
+  ACS-100i-9. The fifth descriptor exists because the declaration is a new file: if the
+  build does not deploy it, the deployed parity check measures against an empty leg list
+  and reports every check complete — a green gate that checked nothing, which is the
+  defect this entire tree is about, arriving through the build step.
+delivers_to:
+  agent: documentation-expert
+  contract: "The single leg declaration and the one wording per leg produced from it. GE-126d-4's procedure and GE-126d-5's reference must both RENDER their leg list from this declaration rather than restating it in prose, and both are forbidden by their own criteria from carrying a second copy."
+expects_from:
+  - ac_id: GE-126d-1
+    contract: "The roster recognised as a fourth registration leg, and the finding emitted for a check absent from it. That finding's wording becomes one of the per-leg wordings this declaration owns."
+  - ac_id: GE-126d-2
+    contract: "The deliberate-exclusion record. Where it lives must be settled against this declaration rather than ahead of it, so that recording an exclusion does not become a fifth undeclared enumeration."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE STRUCTURAL HALF OF THE L1 AND IT IS WHAT STOPS A FIFTH LEG REPEATING THE
+  FOURTH. Adding the roster to the procedure's prose and to the parity check's code
+  separately fixes today's omission and rebuilds the mechanism that produced it. ACS-100i-9
+  solved this exact problem and the L1 names it as the shape to reuse.
+
+  THE ADD-A-LEG TEST IS THE ONLY HONEST TEST OF SINGLE-SOURCING. Asserting that the two
+  surfaces currently agree passes on two hardcoded lists that happen to match. Asserting
+  that a change to one declaration moves both surfaces cannot.
+
+  ONE WORDING RATHER THAN TWO SIMILAR ONES is a criterion and not a nicety. The author who
+  skipped a step reads the procedure; the report they receive later has to be recognisable
+  as being about that step. Two paraphrases of the same requirement are how a reader
+  concludes they are two different requirements.
+
+  MEASURED AGAINST THE DECLARATION AND NEVER AGAINST A COUNT. A parity check that knows
+  there are four legs is a third copy of the list wearing a number.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND CROSSES AN AGENT BOUNDARY. This is the record both
+  documentation surfaces in the branch are downstream of: GE-126d-4 and GE-126d-5 must
+  RENDER their leg lists from this declaration, and their own criteria forbid restating it
+  in prose. Without this record they have nothing to render from and would each grow a
+  copy - which is the defect.
+
+  SIZED L, AND IT IS THE LARGEST RECORD IN THE BRANCH. Three surfaces move together: a new
+  declaration, a parity check that reads it instead of its own list, and a skill body that
+  renders from it instead of enumerating in prose. The rendering mechanism for the skill
+  body is the part with no precedent in this branch and is where the estimate is soft.
+
+  A SPLIT WAS CONSIDERED AND NOT TAKEN. The skill-body surface
+  (templates/skills/create-hook/SKILL.md) would ordinarily suggest llm-expert alongside
+  python-coder. Two reasons against: GE-126d is already at the five-L2 cap so no sibling
+  can be created, and the SKILL.md change here is a render marker rather than authored
+  instruction text - the authored prose change is GE-126d-4's. Recorded as a caveat at the
+  IT PO gate rather than resolved silently.
+
+  THE DEPLOY OBLIGATION IS THE ONE MOST LIKELY TO BE MISSED AND THE MOST DAMAGING. A
+  declaration that is not deployed leaves the deployed parity check with an empty leg list,
+  and a parity check measuring against zero legs reports every check as complete. That is
+  this tree's own defect, delivered by the fix. The fifth test descriptor exists for it.
+
+  PACKAGE SURFACE — CONSIDERED AND NOT DECLARED. The four registries the
+  check-package-surface-declaration hook watches are agent_registry.json,
+  skill_registry.json, paths.json and commit_guardian.json. A new leg declaration is none
+  of them, and no record in this branch adds a real entry to any of them - the fixture
+  checks live in isolated trees. package_surface is therefore left unset. If the
+  implementation lands the declaration INSIDE commit_guardian.json rather than beside it,
+  that verdict changes and the AC must be amended before it is built.
+
+  AGENT — python-coder.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

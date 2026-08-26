@@ -1,0 +1,169 @@
+id: GE-126d-1
+title: "A check registered on every documented leg but missing from the autofix roster is named"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fixture check registered by following the documented procedure to its end — its
+    script present its entry added to the manifest its configuration key added and its row
+    added to the documentation index — and absent from the roster the autofix loop reads
+    and carrying no record of a deliberate exclusion,
+  When the registration parity check runs,
+  Then it names that fixture check and names the roster it is missing from and states the
+    route by which an author records a deliberate exclusion,
+  And it reports this as a warning: the parity check's outcome is unchanged from the
+    outcome it produces on a clean registration set so no commit is blocked by the
+    omission,
+  And in the same run every check already on the roster is left unmentioned so the report
+    is a finding about one check rather than a line printed for all of them,
+  And when the fixture check is added to the roster and the parity check is run again on
+    an otherwise identical tree it names nothing.
+
+  Coverage note: covered only by running the parity check out of process over a fixture
+  registration set and asserting both halves — the fixture named and the already-registered
+  checks not named. Asserting only that a warning appeared does not cover this criterion; a
+  parity check that warns about everything produces the same output and finds nothing. The
+  already-registered checks are the regression boundary and their silence is an assertion.
+depends_on:
+  - GE-126d
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-020 names the fourth leg, quotes the roster, and quotes the autofix procedure step stating the consequence for a check absent from it: the check is treated as non-gating and skipped entirely."
+  - path: templates/scripts/commit_guardian/check_hook_parity.py
+    relationship: modifies
+    status: exists
+    relevance: "The parity check that today enforces exactly three legs and does not know the roster exists."
+  - path: templates/scripts/precommit-autofix.json
+    relationship: related
+    status: exists
+    relevance: "The roster that is the undocumented fourth leg. It stays closed — only its invisibility is the defect."
+  - path: templates/skills/precommit-autofix/SKILL.md
+    relationship: context
+    status: exists
+    relevance: "Its step 4 states the consequence of absence: skip the hook entirely and dispatch no fixer."
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The named precedent: a roster made data while staying closed. The design target for this record - report the omission, do not open the roster."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Where the registration legs are described at component level. Read before adding a fourth to the parity check's notion of completeness."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The roster stays closed. Nothing in this change may open it, default new checks into it, or add a check to it automatically. Membership remains an author's decision; only its invisibility is the defect (ADR-035's shape)."
+  - "The finding must be a warning that leaves the parity check's outcome value identical to the one a clean registration set produces. Exclusion is legitimate and a blocked commit for a legitimate state is how a detector gets bypassed - KI-CG-017 is the recorded instance of exactly that."
+  - "The silence of the already-registered checks is an assertion, not a courtesy. A report that names every check in the manifest carries the same information as no report and will be suppressed; the seven checks currently on the roster are the regression boundary."
+  - "The fixture check must be registered by following the documented procedure rather than by hand-placing files, because the criterion is about what the documented procedure leaves undone. A hand-built fixture tests the parity check against the author's model of registration instead of against the procedure."
+  - "The parity check must be run out of process over a fixture tree. Its production entry point is the pre-commit chain and an in-process call cannot observe the outcome value a caller reads."
+  - "The fixture registration set must be isolated from the real one - a temporary tree, not the repository's own manifest - so a test run cannot alter the real roster or the real manifest."
+  - "Error handling must follow the four rules in CLAUDE.md."
+test_spec:
+  - name: test_procedure_registered_fixture_absent_from_the_roster_is_named
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_hook_parity.py"
+    description: "A fixture check registered on all documented legs and absent from the roster is named by the parity check, together with the roster it is missing from and the route for recording a deliberate exclusion."
+  - name: test_checks_already_on_the_roster_are_not_named_in_the_same_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "In the same run, every check already present on the roster is absent from the report. A parity check that warns about all of them produces the same visible output and has found nothing."
+  - name: test_the_finding_is_a_warning_and_the_outcome_value_is_unchanged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "The outcome value from the run with the omission and the outcome value from a run over a clean registration set are compared to each other and are the same - no commit is blocked by a legitimate exclusion."
+  - name: test_adding_the_fixture_to_the_roster_silences_the_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The same fixture tree with the check added to the roster and nothing else changed produces a report naming nothing - binding the finding to the roster's contents rather than to the parity check having an opinion."
+test_rationale: |
+  A warning-appeared assertion is satisfied by a parity check that warns about every
+  check in the manifest, which finds nothing and gets suppressed within a week — this
+  component has the recorded instance (KI-CG-017, a working detector bypassed because
+  of how its verdict arrived). So the negative half is the real coverage: the seven
+  checks already on the roster must be absent from the report, and that absence is an
+  assertion rather than a courtesy. The fourth descriptor closes the other direction —
+  a parity check that names nothing under any condition also passes the negative half —
+  by binding the silence to a single change in the fixture roster. The fixture must be
+  registered the documented way because the criterion is about what the documented
+  procedure leaves undone, not about what the test author remembers registration to be.
+delivers_to:
+  agent: python-coder
+  contract: "The roster as a fourth registration leg the parity check knows about: the finding it emits for a check registered on every documented leg and absent from the roster, the warning-not-block outcome, and the named route for recording a deliberate exclusion. GE-126d-2 defines what that route is, GE-126d-1-i adds the reverse direction, and GE-126d-3 replaces the leg enumeration with a single declaration."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126d-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE ROSTER IS NOT THE DEFECT and no part of this criterion opens it or defaults new
+  checks into it. Not every check should have a fixer dispatched at it and a closed roster
+  is the right design — ADR-035 is the precedent for a roster made data while staying
+  closed. The defect is that membership is a registration leg the procedure that exists to
+  enumerate the legs does not mention.
+
+  WARNING NOT BLOCK — the L1 decides this and this record records the decision. Exclusion
+  is legitimate, so the omission must be reported by name alongside the route rather than
+  refused. The criterion is that the choice becomes explicit, not that it becomes
+  forbidden.
+
+  THE SILENCE OF THE ALREADY-REGISTERED CHECKS IS AN ASSERTION AND NOT A COURTESY. The
+  L1 calls them the regression boundary. Without that clause the cheapest passing
+  implementation prints the same advisory for every check in the manifest, which is
+  indistinguishable from noise and will be suppressed within a week — the fate KI-CG-017
+  records for a detector whose verdict arrived in the wrong form.
+
+  THE FIXTURE MUST BE REGISTERED THE DOCUMENTED WAY rather than hand-placed. The L1 is
+  explicit that the acceptance shape is the omission and not the procedure text: a test
+  asserting the procedure document mentions a fourth step passes on a sentence nobody
+  reads.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND IS NOT TERMINAL. Three siblings build on what this record
+  establishes: GE-126d-2 supplies the exclusion route this record's finding must name,
+  GE-126d-1-i adds the reverse direction of the same comparison, and GE-126d-3 replaces
+  the leg enumeration with a single declaration. The contract names the ROUTE as well as
+  the finding because GE-126d-1's own criterion requires the report to state it - so a
+  fix that lands the finding without the route leaves this record's third clause
+  unsatisfiable until GE-126d-2 arrives.
+
+  expects_from IS NULL AND THAT IS A DECISION. Head of the GE-126d chain; consumes nothing
+  from another record in this tree. Not an unenriched field. DO NOT REFILL.
+
+  AN ORDERING NOTE FOR THE DRIVER. This record's third Then clause names the exclusion
+  route, which GE-126d-2 defines. depends_on puts GE-126d-2 after this record, which is
+  correct for build order, but the coder should expect to stub the route string here and
+  finalise it in GE-126d-2 rather than discovering the coupling mid-implementation.
+
+  AGENT — python-coder. The surface is check_hook_parity.py plus fixture scaffolding; the
+  procedure documents are GE-126d-4's and GE-126d-5's surfaces and are not touched here.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

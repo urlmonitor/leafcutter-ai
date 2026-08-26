@@ -1,0 +1,155 @@
+id: GE-126d-5
+title: "What each registration leg buys you is written down beside the list of legs"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader deciding whether a check they did not write is properly registered or
+    trying to understand a finding the registration parity check reported,
+  When they consult the reference material for the check family,
+  Then it names each registration leg and states what the check gains from that leg and
+    what it loses without it,
+  And it states that membership of the autofix roster changes whether a repair is attempted
+    and never changes whether the check blocks,
+  And it states that a check absent from the roster with no recorded exclusion is a
+    reported finding rather than a valid state,
+  And the leg list the reference shows comes from the single declaration rather than being
+    written out again as prose,
+  And it records the observation that motivated the fourth leg being added to the
+    enumeration together with its date and names the approved record that was specified
+    against three legs so a later reader can see the worked example rather than only the
+    rule.
+
+  Coverage note: covered by a test that takes each leg the reference describes and asserts
+  the registration parity check treats it as a leg, plus an assertion that the reference's
+  leg list is rendered from the declaration rather than stored separately. A test that the
+  reference mentions four legs does not cover this criterion and hardcodes the number the
+  declaration owns.
+depends_on:
+  - GE-126d
+  - GE-126d-1
+  - GE-126d-2
+  - GE-126d-3
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: modifies
+    status: exists
+    relevance: "Where a reader looks up how a check is wired into the family. The leg list and what each leg buys belongs here."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100b-5.yaml
+    relationship: context
+    status: exists
+    relevance: "The worked example: an approved record specifying a new check with three legs of registration and not the fourth. Named here as the illustration only. Do not edit it from this tree and do not add a dependency edge to it."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-9.yaml
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Why this reference renders the leg list rather than writing it out: a reference that restates the legs in prose is the third copy and drifts the way the first two did. Read-only reference."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "The reference must render its leg list from the single declaration rather than writing the legs out as prose. A reference that restates them is the third copy of the list and will drift the way the first two did."
+  - "No number of legs may appear anywhere - not in the reference and not in the test that covers it. The declaration owns the count and a hardcoded four is a fourth copy of the list wearing a number."
+  - "The blocks-versus-repairs sentence must be present and unambiguous. The most damaging misreading available to a reader of the roster is that membership decides whether a check is enforced; it decides whether a repair is attempted. GE-126d-2 pins that behaviourally and this record makes sure the reader is told."
+  - "The reference must state that a check absent from the roster with no recorded exclusion is a reported finding rather than a valid state, so a reader meeting the warning knows it names a decision they have not yet made."
+  - "The dated observation must be recorded as an observation with its date, and the approved record specified against three legs must be named as an illustration only - not edited, and not made to depend on this work."
+  - "Frontmatter and doc-type conventions must satisfy check_doc_frontmatter and check_doc_types_agents at the commit that lands the page."
+test_spec:
+  - name: test_every_leg_the_reference_describes_is_treated_as_a_leg_by_the_parity_check
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_hook_parity.py"
+    description: "Each leg is read out of the shipped reference and, for each, a fixture check omitting exactly that leg is registered and the parity check is asserted to report it. A leg the reference describes that the parity check does not enforce fails here."
+  - name: test_the_references_leg_list_moves_when_the_declaration_moves
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "A leg added to the declaration in a fixture tree appears in the rendered reference with no edit to the reference's text - proving the list is rendered rather than stored."
+  - name: test_no_leg_count_appears_in_the_reference_or_in_this_test
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The reference states no number of legs, and the assertions here are written against the declaration's contents rather than against a literal count - the coverage note bars the hardcoded number explicitly."
+  - name: test_an_excluded_check_still_blocks_matching_what_the_reference_states
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "The reference's blocks-versus-repairs sentence is exercised: a fixture check carrying a recorded exclusion is run against input that genuinely violates its rule and still blocks. A reference that stated the opposite would fail against the behaviour rather than pass on a string."
+test_rationale: |
+  Two failures are available to this page and neither is caught by a presence test. The
+  first is describing a leg the parity check does not actually enforce, which the first
+  descriptor catches by registering a fixture that omits each described leg in turn. The
+  second is stating the blocks-versus-repairs relationship backwards — the single most
+  damaging misreading a reader can take from a roster — which the fourth descriptor
+  catches by running an excluded check against violating input. The count assertion is
+  written negatively and applies to the test as much as to the page: the coverage note
+  names a hardcoded leg count in a test as the very second copy this branch exists to
+  remove, so the test asserts against the declaration's contents rather than a number.
+delivers_to: null
+expects_from:
+  - ac_id: GE-126d-2
+    contract: "The deliberate-exclusion record and the two facts about it a reader must be told - that it never adds its check to the roster and never changes what its check enforces."
+  - ac_id: GE-126d-3
+    contract: "The single leg declaration and the one wording per leg. The reference renders its leg list from this declaration rather than storing a copy."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  SATISFIES THE reference-doc LEG of GE-126d's documentation_triggers. The how-to leg is
+  GE-126d-4.
+
+  THE BLOCKS-VERSUS-REPAIRS SENTENCE IS THE ONE THAT MUST BE THERE. The most damaging
+  misreading available to a reader of the roster is that membership decides whether a check
+  is enforced. It decides whether a repair is attempted. GE-126d-2 pins that behaviourally;
+  this record makes sure the reader is told.
+
+  BP-1100b-5 IS THE ILLUSTRATION AND IS NOT IN SCOPE. It will need amending or a knowing
+  acceptance when it is built. This record links to it as an example and gates nothing
+  about it.
+
+  THE REFERENCE RENDERS THE LIST RATHER THAN RESTATING IT — inherited from GE-126d-3. A
+  reference that writes the legs out in prose is the third copy and it will drift the same
+  way the first two did.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: it is the last record in the GE-126d branch and its output is reference prose
+  on the component page. GE-126d-4's procedure routes TO this page, which makes that record
+  a consumer of the page's existence but not of an artifact this record hands over - and
+  that edge is already carried by GE-126d-4's own it_requirements. DO NOT REFILL.
+
+  THE NO-COUNT REQUIREMENT APPLIES TO THE TEST AS WELL AS TO THE PAGE, and that is
+  unusual enough to state. The coverage note names a hardcoded leg count in a test as the
+  second copy of the list this branch exists to remove. A reviewer seeing 'assert len(legs)
+  == 4' should treat the record as uncovered whatever the suite reports.
+
+  AGENT — documentation-expert, one component page. Verify the page is on disk before
+  accepting the sign-off.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

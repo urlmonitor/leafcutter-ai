@@ -1,0 +1,152 @@
+id: GE-126c-4
+title: "Which copy of a check is the one that enforces is written down where an author will read it"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author editing a check who wants to try it out and who is by definition already
+    working in the tree where its source lives,
+  When they consult the reference material for this check family,
+  Then it states which copy of a check enforces and which copy is a build input and states
+    that running a build input is not a way to verify anything,
+  And it names the one check known to be structurally incapable of running from the
+    build-source tree together with the reason it can never run there,
+  And it does not assert that build-source copies in general can or cannot run because that
+    has not been measured,
+  And it records the observation that motivated the rule with its date and states the
+    workaround that was used before the repair so a reader recognises the situation if they
+    meet it in an older copy,
+  And any statement in the reference material that a warning followed by a zero exit is an
+    acceptable response to a dependency a copy can never satisfy is removed rather than
+    qualified.
+
+  Coverage note: covered by a test that takes the reference's statement about which copy
+  enforces and asserts the behaviour matches — the named build-source copy refuses and the
+  named enforcing copy produces a verdict on a record known to violate. A test that asserts
+  the reference mentions the distinction does not cover this criterion.
+depends_on:
+  - GE-126c
+  - GE-126c-1
+  - GE-126c-2
+  - GE-126c-3
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: modifies
+    status: exists
+    relevance: "Where a reader looks up how this check family is laid out. The enforcing-copy-versus-build-input distinction belongs here."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: related
+    status: exists
+    relevance: "States the boundary. The reference must route to it rather than restating it in different words."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The second half of the boundary - which scripts deploy and by which phase. The reference routes to both ADRs rather than restating either."
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-9.yaml
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The named precedent against a second copy of a rule. It is why this record routes to ADR-001 instead of restating the boundary. Read-only reference."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "The reference must route to ADR-001 and ADR-013 for the source-versus-deployed boundary rather than restating it. A second statement of the boundary is the second copy ACS-100i-9 exists to prevent and it will drift the first time the layout changes."
+  - "The statement about which copy enforces must be written so a test can read the two copy identities out of the shipped document and drive each one. A prose paragraph that alludes to the distinction cannot be walked and the coverage note demands that it is."
+  - "The reference must name exactly one check as structurally incapable of running from the build-source tree and must make no claim about build-source copies in general. Only one instance has been observed; GE-126e is what would measure the rest and the L0 standing rule forbids the wider claim."
+  - "The reason the named copy can never run there must be stated as a property of the copy, matching what GE-126c-3 makes true. A reference saying it 'usually cannot' would be describing an import-keyed implementation, which is the decomposition GE-126c-3 exists to forbid."
+  - "The pre-repair workaround must be recorded with the dated observation so a reader who meets the old behaviour in an older copy recognises it, rather than being left to rediscover the same manual back-link read."
+  - "The removal clause is a deletion obligation: assert that no statement remains describing a warning followed by a zero exit as an acceptable response to a permanently unsatisfiable dependency."
+  - "Frontmatter and doc-type conventions must satisfy check_doc_frontmatter and check_doc_types_agents at the commit that lands the page."
+test_spec:
+  - name: test_the_copy_identities_are_read_from_the_reference_and_both_are_driven
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "docs/architecture/components/commit-guardian.md enforcing-copy statement"
+    description: "The test extracts the two copy identities the reference names and runs each by subprocess against one record that genuinely violates the parent-back-link rule; it does not retype the paths."
+  - name: test_the_named_build_source_copy_refuses_and_the_named_enforcing_copy_blocks
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The copy the reference calls a build input returns the refusal outcome; the copy it calls the enforcing one blocks and names the record. A reference that names them the wrong way round fails here and passes every string assertion."
+  - name: test_reference_makes_no_general_claim_about_build_source_copies
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The reference names exactly one check as structurally incapable of running from the build-source tree and asserts nothing about build-source copies as a class - the L0 no-widening rule enforced mechanically."
+  - name: test_warn_then_zero_exit_advice_is_absent_and_the_boundary_is_not_restated
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "No statement remains describing a warning followed by a zero exit as acceptable for a permanently unsatisfiable dependency, and the source-versus-deployed boundary is routed to ADR-001 rather than restated in the reference's own words."
+test_rationale: |
+  The specific failure available to this page is naming the two copies the wrong way
+  round, or naming a path the build no longer writes — and every string assertion passes
+  in both cases. Extracting the two identities from the shipped document and driving each
+  one is the only form that catches it, which is why the first two descriptors are
+  integration tests rather than docs unit tests. The third descriptor turns the L0's
+  no-widening rule from a reviewer's memory into an assertion, and it matters here more
+  than anywhere else in the tree: this is the page where a general claim about
+  build-source copies would look most natural and would be least measured. The fourth
+  covers two deletions, both invisible to an addition test.
+delivers_to: null
+expects_from:
+  - ac_id: GE-126c-2
+    contract: "The refusal wording and the runnable route it names. The reference describes the message a reader will actually meet and records the workaround that preceded it."
+  - ac_id: GE-126c-3
+    contract: "The fact that the refusal is keyed to what the copy is rather than to a dependency. The reference's sentence about why that copy can NEVER run there is only accurate once this holds."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  SATISFIES THE reference-doc LEG of GE-126c's documentation_triggers. It is the only
+  documentation trigger this L1 carries.
+
+  ROUTE TO THE BOUNDARY RATHER THAN RESTATING IT. ADR-001 already defines the
+  source-versus-deployed boundary. A second statement of it in the reference is the second
+  copy of a list that ACS-100i-9 exists to prevent, and it will drift the first time the
+  layout changes.
+
+  THE NO-GENERALISATION CLAUSE IS THE L0'S RULE, not a stylistic preference. Until GE-126e
+  reports, no record in this tree may state or imply how many copies share this shape. A
+  reference that says build-source copies generally cannot run would be an unmeasured
+  claim shipped as documentation, which is how this family of defects propagates.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: it is the last record in the GE-126c branch and its output is reference prose
+  on the component page. Nothing in this tree reads it. DO NOT REFILL.
+
+  THE "NEVER" IN THE REFERENCE IS DOWNSTREAM OF GE-126c-3 AND THAT IS WHY THE EDGE IS
+  RECORDED. If GE-126c-3 ships keyed to the import result, the accurate sentence for this
+  page becomes 'usually cannot run there', which is a weaker and different claim. A
+  reviewer checking this record should read GE-126c-3's implementation before accepting
+  the word 'never'.
+
+  AGENT — documentation-expert, one component page. Verify the page is on disk before
+  accepting the sign-off.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

@@ -1,0 +1,164 @@
+id: GE-126b-2
+title: "A store that was never found and a store with nothing to look at are two different answers"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the deployed AC-governance check is invoked out of process three times against
+    three working copies — one whose resolved root holds no acceptance-criterion store at
+    all one whose resolved root holds the store with no record in scope and one whose
+    resolved root holds the store with two records in scope that both satisfy the rule,
+  When each run finishes,
+  Then each run reports a different one of three outcome values and each value is
+    readable by a caller without parsing prose,
+  And the first run's report names the root it resolved because the root is the fact that
+    explains why no store was found there,
+  And the second run's report states that the store was located and that nothing was in
+    scope naming the location,
+  And only the third run reports the ordinary success value and it states that two records
+    were examined,
+  And a fourth run against the third working copy with one of the two records altered so
+    it genuinely violates the rule refuses that record — so the ordinary success value in
+    the third run is a verdict rather than an absence of one,
+  And no two of the four runs can be told apart by exit status alone which is why the
+    outcome value carries the distinction.
+
+  Coverage note: covered only by four out-of-process runs of the deployed check asserting
+  a distinct outcome value for each of the first three and the refusal in the fourth. A
+  test that asserts three different messages were printed does not cover this criterion —
+  the distinction has to be machine-readable, because the callers who were misled were
+  reading an exit code and not prose.
+depends_on:
+  - GE-126b
+  - GE-126b-1
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-018's fix direction names this split directly: distinguish no AC store found at the resolved root from AC store found nothing staged. Both are legitimately exit 0 and they are not the same fact."
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Its four-check probe model separates 'the gate is present' from 'the gate fired'. The three-way outcome split here is the same separation expressed as a result vocabulary."
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-10.yaml
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The precedent for turning a silence into a state you can ask about, and for reporting the answer beside the number of records looked at. Read-only reference; do not edit it from this tree."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The three outcome values must be machine-readable and mutually exclusive. The callers who were misled on 2026-08-25 were reading an exit code, so a distinction that lives only in message text does not close this."
+  - "Two of the three outcomes remain a zero exit status. Do NOT make the no-store outcome non-zero: this check ships to consumer repositories with no acceptance-criterion store, and blocking there would make this repair worse than the defect it fixes."
+  - "The resolved root must appear in the no-store report. A message that says only 'no store found' leaves the reader unable to tell a misconfigured root from a repository that genuinely has no store, and the root is the fact that explains the difference."
+  - "The outcome value assigned to each run must be derived from what the run actually did, not from a filesystem probe performed before the work. Three distinguishable labels assigned from directory state can be emitted by a check that never opens a record - which is the same substitution this record exists to detect."
+  - "Every assertion must be made against the copy the build deploys under .leafcutter/."
+  - "Must not change the exit status of any commit-time invocation that passes today. The component's deliberate fail-open-on-internal-error convention (GE-116a-1-iii) is not repealed by adding outcome values."
+  - "The new outcome vocabulary must be introduced in the same change as its documentation in GE-126b-4, or a caller has three values and one place to look them up that does not mention two of them."
+test_spec:
+  - name: test_no_store_empty_scope_and_clean_scope_yield_three_distinct_outcomes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "Three subprocess runs of the deployed copy against three working copies return three distinct machine-readable outcome values, asserted against each other for distinctness rather than each against a literal."
+  - name: test_no_store_report_names_the_root_it_resolved
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The first run's report contains the resolved root path, so a misconfigured root is distinguishable from a repository that genuinely has no store."
+  - name: test_clean_scope_outcome_is_backed_by_a_refusal_on_the_altered_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A fourth run against the third working copy with one of the two records altered to violate the rule refuses it by name - proving the ordinary success value in run three was a verdict and not a label assigned from directory state."
+  - name: test_no_two_of_the_four_runs_are_separable_by_exit_status_alone
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Exit statuses of the four deployed-copy runs are collected and shown not to partition them, which is why the outcome value carries the distinction. Also guards the no-store run against being made to block."
+test_rationale: |
+  Three distinguishable labels are cheap: a check can assign them from a filesystem
+  probe without opening a single record, and every message-level assertion would pass.
+  The fourth run is what stops that — altering one of the two clean records so it
+  genuinely violates forces the ordinary success value to be backed by a check that
+  would have refused had there been something to refuse. The exit-status descriptor is
+  the inverse guard: it fails if an implementer "fixes" the ambiguity by making the
+  no-store case non-zero, which would break every consumer repository without an AC
+  store. Comparing the three outcome values to each other rather than to literals keeps
+  the test honest if the vocabulary is renamed.
+delivers_to:
+  agent: documentation-expert
+  contract: "The three-answer outcome vocabulary for check_ac_governance - work refused, work examined and found clean, could not examine - with the machine-readable value of each and the fact that two of the three share a zero exit status. GE-126b-4 documents exactly this vocabulary and is forbidden from asserting any other check already speaks it."
+expects_from:
+  ac_id: GE-126b-1
+  contract: "The unconditional pre-exit statement and the single non-ordinary outcome value it introduced. This record partitions that value into the two distinct facts KI-CG-018 named: no store at the resolved root, versus store found with nothing in scope."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THREE OUTCOMES NOT TWO — the L1 says this is the whole defect and a decomposition that
+  only separates pass from fail misses it. Two of the three are legitimately a zero exit
+  today and will very likely remain so. What must differ is the outcome value the caller
+  reads, not necessarily the exit status.
+
+  THE FOURTH RUN IS WHY THIS IS NOT A LABELLING EXERCISE. Three distinguishable labels can
+  be emitted by a check that assigns them from the state of the filesystem without ever
+  opening a record. The altered record forces the ordinary success value to be backed by
+  a check that would have refused had there been something to refuse.
+
+  BLOCK VERSUS ANNOUNCE — DECIDED HERE, as the L0 requires. All three non-refusal outcomes
+  announce and none of them blocks. The no-store outcome in particular must not block:
+  the check ships to consumer repositories that have no acceptance-criterion store and
+  blocking there would make the goal's fix worse than the defect. Visibility is the unit
+  of this rule, not blocking — the component's deliberate fail-open convention is not
+  repealed by this record.
+
+  THE RESOLVED ROOT IS MANDATORY IN THE FIRST MESSAGE and the L1 says why: the root is the
+  fact that explains the difference between the two zero exits. A message that says only
+  "no store found" leaves the reader unable to tell a misconfigured root from a repository
+  that genuinely has no store.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND CROSSES AN AGENT BOUNDARY. This record is the sole producer
+  of the three-answer vocabulary that GE-126b-4 documents. The contract names the
+  vocabulary AND the shared-exit-status fact, because GE-126b-4's criteria require the
+  reference to state which answers share an exit status — if the coder does not deliver
+  that fact, the documentation record cannot be written truthfully.
+
+  THE LAST it_requirement IS AN ORDERING CONSTRAINT AND IS DELIBERATE. Landing the new
+  outcome values ahead of their reference entry produces exactly the state this tree
+  objects to: a machine-readable answer with no published meaning. depends_on already
+  puts GE-126b-4 last; the requirement makes the coupling explicit for a driver that
+  batches by agent rather than by dependency.
+
+  AGENT — python-coder. Ordering lives in depends_on; the expects_from edge is data-shape
+  documentation only and is invisible to the sequencer (KI-ACD-015).
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

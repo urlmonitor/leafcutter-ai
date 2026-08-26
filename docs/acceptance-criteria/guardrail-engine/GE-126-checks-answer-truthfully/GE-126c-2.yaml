@@ -1,0 +1,152 @@
+id: GE-126c-2
+title: "The refusal names the copy you ran and the copy that works"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader working in the build-source tree because that is where the check they are
+    editing lives and whose workspace is fully built with the deployed layout present,
+  When they run the build-source copy against a record that genuinely violates the
+    parent-back-link rule and read what it tells them,
+  Then the refusal names the copy they ran and names the copy to run instead in a form
+    they can act on without further discovery,
+  And it states that this copy cannot enforce the rule as a property of the copy rather
+    than as a condition of their setup,
+  And it does not state or imply that the workspace is unbuilt or that anything the reader
+    could install or link would make this copy work,
+  And the wording recorded on 2026-08-25 — a warning naming an internal helper that could
+    not be imported by three named strategies followed by a skip — is no longer produced,
+  And a reader who follows the route the refusal names arrives at a run that produces a
+    verdict on the same record rather than another refusal.
+
+  Coverage note: covered by executing the build-source copy in a fully built workspace and
+  asserting the refusal names both copies, paired with executing the route it names and
+  asserting a verdict is produced. The paired second run is what stops the message being
+  checked as a string; a message that names a route nobody can follow is decoration.
+depends_on:
+  - GE-126c
+  - GE-126c-1
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-019 quotes the current wording verbatim. It describes an internal symptom and reads as a setup problem the reader could fix, and nothing the reader does to their setup will ever fix it."
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: modifies
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120b-1-i.yaml
+    relationship: context
+    status: exists
+    relevance: "The nearest neighbour and the reason this record exists separately: GE-120b-1-i requires the message to name an unbuilt workspace, which is the wrong diagnosis here. Read-only reference — that folder must not be edited."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The message must be true in the vocabulary this ADR establishes - build source versus deployed - because that is the distinction the reader has to act on."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Where a reader looks up the family's layout after being told which copy to run. The route the message names should resolve against what this page describes."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The route the message names must be an absolute or workspace-resolvable path the reader can run as given, not a description of where the deployed copy generally lives. A reader who has to work out the path has been sent on the discovery this record removes."
+  - "The message must not name the internal helper or the import strategies that failed. Those are internal symptoms and they are what makes the current wording read as a fixable setup problem."
+  - "The message must not state or imply that the workspace is unbuilt. That diagnosis belongs to GE-120b-1-i and is wrong here - the workspace in this record's Given is fully built - and it would send the reader to repair something that is not broken."
+  - "The message and the route it names must be produced from one source rather than assembled in two places, so a later change to the deployed layout cannot leave the message naming a path that no longer exists (ACS-100i-9's shape)."
+  - "Coverage must execute the named route, not merely assert the string. A message that names a route nobody can follow passes every string assertion and is decoration."
+  - "Every assertion must be made in a fully built workspace with the deployed layout present, because the built state is what makes this record and GE-120b-1-i mutually exclusive."
+test_spec:
+  - name: test_refusal_names_the_copy_run_and_the_copy_that_enforces
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "templates/scripts/commit_guardian/check_ac_parent_covered_by.py"
+    description: "In a fully built workspace, the build-source copy run against a violating record produces a refusal whose text contains both the path that was run and a runnable path for the enforcing copy."
+  - name: test_following_the_named_route_produces_a_verdict_on_the_same_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The route string is extracted from the refusal and executed as given against the same record; it blocks, naming the record. This is what binds the message to reality - a route that cannot be followed fails here while passing every string assertion."
+  - name: test_refusal_names_no_internal_helper_and_no_unbuilt_workspace
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The refusal text contains neither the helper module name nor the three import-strategy phrases recorded on 2026-08-25, and makes no unbuilt-workspace claim - the deletion side of the criterion, and the fence against GE-120b-1-i's diagnosis."
+  - name: test_the_2026_08_25_warning_then_success_shape_is_not_producible
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "No invocation of the build-source copy in a built workspace produces a warning followed by the ordinary success value - the exact recorded behaviour, asserted absent."
+test_rationale: |
+  The whole content of this record is a message, and a message is the easiest thing in
+  a codebase to assert falsely: a string test passes whether or not the route it names
+  exists. The second descriptor is therefore the criterion — extract the route from the
+  refusal and run it — and it is what turns a wording requirement into a behavioural one.
+  The third descriptor is a negative assertion because the current message's problem is
+  what it contains, not what it omits, and an addition test leaves the misleading
+  internal-symptom text in place beside the new sentence. Running everything in a fully
+  built workspace is not incidental: it is what makes this record and GE-120b-1-i
+  mutually exclusive rather than merely different, so a reviewer can tell them apart
+  mechanically.
+delivers_to:
+  agent: documentation-expert
+  contract: "The refusal wording for the build-source copy: the fact that it names the copy run and a runnable route to the enforcing copy, and the fact that it makes no setup-repairable claim. GE-126c-4 documents which copy enforces and records the pre-repair workaround, and must describe the message a reader will actually meet."
+expects_from:
+  ac_id: GE-126c-1
+  contract: "The refusal outcome value carried by the build-source copy. This record supplies the human-readable report that accompanies it."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE MESSAGE IS A CRITERION AND NOT POLISH — the L1 says so and the reason is that the
+  reader's next action depends entirely on which situation they are in. A message that
+  reads as a setup problem sends them to fix their environment, which cannot work, and the
+  workaround they land on is the one recorded in KI-CG-019: reading the parent record by
+  hand rather than trusting either exit code.
+
+  THE FULLY BUILT WORKSPACE IN THE GIVEN IS THE FENCE AGAINST GE-120b-1-i. That record's
+  correct message names an unbuilt workspace. Running this criterion's arm in a built one
+  makes the two mutually exclusive rather than merely different, so neither can be closed
+  by the other and a reviewer can tell them apart mechanically.
+
+  THE FOLLOW-THE-ROUTE CLAUSE IS WHAT BINDS THE MESSAGE TO REALITY. Any string assertion
+  can be satisfied by a string. Requiring that the named route actually produces a verdict
+  on the same record means the message has to name something that works.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND CROSSES AN AGENT BOUNDARY. GE-126c-4 has to describe the
+  message a reader will actually meet, including the workaround that preceded it. That
+  makes the wording a contract rather than an internal detail: if the coder changes what
+  the refusal says, the reference record is describing something that no longer exists.
+
+  THE ONE-SOURCE REQUIREMENT FOR THE MESSAGE AND ITS ROUTE is the ACS-100i-9 shape applied
+  at small scale, and it is worth the line: assembling the message in one place and the
+  deployed path in another is how a message ends up naming a location the build stopped
+  writing to.
+
+  AGENT AND SIZE. python-coder, S. Genuinely small - one message and one route - and the
+  cost is entirely in the second test descriptor, which has to execute what the message
+  says.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

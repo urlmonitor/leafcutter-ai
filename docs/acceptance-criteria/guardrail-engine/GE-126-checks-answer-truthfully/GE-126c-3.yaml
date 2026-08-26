@@ -1,0 +1,168 @@
+id: GE-126c-3
+title: "The refusal follows from what the copy is and not from whether a dependency happened to load"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the helper the parent-back-link check needs is placed beside the build-source copy
+    by hand so that every one of the copy's dependency-resolution routes now succeeds,
+  When the build-source copy is run against a record that genuinely violates the
+    parent-back-link rule,
+  Then it still refuses to answer and still names the copy to run instead — because being
+    a build source is what disqualifies it and a satisfied dependency does not change what
+    the copy is,
+  And when the helper is then removed again the refusal is unchanged in outcome value and
+    in wording so a reader cannot tell the two situations apart and does not need to,
+  And in neither case does the build-source copy report a verdict on the record or the
+    ordinary success value,
+  And the deployed copy run against the same record in both situations blocks naming the
+    record so the refusal remains specific to the build-source copy rather than becoming a
+    property of the check.
+
+  Coverage note: covered by executing the build-source copy with the dependency satisfied
+  and again with it absent and asserting the same refusal in both, paired with the deployed
+  copy blocking in both. The dependency-satisfied arm is the whole point: without it this
+  criterion is indistinguishable from an instruction to handle an import failure more
+  loudly, which is the current fail-open behaviour re-specified.
+depends_on:
+  - GE-126c
+  - GE-126c-1
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-019 records that the condition is a permanent property of that copy rather than an environment accident, and that the response to a guaranteed failure is currently to pass."
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: context
+    status: exists
+    relevance: "The boundary that decides which copy is a build input and which is a gate. This criterion asks the check to read that boundary rather than to infer its own status from whether an import worked."
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Together with ADR-001 this is the machine-readable statement of which tree is a build input. The disqualifying fact must be derived from that boundary, which is what makes it independent of any import result."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Where the family's two-tree layout is described. A location-keyed rule is legible against this page; an import-keyed one is not."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The disqualifying fact must be derived from where the copy lives relative to the source-versus-deployed boundary that ADR-001 and ADR-013 define. It must NOT be derived from the outcome of importing the helper, from the helper's presence on disk, or from any other condition a reader could change."
+  - "The dependency-satisfied arm must satisfy EVERY resolution route the copy offers - the package import, the script-relative lookup and the project-root walk that KI-CG-019 names - not just the easiest one. An arm that leaves one route failing is passed by an implementation still keyed on the import result and looks identical in the test report."
+  - "The two refusals must be compared to each other for equality of outcome value AND of wording, not each against a literal. Two literals that happen to match today are the drift shape this tree keeps meeting; equality between the runs is the assertion the criterion actually states."
+  - "The fixture that plants the helper must remove it afterwards and must leave the build-source tree byte-identical. A helper left behind in templates/ would be committed and would permanently change what that copy is."
+  - "The deployed copy must be exercised in both situations. Without that arm the refusal could have become a property of the check rather than of the copy, and every commit in the repository would be refused."
+  - "Error handling must follow the four rules in CLAUDE.md. Handling the import failure more loudly is explicitly NOT what this record asks for - that is the current behaviour with a different exit code, and it leaves the copy deciding what it is from an accident of its surroundings."
+test_spec:
+  - name: test_build_source_copy_refuses_with_every_dependency_route_satisfied
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "templates/scripts/commit_guardian/check_ac_parent_covered_by.py"
+    description: "The helper is planted so that the package import, the script-relative lookup and the project-root walk all succeed; the build-source copy run by subprocess against a violating record still returns the refusal outcome and still names the enforcing copy. An implementation keyed on the import result cannot pass this."
+  - name: test_the_refusal_is_byte_identical_with_and_without_the_dependency
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The refusal from the dependency-satisfied run and the refusal from the dependency-absent run are compared to each other - same outcome value, same wording - so a reader cannot tell the two situations apart and does not need to."
+  - name: test_build_source_copy_never_produces_a_verdict_or_an_ordinary_pass
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Across both dependency situations and against both a violating and a clean record, no run of the build-source copy returns a verdict on the record or the ordinary success value."
+  - name: test_deployed_copy_blocks_in_both_dependency_situations
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_parent_covered_by.py"
+    description: "With the helper planted in templates/ and with it absent, the deployed copy blocks the same violating record by name - the refusal is specific to the build-source copy and has not become a property of the check."
+test_rationale: |
+  This record exists to kill one wrong decomposition — "handle the import failure more
+  loudly" — and only one descriptor can tell the right implementation from the wrong
+  one: running the build-source copy with the dependency fully satisfied. An
+  implementation keyed on the import result passes every other descriptor here and
+  fails that one; an implementation keyed on where the copy lives passes it without
+  effort. That is why the first descriptor also insists on satisfying all three
+  documented resolution routes rather than the convenient one: an arm that leaves the
+  project-root walk failing is still passed by the import-keyed version, and the test
+  report looks the same either way. The byte-identical comparison is written as a
+  comparison between the two runs, not against expected text, because the criterion is
+  about their sameness rather than about their content.
+delivers_to:
+  agent: documentation-expert
+  contract: "The fact that the build-source copy's refusal is a property of the copy rather than of its environment, and the boundary the check reads to know that. GE-126c-4 states the reason that copy can never run there; that reason is only accurate once the rule is keyed to location rather than to a dependency."
+expects_from:
+  ac_id: GE-126c-1
+  contract: "The refusal outcome value carried by the build-source copy. This record fixes what that refusal is KEYED TO, without changing the value itself."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS RECORD EXISTS TO KILL ONE SPECIFIC WRONG DECOMPOSITION. "Handle the import failure
+  gracefully" or "fail closed when the dependency is missing" re-specifies the current
+  behaviour with a different exit code. Both leave the copy deciding what it is from an
+  accident of its surroundings, so the day someone drops the helper into the build-source
+  tree for an unrelated reason the copy starts answering again and answers wrongly.
+
+  THE DEPENDENCY-SATISFIED ARM IS THE LOAD-BEARING ONE and it is deliberately awkward to
+  arrange, because that awkwardness is what makes it a real test. An implementation that
+  keys off the import result cannot pass it. An implementation that keys off where the copy
+  lives passes it without effort.
+
+  SCOPE IS ONE FILE. This says nothing about any other build-source copy of any other
+  check. Most of them have no such dependency and are perfectly capable of running in
+  place. The L1 forbids widening to an unmeasured set and GE-126e is what would measure it.
+
+  IT ALSO MAKES GE-126c-1-i's HAZARD TRACTABLE: a rule keyed to location is one the build
+  can distinguish, whereas a rule keyed to an import result is identical in both copies by
+  construction.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  THE DISTINCTION THIS RECORD PROTECTS IS CARRIED IN ONE TEST DESCRIPTOR AND ONE
+  it_requirement, DELIBERATELY. The descriptor is
+  test_build_source_copy_refuses_with_every_dependency_route_satisfied; the requirement
+  is the second one, which forbids deriving the disqualifying fact from any import
+  result. If either is dropped in review, this record collapses into "fail closed on a
+  missing dependency", which is the current behaviour with a new exit code and is what
+  the BA record exists to forbid. Neither is negotiable.
+
+  WHY THE FIRST DESCRIPTOR NAMES ALL THREE RESOLUTION ROUTES. KI-CG-019 records three
+  strategies. A fixture that satisfies only the script-relative one leaves the other two
+  failing, so an import-keyed implementation still refuses and still passes - and the
+  test report is indistinguishable from a genuine pass. This is the single easiest way
+  for this record to ship green and broken, so the arm is specified at route granularity
+  rather than as 'the dependency is available'.
+
+  delivers_to IS NOW SET AND CROSSES AN AGENT BOUNDARY. GE-126c-4 must state WHY the
+  build-source copy can never run there. That sentence is only true if the rule is keyed
+  to location; if it is keyed to the dependency, the honest sentence would be 'it usually
+  cannot', which is a different and much weaker claim.
+
+  AGENT — python-coder. M rather than S because the dependency-satisfied fixture is the
+  awkward part and has to leave the tree byte-identical afterwards.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

@@ -1,0 +1,145 @@
+id: GE-126b-1-i
+title: "The statement arrives without being asked for and nothing can switch it off"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a caller who does not know that an opt-in introspection switch exists and sets
+    no environment variable of any kind,
+  When they invoke the deployed AC-governance check out of process from a directory tree
+    containing no acceptance-criterion store,
+  Then the check still states the root it resolved and that it examined no records —
+    the statement is unconditional rather than gated behind a switch the caller has to
+    know the name of,
+  And setting the historical opt-in switch to any value including one that reads as off
+    does not suppress the statement,
+  And a caller who sets the historical switch and receives the statement cannot be
+    receiving it for that reason — the same invocation without the switch produces the
+    same statement,
+  And silence from this check is therefore never a possible response so a caller who
+    receives nothing at all knows the check did not run rather than having to weigh
+    three explanations for the silence.
+
+  Coverage note: covered by out-of-process runs with the switch unset with the switch set
+  and with the switch set to a falsy value asserting the statement in all three. Silence
+  in the unset run is the failure this pins.
+depends_on:
+  - GE-126b-1
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-018: setting the switch and getting silence is ambiguous between the variable being unset the check being an older copy and the check having inspected nothing — and only the third was true."
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Its canary check requires the chain to fire rather than to be configured to report that it fired. An opt-in diagnostic is the configurable variant this record removes."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Records the check family's environment switches. Retiring one from load-bearing status is a change this doc has to reflect."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The statement must be emitted with an entirely empty environment. Assert it under a cleared environment rather than under the test runner's inherited one - an inherited variable is how an opt-in diagnostic looks unconditional to its own test suite."
+  - "The historical switch may keep existing and may keep adding detail. What it may not do is decide whether the check says anything at all. Backward compatibility is not a reason to keep the gate and the record says so."
+  - "A falsy spelling of the switch - the empty string, '0', 'false', 'no' - must not suppress the statement either. Today the switch is read for truthiness, so a caller who deliberately turns it off would silence the very thing that tells them the check abstained."
+  - "Silence must not be a reachable response from this check on any path. If a caller receives no output at all, that must mean the process did not run - which is the fact that makes the diagnostic worth reading."
+  - "Every assertion must be made against the copy the build deploys under .leafcutter/."
+  - "Error handling must follow the four rules in CLAUDE.md; the statement must survive the internal-error fail-open path or that path becomes the new switch."
+test_spec:
+  - name: test_statement_is_emitted_with_a_completely_cleared_environment
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "Deployed check run by subprocess with env fully cleared, from a tree with no acceptance-criterion store, still states the resolved root and an examined count of zero. This is the run that is silent today."
+  - name: test_setting_the_historical_switch_produces_no_different_statement
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The statement from the switch-set run and the statement from the switch-unset run are compared to each other and are the same - so a caller who sets the switch cannot be receiving the statement because of it."
+  - name: test_falsy_switch_values_do_not_suppress_the_statement
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Empty string, '0', 'false' and 'no' are each set as the switch value in separate runs and the statement is present in every one."
+  - name: test_no_reachable_condition_produces_a_run_with_no_output_at_all
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Across the no-store, empty-scope, records-examined and induced-internal-failure conditions with a cleared environment, no run produces empty output - silence is not a response the check can give."
+test_rationale: |
+  This record's failure is invisible to any test that runs under the suite's inherited
+  environment, because the cheapest way to satisfy its parent is to move the existing
+  opt-in line above the early returns and leave it opt-in — which passes the parent's
+  descriptors if those tests happen to set the switch. Clearing the environment is
+  therefore not a detail; it is the whole assertion. The second descriptor compares the
+  two runs' statements to each other rather than each to a literal, because that is the
+  only form that proves the switch is not what produced the output. The falsy-value
+  descriptor covers the specific spelling a caller uses when they mean "off", which a
+  truthiness read silently honours.
+delivers_to: null
+expects_from:
+  ac_id: GE-126b-1
+  contract: "The unconditional pre-exit statement - resolved root and examined count - emitted on every path out of the check. This record constrains its FORM: that it is emitted with no environment configuration at all and that nothing can suppress it."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS PINS THE THREE-WAY AMBIGUITY KI-CG-018 NAMES and it is the reason the instrument
+  that already exists did not help anybody. An opt-in diagnostic answers "did you look"
+  only for a caller who already suspects the answer is no and knows the switch's spelling.
+  Everyone else reads silence as agreement.
+
+  IT IS AN L3 BECAUSE IT CONSTRAINS THE FORM of GE-126b-1's statement rather than adding a
+  separate behaviour. It is nonetheless the clause most likely to be dropped: the cheapest
+  way to satisfy GE-126b-1 is to move the existing opt-in line above the early returns and
+  leave it opt-in. That change would pass GE-126b-1's tests if they happen to set the
+  switch and would leave the defect untouched for every caller who does not.
+
+  BACKWARD COMPATIBILITY IS NOT A REASON TO KEEP THE GATE. The switch may continue to
+  exist and may continue to add detail. What it may not do is decide whether the check
+  says anything at all.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: it removes an option. Nothing downstream can consume the absence of a
+  suppression switch, and the statement itself is GE-126b-1's deliverable, not this
+  record's. DO NOT REFILL.
+
+  AGENT AND SIZE. python-coder, S. Small in code, and deliberately so — the risk here is
+  not difficulty, it is that the clause gets dropped as redundant. Build it in the same
+  pass as GE-126b-1 or the cheap version of that fix ships.
+
+  THE CLEARED ENVIRONMENT IS THE WHOLE TEST CONTRACT. A suite that runs under its own
+  inherited environment cannot distinguish an unconditional statement from an opt-in one
+  that happens to be switched on. If a reviewer sees these descriptors implemented
+  without an explicit environment clear, the record is not covered whatever the tests
+  report.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

@@ -1,0 +1,182 @@
+id: GE-126b-1
+title: "No way out of the check exists that has not first said where it looked and how much it examined"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the deployed AC-governance check is invoked out of process twice with the same
+    invocation in two different working directories — first inside a directory tree that
+    contains no acceptance-criterion store at all and then inside a working copy whose
+    store holds one staged record that genuinely violates the rule the check enforces,
+  When each run finishes,
+  Then both runs state the root the check resolved for itself and the number of records
+    it examined there before reporting any result whatsoever,
+  And the first run states that it examined none and names the root at which it found
+    no store while the second states that it examined one and names the root at which
+    it found it,
+  And the second run refuses that record naming it — so the count of one is corroborated
+    by a verdict on a record known to break the rule rather than being an unverified
+    number the check printed about itself,
+  And the two runs report different outcome values a caller can distinguish without
+    reading prose so the pair recorded on 2026-08-25 — same check same file same exit
+    code with only the working directory differing — can no longer occur,
+  And the statement is produced on every path out of the check including both of the
+    paths that terminate before any record is read.
+
+  Coverage note: covered only by executing the deployed check out of process from the two
+  working directories and asserting on both statements and on the refusal. The refusal in
+  the second run is the load-bearing assertion. A test that asserts only that a statement
+  line appeared does not cover this criterion — a check can print a count and have
+  counted the wrong thing. A test that searches the source for the statement's placement
+  relative to the early returns does not cover it either; a grep-only test passes on dead
+  code.
+depends_on:
+  - GE-126b
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-018 records the pair verbatim and the placement defect: the introspection counter that exists to prove the check did work sits after both early returns and is unreachable on precisely the two paths where it saw nothing."
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: modifies
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: context
+    status: exists
+    relevance: "M8 and the variant KI-CG-018 names — the instrumentation meant to defeat M8 placed where the M8 path cannot reach it."
+  - path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The nearest architectural precedent: a gate proven by requiring the chain to actually FIRE, with a fail-closed-on-self-error invariant and no fail-open path. Its canary model is the shape to reuse for 'no exit without a statement'."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The component-level statement of what a check result means, which this record adds a third value to."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "The statement obligation must hold structurally rather than by inspection: there must be no return, raise-to-exit, or sys.exit path out of the check's entry point that a caller can reach without the statement having been emitted. Adding a second diagnostic elsewhere does not satisfy this, and the L1 says so."
+  - "Every assertion must be made against the copy the build deploys under .leafcutter/. The pair recorded on 2026-08-25 was produced with the deployed copy and the reproduction must use the same one (ADR-001, ADR-013)."
+  - "Coverage must reach the check through its process entry point. The existing check_ac_governance test module calls internal functions directly by design; that seam cannot observe an exit path and must not be reused for this criterion."
+  - "The two runs must differ in exactly one variable - the working directory. Any second difference between them makes the comparison uninterpretable, which is precisely why the recorded 2026-08-25 pair was believed."
+  - "The no-store run must announce and must not block. This check ships to consumer repositories that have no acceptance-criterion store; blocking there would make this repair worse than the defect. Visibility is the unit of the rule and the fail-open convention (GE-116a-1-iii) is not repealed."
+  - "The examined count must be produced from the collection the check actually iterated, not from a separately computed figure. A count derived independently of the inspection is a second unverified claim, which is the defect this record closes arriving one layer up."
+  - "Must add no measurable latency to a commit-time run; the statement is emitted on every invocation including the empty-scope one that most commits produce."
+  - "Error handling must follow the four rules in CLAUDE.md. If the check fails internally it must still have stated what it examined before it fails open, or the fail-open path becomes a new silent exit."
+test_spec:
+  - name: test_no_store_run_states_the_resolved_root_and_an_examined_count_of_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "Deployed check run by subprocess from a directory tree containing no acceptance-criterion store states the root it resolved and that it examined zero records - the path that produced total silence on 2026-08-25."
+  - name: test_store_run_states_examined_one_and_refuses_that_one_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The second run states examined-one and names the resolved root, AND refuses the staged violating record by name - the count is corroborated by a verdict rather than standing as a number the check printed about itself."
+  - name: test_the_two_runs_differ_only_in_working_directory_and_in_outcome_value
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "The recorded 2026-08-25 pair reproduced: identical argv, identical environment, identical target file, only the cwd differs - and the two outcome values now differ in a way a caller reads without parsing prose."
+  - name: test_no_exit_path_is_reachable_without_the_statement_having_been_emitted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Every terminating condition the check can reach - no store at the resolved root, store found with nothing in scope, records examined, and an induced internal failure - is driven as a separate subprocess run and each is asserted to have emitted the statement. Driven by execution, never by reading the source for the statement's position."
+test_rationale: |
+  The instrument this record is about already exists and already passes any test that
+  asks whether a diagnostic line is emitted — it emits one, on the two paths where the
+  check did inspect something. So a criterion-level test written the obvious way is
+  green today against the defect. Two things make the contract real. First, the pair:
+  same argv, same file, only the working directory differing, which is the comparison
+  that made KI-CG-018 believable and the only one that names WHY the outcomes differ.
+  Second, the fourth descriptor, which drives every terminating condition as its own
+  subprocess run rather than reading the source for where the statement sits — a
+  grep-for-placement test passes on dead code and would also pass on a statement that
+  is emitted but wrong. The refusal in the second run is what stops the examined count
+  being a self-report.
+delivers_to:
+  agent: python-coder
+  contract: "The unconditional pre-exit statement: the resolved root and the number of records examined, emitted on every path out of check_ac_governance before any result is reported, plus a machine-readable outcome value distinct from ordinary success. GE-126b-2 partitions that outcome value into three; GE-126b-3 supplies the resolved root the statement reports; GE-126b-1-i removes any switch that could suppress the statement."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126b-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE DEFECT IS PLACEMENT AND THIS CRITERION IS ABOUT PLACEMENT. The L1 is explicit that
+  an implementation which adds a second diagnostic somewhere else has not fixed anything.
+  The requirement is that no exit path is reachable without passing the statement first,
+  and the two runs above are chosen so that one of them takes the earliest terminating
+  path in the check.
+
+  WHY THE REFUSAL CLAUSE IS NOT OPTIONAL. This whole tree exists because a gate reported
+  success from a path on which it inspected nothing. A criterion satisfied by a printed
+  count would reproduce that defect one level up: the count itself becomes the unverified
+  claim. Binding the count of one to a verdict on a record known to violate is what makes
+  the number mean something. The L0 bars the bare-diagnostic criterion in as many words
+  and this record honours that.
+
+  THE WORKING DIRECTORY WITH NO STORE IS CHOSEN DELIBERATELY AND NOT THE WORKSPACE PARENT.
+  KI-CG-018 reached the silent exit from the workspace parent because that directory
+  carries a project marker but no store. GE-126b-3 repairs the root resolution so that
+  route stops arising. If this criterion had been written against the workspace parent it
+  would have been silently satisfied by that repair. Written against a tree that genuinely
+  contains no store it stays meaningful afterwards — which is exactly the separation the
+  L1 asked for.
+
+  BLOCK VERSUS ANNOUNCE — DECIDED HERE AND STATED EXPLICITLY, as the L0 requires of each
+  L2. This criterion is about VISIBILITY only. It does not require either run to block a
+  commit. The outcome value must be distinguishable from ordinary success; the exit status
+  may remain unchanged. Requiring the no-store run to block would fail every consumer
+  repository that has no acceptance-criterion store, which is most of them.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND IS NOT TERMINAL. Three records in this branch are built on
+  what this one establishes: GE-126b-2 partitions its outcome value into three,
+  GE-126b-3 supplies the resolved root it reports, and GE-126b-1-i strips any switch
+  that could suppress it. The contract is written as the STATEMENT plus the OUTCOME
+  VALUE because both are consumed, and a fix that delivers only the first would leave
+  GE-126b-2 with nothing to partition.
+
+  expects_from IS NULL AND THAT IS A DECISION. This is the head of the GE-126b chain and
+  consumes nothing from another record. Not an unenriched field. DO NOT REFILL.
+
+  SIZED L, AND THAT IS THE ONE ESTIMATE IN THIS TREE WORTH ARGUING ABOUT. The change
+  looks like moving two lines above two early returns. It is not: the obligation is
+  structural — no exit path reachable without the statement — which means the entry
+  point's control flow is restructured, the internal-error fail-open path acquires the
+  same obligation, and the examined count must come from the iterated collection rather
+  than from a parallel computation. Every one of those is a place the cheap version of
+  this fix quietly stops short.
+
+  A WARNING FOR THE CODER ABOUT THE CHEAPEST PASSING IMPLEMENTATION. Moving the existing
+  HOOK_COUNT_PARSED line above the early returns satisfies the letter of three of the
+  four descriptors while leaving it opt-in. GE-126b-1-i is the record that forbids that,
+  and it is a child of this one for exactly that reason - build them together.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

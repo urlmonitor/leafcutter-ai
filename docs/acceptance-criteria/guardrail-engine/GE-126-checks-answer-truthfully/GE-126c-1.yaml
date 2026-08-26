@@ -1,0 +1,167 @@
+id: GE-126c-1
+title: "The build-source copy refuses the same record the deployed copy blocks"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fully built workspace in which the deployed layout is present and working,
+  And one acceptance-criterion record that genuinely violates the parent-back-link rule —
+    a child record whose parent does not list it among the children it covers,
+  When the build-source copy of the parent-back-link check is run against that record,
+  Then it refuses to answer: the outcome it reports is neither the ordinary success value
+    nor a verdict on the record and its report states that this copy cannot enforce
+    anything and names the copy that can,
+  And when the deployed copy is run against the same record it blocks naming the record
+    and naming the missing back-link,
+  And when the deployed copy is run against a record whose parent does list it the deployed
+    copy reports an ordinary pass,
+  And the three runs are told apart by their outcome values so a caller cannot read the
+    build-source copy's refusal as either a verdict or a pass,
+  And the behaviour recorded on 2026-08-25 — the build-source copy printing a warning
+    about an import and then reporting the ordinary success value — no longer occurs.
+
+  Coverage note: covered only by three out-of-process runs — build-source copy against the
+  violating record deployed copy against the violating record deployed copy against the
+  clean record — asserting a distinct outcome for each. The second and third arms are not
+  optional: without them this criterion is satisfied by a build-source copy that refuses
+  unconditionally while the deployed copy is left broken, which is not a fix.
+depends_on:
+  - GE-126c
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-019 carries the verbatim invocation and output and the reason the condition is permanent: the helper the check needs is placed beside it only by the build, so in the build-source tree none of its three resolution strategies can ever succeed."
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: context
+    status: exists
+    relevance: "Defines the source-versus-deployed boundary that makes the build-source copy a build input rather than a runnable check."
+  - path: scripts/ac_store/ac_parent_id.py
+    relationship: related
+    status: exists
+    relevance: "The helper the build places beside the deployed copy and never beside the build-source copy."
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. States which scripts deploy and by which build phase. It is the machine-readable form of the fact that makes this copy's failure permanent, and the place a coder confirms which locations the build writes."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Where the check family's source-versus-deployed layout is described. Read before adding any location-sensitive behaviour to a check."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "All three arms must be run out of process against real files on disk in a fully built workspace. An in-process import of either copy cannot distinguish them, because the distinguishing fact is which path the file was loaded from."
+  - "The refusal outcome value must be distinct from BOTH the ordinary success value and the verdict values. A caller must not be able to read the refusal as either, and a two-valued result cannot express three states."
+  - "The second and third arms are regression coverage for the deployed copy and are not optional: without them this criterion is satisfied by making the build-source copy exit non-zero unconditionally while the deployed copy stays broken."
+  - "The clean-record arm must exercise a record whose parent genuinely lists it, produced by the same writer the real store uses rather than hand-authored, so the pass is a verdict rather than an artefact of a fixture the parser mishandles."
+  - "The refusal must not be reachable from the deployed copy under any condition this record creates. GE-126c-1-i is the fence and must be built in the same pass - a guard added at the top of the canonical file ships to every deployed location and refuses every commit in the repository."
+  - "Error handling must follow the four rules in CLAUDE.md. The current behaviour - warn and return success - is a Rule 3 violation dressed as a fail-open, and the replacement must not preserve its shape with a different exit code."
+test_spec:
+  - name: test_build_source_copy_refuses_and_names_the_copy_that_enforces
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "templates/scripts/commit_guardian/check_ac_parent_covered_by.py"
+    description: "In a fully built workspace, running the templates/ copy by subprocess against a child record whose parent omits it returns the refusal outcome - neither the ordinary success value nor a verdict - and its report names the deployed copy."
+  - name: test_deployed_copy_blocks_the_same_record_naming_the_missing_back_link
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_parent_covered_by.py"
+    description: "The deployed copy run against the identical record blocks, names the record and names the missing back-link - the arm that stops the fix being an unconditional refusal in templates/."
+  - name: test_deployed_copy_passes_a_record_whose_parent_does_list_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "A child record whose parent's covered_by genuinely contains it, serialised by the store's real writer, produces the ordinary success value from the deployed copy - the discriminating control against a copy that blocks everything."
+  - name: test_the_three_runs_return_three_distinct_outcome_values
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "The refusal, the block and the pass are compared to each other and are three different values, so a caller cannot read the build-source refusal as either a verdict or a pass. The 2026-08-25 behaviour - warning then ordinary success from the templates/ copy - is asserted absent."
+test_rationale: |
+  The single obvious test — the templates/ copy refuses — is satisfied by making that
+  file exit non-zero on its first line, which passes while the deployed copy stays
+  broken and every commit in the repository starts failing. The three arms are one
+  criterion for that reason and the BA record says so explicitly. All three must be
+  subprocess runs because the distinguishing fact is which path the file was loaded
+  from, which an in-process import erases. The clean-record arm uses a real-serialiser
+  fixture because this repository has already shipped a parser that was a no-op on every
+  real record while passing on hand-indented fixtures.
+delivers_to:
+  agent: python-coder
+  contract: "The refusal outcome for a copy that cannot enforce: a value distinct from both ordinary success and any verdict, carried by the build-source copy of check_ac_parent_covered_by. GE-126c-2 defines the message that accompanies it, GE-126c-3 defines what the refusal is keyed to, and GE-126c-1-i requires the deployed copies not to inherit it."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126c-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE THREE ARMS ARE ONE CRITERION AND MUST NOT BE SPLIT ACROSS THREE RECORDS. The L1 says
+  so and gives the reason: an implementer who is handed only the first arm satisfies it by
+  making the build-source copy exit non-zero unconditionally, which passes the test and
+  fixes nothing. The comparison is the criterion.
+
+  THIS IS THE ONE PLACE THIS GOAL TAKES A POSITION ON BLOCK VERSUS ANNOUNCE and it does so
+  deliberately rather than deferring to a per-check disposition. The build-source copy's
+  failure is guaranteed rather than conditional, so passing is correct on none of its runs.
+  The component's deliberate fail-open convention covers a check that ran and hit one bad
+  input; it has never covered a check-shaped object that can never check.
+
+  THE WORKSPACE IS FULLY BUILT IN THE GIVEN AND THAT IS DELIBERATE. GE-120b-1-i requires a
+  cannot-run message to name an unbuilt workspace. That diagnosis is wrong here and would
+  send the reader to fix something that is not broken. Running this criterion's first arm
+  in a fully built workspace is what makes the two records distinguishable and is why
+  neither closes the other. Do not add a dependency edge into the GE-120 tree — its folder
+  is byte-frozen by a guard test.
+
+  THE CLASS IS ONE FILE HERE AND STAYS ONE FILE. Only one instance of this shape has been
+  observed. GE-126e is what establishes how many build-source copies share it. Do not widen
+  this criterion to every build-source copy in anticipation.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND IS NOT TERMINAL. All three siblings build on the refusal
+  outcome this record introduces: GE-126c-2 gives it a message, GE-126c-3 fixes what it is
+  keyed to, GE-126c-1-i fences where it may appear. The contract is written as a VALUE
+  because that is what the three consume; a contract phrased as "the templates copy
+  refuses" would be satisfied by any non-zero exit and would leave the three siblings
+  without the third state they each need.
+
+  expects_from IS NULL AND THAT IS A DECISION. Head of the GE-126c chain; consumes nothing
+  from another record. Not an unenriched field. DO NOT REFILL.
+
+  BUILD GE-126c-1 AND GE-126c-1-i IN ONE PASS — this is the strongest sequencing advice in
+  the branch. The natural implementation of arm one is a guard at the top of the canonical
+  file, and the build copies that file verbatim to every enforcing location. Landing arm
+  one alone refuses every commit in the repository. The L3 is a child of this record
+  precisely so a driver batching by depends_on picks them up together.
+
+  AGENT — python-coder. The change spans templates/ and the build's notion of deployed
+  locations, both Python surfaces; no split is warranted.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).
