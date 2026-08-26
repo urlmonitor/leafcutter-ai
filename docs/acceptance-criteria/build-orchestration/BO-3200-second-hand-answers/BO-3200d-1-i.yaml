@@ -1,0 +1,111 @@
+id: BO-3200d-1-i
+title: "A genuinely bad result of the same size still halts the run — the gate is not loosened"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a result of at least 149 kilobytes that is genuinely malformed — complete, delivered
+    whole, and missing the marker the reading step requires,
+  When the step that reads it forms its verdict,
+  Then the run halts, and the halt states that the result lacked what was required rather than
+    that the result could not be obtained.
+
+  Given a result of at least 149 kilobytes that is well-formed,
+  When the step that reads it forms its verdict,
+  Then the run continues.
+depends_on:
+  - BO-3200d-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-019 — the gate was right and the transport was impossible; KI-BO-018 for the cost of conflating two halts."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "THE GATE'S REFUSAL THRESHOLD MUST NOT MOVE. This AC exists because the cheapest way to make BO-3200d-1 pass is to stop the reading step refusing, and no test in that AC would notice. The two must be delivered and reviewed together."
+  - "THE TWO HALTS MUST READ DIFFERENTLY IN THEIR SUBSTANTIVE CLAUSE: 'the result lacked what was required' sends a reader to the producer's work; 'the result could not be obtained' sends them to the handover. Conflating them is the misdirection cost KI-BO-018 records as the expensive half of a false verdict."
+  - "THE DISTINCTION MUST ALSO BE MACHINE-READABLE, using BO-3200e's vocabulary rather than a second one — an inadequate result is a substantive finding, an unobtainable one is `undetermined`. BO-3200d-2-i defines the full three-way set; this AC pins two of them to the one gate whose correctness must survive the fix."
+  - "The malformed fixture must be at the real size and delivered WHOLE, so the test distinguishes a bad result from a truncated one. A short malformed fixture cannot tell the two halts apart, because both would be plausible."
+  - "The well-formed case must be asserted too, or the criterion is satisfied by a gate that refuses everything."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200d-1
+    contract: "The size-independent handover delivering the result whole. This AC asserts the reading step's verdict on a whole-but-bad result is unchanged from before the handover was fixed."
+  - ac_id: BO-3200e-1
+    contract: "The three-answer vocabulary. The inadequate-result halt is a substantive finding; the could-not-obtain halt is the undetermined outcome. Reused, not reinvented."
+test_spec:
+  - name: test_bo_3200d_1_i_whole_but_malformed_149kb_result_still_halts
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A complete, whole-delivered result of at least 149 KB missing the required marker: assert the run halts. Proves the fix did not buy its pass by loosening the gate."
+  - name: test_bo_3200d_1_i_lacked_and_could_not_obtain_halts_read_differently
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE DISCRIMINATOR. Drive the gate once with a whole-but-bad result and once with no result obtainable; capture both halts and assert the substantive clauses differ and the machine-readable outcomes differ. Asserting only that both halt passes on a single conflated message."
+  - name: test_bo_3200d_1_i_well_formed_149kb_result_continues
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A well-formed result of the same size lets the run continue — stops the criterion being satisfied by a gate that refuses everything."
+test_rationale: |
+  This AC's whole job is to be the test BO-3200d-1 cannot provide: the cheapest way to make a
+  large result pass a gate is to stop the gate refusing, and every test in the parent would
+  still be green. So the discriminating fixture here is a result that is the RIGHT SIZE,
+  DELIVERED WHOLE, and genuinely bad — the one combination that separates "the handover works"
+  from "the check gave up".
+  The two-halt comparison must capture both messages rather than asserting each halts. A single
+  conflated halt message satisfies "both halt" and destroys the diagnosis, which is the
+  expensive half of what KI-BO-018 cost.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, expects_from, doc_links,
+    test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE PARENT L1 IS EXPLICIT: "THE GATE IS NOT THE BUG. Its fail-closed posture is correct and
+  must be preserved — do not let this criterion be decomposed into loosening it." This AC is
+  that instruction made falsifiable, because the cheapest way to make BO-3200d-1 pass is to
+  stop the gate refusing, and no test in that AC would notice.
+
+  What failed in KI-BO-019 was the contract, not the check: "return 149 KB of text as a string
+  field" is not something a specialist reliably honours, and the specialist was not evasive
+  about it — it said plainly what it had done and where the content was. It simply answered a
+  different question than the schema asked.
+
+  THE TWO HALTS MUST READ DIFFERENTLY. "The result lacked what was required" and "the result
+  could not be obtained" send a reader to different places — one to the producer's work, the
+  other to the handover — and conflating them is the misdirection cost KI-BO-018 records. This
+  is the same distinction BO-3200e makes in general; here it is pinned to the one gate whose
+  correctness must survive the fix.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). Complexity S because the code change is small or nil —
+  the gate should already behave this way — and the deliverable is really the pair of tests that
+  hold the line while BO-3200d-1 is implemented. That makes it unusually important that the two
+  ACs are built together rather than sequenced apart: shipped alone, BO-3200d-1 has no guard.

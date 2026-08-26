@@ -151,6 +151,7 @@ flowchart TD
 
 - BO-2100a-3: build-ticket.js phase ordering includes live-surface-tester after the smoker and before commit
 - BO-2100a-3-i: Relative phase order 11.5 < 11.8 < 12 is preserved after insertion
+- GE-124b-3: The pin is stripped from production builds and retained in dev, test and the Atlas
 - TQ-200a-2-iii: MARKUP output is scored by schema, render, and data-binding checks plus a visual judge
 - UXP-100d-2: Frontend-coder agent consumes the handoff artifact without human translation
 - UXP-210a: Customer can browse the plant catalogue

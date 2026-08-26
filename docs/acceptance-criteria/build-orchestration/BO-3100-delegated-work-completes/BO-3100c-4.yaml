@@ -1,0 +1,134 @@
+id: BO-3100c-4
+title: "The arrangement holds with background dispatch forced on and with the choice removed entirely"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a build driven with the setting that makes dispatched work run in the background
+    turned on,
+  When the build is driven end to end,
+  Then every step's result is held by the layer that dispatched it before that layer
+    continues, and the build's outcome is the same as when the setting is off.
+
+  Given the same build driven in an environment where the option to choose foreground or
+    background dispatch has been removed altogether,
+  When the build is driven end to end,
+  Then it completes with the same outcome, and no step is reported as complete without its
+    result having been held.
+
+  Given the build driven in an environment where that option has been removed,
+  When any part of the system attempts to select foreground or background dispatch,
+  Then the build does not fail because the option is absent.
+depends_on:
+  - BO-3100c
+  - BO-3100c-1
+doc_links:
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001's workaround-and-expiry section — the knob this AC makes the build independent of, and the reason its removal would be silent."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "Where dispatch mode is currently selected."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "THE BUILD MUST BE INDEPENDENT OF THE SETTING IN BOTH DIRECTIONS: correct when it is forced on, correct when it is absent. Independence is the requirement — not 'always set it to foreground', which is a rule someone has to remember and is the prompt-level form this tree rejects."
+  - "NO CODE PATH MAY PASS THE OPTION UNCONDITIONALLY. If the option is selected at all it must be selected defensively, so its absence is not an error. Passing an unknown option to a harness that has removed it is the failure that takes out every drive at once, and it is worse than the silent behaviour change it was meant to avoid."
+  - "The removed-option environment must be simulated by actually withholding the option from the dispatch surface the workflow calls — not by a flag the workflow reads. A flag tests the branch the author wrote; withholding tests what the harness will actually do."
+  - "The outcome comparison across the three environments must be made on the workflow's TERMINAL RETURN PAYLOAD, the value a caller branches on — not only on log text. Same outcome means the same machine-readable result, step for step."
+  - "This AC must not be satisfied by pinning a harness version or by asserting a version threshold. KI-SS-001 records the version threshold as second-hand and unverified; the direction of travel is what is being defended against."
+  - "Coverage must run under unit_tests/_workflow_engine_harness.py so the three environments can be produced by varying the mocked dispatch surface rather than by requiring a real harness of each vintage."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3100c-1
+    contract: "The coordinating layer's dispatch path and its per-dispatch record, including result_held_before_continuing — the field this AC asserts stays true in all three environments."
+test_spec:
+  - name: test_bo_3100c_4_background_forced_on_still_holds_every_result
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Drive the real workflow with background dispatch forced on; assert every dispatch record has result_held_before_continuing true and the terminal payload matches the foreground run step for step."
+  - name: test_bo_3100c_4_option_removed_entirely_produces_the_same_outcome
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE EXPIRY TEST. Withhold the foreground/background option from the mocked dispatch surface altogether; assert the workflow completes with the same terminal payload and that no step is reported complete without its result having been held."
+  - name: test_bo_3100c_4_selecting_a_removed_option_does_not_fail_the_build
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With the option absent, exercise any path that attempts to select a dispatch mode and assert the build does not fail because of its absence. Guards the other half of the trap: code that passes the option explicitly takes out every drive the day it disappears."
+  - name: test_bo_3100c_4_three_environments_agree_on_the_terminal_payload
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run the same build in all three environments (off, forced on, option absent) and assert the terminal return payloads are equal. Asserting on the payload rather than on logs is what makes 'the same outcome' mean the value a caller branches on."
+test_rationale: |
+  This AC defends against a change that has not happened yet, so it cannot be covered by running
+  against the current harness. The only workable shape is to vary the mocked dispatch surface —
+  which is exactly what unit_tests/_workflow_engine_harness.py is for — and assert the workflow
+  behaves identically across all three states.
+  Simulating the removal with a flag the workflow reads would be worthless: it would exercise
+  the branch the author wrote rather than the situation the harness will create. Withholding the
+  option from the surface is what reproduces the real event.
+  Comparing terminal payloads rather than logs matters because this repository has repeatedly hit
+  reports that read correctly while the machine-readable outcome said something else.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, expects_from, doc_links,
+    test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS AC IS THE EXPIRY TEST, and it is why the parent calls this work urgent rather than
+  tidy. The interim mitigation recorded in KI-SS-001 is to dispatch every step so its result
+  returns inside the dispatching turn. That knob is documented as disappearing in a coming
+  release — silently, with no error — at which point the workaround stops working while
+  continuing to look like it works. The version threshold in KI-SS-001 is second-hand and
+  unverified; the direction of travel is not.
+
+  Running the build in an environment where the option has been REMOVED is what makes this
+  testable today against a change that lands tomorrow. Running it with background dispatch
+  forced ON is the stronger of the two, because it is the state the coming default puts the
+  system in.
+
+  THE THIRD SCENARIO CATCHES THE OTHER HALF OF THE SAME TRAP: code that passes the option
+  explicitly will fail when the option is gone, and that failure is the one thing worse than
+  the silent behaviour change, because it takes out every drive at once. A build that neither
+  depends on the option nor breaks in its absence is the durable state.
+
+  Note this is a stronger requirement than "do not use the background option" — that is a
+  prompt-level rule of the kind this tree rejects. The criterion is expressed as an outcome
+  observed in an environment where the option cannot be used, so no instruction has to be
+  obeyed for it to hold.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The one implementation trap worth naming: it is tempting
+  to satisfy this by explicitly forcing foreground dispatch everywhere. That passes the first
+  scenario and FAILS the third the day the option disappears, because the explicit selection
+  becomes an unknown argument. Independence, not selection, is the requirement.

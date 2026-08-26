@@ -1,0 +1,154 @@
+id: BO-3200d-2
+title: "The consumer obtains the result without depending on the producer reproducing it in its reply"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a specialist that produces a well-formed result and returns a reply containing none of
+    that result's content — only a plain description of what it did,
+  When the step that reads the result runs,
+  Then it obtains the complete result and forms the same verdict it would form from the
+    produced result read directly.
+
+  Given a specialist that returns a reply containing a description of the result that
+    contradicts the result itself,
+  When the step that reads the result runs,
+  Then the verdict is formed from the result, not from the description.
+
+  Given the arrangement by which the consumer obtains the result,
+  When it is examined,
+  Then no step in it requires a specialist to reproduce the result's content in its reply.
+depends_on:
+  - BO-3200d
+  - BO-3200d-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-019 — the specialist complied with the task perfectly and declined only the transport, returning a pointer and an honest description."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The dispatch surface that must carry the caller-supplied handover location."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+  - schema
+risk_surface: contract_boundary
+it_requirements:
+  - "IT-PO DECISION — THE AGREED HANDOVER. THE CALLER SUPPLIES THE LOCATION AT DISPATCH; THE PRODUCER NEITHER CHOOSES IT NOR REPORTS IT. The coordinating layer allocates a run-scoped artifact path, passes it in the dispatch options, and reads that path when the dispatch returns. This is what makes the criteria structurally true rather than conventionally true: the caller already knows where to look, so the reply cannot be the transport, there is no pointer to truncate or paraphrase, and a reply carrying none of the content is the normal case."
+  - "A PRODUCER-CHOSEN PATH RETURNED IN THE REPLY IS THE SAME DEFECT AS RETURNING THE CONTENT. It is a value the build depends on, arriving second-hand — precisely what BO-3200a forbids. Do not implement the handover that way; it satisfies the first criterion by accident and fails the third."
+  - "THE ARRANGEMENT MUST NOT REQUIRE THE PRODUCER'S COOPERATION BEYOND WRITING TO THE SUPPLIED LOCATION. In KI-BO-019 the specialist did the work perfectly and declined only the transport; a handover that works when the specialist happens to comply is not a fixed handover."
+  - "PRECEDENCE IS SETTLED AND ABSOLUTE: when the reply's description and the result disagree, the RESULT wins. Same doctrine as BO-3100b-1 — the verdict comes from what exists, not from what was said about it. There must be no tie-break, no confidence weighting, and no branch that consults the description when the result looks surprising."
+  - "The reply may still carry a description for a human reader; it must simply never be an input to the verdict."
+  - "THE THIRD CRITERION MUST BE COVERED BY EXECUTION, NOT INSPECTION. Assert it by running the real arrangement with a reply that contains none of the content and observing a correct verdict — not by reading the code for the absence of a reply-parsing branch, which passes on a branch reached through an indirection."
+  - "The supplied location must be run-scoped so a repeated drive cannot read a previous run's artifact (see BO-3200d-1's stale-artifact requirement)."
+delivers_to:
+  - agent: python-coder
+    contract: "A caller-supplied handover: {result_path: str} allocated by the coordinating layer, run-scoped, passed in the dispatch options, and read by the consumer on return. The reply is not an input to the verdict. BO-3200d-2-i defines the three states the location can be in (nothing there, empty, inadequate)."
+  - agent: architecture-diagram-author
+    contract: "The fact that the reply and the result travel as two separate arrows, and that the consumer's verdict is formed from what it obtained at the handover — the structure BO-3200d-3's diagram must draw and be checked against."
+expects_from:
+  - ac_id: BO-3200d-1
+    contract: "The size-independent, byte-exact handover. This AC constrains WHO decides the location and forbids the reply from being the transport."
+test_spec:
+  - name: test_bo_3200d_2_reply_with_no_content_still_yields_the_right_verdict
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE DISCRIMINATOR. Producer writes a well-formed result to the caller-supplied location and returns a reply containing NONE of the content — only a plain description. Assert the consumer obtains the complete result and forms the same verdict it forms from the produced result read directly. Any arrangement still reading the reply for content fails."
+  - name: test_bo_3200d_2_result_wins_when_the_description_contradicts_it
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Producer's reply describes the result inaccurately — claiming a marker that is absent, or absence of one that is present. Assert the verdict follows the result in both directions."
+  - name: test_bo_3200d_2_producer_never_supplies_the_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert the consumer reads the path the CALLER allocated, and that a path named in the reply is not consulted even when present and valid. A producer-chosen path returned in the reply is the same second-hand-value defect wearing a smaller costume."
+  - name: test_bo_3200d_2_no_step_requires_content_in_the_reply
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run the whole arrangement end to end with an empty reply body and assert every step completes. Covers the third criterion by EXECUTION — reading the source for the absence of a reply-parsing branch passes on one reached through an indirection."
+  - name: test_bo_3200d_2_handover_location_is_run_scoped
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Two consecutive runs allocate different locations and each consumer reads its own run's result, never the previous one's."
+test_rationale: |
+  The first scenario is the discriminator and it is only meaningful if the reply genuinely
+  carries none of the content — a reply with a shortened version would still let a
+  reply-reading implementation pass. So the fixture returns a description only.
+  The precedence test runs in BOTH directions (description claims a marker that is absent, and
+  denies one that is present) because a one-directional test passes on an implementation that
+  treats the description as a veto rather than as an input.
+  The third criterion is a statement about the arrangement, which invites a source inspection —
+  and a source inspection passes on a reply-parsing branch reached through an indirection, the
+  exact fast-lane precedent CLAUDE.md records. Running the arrangement with an empty reply body
+  is the executable form of the same claim.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: 'Settled the agreed handover left to the IT PO: caller-supplied, run-scoped
+    location passed at dispatch; producer neither chooses nor reports it. Added assigned_agent,
+    complexity, it_requirements, delivers_to/expects_from, doc_links, test_spec/test_rationale,
+    change_target/risk_surface, declares_side_effect. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3200d-2-i
+implemented_by: []
+notes: |
+  BO-3200d-1 says the result arrives whole. This AC says the arrangement does not depend on the
+  producer's cooperation to make that happen, which is the difference between a handover that
+  works and one that works when the specialist happens to comply. In KI-BO-019 the specialist
+  complied with the task perfectly and declined only the transport, returning a pointer and an
+  honest description — and that was enough to halt the run.
+
+  THE FIRST SCENARIO IS THE DISCRIMINATOR: a reply containing none of the content at all. Any
+  arrangement that still reads the reply for content fails it, and no arrangement that obtains
+  the result out of band can.
+
+  THE SECOND SCENARIO SETTLES PRECEDENCE. Once the reply carries a description alongside the
+  result, something has to decide which wins when they disagree, and the answer must be the
+  result — this is the same doctrine as BO-3100b-1, where the verdict comes from what exists
+  rather than from what was said about it.
+
+  RELATED TO BO-3200a BUT DISTINCT, and both are needed, as the parent L1 states. BO-3200a
+  removes the cases where a specialist should never have been the source at all. This covers
+  the cases where a specialist legitimately IS the source — it did real work and produced a
+  real finding — and only the handover is at fault. A fix to either leaves the other class open.
+
+  Deliberately left to the IT PO: what the agreed handover is. The criterion constrains only
+  that it exists, that it carries the content whole, and that it does not run through the reply.
+
+  IT-PO DECISION (2026-08-26). The handover is a CALLER-SUPPLIED, run-scoped artifact location
+  passed in the dispatch. The alternative — the producer writes wherever it likes and returns the
+  path — was rejected deliberately: it satisfies the first criterion by accident while leaving a
+  value the build depends on arriving second-hand, which is the defect BO-3200a exists to remove.
+  It also fails the third criterion on a careful reading, since obtaining the result would still
+  require the producer to put something load-bearing in its reply. The caller-supplied form makes
+  every one of the three criteria structurally true rather than conventionally true, and gives
+  BO-3200d-1's run-scoping requirement for free.

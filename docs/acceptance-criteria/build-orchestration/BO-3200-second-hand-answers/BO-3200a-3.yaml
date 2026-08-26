@@ -1,0 +1,140 @@
+id: BO-3200a-3
+title: "Reference documentation tells a workflow author which questions a specialist may be asked"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author adding a step that needs to know something about the project,
+  When they open the reference documentation for obtaining facts,
+  Then it states that a value the build branches on is read at its source, states that a
+    judgement may be asked of a specialist, gives the test that separates the two — whether the
+    build would still work with no specialist available — and states how to read a value
+    directly.
+
+  Given the reference documentation,
+  When each rule it states about what is permitted is applied to a path and that path is
+    exercised with specialists unavailable,
+  Then a path the documentation calls permitted completes, and a path it calls forbidden is
+    reported by the sweep.
+depends_on:
+  - BO-3200a
+  - BO-3200a-1
+  - BO-3200a-2
+doc_links:
+  - path: docs/reference/
+    relationship: describes
+    status: exists
+    relevance: "Where the fact-versus-judgement reference lands."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page the reference must be reachable from; the result_use declaration rides its dispatch surface."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 — the worked example the reference should use, because it shows the failure arriving through a dispatch that looked entirely reasonable."
+assigned_agent: reference-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: reference-author, the leaf author, not documentation-expert. A documentation-expert dispatch that then dispatches a leaf author is the sibling tree's defect."
+  - "THE PAGE MUST CARRY THE TEST, NOT THE PROHIBITION. 'Do not use a specialist as an errand runner' is exactly the unacceptable form the parent L0 names. The page must give the author the sweep's own discriminating question — would the build still reach a terminal outcome with no specialist available — so guidance and enforcement cannot diverge."
+  - "THE PAGE MUST DOCUMENT THE DECLARATION AS DATA: the result_use field, its two permitted values, the required judgement_reason, and the fact that ABSENCE MEANS `fact` and fails the sweep. An author who does not know absence fails will keep adding undeclared sites."
+  - "THE PAGE MUST STATE THAT A JUDGEMENT DECLARATION IS VERIFIED, NOT TRUSTED — a path that declares judgement but cannot terminate without the value is reported. Omitting this invites authors to declare judgement to quiet the sweep, and they will discover the verification as a surprise failure instead of a documented rule."
+  - "EACH PERMITTED/FORBIDDEN RULE MUST CARRY A CLAIM IDENTIFIER BOUND TO AN EXERCISED PATH, using BO-3100d-1's pairing mechanism rather than a second one, so the second scenario is enforced rather than intended."
+  - "The page must state how to read a value directly, naming the resolver from BO-3200a-1 and the root-resolution rule from BO-3200a-1-i — otherwise an author following the guidance writes a new upward walk and re-creates the layout defect."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200a-2
+    contract: "The sweep, its discriminating rule, and the result_use declaration's field names and semantics (absence means fact; judgement is verified by observation), so the page documents the enforced rule rather than a parallel one."
+  - ac_id: BO-3200a-1
+    contract: "The direct source-read resolver and its interface, so 'how to read a value directly' names something that exists."
+  - ac_id: BO-3100d-1
+    contract: "The claim-identifier pairing mechanism and three-state report, reused unchanged for this page's permitted/forbidden rules."
+test_spec:
+  - name: test_bo_3200a_3_page_states_the_rule_the_test_and_the_declaration
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert the page's declared claim set covers: branch-on values are read at source; judgement may be delegated; the discriminating question; the result_use field with absence-means-fact; that a judgement declaration is verified; and how to read directly."
+  - name: test_bo_3200a_3_documented_permitted_path_completes_and_forbidden_path_is_reported
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE NON-DIVERGENCE CHECK. For each documented rule, construct the path it describes and exercise it with specialists unavailable: a path the page calls permitted completes, and a path it calls forbidden is reported by BO-3200a-2's real sweep. The page's own examples are run through the arbiter it defers to."
+  - name: test_bo_3200a_3_every_rule_is_bound_to_an_exercised_path
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Each permitted/forbidden rule carries a claim identifier resolving to an exercised path, and no path is orphaned. A rule added without a path fails here rather than reading as covered."
+  - name: test_bo_3200a_3_named_resolver_and_root_rule_exist
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "The resolver and root-resolution helper the page names are asserted to exist in the repository, so guidance to 'read it directly this way' does not point at something that has been renamed."
+  - name: test_bo_3200a_3_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  The parent L0 explicitly rejects "authors are instructed not to..." as an acceptable
+  criterion, which means this page cannot be covered by a test that it contains the right
+  instruction. The coverage that matters runs the page's own examples through the real sweep:
+  a permitted example must complete, a forbidden example must be reported. That makes
+  divergence between guidance and enforcement a failing test rather than a discovery.
+  The claim-binding test is the anti-vacuum half — without it the cheapest way to pass the
+  non-divergence check is to document one rule and leave the rest unexercised.
+  Deliberately NOT covered: whether the page is clear or persuasive. Human judgement.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf reference author), complexity, it_requirements,
+    expects_from, doc_links, test_spec/test_rationale, change_target/risk_surface.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the reference-doc entry in BO-3200a's documentation_triggers.
+
+  THE DOCUMENTATION MUST CARRY THE TEST, NOT THE PROHIBITION. "Do not use a specialist as an
+  errand runner" is exactly the unacceptable form the parent L0 names — an instruction, with no
+  way to tell whether you have followed it. Giving the author the same discriminating question
+  the sweep asks means the guidance and the enforcement cannot diverge, and an author can check
+  their own work before the sweep does.
+
+  The second scenario makes that non-divergence a testable property rather than an intention:
+  the documentation's own examples are run through the sweep and must land where it says they
+  will.
+
+  Sequenced after a-2 because the sweep is the arbiter the documentation defers to.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). Two things the page MUST say that the criteria do not
+  spell out, because they only became true once the declaration mechanism was settled on
+  BO-3200a-2: that a missing result_use declaration FAILS rather than exempts, and that a
+  judgement declaration is verified by observation rather than taken at its word. An author who
+  learns either of those as a surprise failure will reasonably conclude the sweep is broken and
+  work around it — which is the fate BO-2900d exists to prevent, arriving through the
+  documentation instead of through the check.

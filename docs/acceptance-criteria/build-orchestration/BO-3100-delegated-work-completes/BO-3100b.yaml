@@ -1,0 +1,107 @@
+id: BO-3100b
+title: "A helper that finished without doing anything is caught, not believed"
+component: build-orchestration
+components:
+  - supervisor_system
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Ending with nothing to show forces a retry instead of a pass.
+
+  When a specialist finishes, the system decides whether it actually did its work
+  by looking at what changed in your project — not by reading the specialist's
+  own account of itself. One that leaves nothing behind is stopped from finishing
+  quietly and is made to try again, so the empty result never reaches the build
+  as a success.
+depends_on:
+  - BO-3100
+doc_links:
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — the silent, success-shaped exit this criterion converts into a forced retry."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The existing hook substrate an exit-time veto is built on, and the deploy-manifest rule its dependencies must satisfy."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-26
+    note: "Added change_target/risk_surface and one architecture doc_link; recorded the working-state surface decision in notes. Composite — no assigned_agent. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-3100b-1
+  - BO-3100b-2
+  - BO-3100b-3
+  - BO-3100b-4
+  - BO-3100b-5
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+  - sequence-diagram
+notes: |
+  THE VERDICT MUST BE EVIDENCE-BASED. This is the binding constraint on this
+  criterion and the reason it can work where two existing prompt rules failed:
+  the judgement is made from observable repository state, never from the
+  specialist's returned text. A parked specialist returns confident, well-formed
+  prose ("I'll act on the completion notification when it arrives") — reading
+  that text is exactly how the failure stayed invisible. On 2026-08-18 the stall
+  was detected only by checking git status and git log against the report.
+
+  Mechanism available to the implementer (IT PO territory, recorded so the
+  behavioural intent is not lost): an exit-time hook can veto a specialist's
+  attempt to finish, which is what makes "retry" enforceable rather than
+  advisory. The requirement here is the behaviour — empty work cannot become a
+  pass — not that specific mechanism.
+
+  Two failure modes the BA must cover explicitly, because they are what make this
+  hard rather than routine:
+  - A step that legitimately changes nothing (a genuine no-op, an already-satisfied
+    condition, a skip) must be distinguishable from a step that did nothing
+    because it vanished. Without this, the guard blocks honest work and gets
+    switched off — the same fate BO-2900d was added to prevent.
+  - The retry must terminate. A specialist that parks identically every time must
+    end as a visible failure, not an endless loop.
+
+  Boundary: BO-210 (pre-commit safety net) re-dispatches a coder after a hook
+  FAILURE and assumes the coder ran. BO-3100b covers the case where it never ran
+  at all. BO-1300 (independent spot-check) verifies the QUALITY of work that was
+  done; this verifies that work was done. Keep all three distinct.
+
+  IT-PO DECISION (2026-08-26) — WHAT "THE PROJECT'S WORKING STATE" MEANS. The BA
+  left this open on BO-3100b-1 and flagged its coupling to BO-3100b-3. Decided:
+  BOTH tracked and untracked, over a content snapshot, minus a declared volatile
+  set. Full specification lives in BO-3100b-1's it_requirements; the reasoning is
+  recorded here because it binds every child of this L1.
+
+  - Untracked additions MUST count. Almost every honest first output in this
+    repository is an untracked new file (a new test, a new AC record, a new doc);
+    ticket and AC folders are untracked wholesale. A tracked-only surface would
+    judge the most common honest step empty and re-run it forever, which is the
+    guard-gets-switched-off failure this L1 exists to avoid. This also resolves
+    the coupling the BA recorded: a step whose only legitimate output is untracked
+    is no longer falsely empty, so BO-3100b-3's declared no-op is needed only for
+    steps that genuinely produce nothing at all.
+  - The volatile exclusion set is the load-bearing half, and it is what keeps the
+    guard from being a total no-op. Every agent appends to
+    debugging/logs/agent_telemetry.jsonl and most touch __pycache__. If ambient
+    churn counted as work, EVERY parked agent would be judged to have produced
+    work and this L1 would ship as a no-op that looks like a fix — the same
+    success-shaped nothing it exists to remove.
+  - Content hashes, not mtimes. A rewrite with identical bytes is legitimately
+    "produced nothing", and mtime moves on a no-op write.

@@ -178,6 +178,8 @@ flowchart TD
 - ACD-1900g-4: How-to guide covers the dogfood proof and the go/no-go checklist
 - ACD-2000a-4: Reference doc describes the requirement's adjudication trail and its retry budget
 - ACD-2000b-5: Reference doc describes how a requirement is taken, handed back, and reclaimed
+- ACD-2100d-4: A reference page states which copy of the route runs and where a repair has to land
+- ACD-2100e-2: A how-to guide takes an operator from a waiting run back to a running one
 - ACS-1200a-3: The written back-link rule matches the enforced one
 - ACS-1200d-4: The how-to tells you how to park an idea and how to take it back out
 - ACS-500g-2-ii: A how-to guide walks a reader from a noticed repetition to a referenced pattern
@@ -224,6 +226,7 @@ flowchart TD
 - BP-100b-9: Consolidated output root doc lists .claude/workflows/ as a shimmed output
 - BP-1100a-5: The guidance on getting a generated ticket's surface right describes the derivation that actually runs
 - BP-1200a-2: The CI test command is documented as the single authoritative way to run the suite from a clean checkout
+- BP-1500d-5: The published reference tells an adopter where their record lives and how to tell an inert check from a passing one
 - BP-200c-4: Agents README documents llm-expert in the phase agents table
 - BP-300a-7: debug.md falls back to prose skill for older Claude Code runtimes
 - BP-300a-8: SKILL.md contains supersession note for debug.js
@@ -265,8 +268,13 @@ flowchart TD
 - GE-123a-4: The reference says that recognising a file by its name adds to the checking rather than ending it
 - GE-123b-5: The reference says when a suppression is declined, what it is judged against, and what the author will see
 - GE-123c-4: Someone writing their first suppression can find out how to write one instead of copying a neighbouring line
-- GE-123c-5: The document that lists the accepted suppression forms also says what is rejected and why
-- GE-123d-4-ii: The reference states where the exemption applies, in one place, as a closed list
+- GE-124a-4: A how-to shows where the declaration goes in each front-end file shape
+- GE-124b-4: A how-to shows an author how to pin one element to one criterion
+- GE-124b-5: One reference doc holds the data-ac contract for all of its consumers
+- GE-124c-4: A how-to tells a blocked author which of the two mistakes they made and how to clear it
+- GE-124d-4: A how-to shows how to record an opt-out and how an area gets onto the warn list
+- GE-124e-5: A how-to separates 'nothing claims this' from 'nothing proves this' for the person who hit the gate
+- GE-124g-5: A reference doc states what each kind of evidence is worth, for every future check
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
 - KM-KGS-100b-3: How-to guide for tracing a requirement to its code and tests
 - KM-KGS-100c-3: How-to guide for declaring a new knowledge surface

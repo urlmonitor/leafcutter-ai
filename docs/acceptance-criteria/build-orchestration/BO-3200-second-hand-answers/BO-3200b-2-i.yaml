@@ -1,0 +1,133 @@
+id: BO-3200b-2-i
+title: "An outcome that cannot be read as success counts as the action not having happened"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a required action whose outcome is a refusal — a well-formed reply stating the action
+    was declined and not performed,
+  When the run reports its halt,
+  Then the action is reported as not having succeeded.
+
+  Given a required action whose outcome cannot be interpreted at all — absent, or in a shape
+    the caller does not recognise,
+  When the run reports its halt,
+  Then the action is reported as not having succeeded, and that report is distinguishable from
+    the refusal case, naming what could not be interpreted.
+
+  Given a required action whose outcome states plainly that it succeeded,
+  When the run reports its halt,
+  Then the action is reported as having succeeded.
+depends_on:
+  - BO-3200b-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-020 — the well-formed, honest refusal that was simply not read; and KI-BO-018 for the cost of collapsing two diagnoses onto one line."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "THE PREDICATE IS AFFIRMATIVE SUCCESS, NEVER A FAILURE ENUMERATION. The caller recognises exactly the shape that means 'performed'; everything else — refusal, absence, an unrecognised shape, a truthy value that matches no known branch — is not-succeeded. A caller that enumerates known failure shapes is always one shape short, and the shape it misses is read as success. This is the same defect PR #565 fixed for agent statuses, applied to action outcomes."
+  - "THE THREE OUTCOMES MUST BE DISTINGUISHABLE IN THE REPORT — succeeded, refused, uninterpretable — because they mean different things to the reader. A refusal is a wiring defect that recurs on every run; an uninterpretable outcome may be a transport problem affecting this run only. Collapsing them costs the reader the diagnosis, which KI-BO-018 records as the expensive part of a false verdict."
+  - "THE UNINTERPRETABLE CASE MUST NAME WHAT COULD NOT BE INTERPRETED — the raw outcome or a faithful summary of it — so the reader can tell a missing result from a malformed one without re-running."
+  - "REUSE BO-3200e's VOCABULARY FOR 'COULD NOT TELL' RATHER THAN INVENTING A SECOND ONE. BO-3200e covers a CHECK that could not perform its inspection; this covers an ACTION whose outcome could not be read. Different sites, same word, one spelling — a second spelling restores the collapse this tree exists to end."
+  - "Classification must be pure and total: every possible outcome value maps to exactly one of the three, and the classifier itself must not raise on any input."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200b-2
+    contract: "The halt payload's required_actions entry {name, outcome, detail, best_effort, best_effort_reason}. This AC defines the outcome vocabulary — succeeded | refused | uninterpretable | not_attempted — and the affirmative-success predicate that assigns it."
+test_spec:
+  - name: test_bo_3200b_2_i_well_formed_refusal_is_not_success
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Use the real KI-BO-020 refusal shape — a well-formed reply plainly stating the action was declined and not performed — and assert the halt reports the action as not having succeeded, with outcome `refused`."
+  - name: test_bo_3200b_2_i_uninterpretable_outcome_is_distinguishable_from_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE DISCRIMINATOR. Drive the same path twice — once with a refusal, once with an absent/unrecognised outcome — capture both reports and assert they differ substantively and that the second names what could not be interpreted. Comparing only the succeeded/not-succeeded verdict passes on a collapsed implementation."
+  - name: test_bo_3200b_2_i_affirmative_success_is_reported_as_success
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An outcome plainly stating success is reported as succeeded — stops the criterion being satisfied by a classifier that calls everything a failure."
+  - name: test_bo_3200b_2_i_unknown_truthy_shape_is_not_success
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "THE ONE-SHAPE-SHORT TEST. Feed the classifier a truthy, well-formed value that matches no known branch and assert it classifies as uninterpretable, not success. A failure enumeration passes every other test here and fails this one."
+  - name: test_bo_3200b_2_i_classifier_is_total_and_never_raises
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Across None, empty string, empty dict, a list, a nested structure and an unexpected type, the classifier returns exactly one of the three outcomes and raises nothing."
+test_rationale: |
+  The unknown-truthy-shape test is the discriminating one and it is easy to leave out. A caller
+  that enumerates refusal shapes passes the refusal test, the success test and the
+  uninterpretable test, and still reads an unanticipated truthy value as success — which is the
+  precise defect PR #565 fixed one layer up, where an unrecognised but truthy status passed a
+  null guard and matched no branch, landing in silent success.
+  The two-message comparison is the second scenario's whole content, so the test captures both
+  reports and compares them rather than only checking each is non-success.
+  Using the real KI-BO-020 refusal text follows the repository's real-artifact rule: a synthetic
+  refusal reproduces the author's assumption about what a refusal looks like, and the actual one
+  was notably polite and well-formed, which is why it read as fine.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, expects_from, doc_links,
+    test_spec/test_rationale, change_target/risk_surface. criteria untouched; BO-3200e
+    vocabulary reuse made explicit.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the shape that made KI-BO-020 invisible for as long as it lasted. The reply was
+  well-formed, honest and clearly a refusal — "I did not run the requested command" — and it
+  simply was not read. The lesson recorded there generalises: "dispatching an agent under a role
+  name that is not its own is not a prompt-style choice — the agent will refuse, and a caller
+  that ignores the reply turns that refusal into a silent no-op."
+
+  ONLY AN AFFIRMATIVE SUCCESS COUNTS AS SUCCESS. Everything else — refusal, silence, an
+  unrecognised shape — is the action not having happened. Writing the criterion this way round
+  matters: a caller that enumerates known failure shapes will always be one shape short, and the
+  shape it misses is read as success.
+
+  THE TWO REPORTS MUST DIFFER because they mean different things to whoever reads the halt. A
+  refusal means the action was routed to something that will never do it, which is a wiring
+  defect that will recur on every run. An uninterpretable outcome may be a transport problem
+  affecting this run only. Sending both to the same line costs the reader the diagnosis, which
+  is the misdirection KI-BO-018 records as the expensive part of a false verdict.
+
+  RELATED BUT DISTINCT: BO-3200e covers a CHECK that could not perform its inspection. This
+  covers an ACTION whose outcome could not be read. The vocabulary for "could not tell" is the
+  same and should be reused rather than reinvented; the sites are different.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The vocabulary reuse is now an it_requirement rather than
+  a suggestion, because two spellings of "could not tell" would be a slow-motion restoration of
+  the collapse BO-3200e exists to end — each site correct on its own and jointly unreadable.

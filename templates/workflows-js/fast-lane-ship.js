@@ -388,6 +388,95 @@ const batchIds = acIds.join(" ");
 const batchIdsCsv = acIds.join(",");
 
 // ---------------------------------------------------------------------------
+// Producibility guard (BO-2400f-12 / -i / -ii) — consulted BEFORE any claim
+// or build-agent dispatch. An unproducible (or unreadable) verdict ends the
+// run in a distinct "refused" terminal outcome naming every unproducible
+// member, its declared producer/proof, and the reason no phase in this run's
+// roster can satisfy it — before the operator has paid for anything beyond
+// this resolution. This dispatch fires on EVERY resolved (non-empty) set,
+// including a fully producible one, so the guard is provably consulted even
+// when it never blocks (BO-2400f-12-ii).
+// ---------------------------------------------------------------------------
+
+const producibilityInvocation =
+  `python3 ${gateScript} check_producibility --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
+
+const producibilityResult = await agent(
+  `You are the producibility-guard phase agent for a fast-lane build. Before ` +
+  `any AC in the resolved connected build set is claimed or built, decide ` +
+  `whether this run's roster can produce every member.\n\n` +
+  `Run this single Bash command and parse its JSON stdout:\n` +
+  `   ${producibilityInvocation}\n\n` +
+  `Returns { "producible": <bool>, "unproducible": [ {"ac_id","declared_producer",` +
+  `"declared_proof","reason"}, ... ] }.\n\n` +
+  `Return that JSON verbatim, adding a short "message" summarising the result.\n` +
+  `If the command cannot be run or its JSON cannot be parsed, return ` +
+  `{ "producible": false, "unproducible": [], "message": "producibility could not ` +
+  `be determined: <what failed>" } — never assume producible.`,
+  {
+    agentType: "status-checker",
+    schema: {
+      type: "object",
+      required: ["producible"],
+      properties: {
+        producible: { type: "boolean" },
+        unproducible: { type: "array", items: { type: "object" } },
+        message: { type: "string" },
+      },
+    },
+    label: "check-producibility",
+    phase: "Resolve",
+  }
+);
+
+// Fail closed exactly like the review verdict / red-baseline gate_passed
+// checks elsewhere in this file: the verdict is read as a plain-falsy check
+// on the presence of a real boolean `producible` key — a missing key, a
+// null, or an unparseable reply all take the REFUSING branch. No
+// default-true, no `|| true` (BO-2400f-12).
+const producibilityVerdictReadable =
+  !!producibilityResult && typeof producibilityResult.producible === "boolean";
+const unproducibleMembers =
+  producibilityResult && Array.isArray(producibilityResult.unproducible)
+    ? producibilityResult.unproducible
+    : [];
+
+if (!producibilityVerdictReadable) {
+  // No claim was ever taken at this point, so nothing may be released
+  // (BO-2400f-12-i) — the release step is deliberately NOT dispatched here.
+  return {
+    status: "refused",
+    message:
+      "Producibility could not be determined: the producibility-guard dispatch " +
+      "returned no readable verdict. Fail-closed — the run refuses rather than " +
+      `assuming the resolved set is producible. Detail: ${JSON.stringify(producibilityResult)}`,
+    ac_ids: acIds,
+    unproducible: [],
+    worktree_path: worktreePath,
+    branch,
+    classification: "refused",
+  };
+}
+
+if (producibilityResult.producible !== true) {
+  // Same reasoning: refusing here precedes the claim step, so releasing
+  // would be wrong — a concurrent run's legitimate claim must never be
+  // touched by a run that never took one of its own (BO-2400f-12-i).
+  return {
+    status: "refused",
+    message:
+      `Refusing the resolved connected build set before any claim or dispatch: ` +
+      `${unproducibleMembers.length} member(s) declare a deliverable or proof ` +
+      `obligation no phase in this run's roster produces.`,
+    ac_ids: acIds,
+    unproducible: unproducibleMembers,
+    worktree_path: worktreePath,
+    branch,
+    classification: "refused",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Lifecycle: claim the connected set (flip todo → in_progress)
 // ---------------------------------------------------------------------------
 const claimResult = await agent(

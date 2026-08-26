@@ -1,0 +1,117 @@
+id: BO-3100a-3
+title: "A component diagram shows where hand-off authority is declared and where it is reconciled"
+component: build-orchestration
+components:
+  - documentation_system
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who has hit an assembly failure naming a hand-off mismatch,
+  When they open the component diagram for agent hand-off authority,
+  Then the diagram shows both declarations as distinct elements — the agent definition that
+    grants or withholds the means, and the registry record that lists cleared recipients —
+    and shows the reconciliation as a step inside assembly that consumes both and can stop it.
+
+  Given the diagram,
+  When it is compared against the assembly the system actually performs,
+  Then every element it shows corresponds to a declaration or step that exists, and no
+    declaration that the reconciliation reads is missing from it.
+depends_on:
+  - BO-3100a
+  - BO-3100a-1
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the diagram lands; the sequence number must be obtained from scripts/next_diagram_seq.py rather than guessed."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page that must reference the new diagram."
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: describes
+    status: exists
+    relevance: "The adjacent topology record; the new diagram must not contradict it."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: this is assigned to architecture-diagram-author, the leaf author, not to documentation-expert. A dispatch to documentation-expert would itself be an instance of the defect BO-3100c forbids — a specialist delegating and depending on the result of what it spawned. The same rule applies to every documentation child in this tree."
+  - "The diagram must be authored in the repository's existing diagram surface and format (docs/architecture/diagrams/, Mermaid inside a front-mattered Markdown page), with its sequence number taken from scripts/next_diagram_seq.py, never hand-picked."
+  - "The two declarations must appear as SEPARATE elements. A single 'agent configuration' box collapses the reconciliation's subject into one thing and makes the drift undrawable — which is precisely the belief that let the drift exist."
+  - "The reconciliation must be drawn as a step INSIDE assembly with an edge that terminates assembly, not as an adjacent advisory box. A drawing that shows it beside the build reproduces the warn-and-continue implementation BO-3100a-1 forbids."
+  - "The coherence claim in the second scenario must be enforced by an executable test, not by review. The test reads the reconciliation's actual declared input set (see the expects_from contract) and compares it, both directions, against the elements the diagram declares — so a declaration added later is a failing test rather than an invisible omission."
+  - "The diagram page must declare the element ids it draws in a machine-readable form the coherence test can read (front-matter list or an equivalent structured block), so the test compares data with data rather than parsing a rendered picture."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules so check_doc_frontmatter and the component-vocab gate pass unchanged."
+delivers_to:
+  - agent: reference-author
+    contract: "The published diagram path and its element ids, so BO-3100a-4's reference documentation can point an author at the picture of the two declarations it tells them to edit."
+expects_from:
+  - ac_id: BO-3100a-1
+    contract: "The reconciliation's declared input set — an enumerable list of the declaration sources it reads, exposed in a form a test can obtain from the running reconciliation rather than by inspecting its source — plus its position in the assembly sequence."
+test_spec:
+  - name: test_bo_3100a_3_diagram_declares_both_declarations_and_the_gate
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Parse the diagram page's declared element ids and assert it contains a distinct element for the agent-definition declaration, a distinct element for the registry record, and a reconciliation element whose outgoing edge terminates assembly."
+  - name: test_bo_3100a_3_diagram_matches_the_reconciliations_real_inputs
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE COHERENCE CHECK. Obtain the reconciliation's actual declared input set from the running reconciliation, then assert set equality in BOTH directions against the diagram's declared elements — every drawn element exists, and no input it reads is missing from the drawing. Adding a third declaration source without updating the diagram must fail this test."
+  - name: test_bo_3100a_3_diagram_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Run the repository's real doc front-matter and component-vocabulary checks over the new page and assert they pass, so the diagram is a first-class doc rather than an orphan file."
+test_rationale: |
+  A diagram AC is normally covered by review, and review is what let the topology records drift
+  from the behaviour in the first place. The load-bearing test here is the seam test, because it
+  compares the drawing against the reconciliation's REAL inputs obtained at run time, in both
+  directions — the only shape that turns "a declaration was added and nobody redrew" into a
+  failing test rather than an omission nobody can see.
+  Deliberately NOT covered: whether the diagram is legible or well laid out. That is a human
+  judgement and no test in this spec claims it; asserting the page "contains" the right labels
+  would be the grep-on-prose form this tree rejects.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf diagram author, not documentation-expert), complexity,
+    it_requirements, delivers_to/expects_from, doc_links, test_spec/test_rationale,
+    change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the component-diagram entry in BO-3100a's documentation_triggers.
+
+  The second scenario is the one that keeps this from being decoration: the diagram is
+  checked against the reconciliation's actual inputs, so a declaration added later without
+  updating the diagram is a discrepancy rather than an omission nobody can see. This is the
+  same discipline BO-3100d applies to the written topology record.
+
+  Sequence after BO-3100a-1, since the diagram describes a reconciliation that must exist
+  before it can be drawn accurately.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The coherence check needs the reconciliation to EXPOSE
+  its input set as data. That is a real obligation on BO-3100a-1 and is written into this AC's
+  expects_from rather than left implicit, because a coherence test that has to grep the
+  reconciliation's source to learn what it reads is the grep-on-dead-code shape this tree
+  rejects, and would pass on an input that is declared but never read.
