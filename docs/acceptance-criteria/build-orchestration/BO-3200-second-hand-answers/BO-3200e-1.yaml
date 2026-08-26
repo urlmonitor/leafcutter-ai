@@ -1,0 +1,148 @@
+id: BO-3200e-1
+title: "A check whose inspection failed reports that it could not tell, and never the finding it would have made"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a check whose subject is in a state that would make it report a problem,
+  When it inspects that subject successfully,
+  Then it reports that problem as a finding about the subject.
+
+  Given the same check and the same subject in the same state,
+  When its inspection cannot be performed — the subject cannot be read, or what it read cannot
+    be interpreted,
+  Then it reports that it could not tell, names what it was unable to inspect and why, and does
+    not report any finding about the subject.
+
+  Given a check whose subject is in a state that would make it report no problem,
+  When its inspection cannot be performed,
+  Then it reports that it could not tell, and does not report that the subject is in order.
+depends_on:
+  - BO-3200e
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018's reusable finding — the inspection failed for a transport reason and fail-closed was implemented as a substantive negative verdict rather than an unknown."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: modifies
+    status: exists
+    relevance: "Where the existing one-directional guarantee (GE-120a-1: a failed inspection must not report a clean pass) is described; this AC adds the mirror direction."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "THREE ANSWERS, NOT TWO: in order, has a problem, could not be inspected. A boolean has nowhere to put the third, which is why an author reaching for the safe default puts 'I could not look' in the failure bucket — that is the whole mechanism of KI-BO-018 and it is not carelessness."
+  - "THE OUTCOME MUST FOLLOW THE INSPECTION, NOT THE ERROR-HANDLING BRANCH. Holding the subject's state constant and varying only whether the inspection succeeded must change the report. An implementation whose fail-closed branch emits a substantive verdict fails this even though every individual test of the failure path might pass."
+  - "THE UNDETERMINED REPORT MUST NAME WHAT COULD NOT BE INSPECTED AND WHY. Without those, the reader has an unknown with no lead, which is only marginally better than the false verdict it replaces."
+  - "BOTH DIRECTIONS ARE REQUIRED. The existing guarantee (GE-120a-1) says a failed inspection must not report a clean pass; this adds that it must not report a substantive failure either. A check with only one of the two has half the guarantee, and the half KI-BO-018 needed is the new one."
+  - "REUSE THE EXISTING `undetermined` VOCABULARY INTRODUCED BY PR #565 rather than adding a per-check status. The runtime already refuses to count it as success; a per-check spelling would not be recognised by that refusal."
+  - "DO NOT RE-SPECIFY THE RUNTIME SIDE. PR #565 already made the workflow runtime refuse to count an undetermined result as a completed phase, ticket or epic. This AC is the check site's side only."
+  - "The three outcomes must be machine-readable values, so a caller can branch on which occurred without parsing prose."
+delivers_to:
+  - agent: python-coder
+    contract: "A three-valued check outcome {outcome: 'in_order' | 'problem_found' | 'undetermined', subject: str, finding: str | null, uninspectable_reason: str | null, advice: str} reusing PR #565's undetermined vocabulary. BO-3200e-1-i constrains `advice`; BO-3200e-2 requires undetermined to stop the work; BO-3200e-3 sweeps every check site for it; BO-3200b-2-i and BO-3200d-2-i reuse the same vocabulary at their own sites."
+  - agent: reference-author
+    contract: "The three outcomes, when each applies, and the rule that the third stops the work just as the second does — the definitions BO-3200e-4 documents."
+expects_from: null
+test_spec:
+  - name: test_bo_3200e_1_successful_inspection_of_a_bad_subject_reports_the_finding
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Subject in a state that warrants a problem report, inspection succeeds: assert the check reports problem_found with the finding named."
+  - name: test_bo_3200e_1_same_subject_with_a_failed_inspection_reports_undetermined
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE DISCRIMINATOR, AND IT ONLY WORKS AS A PAIR WITH THE PREVIOUS TEST. Same check, same subject, same state — only the inspection is made to fail. Assert the outcome is undetermined, that it names what could not be inspected and why, and that NO finding about the subject is reported."
+  - name: test_bo_3200e_1_failed_inspection_of_a_good_subject_does_not_report_in_order
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The other direction: subject that would warrant a clean pass, inspection fails. Assert undetermined and NOT in_order — the GE-120a-1 direction, asserted here so the pair is complete."
+  - name: test_bo_3200e_1_check_does_not_report_undetermined_for_everything
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE ANTI-VACUUM TEST. With inspections succeeding, assert the check produces in_order and problem_found as appropriate. A check that reports undetermined unconditionally passes the failure-path tests and is useless."
+  - name: test_bo_3200e_1_uses_the_shared_undetermined_value_not_a_local_one
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert the emitted undetermined value is the same one the workflow runtime already refuses to count as success (PR #565), not a per-check spelling the runtime would not recognise."
+test_rationale: |
+  The first two tests are one test in two halves and neither works alone: holding the subject's
+  state constant and varying only whether the inspection succeeded is what proves the report
+  follows the inspection rather than the fail-closed branch. A test of the failure case on its
+  own passes on a check that reports "could not tell" for everything — hence the fourth test.
+  The third direction is deliberately not redundant with GE-120a-1. That guarantee says a failed
+  inspection must not report a clean pass; KI-BO-018 is the mirror image, a failed inspection
+  reporting a confident negative. A check with only one has half the guarantee, and this tree
+  exists because of the half that was missing.
+  The shared-value test matters because an undetermined outcome the runtime does not recognise
+  is, in practice, an unrecognised status — which PR #565 fails closed on, but with a message
+  about an unrecognised status rather than about an inspection that could not run.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: 'Added assigned_agent, complexity, it_requirements, delivers_to, doc_links,
+    test_spec/test_rationale, change_target/risk_surface. criteria untouched; PR #565
+    scope boundary preserved.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3200e-1-i
+implemented_by: []
+notes: |
+  SCOPE — THE VOCABULARY ALREADY EXISTS; USING IT DOES NOT. PR #565 introduced a status meaning
+  "I could not perform my task" and made the workflow runtime refuse to count it as success.
+  Neither is re-specified here. This AC is about the CHECK SITES: what a check may claim when
+  the inspection behind it did not happen.
+
+  THE FIRST TWO SCENARIOS TOGETHER ARE THE TEST, and neither works alone. Holding the subject's
+  state constant and varying only whether the inspection succeeded is what proves the report
+  follows the inspection rather than the fail-closed branch. A test of the failure case on its
+  own passes on a check that reports "could not tell" for everything.
+
+  THE THIRD SCENARIO IS THE OTHER DIRECTION, and it is where this differs from the existing
+  guarantee GE-120a-1 — that one says a failed inspection must not report a clean pass. KI-BO-018
+  records the mirror image: a failed inspection reporting a confident negative. Both directions
+  are needed; a check that reports "could not tell" instead of a pass but still reports a
+  substantive failure when it cannot look has half the guarantee.
+
+  The observed shape, from KI-BO-018's reusable finding: the inspection failed for a transport
+  reason, the surrounding error handling was fail-closed, and fail-closed was implemented as a
+  substantive negative verdict rather than an unknown. The verdict then cost more than a halt —
+  it misdirected the diagnosis, which is BO-3200e-1-i.
+
+  BOUNDARY: AR-200 covers a specialist being equipped to record a verdict at all. This covers
+  what the verdict may claim when the inspection behind it did not happen.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). This AC's outcome vocabulary is the one three other ACs in
+  these two trees reuse: BO-3100b-1 (snapshot could not be taken), BO-3200b-2-i (an action whose
+  outcome could not be read) and BO-3200d-2-i (a result that could not be obtained). Those are
+  different SITES with the same word. The reuse is stated in each of them and required here, so
+  that a single value carries the meaning everywhere and the runtime's existing refusal applies
+  to all of them without further work.

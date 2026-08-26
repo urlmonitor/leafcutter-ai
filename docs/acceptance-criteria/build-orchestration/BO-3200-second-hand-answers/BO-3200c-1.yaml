@@ -1,0 +1,171 @@
+id: BO-3200c-1
+title: "The question is put to the person, and when it cannot be, the run pauses resumably with the work intact"
+component: build-orchestration
+components:
+  - ac_driven_dev
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a point in a run where only the person who started it can decide,
+  When the run reaches that point,
+  Then the question is put to that person by a means capable of receiving their answer, and
+    the run does not continue until an answer is received.
+
+  Given a run reaching that point in circumstances where the question cannot be put to the
+    person,
+  When it reaches that point,
+  Then the run stops, records enough to be resumed at that same question, leaves everything
+    authored so far in place unchanged, and reports that it is waiting for an answer rather
+    than reporting that a decision was reached.
+
+  Given that stopped run, resumed with the person's answer supplied,
+  When it resumes,
+  Then it continues from that question, and the work authored before the pause is present and
+    unchanged.
+depends_on:
+  - BO-3200c
+doc_links:
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 — 'a gate that cannot reach a user should pause and persist a resumable state', in the known issue's own words."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The existing pause-and-resume decision this AC must build on rather than duplicate."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: modifies
+    status: exists
+    relevance: "The substrate that already persists a resumable run record; this AC extends it to a decision point."
+  - path: docs/architecture/diagrams/c3-001-interactive-pause-resume-run-lifecycle.md
+    relationship: describes
+    status: exists
+    relevance: "The existing lifecycle the paused-at-a-gate state must fit into."
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — the harness strips AskUserQuestion from every subagent, which is why the gate must be raised by the workflow layer."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - pipeline
+risk_surface: auth
+it_requirements:
+  - "THE QUESTION MUST BE RAISED BY A LAYER THAT STILL HAS THE MEANS TO ASK. The harness strips AskUserQuestion from every subagent, so a gate raised from inside a dispatched agent cannot satisfy the first criterion at all — no prompt wording fixes it. In this system that layer is the workflow runtime, the same one BO-3100c relocates coordination to; the two must be sequenced together."
+  - "REUSE THE EXISTING PAUSE SUBSTRATE (ADR-024 / scripts/pause_store.py). Do NOT author a second pause mechanism. Two pause stores are two places for a resumable record to be lost, and the third criterion — resume and find the work unchanged — is exactly what would silently stop holding."
+  - "THE PAUSE RECORD MUST BE SUFFICIENT TO RESUME AT THE SAME QUESTION, not merely to restart the run. It must identify the gate, the choices offered, and the point to continue from. A record that only says a run was paused is a discard with a note attached."
+  - "THE AUTHORED WORK MUST BE LEFT IN PLACE UNCHANGED — no rollback, no cleanup, no move to a quarantine location. The third criterion is asserted after an actual resume, so any 'tidying' on the pause path fails it."
+  - "THE OUTCOME A CALLER BRANCHES ON MUST MEAN WAITING, not concluded. An unresolved gate reported with a terminal success or terminal cancel value is the false-success shape; PR #565 removed the default-to-discard, and this must not reintroduce a default-to-anything."
+  - "THE PAUSE MUST BE REACHED WHEN ASKING IS IMPOSSIBLE, and impossibility must be DETECTED rather than assumed from the environment: the run must attempt to ask and pause on the absence of a means to receive an answer. Deciding in advance that a context is non-interactive is how a gate silently stops being asked."
+  - "RESUME MUST BE IDEMPOTENT AND SINGLE-USE: resuming twice with the same answer must not double-apply the decision or duplicate the work authored before the pause."
+delivers_to:
+  - agent: python-coder
+    contract: "A paused-at-decision run record extending the existing pause substrate: {run_id: str, gate_id: str, question: str, choices: list[str], resume_point: <opaque>, authored_paths: list[str]}, plus a terminal outcome value meaning `awaiting_answer` that is distinct from every settled value. BO-3200c-3 distinguishes this from a declined answer; BO-3200c-4's how-to is executed against a real run in this state."
+  - agent: how-to-author
+    contract: "How a person inspects a paused run, supplies an answer, and resumes it — the concrete commands and the record fields they read — so BO-3200c-4's steps can be run against a real paused run rather than described."
+  - agent: architecture-diagram-author
+    contract: "The ordered interaction trace of both paths — question reaching the person and answered; and question unaskable, run paused, record written, work left in place — so BO-3200c-5's diagram can be compared against each."
+expects_from: null
+test_spec:
+  - name: test_bo_3200c_1_question_reaches_a_means_capable_of_answering
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Drive a real gate under the harness with an answering channel available; assert the question is raised through a means that can receive an answer, that no specialist is dispatched to answer it, and that the run does not continue until an answer arrives."
+  - name: test_bo_3200c_1_unaskable_question_pauses_with_a_resumable_record
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Withhold the answering means; assert the run stops, writes a pause record identifying the gate and the resume point, leaves every authored path unchanged on disk, and reports awaiting-an-answer."
+  - name: test_bo_3200c_1_resume_continues_at_the_same_question_with_work_intact
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: e2e
+    angle: criterion
+    description: "THE PAUSE IS ONLY REAL IF IT RESUMES. From the paused run, supply the person's answer and resume; assert it continues from that same question and every file authored before the pause is present and byte-identical."
+  - name: test_bo_3200c_1_awaiting_outcome_is_not_a_settled_value
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert the value a caller branches on for a paused run is neither a success value nor a cancel value. A run reported as concluded while nobody answered is the false-success shape PR #565 removed one instance of."
+  - name: test_bo_3200c_1_pause_uses_the_existing_substrate_not_a_second_store
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert the paused-at-a-gate record is readable through the existing pause substrate's own interface. Two pause stores would each work in isolation and lose runs between them."
+  - name: test_bo_3200c_1_double_resume_does_not_double_apply
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Resuming the same paused run twice with the same answer applies the decision once and does not duplicate the previously authored work."
+test_rationale: |
+  A pause that cannot be resumed from is a discard with extra steps, and a pause record nobody
+  can resume from is the same thing — so the load-bearing test is the end-to-end one that
+  actually resumes and asserts the earlier work is byte-identical. Asserting only that a record
+  was written would pass on a record that cannot be used.
+  Asserting on the value a caller branches on, not only the message, is required by CLAUDE.md's
+  gate rule and by this repository's own history: a cancelled run once returned an ok status
+  having authored nothing.
+  The substrate test exists because the tempting implementation is a small purpose-built pause
+  file. Two pause stores are two places a run can be stranded, each correct in isolation.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements (incl. reuse of the ADR-024
+    pause substrate), delivers_to, doc_links, test_spec/test_rationale, change_target/risk_surface
+    (auth), declares_side_effect. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  SCOPE — HALF OF THIS L1 IS ALREADY FIXED. PR #565 stopped the gates defaulting to discard,
+  so a refusal no longer destroys authored work, and that must not be re-specified. What
+  remains, and what this AC covers, is that the question genuinely reaches a person, and that
+  a run which cannot reach one pauses resumably instead of resolving.
+
+  Anchor case KI-ACD-005: gates documented as user decision points were dispatched as prompts
+  to a reporting specialist. No human was involved at any point. The known issue's own words:
+  "A gate that cannot reach a user should pause and persist a resumable state."
+
+  THE STRUCTURAL CONSTRAINT, from KI-SS-001 and shared with BO-3100c: the ability to put a
+  question to the person is not available to a specialist — the harness removes it. So the gate
+  has to be raised at a layer that still has it. The first scenario is therefore not satisfiable
+  from inside a specialist, which is why the two trees are sequenced together.
+
+  THE THIRD SCENARIO IS WHAT MAKES THE PAUSE WORTH ANYTHING. A pause that loses the authored
+  work is a discard with extra steps, and a resumable record nobody can resume from is the same
+  thing. Requiring an actual resume that finds the work unchanged is the only way to test that
+  the pause is real, and it is executable end to end.
+
+  "Reports that it is waiting for an answer rather than reporting a decision" is the outcome
+  clause: an unresolved gate must not be reported as a run that concluded. The covering test
+  must assert on the outcome a caller branches on, not only on the message.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). Two decisions worth naming.
+
+  FIRST, reuse ADR-024's pause substrate rather than authoring a second one. This is not tidiness:
+  BO-3200c-4's how-to is executed against a real paused run, and if there are two kinds of paused
+  run the how-to is correct for one of them and silently wrong for the other.
+
+  SECOND, impossibility must be DETECTED, not assumed. The natural implementation checks whether
+  the context looks interactive and skips the ask if not — and that is how a gate stops being
+  asked at all, gradually, as more contexts are classified non-interactive. The run must attempt
+  to ask and pause on the absence of a means to receive an answer.

@@ -1,0 +1,143 @@
+id: BO-3100d-4
+title: "A planning agent can pull every criterion in an area and re-read it for contradictions before adding another"
+component: build-orchestration
+components:
+  - ac_store
+  - ac_driven_dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a planning agent about to add or amend a criterion in an area,
+  When it invokes the coherence re-read for that area,
+  Then it receives every criterion in that area,
+    And what it receives matches the area's contents on disk at that moment.
+
+  Given an area containing two criteria that contradict each other,
+  When the re-read is invoked over that area,
+  Then both are present in what the agent receives, so the contradiction is available to be
+    noticed.
+
+  Given an area too large to present whole,
+  When the re-read is invoked,
+  Then it reports that it could not present the area whole, naming what it omitted,
+    And it does not return a silently reduced set.
+
+  Given the re-read invoked over any area,
+  When it completes,
+  Then it makes no claim about whether the criteria it returned are consistent with one
+    another.
+depends_on:
+  - BO-3100d
+  - BO-3100d-2
+doc_links:
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "Already queries across knowledge surfaces; extending it is preferred to authoring a second skill that overlaps it."
+  - path: templates/skills/ac-audit/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Reads an AC area already, but answers 'is this implemented' — a different question from 'do these contradict each other'."
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001's corrected mechanism — the discrepancy this capability would most obviously have caught is a decision record still asserting the depth premise."
+assigned_agent: llm-expert
+estimated_complexity: M
+change_target: prompt
+risk_surface: internal
+it_requirements:
+  - "EXTEND, DO NOT DUPLICATE. knowledge-query already crosses surfaces and ac-audit already walks an AC area. Authoring a third overlapping reader is the likely wrong answer; the first task is to establish which of the two this belongs in."
+  - "THE SKILL MUST NOT RENDER A VERDICT. It assembles material for a human-or-agent judgement and says nothing about consistency. A skill that reports 'no discrepancies found' would be read as coverage and would be exactly the prose-grep this tree rejects — see BO-3100d-2, whose reasoning half is deliberately NOT mechanised."
+  - "COMPLETENESS IS THE PROPERTY UNDER TEST, not relevance ranking. A reader that summarises, samples, or ranks-and-truncates defeats the purpose: the contradiction is as likely to be in the record that scores low."
+  - "TRUNCATION REPORTS IN THE UNDETERMINED VOCABULARY of BO-3200e — could-not-present-whole is a distinct outcome from presented-and-clean, and must not be collapsed into it."
+  - "MUST BE REACHABLE BY THE PLANNING AGENTS THAT NEED IT: product-owner, business-analyst, it-po, and adr-author. Reachability means the skill is declared in each agent's skills_used in config/agent_registry.json, not merely that the skill exists."
+  - "This is the mechanically-available half of a capability whose other half is judgement. Do not let the test contract imply the judgement half is covered."
+delivers_to:
+  - agent: product-owner
+    contract: "The complete criterion set for an area, with an explicit could-not-present-whole outcome, and no consistency verdict."
+  - agent: business-analyst
+    contract: "The same set, invoked before decomposing an L1, so an existing sibling that already says the opposite is visible."
+  - agent: it-po
+    contract: "The same set, invoked before enrichment, so a contract declared on one record can be checked against the record it names."
+expects_from:
+  - ac_id: BO-3200e-1
+    contract: "The could-not-tell outcome shape, reused unchanged for could-not-present-whole rather than inventing a second vocabulary."
+test_spec:
+  - name: test_bo_3100d_4_returns_every_record_in_the_area
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Over a fixture area on disk, assert the returned set is exactly the set of records present — no omissions, no summarisation. Compare against an independent directory walk, not against the skill's own count."
+  - name: test_bo_3100d_4_contradicting_pair_both_present
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Seed an area with two records that assert opposite things, invoke the re-read, and assert BOTH are in the returned material. The test asserts availability, never that the contradiction was detected."
+  - name: test_bo_3100d_4_oversized_area_reports_rather_than_truncates
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Drive an area past the presentable limit and assert the outcome is the explicit could-not-present-whole value naming what was omitted — and that it is distinguishable from a successful complete read."
+  - name: test_bo_3100d_4_emits_no_consistency_verdict
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert the returned structure carries no field asserting consistency, and that an area seeded with a known contradiction returns the same verdict-free shape as a clean one."
+  - name: test_bo_3100d_4_declared_in_the_planning_agents_registries
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Assert product-owner, business-analyst, it-po and adr-author each declare the skill in skills_used in the real config/agent_registry.json — reachability, not mere existence."
+test_rationale: |
+  Every scenario here is about the MATERIAL, never about the reasoning performed over it. That
+  split is deliberate and is the whole point of this criterion: BO-3100d-2 established that
+  whether a record reasons well is not mechanically checkable, and this criterion does not
+  reopen that. What can be guaranteed is that the agent was given everything, was told when it
+  was not, and was not handed a false all-clear.
+
+  Deliberately NOT covered: whether an agent that receives the material actually notices a
+  contradiction in it. No test here claims that, and a later test asserting "the skill found
+  the discrepancy" would be a regression into the coverage-shaped-prose this tree rejects.
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+- reason: authored-post-approval-at-user-request
+  by: main-loop
+  at: 2026-08-26
+  note: Added after the PO/BA/IT-PO pipeline completed, at BrainCandy's direction, on
+    reviewing BO-3100d-2's honest limit. Did not pass through the business-analyst;
+    structure and test-contract conventions follow sibling BO-3100d-3.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ORIGIN. BrainCandy, on being shown that BO-3100d-2's rationale half cannot be mechanically
+  checked: "here we need strong reasoning from the planning agents. the only thing we can make
+  sure is that we provide a skill to the agents which lets them pull all the ACs in the area and
+  read it one more time to see if there are discrepancies."
+
+  That framing is the criterion. The guarantee offered is availability and completeness of the
+  material, plus honesty when the material cannot be presented whole. The judgement stays with
+  the agent, and this record does not pretend otherwise.
+
+  WHY IT IS NOT A DETECTOR. The tempting version of this skill reports "N discrepancies found",
+  and that version is worse than nothing: a clean report would be read as a coherence guarantee
+  while proving only that a heuristic did not fire. BO-3100d-2 already carries an instruction
+  not to close its gap with a prose grep; a discrepancy detector would be that grep wearing a
+  different hat.
+
+  PROCESS NOTE. Authored by the main loop rather than the business-analyst, at the user's
+  direction, after the three-stage pipeline had completed and its leaves were approved. Flagged
+  here rather than left implicit — the role boundary was crossed knowingly, and a reviewer
+  should read this record with the same scepticism they would give any single-author criterion.

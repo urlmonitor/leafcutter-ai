@@ -1,0 +1,158 @@
+id: BO-3100b-3
+title: "A step that legitimately changes nothing passes on a declared no-op, and nothing else confers one"
+component: build-orchestration
+components:
+  - supervisor_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step whose contract declares that it may legitimately produce no change — because
+    the condition it exists to satisfy is already satisfied, or because it is skipped for a
+    stated reason,
+    And the project's working state is unchanged after it runs,
+  When it attempts to finish,
+  Then it finishes, is recorded as a step that legitimately produced no change, and the
+    stated reason appears in the build's record.
+
+  Given a step whose contract makes no such declaration,
+    And the project's working state is unchanged after it runs,
+  When it attempts to finish,
+  Then it is prevented from finishing and re-run.
+
+  Given a step whose contract makes no such declaration but whose name, kind and position in
+    the build all match those of a step that does,
+    And the project's working state is unchanged after it runs,
+  When it attempts to finish,
+  Then it is prevented from finishing, because nothing other than the step's own declaration
+    permits an empty result.
+depends_on:
+  - BO-3100b
+  - BO-3100b-1
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "Where a step's dispatch contract is defined; the no-op declaration is a field on it."
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — the vanished step this exemption must stay distinguishable from."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+  - schema
+risk_surface: internal
+it_requirements:
+  - "IT-PO DECISION — WHERE THE DECLARATION LIVES. It is a field on the step's own DISPATCH CONTRACT: the options object the coordinating layer passes when it dispatches the step, carrying `may_produce_no_change: true` and a non-empty `no_change_reason` string. Chosen because it is the one record that provably exists before the step runs (BO-3100b-3-i's requirement), is attached to that specific step rather than to a class of steps, and is already the object the runtime reads."
+  - "BOTH FIELDS OR NEITHER. A declaration with no reason, or an empty reason, is not a declaration and must be rejected — validated where the dispatch contract is validated, not at exit time. Otherwise the reason degrades to boilerplate nobody wrote and the build record carries a blank."
+  - "NOTHING ELSE MAY CONFER THE EXEMPTION. Not the step's name, kind, phase, agent, position in the sequence, or membership of a list held anywhere outside that step's own dispatch. This is the third scenario, and it is the whole content of the AC: every declared exemption in this repository has decayed into a heuristic (BO-2900d-1 records the same drift), and the moment it does, a vanished step of that kind is indistinguishable from an honest one."
+  - "The exemption must be evaluated ONLY against the declaration present on this dispatch. An implementation that consults a registry of step kinds, a default-by-phase table, or an inherited parent declaration fails the third scenario even if it also reads the per-step field."
+  - "THE PASS MUST BE ANNOUNCED. A legitimate no-op writes its own record entry carrying the step id and the stated reason verbatim. Silence is indistinguishable from a judgement that did not run — this repository's own AC-store validator reported clean for eight days having examined nothing."
+  - "The recorded outcome for a declared no-op must be its OWN kind, distinct from a completed step that produced work and from a vetoed attempt, so the set of steps that legitimately produce nothing is enumerable from the record and can be reviewed."
+  - "Deploy-manifest rule as stated on BO-3100b-1; the declaration reader runs inside the same exit-time judgement and adds no separate entry point."
+delivers_to:
+  - agent: python-coder
+    contract: "A no-op declaration on the step dispatch contract: {may_produce_no_change: bool, no_change_reason: str}, validated at dispatch-contract validation time, plus a build-record outcome value `legitimate_no_op` carrying `no_change_reason` verbatim. BO-3100b-3-i constrains its provenance; BO-3100b-5's diagram draws it as a third, separate input."
+  - agent: architecture-diagram-author
+    contract: "The declaration's field names and the fact that it is a separate input to the judgement from both the working-state snapshot and the reply, so BO-3100b-5 can draw three distinct inputs and be checked against the judgement's real input set."
+expects_from:
+  - ac_id: BO-3100b-1
+    contract: "The work verdict and its evidence; this AC only decides what happens when the verdict is `produced_nothing`, and does not alter how the verdict is reached."
+test_spec:
+  - name: test_bo_3100b_3_declared_no_op_finishes_with_its_reason_in_the_record
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Dispatch a step whose contract declares may_produce_no_change with a stated reason; it produces nothing; assert it finishes, is recorded with the legitimate_no_op outcome, and the reason string appears verbatim in the build record."
+  - name: test_bo_3100b_3_undeclared_empty_step_is_vetoed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Identical step with no declaration on its contract, producing nothing: assert the finish is prevented and the step re-runs."
+  - name: test_bo_3100b_3_matching_name_kind_and_position_confer_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE CONVENTION-PROOF TEST. Run two steps with the SAME name, same kind and same position in the sequence, one declared and one not, both producing nothing. Assert the declared one finishes and the undeclared one is vetoed. Fails any implementation that infers the exemption from a step's identity or place."
+  - name: test_bo_3100b_3_declaration_without_a_reason_is_rejected
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "may_produce_no_change: true with a missing or empty reason is rejected where the dispatch contract is validated, before the step runs — not accepted and later recorded as a blank."
+  - name: test_bo_3100b_3_no_op_outcome_is_enumerable_from_the_record
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "After a run containing one completed step, one declared no-op and one vetoed attempt, assert the three are distinguishable by outcome value in the record, so the set of legitimately-empty steps can be listed and reviewed."
+test_rationale: |
+  The discriminating test is the convention-proof one, and it cannot be written as a unit test
+  of the declaration parser: a parser that reads the field correctly still fails this AC if the
+  surrounding code ALSO exempts by step kind. Only running two otherwise-identical steps through
+  the real lifecycle, differing solely in the declaration, can tell those apart.
+  Every declared exemption in this repository has decayed into a heuristic — BO-2900d-1 records
+  the same drift — so this test is deliberately cheap to run and deliberately hard to satisfy
+  by convention.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Settled the declaration medium left to the IT PO (a validated field pair on
+    the step dispatch contract). Added assigned_agent, complexity, it_requirements,
+    delivers_to/expects_from, doc_links, test_spec/test_rationale, change_target/risk_surface.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3100b-3-i
+implemented_by: []
+notes: |
+  The other failure mode the parent L1 names explicitly: "a step that legitimately changes
+  nothing must be distinguishable from a step that did nothing because it vanished. Without
+  this, the guard blocks honest work and gets switched off — the same fate BO-2900d was
+  added to prevent."
+
+  THE THIRD SCENARIO IS THE ONE THAT MATTERS, and it is lifted deliberately from the
+  BO-2900d-1 exemption pattern, where the same drift is recorded: every declared exemption
+  starts as an explicit list and decays into a heuristic — steps of a certain kind, in a
+  certain position, or with a certain name are let through. The moment that happens the
+  guard stops guarding, because a vanished step of that kind is indistinguishable from an
+  honest one. This scenario is written to be failed by any convention-based shortcut and is
+  cheap to run.
+
+  THE PASS IS ANNOUNCED, NOT ABSORBED. A legitimate no-op that produces no record is
+  indistinguishable from a check that did not run, so the stated reason must reach the
+  build's record rather than being silently accepted.
+
+  Deliberately left to the IT PO: where a step's no-op declaration is recorded. The criterion
+  constrains only that it is explicit, attached to that step, carries a reason, and is
+  visible in the record — not the medium.
+
+  IT-PO DECISION (2026-08-26). The medium is the step's dispatch contract — the options object
+  the coordinating layer already passes at dispatch — carrying `may_produce_no_change` and
+  `no_change_reason`. Three properties made this the choice over a config file or a registry
+  of step kinds: it provably exists before the step runs, which is BO-3100b-3-i's hard
+  requirement; it is per-dispatch rather than per-kind, which is the third scenario's hard
+  requirement; and it needs no new lookup surface that could later be defaulted or inherited.
+
+  NOTE ON SCOPE AFTER THE BO-3100b-1 DECISION. Because untracked additions now count as work,
+  this exemption is needed only for steps that genuinely produce nothing at all — a skip, or an
+  already-satisfied condition. That is a much smaller set than it would have been under a
+  tracked-only surface, which is a good thing: the fewer declared exemptions exist, the less
+  there is to decay.

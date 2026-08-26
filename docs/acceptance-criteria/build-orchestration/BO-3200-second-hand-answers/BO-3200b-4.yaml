@@ -1,0 +1,127 @@
+id: BO-3200b-4
+title: "A sequence diagram shows the failure path performing its cleanup and reading the outcome"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader tracing what happens to claimed work when a run stops early,
+  When they open the sequence diagram for the failure path,
+  Then it shows, in order: the claim being recorded in a store that outlives the run, a later
+    step failing, the release being performed by the layer that must guarantee it rather than
+    by a specialist, the outcome of that release being read, and both the triggering failure
+    and the release outcome appearing in the halt report.
+
+  Given the diagram,
+  When it is compared against a real run driven to a failure after the claim,
+  Then every interaction it shows occurred in that run, in the order shown, and no specialist
+    appears in it as the performer of the release.
+depends_on:
+  - BO-3200b
+  - BO-3200b-1
+  - BO-3200b-2
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the sequence diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
+    relationship: modifies
+    status: exists
+    relevance: "The existing lane sequence whose failure path this diagram corrects."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page the new diagram must be reachable from."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: architecture-diagram-author, the leaf author, not documentation-expert — the same rule applied to every documentation child in these two trees."
+  - "THE OUTCOME BEING READ MUST BE ITS OWN INTERACTION. In the arrangement this replaces, the release was dispatched and the diagram would have looked complete; the missing element was a return arrow nobody consumed, which is invisible unless it is drawn. A diagram that stops at 'release performed' reproduces exactly the belief that let KI-BO-020 survive."
+  - "THE STORE MUST BE DRAWN AS ONE THAT OUTLIVES THE RUN, distinct from the run's own scratch state. The observed harmlessness came entirely from the claim landing in a throwaway copy; a diagram that does not distinguish the two teaches the reader the accident rather than the rule."
+  - "NO SPECIALIST MAY APPEAR AS THE PERFORMER OF THE RELEASE, as a declared property of the drawing, so it cannot be redrawn later into the shape this tree removed."
+  - "BOTH the triggering failure AND the release outcome must appear as reaching the halt report, as two distinct contributions — that pairing is BO-3200b-2's whole content and is the thing a reader comes to this diagram for."
+  - "The coherence claim must be enforced by an executable test comparing the diagram's declared interaction sequence, in order and in both directions, against the trace of a REAL run driven to a failure after the claim."
+  - "The diagram page must declare its participants and ordered interactions in a machine-readable form so the coherence test reads data, not a picture."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200b-1
+    contract: "The ordered failure-path trace of a real run — claim recorded in the outliving store, later step fails, release performed inline, per-item outcome produced — obtainable programmatically."
+  - ac_id: BO-3200b-2
+    contract: "The halt payload carrying both the triggering failure and the required-action outcome, so the diagram's final interactions can be checked against what the report actually contains."
+test_spec:
+  - name: test_bo_3200b_4_diagram_declares_the_full_ordered_failure_path
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Parse the declared sequence and assert it contains, in order: claim recorded in the outliving store, later step fails, release performed by the guaranteeing layer, release outcome read as its own interaction, and both facts reaching the halt report."
+  - name: test_bo_3200b_4_no_specialist_performs_the_release_in_the_drawing
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert no declared interaction has a specialist as the performer of the release. Keeps the drawing from being redrawn into the arrangement this tree removed."
+  - name: test_bo_3200b_4_diagram_matches_a_real_failure_run
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE COHERENCE CHECK. Drive a real run to a failure after the claim, capture the ordered trace, and assert two-way ordered equality with the diagram's declared interactions — including that the outcome-read interaction actually occurred."
+  - name: test_bo_3200b_4_diagram_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  The element that matters here is a return arrow that used to exist and was never consumed —
+  a thing no reviewer notices, because a diagram missing it looks complete. So the coherence test
+  compares the declared sequence against a real failure run and specifically requires the
+  outcome-read interaction to have occurred, rather than trusting that the drawing is accurate
+  because it is plausible.
+  Deliberately NOT covered: layout and legibility, which are human judgement.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf diagram author), complexity, it_requirements, expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the sequence-diagram entry in BO-3200b's documentation_triggers.
+
+  Showing the outcome being READ as its own interaction is the point of this diagram. In the
+  arrangement it replaces, the release was dispatched and the diagram would have looked
+  complete — the missing element was the return arrow nobody consumed, which is invisible
+  unless it is drawn. A diagram that stops at "release dispatched" reproduces exactly the
+  belief that let KI-BO-020 survive.
+
+  The clause forbidding a specialist as the performer keeps the drawing from being redrawn
+  later into the shape this tree removed.
+
+  The second scenario checks the diagram against a real failure run rather than against the
+  intended design.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). Drawing the outliving store as distinct from the run's own
+  scratch state is added as a requirement because the observed harmlessness of KI-BO-020 came
+  entirely from the claim landing in a throwaway copy. A diagram that shows one undifferentiated
+  "store" would teach the reader the accident that contained the damage rather than the rule that
+  the claim outlives the run.

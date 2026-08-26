@@ -1,0 +1,126 @@
+id: BO-3100c-6
+title: "A component diagram shows which layers may coordinate and which may only do work"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader deciding where a new piece of coordination belongs,
+  When they open the component diagram for the delivery arrangement,
+  Then it shows the coordinating layer and the specialists as distinct elements, marks the
+    coordinating layer as the only one that dispatches and awaits, marks specialists as
+    elements that do work and return a result, and shows no dispatch arrow between two
+    specialists.
+
+  Given the diagram,
+  When it is compared against the dispatch record of a real drive,
+  Then every dispatch arrow it shows corresponds to a dispatch that occurred, and every
+    dispatch that occurred corresponds to an arrow it shows.
+depends_on:
+  - BO-3100c
+  - BO-3100c-1
+  - BO-3100c-2
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the component diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: modifies
+    status: exists
+    relevance: "The page a future author consults before adding coordination; this diagram becomes its authoritative picture."
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+    relevance: "The isolation decision the drawn shape must remain consistent with."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: architecture-diagram-author, the leaf author, not documentation-expert — for the same reason the diagram itself states."
+  - "'NO DISPATCH ARROW BETWEEN TWO SPECIALISTS' IS THE LOAD-BEARING ELEMENT and must be a declared, checkable property of the drawing, not a happy accident of the current layout. It states the durable invariant as a shape rather than as a rule to remember, which is the only form that survives the rule being forgotten."
+  - "The coordinating layer must be marked as the only element that dispatches AND awaits, and specialists marked as elements that do work and return. The two capabilities must be separate declared attributes, because 'dispatches' alone does not distinguish the correct arrangement from the broken one — the broken one dispatched too."
+  - "The coherence claim must be enforced by an executable test comparing the diagram's declared dispatch edges against the dispatch record of a real drive in BOTH directions: no drawn edge that never occurs, and no occurring dispatch that is undrawn. A diagram that omits a dispatch that actually happens is how the belief drifted away from the behaviour in the first place."
+  - "The diagram page must declare its elements, their capability attributes, and its edges in a machine-readable form so the coherence test reads data rather than a picture."
+  - "The comparison must be made against a drive that exercised more than one entry point, or the drawing can be complete for one path and silent about the rest."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to:
+  - agent: reference-author
+    contract: "The published diagram path and its declared element capabilities, so BO-3100d-3's delegation reference can point an author at the shape before they design new coordination."
+expects_from:
+  - ac_id: BO-3100c-1
+    contract: "The per-dispatch runtime record {dispatch_id, source, target_step, ...} from a real drive — the data the drawn edges are compared against."
+  - ac_id: BO-3100c-2
+    contract: "The sweep's clean verdict across entry points, establishing that the absence claim the diagram draws is actually true before it is drawn."
+test_spec:
+  - name: test_bo_3100c_6_diagram_declares_capabilities_and_no_specialist_to_specialist_edge
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Parse the declared elements and edges: assert the coordinating layer carries both the dispatches and awaits attributes, specialists carry neither, and no declared edge has a specialist at both ends."
+  - name: test_bo_3100c_6_diagram_matches_a_real_drive_both_directions
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE COHERENCE CHECK. Drive real work through more than one entry point, collect the dispatch records, and assert two-way equality with the diagram's declared dispatch edges — every drawn edge occurred, every occurring dispatch is drawn."
+  - name: test_bo_3100c_6_diagram_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  This is the diagram a future author consults before adding coordination, so its cost of being
+  wrong is the whole defect recurring. The two-way coherence test is what makes it a check
+  rather than an illustration: the direction that matters most is the unusual one — an occurring
+  dispatch that is NOT drawn — because that is precisely how the picture and the behaviour
+  drifted apart before.
+  Requiring more than one entry point in the comparison closes the obvious loophole: a drawing
+  complete for one path and silent about the others would pass a single-path check while leaving
+  the reader with a false map.
+  Deliberately NOT covered: layout and legibility, which are human judgement.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf diagram author), complexity, it_requirements, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the component-diagram entry in BO-3100c's documentation_triggers.
+
+  This is the diagram a future author consults before adding coordination somewhere, which
+  makes "no dispatch arrow between two specialists" the load-bearing element: it states the
+  durable invariant as a shape rather than as a rule to remember. The invariant behind it, in
+  the user's words, is that a subagent must never depend on the result of anything it spawns —
+  if it needs the result it must not delegate.
+
+  The second scenario checks the drawing in both directions against a real drive, which is
+  what makes it a coherence check rather than an illustration. A diagram that omits a dispatch
+  that actually happens is exactly how the belief drifted away from the behaviour in the first
+  place.
+
+  Sequenced after c-2 because the absence claim it draws must be true before it is drawn.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). Splitting "dispatches" from "awaits" into two declared
+  attributes is deliberate. The broken arrangement also dispatched; what it could not do was
+  await. A diagram that marks the coordinating layer only as "the one that dispatches" would be
+  equally true of the arrangement being removed, and would teach the wrong lesson to the reader
+  it exists for.

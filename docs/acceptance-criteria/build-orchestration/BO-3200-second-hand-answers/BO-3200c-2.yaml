@@ -1,0 +1,141 @@
+id: BO-3200c-2
+title: "A reply that did not come from the person never settles the gate, even when it is a perfectly formed decision"
+component: build-orchestration
+components:
+  - ac_driven_dev
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a gate awaiting the person's decision,
+  When a reply arrives from something other than that person, in exactly the shape a valid
+    decision takes and naming one of the permitted choices,
+  Then the gate is not settled and continues to await the person's answer.
+
+  Given the same gate,
+  When a reply arrives from something other than that person stating that the question is
+    outside its scope,
+  Then the gate is not settled, continues to await the person's answer, and no choice is
+    recorded on the person's behalf.
+
+  Given the same gate,
+  When the person's own answer arrives,
+  Then the gate is settled by it and the run continues according to that answer.
+depends_on:
+  - BO-3200c
+  - BO-3200c-1
+doc_links:
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 — the specialist's out-of-scope refusal parsed as an answer of cancel; the anchor case for provenance."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: modifies
+    status: exists
+    relevance: "The gate surface whose settle path this AC constrains."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: auth
+it_requirements:
+  - "THE GATE MUST VALIDATE PROVENANCE, NOT SHAPE. A well-formed reply naming a permitted choice must be REJECTED when it did not come from the person. Any implementation that hardens the parser — which is where KI-ACD-005's own fix direction stops — passes the refusal scenario and fails the first one, because the defect was never that the reply was malformed."
+  - "PROVENANCE MUST BE ESTABLISHED BY THE CHANNEL, NOT BY THE CONTENT. The answer is accepted only when it arrives through the means the question was put by (the user-answer channel), never by inspecting a reply for a marker, a role name, or an author field a caller could set. Content-derived provenance is forgeable by exactly the thing this AC excludes."
+  - "AN UNSETTLED GATE MUST REMAIN AWAITING, and no choice may be recorded on the person's behalf — not a default, not the last received value, not a null that a downstream branch reads as one of the choices."
+  - "AGENT REPLIES MUST NOT BE ROUTED TO THE GATE'S SETTLE PATH AT ALL. The strongest form of this criterion is that a dispatch result is structurally incapable of reaching the settle path, so the rejection is not a check that could be removed. Prefer that over a check where it is achievable."
+  - "The rejection must be recorded — which non-person reply arrived, and that it was rejected — so a run repeatedly answered by the wrong source is diagnosable rather than appearing simply to hang."
+  - "THE THIRD SCENARIO IS THE ANTI-VACUUM CLAUSE: a gate that accepts nothing satisfies the first two. The person's real answer must settle it and the run must continue according to it."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200c-1
+    contract: "The gate raised at the layer that can ask, its user-answer channel, and the awaiting-answer outcome. This AC constrains what may settle that gate: only an answer arriving through that channel."
+test_spec:
+  - name: test_bo_3200c_2_well_formed_non_person_decision_does_not_settle_the_gate
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE DISCRIMINATOR. Deliver a reply from a dispatched agent in exactly the shape of a valid decision, naming a permitted choice; assert the gate remains awaiting and no choice is recorded. A shape-validating implementation passes every other test here and fails this one."
+  - name: test_bo_3200c_2_out_of_scope_refusal_does_not_settle_the_gate
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Using the real KI-ACD-005 refusal shape, assert the gate remains awaiting and that no choice — in particular not cancel — is recorded on the person's behalf."
+  - name: test_bo_3200c_2_person_answer_settles_the_gate_and_the_run_follows_it
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE ANTI-VACUUM TEST. An answer arriving through the user channel settles the gate and the run continues according to it — stops the criterion being satisfied by a gate that accepts nothing."
+  - name: test_bo_3200c_2_agent_result_cannot_reach_the_settle_path
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert structurally that a dispatch result is not routed to the gate's settle path at all — the strongest form of the criterion, where the rejection is not a check that could later be removed."
+  - name: test_bo_3200c_2_rejected_non_person_reply_is_recorded
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "After a rejected non-person reply, assert the run's record names what arrived and that it was rejected, so a gate answered repeatedly by the wrong source is diagnosable rather than appearing to hang."
+test_rationale: |
+  The first test is the whole AC and it is deliberately the harder case. Hardening the parser so
+  refusal-shaped replies are not misread — which is where KI-ACD-005's fix direction stops — leaves
+  the door open: an approve-shaped reply from a non-person would still be honoured. So the
+  discriminating test supplies a PERFECTLY VALID decision from the wrong source and requires
+  rejection precisely because it is valid.
+  Using the real refusal shape for the second test follows the repository's real-artifact rule.
+  The anchor reply was polite, correct, and named the right fix in its own text, which is why it
+  read as an answer; a synthetic refusal would be more obviously not-an-answer than the real one.
+  The structural test is preferred over a check because a check can be removed by someone who
+  finds it inconvenient, and nothing would fail until a gate was answered by the wrong source
+  again.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements (provenance from the channel,
+    never from content), expects_from, doc_links, test_spec/test_rationale, change_target/risk_surface
+    (auth). criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE FIRST SCENARIO IS THE ONE THAT MATTERS and it is deliberately the harder case. Hardening
+  the parser so that refusal-shaped replies are not misread — which is where KI-ACD-005's fix
+  direction stops — leaves the door open: the defect is not that the reply was malformed, it is
+  that a reply from the wrong source was accepted at all. A well-formed decision from a
+  non-person must be rejected precisely because it is well-formed; any implementation that
+  validates shape rather than provenance passes the second scenario and fails this one.
+
+  The anchor case is worth reading in full for how convincing the wrong answer looked: the
+  specialist replied that approving product-truth artifacts is not its job, named the correct
+  fix in its own refusal, and that reply was parsed as an answer of cancel. The specialist was
+  right and said so clearly; what failed was that a refusal and a decision were not
+  distinguishable to the caller.
+
+  ALREADY SHIPPED — NOT RE-SPECIFIED HERE. PR #565 stopped a refusal defaulting to discard. This
+  AC is about provenance, which that change does not address: an approve-shaped reply from a
+  non-person would still be honoured.
+
+  The third scenario prevents the criterion being satisfied by a gate that accepts nothing.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). risk_surface is `auth` because this criterion is literally
+  an authentication requirement: the question is whether the party that answered was the party
+  authorised to answer. That framing also settles the implementation question — provenance must
+  come from the CHANNEL the answer arrived on, never from anything inside the reply. Any
+  content-derived marker is forgeable by precisely the thing being excluded, since a dispatched
+  agent asked to produce a decision will happily produce a well-formed one.

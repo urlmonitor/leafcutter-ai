@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 components:
   - commit_guardian
 related_docs:
@@ -925,8 +925,8 @@ piece of work across the hook family rather than one hook at a time.
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 7 records in two families, all on 2026-08-25 (3 × `BO-2400e`, 4 × `BP-1500d`; the two families were resolved in opposite directions — see the amendment below)
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 14 records in three families (3 × `BO-2400e`, 4 × `BP-1500d` on 2026-08-25; 7 × `BO-3100`/`BO-3200` on 2026-08-26 — see the third-family note below)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
 - **Where:** `derive_declares_side_effect` and `_DURABLE_EFFECT_RE` in `scripts/commit_guardian/_ac_schema_validators.py:560-607`; enforced by `validate_declares_side_effect`; rule is BO-2900g-2
 
 **Symptom.** `check-ac-schema` requires the authored `declares_side_effect` to equal a value
@@ -1081,6 +1081,38 @@ derivation. KI-CG-014 is what happens when someone does: the attempt is rejected
 value the author can honestly write. So the sweep's conclusion that the pattern is not too strict
 holds; it says nothing about the pattern being too *loose*, which is a different axis and is also
 broken. Whichever reading wins here, negation handling is needed regardless.
+
+**Third family, 2026-08-26 — `BO-3100` / `BO-3200`, and the first evidence that the derivation
+is too LOOSE on a whole class it was not previously tested against.** The IT-PO enrichment pass
+authored `declares_side_effect: true` on seven records; the gate rejected all seven with
+`derives False`. On three the gate was plainly right and the authored value was implementation
+reasoning rather than a reading of the Then clause — `BO-3100a-1` (assembly stops with a
+failure), `BO-3200d-1` and `BO-3200d-2` (what a step *reads*, what verdict it *forms*). Those
+are exactly the "authored by opinion" case BO-2900g-2 forbids, and removing the field was the
+correct resolution.
+
+On the other four the derivation looks wrong, and they share a shape the earlier two families
+did not have — **a durable change to a store, expressed without any of the writing verbs the
+pattern matches**:
+
+| Record | Then clause | Why it is durable |
+|---|---|---|
+| `BO-3200b-1` | "every item it claimed is **back in its unclaimed state in that same store**" | mutates a store explicitly described as outliving the run |
+| `BO-3200b-1-i` | "every item it had already claimed is **back in its unclaimed state**" | same |
+| `BO-3100b-2` | "**no completed step is recorded**" / "**exactly one completed step is recorded**" | a sign-off persisted to the ticket record |
+| `BO-3200c-1` | the run **pauses resumably** awaiting a person | a pause record that survives the run |
+
+`_DURABLE_EFFECT_RE` looks for writing verbs. "Is back in its unclaimed state", "is recorded"
+and "pauses resumably" describe the *resulting state* rather than the act, so the pattern misses
+them. That is a third axis, distinct from both the too-strict reading of the first two families
+and from KI-CG-014's negation blindness: **state-described-as-outcome rather than as an action.**
+
+Resolved by removing the field on all seven rather than authoring a value the gate rejects — the
+schema is explicit that this value is derived, not authored, so a conflicting authored value is
+not a legitimate way to record the disagreement. The observation is recorded here instead, which
+is the point of this register. Four records therefore now carry a derived `false` that is
+arguably wrong; when the deriver learns outcome-state phrasing they should flip to `true` with
+no criteria change, and that is the regression test for the fix.
 
 ---
 
@@ -1495,3 +1527,117 @@ commit surfaces the fact that the drift gate has been inert for the life of the 
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2's filter form: source and deployed
 layouts differ, and the gate is configured against the layout it is not running in.
+
+---
+
+### KI-CG-016 — The uniqueness pass's YAML fast path fabricates an id claim for records a full parse rejects
+
+- **Severity:** medium
+- **Status:** open — **the code is not on `main`**; it lives on unmerged PR #495, branch
+  `feat/ge-122-integrity-guard`. Recorded here so it is not lost when that branch is picked up.
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/scripts/commit_guardian/_uniqueness_scanners.py:396-487` —
+  `_fast_scan_top_level_id()`, against `_read_yaml_id()`'s contract
+
+**Symptom.** `_read_yaml_id`'s contract is that an unparsable record yields **no** claim. The
+fast path validates only the `id:` line and its immediate successor, and the caller falls back
+to the full parse **only when the fast path returns `None`** — so a wrong non-`None` answer is
+never corrected. Any YAML syntax error *after* the `id:` line produces a fabricated claim.
+
+**Reproduced end-to-end** with the most realistic shape, an unquoted value containing a colon:
+
+```yaml
+id: GE-500
+title: Fix: the parser      # -> yaml.ScannerError
+```
+
+`scan_acceptance_criteria` returns `passed=False` with the finding
+`GE-500 claimed by [a_malformed.yaml, b_legit.yaml]`. Under the contract there is exactly one
+claimant and no collision at all. **The author is blocked with a duplicate-id message when the
+real fault is a YAML syntax error somewhere else** — so the diagnostic points at the wrong file
+and the wrong problem. A fuzz comparison of the two paths diverged on 6 of 24 inputs; the others
+were `- foo` after a mapping, tab indentation, an unclosed flow sequence, an undefined alias,
+and `...\t` / `....` as a last line.
+
+**Latent today, and the reason it is latent is itself the concern.** Audited against all 3,097
+real AC files: **zero divergences**. But 3,096 of the 3,097 are answered by the fast path — the
+full-parse safety net runs exactly once across the entire store. The fallback is not a
+meaningful second opinion; it is unreachable in practice.
+
+**Do not fix this with another token special-case.** Rounds 4, 5 and 6 of this PR's review each
+added one, and rounds 4-6 each introduced the defect the next round found. The two durable
+options are: have the fast path bail whenever any non-blank line it did not positively classify
+appears after the `id:` line, or accept the divergence deliberately and re-scope the documented
+contract so callers stop being promised a guarantee the fast path does not provide.
+
+**Confirmed NOT broken, so nobody re-opens it:** the document-end token `...` is handled
+correctly — lone trailing, with a trailing space, with a trailing comment, and with no trailing
+newline all agree with the full parse. That round-6 fix is sound.
+
+*Minor, same file:* `_is_document_boundary_token:311` hardcodes `raw_line[3]` and
+`len(raw_line) > 3` rather than deriving from `len(token)`. Correct only because both tokens
+happen to be three characters.
+
+**Pattern:** an optimisation whose fallback is the correctness guarantee, and which answers
+often enough that the fallback never runs.
+
+---
+
+### KI-CG-017 — Placeholder marker detection flags markdown emphasis as a list bullet, and its false-positive cost was measured on one marker and claimed for all six
+
+- **Severity:** medium
+- **Status:** open — **the code is not on `main`**; it lives on unmerged PR #495, branch
+  `feat/ge-122-integrity-guard`. `main` still has only the narrow `\bFIXME\s*:` form and none
+  of the widening described below.
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/build_placeholder_detection.py:114` (`_LEADING_BULLET_REQUIRED`) and
+  `:87` (`_LEADING_MARKER_PREFIX`), plus the claims in the comments at `:98` and `:231`
+
+**Two defects. The second is worse than the first.**
+
+**(a) The bullet requirement accepts a bullet *character*, not a list bullet.** The pattern
+`r"^\s*(?:[-*+]|\d+[.)])\s*"` matches markdown emphasis and ordered prose:
+
+| Line | Result |
+|---|---|
+| `*Placeholder* text is shown when empty.` | **flagged** — false positive |
+| `**Placeholder** text is shown when empty.` | not flagged — the `\s*` cannot span the second `*` |
+| `3. Placeholder naming follows the house style.` | **flagged** — false positive |
+
+Note the italic/bold inconsistency: the same sentence is flagged or not depending on emphasis
+style, which is the tell that the rule is matching punctuation rather than structure.
+
+**(b) The recorded claim that these markers carry no false-positive cost is wrong, and wrong in
+a specific way worth naming.** The comments state there is "no repo-wide evidence of a
+false-positive cost" for `TODO` / `FIXME` / `Replace with`. A repo-wide scan of 5,063 md/yaml
+files returns **55 hits**, of which **14** survive purely on the optional-bullet rule
+(indentation only, no bullet). Nearly all are plainly false:
+
+```
+docs/ticket-lifecycle.md:11,15,19              todo --> in_progress: ...   (Mermaid state transitions)
+templates/skills/roadmap-query/SKILL.md:54,58  todo: 1 / todo: 2           (a count field)
+templates/skills/signoff/SKILL.md:110,119      Replace with:
+ACD-400a-4.yaml:15, BP-900h-4-i.yaml:238,      wrapped prose: "todo -> in_progress -> done"
+TKT-500c-6.yaml:16, UXP-411.yaml:28
+```
+
+Marker distribution across those 55: **`todo` 42, `<!-- question:` 8, `replace with` 3,
+`placeholder` 2.**
+
+**The measurement error, stated plainly, because it is the reusable lesson.** The false-positive
+cost was measured for `PLACEHOLDER` only and then asserted for all six markers. `PLACEHOLDER`
+accounts for 2 of the 55 hits. So the tightening landed on the marker responsible for 2 and left
+untouched the marker responsible for 42. A prior round of the same work made the same shape of
+error — a widening measured with a grep that shared the widening's blind spot, reported as "one
+instance" when the true cost was 23 false positives across 4,815 files.
+
+**Fix direction.** Require a bullet **followed by whitespace** so emphasis cannot satisfy it, and
+decide the ordered-list case deliberately rather than by regex accident. Then re-run the
+repo-wide measurement per marker — not in aggregate — before restating any zero-cost claim, and
+record the per-marker counts next to the rule so the next person tightening it can see which
+marker actually costs anything.
+
+**Pattern:** a claim generalised from the one case that was measured, in a change whose whole
+purpose was to bound false positives.

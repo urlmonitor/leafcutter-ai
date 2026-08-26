@@ -1,0 +1,184 @@
+id: BO-3100b-1
+title: "Two steps returning identical text get opposite verdicts, because the verdict is read from the project not the reply"
+component: build-orchestration
+components:
+  - supervisor_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step whose specialist returns the confident, well-formed reply "Waiting for the
+    phase agent to complete before proceeding. I will not poll further — I'll act on the
+    completion notification when it arrives",
+    And the project's working state is byte-for-byte unchanged since the step began,
+  When the step is judged,
+  Then it is judged to have produced nothing.
+
+  Given a second step whose specialist returns that same reply word for word,
+    And the project's working state now contains changes the step did not have before,
+  When the step is judged,
+  Then it is judged to have produced work.
+
+  Given a step whose specialist returns a reply that describes files it created,
+    And the project's working state is byte-for-byte unchanged since the step began,
+  When the step is judged,
+  Then it is judged to have produced nothing, and the reply's description is not treated
+    as evidence that anything was created.
+depends_on:
+  - BO-3100b
+doc_links:
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — source of the verbatim parked reply used in the first scenario, and of the git-status-versus-report comparison this AC makes mandatory."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The hook substrate the exit-time judgement runs on, and the deploy-manifest obligation that comes with it."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The surrounding guarantees; this is the same shape one layer up, at orchestration rather than artifact level."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "IT-PO DECISION — THE OBSERVED SURFACE IS BOTH TRACKED AND UNTRACKED, MINUS A DECLARED VOLATILE SET. The BA left this open; it is settled here. The judgement compares a snapshot of the project taken at dispatch against one taken at the attempt to finish, over: (a) the content of tracked files, including staged and unstaged modifications and deletions; (b) untracked files not matched by .gitignore; and (c) the git index. Anything in the declared volatile set is excluded from BOTH snapshots."
+  - "UNTRACKED ADDITIONS MUST COUNT. Nearly every honest first output in this repository is an untracked new file (a new test, a new AC record, a new ticket, a new doc), and the ticket and AC folders are untracked wholesale. A tracked-only surface would judge the most common honest step empty and re-run it forever — the guard-gets-switched-off failure BO-2900d exists to prevent. This also settles the coupling the BA recorded against BO-3100b-3: a step whose only legitimate output is untracked is no longer falsely empty, so the declared no-op is needed only for steps that genuinely produce nothing."
+  - "THE VOLATILE EXCLUSION SET IS THE LOAD-BEARING HALF, and omitting it ships this AC as a no-op that looks like a fix. Every agent appends to debugging/logs/ and most touch __pycache__; if ambient churn counted as work, EVERY parked agent would be judged to have produced work. The set must at minimum exclude .gitignore-matched paths, debugging/logs/, __pycache__/, .pytest_cache/, node_modules/ and build output directories. It must be declared in ONE configuration location, be enumerable, and be reported (as a count, or a list) whenever a verdict of 'produced nothing' is issued, so a silently growing exclusion set is visible."
+  - "THE EXCLUSION SET MUST NOT BE EXTENDABLE BY THE FINISHING SPECIALIST, at exit time or otherwise. That is the same hole BO-3100b-3-i closes for no-op declarations, arriving through the exclusion set instead."
+  - "COMPARE CONTENT HASHES, NOT TIMESTAMPS. A rewrite producing identical bytes is legitimately 'produced nothing', and mtime moves on a no-op write. The criterion's phrase is 'byte-for-byte unchanged'."
+  - "THE REPLY MUST NOT BE AN INPUT TO THIS DECISION AT ALL. Not as a tie-breaker, not as a confidence signal, not as a fallback when the snapshot is unavailable. If a snapshot cannot be taken, the outcome is 'could not tell' per BO-3200e's vocabulary — never a verdict inferred from the text."
+  - "The snapshot must be taken at DISPATCH, before the specialist runs, and the pair must be correlated by a step identity that survives a re-run. Snapshotting at exit only, and diffing against the last commit, wrongly attributes a previous step's work to this one."
+  - "Concurrency: when independent steps run at the same time (BO-3100c-3), a step's verdict must be computed from a surface it can be held responsible for. Attributing a sibling's concurrent changes to a parked step would make the guard pass on exactly the case it exists to catch. Either scope the snapshot per step, or serialise the judgement — but state which, and cover it with a test."
+  - "Budget: taking a snapshot must add under 2 seconds per step on a repository of this size, and must not require a full file read of .gitignore-excluded trees."
+  - "DEPLOY-MANIFEST RULE (CLAUDE.md): the judgement runs from the DEPLOYED layout as a hook. Every module it imports MUST be added to the build deploy list in the same change, and the change must be verified by running the deployed hook — not only the source-tree unit tests, which import from the source tree and mask the gap."
+delivers_to:
+  - agent: python-coder
+    contract: "A work verdict for a completed step: {step_id: str, verdict: 'produced_work' | 'produced_nothing' | 'undetermined', evidence: {changed_paths: list[str], excluded_count: int}, snapshot_taken_at_dispatch: bool}. The `verdict` value is what BO-3100b-2 vetoes on; `evidence.changed_paths` is what the build record in BO-3100b-2's third scenario carries; `undetermined` is BO-3200e's vocabulary, reused rather than reinvented."
+  - agent: architecture-diagram-author
+    contract: "The enumerable list of inputs the judgement actually reads, so BO-3100b-5's component diagram can be checked against it in both directions and can correctly draw the reply as an input that exists but is NOT read for this decision."
+expects_from: null
+test_spec:
+  - name: test_bo_3100b_1_identical_parked_reply_yields_opposite_verdicts
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE DISCRIMINATOR. Run the real step lifecycle twice with the specialist returning the KI-SS-001 reply verbatim in both runs; leave the project untouched in the first and write one real file in the second. Assert produced_nothing then produced_work. Any implementation that reads the reply gives the same verdict twice and fails one of them."
+  - name: test_bo_3100b_1_reply_describing_created_files_is_not_evidence
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Specialist returns a detailed, accurate-looking description of files it created; nothing is written. Assert produced_nothing and assert the named paths appear nowhere in the verdict's evidence."
+  - name: test_bo_3100b_1_untracked_new_file_counts_as_work
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A step whose only output is a brand-new UNTRACKED file (the shape of a new test or a new AC record) is judged produced_work. Guards the under-inclusion failure that would block honest work."
+  - name: test_bo_3100b_1_ambient_log_churn_is_not_work
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE OVER-INCLUSION GUARD. A parked step that produces nothing except an append to debugging/logs/ and a new __pycache__ entry is judged produced_nothing. Without the volatile exclusion set this test fails and the whole guard is a no-op."
+  - name: test_bo_3100b_1_identical_byte_rewrite_is_not_work
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Rewriting a tracked file with identical bytes (mtime moves, content does not) is judged produced_nothing — proves the comparison is by content, not timestamp."
+  - name: test_bo_3100b_1_unavailable_snapshot_is_undetermined_not_a_verdict
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "When the dispatch-time snapshot is missing or unreadable, the outcome is `undetermined` and NOT produced_work or produced_nothing — the reply must not be consulted as a fallback."
+  - name: test_bo_3100b_1_judgement_runs_from_deployed_layout
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "PRODUCTION ENTRY POINT + DEPLOYED LAYOUT: build into a temporary target directory and invoke the exit-time judgement exactly as the deployed hook invokes it. Asserts no ModuleNotFoundError and the same verdicts as the source-tree run."
+test_rationale: |
+  The whole content of this AC is that two runs with IDENTICAL reply text produce DIFFERENT
+  verdicts. No single-run test can express that, and no test that inspects the judgement's
+  source can either — a source that never references the reply still fails the AC if the
+  snapshot surface is wrong. So the discriminating test runs the real lifecycle twice and
+  varies only the project state.
+  The two boundary tests are equally load-bearing and pull in opposite directions: without the
+  untracked-counts test the guard blocks honest work and gets switched off; without the
+  ambient-churn test the guard passes every parked agent and is a no-op that reads as a fix.
+  Both failure modes have precedent in this repository, which is why neither is optional.
+  The deployed-layout test is the CLAUDE.md hook trap: done_proof.py passed every source-tree
+  test and crashed with ModuleNotFoundError from the deployed layout.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Settled the BA's open question on the working-state surface (both tracked
+    and untracked, minus a declared volatile set, by content hash). Added assigned_agent,
+    complexity, it_requirements, delivers_to, doc_links, test_spec/test_rationale,
+    change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS IS THE BINDING CONSTRAINT OF THE WHOLE L1, expressed as a behaviour no
+  text-reading implementation can pass. The first two scenarios hold the returned text
+  constant and vary only the project state; if the verdict differs, the judgement is being
+  made from evidence. If an implementation reads the reply at all, the two scenarios must
+  produce the same verdict and one of them fails. The third scenario closes the opposite
+  door — a reply that describes work that does not exist.
+
+  The exact reply text in the first scenario is the one recorded in KI-SS-001 from
+  2026-08-18. It is confident, well-formed and entirely wrong, and it is what the parked
+  agent actually returned. Using the real text rather than a synthetic stand-in follows
+  CLAUDE.md "Real-artifact behavioral spot-check": a hand-authored fixture reproduces the
+  author's own assumptions about what a parked reply looks like.
+
+  On 2026-08-18 the stall was caught only by comparing the project's tracked state against
+  the agent's report. That comparison is the mechanism this AC makes mandatory rather than
+  discretionary.
+
+  WHAT "the project's working state" MEANS is deliberately left open here: the criterion
+  requires that the comparison is of observable project state before and after, not which
+  surface is inspected. Choosing the surface (tracked changes, untracked additions, or
+  both) is an IT PO decision, and the choice interacts with BO-3100b-3 — a step whose only
+  legitimate output is untracked would otherwise read as empty.
+
+  BOUNDARY: BO-1900 dispatch-preflight fires BEFORE a specialist is spawned; this fires at
+  exit. BO-1300 independent spot-check judges the QUALITY of work that was done; this
+  judges only whether any was. BO-2500 and BO-2900 are the artifact layer — is the code
+  real, tested and reached. Keep all four distinct.
+
+  IT-PO DECISION (2026-08-26) — the surface question the BA left open is answered in
+  it_requirements above: BOTH tracked and untracked, over content hashes, minus a declared
+  volatile exclusion set. Two things are worth restating because they are easy to lose:
+
+  1. The exclusion set is not housekeeping, it is the difference between a guard and a
+     no-op. Every agent in this repository appends to debugging/logs/agent_telemetry.jsonl.
+     If that counted, every parked agent would be judged to have produced work and this
+     entire L1 would ship green and do nothing — the exact success-shaped nothing it exists
+     to remove. It is therefore specified as a single declared, enumerable, reported set,
+     not as an ad-hoc filter at the call site.
+  2. The concurrency clause is a real open risk, not boilerplate. BO-3100c-3 requires
+     independent steps to run at the same time. If a step's snapshot spans the whole project
+     while a sibling is writing to it, a parked step inherits the sibling's work and passes.
+     The implementer must choose per-step scoping or serialised judgement and cover the
+     choice with a test; either is acceptable, silence is not.

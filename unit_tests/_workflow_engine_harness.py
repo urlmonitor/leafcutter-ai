@@ -43,6 +43,15 @@ BO-1500f-1 REGRESSION HARDENING (second respawn, 2026-08-18):
       while a test that deliberately wants to exercise the denial path still
       overrides the label explicitly (caller-supplied keys always win).
 
+BO-2400f-12 (2026-08-25): the same script-specific-default mechanism now also
+    covers fast-lane-ship.js's unconditional "check-producibility" dispatch —
+    a fail-closed producibility-guard gate added between Resolve and the claim
+    step. Every pre-existing caller of fast-lane-ship.js gets a real
+    {"producible": true, "unproducible": []} default so its claim/test-writer/
+    coder dispatch assertions are unaffected by the new gate; a test that wants
+    to exercise the refusal path overrides the "check-producibility" label
+    explicitly (see unit_tests/workflows/test_bo2400f_12_refusal_workflow.py).
+
 ENGINE FIDELITY (BP-1100b-4): the workflow body under test now executes inside
     a Node `vm` context (see `_JS_SHIM_TEMPLATE`) contextified with EXACTLY the
     globals the real E2 engine injects (agent, parallel, pipeline, phase, log,
@@ -530,6 +539,36 @@ _PLAN_FEATURE_SCRIPT_NAME = "plan-feature.js"
 _WORKSPACE_SETUP_PERMISSION_LABEL = "resolve-workspace-setup-permission"
 _AGENT_REGISTRY_RELATIVE_PATH = Path("config") / "agent_registry.json"
 
+# BO-2400f-12: fast-lane-ship.js dispatches an unconditional producibility-guard
+# check ("check-producibility") between Resolve and the claim step. Its
+# fail-closed default (a missing/unreadable verdict) REFUSES the run before any
+# claim or build-agent dispatch — exactly the behavior BO-2400f-12 requires, but
+# it means every PRE-EXISTING caller of this script that drives it past Resolve
+# without knowing about the new label would otherwise see its claim/test-writer/
+# coder dispatches vanish behind a refusal the moment this gate was added. As
+# with _WORKSPACE_SETUP_PERMISSION_LABEL above, a real producible default is
+# supplied here so every existing and future caller gets a sane "producible"
+# verdict without having to know about this gate; a test that deliberately wants
+# to exercise the refusal path still can — caller-supplied label_responses
+# always take precedence over this default.
+_FAST_LANE_SHIP_SCRIPT_NAME = "fast-lane-ship.js"
+_CHECK_PRODUCIBILITY_LABEL = "check-producibility"
+
+# BO-2400f-12: a producible verdict is meant to let the run proceed exactly as
+# before this gate existed — including all the way to the test-writer dispatch,
+# which sits behind the (pre-existing, BO-2400c-1) "fastlane-context-bundle"
+# assembly step. A caller asserting only "test-writer was reached on a
+# producible verdict" (BO-2400f-12-ii) has no reason to also know about that
+# unrelated, earlier-shipped gate, so a real, schema-conforming default bundle
+# (mirroring the one every context-bundle-aware caller already hand-stubs) is
+# supplied here too — never a source of a false "obtained" verdict for a test
+# that deliberately stubs its own bundle response instead.
+_CONTEXT_BUNDLE_LABEL = "fastlane-context-bundle"
+_CONTEXT_BUNDLE_DEFAULT_TEXT = (
+    "ARCHITECTURE (stub)\n\nCONVENTIONS (stub)\n\nHIGH-LEVEL ACS (stub)"
+    "\n\n<!-- CACHE_BREAKPOINT -->\n\nBATCH ACS (stub)\n\nPRIOR TESTS (stub)"
+)
+
 
 def _find_ancestor_containing(start: Path, relative_path: Path) -> Path | None:
     """Walk upward from `start` looking for an ancestor containing `relative_path`.
@@ -568,6 +607,20 @@ def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
     fail-closed behavior applies exactly as before this hardening pass, so
     this is never a source of a false "permitted" verdict.
     """
+    if script_path.name == _FAST_LANE_SHIP_SCRIPT_NAME:
+        return {
+            _CHECK_PRODUCIBILITY_LABEL: {
+                "producible": True,
+                "unproducible": [],
+                "message": "all producible (harness default)",
+            },
+            _CONTEXT_BUNDLE_LABEL: {
+                "obtained": True,
+                "bundle": _CONTEXT_BUNDLE_DEFAULT_TEXT,
+                "message": "bundle assembled (harness default)",
+            },
+        }
+
     if script_path.name != _PLAN_FEATURE_SCRIPT_NAME:
         return {}
 

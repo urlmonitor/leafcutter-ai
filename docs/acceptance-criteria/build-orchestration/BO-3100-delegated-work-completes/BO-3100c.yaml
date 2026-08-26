@@ -1,0 +1,114 @@
+id: BO-3100c
+title: "Work handed out is genuinely waited for, never assumed finished"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Coordination happens where waiting really works, so nothing is assumed done.
+
+  Handing out parallel work and collecting the results is done only at the level
+  of the system that can genuinely wait for an answer. Nowhere in a build is
+  there a helper left coordinating work it has no way to wait for, so the whole
+  category of "assumed finished" cannot arise — not merely because it is caught,
+  but because there is no longer anywhere for it to happen.
+depends_on:
+  - BO-3100
+doc_links:
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 fix direction — relocate fan-out to the layer where waiting is a real operation."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The dispatch topology this criterion changes."
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: modifies
+    status: exists
+    relevance: "The component-level record of who may spawn whom; the relocation changes it."
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+    relevance: "The isolation topology the relocated coordination must remain consistent with."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-26
+    note: "Added change_target/risk_surface and two architecture doc_links. Composite — no assigned_agent. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-3100c-1
+  - BO-3100c-2
+  - BO-3100c-3
+  - BO-3100c-4
+  - BO-3100c-5
+  - BO-3100c-6
+implemented_by: []
+child_limit_override: 6
+documentation_triggers:
+  - sequence-diagram
+  - component-diagram
+notes: |
+  CHILD LIMIT WAIVER (child_limit_override: 6, added 2026-08-26). The default cap is 5 L2s
+  per L1 and this parent has 6. TWO of the six — c-5 and c-6 — are documentation ACs derived
+  mechanically from this record's own documentation_triggers, so the behavioural core is four,
+  comfortably inside the cap. Splitting a coherent behaviour into sibling L1s purely to make
+  room for its own auto-derived diagram children would fragment the tree for a bookkeeping
+  reason and leave both halves harder to read. The override is set to 6, the minimum that
+  admits the actual structure, deliberately leaving no headroom: a seventh child must argue
+  for itself rather than arrive under a waiver granted for a different reason. If the
+  behavioural core ever exceeds four, split rather than raise this.
+
+  This is the structural half of the goal, and the most valuable of the four: it
+  makes the failure UNREPRESENTABLE rather than detectable. BO-3100a catches it
+  at build time and BO-3100b catches it at run time; BO-3100c removes the place
+  it lives.
+
+  The user's fix direction: coordination belongs in the layer where waiting is a
+  real operation and where no "run in the background" option exists to be reached
+  for. Retiring the remaining coordinators that spawn other specialists is part
+  of this criterion, not a follow-up — a relocation that leaves the old path in
+  place has not removed anything.
+
+  DECOMPOSITION WARNING for the BA: "the remaining coordinators are retired" must
+  be verified by absence across the whole system, not by the presence of the new
+  path. A test asserting the new coordinator works is satisfied by a repo that
+  still contains five old ones. Per CLAUDE.md "Gate / Workflow ACs — Verify
+  Behaviorally, Not by Grep", the covering test must execute the real
+  coordination path; a grep for the new structure is not coverage.
+
+  EXPIRY NOTE ON THE CURRENT WORKAROUND, which is part of why this is urgent
+  rather than tidy: the interim mitigation is to dispatch every step so that its
+  result returns inside the dispatching turn. That knob is documented as
+  disappearing in a forthcoming release, silently and with no error, at which
+  point the workaround stops working while continuing to look like it works. The
+  version threshold in KI-SS-001 is second-hand and unverified; the direction of
+  travel is not.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). "The layer where waiting is a real
+  operation" resolves, in this repository, to the workflow runtime
+  (templates/workflows-js/*.js executed by the workflow engine) — the only layer
+  that both awaits a dispatch and retains AskUserQuestion. Every child of this L1
+  is therefore workflow-JS work, which python-coder owns per its registry
+  `owns_file_extensions` (.py and .js). risk_surface is contract_boundary because
+  the change moves the dispatch contract between the runtime and every phase
+  agent. unit_tests/_workflow_engine_harness.py (`run_workflow_under_e2`) is the
+  behavioural instrument for all of it: it executes a real workflow under Node
+  with a mocked agent(), and can return null to simulate a dead agent. Its worked
+  example is unit_tests/test_fail_closed_agent_results.py (PR #565).

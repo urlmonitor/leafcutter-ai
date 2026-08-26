@@ -1,0 +1,152 @@
+id: BO-3200b-3
+title: "Best-effort is a recorded choice with a stated reason, and an action without one cannot be dropped"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an action recorded as best-effort, carrying a stated reason why failing to perform it
+    is harmless,
+    And the action does not succeed,
+  When the run ends,
+  Then the run is not halted by that failure, and the halt report states that the action did
+    not succeed and that it is recorded as best-effort with its stated reason.
+
+  Given an action with no such record,
+    And the action does not succeed,
+  When the run ends,
+  Then the run does not treat the failure as tolerable, and the failure is surfaced.
+
+  Given an action with no such record whose name, kind and position in the run all match those
+    of an action that is recorded as best-effort,
+    And the action does not succeed,
+  When the run ends,
+  Then the failure is surfaced, because nothing other than the action's own record makes it
+    best-effort.
+depends_on:
+  - BO-3200b
+  - BO-3200b-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-020 — the release was best-effort by DEFAULT: nobody decided it, the result was simply never read."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The run's action-invocation surface, which is where the best-effort record must live."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+  - schema
+risk_surface: internal
+it_requirements:
+  - "IT-PO DECISION — WHERE THE BEST-EFFORT RECORD LIVES. On the action's own invocation site, as a field pair {best_effort: true, best_effort_reason: <non-empty string>}, carried into the halt payload's required_actions entry. Chosen for the same reasons as BO-3100b-3's no-op declaration: it is per-action rather than per-kind, it exists before the action runs, and it needs no second lookup surface that could later be defaulted or inherited."
+  - "BOTH FIELDS OR NEITHER, validated where the invocation is validated. `best_effort: true` with an absent or empty reason is not a recorded choice; it is the omission this AC exists to forbid, wearing a flag."
+  - "ABSENCE MEANS REQUIRED. An action with no record is not tolerable, and its failure is surfaced. The default must be the strict one — a permissive default is how the release became best-effort without anyone deciding."
+  - "NOTHING OTHER THAN THE ACTION'S OWN RECORD CONFERS TOLERANCE. Not its name, kind, phase, position, or membership of any list held elsewhere. Every declared exemption in this repository decays into a heuristic — 'cleanup actions are best-effort', 'shutdown-path actions are best-effort' — and at that point the record stops meaning anything."
+  - "TOLERANCE APPLIES ONLY TO WHETHER THE RUN HALTS, NEVER TO WHETHER THE OUTCOME IS MENTIONED. A best-effort action that fails silently is indistinguishable from one that succeeded, and BO-3200b-2's report must stay complete: every required action's outcome appears, with the record explaining why one of them did not stop the run."
+  - "THE SET OF BEST-EFFORT ACTIONS MUST BE ENUMERABLE from the invocation sites, with their reasons, so what the system is willing to lose can be reviewed rather than discovered."
+  - "The reason string must reach the halt report verbatim, not be summarised or replaced by a generic line."
+delivers_to:
+  - agent: python-coder
+    contract: "The best-effort field pair {best_effort: bool, best_effort_reason: str} on the action invocation site, validated at invocation-validation time, and populated into BO-3200b-2's required_actions entry with the reason carried verbatim."
+expects_from:
+  - ac_id: BO-3200b-2
+    contract: "The halt payload's required_actions entry {name, outcome, detail, best_effort, best_effort_reason} and the rule that the overall outcome is not a success value whenever a non-best-effort action did not succeed. This AC populates the two best-effort fields and scopes that rule."
+test_spec:
+  - name: test_bo_3200b_3_recorded_best_effort_failure_does_not_halt_but_is_reported
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An action recorded best-effort with a reason fails; assert the run is not halted by it AND the halt report states it did not succeed, marks it best-effort, and carries the reason verbatim."
+  - name: test_bo_3200b_3_unrecorded_action_failure_is_surfaced
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The same action with no best-effort record fails; assert the run does not treat it as tolerable and the failure is surfaced in both the report and the machine-readable outcome."
+  - name: test_bo_3200b_3_matching_name_kind_and_position_confer_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE CONVENTION-PROOF TEST. Two actions with the same name, kind and position in the run, one recorded best-effort and one not, both failing. Assert the recorded one is tolerated and the unrecorded one is surfaced. Fails any implementation that infers tolerance from where an action sits."
+  - name: test_bo_3200b_3_best_effort_without_a_reason_is_rejected
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "best_effort: true with a missing or empty reason is rejected where the invocation is validated, before the run — not accepted and later reported as a blank."
+  - name: test_bo_3200b_3_best_effort_set_is_enumerable_with_reasons
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Assert the set of best-effort actions and their reasons can be listed from the invocation sites, so what the system is willing to lose is reviewable rather than discovered after a stranded run."
+test_rationale: |
+  The convention-proof test is the discriminating one and cannot be replaced by a unit test of
+  the record parser: a parser that reads the field correctly still fails this AC if the
+  surrounding code also tolerates by action kind. Only running two otherwise-identical actions,
+  differing solely in the record, can tell those apart. It is the same shape as BO-3100b-3 and
+  BO-2900d-1, and the drift it guards against is documented in both.
+  The first test asserts BOTH halves — not halted AND reported — because the tempting reading of
+  "best-effort" is silence, and a best-effort action that fails silently is indistinguishable
+  from one that succeeded, which is the original defect returning through the exemption.
+  The enumerability test turns "reviewable decision" from an intention into something someone can
+  actually review.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Settled where the best-effort record lives (validated field pair on the action
+    invocation site). Added assigned_agent, complexity, it_requirements, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The parent L1 requires that nothing required is "treated as best-effort and left unchecked",
+  and states the condition precisely: "best-effort cleanup is acceptable only where failing to
+  clean up is genuinely harmless, and that must be an explicit, recorded choice rather than an
+  omission."
+
+  OMISSION IS THE DEFECT, NOT TOLERANCE. In KI-BO-020 the release was best-effort by default —
+  nobody decided it, the result was simply never read. Requiring the choice to be recorded with
+  a reason converts a silent default into a reviewable decision, and makes the set of actions
+  the system is willing to lose enumerable.
+
+  THE FIRST SCENARIO STILL REPORTS. A best-effort action that fails silently is indistinguishable
+  from one that succeeded, so the tolerance applies to whether the run halts, never to whether
+  the outcome is mentioned. This keeps BO-3200b-2's report complete: every required action's
+  outcome appears, and the record explains why one of them did not stop the run.
+
+  THE THIRD SCENARIO IS THE CONVENTION-PROOF CLAUSE, the same shape as BO-3100b-3 and BO-2900d-1.
+  Every declared exemption decays into a heuristic — cleanup actions are best-effort, actions in
+  the shutdown path are best-effort — and at that point the record stops meaning anything. It is
+  written to be failed by any implementation that infers tolerance from where an action sits.
+
+  Deliberately left to the IT PO: where the record lives. The criterion constrains only that it
+  is explicit, attached to that action, carries a reason, and reaches the halt report.
+
+  IT-PO DECISION (2026-08-26). The record lives on the action's invocation site as
+  {best_effort, best_effort_reason}, validated together. This deliberately mirrors BO-3100b-3's
+  no-op declaration in the sibling tree: the two are the same pattern — a per-instance, reasoned,
+  pre-declared exemption from a guard — and implementing them with one shape rather than two
+  keeps the convention-proof property in both. Note the release in KI-BO-020 would NOT qualify
+  under this rule: losing a claim is not harmless, so no honest reason could be stated for it.
