@@ -1,0 +1,68 @@
+id: AGC-100c-1
+title: "A normal build gives Codex the current project guidance and resolvable references"
+component: agent-compatibility
+components: [build_pipeline, template_compiler, skills_system]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given project configuration declares the description YouTube expert intelligence
+    archive, the test command python -m pytest tests -q, and the architecture
+    summary Python ingestion workers with PostgreSQL storage,
+  And canonical guidance references project instructions, specialist identities,
+    and supporting skills,
+  And the target contains no prior Codex setup,
+  When the normal build completes and a new Codex session starts in the target,
+  Then Codex can state those three configured values before a specialist is started,
+  And every required reference in the Codex guidance resolves to a Codex-native or
+    explicitly platform-neutral target,
+  And no manual copying step or unresolved Claude-only reference is required.
+depends_on: [AGC-100c, AGC-100b-1, AGC-100b-2]
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - Generate root AGENTS.md from project configuration and canonical guidance within Codex's instruction-size budget.
+  - Resolve every project, agent, and skill reference before publication.
+  - Translate Claude-only paths and tool names through the compatibility policy.
+  - Require no post-build copy or activation step.
+test_required: true
+test_spec:
+  - name: test_fresh_codex_session_loads_project_agents_guidance
+    target_dir: tests/agent_compatibility/
+    framework: pytest
+    type: e2e
+    angle: deployed
+    surface_invoked: fresh Codex session at repository root
+    description: A fresh Codex session reports the configured description, test command, and architecture summary.
+  - name: test_codex_guidance_references_resolve_without_manual_copy
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: AGENTS.md reference resolver
+    description: Every required reference resolves in an empty target after the normal build.
+test_rationale: "Reference scanning proves structure while a fresh Codex session proves AGENTS.md is actually discovered."
+delivers_to:
+  agent: python-coder
+  contract: "CodexProjectBundleV1 with AGENTS.md, native agent and skill directories, and resolved reference edges."
+expects_from:
+  - {ac_id: AGC-100b-1, contract: NativeAgentBundleV1}
+  - {ac_id: AGC-100b-2, contract: ValidatedCompatibilityPolicyV1}
+doc_links:
+  - {path: docs/architecture/adrs/ADR-027-native-codex-agent-compatibility.md, relationship: specifies, status: planned}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, config, docs, prompt, pipeline]
+risk_surface: contract_boundary
+declares_side_effect: true

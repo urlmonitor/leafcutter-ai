@@ -1,0 +1,71 @@
+id: AGC-100f-1
+title: "Compatibility reporting identifies every missing, invalid, unreachable, or unexpected artifact"
+component: agent-compatibility
+components: [agent_registry, build_pipeline, skills_system, testing_quality]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the canonical launchable set contains business-analyst, architect-review,
+    and architect-review-deep,
+  And Codex is missing architect-review-deep, business-analyst has invalid native
+    syntax, and architect-review references a missing skill,
+  And Claude and Gemini contain their complete expected catalogs,
+  When compatibility validation runs,
+  Then a deterministic machine-readable report lists expected, generated, missing,
+    invalid, unreachable, unexpected, and excluded identities for each platform,
+  And it names architect-review-deep as missing, business-analyst as invalid with
+    the parse reason, and architect-review as unreachable with the missing-skill
+    reference chain,
+  And the overall result is incomplete with no success declaration.
+depends_on: [AGC-100f, AGC-100a-3, AGC-100c-1, AGC-100d-1, AGC-100e-1]
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - Emit a deterministic schema-versioned report without volatile byte content.
+  - Derive expectations from registry launch intent and generated state from parsed native artifacts.
+  - Traverse AGENTS.md, agent definitions, skills, translated references, and smoke evidence.
+  - Fail closed on every missing, invalid, unreachable, unexpected, or required rejected artifact.
+  - Distinguish deliberate exclusions from failures.
+test_required: true
+test_spec:
+  - name: test_report_partitions_and_explains_identity_states_by_platform
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: compatibility report generator
+    description: The report partitions every platform identity and explains missing, invalid, and unreachable states.
+  - name: test_incomplete_report_never_declares_success
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: Any required non-complete state prevents an overall success declaration.
+test_rationale: "Completeness is a graph across registry intent, parsed files, references, skills, and live evidence; counting files is insufficient."
+delivers_to:
+  agent: python-coder
+  contract: "CompatibilityReportV1 with per-platform expected, generated, missing, invalid, unreachable, unexpected, and excluded sets plus mapping and smoke evidence."
+expects_from:
+  - {ac_id: AGC-100a-3, contract: SpawnEvidenceV1}
+  - {ac_id: AGC-100c-1, contract: CodexProjectBundleV1}
+  - {ac_id: AGC-100d-1, contract: SkillExerciseEvidenceV1}
+  - {ac_id: AGC-100e-1, contract: PlatformRegressionEvidenceV1}
+doc_links:
+  - {path: docs/architecture/components/agent-registry.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: [AGC-100f-1-i]
+implemented_by: []
+change_target: [code, schema, config, pipeline]
+risk_surface: contract_boundary
+declares_side_effect: true

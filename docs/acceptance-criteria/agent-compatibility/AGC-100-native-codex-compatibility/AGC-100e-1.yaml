@@ -1,0 +1,68 @@
+id: AGC-100e-1
+title: "Codex support does not change Claude or Gemini behavior"
+component: agent-compatibility
+components: [build_pipeline, template_compiler, skills_system, testing_quality]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a fixed canonical registry, guidance set, skill set, and project
+    configuration produce an approved Claude and Gemini artifact baseline,
+  When Codex compatibility is included in a fresh build,
+  Then the Claude and Gemini specialist identities, native model metadata,
+    guidance, skills, and references match that approved baseline,
+  And a no-change incremental rebuild changes neither platform's content,
+  And adding, renaming, or removing a canonical specialist or skill updates Claude
+    and Gemini through their existing build behavior while Codex receives the same
+    catalog change,
+  And Codex model names, reasoning settings, paths, and rejected capabilities do
+    not appear in Claude or Gemini artifacts.
+depends_on: [AGC-100e, AGC-100a-2, AGC-100b-3, AGC-100c-1, AGC-100d-2]
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - Compare complete parsed Claude and Gemini metadata plus content hashes against approved baselines.
+  - Prevent Codex settings, paths, and mapping decisions from leaking into existing platform artifacts.
+  - Route catalog changes through each platform's existing build path.
+  - Keep publication atomic across all platforms.
+test_required: true
+test_spec:
+  - name: test_codex_build_preserves_claude_and_gemini_baselines
+    target_dir: tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Codex output leaves approved Claude and Gemini identities, metadata, guidance, skills, and references unchanged.
+  - name: test_catalog_changes_propagate_without_codex_metadata_leakage
+    target_dir: tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: Catalog changes reach all platforms while Codex-specific data stays isolated.
+test_rationale: "Complete fresh and incremental artifact comparisons are required to detect regression or metadata leakage."
+delivers_to:
+  agent: python-coder
+  contract: "PlatformRegressionEvidenceV1 with parsed catalogs, hashes, and leakage findings."
+expects_from:
+  - {ac_id: AGC-100a-2, contract: CurrentIdentitySnapshotV1}
+  - {ac_id: AGC-100b-3, contract: EffectiveMappingFingerprintV1}
+  - {ac_id: AGC-100c-1, contract: CodexProjectBundleV1}
+  - {ac_id: AGC-100d-2, contract: PublishedSkillCatalogV1}
+doc_links:
+  - {path: docs/architecture/components/template-compiler.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, config, pipeline, prompt, model]
+risk_surface: contract_boundary
+declares_side_effect: true

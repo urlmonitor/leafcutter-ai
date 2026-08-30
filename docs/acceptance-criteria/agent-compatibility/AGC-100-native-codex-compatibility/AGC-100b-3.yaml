@@ -1,0 +1,60 @@
+id: AGC-100b-3
+title: "Effective mapping changes rebuild only affected Codex identities deterministically"
+component: agent-compatibility
+components: [build_pipeline, template_compiler]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the package policy maps sonnet to gpt-5.6-terra with medium reasoning effort,
+  And existing Codex identities were built from that policy,
+  And a schema-valid project override changes only sonnet reasoning effort to high,
+  When two consecutive incremental builds run with that override,
+  Then the first build regenerates every identity whose effective sonnet mapping
+    changed and leaves haiku- and opus-mapped identity content unchanged,
+  And the compatibility report records that the high effort came from the project override,
+  And the second build produces byte-identical definitions and report content.
+depends_on: [AGC-100b, AGC-100b-2]
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - Include effective package mapping and override provenance in per-identity fingerprints.
+  - Regenerate only identities whose resolved settings changed.
+  - Keep deterministic report content free of volatile timestamps.
+test_required: true
+test_spec:
+  - name: test_override_rebuilds_only_effective_sonnet_identities
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Changing only sonnet effort rebuilds sonnet identities and leaves haiku and opus outputs unchanged.
+  - name: test_override_report_provenance_and_second_build_are_stable
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: The report attributes the override and a second identical build is byte-stable.
+test_rationale: "Real output hashes across two builds prove selective invalidation, provenance, and determinism."
+delivers_to:
+  agent: python-coder
+  contract: "EffectiveMappingFingerprintV1 keyed by identity with input hash, model, effort, and package or override provenance."
+expects_from: {ac_id: AGC-100b-2, contract: ValidatedCompatibilityPolicyV1 and project override}
+doc_links:
+  - {path: docs/architecture/components/template-compiler.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, config, pipeline, model]
+risk_surface: contract_boundary
+declares_side_effect: true

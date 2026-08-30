@@ -1,0 +1,82 @@
+id: AGC-100b-2
+title: "A separately versioned JSON policy defines Codex compatibility mappings"
+component: agent-compatibility
+components: [agent_registry, build_pipeline, template_compiler]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a version-1 JSON compatibility policy maps haiku, sonnet, and opus to
+    either an explicit Codex model plus supported reasoning effort or an explicit
+    inherit-parent policy,
+  And every declared source capability has a map or reject decision with a target
+    or rejection reason,
+  When the policy is validated independently of generated agent definitions,
+  Then validation accepts it only when it conforms to the version-1 policy schema,
+  And generated Codex definitions contain resolved values rather than becoming
+    the source of mapping policy,
+  And deleting all generated definitions and rebuilding from the canonical
+    registry, templates, and policy reproduces the same resolved definitions.
+depends_on: [AGC-100b]
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    type: object
+    required: [schema_version, source_platform, target_platform, unknown_alias_policy, missing_source_model, models, capabilities, references]
+    properties:
+      schema_version: {const: 1}
+      source_platform: {const: claude}
+      target_platform: {const: codex}
+      unknown_alias_policy: {const: reject}
+      models: {type: object, minProperties: 1}
+      capabilities: {type: object, minProperties: 1}
+      references: {type: object, minProperties: 1}
+    additionalProperties: false
+  reference_file_path: config/codex_agent_compatibility.v1.json
+  n_location_rule: "1"
+  required_skills: [python-coder, add-agent-to-package]
+  post_write_commands:
+    - python scripts/build.py --target-dir . --validate-only
+    - python -m pytest unit_tests/agent_compatibility -q
+  constraints:
+    - "Map haiku to gpt-5.6-luna/low, sonnet to gpt-5.6-terra/medium, and opus to gpt-5.6-sol/high."
+    - Generated definitions contain resolved values but never become mapping authorities.
+    - Project overrides may alter model and reasoning resolution only.
+test_required: true
+test_spec:
+  - name: test_v1_policy_schema_accepts_complete_default_mapping
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: The complete package default validates against the version-1 schema.
+  - name: test_clean_rebuild_reproduces_resolved_agent_definitions
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Deleting generated definitions and rebuilding reproduces identical resolved definitions.
+test_rationale: "Schema validation plus a clean build prove both the policy contract and deterministic consumption."
+delivers_to:
+  agent: python-coder
+  contract: "ValidatedCompatibilityPolicyV1 with model, effort, capability, reference, source-location, and override-provenance data."
+expects_from: null
+doc_links:
+  - {path: docs/architecture/adrs/ADR-027-native-codex-agent-compatibility.md, relationship: specifies, status: planned}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: [AGC-100b-2-i]
+implemented_by: []
+change_target: [schema, config, model, pipeline]
+risk_surface: contract_boundary
+declares_side_effect: true
