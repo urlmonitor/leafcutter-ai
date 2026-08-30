@@ -57,4 +57,4 @@ covered_by: []
 implemented_by: []
 change_target: [code, config, pipeline, model]
 risk_surface: contract_boundary
-declares_side_effect: true
+declares_side_effect: false

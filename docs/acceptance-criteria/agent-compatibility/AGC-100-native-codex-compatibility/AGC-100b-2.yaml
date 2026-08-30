@@ -79,4 +79,4 @@ covered_by: [AGC-100b-2-i]
 implemented_by: []
 change_target: [schema, config, model, pipeline]
 risk_surface: contract_boundary
-declares_side_effect: true
+declares_side_effect: false
