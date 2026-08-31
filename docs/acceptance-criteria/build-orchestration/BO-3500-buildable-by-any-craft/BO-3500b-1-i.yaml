@@ -1,0 +1,103 @@
+id: BO-3500b-1-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "A group containing no code at all still builds, and having no test to run is not a failed run"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a resolved group with no source code member, and therefore nothing to test — a
+    documentation page and a diagram only,
+  When the run builds it,
+  Then both artifacts are produced and the run opens its pull request,
+  And the run does not require a code member to be present in order to proceed,
+  And the absence of any test to run is not reported as a failure, as an empty run, or
+    as a run with nothing to do,
+  And the run's ending states that it delivered the group, not that it found nothing.
+depends_on: [BO-3500b-1]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "The current lane's finish step requires a passing covering test before any member is marked finished, which is precisely why a group with no code in it has no path through today."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "SKIPPED-AS-NOT-APPLICABLE MUST BE A DISTINCT RECORDED OUTCOME FROM PASSED. With no code member, verify_red_baseline and verify_green_and_coverage (scripts/build_orchestration/fast_lane.py) have nothing to check. They must record `not_applicable` with the reason, never `passed` — a gate that passes because there was nothing to check reports the same green as a gate that checked something, and BO-3500c-1's receipt cannot tell them apart either if the run does not."
+  - "DO NOT REUSE THE EMPTY-SET NO-OP ENDING. fast-lane-ship.js already has a clean no-op path for an empty resolved set. A docs-and-diagram group is NOT that path; its ending must state that it delivered the group. Assert the two ending values differ — a run that produces both artifacts and reports 'nothing to build' is worse than a refusal, because the operator concludes the area is empty and stops looking."
+  - "The run must not require a code member to proceed: no precondition, no early return, no 'at least one testable member' guard anywhere on the path."
+  - "This is the common case, not an edge: 152 not-yet-done records declare the documentation craft and 119 declare the diagram craft, so a group drawn from either area contains no code by construction."
+  - "BOUNDARY: this record takes no position on what PROVES the page and the diagram — that is BO-3500c. Do not implement a proof here, and do not let the not_applicable red/green outcome be read as 'nothing needs proving'."
+  - "NO PRESENCE-ONLY ASSERTIONS. Execute the run over a code-free fixture group and assert on the recorded gate outcomes and the ending value."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500b-1
+  contract: "The group-completion account (one entry per resolved member) and the single-PR arc. This record constrains the code-free case: the account must show delivery, and the code-shaped gates must record not_applicable rather than passed."
+test_spec:
+  - name: test_docs_and_diagram_only_group_opens_a_pull_request
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A resolved group with no code member produces both artifacts and opens exactly one PR."
+  - name: test_red_and_green_gates_record_not_applicable_not_passed
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Assert the recorded outcome value for verify_red_baseline and verify_green_and_coverage is the not_applicable value and is not equal to the value they record when they actually checked something."
+  - name: test_absence_of_tests_is_not_reported_as_a_failure
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The run's terminal outcome is success; it is not a failure, not an error and not an empty run."
+  - name: test_ending_says_delivered_and_differs_from_the_empty_set_no_op
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Produce both endings from the same harness — a genuinely empty resolved set and a code-free delivered group — and assert their ending values differ."
+  - name: test_run_proceeds_without_any_code_member_present
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "No guard requiring a testable member fires; assert the run reaches the artifact-production phase with zero code members in the set."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "User decision D3 — a test is a proof of a code deliverable, not a member in its own right, so 'no source code member and no test member' is restated as 'no source code member, and therefore nothing to test'. The criterion's substance is unchanged: the absence of a test to run is still not a failed run."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THIS EARNS ITS PLACE BECAUSE THE RUN IS CODE-SHAPED THROUGHOUT. Its ordering assumes
+  tests are written before code, its gates assume a red baseline exists before work and
+  a green one after, and its finish step assumes a passing covering test. Every one of
+  those assumptions is satisfied vacuously or not at all by a page-and-diagram group,
+  and "satisfied vacuously" is the dangerous half: a gate that passes because there was
+  nothing to check reports the same green as a gate that checked something.
+
+  So this is not a hypothetical edge. Documentation-only and diagram-only areas exist in
+  quantity — 152 not-yet-done requirements declare the documentation craft and 119
+  declare the diagram craft — and a group drawn from one of those areas contains no
+  code by construction.
+
+  THE LAST CLAUSE MATTERS MOST. A run that produces both artifacts and then reports
+  "nothing to build" is worse than one that refuses, because the operator believes the
+  area is empty and stops looking at it.
+
+  BOUNDARY: what proves the page and the diagram is BO-3500c, not this record. This one
+  only asserts that the absence of a test does not by itself end the run — it takes no
+  position on what does prove them, and must not be read as saying nothing needs to.
