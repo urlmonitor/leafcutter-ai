@@ -1,0 +1,134 @@
+id: GE-122a-1-ii
+title: "Excusing a merged-in decision record must not excuse the author's own record claiming the same number"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the decision namespace already holds a record claiming the number 034 on the shared
+    upstream ref,
+  And the current change set is a merge that brings that upstream record in, so it is staged
+    although this author did not write it,
+  And the same change set ALSO stages a second, newly authored decision record that
+    independently claims 034,
+  When the decision-number gate runs,
+  Then it terminates with a failing result,
+  And its report names the contested number 034,
+  So the author learns of the double-claim at commit time rather than after it has landed on
+    the shared ref.
+
+  And Given the same merge staging ONLY the upstream record, with nothing authored here
+    claiming its number,
+  When the gate runs,
+  Then it terminates with a passing result — a record authored upstream and merged in is not
+    a collision against the very ref it came from.
+
+  And Given a change set that stages two brand-new records which both claim the number 077,
+    a number no record on any ref has ever claimed,
+  When the gate runs,
+  Then it terminates with a failing result naming 077.
+
+  The property this criterion pins: the merged-in exemption is a property of a FILE, not of a
+  NUMBER. A gate that decides "this number was merged in" and then drops every staged claimant
+  of that number discards the author's own file along with the upstream one, and hands its
+  collision detector an empty set. The three scenarios above are jointly load-bearing: the
+  first alone can be satisfied by deleting the exemption, and the second alone by keeping the
+  defect.
+
+  Coverage note: covered only by a test that EXECUTES the gate against a real repository with a
+  real merge in progress and real staged files, and asserts on its exit status and emitted
+  report. A test that asserts on a helper's return value in isolation does not cover it — the
+  defect lives in how the helper's per-number answer is applied to a per-file set, which is
+  invisible from inside the helper.
+depends_on:
+  - GE-122a-1
+doc_links:
+  - path: templates/scripts/commit_guardian/check_adr_collision.py
+    relationship: describes
+    status: exists
+    relevance: "The gate this criterion constrains. Its merge-in exemption was keyed on the ADR integer and resolved that integer to a single staged path via a first-match lookup, so a number claimed twice in one change set lost both claimants."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: context
+    status: exists
+    relevance: "Registers check-decision-number-uniqueness. This gate is the only commit-time behaviour GE-122a-1 changes, so a defect in it is a defect in the shipped surface, not in dormant code."
+  - path: docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The governing decision. Amendment 1's fail-open/fail-closed boundary is unaffected by this criterion: the defect produced a wrong PASS on a completed read, not a misclassified failure."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The staged set must be carried as (number, path) pairs from the point it is read until the point it is filtered. Reducing it to a list of bare integers before the merge-in filter runs is what makes the defect possible, and any implementation that re-derives a path from a number is reintroducing it."
+  - "The merge-in decision must be evaluated once per staged FILE, against that file's own path, and it needs TWO probes on that path: the file must exist upstream (`git cat-file -e origin/main:<path>`) AND be absent from HEAD (`git cat-file -e HEAD:<path>`). Absence from HEAD alone identifies nothing — a file the author just wrote is equally absent from HEAD — so a per-file filter that keeps only the HEAD probe still drops the authored file and still passes the double-claim. Verified: making the filter per-file without adding the upstream probe leaves the distinguishing test red."
+  - "The first-match number-to-path lookup must be removed rather than corrected: it is unreachable once the pairs are carried through, and leaving it invites a second caller to reintroduce the bug."
+  - "Do NOT satisfy this by moving self-collision detection ahead of the exemption while leaving the exemption per-number. That passes the double-claim scenario and still drops the author's file from the cross-collision comparison, so a single authored record colliding with a merged-in one would go unreported."
+  - "The public `get_staged_adr_numbers()` signature must keep returning a list of integers with duplicates preserved; the pair-returning form is a new helper it delegates to. The integer form is what the fail-closed early-exit reads."
+  - "Removing the per-number path lookup also removes one `git diff --cached` invocation per staged ADR, which the whole-collection performance budget in GE-122a-1 asks for. That is a consequence, not the motive — do not let it drive a design that skips the per-file HEAD probe."
+test_spec:
+  - name: test_authored_adr_is_reported_despite_merged_in_twin
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "In a real repository mid-merge, with the upstream ADR-034 staged by the merge AND a newly authored ADR-034 staged alongside it, the gate exits non-zero and its report names 034. This is the distinguishing case: it is the only one the defective and the correct implementation answer differently."
+  - name: test_merged_in_adr_alone_is_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The same merge staging only the upstream ADR-034 exits zero — the guarantee the merge-in exemption exists to provide, asserted so that deleting the exemption cannot be mistaken for fixing the defect."
+  - name: test_two_newly_authored_adrs_sharing_a_number_are_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Two brand-new staged records both claiming ADR-077 exit non-zero and the report names 077 — the same-commit self-collision path, asserted to stay reachable after the filter changes."
+test_rationale: |
+  All three descriptors run the gate as a process against a real git repository with a real
+  merge in progress, because the defect is not observable from inside any single helper: each
+  helper returns a defensible answer, and the wrong result emerges only from applying a
+  per-number answer to a per-file set. Each test asserts the staged set BEFORE invoking the
+  gate, so a fixture that failed to stage what the scenario needs fails as a setup error rather
+  than as a false behavioural pass — the failure mode that would otherwise let a test that
+  detects nothing look like a passing guard. The trigger depends on staged-path ordering (the
+  authored filename sorts before the merged-in one, so the first-match lookup resolves to it),
+  so the fixture filenames are chosen deliberately and must not be renamed casually.
+delivers_to: null
+expects_from:
+  ac_id: GE-122a-1
+  contract: "The registered decision-number gate whose merge-in exemption this criterion scopes to the file rather than the number."
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- templates/scripts/commit_guardian/check_adr_collision.py
+- unit_tests/commit_guardian/test_ge_122a_1_ii.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Found by inspection of PR #495 before merge, and reproduced in a real repository before this
+  record was written. The same code exists on main but is registered in no manifest there and
+  has never executed; PR #495 is what makes it live, so the fix belongs on that branch and not
+  on main.
+
+  WHY THIS IS ITS OWN RECORD rather than a correction folded into GE-122a-1: GE-122a-1 is
+  satisfied by the code as written. Its scenarios stage claimants that are all newly authored,
+  and the defect only appears once a merged-in claimant and an authored claimant share a number
+  in one change set. This is the second instance in this tree of the same shape as GE-122a-1-i
+  — a plausible, well-tested implementation of the parent that still misses the defect the goal
+  exists to prevent — which is why both are kept as separate, individually assertable records.
+
+  THE ORDERING DEPENDENCE IS WORTH STATING ONCE. Under the defect the outcome turned on which
+  staged path git listed first for the contested number: had the merged-in filename sorted
+  first, the exemption would have resolved to it and the gate would have behaved correctly by
+  accident. So the defect was intermittent by filename, which is exactly the kind of thing a
+  single hand-picked fixture can pass over. The fix removes the lookup rather than reordering
+  it, so the outcome no longer depends on path order at all.

@@ -1,0 +1,66 @@
+id: AGC-100f-2
+title: "Reference for the Codex agent compatibility contract"
+component: agent-compatibility
+components: [agent_registry, build_pipeline, template_compiler, skill_registry, skills_system]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a maintainer needs the complete contract for generating and validating
+    Codex-native Leafcutter agents,
+  When they open the Codex agent compatibility reference,
+  Then it identifies AGENTS.md, .codex/agents/<identity>.toml, and
+    .agents/skills/<skill>/SKILL.md as the native Codex surfaces,
+  And it lists required native fields name, description, and developer_instructions
+    plus supported model and reasoning fields,
+  And it documents the versioned JSON policy schema, override precedence, and the
+    defaults haiku to gpt-5.6-luna/low, sonnet to gpt-5.6-terra/medium, and opus
+    to gpt-5.6-sol/high,
+  And it lists every supported capability alias and namespace-qualified MCP tool
+    with an explicit map or reject decision,
+  And it documents explicit guidance inheritance for both deep variants while
+    retaining their separate identities and model mappings,
+  And it defines compatibility report fields and registry-intent completeness,
+  And it records that Codex translations do not change Claude or Gemini behavior.
+depends_on: [AGC-100f, AGC-100a-3, AGC-100b-3, AGC-100c-1, AGC-100d-2, AGC-100e-1, AGC-100f-1]
+assigned_agent: documentation-expert
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - Match model, capability, reference, and override content to the version-1 JSON policy and schema exactly.
+  - Validate the capability table against the complete token inventory from canonical templates.
+  - Parse all JSON and TOML examples against their documented schemas.
+  - Match report fields to CompatibilityReportV1 and platform isolation to regression evidence.
+test_required: false
+test_spec: null
+test_rationale: "Documentation-verifier compares this normative reference mechanically with policy, registry, parsed TOML, capability inventory, report schema, and regression evidence."
+delivers_to:
+  agent: documentation-verifier
+  contract: "docs/reference/codex-agent-compatibility.md containing native paths, TOML fields, policy, mappings, capabilities, variants, report states, and platform isolation."
+expects_from:
+  - {ac_id: AGC-100a-3, contract: Native identity and live-spawn contract}
+  - {ac_id: AGC-100b-3, contract: Resolved mappings and override provenance}
+  - {ac_id: AGC-100c-1, contract: Native surface and required-field contract}
+  - {ac_id: AGC-100d-2, contract: Skill publication contract}
+  - {ac_id: AGC-100e-1, contract: PlatformRegressionEvidenceV1}
+  - {ac_id: AGC-100f-1, contract: CompatibilityReportV1}
+doc_links:
+  - {path: docs/reference/codex-agent-compatibility.md, relationship: creates, status: planned}
+  - {path: docs/architecture/components/agent-registry.md, relationship: describes, status: exists}
+  - {path: docs/architecture/components/template-compiler.md, relationship: describes, status: exists}
+  - {path: docs/architecture/components/skill-registry.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+declares_side_effect: false

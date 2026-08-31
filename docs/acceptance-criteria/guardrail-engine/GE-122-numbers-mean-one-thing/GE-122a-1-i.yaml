@@ -116,7 +116,8 @@ amended_by:
   date: '2026-08-17'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-GE122UniquenessPassAndRepair/02_TICKET-20260818-GE-122a-1-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |

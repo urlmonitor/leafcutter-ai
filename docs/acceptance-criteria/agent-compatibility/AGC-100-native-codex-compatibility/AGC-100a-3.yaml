@@ -1,0 +1,64 @@
+id: AGC-100a-3
+title: "A spawned Codex specialist receives its intended identity and instructions"
+component: agent-compatibility
+components: [agent_registry, template_compiler, testing_quality]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the canonical business-analyst guidance in a test fixture contains the
+    instruction marker BA-CODEX-741 and no other specialist contains that marker,
+  And a fresh build has completed,
+  When Codex starts business-analyst and asks it to return its identity and
+    instruction marker,
+  Then the spawned specialist reports the business-analyst identity and
+    BA-CODEX-741,
+  And the evidence comes from the spawned specialist's response rather than from
+    inspection of its generated definition alone.
+depends_on: [AGC-100a, AGC-100a-1, AGC-100c-1]
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - Invoke a real installed Codex custom agent; parsing TOML alone is insufficient.
+  - Isolate the marker so the parent prompt and sibling agents cannot supply it.
+  - Keep live-agent tests opt-in and record identity/model/effort evidence without secrets.
+test_required: true
+test_spec:
+  - name: test_spawned_business_analyst_reports_identity_and_marker
+    target_dir: tests/agent_compatibility/
+    framework: pytest
+    type: e2e
+    angle: deployed
+    surface_invoked: native Codex custom-agent spawn
+    description: A real spawned business-analyst reports its identity and unique instruction marker.
+  - name: test_spawn_evidence_originates_from_child_response
+    target_dir: tests/agent_compatibility/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: native Codex custom-agent spawn
+    description: Accepted evidence is captured from the child response rather than TOML inspection.
+test_rationale: "Only a real spawn proves discovery, identity selection, configuration loading, and instruction delivery end to end."
+delivers_to:
+  agent: python-coder
+  contract: "SpawnEvidenceV1 containing agent ID, expected and observed markers, child response, and success."
+expects_from:
+  - {ac_id: AGC-100a-1, contract: ResolvedIdentityCatalogV1}
+  - {ac_id: AGC-100c-1, contract: CodexProjectBundleV1}
+doc_links:
+  - {path: docs/architecture/components/supervisor-spawn-topology.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, pipeline, model, prompt]
+risk_surface: cost

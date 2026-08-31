@@ -14,6 +14,7 @@ related_docs:
   - docs/how-to/fast-lane-build.md
   - docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
   - docs/architecture/components/build-orchestration.md
+  - docs/pre-commit-hooks.md
 ---
 
 # How to understand proof-of-done enforcement (pre-commit and CI)
@@ -30,6 +31,12 @@ and with different authority:
 The rest of this guide explains exactly what each layer does, how to skip the
 pre-commit hook when you have a legitimate reason, and why a local skip cannot
 prevent unproven work from being caught before it reaches the protected branch.
+
+**Sibling hook:** `check-proof-promise-claim` reads the same underlying
+`done_proof.collect_test_tag_records` scanner but governs a different moment
+— a staged *ticket's own plan* promising a kind of proof with no matching
+claim yet, rather than an AC YAML claiming `work_status: done`. See its
+entry in [`docs/pre-commit-hooks.md`](../pre-commit-hooks.md#proof-promise-vs-claim-check-check-proof-promise-claim).
 
 ---
 

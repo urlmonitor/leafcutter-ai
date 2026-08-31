@@ -1,0 +1,32 @@
+id: AGC-100c
+title: "Bring the right project guidance into Codex"
+component: agent-compatibility
+components:
+  - build_pipeline
+  - template_compiler
+  - skills_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  A fresh Codex workspace receives the mandatory project guidance required for
+  specialists to work correctly, without the user copying instructions or
+  remembering an extra setup step.
+depends_on:
+  - AGC-100
+documentation_triggers:
+  - how-to
+covered_by:
+  - AGC-100c-1
+  - AGC-100c-2
+implemented_by: []
+origin_agent: product-owner
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null

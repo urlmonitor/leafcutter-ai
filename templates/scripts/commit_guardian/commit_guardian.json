@@ -528,6 +528,19 @@
                 "pass_filenames": false
             },
             {
+                "id": "check-decision-number-uniqueness",
+                "tier": "judgment",
+                "name": "Check Decision-Number Uniqueness (GE-122a-1 decision namespace)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_adr_collision.py",
+                "language": "system",
+                "files": "^docs/architecture/adrs/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "GE-122a-1: Registers check_adr_collision.py, which was deployed but wired into no manifest (verified 2026-08-17 -- see ADR-029 Amendment 1). Adopts its staged-vs-origin/main-vs-inflight-branch comparison for the decision-number namespace of the whole-collection uniqueness effort, extended with same-commit self-collision detection (_find_self_collisions). Fail-closed on inability to read the sequence (git unavailable, ADR directory absent, remote-branch scan failing); fail-open only for a bug in its own reporting after a completed read (ADR-029 Amendment 1)."
+            },
+            {
                 "id": "check-infra-docs",
                 "tier": "judgment",
                 "name": "Check Infrastructure Documentation",
@@ -1105,6 +1118,19 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "BO-2500b-1: For each AC YAML staged as work_status:done, requires at least one # covers:<ac_id> (Python) or // covers:<ac_id> (JS/TS) tag anywhere under the test tree. Runs with --test-root . so the scan covers the WHOLE project, not just a Python test directory — the script's built-in default (unit_tests) contains no .ts files, so JS-covered ACs would be reported as unproven (BO-2500e-5); this also makes the hook correct in consumer projects whose tests do not live under unit_tests/. node_modules/, .next/ and dist/ are excluded by the scanner. STATIC only — no pytest run at pre-commit time. CI-mode (check_done_proof.py --mode ci) is the authoritative backstop that runs verify_done_eligible on all done ACs so --no-verify and hook-config-less worktrees are still caught (BO-2500b-1-i). Bypassable via SKIP=check-done-proof or --no-verify."
+            },
+            {
+                "id": "check-proof-promise-claim",
+                "tier": "judgment",
+                "name": "Check Proof Promise Claim (BP-1100g-4 — promise vs. claim gate)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_proof_promise_claim.py",
+                "language": "system",
+                "files": "^tickets/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": true,
+                "_comment": "BP-1100g-4: for each staged ticket, extracts the kinds of proof its own ## Test Requirements descriptors promise (the angle value per covers id) and compares them against the kinds already claimed by a test in the tree (BP-1100g-3's collect_test_tag_records — a covers + angle tag on the same test function). A promised kind with no matching claim blocks the commit, naming the ac_id, the stated behaviour, and the missing kind by name. The promise set is the denominator: a kind never promised is never named in a refusal, and a ticket that promises nothing is never refused. Reads only two authored declarations (the Test Requirements angle values and the scanner's per-function records) — never a test's own body (BO-2900a-2). STATIC only — no pytest run at pre-commit time. Bypassable via SKIP=check-proof-promise-claim or --no-verify."
             },
             {
                 "id": "check-ticket-ac-status-parity",

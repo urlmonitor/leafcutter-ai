@@ -155,8 +155,11 @@ Read the file using the `Read` tool. Parse the fields:
 - `work_status` — expected value: `done`
 - `implemented_by` — list of file paths; at least one must be present in the
   branch diff for L2 ACs (L3 may have empty list)
-- `covered_by` — list of test paths; at least one must be non-empty for L2 ACs
-  (L3 may have empty list)
+- `covered_by` — list of test paths; at least one must be non-empty for L2 ACs.
+  L3 ACs may end with an empty list, but the auto-fix step (3c) is still
+  attempted for L3 — BO-202 draws no level qualifier around auto-fix, so a
+  genuine `# covers: <AC-ID>` tag found in the diff must be captured
+  regardless of level
 - `level` — used to skip L0/L1 ACs
 
 ### 2b. Skip L0/L1 ACs
@@ -195,12 +198,22 @@ diff AND in `files_touched`.
 If `implemented_by` is empty or has no intersection with the diff:
 - Check for auto-fix eligibility (Step 3).
 
-### 2f. Verify `covered_by` (L2 ACs only)
+### 2f. Verify `covered_by`
 
 For L2 ACs: `covered_by` must be non-empty (at least one test file path listed).
-L3 ACs: skip this check (empty `covered_by` is permitted).
+If empty, this AC is not yet `passed` for this field.
 
-If `covered_by` is empty for an L2 AC:
+For L3 ACs: an empty `covered_by` remains an acceptable FINAL state (L3 ACs are
+not hard-failed for missing coverage). But BO-202's auto-fix criterion carries
+NO level qualifier — it says covered_by is populated "with test file paths
+from the diff that contain a `# covers: <AC-ID>` tag matching this AC's ID",
+for any AC. Do NOT skip the auto-fix eligibility check for L3: a genuine
+covering tag discovered from the diff must still be captured. Only after that
+attempt finds nothing does an empty `covered_by` stay acceptable for L3
+(KI-ACD-019 / ACD-1900b-5-i — an L3 AC's covered_by was left `[]` though a
+real covering test existed and was independently confirmed discoverable).
+
+If `covered_by` is empty for any AC (L2 or L3):
 - Check for auto-fix eligibility (Step 3).
 
 ---
@@ -224,17 +237,31 @@ If `implemented_by` has no intersection with `files_touched ∩ diff`:
 - Edit the YAML file to add the new entries (append-only).
 - Record: `{ac_id: <ID>, auto_fixed: implemented_by, added: [<paths>]}`
 
-### 3c. Auto-fix `covered_by` (L2 ACs only)
+### 3c. Auto-fix `covered_by`
 
-If `covered_by` is empty for an L2 AC:
+BO-202's criterion carries no L2-only qualifier and no single-directory
+qualifier: it says covered_by is populated "with test file paths from the
+diff that contain a `# covers: <AC-ID>` tag matching this AC's ID" — for any
+AC, wherever that covering test genuinely lives. A mechanism scoped to L2 only,
+or to one hardcoded directory, silently narrows this and misses real coverage
+(KI-ACD-003 / KI-ACD-019 / ACD-1900b-5-i).
+
+If `covered_by` is empty for any AC (L2 or L3):
 - Run:
   ```bash
-  grep -r "# covers: <AC-ID>" tests/
+  grep -rn "# covers: <AC-ID>" tests/ unit_tests/ 2>/dev/null
   ```
+  This searches every directory this project's own test suite actually lives
+  under — most of this repository's tests live under `unit_tests/`, not
+  `tests/`, so a search scoped to `tests/` alone misses the common case. If a
+  project keeps tests under additional roots, extend this search to cover
+  them too; the requirement is "from the diff", never "from `tests/` only".
   If any test file contains a `# covers: <AC-ID>` tag, append that file path
   to `covered_by`.
-- If no `# covers:` tag is found, do NOT auto-fix `covered_by` — record it as
-  a remaining blocker.
+- For an L2 AC: if no `# covers:` tag is found, do NOT auto-fix `covered_by`
+  — record it as a remaining blocker.
+- For an L3 AC: if no `# covers:` tag is found, `covered_by` remains empty —
+  this is permitted for L3 (see Step 2f) and is NOT a blocker.
 
 ### 3d. Schema validation after auto-fix
 
@@ -257,7 +284,9 @@ If the script exits non-zero:
 After all auto-fix attempts, re-check each AC that was modified:
 - `work_status == "done"`?
 - `implemented_by` non-empty with at least one diff-intersecting path?
-- `covered_by` non-empty (L2 ACs only)?
+- `covered_by`: non-empty required for L2 ACs. For L3 ACs, non-empty if 3c's
+  auto-fix found a covering tag; an empty list remains acceptable for L3 when
+  no genuine covering tag was found in the diff (see Step 2f).
 
 Classify each AC as:
 - `passed` — all checks green after verification or auto-fix
@@ -401,6 +430,18 @@ contradict prior runs, or signals suggesting a different agent should handle it.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-26 [llm-expert]: Fixed BO-202 covered_by-autofix scope defects
+  (KI-ACD-003 / KI-ACD-019, ACD-1900b-5-i). Section 3c's header no longer
+  reads "(L2 ACs only)" -- the auto-fix step now runs for L3 ACs too, and
+  Step 2f no longer skips the auto-fix eligibility check for L3 (previously
+  it never reached Step 3, so an L3 AC's covered_by was NEVER auto-fixed
+  even with a genuine covering test in the diff). Section 3c's documented
+  grep mechanism no longer scopes to `tests/` alone -- it now also searches
+  `unit_tests/`, where most of this repository's own suite actually lives,
+  per BO-202's criterion text ("from the diff", no directory qualifier).
+  Widened, not narrowed: L3's "empty covered_by is an acceptable final
+  state" remains true only when auto-fix genuinely finds nothing, not as a
+  reason to skip looking. (#BO-202)
 - 2026-08-18 [python-coder]: Step 1 now calls the shared
   scripts/ac_store/ac_coverage_resolver.py CLI instead of extracting
   l2/l3/ac_path itself, so it resolves the two-key {id, path} form the
