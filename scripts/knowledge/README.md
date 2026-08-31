@@ -18,7 +18,7 @@ not actually write (ADR-034; INF-700c-1 / INF-700c-1-i).
 | File | Purpose |
 |------|---------|
 | `harvest_learnings.py` | The harvester CLI/library. Reads unprocessed `knowledge_captured` events, applies the per-record eligibility rule (no learning text -> never written), routes eligible events by `entry_kind`, tracks processed events via a hash-based idempotency state file, and reports a five-bucket `HarvestResult` plus a line-level malformed-line count. |
-| `context_file_maintenance.py` | Shared write helpers for component `README.md` and skill `PROJECT_CONTEXT.md` files: reverse-chronological entry append with date headings and agent attribution, plus threshold-triggered summary generation. Called by the harvester's write phase for the `per-folder-readme` and `skill-context` entry kinds. |
+| `context_file_maintenance.py` | Shared write helpers for component `README.md` and skill `PROJECT_CONTEXT.md` files: reverse-chronological entry append with date headings and agent attribution, plus threshold-triggered summary generation. **Not called by the harvester.** `harvest_learnings.py` contains zero references to this module — its `_default_capture` does a plain `fh.write(learning_text + "\n")` with no date heading, attribution or structure, for every `entry_kind` including `per-folder-readme` and `skill-context`. Its only in-tree caller is `init_component_readme.py`. Wiring the harvester's write phase through these helpers would be a real improvement; do not assume it has happened. |
 | `init_component_readme.py` | Idempotent CLI to create a component AC directory `README.md` via `context_file_maintenance.create_readme`. |
 
 ## Critical Context

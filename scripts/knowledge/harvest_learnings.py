@@ -45,7 +45,14 @@ Options
 
 Exit codes
 ----------
-0   Success — drained cleanly (no unroutable events left behind).
+0   Drained with nothing left to ROUTE. Read this literally: it does NOT mean
+    the sink is empty and it does NOT mean every record was written. Records
+    classified `no learning text` are deliberately not written and are NOT
+    counted as unroutable, so a run over a corpus that is entirely textless
+    exits 0 while writing nothing at all -- which is the current state of the
+    real 28-record sink. Always read the summary's `no learning text` segment
+    alongside this code; the count is the only thing that distinguishes
+    "nothing to do" from "nothing eligible to do".
 1   Sink file not found or unreadable.
 2   State file exists but cannot be parsed (corrupted).
 3   Drained with unroutable events left behind (see summary for the
@@ -435,6 +442,20 @@ def harvest(
             result.no_learning_text += 1
             result.no_learning_by_kind[entry_kind] = (
                 result.no_learning_by_kind.get(entry_kind, 0) + 1
+            )
+            # Log at WARNING like every sibling branch. Without this the
+            # bucket is the only classification in the module that is
+            # silent on stderr, and over the real 28-record corpus that
+            # takes the run from 28 warnings to zero while the exit code
+            # goes 3 -> 0. A record deliberately not written is still a
+            # record not written, and an operator reading only stderr
+            # would see a clean run.
+            logger.warning(
+                "No learning text in event (entry_kind: %r, destination: %r). "
+                "Nothing written; the record is left unprocessed so a later "
+                "run re-derives it once a real learning body is emitted.",
+                entry_kind,
+                destination,
             )
             # NOT added to new_hashes / seen: the classification must be
             # re-derived from the record on every run, per INF-700c-1 (the
