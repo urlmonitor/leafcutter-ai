@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given an operator reading a closing report that names unbuilt pieces,
@@ -113,10 +113,23 @@ created: 2026-08-26
 change_target: docs
 risk_surface: internal
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: '2026-08-31'
-    note: "Assigned reference-author rather than documentation-expert, on the registry's own selection_criteria ('requires a new reference document in docs/reference/') and following the approved precedent of BO-2900g-5; documentation-expert still sees the change via the documentation_gates post-coder path. Pinned the page path docs/reference/unbuilt-work-reporting.md (new surface -- no completion-output reference page exists) and updated doc_links accordingly. Added estimated_complexity M, a structured it_requirements mapping, expects_from contracts against BO-300d-2/-3/-4, and a three-descriptor test_spec over two angles (seam, criterion). test_required deliberately NOT set false: the criteria's second scenario is a doc-versus-run parity check that no other record covers. criteria untouched; readiness and priority left for the approval gate."
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-08-31'
+  note: 'Assigned reference-author rather than documentation-expert, on the registry''s
+    own selection_criteria (''requires a new reference document in docs/reference/'')
+    and following the approved precedent of BO-2900g-5; documentation-expert still
+    sees the change via the documentation_gates post-coder path. Pinned the page path
+    docs/reference/unbuilt-work-reporting.md (new surface -- no completion-output
+    reference page exists) and updated doc_links accordingly. Added estimated_complexity
+    M, a structured it_requirements mapping, expects_from contracts against BO-300d-2/-3/-4,
+    and a three-descriptor test_spec over two angles (seam, criterion). test_required
+    deliberately NOT set false: the criteria''s second scenario is a doc-versus-run
+    parity check that no other record covers. criteria untouched; readiness and priority
+    left for the approval gate.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []

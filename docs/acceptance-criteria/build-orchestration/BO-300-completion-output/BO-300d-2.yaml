@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a run whose closing report names four unbuilt pieces,
@@ -150,10 +150,21 @@ created: 2026-08-26
 change_target: pipeline
 risk_surface: contract_boundary
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: '2026-08-31'
-    note: "Assigned python-coder (epicRecheckReport() in templates/workflows-js/build-feature.js, per the approved BO-300a-5 precedent). Added estimated_complexity L, a structured it_requirements mapping fixing the closed cause set, naming the field-rename non-fix, forbidding the degenerate all-undetermined implementation and pinning the withheld-verdict regression risk, delivers_to contracts to python-coder and to reference-author (BO-300d-5's taxonomy parity), expects_from against BO-300a-5 and BO-300d-1, a seven-descriptor test_spec over four angles (criterion, reachability, deployed, failure) with test_rationale, and change_target/risk_surface. criteria untouched; readiness and priority left for the approval gate."
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-08-31'
+  note: Assigned python-coder (epicRecheckReport() in templates/workflows-js/build-feature.js,
+    per the approved BO-300a-5 precedent). Added estimated_complexity L, a structured
+    it_requirements mapping fixing the closed cause set, naming the field-rename non-fix,
+    forbidding the degenerate all-undetermined implementation and pinning the withheld-verdict
+    regression risk, delivers_to contracts to python-coder and to reference-author
+    (BO-300d-5's taxonomy parity), expects_from against BO-300a-5 and BO-300d-1, a
+    seven-descriptor test_spec over four angles (criterion, reachability, deployed,
+    failure) with test_rationale, and change_target/risk_surface. criteria untouched;
+    readiness and priority left for the approval gate.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by:
   - BO-300d-2-i

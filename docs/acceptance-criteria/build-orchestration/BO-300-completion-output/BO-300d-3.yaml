@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a closing report naming unbuilt pieces under the causes planned and not
@@ -121,10 +121,20 @@ created: 2026-08-26
 change_target: pipeline
 risk_surface: contract_boundary
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: '2026-08-31'
-    note: "Assigned python-coder, same location as BO-300d-2 (the action and the cause must be produced together). Added estimated_complexity M, a structured it_requirements mapping requiring the action to be derived from the cause in code rather than printed beside it, pinning the shape of the undetermined action and forbidding boilerplate, a delivers_to contract to reference-author, expects_from against BO-300d-2 and BO-300d-2-i, a five-descriptor test_spec over three angles (criterion, reachability, boundary) with test_rationale, and change_target/risk_surface. criteria untouched; readiness and priority left for the approval gate."
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-08-31'
+  note: Assigned python-coder, same location as BO-300d-2 (the action and the cause
+    must be produced together). Added estimated_complexity M, a structured it_requirements
+    mapping requiring the action to be derived from the cause in code rather than
+    printed beside it, pinning the shape of the undetermined action and forbidding
+    boilerplate, a delivers_to contract to reference-author, expects_from against
+    BO-300d-2 and BO-300d-2-i, a five-descriptor test_spec over three angles (criterion,
+    reachability, boundary) with test_rationale, and change_target/risk_surface. criteria
+    untouched; readiness and priority left for the approval gate.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []

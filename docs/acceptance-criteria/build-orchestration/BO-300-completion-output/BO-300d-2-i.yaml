@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a closing report stating that twenty pieces were not built,
@@ -102,10 +102,19 @@ created: 2026-08-26
 change_target: pipeline
 risk_surface: contract_boundary
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: '2026-08-31'
-    note: "Assigned python-coder, same location as BO-300d-2 and to be implemented in the same pass. Added estimated_complexity S, a structured it_requirements mapping requiring a single partitioning step rather than three independent lists and fixing the count and the breakdown as one object, delivers_to/expects_from contracts, a four-descriptor test_spec over three angles (criterion, seam, boundary) with test_rationale, and change_target/risk_surface. criteria untouched; readiness and priority left for the approval gate."
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-08-31'
+  note: Assigned python-coder, same location as BO-300d-2 and to be implemented in
+    the same pass. Added estimated_complexity S, a structured it_requirements mapping
+    requiring a single partitioning step rather than three independent lists and fixing
+    the count and the breakdown as one object, delivers_to/expects_from contracts,
+    a four-descriptor test_spec over three angles (criterion, seam, boundary) with
+    test_rationale, and change_target/risk_surface. criteria untouched; readiness
+    and priority left for the approval gate.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []

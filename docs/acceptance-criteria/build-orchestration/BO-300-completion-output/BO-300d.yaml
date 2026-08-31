@@ -7,8 +7,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   A run that did part of the job says how much is left and what to do about it.
@@ -75,12 +75,39 @@ change_target:
   - docs
 risk_surface: contract_boundary
 amended_by:
-  - reason: "Criteria body corrected 2026-08-26 during L2 decomposition. It enumerated three causes for unbuilt work -- never taken on, arrived after the run started, stopped part-way -- while this record's own notes required an undetermined bucket wherever the distinction cannot be made. Those two halves disagreed, and the criteria half demanded an attribution the run cannot make: nothing in the data flow records what the body of work contained at the moment the plan was fixed, so 'never selected' and 'arrived mid-run' are indistinguishable from what the run holds. That is precisely the specification defect KI-BO-026 records, restated inside the record that exists to fix it. The notes were taken as authoritative and the criteria body now reads 'a cause only where the run can establish that cause from what it holds, and an explicit cause not determined where it cannot'. No obligation was removed: the count, the naming, the per-piece action and the withheld completion claim are all unchanged, and the undetermined bucket is an obligation to be explicit rather than a licence to say nothing. Aligned with the concurrent BO-300a-5 amendment, whose clause reads 'a cause is stated for a piece of unbuilt work only where the drive can establish that cause from what it holds'."
-    by: business-analyst
-  - reason: technical-enrichment
-    by: it-po
-    at: '2026-08-31'
-    note: "Composite enrichment only -- assigned_agent deliberately left null; implementation is assigned on the five children (python-coder on BO-300d-1/-2/-2-i/-3/-4, reference-author on BO-300d-5). Added estimated_complexity L, a structured it_requirements mapping carrying the constraints binding on every child (the establishability table, the do-not-re-specify fence around BO-300a-5, the family's sharpest false green, the undetermined-is-an-obligation rule, the mandatory clean-run control, and the verify-behaviourally rule), an expects_from contract against BO-300a-5, test_required false with a rationale naming where each child's coverage lives, and change_target/risk_surface. criteria untouched -- the 2026-08-26 amendment above stands as written; readiness and priority left for the approval gate."
+- reason: 'Criteria body corrected 2026-08-26 during L2 decomposition. It enumerated
+    three causes for unbuilt work -- never taken on, arrived after the run started,
+    stopped part-way -- while this record''s own notes required an undetermined bucket
+    wherever the distinction cannot be made. Those two halves disagreed, and the criteria
+    half demanded an attribution the run cannot make: nothing in the data flow records
+    what the body of work contained at the moment the plan was fixed, so ''never selected''
+    and ''arrived mid-run'' are indistinguishable from what the run holds. That is
+    precisely the specification defect KI-BO-026 records, restated inside the record
+    that exists to fix it. The notes were taken as authoritative and the criteria
+    body now reads ''a cause only where the run can establish that cause from what
+    it holds, and an explicit cause not determined where it cannot''. No obligation
+    was removed: the count, the naming, the per-piece action and the withheld completion
+    claim are all unchanged, and the undetermined bucket is an obligation to be explicit
+    rather than a licence to say nothing. Aligned with the concurrent BO-300a-5 amendment,
+    whose clause reads ''a cause is stated for a piece of unbuilt work only where
+    the drive can establish that cause from what it holds''.'
+  by: business-analyst
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-08-31'
+  note: Composite enrichment only -- assigned_agent deliberately left null; implementation
+    is assigned on the five children (python-coder on BO-300d-1/-2/-2-i/-3/-4, reference-author
+    on BO-300d-5). Added estimated_complexity L, a structured it_requirements mapping
+    carrying the constraints binding on every child (the establishability table, the
+    do-not-re-specify fence around BO-300a-5, the family's sharpest false green, the
+    undetermined-is-an-obligation rule, the mandatory clean-run control, and the verify-behaviourally
+    rule), an expects_from contract against BO-300a-5, test_required false with a
+    rationale naming where each child's coverage lives, and change_target/risk_surface.
+    criteria untouched -- the 2026-08-26 amendment above stands as written; readiness
+    and priority left for the approval gate.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by:
   - BO-300d-1

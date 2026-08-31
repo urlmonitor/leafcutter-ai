@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a run over a body of work of thirty-seven pieces whose own record of what it
@@ -124,10 +124,22 @@ created: 2026-08-26
 change_target: pipeline
 risk_surface: contract_boundary
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: '2026-08-31'
-    note: "Assigned python-coder, epic completion path in templates/workflows-js/build-feature.js. Added estimated_complexity M, a structured it_requirements mapping requiring both poles of the predicate in one change, forbidding a fail-open default on an unaccounted piece and stating why the clean-run control is load-bearing, a delivers_to contract to reference-author for the meaning of an absent section, expects_from against BO-300d-1 and BO-300a-5, a five-descriptor test_spec over four angles (failure, criterion, reachability, boundary) with test_rationale, and change_target/risk_surface. Deployed coverage is charged once for the family at BO-300d-2 and deliberately not duplicated here. criteria untouched; readiness and priority left for the approval gate."
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-08-31'
+  note: Assigned python-coder, epic completion path in templates/workflows-js/build-feature.js.
+    Added estimated_complexity M, a structured it_requirements mapping requiring both
+    poles of the predicate in one change, forbidding a fail-open default on an unaccounted
+    piece and stating why the clean-run control is load-bearing, a delivers_to contract
+    to reference-author for the meaning of an absent section, expects_from against
+    BO-300d-1 and BO-300a-5, a five-descriptor test_spec over four angles (failure,
+    criterion, reachability, boundary) with test_rationale, and change_target/risk_surface.
+    Deployed coverage is charged once for the family at BO-300d-2 and deliberately
+    not duplicated here. criteria untouched; readiness and priority left for the approval
+    gate.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []
