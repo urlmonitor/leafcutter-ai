@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-26
+last_updated: 2026-08-31
 components:
   - commit_guardian
 related_docs:
@@ -2328,7 +2328,7 @@ nothing and reports success).
 ### KI-CG-034 — `check_output_drift` examines every output file and compares none of them: the scanner and the installer key paths in two namespaces that never intersect
 
 - **Severity:** high
-- **Status:** open
+- **Status:** fixed for the scan/report and trigger sites this entry names — see "Fix landed" below.
 - **Occurrences:** 1
 - **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
 - **Where:** `scripts/commit_guardian/check_output_drift.py` — the directory scan and the
@@ -2392,6 +2392,43 @@ the check. Run it; do not read it.
 **Related.** `ACD-2100d-2` (the acceptance criterion that will repair this as a side-effect of
 being implemented). `KI-CG-019`, `KI-CG-012` (the sibling exit-0-having-checked-nothing
 routes). `KI-BP-016` (the same output-root confusion in the build's doc-index phase).
+
+**Fix landed 2026-08-26 (`BP-100k-3` / `BP-100k-4`), confirmed and locked in with tests by
+`ACD-2100d-2` on 2026-08-31.** Both defects named above are corrected on this branch:
+
+- **Scan/report side (`scripts/commit_guardian/check_output_drift.py`).** The scanner and
+  its lookup keys are now derived from the installer's own `output_mappings` (the same
+  enumeration `build_phases._compute_phase_mappings()` and the module-level `shim_map` in
+  `scripts/build_helpers.py` produce), not a hardcoded directory list — closing the
+  namespace mismatch this entry's "Cause" section describes. The `_compute_output_mappings`
+  docstring claim flagged above as stale and false (that it enumerates four template
+  directories "by hand" and cannot see the route file) has been corrected; the manifest
+  does contain the `workflows-js` entries including `plan-feature.js`.
+- **The unmapped-file case now reports rather than silently skips (`BP-100k-3`).** An
+  output file absent from `output_mappings` prints `UNCOMPARABLE: EXEMPT <key>
+  ground=<ground>` (a declared, grounded exemption via the `drift_gate_exemption_registry`
+  in `commit_guardian.json`) or `UNCOMPARABLE: GAP <key> action=run build.py to register
+  it` when no exemption is declared. Both are counted in the `RESULT` summary line; only
+  GAPs drive a non-zero exit. See `docs/build-drift-hook.md` §2B for the full reporting
+  contract, including the sibling `MISSING` (`BP-100k-6`) and `UNREADABLE` cases added in
+  the same pass.
+- **Trigger side (`scripts/commit_guardian/commit_guardian.json`, `BP-100k-4`).** The
+  `check-output-drift` hook entry now carries `"always_run": true` instead of a `files:`
+  path-prefix filter — correct because the hook scans the whole tree by hash and never
+  consults the staged file list, so a `files:` filter would exclude a deployed file under a
+  differently-configured output root exactly as this entry's "registration compounds it"
+  point warned.
+- **What `ACD-2100d-2` actually did.** Independent re-verification (architect-review,
+  test-writer, python-coder, and test-runner all confirmed this separately on 2026-08-26
+  and again on re-dispatch 2026-08-31) found the scan/report and trigger fixes above already
+  present on this branch before any `ACD-2100d-2` coder work started — landed by the
+  `BP-100k` family, not by this AC. No production edit was made under `ACD-2100d-2`; its
+  contribution is `unit_tests/build_guards/test_acd_2100d_2.py`, which locks the behaviour
+  in with four real-artifact tests: a hand-edited deployed file is reported by name and
+  exit code, the verdict is consumed where "delivered" is decided (not merely computed),
+  re-running the installer over the same working copy removes the reported repair, and a
+  freshly-installed file that differs from its source only in a generation-explained way
+  produces no report.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
 nothing and reports success).
