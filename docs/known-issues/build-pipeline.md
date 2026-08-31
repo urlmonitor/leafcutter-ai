@@ -2700,3 +2700,44 @@ part of the gate, and an empty scope must never be reported the same way as a sa
 done-proof gate's nodeid lookup that cannot match a parametrized test — the fail-*closed*
 counterpart; this one fails open). `BP-1100b-5` (presence-only assertions ceasing to count as
 coverage — the same underlying question of whether a check actually examined anything).
+
+**ADDENDUM, 2026-08-31 (same day, same job): a SECOND defect, and it is the one that hid the
+first.** Observed on PR #634. The job failed — not on a type error, but on the step before it:
+
+```text
++ f0d22094...9ad2aec2 main       -> origin/main  (forced update)
+fatal: origin/main...HEAD: no merge base
+##[error]Process completed with exit code 128.
+```
+
+The step runs `git fetch --no-tags --depth=1 origin "$BASE"` and then computes
+`git diff "origin/$BASE"...HEAD` — a **three-dot** diff, which needs the merge base. A
+`--depth=1` fetch does not reliably make the merge base reachable, and when the base branch
+has moved since checkout (here: another PR merged minutes earlier, hence the *forced update*)
+the diff aborts with exit 128 before mypy is ever invoked.
+
+So the job has two independent ways of telling you nothing:
+
+| | pathspec (above) | shallow fetch (this) |
+|---|---|---|
+| Failure direction | fails **open** — SUCCESS having checked nothing | fails **loud** — exit 128 |
+| Trigger | any PR touching only a top-level `scripts/` file | base branch moves between checkout and fetch |
+| What the reader sees | a green check | a red check that is not about types |
+
+The second is why the first survived. A check that goes red for reasons unrelated to its
+subject trains everyone to discount it — and once discounted, a *green* from that same check
+is not read carefully either. The pathspec bug needed exactly that inattention to last as long
+as it did. Fixing the pathspec without fixing this leaves the signal untrustworthy in the
+other direction.
+
+**Fix.** Either drop `--depth=1` (the checkout already uses `fetch-depth: 0`, so the shallow
+fetch buys nothing and costs the merge base), or switch the diff to two-dot
+`origin/$BASE..HEAD`, which needs no merge base. Prefer dropping `--depth=1`: two-dot changes
+which commits are considered, and the intent here really is "what this PR adds relative to the
+fork point".
+
+**A note on the ordering, since it recurs.** This addendum exists because merging the PR that
+*filed* this KI moved `main` and broke the very next PR's run of the same job. Not a
+coincidence worth writing down for its own sake — but it does mean the failure is most likely
+in exactly the situation where PRs are being merged in sequence, which is when CI signal
+matters most.
