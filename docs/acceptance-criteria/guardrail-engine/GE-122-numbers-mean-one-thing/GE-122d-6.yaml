@@ -97,7 +97,24 @@ doc_links:
     relevance: "The template-is-canonical, build-deploys rule. It is why a registration edited only in a template that the install does not read is a no-op in the layout the commit path actually runs from."
 assigned_agent: python-coder
 estimated_complexity: M
+package_surface: true
 it_requirements:
+  config_schema_fragment:
+    check-identifier-uniqueness:
+      type: object
+      description: "The hooks_manifest entry registering the GE-122 whole-collection numbering pass into the live commit-time registry. Authored in the 55-entry templates/scripts/commit_guardian/commit_guardian.json (the manifest the install deploys the registry from) and observable after build.py as a hook id in the deployed .pre-commit-config.yaml. Carries always_run: true because the pass inspects the whole collection across all namespaces regardless of the staged diff, and verbose: true so the per-namespace inspected-count line required by GE-122d-6-i survives pre-commit's success-output suppression."
+      required:
+        - id
+        - name
+        - entry
+  reference_file_path: "templates/scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/portability/ -q"
+  constraints:
   - "RESOLVE THE TWO-FILE AMBIGUITY BEFORE WRITING ANY REGISTRATION. There are two files named commit_guardian.json and they disagree: templates/scripts/commit_guardian/commit_guardian.json holds 55 entries and is the one the install deploys the registry from; templates/commit-guardian/commit_guardian.json holds 3 entries and is not. GE-122d's coverage matrix names .pre-commit-config.yaml as the live registry, while GE-120c-3's it_requirements treat the 55-entry file as authoritative. Both are consistent once the direction is stated: the 55-entry manifest is the SOURCE the registration is authored in, and the deployed .pre-commit-config.yaml is where the registration must be OBSERVABLE. Assert on the deployed side; author on the source side."
   - "The verification is a real commit, not an invocation of the check script. Invoking the script directly proves the script works and proves nothing about whether the commit path reaches it — which is the entire defect. Stage real files in a real git index in a real built working copy and run the ordinary commit."
   - "The two negative clauses are the deliverable, not decoration. A test that only exercises the positive path passes identically on a check registered in the wrong file, because the positive path can be made to pass by invoking the script from the test. Deregistering and rebuilding, then observing the commit succeed, is the only construction that fails when the wiring is in the file the install ignores."

@@ -9,7 +9,7 @@ status: active
 req_status: draft
 readiness: reviewed
 priority: critical
-work_status: not_started
+work_status: done
 criteria: |
   Given the consumer-simulation project from BP-900h-1 — built into a directory that started
     empty and held only a minimal skills_config.json, never a copy of this repository,
