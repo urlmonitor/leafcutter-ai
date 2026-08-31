@@ -2322,3 +2322,135 @@ than by whoever notices next.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
 nothing and reports success).
+
+---
+
+### KI-CG-20260826-1612 — Every AC guardian filters the index on `--diff-filter=AM`, so a *renamed* AC record is invisible to all six — and renaming is exactly what a tree split requires
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/scripts/commit_guardian/check_ac_parent_covered_by.py:150`,
+  `check_ac_limits.py:354`, `check_ac_schema.py`, `check_ac_governance.py`,
+  `check_ac_circular_deps.py`, `check_ac_pattern_refs.py` — all six read
+  `git diff --cached --name-only --diff-filter=AM`. Nine further guardian hooks
+  (`transform_*`, `check_package_surface_declaration`, `check_surface_components_e2/e3`)
+  use the same filter and are likely affected the same way.
+
+**The mechanism.** `--diff-filter=AM` selects **A**dded and **M**odified paths. A rename is
+status **R**, so a staged rename is silently absent from every one of these hooks' file lists.
+The record is fully staged — `git status` shows it, the commit will contain it — and the gate
+that exists to validate it never receives its path.
+
+**Why this is worse than it sounds.** The `ac-tree-split` skill *mandates* renaming. Pattern C
+step 6a: "Rename the file to reflect the new parent prefix … the old filename must no longer
+exist," because `check_ac_limits.py` attributes a child to its parent by deriving the parent
+from the child's **ID string** (GE-106), so a moved child that kept its prefix still counts
+against the old parent. The skill is right that the rename is unavoidable. The consequence is
+that **the single operation most likely to break parent/child back-links produces a commit in
+which the back-link gate cannot see any of the moved records.**
+
+**Evidence — controlled A/B, same store state, same hook, one variable.** Splitting `BP-100k`
+into `BP-100k` + `BP-100n` moved three L2s (`BP-100k-6/-7/-8` → `BP-100n-1/-2/-3`).
+`BP-100n-1` was then deliberately removed from `BP-100n`'s `covered_by` — a real violation of
+exactly what this hook enforces:
+
+| how the hook was invoked | result |
+|---|---|
+| via the git index, children staged as `R` | **exit 0**, no output |
+| via `HOOK_TEST_FILES`, same broken store | **exit 1**, `BLOCKED — child AC 'BP-100n-1' is staged but parent AC 'BP-100n' does not include 'BP-100n-1' in its covered_by field` |
+
+The hook is not lenient about renames; it is blind to them. Confirmed the filter is the cause:
+`git diff --cached --name-only --diff-filter=AM` listed 4 of the 7 staged AC records, and
+`--diff-filter=R` listed the 3 missing ones.
+
+**Why the split that found it is nonetheless verified.** Rename detection was disabled locally
+(`git config diff.renames false`), which makes git report the moves as Add + Delete so the `AM`
+filter includes them; all six gates were then re-run and passed with the moved children genuinely
+inspected. That is the workaround, and it is also the shape of the fix.
+
+**Blast radius beyond tree splits.** Any AC record that is renamed — a corrected ID, a record
+moved between feature folders, a Pattern A/C split — passes all six required AC gates unexamined.
+`check_ac_limits` partially escapes only by accident: it keys on the *parent* being staged, and in
+a split the parents are `M`/`A`. Change a child's ID without touching either parent and it is blind
+too.
+
+**Suggested fix.** Add `R` to the filter (`--diff-filter=AMR`) in the shared staged-path helpers.
+For a rename, git's `--name-only` reports the destination path, which is the one that should be
+validated. Worth doing in one pass across the family rather than per hook, since all fifteen
+copies of this line drifted from a common ancestor.
+
+**Relationship to `KI-CG-001`.** Adjacent but distinct, and both should stay. `KI-CG-001` is
+"the file was never staged, so the hook never saw it". This is "the file **was** staged and the
+hook still never saw it". The first is fixed by staging discipline — the standing
+"stage the parent alongside the child" rule in `CLAUDE.md`. That rule does **not** help here:
+you can stage every file involved, correctly, and the gate still reports a clean pass.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
+nothing and reports success).
+
+---
+
+### KI-CG-20260831-0713 — `check-hook-trigger-reachability` blocks EVERY commit in a consumer project that tracks no Python
+
+- **Severity:** blocker
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/commit_guardian.json:1082-1093` (the gate's
+  own manifest entry), `templates/scripts/commit_guardian/check_hook_trigger_reachability.py`,
+  and `hook_trigger_reachability_exemption_registry` in the same config
+
+**The defect.** The gate shipped by `BP-100k-4` is `always_run: true`, `pass_filenames: false`,
+and exits non-zero when any registered hook's `files` pattern matches no tracked path. It is
+rendered into every consumer's `.pre-commit-config.yaml` — `_render_hook_yaml` in
+`scripts/build_precommit.py` iterates the whole `hooks_manifest` with no tier filtering and no
+opt-out. Two registered hooks trigger on `files: '\.py$'`: `check-placeholder-defaults` and
+`check-exception-handling`. **A consumer project containing no Python therefore cannot make a
+commit at all.**
+
+**Evidence — reproduced independently, twice, against the real registry.**
+Synthetic consumer repos, gate executed as a process with cwd inside the probe:
+
+| probe | result |
+|---|---|
+| Fresh TypeScript consumer (`src/index.ts`, `README.md`, `.gitignore`) | `exit 1` · `RESULT total=52 unreachable=27 exempt=9` |
+| **Fully-onboarded** consumer — adds `docs/*.md`, `docs/components.json`, `docs/roadmap.json`, `docs/acceptance-criteria/*.yaml`, `tickets/*.md`, `docs/product-truth/*.json` | **still `exit 1`** · `RESULT total=52 unreachable=2 exempt=9` |
+
+The onboarded residue is exactly the two language-shaped triggers:
+
+```
+UNREACHABLE: check-placeholder-defaults reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
+UNREACHABLE: check-exception-handling   reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
+```
+
+So this is not a not-yet-onboarded edge case. There is no amount of correct onboarding that
+clears it short of adding a `.py` file to the consumer's own tracked tree.
+
+**Why the blast-radius sweep missed it.** `BP-100k-4`'s consumer-layout check was done — nine
+grounded exemptions exist and they are good ones — but every exemption reasons about a
+**path-shaped** pattern ("this path only exists inside the vendored package / the gitignored
+deploy mirror"). No one asked the different question a **language-shaped** pattern raises:
+*what if the consumer simply is not a Python project?* The package is self-hosted in Python, so
+`\.py$` always matches here, and the gate is green in the only repo it was exercised in.
+
+Two further gates look like the same omission and have no exemption:
+`check-surface-components-e3` (targets `config/agent_registry.json` — the **same file**
+`check-agent-spawn-consistency` was exempted for) and `check-eval-staleness`.
+
+**Suggested fix (not applied).** Distinguish "this trigger is dead" from "this repository has
+none of that kind of file yet". A pattern that names a language or file family should be
+unreachable only when the repository *could* have such files. Options: extend the exemption
+vocabulary with a language-conditional ground; skip language-shaped triggers when the
+repository tracks zero files of that type; or make the gate advisory in consumer installs and
+blocking only in the package's own checkout. Whichever is chosen, add a consumer-layout probe
+that tracks **no** `.py` to the test suite — the existing consumer fixture has Python in it,
+which is why this passed.
+
+**Found by** an adversarial review of the shipped `ab9e91c41`, then independently reproduced
+before filing.
+
+**Pattern:** the inverse of this register's usual M5 — not a gate that passes without checking,
+but a gate that **fails without a defect**. Same root cause though: the gate cannot tell
+"nothing to check" from "something is wrong".

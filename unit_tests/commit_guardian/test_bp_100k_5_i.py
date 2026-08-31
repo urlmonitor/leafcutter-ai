@@ -181,6 +181,11 @@ class TestUnexaminedPopulationReachesZeroByRegistrationNotExemption(unittest.Tes
     be able to fake that zero; and a hand-edit to a file drawn from the
     newly-covered population must be caught."""
 
+    _workspace: Path
+    _build_result: subprocess.CompletedProcess[str]
+    _hook: Path
+    _manifest_path: Path
+
     @classmethod
     def setUpClass(cls) -> None:
         tmpdir = tempfile.TemporaryDirectory()
@@ -258,6 +263,7 @@ class TestUnexaminedPopulationReachesZeroByRegistrationNotExemption(unittest.Tes
         combined = result.stdout + result.stderr
         match = _RESULT_LINE_RE.search(combined)
         self.assertIsNotNone(match, f"No RESULT summary line. Output:\n{combined}")
+        assert match is not None  # narrowing for mypy; assertIsNotNone above is the real check
         verified = int(match.group(2))
         self.assertEqual(
             len(self._actual_files),
@@ -371,6 +377,7 @@ class TestUnexaminedPopulationReachesZeroByRegistrationNotExemption(unittest.Tes
         )
         match = _RESULT_LINE_RE.search(combined)
         self.assertIsNotNone(match, f"No RESULT summary line. Output:\n{combined}")
+        assert match is not None  # narrowing for mypy; assertIsNotNone above is the real check
         drifted = int(match.group(6))
         self.assertEqual(
             0,
