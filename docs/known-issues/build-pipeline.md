@@ -2411,3 +2411,61 @@ it "does not raise or return an error").
 **Pattern:** a check that mangles the path it was given and reports the result as the file's
 absence — the same family as `KI-BP-018`, where the guard's own input is wrong rather than the
 thing it guards.
+
+---
+
+### KI-BP-20260831-1014 — Seven declared package sources are skipped with no log at all, and BP-900g-9's scope line used "does it warn" as the boundary the AC says is not the observable
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/build_phases.py` — `build_vision`, `build_components_registry`,
+  `build_ui_context`, `build_antigravity_instructions`, `build_feedback`'s `config_src` check,
+  `build_commit_guardian`'s manifest check, and two `manifest_path.exists()` checks in
+  `build_ticket_lifecycle`
+
+**Symptom.** Each of these names a specific package source literally and, when it is absent,
+skips it with **no output on any stream** — a bare `return 0` or an `if ...exists():` with no
+`else`. The build then reports success. So a missing `VISION.template.md`, a missing
+`feedback_categories.yaml`, or a missing `commit_guardian.json` produces an install quietly
+lacking that artefact, and nothing anywhere says so.
+
+These are quieter than the defect BP-900g-9 just closed. That one at least printed a warning
+before continuing; these print nothing.
+
+**The scope line that left them, recorded honestly because it is the more useful finding.**
+BP-900g-9 (`n_location_rule: all`) converted eight sites and deferred these seven. The line
+applied was: in scope = a literally-named declared source whose absence produces a WARNING and
+the build continues; out of scope = skipped silently with no log. That line is what this entry
+exists to question.
+
+Review ruled it **"defensible but convenient"**, and the reason is sharp: BP-900g-9's own
+central constraint is that *the observable is the exit code, not the log text*. Using "does it
+currently emit a warning" as the scope boundary therefore contradicts the AC it was scoping —
+it makes the presence of a log line, which the AC says is not the thing that matters, decide
+which sites get fixed. A site that fails silently is not less in need of a non-zero exit than
+one that fails loudly; if anything it is more.
+
+The line was drawn mid-implementation, after the enforcement set had already grown from two
+sites to six across three passes, and its real function was to stop the ticket expanding
+indefinitely. That is a legitimate thing to want and an illegitimate thing to dress up as a
+principle. Recorded here so the next person decides on the merits rather than inheriting the
+rationalisation.
+
+**Why it was not simply folded in anyway.** These are single named package templates and
+config files, not entries in a drifting hand-maintained map, so the recurrence risk that makes
+`KI-BP-018` a blocker is lower. And the change is not free: making `build_vision` fail closed
+means a package missing its vision template can no longer build at all, which may be the right
+answer but is a behaviour change deserving its own decision rather than a silent ride-along on
+another ticket.
+
+**Fix direction.** Decide the question the scope line dodged: is a silently-skipped declared
+source in scope for "a declared deploy entry whose source is missing fails the build"? If yes,
+extend `DeploySourceMissingError` to these seven, and note that `build_vision` and friends are
+write-if-absent scaffolds whose *target* absence is normal — it is the missing *source template*
+that must fail. If no, say so explicitly in BP-900g-9's notes so the exclusion is a recorded
+decision rather than an artefact of how the audit was framed.
+
+**Pattern:** a scope boundary drawn on a property the governing criterion explicitly says is not
+the observable.
