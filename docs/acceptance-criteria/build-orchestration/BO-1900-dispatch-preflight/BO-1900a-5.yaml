@@ -1,0 +1,98 @@
+id: BO-1900a-5
+components:
+  - build_orchestration
+  - skills_system
+title: "A phase agent is not dispatched into a run that withholds the capabilities its own instructions require"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run is about to dispatch a phase agent whose own instructions require it to
+    invoke two named quality capabilities on every source file it changes,
+  When the run prepares that dispatch and compares the capabilities the agent would be
+    able to invoke against the capabilities its instructions require,
+  Then a dispatch that would leave either required capability out of reach is held back
+    before the agent is spawned,
+    And the run states which required capability was out of reach and which agent
+      required it,
+    And a dispatch in which both required capabilities are within reach proceeds, and
+      once the agent returns, the run can show that each of the two capabilities was
+      actually invoked during that dispatch,
+  So a craft is never asked to perform a check the run has already made impossible.
+depends_on:
+  - BO-1900a
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The dispatch topology this AC constrains — the point at which a run decides what a phase agent receives."
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: "Enumerates the channels through which an agent receives context at invocation. The capability grant is the channel this AC makes checkable rather than incidental."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1900-dispatch-preflight/BO-1900a-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling precedent: a live-observed dispatch defect recorded under this L1 on the same principle — nothing is spawned against a dispatch that has not been proven fit."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1900a-5-i
+  - BO-1900a-5-ii
+  - BO-1900a-5-iii
+  - BO-1900a-5-iv
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  ORIGIN — OBSERVED LIVE, 2026-08-31 (BrainCandy). A fast-lane run reached its coder
+  phase. The coding craft returned, unprompted, in its own sign-off: its dispatch granted
+  it no means to invoke the two quality capabilities its own instructions mandate on every
+  source file it touches, so it performed manual substitutes and flagged the substitution
+  for supervisor awareness. That agent behaved well. The system did not.
+
+  WHY THIS IS A DISPATCH-FITNESS DEFECT AND NOT A CODER DEFECT. The agent's instructions
+  and the run's grant disagreed, and nothing in the run compared them. The disagreement
+  was discoverable only because one agent volunteered it; a less careful craft would have
+  proceeded silently. The failure is therefore located at the moment the dispatch is
+  prepared, which is this L1's subject: nothing is spawned against a dispatch that has not
+  been proven fit.
+
+  THE CLAUSE THAT MAKES THIS PROVABLE. The third Then clause — that a well-formed dispatch
+  proceeds AND the run can afterwards show each capability was actually invoked — is
+  load-bearing and must not be dropped in decomposition. Without it the AC is satisfiable
+  by a check that reads instructions and grants as text and never establishes that anything
+  ran. This repository rejects presence-only assertions as coverage: the proof obligation
+  here is to EXECUTE a dispatch and observe what the agent could and could not do. A test
+  that asserts a capability name appears in a template or a grant list proves nothing about
+  a run.
+
+  SCOPE — NOT LANE-SPECIFIC, DELIBERATELY. The defect was observed on the fast lane, but the
+  instructions that mandate the capabilities are the craft templates themselves, which the
+  heavy pipeline dispatches too. Wording this against one lane would leave every other
+  dispatch unchecked and would make the AC unprovable for the coding craft, which performs
+  no reading. BO-1900a-5-iv states the per-craft coverage obligation explicitly.
+
+  BOUNDARY vs BO-2400g-2. That AC requires the fast lane's reading to be substantive and to
+  declare examinations it could not perform. Same SHAPE — a check that is present but inert
+  is worse than an absent one, because it reads as coverage — but a different cause: there
+  the reader lacks a ticket to bind to; here the craft lacks the means to invoke a
+  capability. An implementer who satisfies one and marks the other done has closed half the
+  hole.
+
+  PLACEMENT OPTION LEFT OPEN, NOT FORECLOSED. This is recorded as one L2 with four L3s under
+  the existing preflight L1; the same idea could instead be promoted to a first-class
+  capability contract at L1 (BO-1900 has free L1 slots), and that is the user's call rather
+  than a decision this placement should silently settle.
+
+  NOT SETTLED HERE — IT PO TERRITORY. How a craft's required capabilities become declarable
+  and readable before dispatch (a field on the craft's own declaration, a registry entry, or
+  a run-side grant table) is a mechanism choice, not a behaviour. BO-1900a-5-i states only
+  that an undeclared requirement must read as unconfirmed rather than as satisfied.

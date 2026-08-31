@@ -1,0 +1,64 @@
+id: BO-1900a-5-iv
+components:
+  - build_orchestration
+  - review_system
+  - testing_quality
+title: "Every craft the run dispatches is checked, not only the one that writes code"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run that dispatches, in sequence, a craft that writes tests, a craft that writes
+    code, and a craft that reads the change for defects, and each of the three has its own
+    instructions requiring it to invoke at least one named capability,
+  When the run prepares each of those three dispatches,
+  Then a fit comparison is performed for every one of the three, not only for the craft
+    that writes code,
+    And a capability out of reach of the craft that reads the change is held back and named
+      in the same way as one out of reach of the craft that writes code,
+    And adding a further craft to the run brings that craft's own required capabilities into
+      the same comparison without the comparison being restated for it,
+  So the guarantee does not depend on which craft happened to be observed failing.
+depends_on:
+  - BO-1900a-5
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The phase sequence this AC ranges over — the run dispatches several crafts, and the fitness obligation attaches to each dispatch rather than to a nominated one."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS EXISTS. The 2026-08-31 incident was observed on the coding craft only because that
+  is the craft that happened to volunteer the information. The reading craft's instructions
+  also depend on a capability of their own, and whether its dispatch can invoke it is
+  UNVERIFIED as of this record's authoring — that unverified status is precisely what this AC
+  forces to an answer instead of leaving to the next chance disclosure. Scoping a fix to the
+  coding craft would close the one hole that was seen and leave the others exactly as they
+  were.
+
+  THE THIRD CLAUSE IS THE ANTI-ENUMERATION CLAUSE. Requiring that a newly added craft is
+  covered without restating the comparison rules out an implementation that hard-codes a list
+  of crafts to check. Such a list is correct on the day it is written and silently wrong from
+  the next craft onward, and its wrongness is invisible — a craft absent from the list is
+  simply never checked, which looks the same as a craft that passed.
+
+  PROOF OBLIGATION. Execute a run over the three crafts and observe a comparison occurring for
+  each. The strongest test withholds a capability from a craft OTHER than the coding one and
+  asserts it is caught, because an implementation wired only to the observed craft passes every
+  test written around that craft.
+
+  BOUNDARY. This AC says nothing about WHICH capabilities any given craft requires — that is a
+  property of each craft's own instructions, not of the run. It requires only that the
+  comparison ranges over every dispatch the run makes.

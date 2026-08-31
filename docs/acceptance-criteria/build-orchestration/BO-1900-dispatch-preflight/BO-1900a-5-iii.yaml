@@ -1,0 +1,72 @@
+id: BO-1900a-5-iii
+components:
+  - build_orchestration
+  - skills_system
+title: "A craft's sign-off carries no outcome for a capability it had no means to invoke"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a craft completed its work in a run that left one of the two quality capabilities
+    its own instructions require out of that craft's reach,
+  When the craft's sign-off is assembled,
+  Then the sign-off offers no pass-or-fail outcome for the capability that was out of
+    reach,
+    And it instead names that capability as one the run made unavailable to it,
+    And a sign-off that states an outcome for a capability the craft could not invoke is
+      refused by the run,
+  So no craft produces a result line for a check that never ran.
+depends_on:
+  - BO-1900a-5
+doc_links:
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: "The pattern this AC closes: a report field whose value can be supplied without the check that would produce it, so the report attests to work that never happened."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: related
+    status: exists
+    relevance: "Holds KI-BP-20260831-0940, which governs the exact wording of this record's final Then clause. See this record's notes before rewording it."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE SHARPEST OF THE FIVE, AND THE EASIEST TO LOSE. The craft's own instructions ask it to
+  report a pass-or-fail outcome for each of the two mandated quality capabilities. So a craft
+  that cannot invoke them is nonetheless asked to fill in a line describing their result. The
+  craft observed on 2026-08-31 refused and said so; a less careful one fills in "pass", and
+  the sign-off then carries a result no capability produced. That is a phantom-done vector
+  sitting in the craft's own instructions, and it is live today regardless of whether the
+  dispatch is ever fixed.
+
+  WHY IT IS SEPARATE FROM BO-1900a-5. The parent prevents the bad dispatch. This AC assumes
+  the bad dispatch happened anyway and constrains what may then be claimed. Both are needed:
+  a run can be mis-provisioned in ways the comparison does not anticipate, and the sign-off
+  must still not be able to attest to a check that did not run.
+
+  WORDING IS LOAD-BEARING — DO NOT "SIMPLIFY" THE FINAL CLAUSE. It reads "no craft produces a
+  result line" rather than the more natural "no result is written". This is deliberate.
+  KI-BP-20260831-0940 records that derive_declares_side_effect is negation-blind: it matches
+  durable-effect phrases inside a Then block without regard to a preceding negator, so
+  "nothing is written" contains "is written" and derives true. A refusal criterion phrased the
+  natural way is therefore forced to declare the very side effect whose absence is its entire
+  content. The same workaround is in force on BO-3500a-1-i. Do not restore the plainer wording
+  until the derivation handles negation; if this record is reworded and the commit is then
+  refused for an undeclared side effect, this note is the reason.
+
+  PROOF OBLIGATION. Run a craft in a dispatch with one capability withheld and inspect the
+  sign-off it produces: assert no outcome value is offered for that capability, and assert
+  that a sign-off which does offer one is refused. Both halves must be executed — a test that
+  only checks the honest craft's output passes on a system with no enforcement at all, since
+  today's craft already volunteers the disclosure by good behaviour rather than by
+  construction.
