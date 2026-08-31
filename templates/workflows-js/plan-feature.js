@@ -1670,7 +1670,8 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
 }
 
 // ---------------------------------------------------------------------------
-// Repository-anchored support-script resolution (ACD-2100a-1 / KI-ACD-004).
+// Repository-anchored support-script resolution
+// (ACD-2100a-1 / KI-ACD-004, extended by ACD-2100a-3 / KI-ACD-009 cause 1).
 // ---------------------------------------------------------------------------
 //
 // `{{config.output_root}}` is a BUILD-TIME placeholder that resolves to a bare
@@ -1688,33 +1689,88 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
 // ABSOLUTE path must then be embedded literally into any later command that
 // needs it, so the run's own record of what it issued names a real,
 // repository-anchored location rather than a cwd-relative placeholder.
+//
+// A run started with cwd set to a LINKED `git worktree` (e.g. the very
+// AC-authoring worktree this route creates) is itself "inside a git
+// repository" by `git rev-parse --show-toplevel`'s definition — but that
+// command reports the WORKTREE'S OWN directory, which holds no installed
+// `.leafcutter/` of its own (ADR-001: it is untracked build output that only
+// `install_shims` populates on the project's own checkout; `git worktree add`
+// only ever checks out TRACKED content). `git rev-parse --git-common-dir`
+// does not have that problem: it always resolves to the ONE `.git` directory
+// shared by the main checkout and every one of its linked worktrees,
+// regardless of which of them the command runs from — so its parent
+// directory is "the repository being operated on" even from inside a
+// worktree (KI-ACD-009 cause 1).
+
+/**
+ * Build the POSIX-sh fragment that resolves `$REPO_ROOT` to the repository
+ * this process is actually operating on, worktree-aware, or prints a
+ * diagnostic to stderr and exits non-zero if none resolves. Shared by every
+ * repository-anchored resolution/read command below — never duplicated —
+ * so a future fix to the resolution order only has to land here once.
+ *
+ * Resolution order:
+ *   1. `git rev-parse --git-common-dir`'s parent directory. This is the same
+ *      answer whether the current directory is the main checkout or a linked
+ *      worktree of it, because all worktrees of a repository share one
+ *      `.git` directory (KI-ACD-009 cause 1) — unlike `--show-toplevel`,
+ *      which reports whichever worktree happens to be current.
+ *   2. Otherwise (the ADR-001 self-hosting layout: cwd is the untracked
+ *      workspace parent, and the repository lives one level down as one of
+ *      its immediate child directories), probe immediate non-dot children
+ *      the same way.
+ *   3. If neither resolves, print a diagnostic naming what could not be
+ *      found to stderr and exit non-zero — NEVER fall back to a cwd-relative
+ *      guess that could silently select the wrong physical copy.
+ *
+ * Kept to single-line statements (no embedded newlines) so any command built
+ * from it survives this file's existing
+ * "Run the following command...:\n<cmd>\n" single-line convention.
+ *
+ * @param {string} targetDescription - Human-readable name of what could not
+ *                                      be found, used only in the failure
+ *                                      diagnostic printed to stderr.
+ * @returns {string} A POSIX-sh fragment (semicolon-terminated statements,
+ *                    leaves `$REPO_ROOT` populated on success).
+ */
+function _buildRepoRootResolutionSnippet(targetDescription) {
+  return (
+    "REPO_ROOT=$(GC=$(git rev-parse --git-common-dir 2>/dev/null); " +
+    "if [ -n \"$GC\" ]; then (cd \"$(dirname \"$GC\")\" 2>/dev/null && pwd); fi); " +
+    "if [ -z \"$REPO_ROOT\" ]; then " +
+    "REPO_ROOT=$(for d in */; do " +
+    "gc=$(git -C \"$d\" rev-parse --git-common-dir 2>/dev/null); " +
+    "if [ -n \"$gc\" ]; then (cd \"$d\" && cd \"$(dirname \"$gc\")\" 2>/dev/null && pwd); fi; " +
+    "done | sort -u | head -n1); " +
+    "fi; " +
+    "if [ -z \"$REPO_ROOT\" ]; then " +
+    "echo \"Could not resolve a repository containing " + targetDescription + " from the current directory\" >&2; " +
+    "exit 1; " +
+    "fi; "
+  );
+}
 
 /**
  * Build the single-line POSIX-sh resolution command dispatched to a
  * status-checker agent to find the ABSOLUTE, repository-anchored location of
- * a support file installed under `.leafcutter/<relPath>`.
+ * a support file installed under `.leafcutter/<relPath>`, via
+ * _buildRepoRootResolutionSnippet() above.
  *
- * Resolution order:
- *   1. If the current directory is itself inside a git repository, that
- *      repository's toplevel IS "the repository being operated on".
- *   2. Otherwise (the ADR-001 self-hosting layout: cwd is the untracked
- *      workspace parent, and the repository lives one level down as one of
- *      its immediate child directories), probe immediate non-dot children
- *      for a git toplevel.
- *   3. Print the resolved absolute `.leafcutter/<relPath>` on success. If no
- *      repository resolves, OR the resolved path does not exist on disk,
- *      print a diagnostic naming the location that could not be found to
- *      stderr and exit non-zero — NEVER fall back to printing a cwd-relative
- *      path that could silently select the wrong physical copy.
- *
- * Kept to a single line (no embedded newlines) so it survives this file's
- * existing "Run the following command...:\n<cmd>\n" single-line convention.
+ * Prints the resolved absolute `.leafcutter/<relPath>` on success. If no
+ * repository resolves, OR the resolved path does not exist on disk, prints a
+ * diagnostic naming the location that could not be found to stderr and exits
+ * non-zero — NEVER falls back to printing a cwd-relative path that could
+ * silently select the wrong physical copy.
  *
  * Shared mechanism: every `{{config.output_root}}`-relative dispatch site in
- * this workflow is meant to resolve through this same function — this file's
- * worktree-setup step consumes it directly below; ACD-2100a-3's registry read
- * and ACD-2100a-4's pause-store reads/writes are the sibling call sites named
- * in this AC's contract and are expected to consume it too.
+ * this workflow is meant to resolve through this same function (or
+ * buildRepoAnchoredReadCommand() below, for sites that need the file's
+ * contents rather than its path) — this file's worktree-setup step consumes
+ * it directly below, and the Pre-Stage-0 registry-permission read
+ * (ACD-2100a-3) consumes buildRepoAnchoredReadCommand(); ACD-2100a-4's
+ * pause-store reads/writes are the remaining sibling call site named in this
+ * AC's contract and are expected to consume it too.
  *
  * @param {string} relPath - Path under the repo's `.leafcutter/` support
  *                            directory, e.g. "scripts/setup_ticket_worktree.py".
@@ -1723,23 +1779,45 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
 function buildRepoAnchoredResolutionCommand(relPath) {
   const target = ".leafcutter/" + relPath;
   return (
-    "REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null); " +
-    "if [ -z \"$REPO_ROOT\" ]; then " +
-    "REPO_ROOT=$(for d in */; do " +
-    "r=$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null); " +
-    "if [ -n \"$r\" ]; then echo \"$r\"; fi; " +
-    "done | sort -u | head -n1); " +
-    "fi; " +
-    "if [ -z \"$REPO_ROOT\" ]; then " +
-    "echo \"Could not resolve a repository containing " + target + " from the current directory\" >&2; " +
-    "exit 1; " +
-    "fi; " +
+    _buildRepoRootResolutionSnippet(target) +
     "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
     "if [ ! -f \"$SCRIPT\" ]; then " +
     "echo \"Could not resolve a repository-anchored " + target + " (looked for: $SCRIPT)\" >&2; " +
     "exit 1; " +
     "fi; " +
     "echo \"$SCRIPT\""
+  );
+}
+
+/**
+ * Build the single-line POSIX-sh command dispatched to a status-checker
+ * agent to READ THE CONTENTS of a support file installed under
+ * `.leafcutter/<relPath>`, resolved via the SAME
+ * _buildRepoRootResolutionSnippet() as buildRepoAnchoredResolutionCommand()
+ * above — never a second, independent resolver (ACD-2100a-3's implementation
+ * notes: two resolvers on one startup path is how KI-ACD-009's five sites
+ * came to disagree in the first place).
+ *
+ * Prints the file's raw bytes to stdout on success. On failure, prints a
+ * diagnostic naming the unresolved location to stderr and exits non-zero —
+ * never a silent fallback to a cwd-relative read that could report a false
+ * "missing"/"denied" verdict for a registry that genuinely exists in the
+ * repository being operated on (KI-ACD-009 cause 1).
+ *
+ * @param {string} relPath - Path under the repo's `.leafcutter/` support
+ *                            directory, e.g. "config/agent_registry.json".
+ * @returns {string} A single-line POSIX shell command.
+ */
+function buildRepoAnchoredReadCommand(relPath) {
+  const target = ".leafcutter/" + relPath;
+  return (
+    _buildRepoRootResolutionSnippet(target) +
+    "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
+    "if [ ! -f \"$SCRIPT\" ]; then " +
+    "echo \"Could not resolve a repository-anchored " + target + " (looked for: $SCRIPT)\" >&2; " +
+    "exit 1; " +
+    "fi; " +
+    "cat \"$SCRIPT\""
   );
 }
 
@@ -1878,11 +1956,17 @@ const sessionSlug = component
 // the mis-assigned target of the original incident, can never receive it).
 const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "worktree-agent";
 
+// Read the registry through the shared repository-anchored resolution
+// (ACD-2100a-1's buildRepoAnchoredReadCommand(), not a second, independent
+// `{{config.output_root}}`-relative `cat`) so this check reaches the
+// project's real registry even when the run is started from inside a linked
+// git worktree that holds no `.leafcutter/` of its own (ACD-2100a-3 /
+// KI-ACD-009 cause 1).
 let permissionResult;
 try {
   permissionResult = await agent(
     "Run the following command and return ONLY the raw stdout output:\n" +
-    "cat {{config.output_root}}/config/agent_registry.json\n" +
+    buildRepoAnchoredReadCommand("config/agent_registry.json") + "\n" +
     "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number> }",
     { agentType: "status-checker", label: "resolve-workspace-setup-permission" }
   );
