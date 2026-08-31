@@ -337,6 +337,50 @@ consumer is NOT sufficient on its own. If no test ever feeds the producer's real
 output into the real consumer, the seam is unverified and the legacy or
 never-invoked path can survive a fully green suite.
 
+#### Rule 3 hand-off record — exactly one answer, every time (BP-1100g-5)
+
+Rule 3 above tells you what to decide. This subsection tells you what to
+**record** once you have decided it — the decision is worthless to a later
+reader if it lives only in your own reasoning and never reaches the ticket's
+hand-off record.
+
+For every ticket you sign off (one ticket is one piece of work — never a
+whole run, which may hand off several tickets), your `completion_manifest:`
+block MUST carry exactly one `cross_layer_seam_answer` entry. The full shape
+definition lives in the `signoff` skill §2b.2 — read it before writing this
+key for the first time. Summary:
+
+- **Covered** — a seam exists and you tested it. Record `result: covered`
+  plus `producing_side` and `consuming_side` naming both real sides. Do NOT
+  write a bare "seam covered: yes" — a reader cannot act on that without
+  knowing which two things were pinned together.
+- **Not applicable** — no seam exists for this work. Record
+  `result: not_applicable` plus a non-empty `reason`. A fabricated seam claim
+  to avoid writing an honest `not_applicable` is worse than the honest
+  answer: it costs a real test's worth of effort and produces a false
+  record. "No seam applies, because this work is a pure function with no
+  consumer outside its own module" is a complete, conforming answer.
+
+This is a **declaration you are making, not evidence that the seam test is
+any good.** Nothing downstream inspects your test to check the declaration
+is true, and the answer feeds no done/pass/eligibility decision anywhere —
+which is exactly why there is no incentive to fabricate "covered."
+
+**Exactly once, never twice — the BO-1000b-1-i trap.** Emit this key from a
+single branch of your own decision (covered XOR not_applicable), never from
+an unconditional line plus a conditional one. BO-1000b-1-i shipped a
+double-recording bug that shape: a skip-branch record was added alongside a
+pre-existing unconditional record after the same if/else, so a skipped step
+recorded twice. Write your Rule 3 hand-off as one
+`if seam_exists: emit covered else: emit not_applicable` — a single
+emission point, not two independent ones that could both fire.
+
+**Scope: per ticket, never per run.** If you are signing off multiple
+tickets in one dispatch, each ticket's own `completion_manifest` gets its
+own `cross_layer_seam_answer`, freshly derived from that ticket's own work.
+Never copy a prior ticket's answer forward into a sibling ticket's manifest
+in the same run.
+
 ### Rule 4 — Test-repair commits must not change production behavior.
 
 If the classification concludes that production code must change, split the
@@ -812,8 +856,17 @@ Your sign-off comment MUST include a `completion_manifest:` block immediately af
 - `all_tests_red` — the verification run returned a non-zero exit (all new tests are red).
 - `red_baseline_captured` — a `red_baseline:` YAML block appears in the comment body with at least one entry containing the actual error output from the verification run.
 - `ac_ids_covered` — list the AC IDs that were explicitly covered by `# covers:` tags in the written tests (e.g. `[FIN-001, FIN-002]`). Use `[UNKNOWN]` if no AC store was found or the ticket referenced no AC IDs. This field aids the bidirectional coverage check (ticket 04) by making the mapping from test file to AC ID auditable at sign-off time.
+- `cross_layer_seam_answer` — the Rule 3 hand-off record (see "Rule 3 hand-off
+  record" above, and `signoff` skill §2b.2 for the full shape). Every
+  sign-off carries **exactly one** of the two conforming shapes:
+  `{result: covered, producing_side, consuming_side}` or
+  `{result: not_applicable, reason, remediation}`. Unlike the bare-`true`
+  items above, this item is **always** a nested object — even the covered
+  (pass-like) case — because a bare `true` cannot name the two sides a
+  reader needs.
 
-Example completion manifest for a test-writer sign-off that covered two ACs:
+Example completion manifest for a test-writer sign-off that covered two ACs
+and found a real cross-layer seam:
 
 ```yaml
 completion_manifest:
@@ -821,9 +874,13 @@ completion_manifest:
   all_tests_red: true
   red_baseline_captured: true
   ac_ids_covered: [FIN-001, FIN-002]
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: "candle_horizon.populate_features (SQL procedure output)"
+    consuming_side: "live_trader.feature_reader.load_latest_row (ORM read)"
 ```
 
-Example when AC store was absent (fallback path):
+Example when AC store was absent (fallback path) and no seam applies:
 
 ```yaml
 completion_manifest:
@@ -831,6 +888,10 @@ completion_manifest:
   all_tests_red: true
   red_baseline_captured: true
   ac_ids_covered: [UNKNOWN]
+  cross_layer_seam_answer:
+    result: not_applicable
+    reason: "Pure function with no consumer outside its own module — no layer boundary is crossed."
+    remediation: "n/a — not_applicable is a first-class outcome, not a defect."
 ```
 
 ## Architectural Context Enforcement
