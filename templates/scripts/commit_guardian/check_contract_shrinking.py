@@ -26,19 +26,33 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 try:
-    from check_outcome import OUTCOME_NOTHING_TO_INSPECT, emit_result  # type: ignore[import]
+    from check_outcome import (  # type: ignore[import]
+        OUTCOME_COULD_NOT_CHECK,
+        OUTCOME_NOTHING_TO_INSPECT,
+        emit_result,
+    )
 except ImportError:
     # check_outcome.py is deployed alongside this file in every real layout
     # (build.py copies the whole templates/scripts/commit_guardian/ tree), so
     # this fallback exists only for a working copy that exposes this check
     # script in isolation (e.g. a test fixture) -- same pattern as
-    # check_ac_parent_covered_by.py. The value here MUST stay in sync with
+    # check_ac_parent_covered_by.py. The values here MUST stay in sync with
     # check_outcome.py.
     OUTCOME_NOTHING_TO_INSPECT = "nothing_to_inspect"
+    OUTCOME_COULD_NOT_CHECK = "could_not_check"
 
     def emit_result(outcome: str) -> None:
         """Fallback RESULT-line emitter used when check_outcome is absent."""
         print(f"RESULT: {outcome}", file=sys.stdout)
+
+try:
+    from _authored_change import get_authored_change  # type: ignore[import]
+except ImportError:
+    # _authored_change.py is deployed alongside this file in every real
+    # layout (build.py copies the whole templates/scripts/commit_guardian/
+    # tree). This fallback exists only for a working copy that exposes this
+    # check script in isolation (e.g. a test fixture that predates GE-120e-1).
+    get_authored_change = None  # type: ignore[assignment]
 
 
 # ---------------------------------------------------------------------------
@@ -214,21 +228,24 @@ def _name_only(*extra: str) -> list[str] | None:
 def _merge_scoped_paths() -> list[str] | None:
     """Return paths differing from BOTH merge parents, or None when not merging.
 
-    A merge stages the ENTIRE incoming branch, so an unscoped ``git diff
-    --cached`` shows every test the other side ever deleted or skipped. The
-    merge author neither wrote those changes nor can improve them — they are
-    already on the branch being merged — so blocking on them only makes merging
-    impossible and trains people to reach for ``SKIP=``.
-
-    Content differing from both parents is authored BY the merge (a conflict
-    resolution, or an edit made while resolving), so it stays in scope. That is
-    what stops merge-scoping from becoming a way to smuggle weakening through.
+    NOTE: this is a DELIBERATELY SEPARATE, stricter (intersection) predicate
+    from the shared ``_authored_change.get_authored_change()`` derivation
+    (GE-120e-1) that ``main()``/``_get_weakening_diff`` below use for the
+    actual guard verdict. ``unit_tests/commit_guardian/test_ac_limits_merge_scope.py``
+    (AC ACS-100c-1, a different family) drives this exact function directly
+    and requires content taken verbatim from EITHER parent — including the
+    author's own, already-committed-elsewhere content — to be excluded; that
+    is stricter than GE-120e-1's "the verdict on the author's own content is
+    unchanged" requirement, which the shared module instead satisfies by
+    excluding only content matching the OTHER (``MERGE_HEAD``) side. The two
+    predicates cannot be unified without breaking one of the two AC's tests,
+    so this function keeps its own git calls rather than delegating.
 
     Returns:
-        Repo-relative paths to scope to; an empty list when the merge introduces
-        no such file; or None when this is not a merge, or the merge state
-        cannot be determined (caller then uses the unscoped diff — the stricter
-        behaviour).
+        Repo-relative paths to scope to; an empty list when the merge
+        introduces no such file; or None when this is not a merge, or the
+        merge state cannot be determined (caller then uses the unscoped diff —
+        the stricter behaviour).
     """
     try:
         probe = subprocess.run(
@@ -303,44 +320,63 @@ def _get_staged_diff() -> str:
     return _git_diff()
 
 
-def _get_weakening_diff(full_diff: str) -> str:
+def _get_shared_authored_change():
+    """Call the shared ``get_authored_change()``, degrading a broken import to ``None``.
+
+    The shared module is a dependency this check does not control; GE-120e-1's
+    AC-5 requires that if it is broken (raises unexpectedly, as opposed to the
+    ordinary git-failure path it already reports via ``could_not_check``),
+    every consumer degrades to could-not-check identically rather than
+    crashing the whole pre-commit process or silently passing on bad data.
+
+    Returns:
+        The ``AuthoredChange``, or ``None`` (shared module unavailable, or it
+        raised unexpectedly — an ordinary derivation failure is instead
+        reported IN BAND via the returned ``AuthoredChange.could_not_check``).
+    """
+    if get_authored_change is None:
+        return None
+    try:
+        return get_authored_change()
+    except Exception as exc:  # noqa: BLE001 - shared dependency may raise unpredictably; must degrade to could-not-check, never crash or widen (GE-120e-1 AC-5).
+        print(
+            f"[contract-shrinking guard] WARNING: shared change-set derivation raised: {exc}",
+            file=sys.stderr,
+        )
+        return None
+
+
+def _get_weakening_diff(full_diff: str) -> str | None:
     """Return the diff that test-weakening is judged against.
 
     Outside a merge this is the full staged diff. During a merge it is narrowed
-    to files differing from both parents, so the author is judged on the
-    weakening they authored rather than on everything the incoming branch ever
-    did.
+    (via the shared ``_authored_change.get_authored_change()`` — GE-120e-1) to
+    files not carried in verbatim from the incoming branch, so the author is
+    judged on the weakening they authored rather than on everything the
+    incoming branch ever did.
 
     Args:
         full_diff: The unscoped staged diff, reused verbatim when no narrowing
             applies (also the HOOK_TEST_DIFF passthrough).
 
     Returns:
-        The diff text to scan for weakening patterns.
+        The diff text to scan for weakening patterns, or ``None`` when the
+        shared derivation could not be computed (could-not-check — the
+        caller MUST NOT fall back to the unscoped diff on ``None``, per
+        GE-120e-1's Implementation Notes).
     """
     if os.environ.get("HOOK_TEST_DIFF"):
         return full_diff
 
-    scoped = _merge_scoped_paths()
-    if scoped is None:
-        return full_diff  # not a merge, or undeterminable — stay strict
-    if not scoped:
-        return ""  # merge introduces no content of its own
+    if get_authored_change is None:
+        return full_diff  # shared module unavailable in this working copy
 
-    scoped_diff = _git_diff(scoped)
-    if not scoped_diff.strip():
-        # Contradiction: we named files but git produced nothing for them. That
-        # means the pathspecs did not resolve (mangled path, wrong CWD, ...) —
-        # historically the silent failure mode that turns this gate off. Say so
-        # and fall back to the strict, unscoped diff.
-        print(
-            "[contract-shrinking guard] WARNING: merge scope named "
-            f"{len(scoped)} file(s) but produced an empty diff — pathspecs did "
-            "not resolve. Falling back to the full staged diff.",
-            file=sys.stderr,
-        )
-        return full_diff
-    return scoped_diff
+    authored = _get_shared_authored_change()
+    if authored is None or authored.could_not_check:
+        return None  # could not be computed — could-not-check, never widen
+    if len(authored.states) <= 1:
+        return full_diff  # not a merge
+    return authored.diff_text  # merge-scoped; "" when nothing authored
 
 
 def _scan_diff(diff: str, weakening_diff: str | None = None) -> ScanResult:
@@ -393,17 +429,25 @@ def _report_if_nothing_to_inspect() -> None:
     GE-120e-1-i: an empty authored (merge-scoped) change set is a value to
     report, never a signal to widen the scan back to the whole staged diff —
     that anti-pattern is already avoided by construction in
-    ``_get_weakening_diff`` (an empty ``_merge_scoped_paths()`` intersection
-    yields ``""``, not a fallback to ``full_diff``). This function only
-    decides whether to ANNOUNCE that empty state on the shared,
-    machine-readable RESULT line, distinguishing "nothing of the author's to
-    inspect" from GE-120a-1's OUTCOME_COULD_NOT_CHECK ("a check that never
-    looked"). Called only from the non-blocking (pass) path in ``main()`` —
-    empty is a PASS, not a skip.
+    ``_get_weakening_diff`` (an empty shared-derivation set yields ``""``,
+    not a fallback to ``full_diff``). This function only decides whether to
+    ANNOUNCE that empty state on the shared, machine-readable RESULT line,
+    distinguishing "nothing of the author's to inspect" from GE-120a-1's
+    OUTCOME_COULD_NOT_CHECK ("a check that never looked"). Called only from
+    the non-blocking (pass) path in ``main()`` — empty is a PASS, not a skip.
+    Uses the SAME shared derivation as ``_get_weakening_diff`` (not the
+    stricter, private ``_merge_scoped_paths()``) so this announcement never
+    disagrees with the scan it is reporting on.
     """
     if os.environ.get("HOOK_TEST_DIFF"):
         return  # unit-test diff-injection path; no real merge state to probe
-    if _merge_scoped_paths() == []:
+    authored = _get_shared_authored_change()
+    if (
+        authored is not None
+        and not authored.could_not_check
+        and len(authored.states) > 1
+        and not authored.paths
+    ):
         emit_result(OUTCOME_NOTHING_TO_INSPECT)
 
 
@@ -411,7 +455,9 @@ def main() -> int:
     """Run the contract-shrinking guard.
 
     Returns:
-        0 if the commit is allowed, 1 if it is blocked.
+        0 if the commit is allowed (including a could-not-check outcome —
+        see GE-120a-1's fail-open-but-announce disposition), 1 if it is
+        blocked.
     """
     diff = _get_staged_diff()
 
@@ -419,7 +465,23 @@ def main() -> int:
         # Nothing staged — pass silently.
         return 0
 
-    scan = _scan_diff(diff, _get_weakening_diff(diff))
+    weakening_diff = _get_weakening_diff(diff)
+    if weakening_diff is None:
+        # GE-120e-1: the shared change-set derivation could not be computed
+        # (e.g. git failure resolving the merge-parent side). Report
+        # could-not-check and skip the weakening scan for THIS commit rather
+        # than widening it to the unscoped staged diff.
+        print(
+            "[contract-shrinking guard] WARNING: could not derive the "
+            "authored (merge-scoped) change set for this commit — skipping "
+            "the test-weakening scan rather than falling back to the whole "
+            "staged diff.",
+            file=sys.stderr,
+        )
+        emit_result(OUTCOME_COULD_NOT_CHECK)
+        return 0
+
+    scan = _scan_diff(diff, weakening_diff)
 
     if not scan.is_contract_shrinking:
         # Either no production changes, or no test weakening, or neither — OK.
@@ -456,6 +518,31 @@ if __name__ == "__main__":
 # ===========================================================================
 # DECISION HISTORY
 # ===========================================================================
+# - 2026-08-31 [python-coder/GE-120e-1, pr-reviewer remediation]: Renamed the
+#   shared module this file imports from _resolve_change_set.py/
+#   get_change_set() to _authored_change.py/get_authored_change(), to honour
+#   the contract unit_tests/portability/test_ge_120e_4_i.py (ticket 36) had
+#   already established for it. Also corrected this DECISION HISTORY's prior
+#   entry below, which incorrectly stated that _merge_scoped_paths()/
+#   _name_only() were "replaced ... with a thin back-compat wrapper" over the
+#   shared module -- they were not touched by that change and are still
+#   called directly (see _merge_scoped_paths()'s own docstring for why they
+#   remain self-contained). (#EPIC-TrustThatAGreenCheckActuallyChecked/28)
+# - 2026-08-31 [python-coder/GE-120e-1]: Migrated _get_weakening_diff's
+#   merge-scoping source to the shared templates/scripts/commit_guardian/
+#   _authored_change.get_authored_change() derivation (consumed identically
+#   by check_doc_frontmatter.py), so both checks answer "what did the author
+#   change" from one source. _merge_scoped_paths()/_name_only() were
+#   deliberately KEPT, unchanged, with their own private git calls -- they
+#   serve a different, stricter predicate for the unrelated ACS-100c-1
+#   family (see _merge_scoped_paths()'s docstring). main()/_get_weakening_diff
+#   now distinguish "could not compute the derivation"
+#   (get_authored_change().could_not_check) from "not a merge" -- on the
+#   former they emit OUTCOME_COULD_NOT_CHECK and skip the weakening scan for
+#   this commit, replacing the previous fall-back-to-the-unscoped-diff
+#   behaviour this AC's Implementation Notes identify as the anti-pattern that
+#   lets carried-in mainline content drive a merge author's verdict.
+#   (#EPIC-TrustThatAGreenCheckActuallyChecked/28)
 # - 2026-08-25 [python-coder/GE-120e-1-i]: Added _report_if_nothing_to_inspect(),
 #   called from the non-blocking path in main(). Emits the shared
 #   check_outcome.OUTCOME_NOTHING_TO_INSPECT RESULT line when

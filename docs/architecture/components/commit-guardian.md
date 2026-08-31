@@ -8,14 +8,20 @@ created: 2026-06-08
 last_updated: 2026-08-31
 components:
   - commit_guardian
+  - git_vcs_operations
 related_docs:
+  - docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
   - docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md
   - docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
   - docs/architecture/diagrams/c3-006-whole-collection-uniqueness-pass.md
+  - docs/how-to/managing-pre-commit-hooks.md
 related_code:
   - templates/scripts/commit_guardian/check_identifier_uniqueness.py
   - templates/scripts/commit_guardian/check_adr_collision.py
+  - templates/scripts/commit_guardian/_authored_change.py
+  - templates/scripts/commit_guardian/check_contract_shrinking.py
+  - templates/scripts/commit_guardian/check_doc_frontmatter.py
 ---
 
 # Commit Guardian
@@ -47,20 +53,82 @@ Each hook is an independent script that exits 0 (pass) or 1 (block). Hooks are f
 ## Merge-Aware Checks (Authorship, Not Operation, Is the Discriminator)
 
 `check_contract_shrinking.py` and `check_doc_frontmatter.py` both narrow their
-staged-file set during a merge (`MERGE_HEAD` present) to paths that differ
-from **both** merge parents — i.e. content the merge author's own conflict
-resolution introduced or changed. A merge stages the entire incoming branch,
-so an unscoped `git diff --cached` also names every file the *other* side
-ever touched, which the merge author neither wrote nor can fix; naming that
+staged-file set during a merge (`MERGE_HEAD` present) so a check judges only
+the merge author's own content, never work carried in verbatim from the
+other line of development. A merge stages the entire incoming branch, so an
+unscoped `git diff --cached` also names every file the *other* side ever
+touched, which the merge author neither wrote nor can fix; naming that
 carried-in work in an objection is the false-positive class this scoping
-removes. `check_contract_shrinking.py` implements this as `_merge_scoped_paths()`;
-`check_doc_frontmatter.py` implements the same idiom as
-`merge_scoped_md_paths()` in `frontmatter_validators.py`. Both checks still
-run their full inspection during a merge — a merge changes which content is
+removes — the observed trigger was a 479-file mainline merge whose own change
+set touched none of the files a check objected to. Both checks still run
+their full inspection during a merge — a merge changes which content is
 attributed to the author, never whether the author's content is inspected.
 See AC `GE-120e-3-ii` (both checks' merge-scoping arms, plus the
 no-skip-during-merge guarantee) under
 `docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/`.
+
+### Single Shared Source: `_authored_change.py` (`GE-120e-1`)
+
+Before `GE-120e-1`, each check hand-implemented the same merge-scoping idiom
+privately — `check_contract_shrinking.py`'s `_merge_scoped_paths()` and
+`frontmatter_validators.py`'s `merge_scoped_md_paths()` — and each
+independently fell back to the **unscoped** (whole-staged-tree) diff whenever
+its own `git` call failed, silently re-widening the scope on exactly the
+commits where `git` is under stress. Two independently-maintained
+implementations of the same idiom can also drift apart, letting a merge
+leave one check objecting to carried-in content while its sibling, computing
+the same narrowing slightly differently, does not — a split verdict on the
+same commit.
+
+`templates/scripts/commit_guardian/_authored_change.py` closes both gaps
+as one shared module both named checks now consume in place of their private
+`git diff --cached` calls, per
+[ADR-038](../adrs/ADR-038-commit-guardian-shared-change-set-derivation.md).
+The module was renamed from `_resolve_change_set.py`/`get_change_set()`/
+`ChangeSet` to its current name to honour a contract
+`unit_tests/portability/test_ge_120e_4_i.py` (ticket 36, `GE-120e-4-i`) had
+already established for it:
+
+- `get_authored_change(cwd=None) -> AuthoredChange` derives, once per
+  resolved `cwd` per process (memoised — the pre-commit latency budget
+  forbids one `git` invocation per consuming check), the paths differing
+  from `MERGE_HEAD` during a merge (or every staged path otherwise),
+  together with the `states` provenance — the commit-ish(es) the derivation
+  was computed against.
+- `AuthoredChange.diff_text` and `AuthoredChange.name_status` serve the two
+  diff shapes the family's two named consumers need (a full text diff for
+  `check_contract_shrinking.py`, a name-status list for
+  `check_doc_frontmatter.py`) from that one derivation, diffing against the
+  SAME ref `.paths` was derived from (the last entry in `states`) — diffing
+  against the default `HEAD` instead would silently drop content the author
+  already committed to their own branch before the merge began, even though
+  `.paths` correctly includes it. Both are plain data attributes, computed
+  eagerly inside `get_authored_change()` rather than lazily on first access,
+  per the contract this module's rename adopted.
+- A `git` failure or timeout inside the derivation sets
+  `AuthoredChange.could_not_check = True` (with `error` describing what
+  failed) rather than degrading to an unscoped diff; each consumer's
+  `_get_shared_authored_change()` wrapper also catches an unexpected
+  exception from the shared module itself and degrades to the same
+  could-not-check outcome, so a broken dependency cannot crash the check
+  outright. `could_not_check=True` is an `OUTCOME_COULD_NOT_CHECK` outcome
+  (see the vocabulary table below), never license to widen the scope.
+- The merge-scoping predicate here is deliberately **broader** than the
+  pre-existing per-check helpers' "differs from both `HEAD` and `MERGE_HEAD`"
+  intersection: scoping to `MERGE_HEAD` alone is required so a check's
+  verdict on the author's own content — committed to their branch before the
+  merge began, and therefore matching `HEAD` exactly — is unaffected by the
+  merge. This is a different, narrower predicate than
+  `check_contract_shrinking.py`'s private `_merge_scoped_paths()` still uses
+  for the unrelated `ACS-100c-1` family (excluding content taken verbatim
+  from the merge's own side); that helper is intentionally NOT unified into
+  the shared module. See ADR-038's Decision §4 and §8.
+
+`_authored_change.py` follows this family's existing shared-facility
+pattern set by `_resolve_root.py` (one small leaf module in the package,
+imported by name), but solves a different problem: `_resolve_root.py`
+resolves a *prerequisite* (the project root); `_authored_change.py`
+derives the *change set* itself.
 
 ## Machine-Readable Outcome Vocabulary
 
