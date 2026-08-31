@@ -1,0 +1,328 @@
+id: TQ-400f-2
+components:
+  - testing_quality
+  - ac_store
+title: "The parent loses its finished badge on disk, and the record names the children that took it away"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finished parent record that the sweep has judged as having unfinished
+    work beneath it, naming two unfinished descendants at different depths,
+  When the sweep applies its outcome to the store,
+  Then that parent's file on disk no longer reads as finished and reads as work
+    still to be done,
+  And the parent carries the same knocked-back reason and knocked-back date that
+    a record demoted for its own lapsed proof carries — no second, parallel way of
+    recording a demotion is introduced,
+  And the recorded reason names each unfinished descendant by identifier, so a
+    reader holding only that one file, with the run's output gone and without
+    re-running anything, can say which children caused it,
+  And every other field of the parent's file is byte-identical to before the run,
+  And no descendant's file is written to at all by the parent's demotion — the
+    parent answers for its children, it does not change them,
+  And the demoted parent still passes the store's own record validator, and a
+    fresh read of the store in a new process returns it as unfinished work.
+depends_on:
+  - TQ-400f
+  - TQ-400f-1
+  - TQ-400b-1
+  - TQ-400b-2
+  - TQ-400e-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400b-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MACHINERY TO REUSE, NOT REINVENT. It introduces the two demotion fields
+      (the reason and the first-demotion date) and the rule that the reason is the
+      verdict's own cause carried verbatim from one formatting site. This AC adds a
+      new CAUSE to that mechanism; it must not add a second mechanism. Note the
+      conflict flagged in this record's notes before implementing.
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400b-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The demotion write path and its discipline — a targeted single-field rewrite,
+      atomic, never a whole-file re-serialization. It also carries the requirement
+      that composite records are excluded from demotion, which this AC contradicts
+      by design; see the notes.
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The targeted single-field write pattern the demotion must copy. A whole-file
+      YAML round trip reformats quoting, key order and comments on every record it
+      touches, which the byte-identity clause forbids.
+  - path: config/ac_store_schema.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      The record schema is additionalProperties:false at its root, so the demotion
+      fields this AC writes must already be declared there by TQ-400b-2 before this
+      behaviour can ship. A demotion written ahead of its schema fields makes the
+      sweep's own output invalid and blocks every commit in the repository.
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The field reference a reader consults to interpret the demoted parent, and
+      where the new cause must be described alongside the existing lapsed-proof one.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The package source of the sweep and the apply path this demotion hangs off.
+      Note that its deployed mirror scripts/commit_guardian/check_done_proof.py is a
+      build output and does not exist in a fresh worktree — TQ-400b-1 doc-links that
+      deployed path with status exists, which is wrong; do not copy it.
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - >-
+    BLOCKED ON AN ESCALATED ADJUDICATION — DO NOT IMPLEMENT UNTIL IT IS SETTLED, AND
+    DO NOT SETTLE IT FROM HERE. TQ-400b-1's it_requirements state verbatim: "Must not
+    demote L0/L1 composite records: the population is leaf L2/L3 records, and
+    composites never legitimately reach work_status done." This AC's population IS
+    composites, and the second clause is contradicted on the record by BO-2500a-6 —
+    itself work_status: done and readiness: approved, criteria opening "Given a
+    work_status: done composite AC" — plus the twenty composites measured finished at
+    439b9076f. Both records were read and verified during enrichment. The contradiction
+    is escalated to the product owner. This AC is enriched on the assumption that
+    TQ-400b-1's exclusion scopes to the LAPSED-PROOF cause only (a composite has no
+    direct test of its own to lapse, so evaluating it on that axis is meaningless) and
+    does not bar demotion on the UNFINISHED-CHILDREN cause. If the adjudication goes
+    the other way this AC is BLOCKED, not narrowed. Do not amend TQ-400b-1 from this
+    ticket and do not quietly widen TQ-400b-1's exclusion to cover this cause.
+  - >-
+    REUSE TQ-400b-2'S TWO EXISTING DEMOTION FIELDS — demotion_reason (string) and
+    demotion_date (YYYY-MM-DD). No third field, no composite-specific parallel field,
+    no list. TQ-400b-4's already-demoted guard reads "demotion_reason present" as the
+    signal and must keep working unchanged for a parent demoted on this new cause; a
+    parallel field would make every re-run re-demote the parent.
+  - >-
+    THE RECORDED REASON MUST NAME EVERY UNFINISHED DESCENDANT BY IDENTIFIER, in a
+    deterministic order, with none elided. "Has unfinished children" sends the reader
+    back to re-derive the tree, which defeats the only purpose the recorded reason
+    has. The reason must remain a single scalar string that validate_ac_schema.py
+    accepts; if a length cap is unavoidable it must state the total count and must
+    still carry every id.
+  - >-
+    ONE FORMATTING SITE. The reason written to the record and the cause reported for
+    that same ac_id in the run report and the inventory must be produced from one
+    value at one site (TQ-400b-2's rule), so the record and the report can never
+    disagree about why a badge was taken away.
+  - >-
+    WRITE DISCIPLINE IS TQ-400b-1'S, UNCHANGED: a targeted single-field line rewrite
+    (the mark_ac_done.py:164-181 pattern), atomic via temp file then rename, never a
+    whole-file yaml.safe_dump round trip. Every field other than work_status,
+    demotion_reason and demotion_date must be byte-identical after the write, and
+    that must be VERIFIED by diffing the file before and after, not assumed.
+  - >-
+    NO DESCENDANT FILE MAY BE OPENED FOR WRITING BY THE PARENT'S DEMOTION. The write
+    set for one parent verdict is exactly one file. This must hold by construction —
+    the writer addresses exactly the single path recorded on the inventory entry —
+    not as a check applied afterwards. The tempting shortcut is a tree-wide fix-up of
+    the whole branch; it would demote children on no verdict at all, and it is
+    unrecoverable.
+  - >-
+    THE APPLY PATH IS TQ-400b-1'S, behind the same explicit apply flag with preview as
+    the default (TQ-400b-5). Do not create a second command and do not add a second
+    store walk.
+  - >-
+    THE DEMOTED PARENT MUST STILL PASS scripts/ac_store/validate_ac_schema.py
+    immediately after the write, and a fresh process using the store's own loader must
+    return it as unfinished work. The schema root is additionalProperties:false, so a
+    sweep whose own output fails the store validator blocks every commit in the
+    repository.
+  - >-
+    ORDERING HAZARD: this behaviour must not ship ahead of TQ-400b-2's schema edit.
+    demotion_reason and demotion_date must already be declared in
+    config/ac_store_schema.json, and every enforcement point with its own field
+    vocabulary must already accept them, before any parent is written.
+  - >-
+    DOCUMENTATION OBLIGATION, ATTACHED HERE RATHER THAN AS A SIXTH CHILD. The L1's
+    child cap is hard and its documentation_triggers are deliberately unset, so this
+    obligation rides on the record that creates it. In the SAME change,
+    docs/reference/ac-schema.md must describe the unfinished-children cause alongside
+    TQ-400b-2's lapsed-proof cause, and must state that a COMPOSITE record can now
+    carry demotion_reason — a reader told the field has one cause, and that composites
+    are never demoted, will misread every parent this sweep touches.
+  - >-
+    Must handle errors gracefully per the project error handling policy: a write
+    failure on one parent is reported as an error for that parent and must never leave
+    the run reporting a successful demotion.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400b-3
+    contract: >-
+      A demoted parent on disk with work_status todo and status / readiness /
+      priority / level untouched, carrying demotion_reason (naming each unfinished
+      descendant) and demotion_date, so it satisfies scan_ac_store.py's eligibility
+      predicate unchanged and the reason travels with the work into the pickable
+      backlog.
+  - agent: python-coder
+    ac_id: TQ-400f-3
+    contract: >-
+      A live, discriminating write path in the same run. TQ-400f-3's byte-identity
+      control is vacuous unless some record was demonstrably demoted in the very same
+      invocation, so this AC owns the positive half of that pair.
+  - agent: python-coder
+    ac_id: TQ-400f-5
+    contract: >-
+      The same live write path, for the same reason: TQ-400f-5's refusal to promote is
+      only observable in a run whose write path was demonstrably enabled.
+expects_from:
+  - ac_id: TQ-400f-1
+    contract: >-
+      Verdict entries {ac_id, path, outcome, unfinished_descendants: [ac_id, ...]}.
+      The writer demotes exactly these entries, addresses each by its recorded path,
+      carries the named descendants into the reason verbatim, and re-runs no traversal
+      and no verdict of its own.
+  - ac_id: TQ-400b-1
+    contract: >-
+      The demotion write site itself — the targeted single-field, atomic rewrite — and
+      the apply-flag entry point hanging off the sweep. This AC adds a new CAUSE to
+      that mechanism and must not add a second mechanism. Subject to the escalated
+      adjudication recorded in this record's first it_requirement.
+  - ac_id: TQ-400b-2
+    contract: >-
+      demotion_reason and demotion_date, already declared in
+      config/ac_store_schema.json and already documented in
+      docs/reference/ac-schema.md, plus the one-formatting-site rule for the cause.
+      This AC writes those same two fields with a different cause; it introduces
+      neither a field nor a second recording convention.
+  - ac_id: TQ-400e-1
+    contract: >-
+      The standing false-positive guarantee that authorises any demotion at all: only
+      records the sweep reports unproven may be written, one record at a time, leaving
+      every other file byte-identical.
+origin_agent: business-analyst
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Assigned python-coder; complexity M — the write machinery is TQ-400b-1's and
+      TQ-400b-2's unchanged, so what is new is the cause string, the single-file write
+      set, and the schema/doc landing order. THE TQ-400b-1 CONTRADICTION WAS NOT
+      RESOLVED HERE, deliberately: it is recorded as the first it_requirement, named
+      as escalated to the product owner, and the AC is enriched on the stated
+      assumption that TQ-400b-1's composite exclusion scopes to the lapsed-proof cause
+      only. TQ-400b-1 was NOT amended. The L1's documentation obligation is attached
+      to this record's it_requirements rather than minted as a sixth child, per the
+      hard cap and the deliberately-unset documentation_triggers. criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_tq_400f_2_demoted_parent_names_each_unfinished_descendant_on_disk
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      After a real subprocess apply run, DISCARD the run's stdout and its return
+      value, then re-read the parent file off disk in a fresh process: work_status is
+      todo, and demotion_reason contains the identifier of EACH of the two unfinished
+      descendants — one of them a grandchild. Reading the record alone, with the run's
+      output gone, is the whole guarantee, so the assertion must be made with the
+      output gone.
+  - name: test_tq_400f_2_no_descendant_file_is_written_by_the_parents_demotion
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      sha256 EVERY descendant file of the target parent, at every depth, before and
+      after the same apply run; all identical. Paired in the same assertion with the
+      positive control that the parent's own hash DID change, so a run that wrote
+      nothing cannot satisfy it. A tree-wide fix-up passes a work_status assertion on
+      the parent and fails here.
+  - name: test_tq_400f_2_only_the_state_and_demotion_lines_differ_byte_for_byte
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Byte-diff the parent file before and after the run over a store written by the
+      project's real serializer: exactly the work_status, demotion_reason and
+      demotion_date lines differ. Field order, quoting, block-list indentation at
+      column 0, comments and the trailing newline are unchanged. A whole-file
+      yaml.safe_dump round trip preserves every value and fails this entry.
+  - name: test_tq_400f_2_demotion_happens_only_through_the_real_apply_invocation
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      The demotion is produced by subprocessing the production command with its apply
+      flag — never by importing and calling a demote helper. Over the same store
+      WITHOUT the flag, every file is byte-identical, so preview is proven to be the
+      safe default rather than assumed to be.
+  - name: test_tq_400f_2_record_reason_equals_report_reason_and_the_record_still_validates
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      For the same ac_id, demotion_reason on disk and the cause in the run report and
+      inventory are the identical string — one formatting site, not two that can
+      drift. Then run scripts/ac_store/validate_ac_schema.py as a subprocess over the
+      written parent (must pass) and over the whole untouched store (must still pass),
+      because a demoted composite that fails the store validator blocks every commit
+      in the repository.
+test_rationale: >-
+  A descriptor that asserts "the run reported the parent and named its children" is
+  satisfied by an implementation that reports perfectly and writes nothing — the
+  BO-2300 phantom-build shape, dispatch happened and the on-disk effect did not — so
+  every assertion here is made against the file's bytes after a real apply
+  invocation, with the run's output explicitly discarded first. A descriptor that
+  only asserts work_status == todo on the parent is satisfied by a tree-wide rewrite
+  that also demoted every descendant on no verdict at all, which is both wrong and
+  unrecoverable; hence a whole-descendant-set hash comparison, paired with the
+  parent's own hash change so a no-op run cannot pass it. And a value-level
+  comparison would be satisfied by a whole-file YAML round trip, which preserves every
+  value while rewriting all 3,146 files, so the field-preservation assertion is a
+  byte diff rather than a dict comparison. The validator subprocess is present
+  because this is the first cause under which a COMPOSITE record carries
+  demotion_reason, and an additionalProperties:false schema turns a mistake there
+  into a repository-wide commit block rather than a bad row in a report.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  CONFLICT TO RESOLVE BEFORE BUILDING — RAISED DELIBERATELY, NOT PAPERED OVER.
+  TQ-400b-1 carries a technical requirement that the demotion writer "must not
+  demote L0/L1 composite records: the population is leaf L2/L3 records, and
+  composites never legitimately reach work_status done". This AC demotes exactly
+  that population, and the measured evidence contradicts the premise: twenty
+  parents ARE sitting finished today, sixteen of them at L2, and BO-2500a-6 —
+  already built and marked done — explicitly blesses a finished composite whose
+  proof derives from its children. Two positions cannot both stand. The resolution
+  this AC assumes is that TQ-400b-1's exclusion is about the LAPSED-PROOF cause
+  only (a composite has no direct test of its own to lapse, so evaluating it on
+  that axis is meaningless) and does not bar demotion on the UNFINISHED-CHILDREN
+  cause. If the IT PO or the product owner disagrees, this AC is blocked rather
+  than quietly overriding a sibling's stated requirement.
+
+  Only the reason clause is new. The write discipline, the atomicity, the
+  never-rewritten date and the re-run idempotency all come from TQ-400b-1,
+  TQ-400b-2 and TQ-400b-4 unchanged, which is why this AC depends on them rather
+  than restating them. What it does add is that the reason must be specific enough
+  to act on: "has unfinished children" without naming them sends the reader back
+  to re-derive the tree, and the whole point of the recorded reason is that the
+  record explains itself once the run is gone.
+
+  The no-descendant-is-written-to clause exists because the tempting shortcut is a
+  tree-wide rewrite that "fixes up" the whole branch. That would demote children
+  nobody judged, on no verdict, and it is unrecoverable.

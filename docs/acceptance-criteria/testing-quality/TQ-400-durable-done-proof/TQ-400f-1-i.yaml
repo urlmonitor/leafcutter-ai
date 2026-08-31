@@ -1,0 +1,214 @@
+id: TQ-400f-1-i
+components:
+  - testing_quality
+  - ac_store
+title: "Children covered by passing tests does not excuse children that are not finished — the two verdicts move independently"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finished parent record that the existing proof-of-done check already
+    treats as satisfied because each of its children is covered by a test that
+    passes, while one of those children is itself still unfinished work,
+  When the whole-store honesty sweep evaluates that parent,
+  Then the parent still receives the "has unfinished work beneath it" verdict and
+    is demoted on it,
+  And the satisfied test-coverage verdict for that same parent is still reported,
+    alongside the new one rather than in place of it, so neither outcome hides the
+    other,
+  And a finished parent all of whose children are finished but one of whose
+    children has no passing test receives the test-coverage verdict alone and is
+    NOT given the "has unfinished work beneath it" verdict,
+  And in a single run over one store containing both parents, the two receive
+    different outcomes, so the sweep is shown to be answering two independent
+    questions rather than one question twice.
+depends_on:
+  - TQ-400f-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-6.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE NEIGHBOUR THIS AC IS THE CONTROL FOR. It is already built and marked
+      finished, and it says a finished composite derives its proof from its
+      children being COVERED BY PASSING TESTS. It says nothing about whether those
+      children are finished work, so a parent can satisfy it completely while
+      sitting above unfinished children. Read it to see exactly what is already
+      guaranteed; do not restate it and do not treat it as a duplicate of this tree.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      Where the composite exemption of BO-2500a-6 lives today. The risk this AC
+      guards is that the new child-status question gets folded into that existing
+      exemption branch, at which point a parent that satisfies the coverage check
+      is never asked the second question at all.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The seam angle. Two verdicts about one record collapsing into one is the
+      failure mode here, and it is only observable by constructing two parents that
+      must receive different outcomes in the same run.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE CHILD-STATUS QUESTION MUST NOT SIT INSIDE THE BO-2500a-6 COMPOSITE-EXEMPTION
+    BRANCH in scripts/ac_store/done_proof.py. Placed there it runs only for
+    composites that FAILED the coverage check — which is none of the twenty parents
+    measured at 439b9076f, because all of them pass it. That single placement choice
+    is the difference between this tree changing the store and changing nothing.
+  - >-
+    A RECORD MUST BE ABLE TO CARRY TWO OUTCOMES FROM ONE RUN. The verdict shape the
+    oracle returns and TQ-400a-4's inventory serializes must therefore be per-axis
+    rather than one scalar. A scalar verdict field forces one outcome to overwrite
+    the other, which is the collapse this AC exists to prevent, and it cannot be
+    retrofitted once four consumers read the field.
+  - >-
+    THE TWO AXES MUST BE COMPUTED FROM INDEPENDENT INPUTS: the coverage axis from the
+    covers-tag scan (_scan_test_root_for_covers_tags), the descendant axis from
+    TQ-400f-1's child index. Neither may short-circuit the other in either direction
+    — not "coverage satisfied, skip the descendant check", and not "descendants
+    unfinished, skip the coverage check".
+  - >-
+    BO-2500a-6 IS work_status: done AND MUST NOT REGRESS. A done composite whose
+    children are covered by passing tests must still satisfy the coverage axis with no
+    direct test of its own. This AC adds an axis; it does not amend BO-2500a-6, and
+    unit_tests/ac_store/test_done_proof_composite.py must still pass unchanged in the
+    same build.
+  - >-
+    BOTH OUTCOMES MUST APPEAR SEPARATELY IN THE REPORT AND THE INVENTORY. Folding the
+    descendant outcome into the coverage cause string is not sufficient: TQ-400b-1's
+    and TQ-400f-2's demotion population filters select on the outcome value, not on
+    prose, so an outcome that exists only inside a sentence is an outcome nothing acts
+    on.
+  - >-
+    Must handle errors gracefully per the project error handling policy: a failure
+    computing one axis must be reported for that axis and must not silently produce a
+    satisfied verdict on the other.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400f-2
+    contract: >-
+      The two-axis verdict for a single record, so the demotion writer can select
+      records carrying the descendant outcome without consulting or being blocked by
+      their coverage outcome.
+expects_from:
+  - ac_id: TQ-400f-1
+    contract: >-
+      The descendant index and the has-unfinished-descendants outcome, delivered as a
+      value that is independent of the coverage verdict for the same record.
+  - ac_id: BO-2500a-6
+    contract: >-
+      The already-built composite coverage exemption — a done composite is satisfied
+      on the coverage axis when its children are covered by passing tests, with no
+      direct test of its own. Consumed as a branch to sit BESIDE, never inside, and
+      never to modify. BO-2500a-6 says nothing about whether those children are
+      finished work, and that silence is the whole gap this AC closes.
+origin_agent: business-analyst
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Assigned python-coder; complexity M — the logic is small but it forces the
+      verdict shape to become per-axis before four downstream consumers read it, which
+      is a decision that cannot be retrofitted. it_requirements pin the branch
+      placement (beside the BO-2500a-6 exemption, never inside it), forbid either axis
+      short-circuiting the other, and record that BO-2500a-6 is done and must not
+      regress. expects_from names BO-2500a-6 explicitly so the already-built
+      neighbour is consumed rather than duplicated or reopened. criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_tq_400f_1_i_two_parents_one_run_receive_different_outcomes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci"
+    description: >-
+      ONE subprocess run over ONE store holding P1 (every child covered by a test
+      that actually passes, one of those children work_status todo) and P2 (every
+      child finished, one child with no passing test). P1 receives the
+      has-unfinished-descendants outcome AND retains its satisfied coverage outcome;
+      P2 receives the coverage outcome and NOT the descendant outcome. Asserting
+      these in two separate runs, or asserting P1 alone, passes on the collapsed
+      implementation.
+  - name: test_tq_400f_1_i_coverage_satisfied_parent_is_still_demoted_on_disk
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      In the same production invocation with outcome application enabled, P1's file
+      on disk is demoted — work_status and demotion_reason changed — even though its
+      coverage verdict is satisfied. This proves the descendant outcome reached the
+      write path rather than being printed beside a satisfied coverage verdict and
+      then dropped by a filter that selects on the coverage axis.
+  - name: test_tq_400f_1_i_bo_2500a_6_composite_exemption_does_not_regress
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      Through the real oracle in the same build: a done composite whose children are
+      all finished AND all covered by passing tests still satisfies the coverage axis
+      with no direct '# covers:' test of its own, and a done leaf with no covering
+      test still fails. BO-2500a-6 is work_status done; this entry is the regression
+      boundary that keeps this AC additive.
+  - name: test_tq_400f_1_i_inventory_carries_both_outcomes_as_separate_fields
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Read the inventory the run actually wrote: P1's entry carries the coverage
+      outcome and the descendant outcome as two separately machine-readable values,
+      and a consumer selecting "records with the descendant outcome" finds P1 despite
+      its satisfied coverage outcome. A single scalar verdict field, or a descendant
+      cause embedded in the coverage cause string, fails here.
+test_rationale: >-
+  The naive test builds one parent, gives it an unfinished child, and asserts the
+  sweep flags it. That test stays green on the cheapest wrong implementation — adding
+  the child-status check inside the existing composite-exemption branch — for a
+  reason that is easy to miss: a hand-built fixture parent usually fails the coverage
+  check too, because the author did not trouble to write passing tests for its
+  children, so the new check runs and the test passes. Every one of the twenty
+  parents measured at 439b9076f PASSES the coverage check, so the naive fixture is
+  the one shape that never occurs in the real population, and the naive test would
+  certify an implementation that leaves all twenty untouched. Only two parents that
+  must receive DIFFERENT outcomes in the same run, with the coverage-satisfied one
+  demoted on disk under apply, distinguishes two independent axes from one axis asked
+  twice. The BO-2500a-6 entry is included because the second-cheapest wrong
+  implementation deletes the composite exemption instead of sitting beside it, and
+  that regression is invisible from inside this AC.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the falsifiable form of the gap named in TQ-400f's notes. BO-2500a-6 is
+  the closest existing record and it is DONE, so the temptation is to conclude the
+  parent case is already handled. It is not: BO-2500a-6 keys on the children's test
+  coverage, and a child can be covered by a passing test while its own work is
+  still unfinished. Every one of the twenty bad parents measured at 439b9076f can
+  satisfy BO-2500a-6 and still be wrong.
+
+  The cheapest wrong implementation is to add the child-status test inside the
+  existing composite-exemption branch, so it only runs for parents that failed the
+  coverage check. That passes any single-parent test and leaves the entire
+  measured population untouched, because those parents pass the coverage check.
+  The two-parents-in-one-run clause is what makes that specific mistake fail.
+
+  Authored as an L3 rather than a sixth child on purpose: it is a technical
+  constraint on TQ-400f-1's verdict, not a behaviour of its own, and the cap of
+  five is hard. It is expected to be built — without it, TQ-400f-1 is closable by
+  an implementation that changes nothing for any record currently in the store.

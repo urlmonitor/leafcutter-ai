@@ -1,0 +1,274 @@
+id: TQ-400f-5
+components:
+  - testing_quality
+  - ac_store
+title: "A parent whose work is all finished underneath is reported as ready to close, and is never closed by the machine"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing an unfinished parent record every one of whose
+    descendants at every depth is finished, alongside a finished parent that has an
+    unfinished grandchild,
+  When the whole-store honesty sweep runs to completion over that store and
+    applies its outcome,
+  Then the unfinished parent is listed in the run's report as ready to close,
+    named, and the report states that every descendant beneath it is finished,
+  And that parent's file on disk is byte-for-byte identical after the run: it is
+    not marked finished, and no state, reason or date is written to it by the run,
+  And the other parent IS written to in that same run, so the run's write path is
+    shown to have been enabled while this parent was deliberately left alone,
+  And running the sweep again over the unchanged store leaves that parent's file
+    byte-for-byte identical a second time and lists it as ready to close again, so
+    no repetition of the run ever accumulates into a finished badge,
+  And no descendant count, proportion, or run count causes the parent to be marked
+    finished — the only way it becomes finished is a change made outside this run.
+depends_on:
+  - TQ-400f
+  - TQ-400f-1
+  - TQ-400a-4
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400f.yaml
+    relationship: specifies
+    status: exists
+    relevance: >-
+      READ THE NOTES BEFORE IMPLEMENTING. Automatic promotion is refused outright
+      there, not deferred, and the reasoning is load-bearing: a parent's own
+      integration behaviour is not the sum of its children, so a script that mints
+      a finished badge from arithmetic is the phantom-done failure this whole tree
+      exists to prevent, committed by the tool built to prevent it.
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400a-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The durable per-run inventory. The ready-to-close population must be carried
+      in that same artifact so later readers derive it rather than recomputing it,
+      and so the report and the inventory cannot disagree about who is ready.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The store walk and the report the ready-to-close list is emitted from. The
+      population is already available there once the descendant traversal exists;
+      what must not exist is a write path that acts on it.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The anti-no-op control. A criterion asserting a file did not change is
+      satisfied by a sweep that never ran, which is why the same run must be shown
+      to have written to a different record.
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - >-
+    NO WRITE PATH MAY EXIST FOR THIS POPULATION — THE REFUSAL IS STRUCTURAL, NOT A
+    DEFAULT. Automatic promotion is refused outright by the L1, not deferred. The
+    ready-to-close population must be computed and reported and must have NO code path
+    — flagged, configured, environment-gated or otherwise — that sets work_status on
+    it. A promotion behind a disabled flag is a promotion one flag away, on the single
+    field the entire phantom-done edifice rests on. Satisfy this by construction: the
+    ready-to-close list is never passed to the outcome-application writer, so there is
+    nothing to disable.
+  - >-
+    POPULATION WIDENING, AND IT BREAKS TWO EXISTING ASSERTIONS IF NOT RESTATED. The
+    sweep's population is DONE records; this AC's subject is a NOT-done parent all of
+    whose descendants are done. Those records must enter the walk for the
+    ready-to-close verdict only. TQ-400a-1's "records evaluated equals the number of
+    finished records present on disk" and TQ-400a-4's "entries == records_evaluated +
+    records_errored" must both be explicitly restated over the widened population in
+    the same change. Widening the walk silently leaves both assertions wrong while
+    both still pass.
+  - >-
+    READY-TO-CLOSE RECORDS MUST NOT LEAK INTO ANY DEMOTION POPULATION — not
+    TQ-400f-2's and not TQ-400b-1's. They are not done, so there is nothing to
+    revoke; a widened walk that leaks them would write to records that were never
+    claiming anything, which is a false alarm manufactured by the fix.
+  - >-
+    THE READY-TO-CLOSE POPULATION MUST BE CARRIED IN TQ-400a-4'S INVENTORY and derived
+    from the SAME traversal as TQ-400f-1's descendant index. One derivation, one
+    artifact: the report and the inventory must not be able to disagree about who is
+    ready, and no second walk may compute it.
+  - >-
+    THE REPORT MUST NAME EACH READY-TO-CLOSE PARENT and state that every descendant
+    beneath it is finished. A bare count is not actionable, and the whole point of
+    this half is to hand a human something to act on.
+  - >-
+    RE-RUN STABILITY ON A POPULATION THAT IS NEVER WRITTEN AT ALL. A second and third
+    run over an unchanged store must leave every ready-to-close parent byte-identical
+    and must list it again each time. No accumulated count, run count, repeat sighting
+    or confirmation streak may become an input to any state change — the specific
+    failure guarded here is not a duplicated reason but an implementer promoting on
+    the theory that a repeatedly confirmed result is safe to act on.
+  - >-
+    BYTE STABILITY MEANS DO NOT OPEN THE FILE FOR WRITING (TQ-400e-1). No state, no
+    reason, no date, no marker of any kind is written to a ready-to-close parent.
+  - >-
+    MEASURED CASE THIS EXISTS FOR, so the implementer can sanity-check their own
+    output: BP-1100f on 2026-08-31 — all eleven descendants work_status done, parent
+    still work_status todo, verified directly. Under-claiming is a real and current
+    defect in the plan people read from. It is reported; it is never written.
+  - >-
+    Must handle errors gracefully per the project error handling policy, and must fail
+    toward NOT WRITING: an uncertain ready-to-close determination is reported or
+    omitted from the ready list, never resolved by marking the parent finished.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400a-4
+    contract: >-
+      Ready-to-close entries in the per-run inventory — {ac_id, path, verdict:
+      ready-to-close, descendant_count} for each not-done record every one of whose
+      descendants at every depth is finished — plus the restated count invariant over
+      the widened population. TQ-400c-3's cadence report and TQ-400d-4's triage list
+      derive the ready-to-close set from this artifact rather than recomputing it.
+expects_from:
+  - ac_id: TQ-400f-1
+    contract: >-
+      The descendant traversal and its child index. The ready-to-close population is
+      that traversal's inverse applied to NOT-done composites, computed by the same
+      function so the two halves cannot disagree about what "finished underneath"
+      means.
+  - ac_id: TQ-400a-4
+    contract: >-
+      The durable inventory as the carrier for the ready-to-close population, and its
+      count invariant, which must be restated to cover records that are evaluated for
+      this verdict but are not part of the done population.
+  - ac_id: TQ-400f-2
+    contract: >-
+      A live demotion write path acting on a DIFFERENT record in the same invocation.
+      This AC's byte-identity clause is the load-bearing assertion of the whole record
+      and it is vacuous unless the run's write path was demonstrably enabled while
+      this parent was deliberately left alone.
+origin_agent: business-analyst
+created: 2026-08-31
+amended_by:
+  - reason: "declares_side_effect set true by check-ac-schema's derivation (BO-2900g-2), and it is CORRECT here rather than the known false positive. This record forbids a write to the ready-to-close parent, which is the negation-blind shape KI-CG-014 describes — but its Then clause also asserts that the other parent IS written to in the same run, which is precisely what makes the refusal falsifiable rather than satisfiable by a sweep that never ran. That control is a real durable write asserted by this criterion. Do not 'fix' this to false."
+    by: BrainCandy
+    at: 2026-08-31
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Assigned python-coder; complexity M — not for the reporting, which is small, but
+      because this AC widens the sweep's population from done records to not-done
+      composites and thereby breaks TQ-400a-1's and TQ-400a-4's count assertions
+      unless they are restated in the same change. That widening was not visible to
+      the BA and is now the second it_requirement. THE PROMOTION REFUSAL WAS NOT
+      WEAKENED: it is stated as a structural property (the ready-to-close list is
+      never passed to the writer, so there is nothing to disable), and the test
+      contract makes it falsifiable by hashing EVERY file in the store across the run
+      and asserting the changed-file set excludes every ready-to-close id — an
+      assertion that no implementation which promotes can satisfy, however honestly it
+      also reports. criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_tq_400f_5_all_finished_underneath_parent_is_listed_as_ready_to_close
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      Subprocess run over a store holding a NOT-done parent every one of whose
+      descendants at every depth is finished. The run's report names that parent as
+      ready to close and states that every descendant beneath it is finished. Modelled
+      on BP-1100f (eleven finished descendants, parent still todo), so the fixture has
+      real depth rather than one child.
+  - name: test_tq_400f_5_ready_to_close_parent_is_not_promoted_under_apply
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      THE NEGATIVE, AND IT MUST STAY NEGATIVE. sha256 of the ready-to-close parent's
+      raw bytes before and after the run with apply ENABLED; equal. Then re-read the
+      record in a fresh process: work_status is still not-done. A descriptor asserting
+      only that the report lists it is satisfied by an implementation that promotes
+      AND reports — this entry is what forbids that, and it must be run with apply on,
+      because a refusal that holds only in preview is the defect.
+  - name: test_tq_400f_5_the_same_run_demonstrably_wrote_to_a_different_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      THE POSITIVE CONTROL, SAME INVOCATION. In the run whose hashes the previous
+      entry compares, the second parent (done, one unfinished grandchild) IS written to
+      — work_status and demotion_reason changed on disk. Without this, the byte-identity
+      assertion above is satisfied by a crashed run, a disabled write path and a run
+      never invoked, and the refusal is proven by nothing.
+  - name: test_tq_400f_5_three_consecutive_runs_never_accumulate_into_a_finished_badge
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      Run the sweep three consecutive times over the unchanged store with apply
+      enabled. The ready-to-close parent is byte-identical after each run, is listed as
+      ready to close each time, and its work_status is unchanged after the third. This
+      guards the specific erosion the L1 names: promoting on the second or third
+      sighting on the theory that a repeatedly confirmed result is safe to act on.
+  - name: test_tq_400f_5_whole_store_changed_file_set_excludes_every_ready_to_close_id
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      Hash EVERY file in the fixture store before and after the run and compute the
+      changed-file set. It must equal exactly the demotion targets, and must contain no
+      ready-to-close parent. Separately assert the report's ready-to-close list and the
+      inventory's ready-to-close entries are the same set of ac_ids — one derivation,
+      not two. The whole-store assertion catches a promotion written by ANY code path,
+      including one the report never mentions.
+test_rationale: >-
+  The naive test asserts the report lists the parent as ready to close. It is
+  satisfied perfectly by an implementation that promotes the parent AND reports it —
+  which is not a far-fetched failure but the most likely one, because "a parent should
+  not read unfinished when everything beneath it is done" reads to any implementer as
+  an instruction to fix it, and the L1 refuses exactly that. So the negative has to be
+  observable on disk, under apply rather than in preview, in a run that provably wrote
+  to something else. It also has to be a WHOLE-STORE changed-file assertion rather
+  than a work_status check on the one record the test happens to look at: a promotion
+  written by an unnamed code path, or applied to a sibling of the fixture, passes a
+  single-field assertion and fails a changed-file-set assertion. The three-run entry
+  exists because the refusal a determined implementer erodes first is not "never
+  promote" but "never promote on the FIRST sighting"; and the hash is over raw bytes
+  because a load-and-dump round trip preserves every value while rewriting every file.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE HALF THAT IS EASIEST TO BUILD BACKWARDS. The obvious reading of "a
+  parent should not read unfinished when everything beneath it is done" is to mark
+  it finished. That is refused. It manufactures a claim on the single field the
+  entire phantom-done edifice rests on, from arithmetic that says nothing about
+  whether the parent's own behaviour works end to end. An implementation that
+  closes this AC by promoting has inverted it, and the byte-identity clause is what
+  makes that failure detectable rather than a matter of opinion.
+
+  The direction of the asymmetry is what makes it safe. A bug in the demotion half
+  costs a false alarm; a bug in a promotion half would cost a false pass, silently,
+  on exactly the records nobody re-checks. So the sweep is allowed to reduce a
+  claim and never to make one.
+
+  Measured case this exists for: BP-1100f on 2026-08-31 — all eleven descendants
+  finished, the parent still unfinished, verified directly. Under-claiming is a real
+  and current defect in the plan people read from, and it deserves to be surfaced;
+  it just does not deserve to be surfaced by a script writing the badge.
+
+  The re-run clause is here rather than left to the general idempotency rule because
+  the specific failure it guards is different: not a duplicated reason, but a
+  promotion that a determined implementer might apply on the second or third
+  sighting of the same ready-to-close parent, on the theory that a repeatedly
+  confirmed result is safe to act on. It is not.

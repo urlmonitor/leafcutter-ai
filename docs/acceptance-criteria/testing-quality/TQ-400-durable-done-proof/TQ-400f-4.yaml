@@ -1,0 +1,296 @@
+id: TQ-400f-4
+components:
+  - testing_quality
+  - ac_store
+title: "A parent whose children cannot be worked out is reported as undecidable, never knocked back"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given finished parent records whose set of children cannot be resolved — one
+    listing a child that names no record anywhere in the store, one whose child
+    file is present but unreadable, and one that is reachable from itself through
+    the child links,
+  When the whole-store honesty sweep evaluates those parents and applies its
+    outcome,
+  Then each is reported under the sweep's existing "evidence not trustworthy"
+    outcome, counted separately from both the parents judged complete and the
+    parents judged to have unfinished work beneath them,
+  And each of their files is byte-identical after the run: no demotion, no
+    knocked-back reason, no date,
+  And the report names, for each of them, the specific link that could not be
+    resolved and the record it was found on, so the defect is fixed at its source
+    rather than absorbed as a demotion,
+  And a parent whose children ARE all resolvable, one of them unfinished, is
+    demoted in that same run, so the undecidable outcome is shown to be a
+    judgement about the evidence and not the sweep giving up.
+depends_on:
+  - TQ-400f
+  - TQ-400f-1
+  - TQ-400e-2
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE RULE THIS AC EXTENDS TO A NEW AXIS, AND A CONTRACT QUESTION FOR THE IT PO.
+      It defines the abstention outcome for coverage evidence the sweep cannot
+      resolve. This AC applies the same never-demote-on-doubt rule to a parent whose
+      CHILD SET cannot be resolved. Whether that is the same reported outcome with a
+      new cause or a separate outcome is a decision the enrichment pass must make
+      explicitly; the criterion assumes the former.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      Where the child links are resolved during the store walk. The undecidable
+      branch has to be introduced at the point resolution fails, not bolted on
+      afterwards, or a resolution failure will already have been coerced into a
+      verdict by the time anything can abstain.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The outcome vocabulary that must gain the new cause, and the existing
+      fail-closed classification the abstention branch sits beside.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The failure angle and its fail-open precedents in this repository. Both
+      directions are live here: an unreadable child silently treated as finished
+      (a false pass) and an unreadable child treated as unfinished (a false alarm).
+      Neither is acceptable; the record must abstain.
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-ACD-008 — duplicate AC ids are live on main and the required "AC store valid"
+      gate does not test id uniqueness (KI-ACS-001). An id that resolves to more than
+      one record is a fourth resolution failure of the same class as the three named
+      in the criterion, and it must abstain rather than pick a winner.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    DECISION MADE AT ENRICHMENT — REUSE TQ-400e-2'S OUTCOME, ADD A DISTINCT CAUSE KEY.
+    The BA left this open; it is now settled so the implementer does not choose
+    silently. An unresolvable CHILD SET is reported under the EXISTING
+    evidence-not-trustworthy member of the oracle's closed vocabulary (proven /
+    unproven / exempt / evidence-not-trustworthy), carrying a distinct, stable,
+    machine-readable CAUSE KEY that separates it from TQ-400e-2's unresolvable
+    coverage captures; and the run's report must state a sub-count per cause. DO NOT
+    mint a fifth outcome member.
+    Reasoning, recorded so it can be overturned on its merits rather than by drift:
+    (a) the safety semantics are identical on both axes — never write, always report,
+    name the source location — and a second outcome would have to restate all of that
+    and could then drift from it; (b) four downstream consumers already read that
+    closed vocabulary (TQ-400a-4's inventory verdict field, TQ-400b-1's demotion
+    population filter, TQ-400c-3's cadence report, TQ-400d-4's triage pile), so a
+    fifth member is a vocabulary migration across all four, which is the
+    disjoint-vocabulary shape of the EPIC-ComputedQualityGates layer-3 defect; (c) the
+    two causes are nevertheless NOT interchangeable for triage — an unresolvable
+    coverage capture is fixed in a test file, an unresolvable child link is fixed in
+    an AC record — so they must not be indistinguishable in the inventory, which is
+    what the cause key and the per-cause sub-count provide; (d) the change is
+    asymmetric in cost: adding a discriminator now is cheap, splitting one outcome
+    into two later is a migration across four readers.
+  - >-
+    FOUR RESOLUTION FAILURES, ALL REPORTED, NONE ALLOWED TO ESCAPE THE WALK: (a) a
+    covered_by entry naming no record anywhere in the store; (b) a child file present
+    but unreadable or unparseable; (c) a cycle reachable from the record through the
+    child links; (d) an id resolving to more than one record (KI-ACD-008, live on
+    main). Each produces a reported abstention for the affected parent, and none may
+    raise out of the walk and take the run's other verdicts with it.
+  - >-
+    THE CYCLE CASE NEEDS A VISITED-SET TRAVERSAL. A recursive walk written for a tree
+    will hang or exhaust the stack on a child-link cycle and destroy the whole run's
+    output. Termination must be structural, not a depth cap chosen by guess.
+  - >-
+    THE ABSTENTION BRANCH MUST BE RAISED AT THE POINT RESOLUTION FAILS, inside the
+    descendant traversal — not applied afterwards over a completed verdict. Bolted on
+    afterwards, the failure has already been coerced into a has-unfinished-descendants
+    or an all-finished verdict before anything can abstain, and the second of those is
+    a silent false pass.
+  - >-
+    THE REPORT MUST NAME, PER ABSTAINING PARENT, THE SPECIFIC UNRESOLVABLE LINK AND
+    THE RECORD IT WAS FOUND ON — the literal id string that failed to resolve and the
+    parent's repo-relative path. Without the location the defect cannot be fixed at
+    source, and an abstention that cannot be fixed at source is a permanent hole in
+    the sweep rather than a shrinking one.
+  - >-
+    THE ABSTAINED PARENT'S FILE MUST BE BYTE-IDENTICAL AFTER THE RUN — no demotion, no
+    reason, no date. Same write discipline as TQ-400e-1: do not open the file for
+    writing at all.
+  - >-
+    ABSTENTION IS AN OUTCOME, NOT A SKIP. Abstaining parents are counted separately
+    from parents judged complete and from parents judged to have unfinished work, and
+    that count must appear in the run's report AND be carried in TQ-400a-4's
+    inventory. A skipped record is indistinguishable from a record nobody evaluated,
+    which is exactly the invisibility under which the twenty bad parents accumulated.
+  - >-
+    SCOPE BOUNDARY: this AC does not repair dangling links, does not deduplicate ids,
+    and does not gate authoring on either. It owns one guarantee — whatever the
+    store's residual link-integrity error rate, the sweep never takes a badge away on
+    a child set it could not read.
+  - >-
+    Must handle errors gracefully per the project error handling policy and must fail
+    toward ABSTENTION rather than demotion whenever the child set cannot be positively
+    resolved; and the sweep must still complete and emit verdicts for every other
+    record in the store when one record's traversal fails.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400f-2
+    contract: >-
+      The demotion-safety guarantee on the descendant axis: a parent whose child set
+      could not be resolved is classified evidence-not-trustworthy with the
+      child-link cause key, is never written to, and is never present in the
+      population TQ-400f-2 demotes. The report carries the abstention count separately
+      and names each unresolvable link with the record it was found on.
+  - agent: python-coder
+    ac_id: TQ-400a-4
+    contract: >-
+      Inventory entries for abstaining parents carrying the existing
+      evidence-not-trustworthy verdict plus the child-link cause key, so a downstream
+      reader can partition child-link abstentions from TQ-400e-2's coverage
+      abstentions without string-matching prose.
+expects_from:
+  - ac_id: TQ-400e-2
+    contract: >-
+      The existing evidence-not-trustworthy outcome, its never-write discipline, and
+      its name-the-unresolvable-thing-and-its-location reporting rule — extended to
+      the child-set axis with a DISTINCT CAUSE KEY rather than a fifth outcome
+      member. See this record's first it_requirement for the decision and its
+      reasoning. TQ-400e-2 is not modified by this AC.
+  - ac_id: TQ-400f-1
+    contract: >-
+      The descendant traversal and its child index, inside which the abstention branch
+      must be raised at the point resolution fails. TQ-400f-1 also routes its
+      duplicate-id errors here rather than resolving them itself.
+origin_agent: business-analyst
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Assigned python-coder; complexity M. THE BA'S OPEN QUESTION IS RESOLVED HERE:
+      the unresolvable-child-set case reuses TQ-400e-2's existing
+      evidence-not-trustworthy outcome and adds a distinct machine-readable cause key
+      plus a per-cause sub-count, rather than minting a fifth outcome member — the
+      four-part reasoning is recorded verbatim in the first it_requirement so it can
+      be overturned on its merits. A fourth resolution failure was added that the BA
+      could not see: duplicate ids are live on main and the required store gate does
+      not detect them (KI-ACD-008 with KI-ACS-001), so an id resolving to two records
+      abstains rather than one silently winning. criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_tq_400f_4_unresolvable_child_sets_are_counted_apart_from_both_other_outcomes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      One store, four abstaining parents — dangling covered_by id, unreadable child
+      file, child-link cycle, duplicate id — each reported under
+      evidence-not-trustworthy with the child-link cause key, counted separately from
+      parents judged complete and from parents judged to have unfinished work.
+      Construct the store so that folding the abstentions into either of the other two
+      counts would produce a number a correct implementation must not print.
+  - name: test_tq_400f_4_a_child_link_cycle_does_not_take_the_run_down
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      A subprocess run over a store containing a child-link cycle terminates inside
+      the run's normal time budget, exits with a status the harness can read, and
+      still emits verdicts for every OTHER record in the store. A recursive
+      tree-shaped traversal hangs or raises RecursionError here and leaves the run
+      with no verdicts at all — which is worse than the defect being fixed.
+  - name: test_tq_400f_4_abstaining_parents_are_untouched_while_a_resolvable_one_is_demoted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      THE POSITIVE CONTROL, SAME RUN, APPLY ENABLED. sha256 all four abstaining
+      parents before and after; identical. In that same invocation a fifth parent
+      whose child set IS fully resolvable, with one unfinished descendant, is demoted
+      on disk. Abstention is thereby shown to be a judgement about the evidence rather
+      than the sweep giving up, and the byte-identity assertion is shown not to be
+      riding on an inert run.
+  - name: test_tq_400f_4_unreadable_child_is_produced_by_a_real_malformed_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The unreadable-child case must be produced by writing a genuinely malformed
+      .yaml into a real-serializer store and letting the production loader fail on it
+      — truncated YAML, a tab inside an indented block, and a permission-denied read
+      are the store's actual failure modes. Monkeypatching the loader to raise
+      reproduces the author's idea of the failure and is the same fixture bias that
+      hid the files_touched parser no-op for an entire epic.
+  - name: test_tq_400f_4_report_and_inventory_name_the_link_and_carry_a_partitioning_cause_key
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      For each abstaining parent the report names the literal unresolvable child id
+      and the parent's repo-relative path; and the inventory entry carries a cause key
+      that TQ-400e-2's coverage abstentions do NOT carry, so a downstream reader
+      partitions the two by field value rather than by string-matching prose. Assert
+      the partition against a store containing both kinds of abstention in one run.
+test_rationale: >-
+  The naive test gives a parent a covered_by entry pointing at a non-existent id and
+  asserts it is not demoted. That stays green on three broken implementations. One
+  that abstains by SKIPPING the record entirely, leaving it invisible — which is the
+  exact condition the twenty bad parents accumulated under, so the naive test would
+  certify the defect it was written to prevent. One that handles the dangling-id case
+  and crashes on the other three failure shapes its fixture never exercises; the cycle
+  in particular hangs or blows the stack in any traversal written for a tree and
+  destroys every verdict in the run. And one that abstains correctly in preview and
+  demotes with apply enabled, which is the whole defect and is invisible to any test
+  that never passes the flag. Hence: a subprocess run with apply enabled, all four
+  failure shapes in one store, a positive control demoted in that same run, and an
+  explicit termination assertion on the cycle. The real_artifact entry refuses a
+  monkeypatched loader because a hand-raised exception is the failure the author
+  already knows how to handle, whereas truncated YAML and a stray tab are what the
+  store actually produces.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The asymmetry to preserve: uncertainty about a parent's children must resolve to
+  abstention, never to demotion. This is TQ-400e's rule and TQ-400f inherits it
+  unchanged. A dangling child link is a real defect in the store and it is worth
+  reporting loudly, but demoting the parent on it punishes the wrong record and
+  destroys the reason text — the reader is told the parent has unfinished children
+  when what actually happened is that a link is broken.
+
+  Why an abstention and not silence: a parent that were simply skipped is
+  indistinguishable from a parent nobody evaluated, and that invisibility is
+  precisely the condition under which the twenty bad records accumulated. The
+  separate count in the report is what keeps the hole visible and shrinking.
+
+  Three distinct resolution failures are named in the Given on purpose, because the
+  natural implementation handles the first and crashes on the other two. A cycle in
+  the child links in particular will hang or blow the stack in a traversal written
+  for a tree, and it must produce a reported outcome, not an exception that takes
+  the whole sweep down and leaves the run with no verdicts at all.
+
+  Scope boundary: this AC does not repair dangling links, does not deduplicate them,
+  and does not gate authoring on them. It owns one guarantee — whatever the store's
+  residual link-integrity error rate, the sweep never takes a badge away on a child
+  set it could not read.

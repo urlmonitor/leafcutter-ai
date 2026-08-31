@@ -1,0 +1,330 @@
+id: TQ-400f-1
+components:
+  - testing_quality
+  - ac_store
+title: "Every finished parent in the store is judged against all of its descendants, not just the ones in a pending change"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store on disk holding two finished parent records: the first whose only
+    direct child is itself finished but whose grandchild beneath that child is
+    still unfinished, and the second whose direct child is unfinished; and given
+    neither parent appears in any pending change — the pending change contains
+    only unrelated files, and one of the two parents is present in it solely as a
+    renamed path,
+  When the whole-store honesty sweep runs over that store,
+  Then each of the two parents receives a verdict of its own, distinct from the
+    verdicts given to its children,
+  And each of those verdicts is "has unfinished work beneath it", stated as its
+    own outcome and never folded into the verdict about the parent's own test
+    evidence,
+  And each verdict names every descendant found unfinished at any depth,
+    identified by name, including the unfinished grandchild that no direct-child
+    check would have reached,
+  And a parent every one of whose descendants is finished receives a verdict in
+    the same run that is not "has unfinished work beneath it",
+  And running the change-scoped check over that same store produces no verdict
+    for either parent at all, so the population being judged is demonstrably the
+    store on disk and not the set of files staged for a commit.
+depends_on:
+  - TQ-400f
+  - TQ-400a-1
+  - TQ-400a-4
+doc_links:
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      THE FILE TO EDIT. check_all_done_acs already walks the whole store and asks
+      the per-record oracle for a verdict; the parent-versus-descendants verdict
+      belongs in that walk, not in a second command with its own walker. Its
+      deployed mirror under scripts/commit_guardian/ is a build output and must
+      be regenerated in the same change.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The per-record verdict oracle and its closed outcome vocabulary. The new
+      "has unfinished work beneath it" outcome must be added to that vocabulary
+      rather than computed by a second reader, or the sweep and the oracle can
+      disagree about the same record.
+  - path: docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500d-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE DEFINITION THIS AC CONSUMES, NOT RESTATES. It already defines composite
+      doneness as full-tree traversal to every leaf, with intermediate levels that
+      have undone leaves not counting. Read it for the traversal semantics; this
+      AC is the enforcement of that definition over the whole store.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-CG-001 (the AC hooks are scoped to the git index) and
+      KI-CG-20260826-1612 (the guardians filter out renames, so even a staged
+      parent can be invisible) are why the final clause of this criterion exists.
+      An implementation that satisfies every other clause from the staged set
+      reproduces the exact reason twenty bad parents went unnoticed.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The reachability and real_artifact angles. A verdict function proven only by
+      direct import passes on a walk nothing invokes; the fixture store must be
+      written by the real serializer, not hand-typed.
+  - path: scripts/ac_store/ac_parent_id.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The id-SHAPE parent relation already used by check_ac_parent_covered_by.py
+      and scan_ac_orphans.py. It is the second of the two child links in the
+      store, and derive_parent_id returns None for root-shaped and bare
+      PREFIX-NNN ids — so it is neither redundant with covered_by nor complete on
+      its own. Read it before deciding what "descendant" means.
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-ACD-008 — duplicate AC ids are live on main and the required "AC store
+      valid" gate does not test id uniqueness, so an id-to-record map built for
+      this traversal will silently drop a record unless duplicates are treated as
+      an error. KI-ACD-017 — the per-item full-store rescan shape, which this
+      traversal must not repeat at 3,146 records.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    POPULATION WIDENING — STATE IT, DO NOT SLIDE IT IN. The sweep's evaluated
+    population today is done LEAF L2/L3 records (TQ-400a-1's criterion; TQ-400a-4's
+    contract says "one entry per done L2/L3 record"). This AC requires a verdict for
+    done records at EVERY level, composites included. Widen the population inside
+    check_all_done_acs and report the widened figure as its own count, and restate
+    TQ-400a-4's "entries == records_evaluated + records_errored" invariant over the
+    wider population in the same change. Widening the walk without restating those
+    two assertions makes both of them wrong while both still pass.
+  - >-
+    ONE TRAVERSAL, CONSUMED FROM AN EXISTING DEFINITION. TKT-500d-2-i already defines
+    composite doneness as full-tree traversal to every leaf, with intermediate levels
+    that have undone leaves not counting. Consume that definition; do not re-specify
+    it. Exactly one descendant-resolution function may exist — TQ-400f-5's
+    ready-to-close population and TQ-400f-4's abstention branch must both call it.
+  - >-
+    THE DESCENDANT RELATION IS THE UNION OF THE TWO LINKS IN THE STORE: the record's
+    declared covered_by children AND the id-shape-derived children
+    (scripts/ac_store/ac_parent_id.py). covered_by alone is insufficient and unsafe —
+    a stale covered_by is a documented live defect (CLAUDE.md, "AC-store commits —
+    stage the parent alongside the child": ACD-400a's covered_by was stale by two
+    children for five days), and a parent that omits an unfinished child from
+    covered_by is precisely the record this AC exists to catch.
+  - >-
+    NAME THE RESIDUAL BLIND SPOT RATHER THAN HIDING IT. derive_parent_id yields no
+    parent for root-shaped and bare PREFIX-NNN ids, so for those records covered_by
+    is the only link and a stale list makes a child invisible. Count the records
+    whose parent could not be derived by shape and state that figure in the run's
+    output. Do NOT abstain on it — the population is large, and an unstated coverage
+    hole in the sweep is the same invisibility the parent L0 exists to remove.
+  - >-
+    DUPLICATE IDS ARE LIVE ON MAIN AND THE REQUIRED STORE GATE DOES NOT DETECT THEM
+    (KI-ACD-008 with KI-ACS-001). An id-to-record map built for this traversal must
+    not let the last file walked win: an id resolving to more than one record is
+    reported as an error for the affected records and routed to TQ-400f-4's
+    abstention, never silently collapsed.
+  - >-
+    STORE-SCOPED, NOT INDEX-SCOPED. Every verdict must come from the whole-store walk.
+    No git diff, no --diff-filter, no staged-file set anywhere on this path.
+    KI-CG-001 (AC hooks are index-scoped, so parent drift is unreachable) and
+    KI-CG-20260826-1612 (the six guardians filter --diff-filter=AM, so even a staged
+    parent is invisible when renamed) are the recorded reasons an index-scoped
+    implementation would satisfy every other clause and change nothing.
+  - >-
+    Must not alter the behaviour or scope of --mode precommit or --mode ci-changed.
+    The final criterion clause compares the two populations over one store, so the
+    change-scoped mode must remain genuinely change-scoped to be a valid control.
+  - >-
+    THE NEW OUTCOME BELONGS IN THE ORACLE'S CLOSED VOCABULARY in
+    scripts/ac_store/done_proof.py, not computed by a second reader inside the
+    walker. Two readers of the same evidence drift (TQ-400a-3; the
+    EPIC-ComputedQualityGates layer-3 disjoint-vocabulary defect).
+  - >-
+    EDIT THE PACKAGE SOURCE: templates/scripts/commit_guardian/check_done_proof.py.
+    scripts/commit_guardian/check_done_proof.py is a build output of
+    build_phases.build_commit_guardian and DOES NOT EXIST in a fresh worktree; it is
+    regenerated by build.py in the same change. Do not treat the deployed path as
+    source and do not hard-code it in a test.
+  - >-
+    Traversal cost must stay linear in the store: build the child index ONCE per run
+    over the measured baseline of 3,146 records, never by rescanning the store per
+    parent (KI-ACD-017 records that shape as a live defect elsewhere in this
+    pipeline). Report the traversal's own runtime alongside the sweep's.
+  - >-
+    Must handle errors gracefully per the project error handling policy: a record
+    whose descendant set cannot be resolved must not silently leave the evaluated
+    population — it is routed to the abstention outcome owned by TQ-400f-4.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400f-2
+    contract: >-
+      Per-parent verdict entries whose outcome is has-unfinished-descendants, each
+      carrying {ac_id, path (repo-relative), outcome, unfinished_descendants:
+      [ac_id, ...] covering every depth in a deterministic order}. The demotion
+      writer consumes this list verbatim and re-runs no traversal of its own.
+  - agent: python-coder
+    ac_id: TQ-400f-5
+    contract: >-
+      The same traversal's inverse population — records every one of whose
+      descendants at every depth is finished — as the ready-to-close input, so the
+      two halves cannot disagree about who is complete underneath.
+  - agent: python-coder
+    ac_id: TQ-400a-4
+    contract: >-
+      The widened evaluated population (done records at every level, not only done
+      leaves) plus the new has-unfinished-descendants member of the verdict
+      vocabulary, for serialization into the inventory. The inventory's count
+      invariant must be restated over the wider population in the same change.
+expects_from:
+  - ac_id: TQ-400a-1
+    contract: >-
+      The whole-store walk and its per-record verdict list of {ac_id, path, ok,
+      reason} plus records_evaluated. This AC widens that population to composites
+      and adds a second, independent verdict per record; it must not fork the walk
+      or introduce a second walker.
+  - ac_id: TQ-400a-4
+    contract: >-
+      The durable inventory as the carrier for the parent verdict. The
+      has-unfinished-descendants outcome and its named descendants must be persisted
+      there, not only printed, so TQ-400f-2 reads a work list rather than log text.
+  - ac_id: TKT-500d-2-i
+    contract: >-
+      The read-side DEFINITION of composite doneness — full-tree traversal to every
+      leaf, intermediate levels with undone leaves not counting. Consumed, not
+      restated. If TKT-500d-2-i is implemented independently, the two must share one
+      traversal function rather than each owning one.
+origin_agent: business-analyst
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Assigned python-coder; complexity L, because the deliverable is not the
+      comparison but the descendant index and the population widening it forces on
+      TQ-400a-1/TQ-400a-4. it_requirements name the two child links in the store and
+      require their UNION (covered_by alone is known-stale), name the residual
+      blind spot where derive_parent_id yields nothing, and route live duplicate ids
+      (KI-ACD-008) to abstention rather than letting one record win. Contracts added
+      to TQ-400f-2, TQ-400f-5, TQ-400a-4 (down) and TQ-400a-1, TQ-400a-4,
+      TKT-500d-2-i (up) — the last of these is the L1's explicit "consume the
+      definition, do not re-specify it" instruction made into a contract.
+      criteria untouched.
+superseded_by: null
+covered_by:
+  - TQ-400f-1-i
+implemented_by: []
+test_spec:
+  - name: test_tq_400f_1_unfinished_grandchild_is_named_in_the_parents_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci"
+    description: >-
+      Subprocess the production sweep over a temp store whose finished parent has a
+      finished direct child and an UNFINISHED GRANDCHILD beneath it. The parent
+      receives the has-unfinished-descendants outcome and the output names that
+      grandchild by id. A one-level-down traversal passes a direct-child fixture and
+      fails here, which is why the fixture is a grandchild — thirteen of the sixteen
+      measured L2 cases are exactly this shape.
+  - name: test_tq_400f_1_store_wide_run_judges_parents_the_change_scoped_run_never_sees
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci"
+    description: >-
+      THE ANTI-FALSE-GREEN CONTROL, AND IT IS NOT NEGOTIABLE. Over ONE identical
+      store and ONE identical git index in which neither parent is staged as
+      added/modified and one parent is staged only as a RENAME (git mv), run --mode
+      ci and --mode ci-changed as separate subprocesses: ci produces a verdict for
+      both parents, ci-changed produces a verdict for neither. The rename limb is
+      what makes KI-CG-20260826-1612 falsifiable rather than merely cited.
+  - name: test_tq_400f_1_parent_and_child_verdicts_are_distinct_and_composites_are_counted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci"
+    description: >-
+      In one real invocation, each parent carries its own verdict entry distinct from
+      its children's; a parent all of whose descendants are finished receives a
+      verdict in that same run that is NOT has-unfinished-descendants; and the run's
+      reported evaluated count over that store is strictly greater than the count of
+      done LEAF records in it, proving the population actually widened rather than
+      being renamed.
+  - name: test_tq_400f_1_traversal_reads_real_serialized_records_and_errors_on_duplicate_ids
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Build the fixture store with the project's real serializer (yaml.safe_dump,
+      column-0 block lists) or by copying real records verbatim out of
+      docs/acceptance-criteria/, including one L2 with Roman-suffixed -i/-ii children
+      and one feature-folder nesting level; read it in a fresh subprocess and assert
+      every parent is evaluated. Add two records sharing one id (the live KI-ACD-008
+      shape) and assert both are reported as an error rather than one silently
+      winning the id-to-record map.
+  - name: test_tq_400f_1_sweep_outcome_equals_the_per_record_oracle_outcome
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      For EVERY record in the store, the outcome the sweep reports equals the outcome
+      verify_done_eligible returns for that same record — asserted per record, never
+      as matching totals, because matching totals hide two offsetting
+      misclassifications and offsetting misclassifications are exactly how a second
+      verdict reader drifts undetected.
+test_rationale: >-
+  The naive test imports the traversal helper and asserts it returns the unfinished
+  child for a two-level fixture. It would stay green on the defect three separate
+  ways. First, on a traversal that looks only one level down, because the fixture is
+  one level — and one level down misses thirteen of the sixteen measured L2 cases.
+  Second, on a walker nothing invokes: a helper is reachable by import even when
+  --mode ci never calls it, which is the BO-2300 phantom-build shape. Third, and this
+  is the one that produced the twenty bad parents, on a verdict computed from the
+  staged set, because a direct-import test has no git index at all and so cannot tell
+  a store-wide sweep from the existing index-scoped check under a new name. Hence
+  every descriptor runs the production CLI as a subprocess, the unfinished record is
+  a grandchild rather than a child, and one descriptor compares the ci and
+  ci-changed populations over one identical store with one parent present only as a
+  staged rename. The duplicate-id limb is there because the store on main already
+  holds duplicate ids that the required store gate does not detect, so the naive
+  id-to-record map is wrong today rather than hypothetically; the oracle-agreement
+  entry is there because the cheapest way to add a second verdict is to write a
+  second reader.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Measured population this must be able to see: a store-wide sweep of all 3,146
+  records at 439b9076f found 20 parents marked finished with at least one
+  unfinished descendant. Sixteen of the twenty sit at L2, and in thirteen of those
+  every unfinished descendant is a Roman-suffixed technical-constraint sibling.
+  That shape is why the traversal clause says "at any depth" and why the fixture
+  in the first Given is a grandchild rather than a direct child: a check that
+  looks only one level down misses the dominant real case entirely.
+
+  The last clause is the anti-false-green control and is not negotiable. Comparing
+  the store-wide run against the change-scoped run over one identical store is the
+  only assertion that distinguishes a genuinely store-wide verdict from the
+  existing index-scoped check under a new name — and the index-scoped version is
+  precisely the implementation that would change nothing.
+
+  Scope boundary: this AC produces the verdict only. Writing it back to the record
+  is TQ-400f-2, and the interaction with the existing coverage verdict for the
+  same parent is TQ-400f-1-i.

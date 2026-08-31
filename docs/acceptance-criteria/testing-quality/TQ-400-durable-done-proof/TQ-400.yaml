@@ -37,7 +37,10 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-08-17
-amended_by: []
+amended_by:
+  - reason: "TQ-400f added as a sixth L1 (6 of the L0 cap of 7 now used, no override needed). It covers the one direction this goal named but never decomposed: the L0's own evidence section records that 'there is no supported transition from done back to todo', and TQ-400b supplies that transition for a record whose OWN proof lapsed — but nothing covers a composite whose children are unfinished. Measured: 20 composites at 439b9076f are marked done with at least one unfinished child, and BP-1100f (verified 2026-08-31) is the inverse, all eleven descendants done with the parent still todo. Deliberately NOT filed under an existing L1: a, b and e are each already over the default cap with documented overrides, and c and d sit exactly at it, so any L2 here would have required a fourth override on a tree the L0 notes already flag for rebalancing. Scope is demote-only by design — auto-promotion is explicitly refused in TQ-400f's notes, not deferred."
+    by: BrainCandy
+    at: 2026-08-31
 superseded_by: null
 covered_by:
   - TQ-400a
@@ -45,6 +48,7 @@ covered_by:
   - TQ-400c
   - TQ-400d
   - TQ-400e
+  - TQ-400f
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

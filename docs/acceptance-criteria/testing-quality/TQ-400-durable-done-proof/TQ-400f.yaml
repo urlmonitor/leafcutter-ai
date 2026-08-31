@@ -1,0 +1,151 @@
+id: TQ-400f
+components:
+  - testing_quality
+  - ac_store
+title: "A finished parent answers for its children — it cannot keep a done badge while work beneath it is unfinished"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Done at the top means done underneath.
+
+  A parent item is a summary of the work below it, and today that summary can be
+  wrong in both directions without anyone noticing. It can read finished while
+  work beneath it is not, and it can read unfinished long after everything
+  beneath it is complete. Either way the plan you read from is wrong, and in the
+  first direction it overstates what you have.
+
+  After this, a parent whose children are not all finished cannot keep a finished
+  badge: it is knocked back, and the record names the unfinished children that
+  caused it. A parent whose children are all finished is reported as ready to
+  close and is never closed automatically — awarding the badge stays a judgement
+  someone makes about the parent's own behaviour, not an arithmetic result.
+depends_on:
+  - TQ-400
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-001 and KI-CG-20260826-1612 are why this cannot be an index-scoped pre-commit check: the first means a parent that is never staged is never inspected, the second means a parent staged as a RENAME is not inspected either. Both are the reason the 20 known bad composites survived."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-400f-1
+  - TQ-400f-2
+  - TQ-400f-3
+  - TQ-400f-4
+  - TQ-400f-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  SCOPE IS DEMOTE-ONLY, AND THE ASYMMETRY IS THE POINT. The two directions are
+  NOT one rule and must not be decomposed as one:
+
+    - DEMOTION (in scope). Parent says done, a child does not → the parent loses
+      the badge, with the offending children named. This can only ever REDUCE a
+      claim, so a bug in it costs a false alarm, never a false pass.
+    - PROMOTION (explicitly OUT of scope, and not merely deferred). All children
+      done → parent automatically done. Do NOT author this. It manufactures a
+      done claim mechanically on the single field the entire phantom-done
+      edifice rests on, and an L1's own integration behaviour is not the sum of
+      its children — that assumption is exactly how a parent goes green while
+      the feature does not work end to end. The all-children-done case is
+      REPORTED as ready-to-close and left for a human or an agent that has
+      looked at the parent's own behaviour.
+
+  This L1 therefore has one blocking behaviour and one reporting behaviour, and
+  an implementation that closes the reporting half by auto-promoting has not
+  satisfied it — it has inverted it.
+
+  WHAT THIS IS NOT — three neighbours that already exist. Do not restate any of
+  them and do not close them as duplicates:
+
+    - BO-2500a-6 (work_status: done) — "a done composite derives its proof from
+      its children, not from a direct linked test". READ IT BEFORE DECOMPOSING.
+      It is the closest neighbour and it keys on whether the children are
+      COVERED BY PASSING TESTS, not on the children's own work_status. That gap
+      is precisely what this L1 closes: a composite can sit done today with
+      children whose tests pass while those children are still work_status:
+      todo, and BO-2500a-6 is satisfied by it.
+    - TQ-400b (sibling) — a record loses its badge when ITS OWN proof lapses.
+      Same demotion machinery, different trigger. This L1's trigger is the
+      children's status. Reuse TQ-400b's demotion fields and reason-recording
+      rather than inventing a second mechanism; if that requires a contract
+      between the two, that is an L2 delivers_to/expects_from for the IT PO.
+    - TKT-500d-2-i (approved, todo) — "L0 is done only when every leaf has
+      work_status: done", full-tree traversal, intermediate L1s with undone
+      leaves do not count. That is the read-side DEFINITION of composite
+      doneness. This L1 is the enforcement and demotion of it. The definition
+      should be consumed, not re-specified — if the traversal semantics need to
+      be shared, say so as a contract.
+
+  MEASURED EVIDENCE — both directions are real, cite these and do not inflate
+  them:
+    - OVER-CLAIMING: a store-wide sweep of all 3,146 records at 439b9076f found
+      20 composites marked done with at least one unfinished child. Sixteen of
+      the twenty are L2, and in thirteen of those every unfinished child is a
+      Roman-suffixed technical-constraint sibling (-i/-ii/-iii). So the dominant
+      real shape is an L2 flipped done once its behaviour works while its
+      constraint siblings stay todo.
+    - UNDER-CLAIMING: BP-1100f on 2026-08-31 — all eleven descendants
+      work_status: done, parent still work_status: todo. Verified directly.
+      This is the case the reporting half exists for.
+    - WHY THEY SURVIVED: the per-record verdict is already computable but is
+      only ever computed over files STAGED FOR A COMMIT. A parent nobody stages
+      is never inspected.
+
+  MUST READ THE STORE, NOT THE INDEX — this is a hard design constraint, not a
+  preference. An index-scoped implementation reproduces the exact reason the 20
+  went unnoticed, and would satisfy a naively-written criterion while changing
+  nothing. Two recorded defects make this concrete: KI-CG-001 (AC hooks are
+  scoped to the git index, so parent-level drift is unreachable) and
+  KI-CG-20260826-1612 (the six AC guardians filter on --diff-filter=AM, which
+  excludes renames, so even a STAGED parent is invisible when it was renamed).
+  Any Then-clause here that can be satisfied by a check reading only the staged
+  set is mis-written. Prefer the whole-store sweep TQ-400a already establishes.
+
+  THE BAR FOR EVERY THEN CLAUSE — restate it in each L2. A criterion that could
+  be closed by an implementation which never runs is this defect reproducing one
+  level up. Two specific traps:
+    - "The check reports the parent" is NOT sufficient. Bind the observable to
+      the store state: construct a real composite with a real unfinished child,
+      run the check out of process, and assert the badge actually changed on
+      disk and the reason names that child.
+    - A test that greps source for a string passes on dead code. Every L2 must
+      execute the behaviour against a real record.
+    - Mirror TQ-400e's rule: evidence the check cannot trust produces an
+      ABSTENTION, never a demotion. A parent whose children cannot be resolved
+      is not demoted — it is reported as indeterminate. Never-cry-wolf is a
+      property this L1 inherits and must not weaken.
+
+  CAP DISCIPLINE — HARD. Author AT MOST FIVE L2 children here. Every other L1 in
+  TQ-400 (a, b, e) already carries a child_limit_override and the L0 notes name
+  TQ-400b as the first candidate for a PO-owned rebalance. Do NOT add a sixth
+  child and do NOT add an override to this record. If the behaviour genuinely
+  needs more than five, say so and stop rather than widening the cap — the L0
+  has room for one further L1 (5 of 7 used before this record, 6 of 7 after).
+
+  DOCUMENTATION TRIGGERS ARE DELIBERATELY UNSET. Adding them forces doc ACs that
+  consume cap slots, which is exactly how a, b and e each ended up needing an
+  override. If the IT PO judges a doc obligation necessary, attach it to an
+  existing L2's it_requirements rather than minting a sixth child.
+
+  Authored by the AC-pipeline owner at BrainCandy's direction on 2026-08-31,
+  bypassing /plan-feature by explicit instruction. L1 only: no L2, no test_spec,
+  no it_requirements written here, by design — the BA authors L2/L3 and the IT
+  PO enriches.

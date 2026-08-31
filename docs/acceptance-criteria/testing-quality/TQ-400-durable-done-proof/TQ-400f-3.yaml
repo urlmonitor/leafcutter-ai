@@ -1,0 +1,235 @@
+id: TQ-400f-3
+components:
+  - testing_quality
+  - ac_store
+title: "A parent that really is finished underneath keeps its badge, untouched, in a run that demotes others"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing a finished parent every one of whose descendants at
+    every depth is finished — including its Roman-suffixed technical-constraint
+    children — alongside a second finished parent with one unfinished grandchild,
+  When the whole-store honesty sweep runs to completion over that store and
+    applies its outcome,
+  Then the consistent parent's file is byte-for-byte identical before and after
+    the run: it is not demoted, and no knocked-back reason or date is written to it,
+  And the consistent parent appears in the run's report with a verdict of its own,
+    so a reader can tell "looked at and left alone" apart from "never looked at",
+  And the second parent is demoted in that same run, proving the run's write path
+    was live and discriminating while the consistent parent was left alone,
+  And a parent whose descendants are all finished except one that is itself
+    excused from needing proof is likewise left untouched, so an excused
+    descendant does not read as unfinished work.
+depends_on:
+  - TQ-400f
+  - TQ-400f-1
+  - TQ-400f-2
+  - TQ-400e-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PROPERTY THIS AC INHERITS, ON A NEW AXIS. It establishes byte-identity
+      for a record whose own proof holds; this AC establishes the same for a parent
+      whose children hold. Read its requirement that byte stability means not
+      opening the file for writing at all — a load-and-dump round trip preserves
+      every value and rewrites every file.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The real_artifact angle and the anti-no-op control. "Nothing changed" is
+      satisfied perfectly by a sweep that does nothing, which is why the same run
+      must be shown to have demoted something else.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The store walk and the outcome application path. The consistent parent must
+      be reported from here, not skipped — a skipped record is indistinguishable
+      from an unevaluated one, which is the invisibility the parent goal exists to
+      remove.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      Where a descendant excused from needing its own proof is recognised today.
+      The final clause requires the parent verdict to consult that same
+      classification rather than reading an excused descendant as unfinished work.
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: true
+it_requirements:
+  - >-
+    BYTE STABILITY MEANS DO NOT OPEN THE FILE FOR WRITING, not write-the-same
+    (TQ-400e-1, inherited unchanged). A YAML load-and-dump round trip reformats
+    quoting, key order and line wrapping while preserving every value; at 3,146
+    records that churns the whole store on every run. The consistent parent must never
+    enter the write set.
+  - >-
+    THE CONSISTENT PARENT MUST BE REPORTED WITH ITS OWN VERDICT, NOT SKIPPED. "Looked
+    at and left alone" and "never looked at" produce identical files and are
+    distinguishable only in the report and the inventory. A skipped record is
+    invisible, and invisibility is the condition under which the twenty bad parents
+    accumulated.
+  - >-
+    THE EXCUSED-DESCENDANT CLAUSE MUST CONSULT THE ORACLE'S EXISTING EXEMPT
+    CLASSIFICATION in scripts/ac_store/done_proof.py. A descendant the oracle already
+    classifies as exempt from needing its own proof must not be counted as unfinished
+    work by the parent verdict. Do not introduce a second notion of "excused" — two
+    readers of the same classification drift (the EPIC-ComputedQualityGates layer-3
+    disjoint-vocabulary defect).
+  - >-
+    THE ANTI-NO-OP PROPERTY IS A PROPERTY OF THE BEHAVIOUR, NOT ONLY OF ITS TEST. An
+    implementation whose outcome application can be globally disabled, or that no-ops
+    whenever any record in the store is consistent, does not satisfy this AC. This is
+    TQ-400e-1's standing requirement applied to the descendant axis.
+  - >-
+    NEVER-CRY-WOLF IS INHERITED AND MAY NOT BE WEAKENED ON THIS AXIS. A false demotion
+    of a genuinely complete parent costs more than the twenty bad records the sweep
+    was built to find: it teaches every reader to discount the verdict, after which
+    the whole cadence is decorative. Where the descendant verdict is uncertain the
+    record is left untouched and reported, never demoted.
+  - >-
+    Must handle errors gracefully per the project error handling policy, and must fail
+    toward NOT WRITING: if a parent's descendant verdict cannot be determined the
+    record is left untouched and reported (TQ-400f-4 owns the abstention outcome).
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400f-2
+    contract: >-
+      The false-positive guarantee on the descendant axis that authorises the
+      demotion: (a) the descendant verdict is the traversal's, unmodified; (b) the
+      write path touches only parents whose verdict is has-unfinished-descendants, one
+      record at a time, leaving every other file byte-identical; (c) every evaluated
+      parent — consistent, unfinished-beneath, abstained — appears in the report.
+      TQ-400f-2 may write only to records this guarantee permits writing to.
+expects_from:
+  - ac_id: TQ-400f-1
+    contract: >-
+      The descendant traversal and an explicit not-has-unfinished-descendants outcome
+      for a parent all of whose descendants at every depth are finished — an explicit
+      verdict value, not the absence of an entry.
+  - ac_id: TQ-400f-2
+    contract: >-
+      A live demotion write path acting on a DIFFERENT record within the same
+      invocation. Without it this AC's byte-identity clause is satisfied by a crashed
+      run, a disabled write path and a run never invoked, and the control is worthless.
+  - ac_id: TQ-400e-1
+    contract: >-
+      The byte-stability write discipline (do not open an untouched record for
+      writing) and the oracle's exempt classification, both applied unchanged to this
+      new axis rather than re-derived for it.
+origin_agent: business-analyst
+created: 2026-08-31
+amended_by:
+  - reason: "declares_side_effect set true by check-ac-schema's derivation (BO-2900g-2), and it is CORRECT here rather than the known false positive. This record's subject is a file that must NOT change, which is the negation-blind shape KI-CG-014 describes — but its Then clause also asserts that a second parent IS demoted in the same run, as the anti-no-op control. That control is a real durable write asserted by this criterion, so the derivation is right and the record genuinely belongs on the durable-effect test path. Do not 'fix' this to false: doing so would route the record away from the smoke path its own control clause requires."
+    by: BrainCandy
+    at: 2026-08-31
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Assigned python-coder; complexity S — the production change is small (consult
+      the oracle's existing exempt classification, report the untouched parent), and
+      almost all of this record's weight is in the test contract, where every
+      descriptor is written as a PAIR inside one invocation so "left alone" cannot be
+      satisfied by a run that did nothing. it_requirements restate TQ-400e-1's
+      do-not-open-for-writing rule on the descendant axis and forbid a second notion
+      of "excused". expects_from names TQ-400f-2 explicitly, because the positive
+      control is a dependency of this AC's meaning, not merely of its tests.
+      criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_tq_400f_3_consistent_parent_is_byte_identical_after_a_full_apply_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      Fixture store built by the project's real serializer. The consistent parent must
+      carry Roman-suffixed technical-constraint children (-i, -ii) and they must be
+      finished, because an L2 flipped finished while its constraint siblings stay todo
+      is the dominant real defect and therefore the shape the implementation is most
+      likely to get wrong. sha256 that parent's raw bytes before and after a completed
+      subprocess run with apply enabled; equal. Compare bytes, not parsed values.
+  - name: test_tq_400f_3_a_different_parent_is_demoted_in_that_same_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      THE POSITIVE CONTROL, AND IT MUST BE THE SAME INVOCATION. In the run whose hashes
+      the previous entry compares, the second parent (one unfinished grandchild) IS
+      demoted on disk — work_status and demotion_reason changed. Split across two runs
+      this entry is void: byte-identity alone is satisfied by a crashed run, a disabled
+      write path, a preview-default run nobody passed the apply flag to, and a run the
+      test never actually invoked.
+  - name: test_tq_400f_3_consistent_parent_appears_in_the_report_with_its_own_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Assert PRESENCE, not the absence of a demotion: the consistent parent is in the
+      run's report and inventory carrying an explicit not-has-unfinished-descendants
+      verdict, and the run's evaluated count includes it. "Untouched" and "never
+      looked at" produce identical files and are separable only here.
+  - name: test_tq_400f_3_an_excused_descendant_does_not_read_as_unfinished_work
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    surface_invoked: "templates/scripts/commit_guardian/check_done_proof.py --mode ci --apply"
+    description: >-
+      A PAIR IN ONE RUN. Parent A's descendants are all finished except one the
+      oracle classifies as exempt from needing proof; parent B is identical except
+      that its one outlier descendant is genuinely unfinished. A is byte-identical and
+      carries the not-has-unfinished-descendants verdict; B is demoted. Only the pair
+      proves the exempt classification was consulted rather than "not done" being read
+      literally — A alone is satisfied by a traversal that found nothing.
+test_rationale: >-
+  The naive test asserts the good parent's file is unchanged after the run. It stays
+  green on every inert implementation there is: a sweep whose write path is disabled,
+  a sweep that raised before reaching the apply step, a sweep running in its
+  preview-by-default mode because nobody passed the apply flag, and a sweep the test
+  never actually invoked. Byte-identity is the easiest assertion in this tree to pass
+  for the wrong reason. So every descriptor here is written as a PAIR inside one
+  subprocess invocation — something must have been demoted in that same run for the
+  untouched record to carry any information at all. The excused-descendant entry
+  repeats the pattern one level down for the same reason: "left alone because the
+  descendant was correctly excused" and "left alone because the traversal never
+  reached it" are indistinguishable from a single record, and only an
+  otherwise-identical parent that IS demoted separates them. The hash is taken over
+  raw bytes rather than parsed values because the realistic defect — load the store,
+  dump it back — preserves every value and rewrites every file.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the negative control for TQ-400f and it inherits TQ-400e's never-cry-wolf
+  property directly. A demotion mechanism that fires on a parent which is genuinely
+  complete costs more than the twenty bad records it was built to find: it teaches
+  every reader to ignore the verdict, and after that the whole sweep is decorative.
+
+  The control is worthless if the thing it controls was inert, which is why the
+  third clause is part of the criterion rather than a testing note. Byte-identity
+  on a correct parent is satisfied trivially by a sweep with its write path
+  disabled, by a sweep that crashed early, and by a sweep that was never invoked.
+  Only a demotion landing on a different record in the SAME run rules all three out.
+
+  Note the shape of the fixture in the first Given. The dominant real defect is an
+  L2 flipped finished while its Roman-suffixed constraint siblings stay unfinished,
+  so the consistent parent here must have those siblings and have them finished —
+  otherwise the test never exercises the case the implementation is most likely to
+  get wrong.
