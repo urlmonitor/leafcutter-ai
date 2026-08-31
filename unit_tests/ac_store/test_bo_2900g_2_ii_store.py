@@ -54,13 +54,16 @@ from generate_ticket_from_ac import _build_agents_map  # noqa: E402
 #
 # Shrinking this set is progress. Growing it is a regression: it means a change
 # to the derivation moved a record into contradiction without reconciling it.
+#
+# BP-1100g-4 was in this set and is no longer: it was reconciled on main while this
+# branch was open, and the staleness test below caught it in CI on the merge ref
+# before a human did. That is the set shrinking on its own, which is the intent.
 _KNOWN_PRE_EXISTING_DISAGREEMENTS = frozenset({
     "BO-2400g-4",
     "BO-2400g-4-i",
     "BO-2900g-1",
     "BO-2900g-2-i",
     "BO-2900g-4",
-    "BP-1100g-4",
     "BP-1100g-4-i",
     "BP-1100g-5-i",
 })
