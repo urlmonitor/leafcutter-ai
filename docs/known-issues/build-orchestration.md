@@ -2125,3 +2125,99 @@ itself the thing that makes the gap invisible.
 the sweep's nineteenth phantom-done). `KI-BO-008` (a structural test making code comments
 load-bearing — the individual-test form of the same mechanism). `KI-BO-20260826-1332` (why the
 `BP-1100b-5` implementation that would catch this mechanically is invisible to the store).
+
+---
+
+### KI-BO-20260826-1900 — The done-proof gate collects parametrized pytest ids and then cannot match one, so a covers-tagged parametrized test reads as "not run" and blocks the merge
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/ac_store/done_proof.py` — `_find_nodeid_for_test` (lines 1000-1006)
+  against the result-line regex at line 103. Surfaces through the **required** CI check
+  `Proof-of-done coverage check (BO-2500b)` and the `check-done-proof` pre-commit hook.
+
+**Symptom.** `BO-2400c-1-vii` was covered by a passing, correctly `# covers:`-tagged test.
+The required CI check failed anyway:
+
+```text
+[check-done-proof] BO-2400c-1-vii: linked test not run:
+  unit_tests/workflows/test_bo2400c1vii_reference_examples.py::
+  test_ac1vii_each_documented_example_executes_against_the_real_function
+```
+
+The test existed, was tagged, ran, and passed. The only thing unusual about it was
+`@pytest.mark.parametrize`.
+
+**Cause, and the reason it is a defect rather than a missing feature.** The two halves of the
+gate disagree about what a nodeid looks like.
+
+- The result parser at line 103 matches
+  `^(\S+::test_\w+(?:\[.*?\])?)\s+(PASSED|FAILED|…)` — the `(?:\[.*?\])?` group means it
+  **deliberately captures** parametrized ids such as `::test_foo[0]` into the results dict.
+- The lookup at lines 1000-1006 builds `suffix = f"::{func_name}"` and accepts a nodeid only
+  when `nodeid.endswith(suffix)`. A parametrized id ends `::test_foo[0]`, never `::test_foo`.
+
+So the scanner goes to the trouble of collecting parametrized results, and the matcher is
+structurally incapable of finding any of them. Both fallback loops at 1001 and 1004 use the
+same `endswith`, so neither rescues it.
+
+**Why this bites hard.** The verdict is `not run`, which is the gate's *fail-closed* wording
+for "the pytest run never reached this test" — a phrase that sends the reader looking for a
+collection error, an import failure, or a skip. None of those is happening. The test ran and
+passed in the very same pytest invocation whose output the gate just parsed.
+
+It also arrives late and asymmetrically. The pre-commit hook and the CI job disagree in
+practice: at commit time the hook passed for this branch, and CI failed. Reproducing the CI
+result locally requires the exact invocation *and* the right working directory —
+
+```bash
+env --chdir=<worktree> python scripts/commit_guardian/check_done_proof.py \
+  --mode ci-changed --base origin/main --test-root .
+```
+
+— because run from outside the repo it exits 0 and reports nothing, which reads as a pass.
+That is the `KI-BP-*` "silence is not a pass" shape again: a gate invoked slightly wrong is
+indistinguishable from a gate satisfied.
+
+**Consequence for authors.** Parametrization is the natural shape for any AC of the form "each
+of N cases must hold" — precisely the ACs most worth testing thoroughly. Today that shape is
+unmergeable when the test carries a `# covers:` tag, and nothing tells the author why. The
+silent workaround is to write N near-duplicate functions; the *quiet* workaround, and the
+dangerous one, is to drop the `# covers:` tag to get the gate to stop complaining, which
+removes the AC's proof entirely while turning the check green.
+
+**Fix.** Match the parametrized form in the lookup — accept a nodeid when it equals
+`::func_name` **or** starts with `::func_name[`. Because parametrization means one tag maps to
+many nodeids, the pass/fail rule needs a decision at the same time, and the safe one is: every
+matching nodeid must pass, so a single red case still fails the gate. A `next()`-style
+first-match would let a green `[0]` mask a red `[1]`, which converts this bug into a
+false-green — strictly worse than the current fail-closed behaviour. Whoever fixes it should
+also reconcile the hook and CI paths, since the two currently disagree on the same commit.
+
+**Workaround in force.** `unit_tests/workflows/test_bo2400c1vii_reference_examples.py` uses
+three named functions over a shared helper rather than one parametrized test. Both the module
+docstring and the helper name this KI and say not to collapse them back until the gate matches
+parametrized ids — the constraint is recorded where someone would otherwise reintroduce it,
+not only here.
+
+**A second, narrower gap found in the same investigation, not yet its own entry.** The gate's
+only exemption from requiring a covers tag is the composite one (`BO-2500a-6`: an AC whose
+`covered_by` is non-empty derives proof from its children). There is no exemption for a **leaf**
+declaring `test_required: false`. Such a record can therefore never be marked `done` — the
+schema permits the declaration and the gate refuses its consequence. That deserves care rather
+than a quick exemption: `test_required: false` is exactly the escape hatch a phantom-done would
+reach for, so the right answer is probably to require the field be justified in
+`test_rationale` and reviewed, not to make it a silent bypass. Recorded here so the next person
+meets both halves at once. (In this instance the correct resolution was not an exemption at
+all: the record's `test_required: false` was simply wrong, and executing the documentation
+page's own examples turned out to be a real behavioural test.)
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — adjacent to, but not an instance of,
+the presence-only family. This one fails *closed*, so it costs merges rather than hiding
+defects; the false-green risk is in the two tempting fixes (drop the tag; first-match wins).
+
+**Related.** `KI-BO-20260826-1332` (the store's `work_status` disagreeing with reality — same
+theme of a gate reading a proxy rather than the thing itself). `KI-ACS-001` (a validation run
+that reported clean because it was invoked in a way that checked nothing).
