@@ -2463,3 +2463,156 @@ the lane.
 **Trap.** The refusal reads as a per-AC problem ("this AC is wrong"), so the natural response
 is to re-author the AC. The AC is fine. The mismatch is between the store's notion of ready
 and the lane's notion of buildable, and re-authoring one record does not touch it.
+
+---
+
+### KI-BO-20260831-1930 — The driver deliberately drops the `pull-request` phase for an epic member, the generator emits it as `needed`, and nothing reconciles them — so every epic ticket halts the drive at completion
+
+- **Severity:** blocker
+- **Status:** open — no AC
+- **Occurrences:** 3 (three consecutive drives of EPIC-StartingNewWorkTheProperWayAlways,
+  each halting on a different ticket as it became the first to finish)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/workflows-js/build-feature.js:406`
+  (`phases.filter((p) => p.agent !== "pull-request")`) and `:1384`
+  (`deferredPhases = isEpicMember ? ["pull-request"] : []`), against
+  `scripts/ac_store/generate_ticket_from_ac.py`, which emits `pull-request: needed` on every
+  generated ticket
+
+**Symptom.** An epic ticket completes every phase, then the drive halts:
+
+```
+Ticket "..." was NOT recorded complete.
+0 needed phase(s) are outstanding in the ticket's own record: .
+The completion write failed: Refusing to set status: done. The ticket's own
+frontmatter still lists `pull-request: needed` (not among the 8 agents the
+request asked me to check)...
+```
+
+Note the shape: **zero outstanding phases, and a refusal anyway.** The driver's own list is
+complete; the ticket's list has one more entry.
+
+**Cause.** Both halves are individually correct and they were never introduced to each other.
+
+The driver *deliberately* removes `pull-request` from an epic member's phase list, because a
+single epic-level PR covers every ticket on the branch. That is intentional, documented in
+the source, and right. The generator, which does not know or care whether its output will
+land in an `EPIC-*/` folder, writes `pull-request: needed` into every ticket it produces. So
+the phase is never dispatched, no sign-off is ever written, and the completion writer — which
+reads the ticket rather than the driver's phase list — correctly refuses to mark done with a
+`needed` phase outstanding.
+
+**Why blocker.** It is not one ticket, it is every ticket in every epic. All 25 tickets in
+the observed epic carried it. The drive halts on whichever ticket finishes first, so fixing
+that one ticket by hand just moves the halt to the next, which is exactly what three
+consecutive drives did before the pattern was visible.
+
+**It also cannot be diagnosed from the halt message.** The message names the ticket and the
+phase, so the natural reading is "this ticket is missing a sign-off" — and the natural
+response, re-running the drive, reproduces it identically because the phase the ticket wants
+is the one the driver has decided not to run.
+
+**Fix direction.** Make the generator emit `pull-request: not_needed` when the target path is
+inside an `EPIC-*/` folder — the ticket then states what the system actually does, and the
+Sign-offs row is omitted with it (a `not_needed` agent must not appear there). The runtime
+alternative — having the driver reconcile the frontmatter when it defers a phase — is worse:
+it means an agent rewriting the record to match its own behaviour, which is the shape that
+makes a record stop being independent evidence.
+
+**Workaround in use.** All 25 tickets were set to `pull-request: not_needed` by hand
+(`9682d6adf`). This is a correction, not a suppression: `not_needed` means "explicitly
+excluded from this ticket", which is precisely what the driver does. They were NOT set
+`signed_off` — no per-ticket PR phase ran, and saying one did would be false.
+
+**Related.** `KI-BO-20260831-1931` (the sibling record-vs-driver disagreement, on comment
+status rather than phase membership).
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse: a gate that blocks
+correctly on a record the rest of the system has already decided to ignore.
+
+---
+
+### KI-BO-20260831-1931 — Ticket completeness is judged from the newest per-agent COMMENT, and the driver halts before dispatching, so a stale comment blocks every future run and the record cannot heal itself
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 2 (tickets ACD-2100a-1 and ACD-2100d-2, two consecutive drives)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** the per-ticket completeness evaluation in
+  `templates/workflows-js/build-feature.js`, against the `## Comments` sign-off entries the
+  `signoff` skill writes
+
+**Symptom.** A ticket whose frontmatter reads `python-coder: signed_off` halts the drive with
+
+```
+python-coder (the latest sign-off entry for 'python-coder' in the record reads
+status 'handoff', not a passing outcome)
+```
+
+The frontmatter and the newest comment disagree, and the comment wins.
+
+**Why it is not self-correcting, which is the actual defect.** The driver evaluates
+completeness *before* dispatching any phase. A run against the affected epic dispatched
+**11 agents, all status-checkers, and not one phase agent** — it read the records, found a
+non-passing newest comment, and stopped. So the only thing that could write a newer comment
+is the phase the driver has already declined to run. A re-run is byte-identical and produces
+the identical halt. The observed epic halted this way twice in a row.
+
+**How the stale comment gets there, and the part worth internalising.** On ACD-2100a-1 the
+phase had genuinely completed. A re-dispatched `python-coder` returned `status: ok` and
+**deliberately wrote no comment**, reasoning that "re-writing it would duplicate/risk
+corrupting a correct history". That caution is defensible in isolation and it is what left
+the earlier `handoff` as the newest entry. An agent doing the careful thing created an
+unrecoverable block.
+
+**Fix direction.** Either resolve completeness from the frontmatter `agents:` map — which the
+sign-off protocol already requires be kept in lockstep with the checklist — or, if the newest
+comment is to remain authoritative, require a phase returning `ok` to write a comment saying
+so, so "no new comment" cannot mean "still blocked". The two sources must not be able to
+disagree while only one is read.
+
+**Detection.** Compare each ticket's frontmatter `agents:` values against the status on the
+newest `### <timestamp> — <agent> (status: ...)` entry for that agent. Any disagreement is
+this defect. `check_ticket_signoff_parity.py` does **not** catch it — it reconciles
+frontmatter against the `## Sign-offs` checklist, not against the comment log.
+
+**Related.** `KI-BO-20260831-1930` (same class: the driver's model of a ticket and the
+ticket's own record disagreeing, with no reconciliation).
+
+---
+
+### KI-BO-20260831-1932 — The completion guard refuses one ticket and passes another on identical conditions
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1 (one drive, three tickets, split outcome)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** the completion-write step of `templates/workflows-js/build-feature.js`, and
+  `scripts/set_ticket_status.py`'s agents-parity check
+
+**Symptom.** In a single drive, with three tickets in exactly the same state — every phase
+signed off except `pull-request: needed`, no sign-off entry for it — the guard **refused**
+ticket 01 and **flipped tickets 03 and 20 to `status: done`**.
+
+The refusal cited the condition explicitly: "the ticket's own frontmatter still lists
+`pull-request: needed` ... Per my closing protocol I only mark a ticket done when every phase
+the ticket names as needed is confirmed signed off". The other two met that description
+equally and were written anyway.
+
+**Why it matters more than the inconsistency itself.** The refusing path is the correct one.
+The lenient path is a phantom-done write: it records `status: done` on a ticket the guard's
+own stated rule says is not done. Whichever way this is unified, it should be unified toward
+the refusal — but a guard that produces both outcomes from one condition gives no signal
+about which it will do next time, so neither result can be trusted as evidence.
+
+**A secondary consequence, observed.** Ticket 20 was flipped to `done` while its
+`source_ac` (`ACD-2100d-2`) was still `work_status: todo`, which
+`check-ticket-ac-status-parity` then blocked at commit time. The lenient write produced a
+state a different gate had to catch.
+
+**Fix direction.** Make the completion write take its phase list from the ticket, not from
+the caller's request. Both observed paths had the same 8-item request; only one of them
+went and read the ticket for a ninth.
+
+**Related.** `KI-BO-20260831-1930` — the `pull-request: needed` entry that put all three
+tickets in this state.

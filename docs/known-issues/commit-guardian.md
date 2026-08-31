@@ -3083,3 +3083,59 @@ thin-or-fictional-spec rule this violates).
 
 **Pattern:** a validator that checks a declaration is well-formed and never checks that what
 it declares exists — so the cheapest way to pass it is to invent something plausible.
+
+---
+
+### KI-CG-20260831-1933 — `check-predone-scope` compares the whole branch diff against one ticket's `files_touched`, so it can never pass on a multi-ticket epic branch
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 3 (three commits on one epic branch, each skipped)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/commit_guardian/hooks/check_files_touched_reconciliation.py` —
+  `_BRANCH_BASE_CANDIDATES = ["origin/main", "main"]` at `:67` and the three-dot branch diff
+  at `:114` ("Return files changed in this branch relative to origin/main")
+
+**Symptom.** Committing a ticket transitioning to `status: done` on an epic branch:
+
+```
+[check-predone-scope] ERROR: source files changed but not declared in
+files_touched or out_of_scope
+
+  Ticket : .../02_TICKET-20260826-ACD-2100a-2.md
+  Undeclared source files:
+    - templates/workflows-js/plan-feature.js
+    - unit_tests/ac_driven_dev/test_acd_2100a_2.py
+    - unit_tests/build_guards/test_acd_2100d_2.py
+    - unit_tests/test_workflow_dual_engine.py
+    - unit_tests/workflows/test_acd_2100a_1.py
+```
+
+Every file it names belongs to a **different ticket** on the same branch — 01 and 20. None
+of them has anything to do with ticket 02.
+
+**Cause.** The hook computes its change set as `origin/main...HEAD`, the entire branch, and
+compares that against the `files_touched` of whichever single ticket is transitioning to
+done. That is correct for a one-ticket branch, which is the only shape it appears to assume.
+On an epic branch every ticket after the first inevitably sees every earlier ticket's files
+as undeclared, and the set grows as the epic proceeds.
+
+**Why high rather than medium.** The only ways to make it pass are both wrong. Declaring
+another ticket's files in this ticket's `out_of_scope` is false, and it would have to be
+repeated for all 25 tickets, each with a different and growing list — which would also
+destroy the field's value as a scope signal for `change-scope-reviewer`. The alternative is
+skipping the hook, which is what actually happened three times. A gate whose only passing
+strategies are falsification or bypass provides no protection on the branch type it most
+needs to.
+
+**Fix direction.** Scope the diff to the commits that belong to the ticket rather than to the
+branch. The per-ticket commits are identifiable — they carry the AC id — or the hook could
+compare against the staged set plus the ticket's own prior commits. Failing that, detect an
+epic-member ticket (path under `EPIC-*/`) and compare against the union of all sibling
+`files_touched`, which at least makes the assertion true even if it is weaker.
+
+**Workaround in use.** `SKIP=check-predone-scope`, recorded in each affected commit message
+with the reason, so the skips are auditable rather than silent.
+
+**Pattern:** a gate whose correctness assumption (one ticket per branch) is invisible in its
+output, so its failure reads as a finding about the ticket rather than about itself.
