@@ -53,6 +53,27 @@ INSTALLED-COPY PATH RESOLUTION: ``_resolve_installed_layout()`` detects whether
     ``<consumer_root>/worktrees/<session>/docs/acceptance-criteria/``.  This means
     ``/create-ac`` and ``/plan-feature`` work correctly when leafcutter-ai is
     installed as a subdirectory of a consumer project (AC BO-1500e-2).
+REPOSITORY RESOLUTION FALLBACK (AC ACD-2100a-2): ``_git_toplevel()`` anchors on
+    ``Path(__file__).resolve().parent`` — the script's own on-disk location.
+    That anchor fails when the script has been copied out of the repository it
+    is meant to operate on (e.g. a deployed/installed copy, or a copy placed in
+    a scratch directory).  ``create-only`` resolves its repository with an
+    ordered contract, implemented by ``_resolve_repository_with_search_fallback()``:
+    (1) an explicit ``--repo-root`` supplied on the command line always wins and
+    never consults the anchor or the search; (2) otherwise the anchor remains the
+    first choice, unchanged for every caller that works today; (3) only when the
+    anchor yields no repository does a bounded search run, via
+    ``_search_immediate_subdirectory_repos()``, over the *immediate*
+    subdirectories of the process's current working directory — never walking
+    upward past that directory and never following symlinks out of it.  The
+    search returns its full candidate set rather than a first hit, so an
+    ambiguous layout (zero or multiple candidates) is representable and raised
+    as an error rather than silently guessed.  A successful search-based
+    resolution always announces itself on stderr at WARNING level, naming the
+    selected repository and stating that the selection came from a search
+    rather than the script's own location — a silent fallback would be
+    indistinguishable from the anchor having worked and would leave a future
+    wrong-repository incident undiagnosable.
 """
 
 from __future__ import annotations
@@ -145,6 +166,119 @@ def _git_toplevel(anchor: Path | None = None) -> Path:
             f"Failed to resolve git toplevel from {anchor}: {exc}"
         ) from exc
     return Path(result.stdout.strip())
+
+
+def _search_immediate_subdirectory_repos(start_dir: Path) -> list[Path]:
+    """Search the immediate subdirectories of *start_dir* for git repositories.
+
+    Bounded by design: only *start_dir*'s direct children are examined — the
+    search never recurses further, never walks upward past *start_dir*, and
+    never follows a symlinked child out of *start_dir*.  An unbounded walk on
+    a deep or shared developer tree could otherwise reach unrelated
+    repositories, which is a denial-of-service surface as well as a
+    correctness hazard.
+
+    A child directory qualifies only when ``git -C <child> rev-parse
+    --show-toplevel`` succeeds AND resolves to the child itself (not to some
+    ancestor repository reached by git's own upward walk from inside the
+    child) — this keeps a single candidate's internal git behaviour from
+    silently promoting an unrelated, higher-up repository into the result.
+
+    Args:
+        start_dir: Directory whose immediate subdirectories are examined.
+            The caller is expected to have already established that
+            *start_dir* itself is not a repository.
+
+    Returns:
+        A list of resolved repository-root Paths, one per qualifying
+        immediate subdirectory, in a deterministic (sorted) order. May be
+        empty or contain more than one entry — the caller decides how to
+        react to zero or multiple candidates (the ambiguous case is
+        represented rather than collapsed to a first hit).
+    """
+    candidates: list[Path] = []
+    try:
+        entries = sorted(start_dir.iterdir())
+    except OSError as exc:
+        print(
+            f"WARNING: could not list subdirectories of {start_dir} while "
+            f"searching for a repository: {exc}",
+            file=sys.stderr,
+        )
+        return candidates
+    for entry in entries:
+        if entry.is_symlink() or not entry.is_dir():
+            continue
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(entry), "rev-parse", "--show-toplevel"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except (subprocess.SubprocessError, OSError):
+            # Not a git repository (or git itself is unavailable for this
+            # candidate) — expected for most entries, not an error condition.
+            continue
+        toplevel = Path(result.stdout.strip()).resolve()
+        if toplevel == entry.resolve():
+            candidates.append(toplevel)
+    return candidates
+
+
+def _resolve_repository_with_search_fallback(anchor: Path | None = None) -> Path:
+    """Resolve the repository to operate on, with a bounded search fallback.
+
+    Implements the AC ACD-2100a-2 resolution order: the anchor-based
+    resolution (``_git_toplevel``) remains the first choice, so every caller
+    that works today keeps its current behaviour unchanged.  Only when the
+    anchor yields no repository — e.g. the script has been copied out of the
+    repository it operates on — does this fall back to a bounded search of
+    the immediate subdirectories of the process's current working directory
+    (see ``_search_immediate_subdirectory_repos``).
+
+    When the search finds exactly one candidate, this prints a diagnostic to
+    stderr at WARNING level naming the selected repository and stating that
+    the selection came from a search rather than the script's own location,
+    then returns it.  A silent fallback would be indistinguishable from the
+    anchor having worked, leaving a future wrong-repository incident
+    undiagnosable.
+
+    Args:
+        anchor: Path passed through to ``_git_toplevel`` as the first-choice
+            resolution anchor.  Defaults to the script's own directory, same
+            as ``_git_toplevel``'s own default.
+
+    Returns:
+        Absolute Path to the resolved repository root.
+
+    Raises:
+        subprocess.SubprocessError: If the anchor fails AND the bounded
+            search finds zero or more than one candidate repository —
+            ambiguous or absent, so there is no safe default to pick.
+    """
+    if anchor is None:
+        anchor = Path(__file__).resolve().parent
+    try:
+        return _git_toplevel(anchor)
+    except subprocess.SubprocessError:
+        search_dir = Path.cwd()
+        candidates = _search_immediate_subdirectory_repos(search_dir)
+        if len(candidates) == 1:
+            selected = candidates[0]
+            print(
+                f"WARNING: no repository found via the script's own location "
+                f"({anchor}); selected {selected} from a search of the "
+                f"immediate subdirectories of {search_dir} instead.",
+                file=sys.stderr,
+            )
+            return selected
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to resolve a repository: the anchor at {anchor} is not "
+            f"inside a git repository, and a bounded search of the immediate "
+            f"subdirectories of {search_dir} found {len(candidates)} "
+            f"candidate repositories (need exactly 1): {candidates}"
+        ) from None
 
 
 def _resolve_installed_layout(leafcutter_repo: Path) -> tuple[Path, Path]:
@@ -335,6 +469,11 @@ def _create_worktree(slug: str, worktrees_dir: Path) -> Path:
     """
     worktree_path = worktrees_dir / slug
     try:
+        # capture_output=True: `git worktree add` writes its informational
+        # "HEAD is now at ..." message to STDOUT (verified empirically, not
+        # STDERR as one might expect), which — left uncaptured — leaks
+        # straight through onto this script's own stdout and corrupts the
+        # single-line JSON payload callers parse (module docstring contract).
         subprocess.run(
             [
                 "git",
@@ -345,6 +484,8 @@ def _create_worktree(slug: str, worktrees_dir: Path) -> Path:
                 str(worktree_path),
                 "main",
             ],
+            capture_output=True,
+            text=True,
             check=True,
         )
     except OSError as exc:
@@ -1107,11 +1248,20 @@ def cmd_create_only(args: argparse.Namespace) -> None:
     Exits 1 on any subprocess failure.
 
     Args:
-        args: Parsed argparse namespace. Expected attribute: ``branch_name`` (str).
+        args: Parsed argparse namespace. Expected attribute: ``branch_name``
+            (str) and optional ``repo_root`` (str or None). When
+            ``repo_root`` is supplied it is used verbatim as the repository
+            to operate on, bypassing both the anchor-based resolution and
+            the bounded-search fallback entirely (AC ACD-2100a-2).
     """
     branch_name = args.branch_name
 
-    leafcutter_repo = _git_toplevel()
+    if args.repo_root:
+        # Explicit caller-supplied location wins outright — no anchor probe,
+        # no search, no stderr search announcement (AC ACD-2100a-2 boundary).
+        leafcutter_repo = Path(args.repo_root).resolve()
+    else:
+        leafcutter_repo = _resolve_repository_with_search_fallback()
     # Resolve the effective repo root and worktrees base.  See
     # _resolve_installed_layout() for the dev vs consumer layout detection.
     main_repo, worktrees_base = _resolve_installed_layout(leafcutter_repo)
@@ -1361,6 +1511,16 @@ def _build_parser() -> argparse.ArgumentParser:
         "branch_name",
         help="Branch name (without the feature/ prefix).",
     )
+    p_create.add_argument(
+        "--repo-root",
+        dest="repo_root",
+        default=None,
+        help=(
+            "Explicit path to the repository to operate on. When supplied, "
+            "bypasses both the anchor-based resolution and the bounded "
+            "search fallback entirely (AC ACD-2100a-2)."
+        ),
+    )
     p_create.set_defaults(func=cmd_create_only)
 
     # create-ac-worktree subcommand
@@ -1413,7 +1573,13 @@ def main() -> None:
     except BootstrapError as exc:
         print(f"BOOTSTRAP ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
-    except subprocess.CalledProcessError as exc:
+    except subprocess.SubprocessError as exc:
+        # subprocess.CalledProcessError is a subclass of SubprocessError, so
+        # this also covers the pre-existing CalledProcessError path. Widened
+        # to the parent class so a bare SubprocessError raised by
+        # _git_toplevel()/_resolve_repository_with_search_fallback() (e.g. an
+        # unresolvable or ambiguous repository) is reported cleanly instead
+        # of propagating as an uncaught traceback (AC ACD-2100a-2).
         print(f"ERROR: subprocess failed: {exc}", file=sys.stderr)
         sys.exit(1)
 
@@ -1426,6 +1592,27 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-31 [Agent/python-coder] (AC ACD-2100a-2): Added
+  ``_search_immediate_subdirectory_repos()`` and
+  ``_resolve_repository_with_search_fallback()``, and wired the latter into
+  ``cmd_create_only()`` in place of a bare ``_git_toplevel()`` call. Fixes the
+  crash when the script is copied outside any git repository (deployed copy,
+  or a copy placed in a scratch directory): the anchor remains the first
+  choice unchanged, but when it fails, a bounded search over the immediate
+  subdirectories of the process's current working directory runs instead of
+  crashing. Exactly one candidate resolves the repository and announces
+  itself on stderr at WARNING level, naming the repository and stating the
+  selection came from a search (never silent). Zero or multiple candidates
+  raise, surfacing the full candidate set rather than picking a first hit.
+  Added an optional ``--repo-root`` flag to the ``create-only`` subcommand
+  (naming convention shared with glossary_bootstrap.py, run_ci_local.py,
+  check_component_vocab.py) that bypasses the anchor and the search entirely
+  when supplied. Also widened ``main()``'s except clause from
+  ``subprocess.CalledProcessError`` to the parent ``subprocess.SubprocessError``
+  so a bare ``SubprocessError`` raised by ``_git_toplevel()`` or the new
+  resolver (e.g. an unresolvable or ambiguous repository) is reported as a
+  clean ``ERROR:`` line instead of an uncaught traceback — this was a
+  pre-existing gap that the red-baseline tests for this AC exposed.
 - 2026-08-14 [Agent/python-coder] (AC BP-015): Mirrored the canonical
   scripts/setup_ticket_worktree.py .env fix into this template copy so
   consumer installs (which get this file, not the canonical copy, via
