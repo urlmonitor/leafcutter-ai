@@ -2297,3 +2297,169 @@ defects; the false-green risk is in the two tempting fixes (drop the tag; first-
 **Related.** `KI-BO-20260826-1332` (the store's `work_status` disagreeing with reality — same
 theme of a gate reading a proxy rather than the thing itself). `KI-ACS-001` (a validation run
 that reported clean because it was invoked in a way that checked nothing).
+
+---
+
+### KI-BO-20260831-1330 — The fast lane invokes `assemble-bundle` with two flags that were deliberately deleted, so its context-bundle gate can never be satisfied
+
+- **Severity:** blocker
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/workflows-js/fast-lane-ship.js`, the `context-bundle` phase's Step 2
+  invocation; `injection_builders.py` `assemble-bundle` argparse surface
+
+**Symptom.** `/fast-lane-build INF-700b-2` halts:
+
+```
+status: blocked
+failing_phase: context-bundle
+context_bundle_state: incomplete
+"The context bundle was obtained but is incomplete: the cache breakpoint marker
+ is absent, or one of its layers is empty."
+```
+
+`obtained: true`, `bytes: 10287`. The content came back — this is **not** the pointer-instead-of-content
+failure in `KI-BO-20260826-1214`. The bundle is genuinely incomplete.
+
+**Cause.** The workflow's Step 2 tells the phase agent to invoke `assemble-bundle` with
+`--conventions` and `--acs`. Those flags **do not exist**. `BO-2400c-1-vi` removed them
+deliberately — not made optional, *removed* — so a caller cannot reintroduce the two largest
+duplicate layers the design retired (`conventions` duplicates the harness-injected
+`CLAUDE.md`; `acs` duplicates AC records the receiving agent can read from its own
+workspace). Passing either makes argparse reject the whole command.
+
+The agent did the sensible thing: ran with the three flags that do exist
+(`--architecture`, `--high-level`, `--prior-tests`) and folded a pointer to the AC store into
+the `high_level` layer. The bundle assembled, exit 0, no stderr — and then failed the
+completeness check, because the layer set no longer matches what the workflow validates.
+
+**So the two halves of one feature disagree about their own interface.** `BO-2400c-1-vi`
+narrowed the CLI; nothing updated the caller or the completeness contract it validates
+against. Every fast-lane run for a `python-coder` AC hits this.
+
+**Why it reads as something else.** The message says "incomplete", which invites you to
+look at the layers' *content* — whether a doc was too big, whether a file was missing. The
+actual fault is one directory away, in an argparse surface the workflow has no test against.
+The phase agent's own report is what surfaced it, in prose, as an aside.
+
+**Fix direction.** Reconcile the caller with the CLI, in one change, and add the test that
+would have caught it: assert the workflow's invocation string only names flags
+`assemble-bundle` actually accepts. Then decide whether the completeness contract should
+still demand the two retired layers — it should not, and that is the substantive half.
+A shared constant for the layer set, read by both the builder and the validator, removes
+the class rather than this instance.
+
+**Related.** `KI-BO-20260826-1214` (same phase, same halt, different cause: content returned
+as a pointer rather than inlined — that one is about the size of the payload, this one about
+the shape of the command). Both make the lane unable to ship; fixing either alone is not
+enough.
+
+---
+
+### KI-BO-20260831-1331 — A half-created fast-lane worktree is invisible to `git worktree`, so it cannot be cleaned up and its symptom reads as store-wide corruption
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `setup_ticket_worktree.py create-fastlane-worktree`, and the resolver's error
+  message in `templates/workflows-js/fast-lane-ship.js`
+
+**Symptom.** A fast-lane run halted at `resolve` with:
+
+```
+resolve_connected_build_set: AC id 'INF-700c-1' not found in the store at
+.../worktrees/inf-700c-1/docs/acceptance-criteria
+... the run also emitted ~3695 lines of "ERROR: <path>.yaml: expected a YAML mapping,
+got NoneType" for effectively every AC file in that store
+```
+
+The message concludes "this looks like a store-wide corruption or wrong ac-root path".
+**It is neither.** Measured:
+
+| Check | Result |
+|---|---|
+| Empty `.yaml` in that worktree's store | **3695** |
+| Empty objects in `.git/objects` | **0** |
+| Empty `.yaml` in the main checkout | **0** |
+| Empty `.yaml` in two sibling fast-lane worktrees | **0** |
+| Disk usage | 3% of 1007G |
+
+So the object store is intact and every other checkout is fine. `create-fastlane-worktree`
+wrote a directory tree of zero-byte files **and a corrupt `.git` gitfile**
+(`fatal: invalid gitfile format`), then failed before registering the worktree.
+
+**The cleanup path is closed.** `git worktree list` does not contain it, so
+`git worktree remove --force` refuses with *"is not a working tree"*, and
+`git worktree prune` finds nothing to prune. The only recourse is to move or delete the
+directory by hand. An operator following the obvious commands gets two refusals that both
+look like *they* are holding it wrong.
+
+**Why the misdiagnosis matters more than the corruption.** The blast radius of the real
+fault is one throwaway worktree. The blast radius of the *message* is the whole AC store:
+it points a reader at `docs/acceptance-criteria/`, which is shared, tracked, and the thing
+this repo is most afraid of losing. The correct first move — check whether the git object
+store is intact — is not suggested anywhere.
+
+**Fix direction.** Make `create-fastlane-worktree` atomic or self-cleaning: if registration
+does not complete, remove the partial directory before returning, and return non-zero. On
+the reading side, when a store scan finds *every* file unparseable, that is evidence about
+the **checkout**, not the store — the resolver should say so and check
+`git -C <worktree> rev-parse --git-dir` before blaming the ac-root. Cheapest immediate
+guard: have the worktree phase verify the new worktree appears in `git worktree list` and
+that a known file is non-empty, before any later phase trusts it.
+
+**Related.** `KI-BP-20260826-1331` (a shared deployed `.leafcutter/` being a collage of
+whatever each worktree last wrote — same family: worktree provisioning that half-succeeds
+and is believed).
+
+---
+
+### KI-BO-20260831-1332 — The fast lane's roster is python-coder + test-writer, so it refuses a third of the ready queue with no upstream signal
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1 (3 ACs affected in one sitting)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/workflows-js/fast-lane-ship.js` roster / build-set refusal;
+  `scripts/ac_store/scan_ac_store.py` ready-queue construction
+
+**Symptom.** `/fast-lane-build INF-400b-2-ii` refuses immediately:
+
+```
+status: refused
+"1 member(s) declare a deliverable or proof obligation no phase in this run's roster produces"
+reason: "no phase in this run's roster produces work assigned to 'llm-expert'
+         (roster: ['python-coder', 'test-writer'])"
+```
+
+**The refusal itself is good and should be kept.** It happens *before any claim or dispatch*,
+names the AC, the missing producer and the actual roster, and leaves no `in_progress` state
+to clean up. That is the correct shape for a gate that cannot proceed.
+
+**The defect is upstream silence.** Nothing between the AC store and the operator says an
+`llm-expert` AC is un-fast-lane-able. `scan_ac_store.py` lists them as `ready` alongside
+`python-coder` ACs; `readiness: approved` says nothing about which builder can take them;
+neither `/build-ac` nor the fast lane's own documentation mentions the roster. In the
+`INF-400b-2-ii` / `INF-700b-1-i` / `INF-700b-1-ii` group, **3 of 9 ready ACs** were in this
+category — discovered only by launching a lane at each and reading the refusal.
+
+There is a second-order cost. `INF-400b-2-ii` is assigned `llm-expert` *and* carries six
+`test_spec` descriptors, so it is not routable to a single agent at all: `llm-expert` cannot
+write `.py`, and `test-writer` does not own template prose. It needs two agents in sequence,
+which the fast lane has no shape for. Driven by hand, this inverted TDD order — the
+implementation necessarily landed before its tests, and a red baseline had to be recovered
+afterwards by stashing the production diff.
+
+**Fix direction.** Cheapest useful step: have `scan_ac_store.py` report the assigned agent
+per ready AC (it already reads the field) and let the operator filter, or add a
+`--fast-lane-eligible` flag that applies the roster. Better: publish the roster as data the
+store can read, so eligibility is derived rather than discovered by refusal. Separately,
+decide whether an AC whose implementation surface is prose but whose proof surface is Python
+should be *split* at authoring time — that is a question for IT-PO's enrichment pass, not for
+the lane.
+
+**Trap.** The refusal reads as a per-AC problem ("this AC is wrong"), so the natural response
+is to re-author the AC. The AC is fine. The mismatch is between the store's notion of ready
+and the lane's notion of buildable, and re-authoring one record does not touch it.

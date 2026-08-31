@@ -2826,3 +2826,107 @@ ambiguity instead of a verdict.**
 **Related.** `BO-2900g-2` (the derive-don't-author rule this collides with). `KI-BP-20260831-0620`
 (the mypy gate — the other kind of gate defect found today; that one fails open, this one fails
 closed onto a false value).
+
+---
+
+### KI-BP-20260831-1333 — `check-output-drift` blocks a commit on a gitignored cache file, so the gate fails on something no commit could ever contain
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** the `check-output-drift` pre-commit hook (leafcutter Direction B), its
+  `gaps` classification
+
+**Symptom.** A commit touching only `scripts/knowledge/`, `tests/knowledge/`,
+`docs/acceptance-criteria/` and `changelogs/` was refused:
+
+```
+Check Output Drift (leafcutter Direction B).....Failed
+- hook id: check-output-drift
+- exit code: 2
+UNCOMPARABLE: GAP .claude/.cache/readme_markers/fallback-125345.json
+              action=run build.py to register it
+RESULT verified=476 uncomparable=6 exempt=5 gaps=1 drifted=0 missing=0 unreadable=0
+```
+
+Note `drifted=0`. Nothing had drifted. The single `gap` is the whole failure.
+
+**The file is gitignored.**
+
+```
+$ git check-ignore -v .claude/.cache/readme_markers/fallback-125345.json
+.gitignore:15:.claude/.cache/    .claude/.cache/readme_markers/fallback-125345.json
+```
+
+So it can never appear in any commit, cannot be staged, and is unrelated to the diff being
+refused. Its contents point at a *different* file again — `scripts/changelog/README.md` —
+which the commit did not touch.
+
+**The prescribed fix does not work.** `action=run build.py to register it` was followed:
+a scoped `build.py --target-dir <worktree> --force` ran to completion, and the hook failed
+identically afterwards. The marker was created during worktree bootstrap (timestamp 12:49,
+before any of the work) and a sibling worktree from an earlier run does not have the
+directory at all. Unblocked only by moving the file out of the tree by hand.
+
+**Why this is worse than a nuisance.** A gate that fails on untracked, gitignored, machine-
+local state makes its verdict a function of the developer's filesystem rather than of the
+change. Two people with identical diffs get different answers, CI and local disagree, and
+the documented remedy is a no-op — so the natural next move is `--no-verify`, which disables
+every *other* hook in the same run. A gate that cannot be satisfied honestly teaches people
+to skip the gate.
+
+**Fix direction.** Exclude gitignored paths from the drift comparison entirely — if git will
+not track it, the hook has no business gating on it. If cache markers genuinely need
+verifying, that belongs in `build.py`'s own self-check, not in a commit gate. Failing that,
+`gaps` on an ignored path should be reported as INFO and not affect exit status: `drifted=0`
+should mean the hook passes.
+
+**Related.** `KI-BP-20260826-1331` (shared deployed `.leafcutter/` as a per-worktree collage
+— same root theme: build-output state that varies per checkout being treated as
+commit-worthy truth).
+
+---
+
+### KI-BP-20260831-1334 — Every fast-lane worktree bootstrap regenerates ten agent cards as drift, and the lane stages with `git add -A`
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 3 (three separate worktrees in one afternoon, identical ten files)
+- **Where:** worktree bootstrap's `build.py` run; `templates/workflows-js/fast-lane-ship.js`
+  Step 2 staging
+
+**Symptom.** Immediately after `create-fastlane-worktree` completes — before any agent has
+done any work — `git status` in the new worktree shows exactly ten modified files:
+
+```
+docs/agents/cards/{architecture-diagram-author, business-analyst, documentation-expert,
+documentation-verifier, it-po, knowledge-harvester, llm-expert, product-owner,
+python-coder, reference-author}.card.md
+```
+
+Reproduced in three independent worktrees created hours apart, same ten files each time. So
+the committed cards and the cards `build.py` generates from the current templates do not
+agree, and every bootstrap surfaces it afresh.
+
+**The reason it matters is the staging rule.** The fast lane's commit step stages with
+`git add -A` (`KI-BO-029`). Any lane that reaches commit therefore sweeps ten unrelated
+regenerated cards into its PR, attributed to whatever AC it was building. In three runs this
+was caught and reverted by hand each time; a run that is not watched will ship them.
+
+**Two defects, and the second is the durable one.** The card/template disagreement is a
+content bug someone can fix by regenerating and committing. The `git add -A` is a
+*mechanism* bug: it guarantees that any pre-existing drift, from any source, is silently
+adopted by the next PR to pass through the lane. Fixing the cards without fixing the staging
+just waits for the next drift.
+
+**Fix direction.** Stage explicitly — the lane knows which files its build set touches, and
+`files_touched` already exists for exactly this. Separately, regenerate and commit the ten
+cards so a fresh bootstrap is clean, and add a bootstrap assertion that a newly created
+worktree has an empty `git status`: a provisioning step that leaves the tree dirty has not
+finished.
+
+**Related.** `KI-BO-029` (the `git add -A` itself). `KI-BP-20260831-1333` (the other
+build-output-state defect found the same day — that one blocks a commit, this one silently
+enlarges it; opposite failure directions, same underlying confusion about which files the
+build owns).
