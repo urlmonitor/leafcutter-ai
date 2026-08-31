@@ -52,7 +52,7 @@ doc_links:
     relevance: "The component page that owns the surrounding guarantees, including the one automatic guard against 'built but not wired into anything' that this declaration feeds."
 assigned_agent: python-coder
 estimated_complexity: L
-declares_side_effect: true
+declares_side_effect: false
 it_requirements:
   reference_file_path: "scripts/commit_guardian/_ac_schema_validators.py"
   n_location_rule: "1"
@@ -126,6 +126,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - BO-2900g-2-i
+  - BO-2900g-2-ii
 implemented_by: []
 change_target:
   - pipeline

@@ -557,6 +557,24 @@ def validate_test_contract(path: Path, data: dict[str, Any]) -> list[str]:
 # same reasoning check_ac_schema's other Gherkin-aware helpers already use.
 _THEN_CLAUSE_START_RE = re.compile(r"\bThen\b", re.IGNORECASE)
 
+# Nouns whose being written outlives the run. BO-2900g-2-ii: the discriminator
+# for a durable effect is the OBJECT written, not the verb — "a record file is
+# written" persists, "before any test is written" is a human authoring a test
+# later, and neither the verb nor its tense tells them apart.
+_DURABLE_OBJECT = (
+    r"(?:file|files|record|records|artifact|artifacts|entry|entries|"
+    r"document|documents|index|manifest|AC|criterion|ticket|log)"
+)
+
+# Destinations that are observable but NOT durable: they are gone when the
+# terminal closes, so a write to one is not the "file that exists and can be
+# read back afterwards" BO-2900g-2 asks for.
+_TRANSIENT_DESTINATION = (
+    r"(?:the\s+|either\s+)?(?:error|output|standard)\s+(?:stream|output)|"
+    r"either\s+stream|both\s+streams|stdout|stderr|the\s+terminal|"
+    r"the\s+console|screen"
+)
+
 # Durable, observable-outside-the-process effect phrases. Deliberately narrow
 # and phrase-based (not single common words like "created" or "recorded" in
 # isolation) so the derivation marks a STRICT subset of the store rather than
@@ -564,8 +582,26 @@ _THEN_CLAUSE_START_RE = re.compile(r"\bThen\b", re.IGNORECASE)
 # is indistinguishable from one that marks nothing one gate later (BO-2900g-2
 # constraints). Calibrated against the real on-disk store at authoring time:
 # ~3.6% of records with a Then clause matched (114 of 3148).
+#
+# BO-2900g-2-ii (2026-08-25) replaced two bare alternatives, `\bis written\b`
+# and `\bare written\b`, with the two object-aware forms below. Those two
+# accounted for 108 of the 139 records the pattern then marked — 78% of every
+# positive it produced — and they could not distinguish a durable write from
+# a write to a stream, from a reported clause whose subject is a document
+# ("the reference states that a notice is written ..."), or from a relative
+# clause merely naming where something lives ("the file suppressions are
+# written in"). Four false positives surfaced in a single day; none was a real
+# side-effect. Re-measured after the change: 139 -> 88 marked, 51 flipped to
+# false, and zero records newly marked. A blunt deletion of the two
+# alternatives was measured first and rejected — it left only 31 and dropped
+# genuine positives such as "a record file is written into that project's own
+# tree" (BP-1500d-1).
 _DURABLE_EFFECT_RE = re.compile(
-    r"written to disk|written to a file|\bis written\b|\bare written\b|"
+    r"written to disk|written to a file|"
+    # (a) a durable noun governs the verb directly: "a record file is written"
+    rf"\b{_DURABLE_OBJECT}\s+(?:is|are)\s+written\b|"
+    # (b) the write names a destination, and that destination is not a stream
+    rf"\b(?:is|are)\s+written\s+(?:to|into|under)\s+(?!{_TRANSIENT_DESTINATION})|"
     r"writes? (?:a|the|an) (?:file|record)|persist(?:ed|s)?\b|"
     r"saved to disk|\bis saved\b|\bare saved\b|"
     r"saves? (?:a|the|an) (?:file|record)|record is persisted|"
@@ -584,10 +620,27 @@ def derive_declares_side_effect(data: dict[str, Any]) -> bool:
     BO-2900g-2: the declaration that routes a ticket's ``user-surface-smoker``
     phase agent must be DERIVED from the record's own Then clause — a file
     written, a record persisted, a state-changing command — never authored by
-    opinion. Only the Gherkin ``Then`` clause (and anything after it, e.g. a
-    trailing ``And``) is examined; a durable-effect phrase appearing only in a
-    ``Given`` clause does not count, because the Given describes pre-existing
-    state, not what this AC's own work does.
+    opinion. Only Gherkin ``Then`` clauses (and anything trailing them within
+    the same scenario, e.g. a following ``And``) are examined; a durable-effect
+    phrase appearing only in a ``Given`` clause does not count, because the
+    Given describes pre-existing state, not what this AC's own work does.
+
+    KNOWN GAP, DELIBERATELY NOT FIXED HERE (BO-2900g-2-ii). The paragraph above
+    is the intent; it is not quite the behaviour. The search runs from the FIRST
+    ``Then`` to the END of the criteria, so on a multi-scenario record every
+    LATER scenario's ``Given`` and ``When`` is searched as well. A durable-effect
+    phrase in a later Given therefore still counts, which the paragraph above
+    says it should not.
+
+    Bounding each scenario on a line-initial ``Given`` was implemented and
+    measured while narrowing the pattern, then reverted and left to its own
+    change. It moves three more records into disagreement with their authored
+    value — BO-2400c-1-v, UXP-612 and UXP-614 — and at least two of those are
+    arguable rather than clear: UXP-612 and UXP-614 do produce a real file, and
+    only ever say so in a ``When``. Bundling it would have made this change
+    breach its own acceptance criterion that the number of disagreeing records
+    must not rise, and would have decided two judgement calls inside a change
+    about a regular expression.
 
     Args:
         data: Parsed AC YAML content.
