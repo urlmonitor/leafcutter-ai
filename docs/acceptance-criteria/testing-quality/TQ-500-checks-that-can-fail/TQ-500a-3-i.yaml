@@ -1,0 +1,196 @@
+id: TQ-500a-3-i
+components:
+  - testing_quality
+  - build_orchestration
+title: "An unnamed alteration, an unstated revert, and a revert that did not restore are each named"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given four hand-off records for four pieces of work:
+      record R, naming an alteration, the outcome of each test under it, a revert,
+        and a post-revert re-run returning the pre-alteration outcomes,
+      record S, naming an alteration and the per-test outcomes but stating nothing
+        about a revert,
+      record T, naming an alteration and a revert whose post-revert re-run did not
+        return the pre-alteration outcomes,
+      and record U, claiming the substitute evidence while naming no alteration,
+  When the four records are read,
+  Then record R is not reported, because it is a conforming substitute answer,
+    And records S, T and U are each reported, and each report names which of the
+      three it is — revert not stated, revert did not restore, or alteration not
+      named,
+    And each of these findings is established from the records the run actually
+      produced: a run in which the writing side was asked for an alteration but
+      emitted no record for that piece of work yields no finding for it, rather
+      than a report of an unnamed alteration,
+    And a piece of work whose answer is of the ordinary before-and-after kind, and
+      one whose answer is a reasoned negative, are each left unreported by this
+      reading, because neither claims an alteration.
+depends_on:
+  - TQ-500a-3
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The four-record adversarial shape this AC copies, and the reader it extends.
+      Its no-record-versus-bad-record carve-out is reproduced in the third clause
+      here, and its false-shortfall discipline in the fourth.
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-010 Fix direction item 1 — the three-part substitute whose three
+      omissions this AC detects.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THREE OMISSIONS NEED THREE MECHANISMS AND AN IMPLEMENTATION COMMONLY GETS
+    ONE OR TWO. Revert-not-stated is a presence check; revert-did-not-restore is
+    a comparison of two outcome sets; alteration-not-named requires the field to
+    be mandatory rather than merely permitted. Each must be reported BY ITS OWN
+    NAME in the output, not as one generic "malformed substitute answer".
+  - >-
+    THE ANTI-GREP CLAUSE IS BINDING. Every finding must be established from the
+    hand-off records the run actually emitted. A test asserting that the writing
+    side was instructed to name an alteration passes on an implementation that
+    records nothing at all.
+  - >-
+    THE FOURTH CLAUSE BOUNDS THE RULE AND IS AS LOAD-BEARING AS THE OTHER THREE.
+    An ordinary before-and-after answer and a reasoned negative make no claim
+    about an alteration; reporting either here produces false shortfalls whose
+    only natural remedy is to weaken the check until they stop.
+  - >-
+    Extend the same reading TQ-500b-1 builds. This is a third finding class on
+    one parse of one record, not a separate pass over the same file.
+  - >-
+    Must not be closed by a change that special-cases the four fixture records.
+delivers_to: null
+expects_from:
+  ac_id: TQ-500a-3
+  contract: >-
+    A substitute answer containing a named alteration, a revert statement, and a
+    post-revert re-run result. This AC asserts the reader reports S, T and U by
+    distinct names and leaves R, the ordinary kind, and the reasoned negative
+    unreported.
+test_spec:
+  - name: test_tq500a_3_i_records_s_t_and_u_are_each_reported_under_their_own_name
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Records S, T and U each produce exactly one finding, named revert-not-
+      stated, revert-did-not-restore and alteration-not-named respectively. A
+      single generic finding kind for all three fails this test.
+  - name: test_tq500a_3_i_conforming_record_r_is_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Record R — named alteration, per-test outcomes, revert, and a post-revert
+      re-run returning the pre-alteration outcomes — produces no finding. NAMED
+      MUTATION (this descriptor asserts an absence): make the post-revert
+      comparison strict on ordering as well as membership, so R's re-run outcome
+      set is judged unequal to its pre-alteration set. Under that injection R is
+      reported as revert-did-not-restore and THIS TEST MUST GO RED; revert and
+      it returns to green.
+  - name: test_tq500a_3_i_ordinary_and_reasoned_negative_answers_are_left_unreported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      The false-shortfall control. A work item whose answer is of the ordinary
+      before-and-after kind and one carrying a reasoned negative each produce no
+      finding, because neither claims an alteration. NAMED MUTATION (this
+      descriptor asserts an absence): widen the alteration-not-named check from
+      "answers declaring the substitute kind" to "any answer carrying no
+      alteration field". Under that injection both records are reported and THIS
+      TEST MUST GO RED; narrow it back and it returns to green. Record both
+      outcomes in this AC's own falsifiability answer.
+  - name: test_tq500a_3_i_a_work_item_with_no_emitted_record_yields_no_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The anti-grep and no-record-versus-bad-record clause. A run in which the
+      writing side was asked for an alteration but emitted no record for that
+      work item yields nothing for it — not an alteration-not-named finding.
+      NAMED MUTATION (this descriptor asserts an absence): make the reader treat
+      a missing record as a missing alteration field. THIS TEST MUST GO RED under
+      it and green on revert.
+  - name: test_tq500a_3_i_the_four_records_are_parsed_from_files_written_by_the_signoff_recipe
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py
+    description: >-
+      Build R, S, T and U on disk with yaml.safe_dump into the ## Comments
+      completion_manifest block per the signoff SKILL §2b recipe — never
+      hand-typed markdown — and read them through the registered hook path as a
+      subprocess. Hand-typed fixtures reproduced the column-0 indentation bias
+      that hid the files_touched parser no-op through seven green sign-offs.
+test_rationale: |
+  Four records rather than two, because the three omissions need three
+  different mechanisms and an implementation commonly ships one or two: a
+  presence check catches the unstated revert, a set comparison catches the
+  non-restoring one, and only a mandatory field catches the unnamed alteration.
+  Naming all three alongside a conforming record that must NOT be reported makes
+  the scenario adversarial rather than illustrative — the BP-1100g-5-i design,
+  reused deliberately.
+
+  THREE OF THE FIVE DESCRIPTORS ASSERT AN ABSENCE and are green on arrival by
+  construction, so each names a concrete injection and requires a RED-under-
+  injection, green-on-revert demonstration. This AC's own falsifiability answer
+  must be of the substitute kind carrying those alterations and their per-test
+  outcomes; "green on arrival, nothing to prove" reproduces KI-TQ-010 inside the
+  fix for it.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      change_target VERIFIED as code, not normalised to the prompt parent — the
+      Then clauses describe a reader over emitted records. Added a five-descriptor
+      test_spec; the three absence-asserting descriptors each name a distinct
+      concrete injection (strict ordering on the post-revert comparison; widening
+      alteration-not-named to any answer lacking the field; treating a missing
+      record as a missing field) with a required RED-then-green demonstration.
+      criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHY FOUR RECORDS AND NOT TWO. The three omissions need three different
+  mechanisms and an implementation commonly gets one or two: an unstated revert is
+  a presence check, a non-restoring revert is a comparison of two outcome sets, and
+  an unnamed alteration is a required rather than merely permitted field. Naming
+  all three alongside a conforming record that must NOT be reported makes the
+  scenario adversarial rather than illustrative. This is BP-1100g-5-i's design,
+  reused deliberately.
+
+  THE THIRD CLAUSE IS THE ANTI-GREP CLAUSE. A test asserting that the writing side
+  was instructed to name an alteration passes on an implementation that records
+  nothing at all. Assert over the records the run emitted.
+
+  THE FOURTH CLAUSE BOUNDS THE RULE. Ordinary before-and-after answers and reasoned
+  negatives make no claim about an alteration, so reporting them here would generate
+  false shortfalls — whose only natural remedy is to weaken the check until they
+  stop.
