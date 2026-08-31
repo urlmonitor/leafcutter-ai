@@ -1423,17 +1423,30 @@ doc it would have checked **is present in the diff**:
 > of whether the referenced doc (`docs/architecture/components/commit-guardian.md`) actually
 > appears in the diff**."
 
-**Scale — this is not one ticket.** Across the epic's 37 generated tickets:
+**Scale — this is not one ticket.** Measured by extracting each ticket's
+`### documentation-expert` block and testing only the `- [ ] AC-N:` lines inside it:
 
 ```
-$ grep -c  "AC-1:"     .../EPIC-.../ *.md | grep -v ":0" | wc -l   → 37
-$ grep -l  "AC-1: .*|" .../EPIC-.../ *.md                  | wc -l →  2
+parseable (all AC lines piped) :  0
+malformed (>=1 AC line unpiped): 25
+no AC-N lines at all           : 12
 ```
 
-**35 of 37 tickets carry the unparseable shape.** Every one of them will fail-closed at
-`documentation-verifier` for this reason alone, at priority 11.9 — after the coder, tests,
-review and AC gates have all passed and immediately before `commit`. The epic cannot be driven to
-completion until this is fixed in the tickets or in the parser.
+**Every applicable ticket carried the unparseable shape — 25 of 25, none correct.** The 12
+without a block are exactly the tickets where `documentation-expert` is not in the agents map, so
+their absence is correct. Each of the 25 would fail-closed at `documentation-verifier`, priority
+11.9 — after the coder, tests, review and AC gates have all passed, immediately before `commit`.
+
+> **Measurement caution, recorded because it caught the first attempt.** A whole-file
+> `grep -l "AC-1: .*|"` reports 2 tickets as correct. Both are false: the pipe it matches is in
+> `documentation-verifier`'s own blocker comment, which quotes the *expected* format as
+> remediation advice. Any scan of this defect must be scoped to the `### documentation-expert`
+> block, or the tool's own error message is counted as a fix.
+
+**Resolved in this epic 2026-08-31** by rewriting all 25 lines to
+`AC-N: <genre> | <path> | <constraint>`; re-measured 25/25 parseable. The generator is unchanged,
+so the next generated epic will reproduce it — see
+`KI-BP-20260831-generator-emits-unparseable-doc-contract` for the source-side entry.
 
 **Cause.** The verifier's Step 2 expects
 `- [x] AC-1: <doc-type> | <path> | <requirement>`. The generator emits the AC text as prose with
