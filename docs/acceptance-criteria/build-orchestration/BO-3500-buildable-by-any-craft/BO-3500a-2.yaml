@@ -1,0 +1,143 @@
+id: BO-3500a-2
+components:
+  - build_orchestration
+  - agent_registry
+title: "A requirement naming a craft that does not exist is reported as a defective declaration"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a not-yet-done requirement whose declared producing craft is a name this
+    project has no craft for at all — a misspelling, or a craft that once existed and
+    was removed,
+  When a run resolves a build set containing that requirement,
+  Then the run stops before any craft is dispatched,
+  And it reports that the requirement carries a declaration this project cannot
+    resolve, naming the requirement and quoting the unrecognised name it declares,
+  And the report states that no craft of that name exists here — so the reader is sent
+    to correct the requirement, not to wait for a capability that is coming.
+
+  Given the same run,
+  When the report is compared with the report a run gives for a craft that does exist
+    but is not available to that run,
+  Then the two are distinguishable both by a person reading them and by a machine
+    reading the run's outcome, without parsing prose for the difference.
+
+  Given the same requirement,
+  When the run has ended,
+  Then the requirement is left exactly as the run found it: not marked finished, not
+    marked as being worked on, and not rewritten to name a craft the run does have.
+
+  Given a requirement whose declared craft is unrecognised and which is not itself the
+    requirement the operator pointed at, but is reachable from it,
+  When the run resolves the set,
+  Then the report names that reachable requirement as the cause, rather than reporting
+    a problem with the requirement the operator named — so the operator is told which
+    record to fix.
+depends_on: [BO-3500a]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Where the two endings of a run are explained to the operator. A third, narrower ending — your backlog record is wrong — needs describing there or operators will read it as the capability refusal."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013 records what happens when a correct refusal is reported in the wrong vocabulary: the reader goes looking for a missing test that was never supposed to exist. The same hazard applies here in reverse — a data defect reported as a capability gap sends the reader to wait for work that will never fix it."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "'EXISTS' RESOLVES AGAINST config/agent_registry.json AND NOTHING ELSE — the `agents[].id` set. This answers the question the record's notes flagged for the IT PO. It is the same source ACD-1800a-1's craft validation reads store-side; naming a second source (a template file listing, a deployed .claude/agents/ scan) is precisely how a record passes one gate and fails the other."
+  - "THE TWO ENDINGS MUST DIFFER IN A MACHINE-READABLE FIELD, NOT IN PROSE. Emit a reason code on the run outcome — `unresolvable_craft` here, `capability_gap` on BO-3500a-3 — plus a remedy field (`fix-record` vs `add-capability`). A test that compares message strings does not satisfy the machine-distinguishability clause; the test must show a caller branching on the code."
+  - "NAME THE REACHABLE OFFENDING RECORD, NOT THE AIMED-AT ONE. The verdict is computed over every member of resolve_connected_build_set's output and each finding carries its own ac_id. compute_producibility_verdict already returns per-member entries with `ac_id`, `declared_producer` and `reason` — EXTEND that structure with the reason code rather than adding a parallel reporting path."
+  - "The check runs BEFORE any dispatch, inside fast_lane.py's producibility pass — not at the workflow's Phase 3. A defective declaration must cost nothing."
+  - "READ-ONLY. Preserve BO-2400f-12-i: a refusing run performs no writes. Assert the whole resolved set's YAML is byte-identical afterwards, not just the offending record's."
+  - "The report must quote the unrecognised name verbatim as the record spells it, so the reader can find and fix the typo; do not normalise or suggest a nearest match in the machine-readable field (a suggestion in prose is fine, a silent correction is BO-3500a-1-i's forbidden rewrite)."
+  - "NO PRESENCE-ONLY ASSERTIONS: every test below executes the resolution and reads the outcome object."
+delivers_to:
+  agent: python-coder
+  contract: "Refusal outcome for a defective declaration: {reason_code: 'unresolvable_craft', ac_id: <the reachable offending record, not the aimed-at one>, declared_producer: <the unrecognised name, verbatim>, remedy: 'fix-record'}. Consumed by the run's ending, and by BO-3500d-2, which groups the standing backlog view by the SAME reason codes."
+expects_from:
+  ac_id: BO-3500a-1
+  contract: "The per-member dispatch plan {ac_id, craft, source} over the fully resolved connected set, so every reachable member's declaration is checked, not only the aimed-at one's."
+test_spec:
+  - name: test_unresolvable_craft_stops_before_any_dispatch
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Run over a store containing a record whose assigned_agent is not an id in agent_registry.json; assert zero dispatches were recorded and the run's ending is the refusal."
+  - name: test_report_quotes_the_unrecognised_name_and_the_ac_id
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The outcome entry carries the offending ac_id and the declared name exactly as the record spells it."
+  - name: test_reason_code_separates_unresolvable_craft_from_capability_gap
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Produce both endings from the same harness and assert a consumer branching on reason_code routes them differently — string comparison of the prose message is not the assertion."
+  - name: test_reachable_record_is_named_not_the_aimed_at_one
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Aim at record A; place the unresolvable declaration on record C, reachable from A. Assert the refusal's ac_id is C and that A is not reported as the cause."
+  - name: test_resolution_source_is_the_agent_registry
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Add the previously-unrecognised id to a fixture agent_registry.json and assert the same record now resolves — proving the verdict is read from that registry rather than from a hard-coded name set."
+  - name: test_store_byte_identical_after_defective_declaration_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Hash every member of the resolved set before and after the refusing run; assert all unchanged."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  ONE OF THE TWO SITUATIONS THE PRODUCT OWNER LEFT TO DECOMPOSITION, and the answer is
+  the one BO-3500a's notes asked for: this is a data defect and it should say so. Its
+  sibling BO-3500a-3 is the other situation. Neither is answered by substituting a
+  coder; that shared constraint is BO-3500a-1-i.
+
+  WHY THE DISTINCTION IS WORTH A SEPARATE CRITERION rather than a nicer error message.
+  The two situations have different owners and different remedies. An unrecognised
+  craft is fixed by editing one record, today, by whoever wrote it. An absent craft is
+  fixed by building a capability, later, by somebody else. A run that reports both the
+  same way sends every reader down the wrong path half the time, and — worse for this
+  tree — makes BO-3500d's backlog figure meaningless, because a hundred typos and a
+  hundred genuine capability gaps would be indistinguishable in the count of what
+  cannot be built.
+
+  THE FOURTH SCENARIO is the one that will actually be hit. Sets are resolved, not
+  chosen, so the defective record is usually not the one the operator aimed at. A
+  report that names the aimed-at requirement is worse than useless: the operator opens
+  a record that is perfectly correct.
+
+  TESTABILITY. Execute a run against a store containing a record with an unresolvable
+  craft name and assert on the run's terminal outcome and on the store afterwards. The
+  machine-distinguishability clause is deliberately phrased so it cannot be satisfied
+  by wording alone — the two endings must differ in something a caller can branch on.
+
+  NOT DECIDED HERE, and flagged for the IT PO: which registry defines "exists". This
+  criterion says "this project has no craft of that name" and leaves the resolution
+  source to enrichment. Note the seam with ACD-1800a-1, which already requires a
+  requirement's declared craft to resolve against the project's craft registry — that
+  is the store-side validation of the same fact, and the two must agree on the source
+  or a record can pass one gate and fail the other.

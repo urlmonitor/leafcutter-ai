@@ -1,0 +1,114 @@
+id: BO-3500d-4
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "The report is a view, not a verdict: it changes nothing and nothing consults it"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a buildability report showing that a large share of the backlog cannot be
+    built,
+  When a build run is started afterwards,
+  Then that run behaves exactly as it would have if the report had never been produced
+    — the figure blocks nothing, delays nothing and changes no decision the run makes.
+
+  Given the buildability report,
+  When it is produced,
+  Then it changes no requirement in the backlog, opens no pull request, and writes
+    nothing that any other part of the automation reads as an instruction,
+  And producing it twice in succession leaves the project in the same state as
+    producing it once.
+
+  Given any build run, commit or routine check,
+  When it decides whether to proceed,
+  Then it does not read the report or any figure derived from it,
+  And no threshold on the figure exists that would cause anything to fail.
+depends_on: [BO-3500d]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: related
+    status: exists
+    relevance: "Where the endings of a run are enumerated. This criterion asserts the report adds none of them, which is a statement that belongs beside the list rather than only in the backlog."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "READ-ONLY, ASSERTED AT BYTE LEVEL. Snapshot the whole AC store and the working tree, produce the report twice, and assert both are byte-identical afterwards. That single comparison covers no-write and idempotence together, and it catches the accidental violation this record actually fears: a report that helpfully annotates the records it classified. That is a write, it makes the report a participant rather than an observer, and it would be added with the best of intentions."
+  - "THE NO-CONSUMER PROPERTY IS ESTABLISHED BEHAVIOURALLY, NOT BY INSPECTION. Run the automation's decision paths with the report present and with it absent and assert the decisions are identical. Do NOT scan source for the absence of a reference — that proves nothing about behaviour and is precisely the evidence shape this component rejects (CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep'). This is the hardest clause here and the one a future change is most likely to violate."
+  - "NO THRESHOLD ANYWHERE. There must be no comparison of the coverage figure against a constant in any gate, hook or CI path. The moment a number can fail a build, the incentive to make the number look good arrives — and the cheapest way to improve this particular number is to delete a declaration, which BO-3500a-1-i already has to forbid on the build side."
+  - "The report opens no pull request, writes no changelog and emits nothing any other part of the automation reads as an instruction. Telemetry is not an exception if anything downstream branches on it."
+  - "THE PRODUCT OWNER ASKED FOR THIS IN TERMS ('resist making this a live gate; a coverage figure that starts blocking things is a different requirement and needs its own conversation with the user'). It is a criterion rather than a note so the resistance is mechanical rather than a matter of whoever implements it having read the note."
+  - "NO PRESENCE-ONLY ASSERTIONS. Every test executes a path and compares observed behaviour or on-disk bytes."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500d-1
+  contract: "The report structure and its production path. This record constrains that path to be observational: no writes, idempotent, and with no consumer anywhere in the build, commit or routine-check decision paths."
+test_spec:
+  - name: test_store_and_worktree_bytes_identical_after_producing_the_report
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Hash the whole AC store and working tree before and after one report; assert unchanged — no record annotated, nothing written."
+  - name: test_producing_the_report_twice_leaves_the_same_state
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Two successive reports leave the project in the state one report left it in."
+  - name: test_build_run_decisions_identical_with_and_without_the_report
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "THE BEHAVIOURAL NO-CONSUMER TEST. Execute a build run with the report produced and with it absent; assert the run's decisions, phases and ending are identical."
+  - name: test_no_gate_compares_the_coverage_figure_to_a_threshold
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Produce a report showing a very poor figure and then run the build, commit and routine-check paths; assert none fails, blocks or delays as a result."
+  - name: test_report_opens_no_pull_request
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "After producing the report, assert no PR or commit was created and no changelog entry emitted."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE PRODUCT OWNER ASKED FOR THIS IN TERMS: "resist making this a live gate. It is a
+  view, not a verdict. A coverage figure that starts blocking things is a different
+  requirement and needs its own conversation with the user." Recorded as a criterion so
+  the resistance is mechanical rather than a matter of whoever implements it having
+  read the note.
+
+  A MEASUREMENT THAT GATES STOPS BEING A MEASUREMENT. The moment a number can fail a
+  build, the incentive to make the number look good arrives, and the cheapest way to
+  improve this particular number is to delete a declaration — which BO-3500a-1-i
+  already has to forbid on the build side. A reporting requirement that quietly creates
+  that incentive would undermine the tree it belongs to.
+
+  THE SECOND CLAUSE OF THE SECOND SCENARIO — producing it twice leaves the same state —
+  is the one that catches the accidental version of this, which is a report that
+  helpfully annotates the requirements it classified. That is a write, it makes the
+  report a participant rather than an observer, and it would be added with the best of
+  intentions.
+
+  THE THIRD SCENARIO IS THE HARDEST TO TEST and is stated anyway, because it is the
+  clause a future change is most likely to violate. It asks for the absence of a
+  consumer, and the honest way to establish it is to run the automation's decisions
+  with the report absent and with it present and show no difference — not to inspect
+  the source for the absence of a reference, which proves nothing about behaviour and
+  is the evidence shape this component rejects.

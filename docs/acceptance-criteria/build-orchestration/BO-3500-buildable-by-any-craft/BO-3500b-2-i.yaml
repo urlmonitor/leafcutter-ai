@@ -1,0 +1,96 @@
+id: BO-3500b-2-i
+components:
+  - build_orchestration
+title: "A failed mixed run leaves no half-state behind for the next run to inherit"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a mixed group whose run failed part way, with some members produced and one not,
+  When the backlog is inspected after that run has ended,
+  Then no member of that group is marked finished,
+  And no member of that group is left marked as being worked on,
+  And a later run resolving the same group sees the same group, in the same state, as
+    the failed run saw when it started.
+
+  Given the same group,
+  When the later run builds it and every member is produced,
+  Then that run succeeds — the earlier failure left nothing behind that prevents the
+    group from being built again.
+depends_on: [BO-3500b-2]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Where the claim-and-release behaviour of a run is described. A run that fails between claiming and releasing is the mechanism by which a half-state persists."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE MECHANISM IS claim_build_set / release_claim IN scripts/build_orchestration/fast_lane.py, and the half-state is a run that dies between the two. Release must be GUARANTEED on every exit path — a try/finally or equivalent around the whole group, not a release call on the happy path plus one in an except block that a later branch can skip past."
+  - "A mixed run has more places to die than a code-only run, because it dispatches more crafts, and the crafts producing pages, diagrams and screens have the least exercised failure paths. Test the crash path, not only the clean-failure path: kill the run between two members' phases and assert the claims are still released."
+  - "ASSERT ON THE STORE AS BYTES. Snapshot every member's YAML before the run and compare after; that single assertion covers work_status, an in-progress marker and any incidental field the failure path might have written."
+  - "THE SECOND SCENARIO IS THE ONLY ONE THAT CANNOT BE FAKED BY TIDYING. The first is satisfied by a run that cleans up and also blocks the group some other way (a stale lock file, a leftover worktree, a cached verdict). Assert the RETRY SUCCEEDS, in the same test, by running twice."
+  - "filter_already_claimed must not treat a released claim as still held; if a claim ledger exists outside the AC records, it is part of the state that must be restored."
+  - "NO PRESENCE-ONLY ASSERTIONS. Both scenarios execute runs and read the store from disk."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500b-2
+  contract: "The group failure outcome and the guarantee that no member is marked done on a partial run. This record adds the claim-release obligation: after that failure the store must be byte-identical to its pre-run state, so the group is re-resolvable and re-buildable."
+test_spec:
+  - name: test_failed_mixed_run_leaves_no_member_marked_done
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "After a part-way failure, no member of the group carries work_status done on disk."
+  - name: test_failed_mixed_run_leaves_no_member_marked_in_progress
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "No member is left claimed or in-progress; the claim taken by the failed run is released."
+  - name: test_store_bytes_identical_after_the_failed_run
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Hash every member's YAML before and after the failed run and assert equality — one assertion covering every field the failure path could have touched."
+  - name: test_claims_released_when_the_run_dies_between_phases
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Force an abrupt termination between two members' phases and assert every claim is released — the crash path, not the clean-failure path."
+  - name: test_retry_after_the_failure_succeeds
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "THE LOAD-BEARING TEST. In one test, run and fail, then run again with the craft un-stubbed; assert the second run resolves the same group and reaches a successful ending. A run that tidies but blocks the retry fails only here."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  A group that fails part way is the state in which a stuck marker is most likely to be
+  left, and a member stuck as being worked on is invisible until somebody tries to build
+  it again and is told it is already in hand. The parent criterion says the run does not
+  claim a partial delivery; this one says the run does not poison the retry either.
+
+  THE SECOND SCENARIO IS THE REAL TEST. The first can be satisfied by a run that cleans
+  up but also blocks the group in some other way. Asserting that the retry SUCCEEDS is
+  the only version of this that cannot be faked by tidying.
+
+  Worth noting for whoever implements it: a mixed run has more places to fail than a
+  code-only run, because it dispatches more crafts, and the crafts that produce pages,
+  diagrams and screens are the ones with the least exercised failure paths. This is not
+  an exotic scenario; it is the expected one for the first months after this tree lands.

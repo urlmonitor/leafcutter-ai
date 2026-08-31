@@ -1,0 +1,152 @@
+id: BO-3500c-3
+components:
+  - build_orchestration
+  - testing_quality
+title: "An artifact produced empty fails its proof, whatever its kind"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given members whose declared artifacts were produced but produced hollow — a page
+    with a heading and no body, a diagram with no elements, a screen that renders
+    nothing, a prompt no surface loads, and a setting no component reads,
+  When each member's proof is established,
+  Then each proof fails and none of those members is finished,
+  And this holds for every kind of artifact, including the kind whose defined proof is
+    the least demanding — so for no kind is the presence of an artifact sufficient on
+    its own,
+  And for those kinds whose proof compares two conditions, the hollow artifact shows
+    itself as a comparison in which the two conditions produced the same result, and a
+    comparison recording no difference is never a passed proof.
+
+  Given a hollow artifact that failed its proof,
+  When the run reports it,
+  Then the report states that the artifact was produced but does not deliver what the
+    requirement asked for, and names the member,
+  And it does not report the artifact as missing — because it is not missing, and a
+    reader told it is missing will go looking for a run that did not happen.
+
+  Given a group in which one member's artifact is hollow and the rest are sound,
+  When the run reaches its ending,
+  Then the run does not succeed, and no member of the group is marked finished.
+depends_on: [BO-3500c]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "The register this criterion is written against. Its recurring finding is that a produced artifact and a working one are indistinguishable to every check short of using the artifact — a gate defined and never reached, an allowlist read from the wrong place, a hook whose dependency was never deployed."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THESE TESTS ARE WRITTEN FROM THE ATTACKER'S SIDE, AND THAT IS THE SPECIFICATION, NOT AN ASPIRATION. For each of the five kinds, construct the CHEAPEST artifact that could plausibly pass its proof and assert the proof returns false. If the cheapest passing artifact cannot be named for a kind, that kind's proof is not specified tightly enough yet and this record is not satisfied for it."
+  - "STATE THEM IN ONE PLACE, ACROSS ALL FIVE KINDS. The failure mode is not per-kind: it is that whoever implements the five proofs implements the first carefully and the remaining four by analogy, and analogy from the written-page proof produces four existence checks. A hollow case tested inside each per-kind record would be written by the same analogy that produced the defect."
+  - "REPORT VOCABULARY IS PART OF THE CRITERION. 'Produced but does not deliver what the requirement asked for' must be a DISTINCT outcome value from 'not produced', branchable by a caller. A reader told the artifact is missing goes looking for a run that did not happen — this component's register records exactly that cost, where a correct refusal reported in the wrong vocabulary sent readers hunting for a test that was never supposed to exist."
+  - "FOR THE COMPARING KINDS, DO NOT REIMPLEMENT THE DEGENERATE-COMPARISON CHECK — CONSUME BO-3500c-1's. A hollow setting and an ignored instruction both present as condition_a == condition_b, which the receipt validator already rejects at write time. Assert the CONSUMPTION (that the hollow member fails because the receipt validator refused it), not a second copy of the rule."
+  - "FOR THE READING KINDS THE PATH IS DIFFERENT AND MUST STAY DIFFERENT. A reading proof has no second condition, so a hollow page cannot present as a degenerate comparison; it is caught by BO-3500c-2-i's content and subject clauses. Keep the two paths distinct — collapsing them either adds a fake second condition to the page proof or lets a hollow page through."
+  - "THIRD SCENARIO TIES THIS TO BO-3500b-2 SO THE TWO CANNOT BE SATISFIED SEPARATELY: for the purposes of the group's ending, a hollow member is a member that was not produced, and the sound members are not delivered without it."
+  - "NO PRESENCE-ONLY ASSERTIONS. Every test constructs a real hollow artifact and executes the proof."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500c-1
+  contract: "The receipt-shape validator and its write-time rejection of a comparing-class receipt whose two conditions are equal. This record consumes that rejection as the mechanism for the comparing kinds' hollow cases rather than implementing a second hollowness rule."
+test_spec:
+  - name: test_heading_only_page_fails_its_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A page with a heading and no body fails and the member is not finished."
+  - name: test_elementless_diagram_fails_its_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A schema-valid diagram source containing no elements fails and the member is not finished."
+  - name: test_screen_rendering_nothing_fails_its_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A component that mounts and renders an empty tree fails; rendering is not the observable, the described result is."
+  - name: test_unloaded_prompt_fails_its_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A prompt no surface loads fails and the member is not finished."
+  - name: test_unread_setting_fails_its_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A setting no component reads fails and the member is not finished."
+  - name: test_no_kind_passes_on_artifact_presence_alone
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Iterate every kind in the proof table, present it with an artifact that merely exists and changed, and assert none is finished — including the kind whose defined proof is the least demanding."
+  - name: test_hollow_comparing_kinds_are_caught_by_the_receipt_validator
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "For a hollow prompt and a hollow setting, assert the failure originates in BO-3500c-1's write-time rejection of a degenerate comparison — consumption of the existing rule, not a duplicate of it."
+  - name: test_hollow_report_says_produced_but_empty_not_missing
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The report's outcome value for a hollow artifact differs from the value used for an unproduced one, names the member, and a consumer branching on it separates the two."
+  - name: test_one_hollow_member_fails_the_whole_group
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A group with one hollow member and the rest sound does not succeed, and no member of it is marked finished."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "User decision D5, applied here rather than restated. Nothing in this record was contradicted; one clause is added because the receipt shape gives the hollow-artifact guard a mechanism it previously lacked. A setting nothing reads, and an instruction nothing honours, both present as a comparison whose two conditions produced the same result — which is now a rejectable receipt (BO-3500c-1) rather than something a reader has to notice. The clause is scoped to the comparing kinds; a hollow written page is still caught by the content and subject clauses of BO-3500c-2-i, since a reading proof has no second condition to be degenerate."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE ADVERSARIAL CRITERION OF THIS L1, and the one that decides whether the tree is
+  worth building. Its siblings define what each proof checks; this one asserts that the
+  proofs actually reject the artifact a hurried craft produces when it has nothing to
+  say. Without it, every per-kind proof can be implemented as a formality that has
+  never once returned false, and nobody would notice, because a proof that always
+  passes and a proof that is correct look identical on a healthy backlog.
+
+  WHY IT IS STATED ACROSS ALL FIVE KINDS AT ONCE rather than as a clause in each. The
+  failure mode is not per-kind — it is that whoever implements the five proofs will
+  implement the first one carefully and the remaining four by analogy, and analogy from
+  the written-page proof produces four existence checks. Testing all five hollow cases
+  in one place is what catches that.
+
+  THE SECOND SCENARIO is a message requirement and is not decoration. This component's
+  own register records the cost of a correct refusal reported in the wrong vocabulary:
+  the current jam says a member is stale, which sends the reader looking for a missing
+  test that was never supposed to exist. "Produced but empty" and "not produced" have
+  different causes and different fixes, and conflating them wastes exactly the time this
+  tree is meant to save.
+
+  THE THIRD SCENARIO ties this to BO-3500b-2 so the two cannot be satisfied separately:
+  a hollow member is a member that was not produced, for the purposes of the group's
+  ending, and the sound members are not delivered without it.
+
+  TESTABILITY. Deliberately construct each hollow artifact and assert the proof returns
+  false. This is the one place in the tree where the covering tests must be written
+  from the attacker's side — the question is not "does the proof pass on good work" but
+  "what is the cheapest artifact that passes it", and if a test cannot answer that, the
+  proof is not specified tightly enough yet.

@@ -17,9 +17,13 @@ criteria: |
   When the requirement is inspected,
   Then the requirement carries an explicit deliverable checklist,
   And the checklist enumerates one item per artifact the requirement needs -- a
-    code item, a tests item, and a how-to documentation item,
-  And each checklist item names its kind (one of code, tests, docs, diagram, or
-    config) and the craft responsible for producing it,
+    code item and a how-to documentation item,
+  And each checklist item names its kind and the craft responsible for producing it,
+  And the kind is drawn from the vocabulary this store already uses to declare what a
+    requirement changes, extended by one value for a diagram -- no second vocabulary of
+    artifact kinds is introduced for the checklist,
+  And a test is not one of the kinds: the obligation to test the code item travels with
+    that item and never occupies a deliverable slot of its own,
   And the full scope of the requirement is readable from the checklist alone,
     without consulting any other artifact.
 depends_on: [ACD-1800a]
@@ -34,43 +38,86 @@ assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   - "The deliverable checklist is a NEW additive AC-schema field (a list of items, each `{kind, craft}`). Declare it OPTIONAL in the canonical schema config/ac_store_schema.json; do NOT tighten additionalProperties until the store is 100% backfilled (ADR-026 safety rule 1)."
-  - "The `kind` value must be exactly one of {code, tests, docs, diagram, config}. Validate the enum at EVERY enforcement point that actually gates commits: scripts/commit_guardian/check_ac_schema.py plus its manual-validation fallback in scripts/commit_guardian/_ac_schema_validators.py (the load-bearing gate when jsonschema is absent), mirrored by the agent-side scripts/ac_store/validate_ac_schema.py. A rule added only to the JSON schema is a partial/no-op gate."
-  - "The `craft` attribute value must resolve to a real agent id in config/agent_registry.json; reject an unknown craft."
+  - "NO NEW KIND VOCABULARY (user decision D1, 2026-08-31). The checklist item's `kind` enum MUST be the store's EXISTING change_target enum in config/ac_store_schema.json -- code, schema, ui, infrastructure, pipeline, prompt, model, config, docs, dependency -- extended by exactly one value, `diagram` (D2). Eleven values, not five. Verified live use of the existing ten: code 1241, pipeline 884, prompt 449, docs 260, config 90, schema 73, infrastructure 32, ui 10; 3,381 of 3,694 records already carry one."
+  - "READ THE ENUM FROM THE ONE PLACE IT IS DEFINED; DO NOT RESTATE IT. The checklist item's kind MUST resolve to the SAME schema definition object as change_target -- a JSON-Schema `$ref` into a shared `$defs` enum, with change_target itself refactored to use that `$ref` -- so `diagram` is added by ONE edit and the two can never disagree. A second literal copy of the values inside the checklist definition is the duplicated-source defect D1 exists to prevent, and a copy is 'correct' against itself from the moment it drifts."
+  - "`tests` IS NOT A KIND and must be rejected by the enum (user decision D3). A code deliverable's test obligation is carried by this record's existing `test_spec` / `test_required` fields; the checklist writer must never synthesize a `tests` item, and a checklist containing one fails validation."
+  - "Validate the enum at EVERY enforcement point that actually gates commits, and know which one is load-bearing: templates/scripts/commit_guardian/check_ac_schema.py plus its manual-validation fallback in templates/scripts/commit_guardian/_ac_schema_validators.py -- the branch that actually runs when jsonschema is absent, and therefore the authoritative gate -- mirrored by the agent-side scripts/ac_store/validate_ac_schema.py. A rule added only to the JSON schema is a partial/no-op gate."
+  - "The `craft` attribute value must resolve to a real agent id in config/agent_registry.json; reject an unknown craft. This is the store-side half of the same resolution BO-3500a-2 performs at build time -- the two must read the same registry or a record can pass one gate and fail the other."
   - "Tolerant reader: absence of the checklist (schema_version < 2) is legacy mode -- derive/skip, never fail (ADR-026 rule 4)."
-  - "Canonical source only: edit config/ac_store_schema.json and scripts/ac_store/*.py; never a deployed .claude/ copy or the workspace-parent build-output mirror (ADR-001 / ADR-026)."
+  - "Canonical source only: edit config/ac_store_schema.json, scripts/ac_store/*.py and templates/scripts/commit_guardian/*.py; never a deployed .claude/ or scripts/commit_guardian/ build-output copy, and never the workspace-parent mirror (ADR-001 / ADR-026)."
+  - "DEPLOY MANIFEST: any new module the check_ac_schema hook imports MUST be added to AC_STORE_DEPLOY_MAP in scripts/build_phases.py. Verify by running the DEPLOYED hook, not the unit tests -- those import from the source tree and mask the gap (the done_proof.py incident)."
 delivers_to:
   agent: python-coder
-  contract: "deliverables[] checklist field on the AC record: a list of {kind: code|tests|docs|diagram|config, craft: <agent_registry id>}; consumed by the checklist-vs-change-surface validator (ACD-1800a-2-i) and by the per-deliverable sign-off store (ACD-1800b-1a)."
+  contract: "deliverables[] checklist field on the AC record: a list of {kind, craft}, where `kind` is the SHARED change-target enum definition resolved by $ref rather than copied (code|schema|ui|infrastructure|pipeline|prompt|model|config|docs|dependency|diagram -- eleven values, no `tests`), and `craft` is an id from config/agent_registry.json. Consumed by the checklist-vs-change-surface validator (ACD-1800a-2-i), by the per-deliverable sign-off store (ACD-1800b-1a), and -- at build time -- by the proof-class derivation of BO-3500c-2."
 expects_from: null
 test_spec:
   - name: test_deliverable_checklist_present_on_requirement
     target_dir: unit_tests/ac_store/
     framework: unittest
     type: unit
-    description: "An AC with a code+tests+docs change surface exposes a non-empty deliverable checklist field."
+    angle: criterion
+    description: "An AC declaring a code change surface and a how-to documentation surface exposes a non-empty deliverable checklist field."
   - name: test_checklist_one_item_per_artifact_kind
     target_dir: unit_tests/ac_store/
     framework: unittest
     type: unit
-    description: "The checklist enumerates exactly one item for each artifact the requirement needs (code, tests, docs)."
+    angle: criterion
+    description: "The checklist enumerates exactly one item for each artifact the requirement needs -- a code item and a docs item -- and no item for tests."
   - name: test_checklist_item_names_kind_and_craft
     target_dir: unit_tests/ac_store/
     framework: unittest
     type: unit
+    angle: criterion
     description: "Each checklist item carries a `kind` and a `craft` attribute."
+  - name: test_checklist_kind_enum_equals_change_target_enum_plus_diagram
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Load config/ac_store_schema.json, resolve the checklist item's kind enum and the change_target enum through their $refs, and assert the first set equals the second union {diagram} -- so the two vocabularies are provably one rather than two that currently agree."
+  - name: test_kind_added_in_one_place_appears_in_both_enums
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Add a value to the shared $defs enum in an in-memory copy of the schema, re-resolve both references, and assert BOTH the checklist kind enum and change_target reflect it. A duplicated literal copy fails this test; a $ref passes it."
+  - name: test_checklist_kind_tests_is_rejected
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A checklist item with kind `tests` is rejected -- asserted through validate_ac_schema.py AND through the manual-validation fallback in _ac_schema_validators.py, since that fallback is the branch that gates commits when jsonschema is absent."
   - name: test_checklist_kind_enum_rejects_unknown_value
     target_dir: unit_tests/ac_store/
     framework: unittest
     type: unit
-    description: "A checklist item whose kind is not in {code,tests,docs,diagram,config} fails validation."
+    angle: failure
+    description: "A checklist item whose kind is outside the eleven-value vocabulary fails validation at the manual-validation fallback as well as at the JSON-schema path."
   - name: test_checklist_craft_must_be_registry_agent
     target_dir: unit_tests/ac_store/
     framework: unittest
     type: unit
-    description: "A checklist item whose craft is not an agent in agent_registry.json fails validation."
+    angle: failure
+    description: "A checklist item whose craft is not an agent id in config/agent_registry.json fails validation."
+  - name: test_deployed_check_ac_schema_hook_rejects_tests_kind
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: "scripts/commit_guardian/check_ac_schema.py (deployed layout)"
+    description: "Build the deploy layout, then run the DEPLOYED check_ac_schema hook over a staged AC carrying kind `tests` and assert a non-zero exit with the kind named -- catches a missing AC_STORE_DEPLOY_MAP entry that source-tree unit tests cannot see."
 origin_agent: BrainCandy
 created: 2026-08-11
-amended_by: []
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "User decisions D1, D2 and D3, raised by the cross-tree seam defect recorded on BO-3500c-2. D1: the criteria named a NEW five-value kind enum {code, tests, docs, diagram, config}. That would have been the fourth overlapping artifact vocabulary in this repository. The store's change-target vocabulary already exists, already has ten values including one for a screen, one for an instruction and one for a schema, and is already carried by 3,381 of 3,694 records (verified counts in live use: code 1241, pipeline 884, prompt 449, docs 260, config 90, schema 73, infrastructure 32, ui 10). The checklist reuses it instead of minting a parallel list. D2: `diagram` is the one value genuinely missing and is added to that vocabulary -- the user's reason (a move to structured data as the foundation for diagrams) also changes the diagram's proof, recorded on BO-3500c-2-ii. D3: `tests` is DROPPED as a kind. It is a proof, not an artifact -- the lane's red-baseline check already is the differential applied to a code deliverable -- and, load-bearing, with the independent per-deliverable sign-off slots of ACD-1800b-1a a tests kind lets one record hold a signed-off code deliverable beside an unstarted tests deliverable: a code deliverable declared finished with its own proof unwritten, which is the phantom-done shape encoded in the field meant to prevent it. The code item's test obligation already has a home on the record."
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "NOT AMENDED IN THE SAME PASS, AND STALE UNTIL THE IT PO RE-DERIVES THEM. This record is readiness: reviewed and its technical enrichment fields are the IT PO's to author, so the amendment above touched criteria only. Four fields still name the superseded five-value enum and now contradict the criteria: the second it_requirements entry (`The kind value must be exactly one of {code, tests, docs, diagram, config}`), the delivers_to contract, the expects_from contract as quoted by ACD-1800a-4, and the test_spec entry test_checklist_kind_enum_rejects_unknown_value. An implementer reading it_requirements rather than criteria will build the forbidden enum. Also stale for the same reason, in the same tree and outside this pass's named scope: ACD-1800a-3's it_requirements, ACD-1800a-2-i (whose criteria scenario is 'a checklist listing only code and tests'), and ACD-1800a-4 (whose doc_links and expects_from both quote the five-value enum as fixed)."
+  - date: 2026-08-31
+    agent: it-po
+    reason: "RESOLVES THE CONTRADICTION THE ENTRY ABOVE FLAGGED. criteria untouched; only the enrichment fields the IT PO owns were re-derived against decisions D1/D2/D3. it_requirements: the entry fixing the five-value enum is replaced by three -- (a) the kind vocabulary IS the existing change_target enum extended by `diagram` (eleven values), (b) it must be resolved by a shared JSON-Schema $ref rather than restated, because a duplicated literal is the very defect D1 names and a copy is self-consistent from the moment it drifts, and (c) `tests` is rejected outright, the code deliverable's test obligation living in this record's existing test_spec / test_required. Two further entries added: the commit-guardian paths corrected to templates/scripts/commit_guardian/ (scripts/commit_guardian/ is build output, so the old paths pointed at a copy an edit would not survive), and the AC_STORE_DEPLOY_MAP obligation with the run-the-deployed-hook verification, since source-tree unit tests mask a missing deploy entry. delivers_to restated to the eleven-value $ref'd contract and its third consumer named (BO-3500c-2's build-time proof-class derivation). test_spec: the enum test no longer quotes a literal list -- it resolves both enums from the schema and asserts set equality -- and gains a one-edit-changes-both test that a duplicated literal fails, a tests-kind rejection test asserted at BOTH the JSON-schema path and the manual-validation fallback, and a deployed-hook test. No test is a presence grep: each loads the schema or runs a validator."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -88,3 +135,17 @@ notes: |
   + validators (scripts/ac_store/, scripts/commit_guardian/); added ac_store to the
   graph components list so component_membership edges point at the code that implements
   this. This is the normative deliverable-checklist model documented by ACD-1800a-3.
+
+  2026-08-31 -- KIND VOCABULARY AMENDED (BA). See amended_by for the full reasoning. In
+  short: reuse the store's existing change-target vocabulary rather than minting a fifth
+  parallel one, add `diagram` to it as the single genuinely-missing value, and drop
+  `tests`, which is a proof rather than an artifact and which -- given the independent
+  per-deliverable sign-off slots of ACD-1800b-1a -- would let a record hold a signed-off
+  code deliverable next to an unstarted tests deliverable.
+
+  THE ENRICHMENT FIELDS ON THIS RECORD ARE NOW STALE and were deliberately left alone:
+  it_requirements, delivers_to, expects_from and test_spec all still name the superseded
+  five-value enum. They are the IT PO's to re-derive, and until they are, this record
+  contradicts itself between criteria and it_requirements -- with the it_requirements
+  side being the one an implementer reads. Flagged in amended_by so the contradiction is
+  attributable rather than discovered.

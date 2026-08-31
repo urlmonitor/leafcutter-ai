@@ -1,0 +1,229 @@
+id: BO-3500c-1
+components:
+  - build_orchestration
+  - testing_quality
+title: "A non-code member is finished only with its artifact produced and a proof established and recorded"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a member of a group whose deliverable is not code, and for which no passing
+    test can exist,
+  When the run decides whether that member is finished,
+  Then the member is finished only if its declared artifact was produced in this run
+    and a proof appropriate to that artifact was established in this run,
+  And having no test to point at is never on its own a reason to treat the member as
+    finished,
+  And having no test to point at is never on its own a reason to leave the member out
+    of the group, to stop producing it, or to pass over it in silence.
+
+  Given a non-code member the run has finished,
+  When the backlog is read after the run,
+  Then that member carries a receipt of what was checked, stating the instrument that
+    was used, the exact invocation that was made, the outcome that invocation returned,
+    and when it was made,
+  And where the proof is one that compares two conditions, the receipt states both
+    conditions and the difference observed between them,
+  And where the proof is one that only reads the artifact, the receipt states no second
+    condition at all,
+  And a reader can therefore tell from the receipt alone which class of proof was
+    applied, without re-running anything and without inferring it from the kind of
+    artifact.
+
+  Given a receipt offered for a member whose proof compares two conditions, in which
+    the two conditions stated are the same condition,
+  When the receipt is written,
+  Then it is rejected at the moment of writing and the member is not finished,
+  And the reason given is that a comparison recording no difference is not a
+    comparison — so a proof borrowed from a kind that only reads the artifact is caught
+    by the shape of the receipt rather than by trusting whoever produced it.
+
+  Given a receipt offered for a member whose proof only reads the artifact, in which a
+    second condition is stated,
+  When the receipt is written,
+  Then it is rejected at the moment of writing and the member is not finished.
+
+  Given any receipt,
+  When it is checked,
+  Then the class of proof it is checked against is the one the member's deliverable
+    resolves to, and never a class the receipt or the requirement claims for itself.
+
+  Given a non-code member whose artifact was produced but whose proof could not be
+    established,
+  When the run reaches its ending,
+  Then that member is not marked finished,
+  And the run does not report success,
+  And the reason given names the member and the proof that failed — not a missing test.
+depends_on: [BO-3500c]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013 states the standing constraint this criterion carries — 'Do not simply skip untestable ACs' — and explains why the current jam is half-correct: refusing to mark a documentation requirement finished when no page was written is right, and must stay right."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Where a requirement's proof obligation and its record of being finished are defined. The recorded proof this criterion requires is a store-side field and must agree with the per-deliverable sign-off accounting that ACD-1800b owns."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "WHERE THE RECEIPT IS STORED (the open question this record left the IT PO). It is a `receipt` sub-object on the per-deliverable sign-off slot ACD-1800b-1a defines: `deliverables[].signoff.receipt`, on the AC record itself. Never in a grouping ticket body, never in a side file, never in run telemetry only — a proof written somewhere the store does not read is a record nothing counts. Declare it additive and OPTIONAL in config/ac_store_schema.json and do not tighten additionalProperties pre-backfill (ADR-026 rule 1)."
+  - "SLOT INDEPENDENCE MUST SURVIVE (ACD-1800b-1a's second it_requirement). Writing one deliverable's receipt must not mutate, clear or re-order any sibling slot."
+  - "RECEIPT SHAPE, DISCRIMINATING BY CLASS. Common to every receipt: {instrument, invocation, outcome, at}. A COMPARING-class proof adds {condition_a, condition_b, difference} — all three required, `difference` non-empty, and condition_a != condition_b. A READING-class proof carries NONE of those three. There is NO `class` field on the receipt: the class is derived (BO-3500c-2) and the shape is validated against the derived class, so a reader tells the class from the shape and an author cannot choose it."
+  - "TWO WRITE-TIME REJECTIONS, AND THEY NEED NO RUN AT ALL. (a) A comparing-class receipt whose two conditions are equal, or whose `difference` is empty, is rejected at the moment of writing. (b) A reading-class receipt carrying any of condition_a / condition_b / difference is rejected at the moment of writing. Both are pure shape checks over a candidate record — implement and TEST them as such. They are the cheapest real tests in this tree and must not be specified as end-to-end runs."
+  - "ENFORCE AT EVERY GATE THAT ACTUALLY RUNS, AND KNOW WHICH IS LOAD-BEARING: config/ac_store_schema.json (the JSON-schema path), templates/scripts/commit_guardian/_ac_schema_validators.py (the manual-validation fallback — the authoritative branch when jsonschema is absent), templates/scripts/commit_guardian/check_ac_schema.py, and the agent-side scripts/ac_store/validate_ac_schema.py. A rule added only to the JSON schema is a partial/no-op gate; the receipt tests must assert the rejection through the fallback as well."
+  - "THE CLASS CHECKED AGAINST IS THE DERIVED ONE (user decision D4), resolved by BO-3500c-2's registry table from the deliverable's path — never a value read off the record. If a record carries a proof-class field, report it as a defective declaration in the BO-3500a-2 reason-code family; do not honour it, and do not silently ignore it either."
+  - "THE LAST SCENARIO NEEDS ITS OWN TEST WITH THE PROOF FORCED TO FAIL. An implementation that establishes proofs correctly and then marks the member finished regardless satisfies every other assertion on this record. The reason given must name the member and the proof that failed — never 'missing test', which sends the reader looking for a test that was never supposed to exist (the KI-BO-013 vocabulary cost)."
+  - "'No test to point at' must not be reachable as a reason to finish the member, to drop it from the group, to stop producing it, or to pass over it silently. Those are three different doors and all three are open today."
+  - "DEPLOY MANIFEST: any new module the receipt validator adds and a hook imports MUST be added to AC_STORE_DEPLOY_MAP in scripts/build_phases.py, or the deployed check_ac_schema hook raises ModuleNotFoundError and — once required — blocks every merge. Verify by running the DEPLOYED hook; the unit tests import from the source tree and mask the gap."
+  - "NO PRESENCE-ONLY ASSERTIONS (check_presence_only_assertions.py is a live ratchet). The rejection tests execute the validator; the run-level tests execute a run and read the real store on disk afterwards."
+delivers_to:
+  agent: python-coder
+  contract: "deliverables[].signoff.receipt on the AC record: {instrument: str, invocation: str, outcome: str, at: 'YYYY-MM-DD HH:MM'}, plus — for a COMPARING-class proof only — {condition_a: str, condition_b: str, difference: str}, with difference non-empty and condition_a != condition_b. A READING-class receipt carries none of those three. No class field. Consumed by BO-3500c-3's hollow-artifact guard (a degenerate comparison IS a hollow artifact), by the done gate, and by any later audit that must tell what was checked without re-running it."
+expects_from:
+  ac_id: ACD-1800b-1a
+  contract: "deliverables[].signoff = {status: needed|signed_off|not_applicable, by, at, reason?} — independent per-deliverable slots stored on the AC record itself, onto which `receipt` attaches as an additive sub-object. Slot independence is a property this record must preserve, not re-derive."
+test_spec:
+  - name: test_comparing_receipt_with_identical_conditions_is_rejected_at_write
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "NO RUN. Hand the validator a candidate record whose comparing-class receipt has condition_a == condition_b; assert the write is refused and the reason states that a comparison recording no difference is not a comparison."
+  - name: test_comparing_receipt_with_empty_difference_is_rejected_at_write
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "NO RUN. A comparing-class receipt whose `difference` is empty or absent is refused at write time."
+  - name: test_reading_receipt_carrying_a_second_condition_is_rejected_at_write
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "NO RUN. A reading-class receipt carrying condition_a, condition_b or difference is refused at write time."
+  - name: test_receipt_rejections_fire_in_the_manual_validation_fallback
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: deployed
+    description: "Run the same three degenerate receipts through _ac_schema_validators.py with jsonschema unavailable, and assert each is refused — the JSON-schema path alone is not the gate that runs."
+  - name: test_receipt_class_checked_is_the_derived_one_not_a_declared_one
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "A record whose deliverable path derives to the comparing class but which declares itself reading-class is validated against the comparing shape, and the declaration is reported as a defect."
+  - name: test_member_not_marked_done_when_its_proof_fails
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Run with the proof forced to fail; assert the member is not done on disk. An implementation that derives proofs correctly and marks done regardless passes every other test here and fails only this one."
+  - name: test_run_does_not_report_success_when_a_proof_fails
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The run's terminal outcome is failure and the reason names the member and the proof — not a missing test."
+  - name: test_finished_non_code_member_carries_a_receipt_readable_after_the_run
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "After a successful run, read the member's YAML from disk and assert the receipt carries instrument, invocation, outcome and at, with the class-appropriate condition fields."
+  - name: test_receipt_write_leaves_sibling_slots_untouched
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Write a receipt onto one deliverable slot and assert the sibling slots are byte-identical, still present and still unsigned."
+  - name: test_absent_test_is_not_a_reason_to_finish_or_to_drop_the_member
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "For a member with no possible passing test, assert it is neither marked done without a proof nor removed from the resolved group — the two distinct doors of the first scenario, closed in one test."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "User decision D5 — the recorded proof is given a discriminating SHAPE. The original second scenario asked only that the member 'record what was checked', which a conforming implementation satisfies with a sentence. Replaced with a receipt whose fields differ by class of proof, plus two write-time rejection scenarios and the derive-don't-declare clause from D4. This converts 'the weakest kind's proof was borrowed' (BO-3500c-2, second scenario) from something an implementer must be trusted not to do into a shape mismatch a validator sees, detectable without re-running anything."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE INVARIANT THE REST OF BO-3500c HANGS FROM. Its siblings say what the proof IS for
+  each kind of artifact; this one says a proof is required at all, that its absence is
+  never a licence to skip, and that whatever was checked is written down.
+
+  THE RECEIPT SHAPE (2026-08-31, user decision D5 — the most important change in this
+  pass). "Record what was checked" was too weak: any sentence satisfies it. The receipt
+  the second scenario now demands carries six things — the instrument, the exact
+  invocation, the outcome that invocation returned, the first condition compared, the
+  second condition compared, and the difference observed between them — and its shape
+  DIFFERS BY CLASS OF PROOF. A proof that only reads the artifact carries no second
+  condition at all. A proof that runs or renders something and reports the same value for
+  both conditions has recorded a comparison that compared nothing.
+
+  WHY THAT MATTERS MORE THAN THE WORDING SUGGESTS. BO-3500c-2's second scenario forbids a
+  member of one kind being finished on the strength of the proof defined for a weaker
+  kind. As written, nothing detects it: a borrowed proof and a correct one both end in
+  "checked, passed". Once the receipt is shaped, the borrowing is a MISSING OR DEGENERATE
+  FIELD — a running proof whose receipt has no second condition, or one whose two
+  conditions are identical — which a validator sees at write time, on the record, without
+  re-running anything and without re-executing the run that produced it. The two
+  rejection scenarios are that validator's contract.
+
+  THE LAST SCENARIO IS D4 AND IS NOT DECORATION. If the class of proof is a field an
+  author types, the whole mechanism is defeated by typing: declare the screen deliverable
+  to be a reading-class one and the receipt legitimately carries no second condition. So
+  the class is resolved from the deliverable, not read from the record. Where it is
+  resolved FROM is BO-3500c-2's third scenario and the IT PO's to make concrete.
+
+  THE THIRD CLAUSE OF THE FIRST SCENARIO is not a restatement of the second. They close
+  different doors, and both are open today. "No test, therefore finished" is the
+  loosened gate. "No test, therefore not built" is the skip. KI-BO-013 warns against the
+  second by name and BO-2400f-12 forbids it on the refusal path, but nothing anywhere
+  forbids it once a group has been accepted — and an implementation reaching for the
+  cheapest way to make BO-3500b pass will find it immediately.
+
+  WHY THE RECORDED PROOF IS PART OF THIS CRITERION AND NOT A SEPARATE ONE. A proof that
+  is established and then not written down is unfalsifiable an hour later. This
+  component has twice found requirements marked finished with no recoverable evidence,
+  and the audit needed to sort the real ones from the phantoms cost more than the
+  original work. The record is what makes the difference between "a run said so" and
+  "here is what was checked".
+
+  BOUNDARY vs BO-2500 — restated because it will be misread. BO-2500 says only a
+  mechanical check may confer finished-ness, never an opinion. That is not weakened
+  here and must not be. This criterion asks that the mechanical check be the right
+  instrument for an artifact that is not code. If any implementation of this tree ever
+  reads as "some work is finished without a mechanical check", it has drifted and
+  should be rejected.
+
+  SEAM WITH ACD-1800b, which is ahead of this in the roadmap and owns how finished-ness
+  is counted from per-deliverable sign-offs. This criterion is the build side: the run
+  produces the artifact, establishes the proof, and writes the evidence that side
+  counts. Treat its accounting as the target. The two must agree on where the evidence
+  is written or the run will produce a record nothing reads.
+
+  TESTABILITY. Execute a run over a group containing a non-code member, then read the
+  real backlog on disk afterwards. Two load-bearing tests, not one:
+
+    - The LAST scenario, run with the proof forced to fail: an implementation that
+      establishes proofs correctly and then marks the member finished regardless
+      satisfies every other assertion here.
+    - The two REJECTION scenarios, which need no run at all — offer a degenerate receipt
+      (two identical conditions on a comparing proof; a second condition on a reading
+      proof) directly to the write path and assert it is refused. These are cheap,
+      deterministic, and are the only tests in this tree that catch a borrowed proof
+      after the fact.

@@ -1,0 +1,152 @@
+id: BO-3500c-2-iii
+components:
+  - build_orchestration
+  - frontend_coding
+title: "Proof for a screen: it is loaded and driven, and the described result is observed on the running screen"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a member whose artifact is a screen,
+  When its proof is established,
+  Then the screen is loaded and rendered as part of establishing the proof,
+  And establishing it requires no service to be started and no network address to be
+    reachable — the screen is rendered within the run itself,
+  And the interaction the requirement describes is performed against the running
+    screen,
+  And the result the requirement describes is observed on the running screen after
+    that interaction.
+
+  Given a requirement whose described result can be observed only with a live service
+    running,
+  When a run resolves a group containing that member,
+  Then it is refused before any craft is dispatched, on the ground that this proof
+    cannot be established here,
+  And the run does not fall back to a weaker check and does not finish the member on
+    the strength of the screen's source existing.
+
+  Given a screen whose source was produced and which is never loaded,
+  When its proof is established,
+  Then the proof fails — a screen that exists as source and was never rendered is not
+    evidence that anything was delivered.
+
+  Given a screen that loads and renders but on which the described interaction produces
+    no observable result,
+  When its proof is established,
+  Then the proof fails, naming the interaction and the result that was not observed.
+depends_on: [BO-3500c-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Where a requirement declares that its work produces a durable, observable effect on a user-facing surface — the existing signal that a screen requirement carries a stronger obligation than a file being written."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE COMPONENT-TEST SURFACE THAT ESTABLISHES THE SCREEN PROOF (the open question), and it is affordable TODAY with nothing provisioned (finding F1): leafcutter-web/ already carries vitest 4.1.10, jsdom 29.1.1, @testing-library/react 16.3.2 and @testing-library/jest-dom; leafcutter-web/vitest.config.ts sets environment \"jsdom\" and include [\"**/*.test.{ts,tsx}\"]; and a real render-and-drive component test already exists at leafcutter-web/components/flows/__tests__/flow-nodes.decisions.test.tsx. That is the surface. Do not stand up a second one."
+  - "REUSE THE EXISTING INVOCATION SEAM; DO NOT BUILD A SECOND RUNNER. scripts/ac_store/done_proof.py already scans .ts/.tsx sources for `// covers:` tags (_scan_single_ts_file) and already invokes vitest scoped to specific files and parses per-file outcomes (run_vitest_and_parse, with JsRunnerUnavailable on a missing binary or launch error). The screen proof is that seam applied to a screen member — the assigned agent is python-coder because the work is the Python-side proof harness, not the screen."
+  - "REFUSE, DO NOT DOWNGRADE, WHEN A LIVE SERVICE IS REQUIRED. config/skills_config.default.json sets live_surface_testing.enabled false by default and deliberately: a portable package installed into arbitrary repositories must not require its consumers to start servers. A member whose described result is observable only against a live HTTP surface is refused up front under BO-3500c-4 scenario 3 — a cheaper proof for a screen does not prove less, it proves nothing."
+  - "JsRunnerUnavailable IS A REFUSAL, NOT A PASS AND NOT A SKIP. A missing vitest binary means the defined proof cannot be established in this run — BO-3500c-4's `proof_unavailable_here`. done_proof already fails closed on this path; preserve that and do not add a lenient branch."
+  - "COMPARING CLASS. The receipt carries condition_a (observed state before the described interaction), condition_b (after) and a non-empty difference. A proof that renders and never interacts produces identical conditions and is therefore rejected at write time by BO-3500c-1 — that cross-check is the intended mechanism for catching a screen proved by rendering alone, not a redundancy."
+  - "THE INSTRUMENT MUST RECORD THAT A RENDER ACTUALLY OCCURRED, NOT INFER IT from the test file existing or from a PASSED outcome on an empty test. The third scenario — source produced, never loaded — is the one an existence check cannot see."
+  - "TEST FRAMEWORK NOTE: the AC schema's test_spec framework enum is unittest|pytest, and `vitest` is not a permitted value (records that used it are the store's current schema violations). Model these as pytest tests that drive run_vitest_and_parse as a subprocess — which is also what the lane actually does."
+  - "NO PRESENCE-ONLY ASSERTIONS. Every test renders, drives, and reads an observable, or asserts a refusal."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500c-2
+  contract: "derive_proof_kind(path) resolving a leafcutter-web source matched by the vitest include globs to kind `ui`, class `comparing` — claimed by leafcutter-web/vitest.config.ts at position 5 of the resolution table, ahead of the components.json primary_code catch-all."
+test_spec:
+  - name: test_screen_proof_renders_and_drives_the_component
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The proof invokes run_vitest_and_parse for the member's .test.tsx file under the jsdom environment and reads a PASSED outcome for it; assert the render and the interaction both occurred."
+  - name: test_screen_proof_needs_no_server
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Establish the proof with live_surface_testing disabled and no listening socket; assert it completes and no HTTP address was contacted."
+  - name: test_screen_source_never_rendered_fails_the_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A screen whose source was produced but which no test loads fails; assert the instrument records the absence of a render rather than inferring one from file existence."
+  - name: test_interaction_with_no_observable_result_fails_naming_both
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A component that renders and accepts the interaction but changes nothing fails, with the interaction and the unobserved result both named."
+  - name: test_live_service_requirement_is_refused_up_front
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A member whose described result needs a live service is refused before any craft is dispatched, and is never finished on the strength of its source existing."
+  - name: test_missing_vitest_binary_is_a_refusal_not_a_pass
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "With the vitest binary absent, JsRunnerUnavailable becomes a proof_unavailable_here refusal; assert the member is not finished and the run does not report success."
+  - name: test_screen_receipt_is_comparing_class_with_distinct_conditions
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "After a passing screen proof, the receipt carries condition_a, condition_b and a non-empty difference; a render-only proof produces identical conditions and is rejected at write time."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "Finding F1 — this record's cost note was wrong and its criterion was weaker than the project can already afford. Verified: the front-end workspace already carries a component test runner, a browser-like document environment as its configured default, a render-and-drive library and its matchers; real render-and-interact component tests exist; and the store's done-proof machinery already scans front-end sources for coverage tags and can run that suite. Component-level render-and-drive is affordable today, so the criterion now states that no service need be started. What is NOT affordable is a proof needing a live service on a network address — the project's default configuration disables live-surface testing deliberately, because a portable package must not require consumers to start servers — so that case is added as an up-front refusal rather than a downgrade. Also records the inversion: the prompt, not the screen, is the expensive kind."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE KIND THE PRODUCT OWNER NAMED FIRST as obviously beyond the written-page floor,
+  and the reason is worth stating plainly: a screen's whole content is behaviour under
+  interaction. Everything a proof could check without running it — that the file
+  exists, that it changed, that it mentions the right words — is satisfied by a screen
+  that renders as a blank rectangle.
+
+  THIS IS THE SAME RULE THIS REPOSITORY ALREADY IMPOSES ON ITSELF for gates and
+  workflows: a criterion about behaviour must be proved by executing the behaviour, and
+  a check that inspects source text passes on dead code. The rule has been paid for
+  here more than once. A screen is the purest instance of it.
+
+  COST — THE ORIGINAL NOTE HERE WAS WRONG, AND THE CORRECTION MATTERS (amended
+  2026-08-31, finding F1). It said this proof needs a running surface which the lean run
+  does not have, and treated the screen as the most expensive of the five. Verified, it
+  is not: the front-end workspace already has a component test runner, a browser-like
+  document environment configured as its default, a component render-and-drive library
+  and its matchers all installed; real component tests that render and interact already
+  exist; and the store's done-proof machinery already scans front-end sources for
+  coverage tags and can run that suite and read its result. Rendering a component,
+  driving the described interaction and observing the described result is affordable
+  TODAY. Nothing needs provisioning.
+
+  WHAT IS GENUINELY NOT AFFORDABLE is a proof that needs a live service on a network
+  address. The project's own default configuration disables live-surface testing, and
+  deliberately: a portable package installed into arbitrary repositories must not require
+  its consumers to start servers. That is the boundary the second scenario draws, and it
+  is drawn as a REFUSAL rather than as a downgrade — a cheaper proof for a screen does
+  not prove less, it proves nothing.
+
+  THE INVERSION IS WORTH RECORDING because it redirects the effort. This record assumed
+  the screen was the hard kind. It is the prompt that is expensive (BO-3500c-2-iv), and
+  it is also the largest by count by a factor of five. An implementer who sequences by
+  the original note would start with the cheap one believing it to be the hard one.
+
+  80 not-yet-done requirements declare the screen craft.

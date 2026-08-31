@@ -2613,3 +2613,88 @@ session by an operator who had read it.
 
 **Pattern:** a correct guard reachable from exactly one entry point, protecting against a
 condition whose only symptom is silence.
+
+---
+
+### KI-BP-20260831-0940 — `derive_declares_side_effect` is negation-blind, so a refusal criterion is forced to declare the side effect whose absence is its entire content
+
+- **Severity:** medium — it does not fail open, it forces a FALSE value into the store
+- **Status:** open — no AC
+- **Occurrences:** 1 (BO-3500a-1-i, 2026-08-31), but see the population estimate below
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `derive_declares_side_effect()` in
+  `templates/scripts/commit_guardian/_ac_schema_validators.py` (~line 674), reached through
+  `validate_declares_side_effect()` and the `check-ac-schema` pre-commit hook.
+
+**Symptom.** Committing `BO-3500a-1-i` was refused with:
+
+```text
+[check-ac-schema]: criteria assert a durable, observable effect (a file written, a record
+persisted, a state-changing command) but declares_side_effect is not set — add
+declares_side_effect: true. This value must be DERIVED from the AC's own Then clause, not
+authored by opinion (BO-2900g-2).
+```
+
+That record is a **refusal** criterion. Its Then block is entirely negative: no other craft is
+handed the member, no artifact is produced for it, it is not marked finished, its declaration
+is not rewritten. Nothing durable happens — that is the whole requirement.
+
+**Cause, verified with a minimal case rather than inferred.** The derivation scopes to Then
+blocks correctly, but inside them it matches durable-effect phrases without regard to negation:
+
+```text
+derive({'criteria': 'Then the file is written to disk ...'})            -> True   correct
+derive({'criteria': 'Then the run refuses and nothing is written ...'}) -> True   WRONG
+```
+
+The second is the whole bug in one line: *nothing is written* contains *is written*.
+
+Bisecting the real record confirms both halves of the behaviour. Fed clause-by-clause in
+isolation every clause derives `False` — because with no preceding `Then` the scoping drops
+them. Fed cumulatively, the value flips on exactly `And no artifact is written on that
+member's behalf by any craft`. So the Then-scoping works; the negation handling does not.
+
+**Why this one is worth more than its single occurrence.** The two honest options are both
+unavailable:
+
+- `true` is a lie, and it mis-routes. `user-surface-smoker` is selected from this field, and
+  the field's documented meaning is *durable effect*.
+- `false` contradicts the derivation, and `BO-2900g-2` states the value must be derived rather
+  than authored — so hand-setting it is exactly what the rule forbids.
+
+`KI-ACD-…`'s note on `BP-1100g-4` records the same collision from the other side and asserts
+that for a commit-time refusal "the derivation correctly returns `False`". On the evidence
+above that claim does not generalise: whether a refusal derives correctly depends only on
+whether its wording happens to avoid the phrase list.
+
+**Population.** Every refusal, guard, gate and no-op criterion in the store is a candidate, and
+this component is full of them — the whole `BO-3500a` family, `BO-2400f-12`'s producibility
+refusal, and `BO-3500c-4`'s up-front refusal are all written as "nothing happens" criteria. It
+has not bitten more often because the trigger is the presence of a phrase-list word inside a
+negated clause, which is a wording accident.
+
+**Fix.** Handle negation inside the Then block — at minimum, do not match a durable-effect
+phrase when it is governed by a preceding negator (`no`, `not`, `never`, `nothing`) within the
+same clause. Note this is genuinely harder than it looks: `no artifact is written on that
+member's behalf` needs the negator to reach across the noun phrase. If a robust rule is not
+cheap, the honest alternative is to make the failure a **question rather than a verdict** —
+report that the clause is ambiguous and require the author to record which reading applies,
+rather than asserting a value the criteria contradict.
+
+**Workaround in force.** `BO-3500a-1-i`'s third Then-clause is worded "no craft produces an
+artifact on that member's behalf" rather than "no artifact is written ...". Same meaning,
+derives `false`, which is correct. The record carries a note pointing at this entry and telling
+the next author not to restore the plainer wording until the derivation handles negation —
+because the natural phrasing is the one that breaks.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — a textual rule that cannot distinguish
+a statement from its negation. Same family as the `/\n{4,}/` empty-layer heuristic fixed earlier
+today, which could not distinguish an empty layer from content ending in a blank line, and as
+the forbidden-phrase prompt test that flagged a prohibition for containing the words it
+prohibits. Three instances in one day suggests the general lesson: **a regex over prose cannot
+carry a polarity, so any check built that way must either handle negation explicitly or report
+ambiguity instead of a verdict.**
+
+**Related.** `BO-2900g-2` (the derive-don't-author rule this collides with). `KI-BP-20260831-0620`
+(the mypy gate — the other kind of gate defect found today; that one fails open, this one fails
+closed onto a false value).
