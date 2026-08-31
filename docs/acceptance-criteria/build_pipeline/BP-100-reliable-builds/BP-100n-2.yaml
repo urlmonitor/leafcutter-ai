@@ -1,4 +1,4 @@
-id: BP-100k-7
+id: BP-100n-2
 components:
   - build_pipeline
 title: "A guard skips a check only because the configuration declares the capability off — never because the capability's output happens to be absent, which is the failure the guard exists to catch"
@@ -30,9 +30,9 @@ criteria: |
     is never indistinguishable in the build's output from a check that ran and
     passed.
 depends_on:
-  - BP-100k
+  - BP-100n
 doc_links:
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n.yaml"
     relationship: parent
     status: exists
   - path: "docs/build-pipeline.md"
@@ -105,9 +105,22 @@ amended_by:
       unit_tests/build_guards/test_bp_100k_7.py and passes under
       AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests run clean
       apart from the unrelated test_ge_122e_1.py failure from another branch).
+  - by: ac-tree-split
+    at: 2026-08-26
+    note: >-
+      Renamed BP-100k-7 -> BP-100n-2 and reparented from BP-100k to BP-100n
+      (Pattern C, split of BP-100k 8 children -> 5 + 3). The rename is forced,
+      not cosmetic: check_ac_limits.py derives a child's parent from its ID
+      string rather than from covered_by (GE-106), so a child that kept the
+      BP-100k- prefix would still count against BP-100k's cap. The covering
+      test moved with it — unit_tests/build_guards/test_bp_100k_7.py is now
+      unit_tests/build_guards/test_bp_100n_2.py and its "# covers:" tags read
+      BP-100n-2, so the ac-reconcile entry above names the pre-split filename
+      and tag. Criteria, title, work_status and evidence unchanged; this AC's
+      substance is untouched by the split.
 superseded_by: null
 covered_by:
-  - unit_tests/build_guards/test_bp_100k_7.py
+  - unit_tests/build_guards/test_bp_100n_2.py
 implemented_by:
   - scripts/build_phases.py
 change_target: pipeline

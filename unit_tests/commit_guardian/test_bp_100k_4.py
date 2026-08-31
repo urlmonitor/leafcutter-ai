@@ -412,6 +412,7 @@ class TestTriggerMatchingNoTrackedPathIsNamedAndFails(unittest.TestCase):
                 f"matches no tracked path. Output:\n{combined}"
             ),
         )
+        assert match is not None  # narrowing for mypy; assertIsNotNone above is the real check
         self.assertEqual(
             "check-build-drift-fixture",
             match.group(1),
@@ -484,6 +485,7 @@ class TestTriggerWhoseEveryNamedLocationIsIgnored(unittest.TestCase):
                 f"git's tracked-path set, not merely path syntax. Output:\n{combined}"
             ),
         )
+        assert match is not None  # narrowing for mypy; assertIsNotNone above is the real check
         self.assertEqual(
             "check-output-drift-fixture",
             match.group(1),
@@ -542,6 +544,7 @@ class TestWholeTreeGateCarryingPathFilterIsReported(unittest.TestCase):
                 f"carrying a redundant files filter. Output:\n{combined}"
             ),
         )
+        assert match is not None  # narrowing for mypy; assertIsNotNone above is the real check
         self.assertEqual("check-build-drift-fixture", match.group(1))
         self.assertIn(
             "whole-tree",
@@ -821,6 +824,7 @@ class TestRealRegistryReportsZeroUnreachableGatesAfterTheFix(unittest.TestCase):
                 f"Output:\n{combined}"
             ),
         )
+        assert match is not None  # narrowing for mypy; assertIsNotNone above is the real check
         unreachable = int(match.group(2))
         self.assertEqual(
             0,

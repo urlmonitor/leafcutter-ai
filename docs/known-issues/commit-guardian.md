@@ -831,9 +831,10 @@ whether it moves the other two.
 > work and not a drive-by fix — attempting it as a side effect of unrelated work is how the
 > `016`/`017` collision below was created in the first place.
 >
-> **Next free id is `KI-CG-034`.** The earlier note here said `018`; that was true on
-> 2026-08-25 and has been overtaken three times since. Do not allocate by reading this line —
-> read the file, on a fresh `origin/main`, immediately before you land.
+> **Next free id is `KI-CG-035`.** The note here said `018`, then `034`; each was true when
+> written and overtaken shortly after — `034` was consumed by the very PR that wrote the line
+> claiming it was free. Do not allocate by reading this line — read the file, on a fresh
+> `origin/main`, immediately before you land.
 
 - **Severity:** high
 - **Status:** open
@@ -2328,15 +2329,51 @@ nothing and reports success).
 ### KI-CG-034 — `check_output_drift` examines every output file and compares none of them: the scanner and the installer key paths in two namespaces that never intersect
 
 - **Severity:** high
-- **Status:** open
+- **Status:** **resolved — and it was already resolved when this entry was filed.** See
+  "Correction" immediately below before reading anything else here.
 - **Occurrences:** 1
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26 (fixed by `ab9e91c41`, PR #593)
 - **Where:** `scripts/commit_guardian/check_output_drift.py` — the directory scan and the
   `not in output_mappings` branch; `scripts/build_helpers.py::write_build_manifest` supplies
   the mapping it is compared against
 
-**Symptom.** The Direction-B drift guard passes on every working copy because it never
-performs a comparison. Run against a freshly built worktree at `18c8e10a`:
+**Correction, 2026-08-26.** This entry was filed against a worktree pinned at `18c8e10a`. PR
+#593 (`ab9e91c41`, "gates that could not check stop reporting passes") had already rewritten
+the scanner by then — and `ab9e91c41` is an **ancestor** of the commit that added this entry.
+So the defect was fixed on `main` before the entry describing it reached `main`. Re-run
+against `d0fa881c`:
+
+```
+$ python scripts/commit_guardian/check_output_drift.py ; echo "exit: $?"
+exit: 0
+check-output-drift: RESULT verified=466 uncomparable=5 exempt=5 gaps=0 drifted=0 missing=0 unreadable=0
+```
+
+466 files hash-compared against the manifest, zero skipped into the fail-open branch, and the
+five uncomparables are declared exemptions that name their ground (`CLAUDE.md`, the glossary
+seeds, `roadmap.json`, `vision.md` — write-if-absent scaffolds whose content is human-owned
+from creation). `_derive_scan_dirs()` now derives the scan set from the manifest's own
+`output_mappings` keys, which is precisely the fix direction recorded below.
+
+**How this happened, since it is the more useful half.** The evidence was gathered in a
+long-lived worktree and never re-checked against current `main` before landing. Everything
+downstream inherited that: the severity argument, the `ACD-2100d-2` framing, the commit
+message. A stale baseline does not announce itself — the run really did print 169 skips and
+zero comparisons, so every check of the *evidence* passed. Only a check of the *baseline*
+would have caught it. Pin the commit you measured, and re-measure on `origin/main`
+immediately before you land.
+
+**The reverse error is the one worth guarding against.** The `ACD-2100d-2` coder read this
+entry, found production already correct, and refused to write a no-op edit to manufacture a
+diff. That was right. An entry like this one — confident, evidenced, wrong — is exactly what
+pressures an agent into "fixing" working code.
+
+The original report follows unchanged, because the mechanism it describes was real at
+`18c8e10a` and is worth keeping as a pattern.
+
+**Symptom (as of `18c8e10a`; no longer reproducible).** The Direction-B drift guard passes on
+every working copy because it never performs a comparison. Run against a freshly built
+worktree at `18c8e10a`:
 
 ```
 $ python scripts/commit_guardian/check_output_drift.py ; echo "exit: $?"
@@ -2366,20 +2403,26 @@ the missing coverage is **shaped like success**:
   **never** worked — there is no regression to point at, which is why nothing noticed.
 - It is the guard that `ACD-2100d-2` is written to strengthen. An acceptance criterion built
   on the assumption that the check works, when it has never run a comparison, would be
-  satisfied by an implementation that leaves it inert.
+  satisfied by an implementation that leaves it inert. *(Superseded: `ab9e91c41` landed the
+  comparison, so `ACD-2100d-2` found its premise already satisfied.)*
 - The registration compounds it: the hook's `files` trigger in
   `scripts/commit_guardian/commit_guardian.json` carries the same stale path prefixes, so a
   deployed file under a differently-configured output root does not match and the hook does
   not fire at all. Repairing the script alone leaves a gate that computes the right answer
   and is never invoked.
 
-**Fix direction.** Derive both the set of files to check and the key each is looked up under
-from the installer's mapping itself, rather than from a hardcoded directory list, so a newly
-deployed directory is covered the day it appears. Make the unmapped case report rather than
-skip — a deployed file with no mapping entry is either a mapping defect or an untracked
-output, and both are findings. Fix the hook's `files` trigger in the same change. Cover it
-with a test that asserts a run examining files while checking none of them **fails**; that is
-today's behaviour, and a test written without that assertion passes against the defect.
+**Fix direction — implemented by `ab9e91c41` before this entry was written.** Derive both the
+set of files to check and the key each is looked up under from the installer's mapping itself,
+rather than from a hardcoded directory list, so a newly deployed directory is covered the day
+it appears. Make the unmapped case report rather than skip — a deployed file with no mapping
+entry is either a mapping defect or an untracked output, and both are findings. Cover it with
+a test that asserts a run examining files while checking none of them **fails**; a test
+written without that assertion passes against the defect.
+
+`ab9e91c41` did all of that: `_derive_scan_dirs()` reads the manifest keys, the unmapped case
+reports `GAP`/`EXEMPT` instead of skipping, and the `verified == 0` floor treats an empty
+`output_mappings` as INDETERMINATE rather than clean. Recorded here as the shape of the fix,
+not as outstanding work.
 
 **Caution for whoever fixes this.** `_compute_output_mappings`'s docstring says it enumerates
 four template directories by hand and therefore cannot see the route file. **That docstring is
@@ -2389,9 +2432,10 @@ correct; the defect is entirely on the scan side. An agent working from the docs
 the `ACD-2100d-2` enrichment pass reached the wrong conclusion and caught it only by running
 the check. Run it; do not read it.
 
-**Related.** `ACD-2100d-2` (the acceptance criterion that will repair this as a side-effect of
-being implemented). `KI-CG-019`, `KI-CG-012` (the sibling exit-0-having-checked-nothing
-routes). `KI-BP-016` (the same output-root confusion in the build's doc-index phase).
+**Related.** `ACD-2100d-2` (written to repair this; found it already repaired). `KI-CG-019`,
+`KI-CG-012` (the sibling exit-0-having-checked-nothing routes — those are still open, and
+unlike this one they have regressed from working states). `KI-BP-016` (the same output-root
+confusion in the build's doc-index phase).
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
 nothing and reports success).
@@ -2481,9 +2525,147 @@ is the one this register exists to discourage.
    introduce a registry entry — conflict resolution can add one — and skipping the check there
    would open exactly the hole the hook exists to close.
 
-**Related.** `KI-CG-012`, `KI-CG-019` (sibling checks that reach a verdict from an incomplete
-read of git state). `KI-BP-20260826-1331` (the same class of wrong-baseline comparison, there
-against the deployed tree rather than against `HEAD`).
+**Related.** `KI-CG-20260826-1612` — **same hook, different and independent defect**, filed the
+same day by another session. That entry reports `check_package_surface_declaration` among the
+hooks whose `--diff-filter=AM` makes a staged *rename* invisible; this entry reports its
+baseline being wrong on a merge. They do not overlap and neither fix addresses the other:
+`--diff-filter` decides *which paths* the hook sees, `HEAD` vs `MERGE_HEAD` decides *what it
+compares them against*. Both are worth fixing in one pass, since both live in the same twenty
+lines of git plumbing. `KI-CG-012`, `KI-CG-019` (sibling checks that reach a verdict from an
+incomplete read of git state). `KI-BP-20260826-1331` (the same class of wrong-baseline
+comparison, there against the deployed tree rather than against `HEAD`).
 
 **Pattern:** a check that treats `HEAD` as "the state before this change" — true for an ordinary
 commit, false for every merge.
+
+---
+
+### KI-CG-20260826-1612 — Every AC guardian filters the index on `--diff-filter=AM`, so a *renamed* AC record is invisible to all six — and renaming is exactly what a tree split requires
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/scripts/commit_guardian/check_ac_parent_covered_by.py:150`,
+  `check_ac_limits.py:354`, `check_ac_schema.py`, `check_ac_governance.py`,
+  `check_ac_circular_deps.py`, `check_ac_pattern_refs.py` — all six read
+  `git diff --cached --name-only --diff-filter=AM`. Nine further guardian hooks
+  (`transform_*`, `check_package_surface_declaration`, `check_surface_components_e2/e3`)
+  use the same filter and are likely affected the same way.
+
+**The mechanism.** `--diff-filter=AM` selects **A**dded and **M**odified paths. A rename is
+status **R**, so a staged rename is silently absent from every one of these hooks' file lists.
+The record is fully staged — `git status` shows it, the commit will contain it — and the gate
+that exists to validate it never receives its path.
+
+**Why this is worse than it sounds.** The `ac-tree-split` skill *mandates* renaming. Pattern C
+step 6a: "Rename the file to reflect the new parent prefix … the old filename must no longer
+exist," because `check_ac_limits.py` attributes a child to its parent by deriving the parent
+from the child's **ID string** (GE-106), so a moved child that kept its prefix still counts
+against the old parent. The skill is right that the rename is unavoidable. The consequence is
+that **the single operation most likely to break parent/child back-links produces a commit in
+which the back-link gate cannot see any of the moved records.**
+
+**Evidence — controlled A/B, same store state, same hook, one variable.** Splitting `BP-100k`
+into `BP-100k` + `BP-100n` moved three L2s (`BP-100k-6/-7/-8` → `BP-100n-1/-2/-3`).
+`BP-100n-1` was then deliberately removed from `BP-100n`'s `covered_by` — a real violation of
+exactly what this hook enforces:
+
+| how the hook was invoked | result |
+|---|---|
+| via the git index, children staged as `R` | **exit 0**, no output |
+| via `HOOK_TEST_FILES`, same broken store | **exit 1**, `BLOCKED — child AC 'BP-100n-1' is staged but parent AC 'BP-100n' does not include 'BP-100n-1' in its covered_by field` |
+
+The hook is not lenient about renames; it is blind to them. Confirmed the filter is the cause:
+`git diff --cached --name-only --diff-filter=AM` listed 4 of the 7 staged AC records, and
+`--diff-filter=R` listed the 3 missing ones.
+
+**Why the split that found it is nonetheless verified.** Rename detection was disabled locally
+(`git config diff.renames false`), which makes git report the moves as Add + Delete so the `AM`
+filter includes them; all six gates were then re-run and passed with the moved children genuinely
+inspected. That is the workaround, and it is also the shape of the fix.
+
+**Blast radius beyond tree splits.** Any AC record that is renamed — a corrected ID, a record
+moved between feature folders, a Pattern A/C split — passes all six required AC gates unexamined.
+`check_ac_limits` partially escapes only by accident: it keys on the *parent* being staged, and in
+a split the parents are `M`/`A`. Change a child's ID without touching either parent and it is blind
+too.
+
+**Suggested fix.** Add `R` to the filter (`--diff-filter=AMR`) in the shared staged-path helpers.
+For a rename, git's `--name-only` reports the destination path, which is the one that should be
+validated. Worth doing in one pass across the family rather than per hook, since all fifteen
+copies of this line drifted from a common ancestor.
+
+**Relationship to `KI-CG-001`.** Adjacent but distinct, and both should stay. `KI-CG-001` is
+"the file was never staged, so the hook never saw it". This is "the file **was** staged and the
+hook still never saw it". The first is fixed by staging discipline — the standing
+"stage the parent alongside the child" rule in `CLAUDE.md`. That rule does **not** help here:
+you can stage every file involved, correctly, and the gate still reports a clean pass.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
+nothing and reports success).
+
+---
+
+### KI-CG-20260831-0713 — `check-hook-trigger-reachability` blocks EVERY commit in a consumer project that tracks no Python
+
+- **Severity:** blocker
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/commit_guardian.json:1082-1093` (the gate's
+  own manifest entry), `templates/scripts/commit_guardian/check_hook_trigger_reachability.py`,
+  and `hook_trigger_reachability_exemption_registry` in the same config
+
+**The defect.** The gate shipped by `BP-100k-4` is `always_run: true`, `pass_filenames: false`,
+and exits non-zero when any registered hook's `files` pattern matches no tracked path. It is
+rendered into every consumer's `.pre-commit-config.yaml` — `_render_hook_yaml` in
+`scripts/build_precommit.py` iterates the whole `hooks_manifest` with no tier filtering and no
+opt-out. Two registered hooks trigger on `files: '\.py$'`: `check-placeholder-defaults` and
+`check-exception-handling`. **A consumer project containing no Python therefore cannot make a
+commit at all.**
+
+**Evidence — reproduced independently, twice, against the real registry.**
+Synthetic consumer repos, gate executed as a process with cwd inside the probe:
+
+| probe | result |
+|---|---|
+| Fresh TypeScript consumer (`src/index.ts`, `README.md`, `.gitignore`) | `exit 1` · `RESULT total=52 unreachable=27 exempt=9` |
+| **Fully-onboarded** consumer — adds `docs/*.md`, `docs/components.json`, `docs/roadmap.json`, `docs/acceptance-criteria/*.yaml`, `tickets/*.md`, `docs/product-truth/*.json` | **still `exit 1`** · `RESULT total=52 unreachable=2 exempt=9` |
+
+The onboarded residue is exactly the two language-shaped triggers:
+
+```
+UNREACHABLE: check-placeholder-defaults reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
+UNREACHABLE: check-exception-handling   reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
+```
+
+So this is not a not-yet-onboarded edge case. There is no amount of correct onboarding that
+clears it short of adding a `.py` file to the consumer's own tracked tree.
+
+**Why the blast-radius sweep missed it.** `BP-100k-4`'s consumer-layout check was done — nine
+grounded exemptions exist and they are good ones — but every exemption reasons about a
+**path-shaped** pattern ("this path only exists inside the vendored package / the gitignored
+deploy mirror"). No one asked the different question a **language-shaped** pattern raises:
+*what if the consumer simply is not a Python project?* The package is self-hosted in Python, so
+`\.py$` always matches here, and the gate is green in the only repo it was exercised in.
+
+Two further gates look like the same omission and have no exemption:
+`check-surface-components-e3` (targets `config/agent_registry.json` — the **same file**
+`check-agent-spawn-consistency` was exempted for) and `check-eval-staleness`.
+
+**Suggested fix (not applied).** Distinguish "this trigger is dead" from "this repository has
+none of that kind of file yet". A pattern that names a language or file family should be
+unreachable only when the repository *could* have such files. Options: extend the exemption
+vocabulary with a language-conditional ground; skip language-shaped triggers when the
+repository tracks zero files of that type; or make the gate advisory in consumer installs and
+blocking only in the package's own checkout. Whichever is chosen, add a consumer-layout probe
+that tracks **no** `.py` to the test suite — the existing consumer fixture has Python in it,
+which is why this passed.
+
+**Found by** an adversarial review of the shipped `ab9e91c41`, then independently reproduced
+before filing.
+
+**Pattern:** the inverse of this register's usual M5 — not a gate that passes without checking,
+but a gate that **fails without a defect**. Same root cause though: the gate cannot tell
+"nothing to check" from "something is wrong".

@@ -1,6 +1,6 @@
 """
-MODULE: unit_tests/commit_guardian/test_bp_100k_6.py
-GOAL: BP-100k-6 — a deployed output (or source template) the build recorded
+MODULE: unit_tests/commit_guardian/test_bp_100n_1.py
+GOAL: BP-100n-1 — a deployed output (or source template) the build recorded
     as having been written, but which is absent from disk, must be named,
     counted, and must fail the run. Deletion is the most complete form of
     drift there is, and today it is the only kind the gate ignores.
@@ -17,7 +17,7 @@ BUSINESS CONTEXT: In check_output_drift.py's ``_scan_output_files()``, the
     structure on the template side. Deleting a deployed artifact (or a
     hashed template) therefore passes both gates silently.
     See docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/
-    BP-100k-6.yaml.
+    BP-100n-1.yaml.
 
 OUTPUT + EXIT-CODE CONTRACT SPECIFIED BY THIS TEST FILE (the target for
     python-coder — mirrors the existing BP-100k-3 contract style in
@@ -325,7 +325,7 @@ class TestDeletedRecordedOutputIsNamedAndFailsTheRun(unittest.TestCase):
         self.hook = _deploy_commit_guardian_dir(self.workspace) / "check_output_drift.py"
 
     def test_deleted_recorded_output_is_named_and_fails_the_run(self) -> None:
-        # covers: BP-100k-6
+        # covers: BP-100n-1
         key = self.scenario["tracked_key"]
         self.scenario["tracked_path"].unlink()
 
@@ -339,7 +339,7 @@ class TestDeletedRecordedOutputIsNamedAndFailsTheRun(unittest.TestCase):
                 f"Deleting the recorded output {key} produced no "
                 "'UNCOMPARABLE: MISSING' line naming it — the gate does not "
                 f"currently visit a manifest-recorded key whose file was "
-                f"deleted at all (BP-100k-6). Output:\n{combined}"
+                f"deleted at all (BP-100n-1). Output:\n{combined}"
             ),
         )
         self.assertNotEqual(
@@ -369,7 +369,7 @@ class TestMissingOutputIsCountedInTheRunSummary(unittest.TestCase):
         self.hook = _deploy_commit_guardian_dir(self.workspace) / "check_output_drift.py"
 
     def test_missing_output_is_counted_in_the_run_summary(self) -> None:
-        # covers: BP-100k-6
+        # covers: BP-100n-1
         self.scenario["tracked_path"].unlink()
 
         result = _run_hook(self.hook, self.workspace)
@@ -386,7 +386,7 @@ class TestMissingOutputIsCountedInTheRunSummary(unittest.TestCase):
             msg=(
                 "The RESULT summary line has no 'missing=<X>' field — a "
                 "recorded-but-absent output is not counted as its own "
-                f"reported condition (BP-100k-6). Output:\n{combined}"
+                f"reported condition (BP-100n-1). Output:\n{combined}"
             ),
         )
         self.assertEqual(
@@ -415,7 +415,7 @@ class TestMissingOutputIsNotCountedAmongVerifiedOutputs(unittest.TestCase):
         self.hook = _deploy_commit_guardian_dir(self.workspace) / "check_output_drift.py"
 
     def test_missing_output_is_not_counted_among_verified_outputs(self) -> None:
-        # covers: BP-100k-6
+        # covers: BP-100n-1
         baseline = _run_hook(self.hook, self.workspace)
         baseline_combined = baseline.stdout + baseline.stderr
         baseline_match = _RESULT_LINE_RE.search(baseline_combined)
@@ -475,7 +475,7 @@ class TestRunWithAMissingOutputIsNotDescribedAsClean(unittest.TestCase):
         self.hook = _deploy_commit_guardian_dir(self.workspace) / "check_output_drift.py"
 
     def test_run_with_a_missing_output_is_not_described_as_clean(self) -> None:
-        # covers: BP-100k-6
+        # covers: BP-100n-1
         baseline = _run_hook(self.hook, self.workspace)
         self.assertEqual(
             0,
@@ -528,7 +528,7 @@ class TestRestoringTheOutputUnchangedReturnsTheRunToPassing(unittest.TestCase):
         self.hook = _deploy_commit_guardian_dir(self.workspace) / "check_output_drift.py"
 
     def test_restoring_the_output_unchanged_returns_the_run_to_passing(self) -> None:
-        # covers: BP-100k-6
+        # covers: BP-100n-1
         tracked_path = self.scenario["tracked_path"]
         original_content = self.scenario["tracked_content"]
 
@@ -539,7 +539,7 @@ class TestRestoringTheOutputUnchangedReturnsTheRunToPassing(unittest.TestCase):
             deleted_result.returncode,
             msg=(
                 "Precondition for this restore test: deleting the tracked "
-                "output must fail the run (BP-100k-6) so that restoring it "
+                "output must fail the run (BP-100n-1) so that restoring it "
                 "next actually proves the new verdict clears itself rather "
                 "than never having fired in the first place. "
                 f"Output:\n{deleted_result.stdout + deleted_result.stderr}"
@@ -589,7 +589,7 @@ class TestBothGatesEmitTheSameMissingArtifactVerdict(unittest.TestCase):
         self.output_hook = deployed_dir / "check_output_drift.py"
 
     def test_both_gates_emit_the_same_missing_artifact_verdict(self) -> None:
-        # covers: BP-100k-6
+        # covers: BP-100n-1
         self.scenario["tpl_path"].unlink()
         self.scenario["out_path"].unlink()
 

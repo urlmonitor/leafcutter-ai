@@ -77,7 +77,7 @@ it_requirements:
     - "Verify behaviorally — run the real build, then execute the gate as a process over the real deployed tree and assert on the emitted counts. A unit assertion over the record set stays green on a gate that never collects the files, which is the incumbent defect."
     - "Must follow the repo error-handling policy: specific-exception try/except around file, JSON and subprocess I/O, log at WARNING or higher or re-raise; no bare or blind excepts."
     - "REGISTRATION SURFACE: any new configuration key belongs in templates/scripts/commit_guardian/commit_guardian.json — the authoritative guardian config. templates/commit-guardian/commit_guardian.json is a different, smaller file and is NOT the registration surface. A build.py re-run is required after editing anything under templates/, since the gate runs from its deployed copy."
-    - "This AC and BP-100k-6 both edit check_output_drift.py and must land as one reviewable diff; they must not run concurrently."
+    - "This AC and BP-100n-1 (the former BP-100k-6, moved to sibling L1 BP-100n on 2026-08-26) both edit check_output_drift.py and must land as one reviewable diff; they must not run concurrently."
 test_spec:
   - name: test_inspection_set_equals_what_the_build_recorded_writing
     target_dir: unit_tests/build_guards/
