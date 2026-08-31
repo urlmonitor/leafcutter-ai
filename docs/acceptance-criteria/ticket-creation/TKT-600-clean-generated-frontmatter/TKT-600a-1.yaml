@@ -1,10 +1,55 @@
-amended_by: []
+amended_by:
+- reason: reopened-phantom-done
+  date: '2026-08-31'
+  by: safety-security-expert
+  entry: 'REOPENED. work_status done -> todo. criteria, title, level, depends_on,
+    it_requirements and test_spec are all UNCHANGED — this record still asks for exactly
+    what it asked for, and it is reopened because that has not been delivered, not because
+    the requirement moved. covered_by gains the four tests that were already tagged
+    "# covers: TKT-600a-1" but never linked.
+
+    HALF OF THIS AC WAS NEVER IMPLEMENTED, AND ITS TEST CANNOT DETECT THAT. The
+    files_touched half is unfixed: _build_files_touched still harvests every slash-bearing
+    token out of prose it_requirements. Measured directly against the shipped function on
+    2026-08-31:
+
+      the test fixture (src/foo.py, deploy/foo.py — do NOT exist on disk)  -> []
+      the same shape with paths that DO exist  -> [docs/acceptance-criteria,
+                                                   docs/retrospectives, templates/skills]
+      "Do not edit templates/skills/security-scanner/SKILL.md here; it is context only."
+                                              -> [templates/skills/security-scanner/SKILL.md]
+
+    The four tagged tests pass. What removes the fixture paths is the ON-DISK EXISTENCE
+    GATE, not the restriction this AC asks for — so the test passes identically on unfixed
+    code and is vacuous. The last line is the sharpest: an it_requirement written to say
+    "this file is context, do not edit it" makes that file the declared edit surface.
+
+    THE CONSEQUENCE WAS OBSERVED, NOT PREDICTED. The unfixed extractor produced the
+    surfaces for EPIC-SuppressionNarrowsNeverDisables: 10 of 27 tickets unusable — 4 empty,
+    3 carrying only bare directories, 1 mixed, and 2 pointed at
+    docs/known-issues/commit-guardian.md, a live document, as the file to modify. The
+    /build-feature drive was stopped mid-run before any coder phase executed.
+
+    THE depends_on HALF IS DIFFERENT AND SHOULD NOT BE RE-DONE BLINDLY. Its two tests are
+    sound and generate_ticket_from_ac is correct in isolation. The dangling references seen
+    in the epic come from goal_to_epic renaming files to their NN_ prefix AFTER depends_on
+    is written — filed as KI-ACD-018, a seam this AC does not own. Whoever picks this up
+    should re-verify rather than assume both halves are broken.
+
+    WHAT CLOSING THIS NOW REQUIRES, beyond the original criteria: the files_touched test
+    must use fixture paths that EXIST, so the existence gate cannot pass it by proxy, and
+    the fix must be mutation-proved — reverting it must turn the test red. Recorded as
+    KI-TQ-010 occurrence 2 and as the second occurrence of KI-ACD-023.'
 assigned_agent: python-coder
 change_target: code
 component: ticket-creation
 components:
 - ticket_creation_pipeline
-covered_by: []
+covered_by:
+- tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_files_touched_excludes_prose_illustration_paths
+- tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_files_touched_keeps_real_reference_file_path
+- tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_depends_on_drops_structural_parent
+- tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_depends_on_is_guard_valid
 created: 2026-08-11
 criteria: "Given generate_ticket_from_ac generating a ticket from an AC,\nWhen it\
   \ builds the ticket frontmatter,\nThen files_touched contains only real edit-surface\
@@ -108,4 +153,4 @@ test_spec:
   target_dir: tests/ac_store/
   type: unit
 title: Generated files_touched excludes prose-illustration paths; depends_on is guard-valid
-work_status: done
+work_status: todo

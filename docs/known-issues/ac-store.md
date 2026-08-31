@@ -1240,63 +1240,28 @@ gates that will judge it" shape).
 
 ---
 
-### KI-ACS-018 — Four defects in `goal_to_epic.py`'s generated output, three of them caught by the repo's own hooks
+### KI-ACS-018 — withdrawn as a duplicate; see `ac-driven-dev.md`
 
-- **Severity:** high
-- **Status:** open
-- **Occurrences:** 1 epic (27 tickets), all four present in the same run
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
-- **Where:** `scripts/ac_store/goal_to_epic.py` — `_derive_epic_name()` / `_truncate_pascal_at()`,
-  the `implemented_by` stamp, `Master_Plan.md` assembly, and the `depends_on` writer
+Filed 2026-08-31 as "four defects in `goal_to_epic.py`'s generated output" and withdrawn the
+same day. **All four were already filed**, in `ac-driven-dev.md`, which is the correct register
+for the AC-driven generator:
 
-**Symptom.** Generating `EPIC-SuppressionNarrowsNeverDisables` from `GE-123` produced output
-with four independent defects. None is specific to that goal; all four will recur on every
-generated epic.
+| Defect observed | Already filed as |
+|---|---|
+| `depends_on` written without the numeric filename prefix, so every edge dangles | `KI-ACD-018` |
+| `Master_Plan.md` missing the fields `ticket_frontmatter_guard` requires | `KI-ACD-012` |
+| Absolute `/home/…` paths stamped into `implemented_by` | `KI-ACD-014` |
+| Epic name truncated mid-phrase onto a dangling article | `KI-ACD-011` |
 
-1. **`depends_on` references filenames that cannot exist.** The generator numbers the ticket
-   files it writes (`01_TICKET-…`, `06_TICKET-…`) but writes `depends_on` entries **without**
-   the prefix. All **eight** references in this epic were dangling, in an epic whose entire
-   build order rests on them. `check-doc-frontmatter` refuses the commit, naming each. This is
-   the highest-impact of the four: an epic driven before anyone notices has no dependency
-   ordering at all.
+The `EPIC-SuppressionNarrowsNeverDisables` run is recorded as a fresh occurrence on each of
+those four, which is what this register's own rule asks for — *"Hitting an existing issue.
+Increment `Occurrences` and update `Last seen`. Do not add a duplicate entry."*
 
-2. **`Master_Plan.md` fails the repo's own `ticket_frontmatter_guard` as generated** — missing
-   `title`, `type`, `depends_on`, `requires_diagram`, `requires_adr`, `change_target` and
-   `risk_surface`, i.e. every required field. The one existing Master_Plan on `main` that passes
-   carries all of them, which means it was hand-corrected too and this has been silently taxing
-   every generated epic.
+**Kept as a stub rather than deleted**, because the id was published in a merged commit and a
+dangling reference is worse than a redirect. Do not reuse the number.
 
-3. **Absolute paths stamped into committed AC records.** Each leaf AC receives
-   `- /home/henzeh/projects/leafcutter/worktrees/<name>/tickets/…` in `implemented_by` — the
-   generating machine's local worktree path, written into a file everyone reads. A store-wide
-   count on 2026-08-31 found **60** records carrying an absolute `/home/henzeh` path, so this
-   long predates the run that surfaced it.
-
-4. **Epic name truncated mid-phrase.** `_derive_epic_name` cut *"Trust that the last check
-   between you and a leaked credential is still on"* at a character count, yielding
-   `EPIC-TrustThatTheLastCheckBetweenYouAndA` — ending on a dangling article. The LLM
-   summariser it would normally call is unavailable when no `claude` binary is on PATH, and
-   the script offers **no name override**, so there is no supported way to correct it other
-   than renaming the folder and every stamp afterwards.
-
-**Detection.** Defects 1 and 2 are caught by `check-doc-frontmatter` and
-`ticket_frontmatter_guard` at commit time — loudly, which is the good news. Defects 3 and 4
-are silent: nothing rejects an absolute path or a truncated name, and both are committed
-without complaint. For 3: `grep -rl "^- /home/" docs/acceptance-criteria/`.
-
-**Workaround.** Generate, then repair before committing: rename the folder and rewrite the
-`target_epic` stamp in every AC, rewrite `implemented_by` to repo-relative, add the missing
-Master_Plan frontmatter, and prefix every `depends_on` entry. That is roughly 60 edits for a
-27-ticket epic, which is the real cost of leaving this open.
-
-**Fix direction.** The four share one cause: **the generator's output is never checked against
-the gates that will judge it.** The durable fix is a post-generation self-check that runs the
-frontmatter guards over what it just wrote, so the generator fails rather than the human who
-commits an hour later. Individually: write `depends_on` with the same prefix the filename
-writer produces (they should share one function); emit the full Master_Plan frontmatter;
-stamp `implemented_by` relative to the repo root; and truncate the epic name on a word
-boundary, refusing to end on an article — plus an `--epic-name` override for when the
-summariser is unavailable.
-
-**Related.** `KI-ACS-017` (the sibling AC-store writer with the same unvalidated-output
-shape). `KI-CG-035` (the gate that makes the corrected scaffold unlandable anyway).
+**Worth recording, since it is the second time this has happened here.** The duplicate was
+filed after checking that the *id* was free but not that the *defect* was. Those are different
+checks, and only the first is mechanical. Before filing against a component you do not own,
+grep the register for the symptom — `grep -rn "goal_to_epic" docs/known-issues/` would have
+returned all four in one line of output.

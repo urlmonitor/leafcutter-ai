@@ -47,11 +47,11 @@ no index, since it reads as "there are five commit-guardian issues" when there a
 
 | Component | File | Open entries |
 |---|---|---|
-| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 38 |
+| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 39 |
 | `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 30 |
 | `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 26 |
 | `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 23 |
-| `ac_store` | [ac-store.md](ac-store.md) | 16 |
+| `ac_store` | [ac-store.md](ac-store.md) | 15 |
 | `knowledge_management` | [knowledge-management.md](knowledge-management.md) | 12 |
 | `testing_quality` | [testing-quality.md](testing-quality.md) | 11 |
 | `supervisor_system` | [supervisor-system.md](supervisor-system.md) | 6 |
