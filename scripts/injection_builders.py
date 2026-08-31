@@ -777,6 +777,21 @@ def _cmd_assemble_bundle(parsed: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
+        if not content.strip():
+            # An empty required layer is refused HERE, at assembly time, because
+            # this is the only place the fact is knowable. Downstream the layers
+            # are concatenated into one string and the boundaries are gone, so a
+            # consumer can only guess at emptiness from formatting -- which is
+            # exactly what the lane used to do, by looking for a run of 4+
+            # newlines, and exactly why it refused perfectly good bundles whose
+            # architecture layer happened to end in a blank line. Refusing here
+            # names the layer and needs no heuristic.
+            print(
+                "injection_builders assemble-bundle: required layer "
+                f"'{layer_name}' at {path_str!r} is empty",
+                file=sys.stderr,
+            )
+            return 1
         required[layer_name] = content
 
     optional: dict[str, str | None] = {}

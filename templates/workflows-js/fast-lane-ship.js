@@ -319,42 +319,47 @@ function classifyContextBundle(bundleResult, marker) {
     };
   }
 
-  // Real content, not a locator — but still incomplete when the breakpoint
-  // marker is absent, or when a layer was empty. assemble_context_bundle()
-  // joins every layer with exactly one blank line ("\n\n"); an empty layer
-  // collapses two such joins back-to-back, producing a run of 4+ consecutive
-  // newline characters that never occurs when every layer is non-empty. This
-  // is a property of the real, on-disk assembly function's own layering
-  // rule, not a hand-typed re-implementation of it.
-  var hasEmptyLayerGap = /\n{4,}/.test(bundleText);
-
-  // A gap only appears BETWEEN two joins, so the rule above cannot see an
-  // empty layer in LAST position — that one leaves a single trailing "\n\n"
-  // and nothing after it. Before BO-2400c-1-vi the last-position case was
-  // unreachable, because "acs" always sat between the marker and
-  // "prior_tests". With "acs" removed, "prior_tests" IS the volatile suffix,
-  // and it is the layer most likely to arrive empty: the bundle prompt tells
-  // the agent a short placeholder is fine when no prior tests exist. So this
-  // check is the last-position half of the same "one of its layers is empty"
-  // rule, added by -vi because -vi is what made it reachable.
+  // Real content, not a locator — but still incomplete when it did not
+  // survive the crossing intact. What remains here is deliberately only a
+  // TRANSPORT check. Whether a layer was EMPTY is an assembly-time fact, and
+  // it is now refused at assembly time by injection_builders.py, which is the
+  // only place the layer boundaries still exist.
+  //
+  // This used to also test /\n{4,}/, on the theory that an empty layer
+  // collapses two "\n\n" joins into a run of 4+ newlines "that never occurs
+  // when every layer is non-empty". That premise is false: a layer whose own
+  // content ends in a blank line produces the same run. It cost a real run —
+  // the architecture layer (a markdown document ending in an HTML comment and
+  // a trailing blank line) yielded five consecutive newlines, and a complete
+  // 16,442-byte bundle with its marker present exactly once was refused as
+  // incomplete. The signal is genuinely ambiguous in this direction, so no
+  // textual rule here can be sound; the check belongs upstream and now lives
+  // there.
   var markerIndex = bundleText.indexOf(marker);
-  var volatileSuffixEmpty =
+
+  // Truncation after the marker. This is NOT the empty-layer rule wearing a
+  // different hat: assembly guarantees a non-empty prior_tests layer follows
+  // the marker, so an empty suffix means the text was cut in transit rather
+  // than assembled that way. Unambiguous, and it cannot fire on real content.
+  var truncatedAfterMarker =
     markerIndex >= 0 &&
     bundleText.slice(markerIndex + marker.length).trim().length === 0;
 
   if (
     bundleText.length === 0 ||
-    !bundleText.includes(marker) ||
-    hasEmptyLayerGap ||
-    volatileSuffixEmpty
+    markerIndex < 0 ||
+    truncatedAfterMarker
   ) {
     return {
       state: CONTEXT_BUNDLE_STATE_INCOMPLETE,
       message:
-        "The context bundle was obtained but is incomplete: the cache " +
-        "breakpoint marker is absent, or one of its layers is empty. The " +
-        "run halts rather than falling back to prompts composed some other " +
-        `way (BO-2400c-1-iii). Detail: ${JSON.stringify(bundleResult)}`,
+        "The context bundle was obtained but is incomplete — it did not " +
+        "arrive intact: the cache breakpoint marker is absent, or nothing " +
+        "follows it. The run halts rather than falling back to prompts " +
+        "composed some other way (BO-2400c-1-iii). An EMPTY layer is a " +
+        "separate failure and is refused earlier, by injection_builders.py " +
+        "at assembly time, naming the layer. Detail: " +
+        `${JSON.stringify(bundleResult)}`,
     };
   }
 
