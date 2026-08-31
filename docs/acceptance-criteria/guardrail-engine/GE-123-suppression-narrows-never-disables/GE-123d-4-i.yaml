@@ -34,6 +34,10 @@ criteria: |
 depends_on:
   - GE-123d-4
 doc_links:
+  - path: templates/scripts/commit_guardian/check_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. The kind gate this criterion exists to protect is applied in this module, alongside the pre-existing _PROSE_FILE_PREFIXES location list that the new exemption copies in spirit — so the forbidden reuse (sharing the location list without sharing the kind gate) would be a one-line change here, and the guard against it has to be here too. Canonical copy per ADR-001."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -101,6 +105,19 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added one doc_link,
+    templates/scripts/commit_guardian/check_secrets.py with relationship modifies. Nothing
+    else changed; all pre-existing doc_links kept at their original relationships. The
+    known-issues link stays at related and that matters here more than anywhere: this
+    record''s requirements fence KI-CG-004 as explicitly out of scope, so
+    docs/known-issues/commit-guardian.md must never be presented to a coder as a file to
+    modify — and a prose harvest did exactly that to records in this tree, which is the
+    defect being repaired (KI-ACD-023). WHY THIS SURFACE: the kind gate this record exists
+    to protect is applied in check_secrets.py, alongside the pre-existing
+    _PROSE_FILE_PREFIXES list the new exemption copies in spirit. The forbidden reuse the
+    requirements describe — sharing the location list without sharing the kind gate —
+    would be a one-line change in that module, so the guard against it has to live there
+    too.'
 superseded_by: null
 covered_by: []
 implemented_by:

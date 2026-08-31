@@ -47,6 +47,10 @@ criteria: |
 depends_on:
   - GE-123d
 doc_links:
+  - path: templates/scripts/commit_guardian/check_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. This is the check whose boundary the criterion fixes — the ADR-001 doc_link below already says so in words, and _PROSE_FILE_PREFIXES plus _is_prose_exempt in this module are the closed location list and the gate that reads it. The cost invariant in it_requirements (adding a sixth prose location must be exactly one list edit and no exclusion edit) is an invariant about this file. Canonical copy per ADR-001."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -123,6 +127,18 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added one doc_link,
+    templates/scripts/commit_guardian/check_secrets.py with relationship modifies. Nothing
+    else changed; all pre-existing doc_links kept at their original relationships,
+    including the ADR-001 entry at describes. WHY: this record declared no edit surface,
+    leaving the ticket generator to harvest paths out of prose (KI-ACD-023). The surface
+    was already named in words and only in words — the ADR-001 doc_link''s own relevance
+    note says "the check whose boundary this AC fixes is the canonical copy under
+    templates/", which is check_secrets.py; _PROSE_FILE_PREFIXES and _is_prose_exempt in
+    that module are the closed location list and the gate that reads it. The cost
+    invariant in it_requirements (adding a sixth prose location must cost exactly one list
+    edit and no exclusion edit) is an invariant about that one file, so a reviewer needs
+    it named rather than described.'
 superseded_by: null
 covered_by:
   - GE-123d-4-i

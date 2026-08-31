@@ -54,6 +54,10 @@ criteria: |
 depends_on:
   - GE-123a-1
 doc_links:
+  - path: templates/skills/security-scanner/scripts/scan_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. Both the per-file scan and the multi-file entry point scan_files that aggregates its results live in this module, and the third arm — no finding dropped or collapsed between the per-file scan and the run's report — is a property of that aggregation. The expected production diff may be empty once GE-123a-1 lands (the parent's enrichment records no code change beyond it), but this module is the only file any change for this criterion could land in. Canonical copy per ADR-001."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -127,6 +131,20 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added one doc_link,
+    templates/skills/security-scanner/scripts/scan_secrets.py with relationship modifies.
+    Nothing else changed; all pre-existing doc_links kept at their original relationships.
+    WHY: this record declared no edit surface, so the ticket generator had nothing
+    structured to read and fell back to prose harvesting (the failure recorded as
+    KI-ACD-023). The honest surface is scan_secrets.py — both the per-file scan and the
+    scan_files aggregation that the third arm is about live in that one module. STATED
+    PLAINLY so a coder is not misled: the expected production diff here may be EMPTY. The
+    parent''s enrichment records no code change beyond GE-123a-1, and this record''s own
+    test_rationale says the order-independence and no-collapse properties already hold in
+    the current implementation. Its arms are counts that turn green when GE-123a-1 lands
+    plus two standing regression guards. The surface is declared anyway because it is the
+    only file a change for this criterion could land in, and because an empty
+    files_touched is what blocked the epic.'
 superseded_by: null
 covered_by: []
 implemented_by:
