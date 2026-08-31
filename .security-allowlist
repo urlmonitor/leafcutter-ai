@@ -117,3 +117,12 @@ ENTROPY_HIGH:memory/feedback_po_ba_itpo_bo3100_3200_delegation_boundary.md:*
 # changes, and pinned line numbers would silently void themselves on the first
 # re-capture.
 ENTROPY_HIGH:tests/fixtures/harvest_learnings/unroutable_corpus_28.json:*
+
+# GE-120c-1's out-of-process harness declares the build system's own output-root
+# substitution marker as a module constant (_OUTPUT_ROOT_TOKEN) so it can detect an
+# unsubstituted placeholder left in a deployed file. It is a literal template
+# marker, not a credential. The marker text is deliberately NOT reproduced in this
+# comment: quoting it here makes the allowlist trip the very scanner it is
+# suppressing. Glob rather than per-line — the harness gains cases as the checks it
+# exercises grow, and a pinned line number would void itself on the first insertion.
+GENERIC_SECRET:unit_tests/portability/_deployed_check_harness.py:*
