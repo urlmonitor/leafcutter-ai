@@ -1954,13 +1954,22 @@ The same population-vs-change mismatch as `KI-CG-001`.
 ### KI-CG-024 — `check_ticket_signoff_parity.py` silently skips check #6 because its default registry path does not exist in this layout
 
 - **Severity:** medium
-- **Status:** open — code is on `main` and live
+- **Status:** open — code is on `main`, but see the correction below: it is **not** live
 - **Occurrences:** 1
 - **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
 - **Where:** `templates/scripts/commit_guardian/config.py:224-226`
   (`AGENT_REGISTRY_PATH` default) consumed by
   `templates/scripts/commit_guardian/_signoff_parity_checks.py:96-103`
   (`load_agent_registry`)
+
+> **Correction, 2026-08-31.** This entry says the hook "silently skips check #6". It skips **all
+> six** — `check_ticket_signoff_parity.py` is registered in no `hooks_manifest` entry, no
+> `.pre-commit-config.yaml` id, and no CI workflow, so it never executes on any commit. The
+> registry-path defect below is real and worth fixing, but repairing it alone would change
+> nothing observable, because nothing invokes the hook. Note also that
+> `templates/scripts/precommit-autofix.json` carries autofix routing for this hook — remediation
+> wired to a gate that cannot fire. See
+> `KI-CG-20260831-twenty-hooks-registered-nowhere`, which records the systemic version.
 
 **Symptom.** The hook resolves the agent registry at
 `<worktree_root>/leafcutter/config/agent_registry.json`. That path is wrong for this layout
@@ -2460,11 +2469,29 @@ install tree every other worktree and every parallel session reads** — the fai
 `KI-BP-016` / `KI-BP-017` already document as a quiet way to lose work. The hook names the one
 action its own operating context makes unsafe, and names it as the fix.
 
+**C — when the cwd-derived roots do not resolve at all, it fail-opens silently to 0.**
+*(Added 2026-08-31, second observation.)* Run from any subdirectory, both parity legs are
+**skipped** and the hook still reports success:
+
+```
+$ env --chdir=<worktree>/docs python templates/scripts/commit_guardian/check_hook_parity.py
+check-hook-parity: WARNING — cannot read canonical manifest .../docs/templates/.../commit_guardian.json.
+  Skipping manifest parity check.
+check-hook-parity: INFO — deployed output dir not found or not a directory (.../doc...)
+exit: 0
+```
+
+The contrast in the same experiment is the point: `check_build_drift` resolved correctly from that
+same subdirectory (`verified=161`), and `check_hook_trigger_reachability` fail-**closed** with
+exit 1. Only this hook treats "I could not find the things I compare" as a pass — which is the
+`GE-120a-1` rule (a check that could not perform its inspection must not report a clean pass)
+violated by the very hook family adopting it.
+
 **Cause.** `project_root = Path.cwd()` with plain `/` joins, and no resolution or comparison of
 the results. The hook never asks whether two of its four configured directories are the same
-inode, nor whether the tree it is calling "runtime" belongs to the working copy being committed.
-This is the same cwd-derived-root shortcut recorded in `KI-CG-027`, with a worktree-specific
-consequence.
+inode, nor whether the tree it is calling "runtime" belongs to the working copy being committed,
+nor whether it found them at all. This is the same cwd-derived-root shortcut recorded in
+`KI-CG-027`, with a worktree-specific consequence.
 
 **Workaround.** `SKIP=check-hook-parity` for the commit. That is what was done here; every other
 guardrail hook passed on the same commit. Do **not** run `build.py` to clear it unless the
@@ -2485,3 +2512,195 @@ beside it). `KI-CG-009` (a hook resolving to the main checkout instead of the wo
 
 **Pattern:** two configured paths that are one path, and a fix instruction that is safe in the
 layout the author imagined and destructive in the layout the project recommends.
+
+---
+
+> **Note on ids from here down.** Entries below use the `KI-CG-YYYYMMDD-slug` form rather than the
+> next sequential number. Sequential numbering was abandoned after `KI-BO-024` (it requires every
+> concurrent author to read the file and act at the same instant; it produced ten collisions in a
+> day). The "Adding an issue" block at the top of this file is stale — see
+> `KI-KM-20260826-id-convention-diverged-across-registers`. Existing numeric ids are never
+> renumbered, because inbound references break.
+
+---
+
+### KI-CG-20260831-glossary-coverage-detector-path-unreachable — `check-glossary-coverage` has never run in this repo: it loads its detector from a path no leafcutter layout has, and its own "detector not found" message is dead code
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/check_glossary_coverage.py` — `_load_detector()`'s
+  `spec_from_file_location(... find_project_root() / "scripts" / "glossary_detector.py")` branch,
+  its `if spec is None or spec.loader is None` guard, and the blanket `except Exception` in
+  `check_glossary_coverage()`
+
+**Symptom.** The hook is registered live on `.*\.(md|py|sql)$` — it fires on nearly every commit —
+and every one of those runs has been a no-op:
+
+```
+$ python .leafcutter/scripts/commit_guardian/run_hook.py .../check_glossary_coverage.py
+check-glossary-coverage: WARNING — unexpected error: [Errno 2] No such file or directory:
+  '.../EPIC-TrustThatAGreenCheckActuallyChecked/scripts/glossary_detector.py'.
+  Glossary coverage check skipped (fail-open).
+exit: 0
+```
+
+**Three compounding layers.**
+
+1. **The path cannot exist.** `glossary_detector.py` is present at `templates/scripts/` and
+   `.leafcutter/scripts/`, never at `scripts/`. Confirmed absent from the worktree *and* the main
+   checkout. `scripts/` contains only whole-directory symlinks (`commit_guardian`,
+   `doc_compliance`, `feedback`), so a loose file is structurally unreachable there. This is the
+   permanent state of the layout, not a local accident.
+2. **The dedicated diagnostic is unreachable.** The hook carries a specific message —
+   *"glossary_detector.py not found. Skipping glossary coverage check."* — guarded by
+   `if spec is None or spec.loader is None`. But `spec_from_file_location` on a **nonexistent**
+   path returns a fully-populated spec:
+   ```
+   $ python -c "import importlib.util; print(importlib.util.spec_from_file_location('g','/nope/g.py'))"
+   ModuleSpec(name='g', loader=<SourceFileLoader ...>, origin='/nope/g.py')
+   ```
+   So the guard is false, control reaches `spec.loader.exec_module(...)`, that raises
+   `FileNotFoundError`, and the outer blanket handler relabels it as a generic *"unexpected
+   error"*. The one message written to name this exact condition can never print, and the message
+   that does print misattributes the cause.
+3. **The project documents it as working.** `CLAUDE.md` states *"the `check-glossary-coverage`
+   pre-commit hook detects novel terms in staged files and dispatches the `glossary-triage` agent
+   automatically."* It has dispatched nothing, ever, in this repo. Anyone relying on that sentence
+   believes glossary coverage is enforced.
+
+**Fix direction.** Resolve the detector from the same place the rest of the family resolves shared
+modules (`_resolve_root.py`) and try the deployed location, not a `scripts/` path that only exists
+in an imagined layout. Replace the `spec is None` guard with an explicit `path.is_file()` check
+before `spec_from_file_location` — that is the only form that can actually detect absence.
+Narrow the blanket `except Exception` so a missing prerequisite is reported as a missing
+prerequisite. Then decide deliberately whether a missing detector should fail open at all: a gate
+`CLAUDE.md` presents as enforcing is a poor candidate for silent fail-open.
+
+**Related.** `KI-CG-019` (same shape — a hook fail-opening on an import it can never satisfy —
+but a different hook and prerequisite). `KI-CG-034`, `KI-CG-012` (the sibling
+exit-0-having-checked-nothing routes).
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5, with the aggravating factor that the
+absence is documented as presence.
+
+---
+
+### KI-CG-20260831-test-ac-tags-dead-three-ways — the test-to-AC traceability gate is registered nowhere, defaults to warn-only, and the config key that would escalate it is absent from the shipped config
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/check_test_ac_tags.py` —
+  `_DEFAULT_ENFORCEMENT_MODE = "warn"`, `_CONFIG_KEY = "test_ac_tag_enforcement"`, and `main()`'s
+  exit contract
+
+**Symptom.** Pointed at one arbitrary existing test file, the hook finds 20 real violations and
+reports success:
+
+```
+$ python templates/scripts/commit_guardian/check_test_ac_tags.py \
+    unit_tests/commit_guardian/test_check_duplicate_code_strict.py
+WARNING: ... is missing a # covers: XX-NNN tag.        (x20)
+check_test_ac_tags: 20 warning(s) — add '# covers: XX-NNN' tags to suppress these warnings.
+exit: 0
+```
+
+**Three independent reasons it can never block.**
+
+1. **Not registered.** Absent from `hooks_manifest` in
+   `templates/scripts/commit_guardian/commit_guardian.json`, from the deployed
+   `.pre-commit-config.yaml`, and from every CI workflow. It executes on no commit.
+2. **Warn-only by default.** `_DEFAULT_ENFORCEMENT_MODE = "warn"`, which the module docstring
+   frames as a *"grace period"* ending when *"a follow-up ticket flips the default to error mode
+   once existing tests are backfilled."*
+3. **The escalation switch does not exist.** The config key it reads to leave warn mode —
+   `test_ac_tag_enforcement` — is **not present** in `commit_guardian.json`. `grep` returns
+   nothing. So the documented flip is unreachable through config; only the
+   `CHECK_TEST_AC_TAGS_MODE` environment variable can do it, and nothing sets that either.
+
+**Why it matters beyond one dead hook.** `# covers:` tags are the mechanism `check_done_proof`
+and the AC store use to connect an AC to the test that proves it. A gate written to keep that
+mapping honest, which has never run, means the backfill it was waiting for has no deadline and no
+measurement — and the 20 violations above are a sample from a single file, not the total.
+
+**Fix direction.** Decide whether this gate is wanted. If yes: register it, add
+`test_ac_tag_enforcement` to `commit_guardian.json`, measure the real violation count across the
+suite, and set a date for the warn→error flip. If no: delete it, rather than leave a plausible
+gate that a reader will assume is enforcing. Either way it should not stay in its current shape.
+
+**Related.** `KI-CG-20260831-twenty-hooks-registered-nowhere` (this hook is one of the twenty).
+`KI-CG-021`, `KI-CG-022` (the same "registered nowhere" defect recorded per-hook).
+
+**Pattern:** a gate that is three separate kinds of off, each of which alone would be enough.
+
+---
+
+### KI-CG-20260831-twenty-hooks-registered-nowhere — twenty `check_*.py` scripts sit in the canonical hook directory wired to nothing, several with live-looking config blocks, and the register has been recording them one at a time
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/` (and `hooks/`) vs the `hooks_manifest` in
+  `templates/scripts/commit_guardian/commit_guardian.json`
+
+**Symptom.** Differencing the hook scripts on disk against the manifest:
+
+```
+manifest entries: 57   disabled: 5   orphan count: 21
+check_ac_coverage, check_ac_done_on_merge, check_adr_collision, check_complexity,
+check_debug_scripts, check_doc_coverage, check_doc_links, check_docstrings,
+check_documentation, check_file_size, check_folder_density, check_outcome*,
+check_pytest_style, check_root_files, check_sql_complexity, check_sql_dependencies,
+check_test_ac_tags, check_test_fixture_bloat, check_ticket_signoff_parity,
+check_ticket_test_requirements, check_v2_ac_store_alignment
+```
+
+\* `check_outcome.py` is a shared helper, not a hook — so **twenty** actual orphaned gates. None
+appears in the deployed `.pre-commit-config.yaml` (52 ids, matching the 57 manifest entries minus
+the 5 marked `enabled: false`) or in any CI workflow. Nothing is being hidden by opt-in filtering.
+
+**Three of them, run directly:**
+
+- `check_ac_coverage.py` — **exit 0** after printing **178** `WARNING: AC <id> has no test
+  coverage` lines. It reads the entire AC store to produce findings nobody receives.
+- `check_doc_coverage.py` — **exit 1 with an unhandled traceback**. It has presumably been broken
+  for some time; nothing runs it, so nothing noticed.
+- `check_ticket_test_requirements.py` — **hung past a 45-second timeout** with two files staged.
+
+**The trap that makes this worse than dead code.** Ten of the twenty have **live-looking config
+blocks** in `commit_guardian.json` — `file_size`, `complexity`, `sql_complexity`, `docstrings`,
+`documentation`, `root_files`, `folder_density`, `debug_scripts`, `doc_coverage`, `doc_links` —
+carrying thresholds and `enabled` flags. To anyone tuning a threshold there, these read as active
+gates. Changing one of those numbers has no effect on anything and produces no signal saying so.
+
+**It also falsifies an existing entry.** `KI-CG-024` records
+`check_ticket_signoff_parity.py` as a live gate that *"silently skips check #6."* It is in this
+orphan list: it skips all six, because it never runs. Compounding it,
+`templates/scripts/precommit-autofix.json` contains autofix routing for that hook — remediation
+wired to a gate that cannot fire, which is a fifth leg on `KI-CG-020`'s fourth.
+**`KI-CG-024` should be corrected rather than left to mislead the next reader.**
+
+**Why file this as one entry.** The register already holds `KI-CG-021` and `KI-CG-022`, each
+recording a single instance of exactly this defect. Recording the remaining eighteen the same way
+would bury the actual finding, which is not "hook X is unregistered" but *registration is a
+manual step with no guard, so the default outcome for a new hook is silence.* The per-hook
+entries are symptoms of a missing invariant.
+
+**Fix direction.** Add a gate asserting the set of `check_*.py` in the canonical directory equals
+the set in `hooks_manifest`, with an explicit, named opt-out list for helpers and
+deliberately-retired scripts — so a new hook is registered or is loudly not. Then triage the
+twenty: register, fix (`check_doc_coverage` crashes, `check_ticket_test_requirements` hangs), or
+delete. Delete the config blocks of anything retired in the same change; a threshold for a gate
+that does not run is worse than no threshold. This is the same invariant `KI-CG-021`/`022` each
+asked for locally.
+
+**Related.** `KI-CG-021`, `KI-CG-022` (single instances of this defect). `KI-CG-024` (needs the
+correction above). `KI-CG-020` (the fourth registration leg; autofix routing is a fifth).
+`KI-CG-20260831-test-ac-tags-dead-three-ways` (one orphan with two further reasons to be off).
+
+**Pattern:** an invariant that is a convention rather than a check, so the failure mode is
+absence, and absence is silent.
