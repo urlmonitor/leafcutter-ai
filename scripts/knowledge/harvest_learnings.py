@@ -1,4 +1,21 @@
 """
+MODULE: harvest_learnings
+GOAL: Read unprocessed knowledge_captured events from the emission sink and
+    route each to the knowledge surface it names, without ever inventing
+    content the emitting agent did not actually write.
+BUSINESS CONTEXT: Agents emit learnings via the signoff Sec7 knowledge-capture
+    step; this harvester is the batch process that drains those emissions
+    into durable, curated knowledge files. A record with no learning text is
+    a receipt of a past write, not new knowledge, and must never become a
+    placeholder line on a real file (INF-700c-1); a line that is not a valid
+    JSON object must never derail the read of the records around it
+    (INF-700c-1-i).
+ARCHITECTURE: Entry point for the Knowledge System component
+    (docs/architecture/components/knowledge-system.md). Reads
+    ``debugging/logs/knowledge_emissions.jsonl`` (retained sink per ADR-011)
+    and writes via the capture-learning write protocol
+    (docs/architecture/adrs/ADR-034-knowledge-write-ownership.md).
+
 harvest_learnings.py — Knowledge emission harvester for leafcutter-ai.
 
 Reads unprocessed ``knowledge_captured`` events from
@@ -28,7 +45,14 @@ Options
 
 Exit codes
 ----------
-0   Success — drained cleanly (no unroutable events left behind).
+0   Drained with nothing left to ROUTE. Read this literally: it does NOT mean
+    the sink is empty and it does NOT mean every record was written. Records
+    classified `no learning text` are deliberately not written and are NOT
+    counted as unroutable, so a run over a corpus that is entirely textless
+    exits 0 while writing nothing at all -- which is the current state of the
+    real 28-record sink. Always read the summary's `no learning text` segment
+    alongside this code; the count is the only thing that distinguishes
+    "nothing to do" from "nothing eligible to do".
 1   Sink file not found or unreadable.
 2   State file exists but cannot be parsed (corrupted).
 3   Drained with unroutable events left behind (see summary for the
@@ -51,7 +75,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 logger = logging.getLogger("harvest_learnings")
 
@@ -63,7 +87,15 @@ logger = logging.getLogger("harvest_learnings")
 
 @dataclasses.dataclass
 class HarvestResult:
-    """Outcome of a single harvester run."""
+    """Outcome of a single harvester run.
+
+    Five record-level buckets — ``routed``, ``previously_processed``,
+    ``skipped_unknown``, ``write_failures``, ``no_learning_text`` — partition
+    every ``knowledge_captured`` record read from the sink; they always sum
+    to the number of such records. ``malformed_lines`` is a separate,
+    line-level counter (a malformed line never parses into a record at all)
+    and is intentionally excluded from that sum (INF-700c-1-i).
+    """
 
     routed: int = 0
     previously_processed: int = 0
@@ -73,14 +105,19 @@ class HarvestResult:
     write_failures: int = 0
     failed_by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
     state_persist_failed: bool = False
+    no_learning_text: int = 0
+    no_learning_by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
+    malformed_lines: int = 0
+    malformed_line_numbers: list[int] = dataclasses.field(default_factory=list)
 
     def summary(self) -> str:
         """Return the human-readable one-line summary.
 
         Format: ``"N learnings routed: K1 kind1, K2 kind2 (M previously
         processed); P unroutable: K3 kind3, K4 kind4; Q write failures: ...;
-        state NOT persisted"``. Each trailing segment appears only when the
-        condition it reports is present.
+        state NOT persisted; R no learning text: ...; S malformed line(s):
+        [...]"``. Each trailing segment appears only when the condition it
+        reports is present.
 
         The unroutable segment names each distinct unroutable ``entry_kind``
         with its count so the backlog is visible on every run
@@ -91,6 +128,12 @@ class HarvestResult:
         none"`` — textually identical to a run that had nothing to do. The
         counters are what let the caller tell an empty queue from a broken
         one.
+
+        The no-learning-text segment (INF-700c-1) and the malformed-line
+        segment (INF-700c-1-i) never include the record's or line's raw
+        content — only counts and, for malformed lines, 1-based line
+        numbers — so a corrupt or content-free record cannot leak its bytes
+        into the run's own output.
         """
         parts = [f"{count} {kind}" for kind, count in sorted(self.by_kind.items())]
         breakdown = ", ".join(parts) if parts else "none"
@@ -111,6 +154,16 @@ class HarvestResult:
             base += (
                 f"; state NOT persisted ({self.routed} routed learnings will be"
                 " re-applied on the next run)"
+            )
+        if self.no_learning_text:
+            no_text_parts = [
+                f"{count} {kind}" for kind, count in sorted(self.no_learning_by_kind.items())
+            ]
+            base += f"; {self.no_learning_text} no learning text: {', '.join(no_text_parts)}"
+        if self.malformed_lines:
+            base += (
+                f"; {self.malformed_lines} malformed line(s) at "
+                f"{self.malformed_line_numbers}"
             )
         return base
 
@@ -136,6 +189,32 @@ def _event_hash(event: dict[str, Any]) -> str:
         sort_keys=True,
     )
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
+def _is_no_learning_text(event: dict[str, Any]) -> bool:
+    """Return ``True`` if *event* carries no real learning content.
+
+    A record is ineligible to be written to any knowledge surface when its
+    ``text`` field is absent, ``null``, empty (after whitespace
+    normalisation), or is merely a restatement of the record's own
+    descriptive fields in the exact shape the deleted harvester placeholder
+    used to compose (``"[<entry_kind>] Learning from <ticket>"``). The
+    restatement check exists so an emitter cannot undo the deletion of that
+    placeholder by inlining the same string as if it were real ``text``
+    (INF-700c-1 it_requirements #3).
+
+    Pure function: no I/O, no shared-state mutation.
+    """
+    text = event.get("text")
+    if text is None or not isinstance(text, str):
+        return True
+    normalized = text.strip()
+    if not normalized:
+        return True
+    entry_kind = event.get("entry_kind", "")
+    ticket = event.get("ticket", "")
+    placeholder = f"[{entry_kind}] Learning from {ticket}".strip()
+    return normalized == placeholder
 
 
 def _load_state(state_path: Path) -> set[str]:
@@ -290,16 +369,43 @@ def harvest(
 
     new_hashes: set[str] = set()
 
-    for line in raw_lines:
-        line = line.strip()
+    # enumerate() over raw_lines (from splitlines(), so no trailing newline
+    # entry) gives the 1-based line number exactly as it appears on disk,
+    # including blank lines -- required so a reported malformed-line number
+    # can be used to open the real file at that line (INF-700c-1-i).
+    for line_no, raw_line in enumerate(raw_lines, start=1):
+        line = raw_line.strip()
         if not line:
             continue
 
-        # Parse JSON line
+        # Parse JSON line. Two distinct ways a line can fail to be a usable
+        # record: it is not valid JSON at all (JSONDecodeError), or it parses
+        # but is not a JSON object (e.g. a bare string/number/list/null),
+        # which would otherwise raise AttributeError on the .get() calls
+        # below. Both are "malformed line" (INF-700c-1-i) -- a line-level
+        # condition, never written to a knowledge surface, and the read does
+        # not stop: subsequent lines are still processed.
         try:
             event = json.loads(line)
         except json.JSONDecodeError as exc:
-            logger.warning("Skipping malformed JSON line: %s — %s", line[:80], exc)
+            logger.warning(
+                "Skipping malformed line %d (not valid JSON): %s — %s",
+                line_no,
+                line[:80],
+                exc,
+            )
+            result.malformed_lines += 1
+            result.malformed_line_numbers.append(line_no)
+            continue
+
+        if not isinstance(event, dict):
+            logger.warning(
+                "Skipping malformed line %d (valid JSON but not an object): %s",
+                line_no,
+                line[:80],
+            )
+            result.malformed_lines += 1
+            result.malformed_line_numbers.append(line_no)
             continue
 
         # Filter: only knowledge_captured events
@@ -327,6 +433,36 @@ def harvest(
                 ticket,
             )
 
+        # Eligibility check MUST run before entry_kind routing (INF-700c-1
+        # it_requirements: classification order is load-bearing). All 28
+        # retained real records are simultaneously textless AND
+        # unknown-entry_kind; a kind-first check would route every one of
+        # them into skipped_unknown and pin the exit code non-zero forever.
+        if _is_no_learning_text(event):
+            result.no_learning_text += 1
+            result.no_learning_by_kind[entry_kind] = (
+                result.no_learning_by_kind.get(entry_kind, 0) + 1
+            )
+            # Log at WARNING like every sibling branch. Without this the
+            # bucket is the only classification in the module that is
+            # silent on stderr, and over the real 28-record corpus that
+            # takes the run from 28 warnings to zero while the exit code
+            # goes 3 -> 0. A record deliberately not written is still a
+            # record not written, and an operator reading only stderr
+            # would see a clean run.
+            logger.warning(
+                "No learning text in event (entry_kind: %r, destination: %r). "
+                "Nothing written; the record is left unprocessed so a later "
+                "run re-derives it once a real learning body is emitted.",
+                entry_kind,
+                destination,
+            )
+            # NOT added to new_hashes / seen: the classification must be
+            # re-derived from the record on every run, per INF-700c-1 (the
+            # idempotency state file lives under gitignored debugging/logs/
+            # and is not durable across a fresh clone or install).
+            continue
+
         # Route based on entry_kind
         if entry_kind not in _KNOWN_ENTRY_KINDS:
             logger.warning(
@@ -345,10 +481,19 @@ def harvest(
             # discarded via the idempotency record.
             continue
 
-        # Build the learning text (minimal — harvester writes destination text)
-        # The production path would load the event's `text` field if present;
-        # for events emitted by signoff §7 the text is the learning body.
-        learning_text = event.get("text", f"[{entry_kind}] Learning from {ticket}")
+        # By this point `_is_no_learning_text` has already confirmed `text`
+        # is present and carries real content, so it is used verbatim. Per
+        # INF-700c-1 it_requirements, there is deliberately NO fallback here
+        # — a default that synthesises a stand-in string from the record's
+        # descriptive fields is exactly the defect this AC closes.
+        # cast, not a runtime check: `_is_no_learning_text` above has already
+        # rejected absent / null / blank / self-restating values and issued a
+        # `continue`, so by here `text` is necessarily a non-empty str. mypy
+        # cannot see across that helper, and adding an `isinstance` branch
+        # would be unreachable code asserting an invariant the helper owns.
+        # If that helper's contract ever changes, this cast is the line to
+        # revisit.
+        learning_text = cast(str, event.get("text"))
 
         if not dry_run:
             try:
@@ -473,3 +618,15 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-08-31 12:00 [python-coder]: Deleted the placeholder-synthesis default for
+#   learning_text and added a no-learning-text eligibility bucket, evaluated
+#   BEFORE entry_kind routing so a record that is both textless and
+#   unknown-kinded (the shape of all 28 retained real records) is never
+#   double-counted into skipped_unknown. Also added a malformed-line counter
+#   with 1-based line numbers and a not-a-JSON-object guard so a bare JSON
+#   scalar line no longer crashes the run with AttributeError. Neither change
+#   introduces a new exit code. (#TICKETLESS reason=ac-scoped-fastlane-build-INF-700c-1)
