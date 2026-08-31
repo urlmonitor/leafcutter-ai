@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -88,6 +88,230 @@ doc_links:
       criterion requires.
 assigned_agent: python-coder
 estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO NEW PACKAGE SURFACE — MEASURED, NOT ASSUMED, AND THIS IS WHY THE SPEC HERE IS A PLAIN
+    LIST. _package_surface_registry.WATCHED_REGISTRIES watches commit_guardian.json on
+    hooks_manifest.hooks (by id) and on the document's own top level (by mapping key, with
+    only "$schema" and "_comment" excluded). This criterion adds neither: it changes the
+    check's summary output and its two zero-population floors, and touches no registry entry
+    and no top-level key. package_surface is therefore declared FALSE. Do NOT mint a
+    config_schema_fragment key merely to satisfy the structured-spec validator — see the
+    warning about the sibling precedent below. If an implementer finds a real need for a new
+    top-level key, raise it rather than adding one: the declaration then belongs here and the
+    structured five-field spec must move with it.
+  - >-
+    DO NOT COPY BP-100k-4 / BP-100k-4-i's config_schema_fragment. Verified in this worktree at
+    enrichment time: commit_guardian.json holds 36 top-level keys, and NEITHER
+    hook_trigger_reachability NOR hook_trigger_reachability_indeterminate is among them. Both
+    were declared by those ACs and neither was ever created — a fictional package-surface
+    fragment authored to clear the validator. Repeating it here would put a second imaginary
+    key in the store and make the machine-checked spec less trustworthy than no spec at all.
+  - >-
+    EXTEND THE EXISTING FLOOR, DO NOT ADD A SECOND ONE. _resolve_hooks_or_reason and
+    _resolve_tracked_paths_or_reason in check_hook_trigger_reachability.py are already the
+    zero-population floors for the registry side, and they already encode the finding that a
+    SUCCESSFULLY empty result is the same epistemic state as a failed lookup. The disk side
+    needs the identical floor placed beside them, in the same vocabulary. A second, parallel
+    floor would let the two disagree about whether the same run was determinate.
+  - >-
+    ONE SUMMARY LINE, FOUR NUMBERS, EXTENDED IN PLACE. The guard already prints
+    "check-hook-trigger-reachability: RESULT total=<n> unreachable=<n> exempt=<n>". Extend
+    THAT line so a single read states how many gate scripts were found on disk and compared,
+    how many registry entries were read, how many scripts were reported as invoked by
+    nothing, and how many were treated as declared non-gates. A second summary line printed
+    elsewhere would let one line report a determinate run while the other reports an empty
+    one.
+  - >-
+    THE POSITIVE-COUNT FORM IS THE REQUIREMENT; THE GUARD IS DERIVED FROM IT. "Fails when it
+    compared nothing" and "states how many it compared" are different requirements. The first
+    is satisfiable by a branch on one code path; the second makes the empty state
+    unrepresentable in the output, so a reader — human, agent, or CI log grep — can tell a run
+    that examined everything from a run that examined nothing without knowing which branch
+    was taken. Implement the second and derive the first from it.
+  - >-
+    THE TWO DISK SITUATIONS MUST BE DISTINGUISHED BY NAME, NOT MERELY BOTH FAIL. "The gate-
+    script directory could not be listed" and "the directory listed successfully and holds no
+    gate scripts" are different facts about the world and the output must say which one
+    occurred. Collapsing them into one message costs the reader the only information that
+    distinguishes a broken checkout from a broken path constant.
+  - >-
+    REUSE THE INDETERMINATE VOCABULARY AND THE EXIT-STATUS CONTRACT UNCHANGED. The existing
+    contract is "INDETERMINATE: reason=<text>" on stderr with exit 2, alongside exit 0 clean
+    and exit 1 for a reported finding. Every new unresolvable condition here — unlistable
+    directory, empty directory, unreadable registry, unparseable registry — reports through
+    that same line and that same exit status. Do not mint a third verdict vocabulary and do
+    not widen the exit-status set; BP-100n-4's reported-finding case keeps exit 1, so the two
+    outcomes stay distinguishable.
+  - >-
+    THE INDETERMINATE PATHS MUST BE EXERCISED FOR REAL. Mirrors BP-100k-4-i's standing
+    constraint for the registry side, which applies here unchanged: make the disk listing and
+    the registry read GENUINELY unavailable at run time — an unreadable directory, a path that
+    does not exist, a file that is present but not parseable — never by asserting that an
+    error branch is present in the source. A source assertion stays green on precisely the
+    fail-open implementation this criterion exists to forbid.
+  - >-
+    A SWALLOWED ERROR MUST NEVER BECOME AN EMPTY POPULATION, AND AN EMPTY POPULATION MUST
+    NEVER BECOME A CLEAN RUN. This is the exact shape all four cited precedents shipped
+    (KI-CG-034 examined 169 files, compared zero, exited 0; KI-CG-012; KI-CG-018; the AC-store
+    validator's bare-directory no-op that reported clean for eight days). Neither indeterminate
+    situation may state a count of zero scripts invoked by nothing, and neither may exit as
+    though the comparison had been performed and had found every script invoked.
+  - >-
+    HOST AND LAYERING — MEASURED IN THIS WORKTREE, NOT GUESSED. Under check_file_size's own
+    counting rule (docstrings stripped), check_hook_trigger_reachability.py stands at 354 of
+    its 400 permitted lines and _hook_trigger_reachability_helpers.py at 145. Put the disk-side
+    floor and the assembly of the four summary counts in the helpers module; leave the guard
+    only the call sites and the printed summary line. If the guard still exceeds the cap after
+    this change's own DECISION HISTORY entry, split a further sibling INSIDE
+    templates/scripts/commit_guardian/ — never outside it.
+  - >-
+    DEPLOY-MANIFEST BOUNDARY, STATED PRECISELY. build_commit_guardian copies EVERY file in
+    templates/scripts/commit_guardian/ verbatim, so a new sibling inside that directory needs
+    no deploy entry. A module imported from OUTSIDE that directory MUST be added to the deploy
+    map in scripts/build_phases.py in the same change, or the deployed hook raises
+    ModuleNotFoundError at commit time while the unit tests, which import from the source tree,
+    stay green. The deployed-layout descriptor exists to make that failure visible rather than
+    latent.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT. templates/scripts/commit_guardian/ is canonical;
+    scripts/commit_guardian/ is a build output that build.py overwrites. Edit the template and
+    re-run build.py. A fix applied only to the build output disappears on the next build; a fix
+    applied only to the template leaves the running hook unchanged and the work unverified.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around directory
+    listing, file and JSON I/O; log at WARNING or higher or re-raise; no bare or blind excepts.
+    Here the re-raise-equivalent is the INDETERMINATE verdict — it must never degrade into a
+    swallowed error and a clean exit.
+test_spec:
+  - name: test_bp_100n_4_ii_the_summary_states_all_four_population_numbers
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The executed check's summary states four numbers — gate scripts found on disk and
+      compared, registry entries read, scripts reported as invoked by nothing, and scripts
+      treated as declared non-gates. Asserted by varying each population between runs and
+      requiring the corresponding stated number to move with it, never by matching a fixed
+      number, which would pass on four hard-coded literals. All four are read from the check's
+      own output.
+  - name: test_bp_100n_4_ii_an_unlistable_gate_script_directory_is_named_as_such_and_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      With the gate-script directory made GENUINELY unavailable at run time — a path that does
+      not exist, or one whose permissions forbid listing — the executed check states that it
+      could not establish which gate scripts exist, names this situation specifically as the
+      unlistable one, and exits non-zero. Exercised by breaking the listing for real, never by
+      asserting that an error branch appears in the source.
+  - name: test_bp_100n_4_ii_a_listable_but_empty_gate_script_directory_is_the_other_named_situation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A gate-script directory that lists successfully and holds no gate scripts at all is
+      reported as a DIFFERENT, separately named situation from the unlistable one, and also
+      fails. Establishes that a successfully-empty listing carries the same epistemic weight as
+      a failed one — the finding _resolve_tracked_paths_or_reason already encodes for the
+      registry side — while remaining distinguishable from it in the output.
+  - name: test_bp_100n_4_ii_an_unreadable_or_unparseable_registry_names_its_reason_and_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      With the registry made genuinely unreadable at run time, and separately with a registry
+      that is present but cannot be parsed, the executed check states that it could not
+      establish which scripts are invoked, names which of the two reasons applies, and exits
+      non-zero. The present-but-corrupt case must not fall through to a different registry copy
+      and report clean against a file the commit would never consume.
+  - name: test_bp_100n_4_ii_neither_indeterminate_situation_emits_a_zero_invoked_by_nothing_clean_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      In neither indeterminate situation does the check state a count of zero scripts invoked
+      by nothing, and in neither does it exit as though the comparison had been performed and
+      found every script invoked. NAMED MUTATION (mandatory, run it, do not merely describe
+      it): make the disk listing return an empty collection on error rather than raising or
+      returning an unavailability signal — the ordinary fail-open shape, and the one every
+      cited precedent actually shipped. Under that injection the check reports zero compared,
+      zero reported, and exits clean; this descriptor must go RED, and it must fail BY THE EXIT
+      STATUS as well as by the text, then return to green on revert. The clause is green on
+      arrival on any implementation that reports nothing, which is why the injection is not
+      optional.
+  - name: test_bp_100n_4_ii_a_clean_run_states_a_compared_count_greater_than_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Over a run in which every gate script on disk is invoked or declared, the stated
+      compared-count read from the check's own output is greater than zero, and it is that
+      positive number — not the absence of findings — that establishes the run as clean. A run
+      reporting nothing while stating a compared count of zero must not be accepted as clean by
+      this descriptor.
+  - name: test_bp_100n_4_ii_the_four_counts_and_the_indeterminate_verdict_reach_the_registered_hook_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_hook_trigger_reachability.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the check as a subprocess through the registered hook path
+      and assert that all four summary counts appear in the hook's own output stream on a
+      determinate run, that the indeterminate verdict and its named reason appear on an
+      indeterminate one, and that the exit status is the commit outcome in both cases rather
+      than an advisory note. A count computed by a function nothing at commit time calls is
+      inert — which is the defect this AC family exists to close.
+  - name: test_bp_100n_4_ii_the_deployed_copy_fails_closed_when_the_disk_listing_is_unavailable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy of the check and every module it imports load and run
+      in a cold process — a helper placed outside templates/scripts/commit_guardian/ without a
+      scripts/build_phases.py deploy-map entry surfaces here as ModuleNotFoundError rather than
+      passing. With the gate-script listing made genuinely unavailable to that deployed run, it
+      emits the indeterminate verdict with its named reason and exits non-zero; over the real
+      tree it states a compared count greater than zero and exits zero. Source-tree greenness
+      cannot substitute: the hook runs from the deployed layout.
+test_rationale: |
+  Every clause here is an assertion about what the check must NOT do — must not state zero
+  invoked-by-nothing, must not exit clean, must not let a comparison that never happened look
+  like a comparison that found nothing wrong. On the incumbent implementation, which has no
+  disk side at all, all of them are green on arrival for the trivial reason that nothing is
+  reported. That is KI-TQ-010's shape, and it is why the zero-clean-verdict clause carries an
+  executable injection rather than a note asking someone to confirm the test is meaningful.
+
+  The mutation is the fail-open shape all four cited precedents actually shipped — an error
+  path that returns an empty collection instead of an unavailability signal — so the injection
+  is not hypothetical: it is a reconstruction of KI-CG-034, KI-CG-012, KI-CG-018 and the
+  AC-store validator's bare-directory no-op. Requiring the descriptor to fail by the EXIT
+  STATUS as well as by the text is deliberate: a check that prints a worried message and then
+  exits 0 is indistinguishable from a passing one to pre-commit, which reads only the status.
+
+  The four-count descriptor asserts by variation rather than by fixed numbers because four
+  hard-coded literals would satisfy a stated-count requirement while proving nothing about
+  what was examined — the same defect one level up, which is how the incumbent guard fails.
+
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", and per BP-100k-4-i's
+  standing constraint that the indeterminate path be exercised by making the lookup genuinely
+  unavailable at run time, no descriptor here may be satisfied by reading the guard's source.
+  Every one executes the check as a process and asserts on its emitted counts, its named
+  reason and its exit status; the reachability descriptor runs the registered hook entry point
+  and the deployed descriptor runs the built copy, so a missing deploy-map entry cannot hide
+  behind source-tree imports.
 delivers_to: null
 expects_from:
   ac_id: BP-100n-4
@@ -97,7 +321,38 @@ expects_from:
     silent clean exit into a named, non-zero failure.
 origin_agent: BrainCandy
 created: 2026-08-31
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-31
+  note: 'criteria untouched. PACKAGE SURFACE DECIDED FALSE, AND MEASURED: this criterion
+    adds no hooks_manifest.hooks id and no new top-level mapping key to commit_guardian.json
+    — the only two containers _package_surface_registry.WATCHED_REGISTRIES watches
+    on that file — so it registers nothing and declares package_surface: false, which
+    also releases it from the structured five-field spec. VERIFIED DEFECT IN THE SIBLING
+    PRECEDENT, recorded in it_requirements so it is not copied: commit_guardian.json
+    holds 36 top-level keys and neither hook_trigger_reachability (declared by BP-100k-4)
+    nor hook_trigger_reachability_indeterminate (declared by BP-100k-4-i) is among
+    them — both config_schema_fragment keys are fictional, authored to clear the package-surface
+    validator. HOST DECIDED, MEASURED under check_file_size''s own counting rule:
+    check_hook_trigger_reachability.py is at 354/400 and _hook_trigger_reachability_helpers.py
+    at 145/400, so the disk-side floor and the four-count assembly go in the helpers
+    module — inside templates/scripts/commit_guardian/, which build_commit_guardian
+    copies whole, so no scripts/build_phases.py deploy entry is needed; anything imported
+    from outside that directory does need one. VOCABULARY: extend the existing INDETERMINATE:
+    reason=<text> line and the existing 0/1/2 exit-status contract rather than minting
+    a third verdict set, and extend the single existing RESULT summary line rather
+    than printing a second one. declares_side_effect false: every Then clause reports
+    to a stream and sets an exit status, which is the transient case the derivation
+    excludes. test_spec: eight executing descriptors, one of which carries the BA''s
+    named mutation (disk listing returns an empty collection on error), one running
+    the registered hook entry point and one running the deployed copy in a cold process.
+    All four populations re-measured independently at enrichment: 66 check_*.py on
+    disk, 59 hooks_manifest entries, 5 enabled:false, 60 distinct .py filenames named
+    across entry lines, 19 named by no entry line — reproduced exactly.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []
