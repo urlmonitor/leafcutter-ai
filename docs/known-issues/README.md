@@ -41,13 +41,31 @@ issue *used to* exist explains present code.
 
 ## Index
 
+Counts recounted 2026-08-31. This table had listed five of the thirteen files and was stale
+by roughly an order of magnitude on the two largest — an index nobody can trust is worse than
+no index, since it reads as "there are five commit-guardian issues" when there are 35.
+
 | Component | File | Open entries |
 |---|---|---|
-| `supervisor_system` | [supervisor-system.md](supervisor-system.md) | 3 |
-| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 5 |
-| `testing_quality` | [testing-quality.md](testing-quality.md) | 3 |
-| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 2 |
-| `feedback_collector` | [feedback-collector.md](feedback-collector.md) | 1 |
+| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 35 |
+| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 26 |
+| `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 23 |
+| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 23 |
+| `ac_store` | [ac-store.md](ac-store.md) | 16 |
+| `knowledge_management` | [knowledge-management.md](knowledge-management.md) | 11 |
+| `testing_quality` | [testing-quality.md](testing-quality.md) | 11 |
+| `supervisor_system` | [supervisor-system.md](supervisor-system.md) | 5 |
+| `agent_registry` | [agent-registry.md](agent-registry.md) | 3 |
+| `documentation_system` | [documentation-system.md](documentation-system.md) | 3 |
+| `feedback_collector` | [feedback-collector.md](feedback-collector.md) | 3 |
+| `changelog` | [changelog.md](changelog.md) | 2 |
+| `security_scanner` | [security-scanner.md](security-scanner.md) | 1 |
+
+**Known id collision, unrepaired:** `commit-guardian.md` carries **two** distinct entries
+numbered `KI-CG-012` — one on hook test seams, one on `check-ac-schema` failing open on an
+empty staged set. Both are cited elsewhere by that id, so neither can be silently renumbered
+without breaking references; repairing it means choosing which keeps the number and updating
+every citation to the other.
 
 ## Highest severity first
 
