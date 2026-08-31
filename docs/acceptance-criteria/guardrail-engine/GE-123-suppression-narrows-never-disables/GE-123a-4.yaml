@@ -126,7 +126,8 @@ amended_by:
       documentation-expert.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/05_TICKET-20260831-GE-123a-4.md
 change_target: prompt
 risk_surface: contract_boundary
 notes: |
@@ -159,3 +160,4 @@ notes: |
   suppression form accepted". GE-123b-5 answers "when is a suppression declined".
   Same document, three different questions; cross-reference rather than restate,
   because the shared grammar has exactly one home.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

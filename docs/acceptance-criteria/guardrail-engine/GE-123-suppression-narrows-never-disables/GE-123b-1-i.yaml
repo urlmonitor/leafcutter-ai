@@ -138,7 +138,8 @@ amended_by:
   date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/07_TICKET-20260831-GE-123b-1-i.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -176,3 +177,4 @@ notes: |
   is the reason this record was re-estimated from S to M, and it is a signature
   extension with existing call sites in the module and in the existing
   suppression test module.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

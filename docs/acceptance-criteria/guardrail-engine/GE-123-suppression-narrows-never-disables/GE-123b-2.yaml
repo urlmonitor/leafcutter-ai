@@ -133,7 +133,8 @@ amended_by:
   date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/08_TICKET-20260831-GE-123b-2.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -180,3 +181,4 @@ notes: |
   re-measured through scan_files with three real files on disk, one of them at a
   nested path sharing a basename with another, and a real allowlist in the same
   temporary root — 0, 9, 0 — matching the BA's figures exactly.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

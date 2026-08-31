@@ -111,7 +111,8 @@ amended_by:
       empty in the same block; only internal and contract_boundary carry agents.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/19_TICKET-20260831-GE-123c-4.md
 change_target: docs
 risk_surface: contract_boundary
 notes: |
@@ -137,3 +138,4 @@ notes: |
   the documentation check written out in it_requirements, because inventing code
   tests for a prose change produces a test that asserts a string is present in a
   file — a shape this project has repeatedly found to pass on dead content.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

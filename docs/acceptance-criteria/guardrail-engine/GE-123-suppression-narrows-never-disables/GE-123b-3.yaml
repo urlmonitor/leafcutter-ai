@@ -125,7 +125,8 @@ amended_by:
   date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/09_TICKET-20260831-GE-123b-3.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -169,3 +170,4 @@ notes: |
   BA's figures. The unreadable-file arm was also exercised: a path that does not
   resolve produces no finding and no output on either stream, because scan_file
   swallows the read error and returns an empty finding list.
+target_epic: EPIC-SuppressionNarrowsNeverDisables
