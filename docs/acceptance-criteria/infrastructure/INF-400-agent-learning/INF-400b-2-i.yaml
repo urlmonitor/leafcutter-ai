@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400b-2.yaml"
@@ -125,8 +125,10 @@ origin_agent: BrainCandy
 created: 2026-08-26
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "tests/knowledge/test_harvest_learnings.py"
+implemented_by:
+  - "scripts/knowledge/harvest_learnings.py"
 notes: |
   Filed from KI-KM-010 (severity high, 2026-08-26), second half and fix
   direction item 3: "Re-key `_event_hash` on fields that are actually

@@ -89,12 +89,22 @@ logger = logging.getLogger("harvest_learnings")
 class HarvestResult:
     """Outcome of a single harvester run.
 
-    Five record-level buckets — ``routed``, ``previously_processed``,
-    ``skipped_unknown``, ``write_failures``, ``no_learning_text`` — partition
-    every ``knowledge_captured`` record read from the sink; they always sum
-    to the number of such records. ``malformed_lines`` is a separate,
-    line-level counter (a malformed line never parses into a record at all)
-    and is intentionally excluded from that sum (INF-700c-1-i).
+    Six record-level buckets — ``routed``, ``previously_processed``,
+    ``skipped_unknown``, ``write_failures``, ``no_learning_text``,
+    ``missing_required_field_count`` — partition every ``knowledge_captured``
+    record read from the sink; they always sum to the number of such
+    records. ``malformed_lines`` is a separate, line-level counter (a
+    malformed line never parses into a record at all) and is intentionally
+    excluded from that sum (INF-700c-1-i).
+
+    ``missing_required_field_count`` / ``missing_required_field_lines``
+    (INF-400b-2-i) count records that parsed as a valid JSON object and are
+    genuine ``knowledge_captured`` events but lack a field the idempotency
+    digest requires (see ``_event_hash``). This is deliberately a distinct
+    bucket from ``malformed_lines`` — the line itself is well-formed JSON;
+    it is the record's content that is short a required key. Such a record
+    is never hashed, routed, or added to the idempotency state, so it is
+    retried on a later run once the producer is fixed.
     """
 
     routed: int = 0
@@ -109,6 +119,8 @@ class HarvestResult:
     no_learning_by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
     malformed_lines: int = 0
     malformed_line_numbers: list[int] = dataclasses.field(default_factory=list)
+    missing_required_field_count: int = 0
+    missing_required_field_lines: list[int] = dataclasses.field(default_factory=list)
 
     def summary(self) -> str:
         """Return the human-readable one-line summary.
@@ -116,6 +128,7 @@ class HarvestResult:
         Format: ``"N learnings routed: K1 kind1, K2 kind2 (M previously
         processed); P unroutable: K3 kind3, K4 kind4; Q write failures: ...;
         state NOT persisted; R no learning text: ...; S malformed line(s):
+        [...]; T record(s) missing a required digest field at line(s)
         [...]"``. Each trailing segment appears only when the condition it
         reports is present.
 
@@ -165,6 +178,11 @@ class HarvestResult:
                 f"; {self.malformed_lines} malformed line(s) at "
                 f"{self.malformed_line_numbers}"
             )
+        if self.missing_required_field_count:
+            base += (
+                f"; {self.missing_required_field_count} record(s) missing a "
+                f"required digest field at line(s) {self.missing_required_field_lines}"
+            )
         return base
 
 
@@ -173,19 +191,47 @@ class HarvestResult:
 # ---------------------------------------------------------------------------
 
 
+# The idempotency key, per INF-400b-2-i / INF-400b-2-ii: exactly the fields
+# the reconciled record shape requires of every producer. `ticket` and
+# `text` are optional and MUST NOT appear here under any spelling -- not
+# even as a defaulted-to-empty lookup, which is the substitution path that
+# produced the original defect (a constant key component that silently
+# discriminated nothing).
+_REQUIRED_DIGEST_FIELDS: tuple[str, ...] = (
+    "timestamp",
+    "agent",
+    "component",
+    "destination",
+    "entry_kind",
+)
+
+
 def _event_hash(event: dict[str, Any]) -> str:
     """Return a stable SHA-256 hex digest for a knowledge_captured event.
 
-    The hash key is the tuple (ticket, timestamp, destination, entry_kind).
-    This is stable across file rotation and compaction.
+    The hash key is built from exactly ``_REQUIRED_DIGEST_FIELDS`` --
+    ``(timestamp, agent, component, destination, entry_kind)`` -- the set of
+    fields the reconciled record shape requires of every producer
+    (INF-400b-2-ii). Optional fields (``ticket``, ``text``) are deliberately
+    excluded: they must never contribute to identity, either because they
+    carry no discriminating information (``ticket`` is absent from every
+    real record) or because they carry content rather than identity
+    (``text``). This is stable across file rotation and compaction.
+
+    Pure function: no I/O, no shared-state mutation, so per the project
+    error-handling policy it is not wrapped in try/except here. A record
+    missing one of the required fields raises ``KeyError`` naming that
+    field; the caller (``harvest()``, at the I/O boundary) is responsible
+    for catching it, reporting the record's line number, and leaving the
+    record unprocessed rather than silently substituting an empty string.
+
+    Raises
+    ------
+    KeyError
+        If *event* is missing any field in ``_REQUIRED_DIGEST_FIELDS``.
     """
     key = json.dumps(
-        {
-            "ticket": event.get("ticket", ""),
-            "timestamp": event.get("timestamp", ""),
-            "destination": event.get("destination", ""),
-            "entry_kind": event.get("entry_kind", ""),
-        },
+        {field: event[field] for field in _REQUIRED_DIGEST_FIELDS},
         sort_keys=True,
     )
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
@@ -414,7 +460,29 @@ def harvest(
                 logger.debug("Skipping non-knowledge event: %s", event.get("event"))
             continue
 
-        h = _event_hash(event)
+        # The record parsed as a valid JSON object and is a genuine
+        # knowledge_captured event, but it may still lack a field the
+        # idempotency digest requires (INF-400b-2-i). This is distinct from
+        # a malformed line -- the line itself is well-formed JSON -- so it
+        # is counted in its own bucket, reported with its line number, and
+        # the record is left unprocessed (never hashed, routed, or added to
+        # the idempotency state) rather than silently hashed on a
+        # defaulted-to-empty substitute, which is the mechanism that
+        # produced the original defect.
+        try:
+            h = _event_hash(event)
+        except KeyError as exc:
+            missing_field = exc.args[0] if exc.args else "<unknown>"
+            logger.warning(
+                "Skipping event at line %d: missing required digest field %r. "
+                "Event stays unprocessed and will be retried once the "
+                "producer emits it.",
+                line_no,
+                missing_field,
+            )
+            result.missing_required_field_count += 1
+            result.missing_required_field_lines.append(line_no)
+            continue
 
         # Already processed?
         if h in seen:
@@ -630,3 +698,34 @@ if __name__ == "__main__":
 #   with 1-based line numbers and a not-a-JSON-object guard so a bare JSON
 #   scalar line no longer crashes the run with AttributeError. Neither change
 #   introduces a new exit code. (#TICKETLESS reason=ac-scoped-fastlane-build-INF-700c-1)
+# - 2026-08-31 [python-coder]: Re-keyed `_event_hash` on the reconciled
+#   required-field set (timestamp, agent, component, destination, entry_kind)
+#   per INF-400b-2-ii's contract, dropping the always-absent `ticket` field
+#   that made the digest effectively three-fields-wide (INF-400b-2-i /
+#   KI-KM-010). A record missing a required field now raises `KeyError` from
+#   `_event_hash` instead of being silently hashed on a defaulted-to-empty
+#   substitute; `harvest()` catches it per-record, reports the 1-based line
+#   number via new `HarvestResult.missing_required_field_count` /
+#   `missing_required_field_lines` counters (distinct from `malformed_lines`
+#   per KI-KM-011's separate territory), and leaves the record unprocessed
+#   so it is retried once the producer is fixed. No new exit code.
+#   CONSEQUENCE (documented per this AC's own it_requirements): changing the
+#   key invalidates every digest computed under the old (ticket, timestamp,
+#   destination, entry_kind) key -- any state file persisted before this
+#   change will no longer recognise its own entries as processed. Harmless
+#   for the current real corpus (INF-700c establishes all 28 records are
+#   ineligible-to-write, so nothing was ever actually routed under the old
+#   key), but deliberate and called out here rather than discovered later.
+#   KNOWN COLLATERAL: 15 pre-existing tests in
+#   tests/knowledge/test_harvest_learnings.py (all tagged for INF-400c-2 /
+#   INF-400c-2-ii, none for this AC) construct events via the `_make_event`
+#   helper, which predates INF-400b-2-ii's reconciled record shape and
+#   supplies `ticket` but never `agent`/`component`. Those fixtures are now
+#   stale relative to the shape INF-400b-2-ii made authoritative (classify:
+#   test_drift -- production is correct per the now-`done` INF-400b-2-ii
+#   contract; the fixtures were never updated to match it). Per this
+#   project's Test Delegation rule, test files are not touched here; flagged
+#   for test-writer to update `_make_event` call sites (or migrate them to
+#   `_make_bare_event`) to include `agent`/`component`. The fast-lane gate
+#   scoped to INF-400b-2-i's own `# covers:` tags is unaffected (verified
+#   green + coverage_ok). (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400b-2-i)

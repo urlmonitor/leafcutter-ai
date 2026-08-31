@@ -83,12 +83,30 @@ def _make_event(
     destination: str,
     ticket: str = "tickets/test.md",
     timestamp: str = "2026-06-05T14:00:00Z",
+    agent: str = "python-coder",
+    component: str = "knowledge_system",
 ) -> dict:
-    """Return a well-formed knowledge_captured event dict."""
+    """Return a well-formed knowledge_captured event dict.
+
+    Conforms to the reconciled record shape INF-400b-2-ii made authoritative
+    (signoff Sec7 step 4): every producer supplies `agent` and `component` --
+    both are required by `_event_hash` (INF-400b-2-i) and a record missing
+    either now raises `KeyError` rather than being silently hashed on a
+    defaulted-to-empty substitute. `ticket` remains optional and is kept
+    here only for callers that want it present on the record; it never
+    contributes to the digest (see
+    TestDigestIgnoresFieldsAbsentFromRequiredShape). Before INF-400b-2-ii
+    this helper supplied `ticket` but never `agent`/`component` -- the
+    pre-reconciliation shape -- which is why every call site here predates
+    the real corpus's actual shape (see `_make_bare_event` below, which was
+    already written to match it).
+    """
     return {
         "event": "knowledge_captured",
         "timestamp": timestamp,
         "ticket": ticket,
+        "agent": agent,
+        "component": component,
         "destination": destination,
         "entry_kind": entry_kind,
     }
@@ -1683,6 +1701,563 @@ class TestRealStreamReportsFragmentAtLine19(unittest.TestCase):
             self.assertEqual(result.malformed_line_numbers, [19])
             self.assertEqual(result.routed, 1)
             self.assertIn(str(tmp / "after_corruption.md"), captured)
+
+
+# ---------------------------------------------------------------------------
+# INF-400b-2-i: re-key the idempotency digest away from the always-absent
+# `ticket` field onto the required set every real producer populates
+# (timestamp, agent, component, destination, entry_kind), per INF-400b-2-ii's
+# reconciled shape. See KI-KM-010 second half.
+#
+# CONTRACT THESE TESTS ESTABLISH (test-writer runs before python-coder; this
+# is the target the implementation must satisfy, not a restatement of
+# existing behaviour):
+#
+#   1. ``_event_hash(event)`` must build its digest from exactly the fields
+#      (timestamp, agent, component, destination, entry_kind) and MUST NOT
+#      read ``ticket`` under any spelling, including a defaulted-to-empty
+#      ``event.get("ticket", "")`` lookup -- that lookup is the present bug.
+#   2. ``_event_hash`` must require each of those five fields to be an
+#      actual key in *event* -- not merely present-with-a-default. When a
+#      required field is absent, ``_event_hash`` must raise
+#      ``KeyError`` naming the missing field, rather than silently
+#      substituting ``""`` (the substitution path that produced this
+#      defect for ``ticket``).
+#   3. ``harvest()`` must catch that ``KeyError`` per-record (not per-line
+#      -- the record parsed as valid JSON, it is simply missing a field the
+#      digest requires), report it via a new ``HarvestResult`` counter/list
+#      pairing -- ``missing_required_field_count: int`` and
+#      ``missing_required_field_lines: list[int]`` (1-based source line
+#      numbers, mirroring ``malformed_line_numbers``) -- log a WARNING
+#      naming the line number and the missing field, and ``continue`` to
+#      the next line without crashing the run and without adding the
+#      record's hash to the idempotency state (so it is retried once the
+#      producer is fixed). This must be a distinct bucket from
+#      ``malformed_lines`` (KI-KM-011's territory; must not be conflated
+#      per this AC's it_requirements) and must not change the harvester's
+#      exit-code vocabulary (0/1/2/3).
+# ---------------------------------------------------------------------------
+
+
+_REQUIRED_DIGEST_FIELDS = ("timestamp", "agent", "component", "destination", "entry_kind")
+
+
+class TestTwoSameDaySameDestinationSameKindRecordsAreBothProcessed(unittest.TestCase):
+    """INF-400b-2-i: the collision test.
+
+    Reproduces the defect exactly as KI-KM-010 describes it: two DIFFERENT
+    real producers (different ``agent``/``component``) emit on the same day,
+    to the same destination, classified with the same ``entry_kind``. Under
+    the current (ticket, timestamp, destination, entry_kind) digest -- with
+    ``ticket`` always defaulted to ``""`` -- these two records are
+    indistinguishable, so a harvest run occurring AFTER the first record's
+    hash has already been persisted to state (the realistic multi-run
+    scenario: the sink is append-only and the harvester runs periodically)
+    silently drops the second record as "previously processed".
+
+    This is a two-run test, not a single-run test, because within a single
+    ``harvest()`` call the in-memory ``seen`` set is not updated until after
+    the whole file is read -- the collision only bites once one record's
+    hash has already reached the on-disk state file from a PRIOR run.
+    """
+
+    def test_two_same_day_same_destination_same_kind_records_are_both_processed(
+        self,
+    ) -> None:
+        # covers: INF-400b-2-i
+        # angle: criterion
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            processed = tmp / "harvest_state.json"
+            dest = str(tmp / "memory" / "shared_destination.md")
+
+            record_a = _make_bare_event(
+                entry_kind="memory-project",
+                destination=dest,
+                agent="product-owner",
+                component="ac_pipeline",
+                timestamp="2026-06-16T00:00:00Z",
+            )
+            record_a["text"] = "Learning A: captured by product-owner."
+
+            record_b = _make_bare_event(
+                entry_kind="memory-project",
+                destination=dest,
+                agent="business-analyst",
+                component="ac_pipeline",
+                timestamp="2026-06-16T00:00:00Z",
+            )
+            record_b["text"] = "Learning B: a genuinely different learning from a different agent."
+
+            captured_texts: list[str] = []
+
+            def fake_capture(learning_text: str, destination_path: str) -> None:
+                captured_texts.append(learning_text)
+
+            # Run 1: only record A exists in the sink. Its hash is persisted
+            # to the on-disk state file.
+            sink1 = tmp / "sink_run1.jsonl"
+            _write_sink(sink1, [record_a])
+            result1 = harvest(sink_path=sink1, state_path=processed, capture_fn=fake_capture)
+            self.assertEqual(result1.routed, 1)
+
+            # Run 2 (later, same append-only sink now also carries record B):
+            # a real harvester re-reads the WHOLE sink each run and relies on
+            # the persisted state file for idempotency, so replay both lines.
+            sink2 = tmp / "sink_run2.jsonl"
+            _write_sink(sink2, [record_a, record_b])
+            result2 = harvest(sink_path=sink2, state_path=processed, capture_fn=fake_capture)
+
+            # Record A must be recognised as already processed; record B —
+            # captured by a different agent, so a genuinely distinct
+            # learning under the reconciled key — must be newly routed.
+            self.assertEqual(
+                result2.previously_processed,
+                1,
+                "record A should be recognised as already processed on run 2",
+            )
+            self.assertEqual(
+                result2.routed,
+                1,
+                "record B must be processed as a NEW record, not folded into A's digest",
+            )
+            self.assertIn("Learning A: captured by product-owner.", captured_texts)
+            self.assertIn(
+                "Learning B: a genuinely different learning from a different agent.",
+                captured_texts,
+                "record B was silently dropped as a duplicate of A -- "
+                "the exact collision this AC exists to close",
+            )
+
+
+class TestDigestChangesWhenAnyRequiredFieldChanges(unittest.TestCase):
+    """INF-400b-2-i: each of the five required fields must contribute to the
+    digest. A field that never varies the output cannot discriminate
+    anything -- which is exactly how ``ticket`` (always defaulted to ``""``)
+    became a no-op key component in the first place.
+    """
+
+    # NOTE: deliberately five separate test methods, NOT a single method with
+    # unittest subTest() over _REQUIRED_DIGEST_FIELDS. The fast-lane red-
+    # baseline runner (.leafcutter/scripts/build_orchestration/fast_lane.py)
+    # observes only the outer test outcome per pytest node; a subTest
+    # failure does not flip that outer outcome to FAILED under this runner
+    # (verified empirically: the "agent" and "component" subTests fail
+    # under AC_ENFORCE_STRICT=1 while the aggregate node still reports
+    # PASSED). Five discrete nodes give the gate one outcome per field,
+    # which is exactly what this AC's collision -- caused by two of these
+    # five fields silently contributing nothing -- needs to be caught by.
+
+    def _assert_field_changes_digest(self, field: str) -> None:
+        base = _make_bare_event(
+            entry_kind="memory-project",
+            destination="memory/foo.md",
+            agent="python-coder",
+            component="knowledge_system",
+            timestamp="2026-06-16T00:00:00Z",
+        )
+        base_hash = _mod._event_hash(base)
+        variant = dict(base)
+        variant[field] = variant[field] + "-DIFFERENT"
+        variant_hash = _mod._event_hash(variant)
+        self.assertNotEqual(
+            base_hash,
+            variant_hash,
+            f"changing required field {field!r} did not change the digest -- "
+            "this field contributes nothing to identity, reproducing the "
+            "original `ticket` defect",
+        )
+
+    def test_the_digest_changes_when_timestamp_changes(self) -> None:
+        # covers: INF-400b-2-i
+        # angle: seam
+        self._assert_field_changes_digest("timestamp")
+
+    def test_the_digest_changes_when_agent_changes(self) -> None:
+        # covers: INF-400b-2-i
+        # angle: seam
+        self._assert_field_changes_digest("agent")
+
+    def test_the_digest_changes_when_component_changes(self) -> None:
+        # covers: INF-400b-2-i
+        # angle: seam
+        self._assert_field_changes_digest("component")
+
+    def test_the_digest_changes_when_destination_changes(self) -> None:
+        # covers: INF-400b-2-i
+        # angle: seam
+        self._assert_field_changes_digest("destination")
+
+    def test_the_digest_changes_when_entry_kind_changes(self) -> None:
+        # covers: INF-400b-2-i
+        # angle: seam
+        self._assert_field_changes_digest("entry_kind")
+
+
+class TestDigestIgnoresFieldsAbsentFromRequiredShape(unittest.TestCase):
+    """INF-400b-2-i: optional fields (``ticket``, ``text``) must NOT affect
+    the digest. Hashing the whole record (the tempting over-correction) would
+    restore discrimination and then break idempotency the instant an
+    optional field appears on a re-emitted record.
+    """
+
+    def test_the_digest_ignores_fields_absent_from_the_required_shape(self) -> None:
+        # covers: INF-400b-2-i
+        # angle: seam
+        bare = _make_bare_event(
+            entry_kind="adr",
+            destination="memory/bar.md",
+            agent="it-po",
+            component="ac_pipeline",
+            timestamp="2026-06-16T00:00:00Z",
+        )
+        bare_hash = _mod._event_hash(bare)
+
+        with_ticket = dict(bare)
+        with_ticket["ticket"] = "tickets/some-ticket.md"
+        self.assertEqual(
+            bare_hash,
+            _mod._event_hash(with_ticket),
+            "presence of the optional `ticket` field changed the digest -- "
+            "optionality was not honoured",
+        )
+
+        with_text = dict(bare)
+        with_text["text"] = "Some real learning content."
+        self.assertEqual(
+            bare_hash,
+            _mod._event_hash(with_text),
+            "presence of the optional `text` field changed the digest -- "
+            "content must never be part of identity",
+        )
+
+        with_both = dict(bare)
+        with_both["ticket"] = "tickets/some-ticket.md"
+        with_both["text"] = "Some real learning content."
+        self.assertEqual(bare_hash, _mod._event_hash(with_both))
+
+
+class TestEveryRequiredKeyComponentIsPopulatedAcrossTheRealCorpus(unittest.TestCase):
+    """INF-400b-2-i: real-artifact test. Runs the digest over the actual
+    28-record corpus (not a hand-authored fixture -- a hand-authored one
+    would have populated every documented field, which is the exact
+    assumption that hid this defect for two months) and asserts every
+    required field is genuinely present and non-empty in every record, and
+    that the 28 records yield 28 distinct digests.
+    """
+
+    def test_every_required_key_component_is_populated_across_the_real_corpus(
+        self,
+    ) -> None:
+        # covers: INF-400b-2-i
+        # angle: real_artifact
+        events = load_fixture("harvest_learnings/unroutable_corpus_28")
+        self.assertEqual(len(events), 28, "fixture drift -- expected 28 events")
+
+        digests: set[str] = set()
+        for i, event in enumerate(events):
+            for field in _REQUIRED_DIGEST_FIELDS:
+                self.assertIn(
+                    field,
+                    event,
+                    f"record {i} is missing required digest field {field!r}",
+                )
+                self.assertTrue(
+                    str(event[field]).strip(),
+                    f"record {i} has an empty required digest field {field!r}",
+                )
+            digests.add(_mod._event_hash(event))
+
+        self.assertEqual(
+            len(digests),
+            28,
+            "the 28 real records must yield 28 distinct digests under the "
+            "reconciled required-field key",
+        )
+
+
+class TestRerunningOverAnUnchangedCorpusProcessesNothingTwice(unittest.TestCase):
+    """INF-400b-2-i: the re-keyed digest must not sacrifice idempotency to
+    buy discrimination. Two consecutive runs over an unchanged corpus deal
+    with every eligible record on the first run and nothing on the second.
+    """
+
+    def test_rerunning_over_an_unchanged_corpus_processes_nothing_twice(self) -> None:
+        # covers: INF-400b-2-i
+        # angle: criterion
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            sink = tmp / "knowledge_emissions.jsonl"
+            processed = tmp / "harvest_state.json"
+
+            events = []
+            for i in range(3):
+                ev = _make_bare_event(
+                    entry_kind="memory-project",
+                    destination=str(tmp / f"dest_{i}.md"),
+                    agent=f"agent-{i}",
+                    component="knowledge_system",
+                    timestamp="2026-06-16T00:00:00Z",
+                )
+                ev["text"] = f"Distinct real learning number {i}."
+                events.append(ev)
+            _write_sink(sink, events)
+
+            call_count = [0]
+
+            def fake_capture(learning_text: str, destination_path: str) -> None:
+                call_count[0] += 1
+
+            result1 = harvest(sink_path=sink, state_path=processed, capture_fn=fake_capture)
+            self.assertEqual(result1.routed, 3)
+            self.assertEqual(call_count[0], 3)
+
+            result2 = harvest(sink_path=sink, state_path=processed, capture_fn=fake_capture)
+            self.assertEqual(result2.routed, 0)
+            self.assertEqual(result2.previously_processed, 3)
+            self.assertEqual(call_count[0], 3, "no new capture_fn calls on the second run")
+
+
+class TestARecordMissingARequiredKeyFieldIsReportedNotSilentlyHashed(unittest.TestCase):
+    """INF-400b-2-i: closing the substitution path that created this defect
+    in the first place. A record lacking a field the digest requires must be
+    reported with its line number, never silently folded into an
+    empty-string default and hashed as if it were a normal record.
+    """
+
+    def test_missing_required_field_raises_from_event_hash(self) -> None:
+        # covers: INF-400b-2-i
+        # angle: failure
+        incomplete = _make_bare_event(
+            entry_kind="adr",
+            destination="memory/baz.md",
+            agent="it-po",
+            component="ac_pipeline",
+            timestamp="2026-06-16T00:00:00Z",
+        )
+        del incomplete["component"]
+
+        with self.assertRaises(KeyError):
+            _mod._event_hash(incomplete)
+
+    def test_a_record_missing_a_required_key_field_is_reported_not_silently_hashed(
+        self,
+    ) -> None:
+        # covers: INF-400b-2-i
+        # angle: failure
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            sink = tmp / "knowledge_emissions.jsonl"
+            processed = tmp / "harvest_state.json"
+
+            good = _make_bare_event(
+                entry_kind="adr",
+                destination=str(tmp / "good.md"),
+                agent="it-po",
+                component="ac_pipeline",
+                timestamp="2026-06-16T00:00:00Z",
+            )
+            good["text"] = "A real, well-formed learning."
+
+            broken = _make_bare_event(
+                entry_kind="adr",
+                destination=str(tmp / "broken.md"),
+                agent="it-po",
+                component="ac_pipeline",
+                timestamp="2026-06-16T00:30:00Z",
+            )
+            broken["text"] = "A learning whose record is missing `component`."
+            del broken["component"]
+
+            # good (line 1), broken (line 2) -- a real JSONL sink, written by
+            # the same serializer used everywhere else in this file.
+            _write_sink(sink, [good, broken])
+
+            captured: list[str] = []
+            result = harvest(
+                sink_path=sink,
+                state_path=processed,
+                capture_fn=lambda t, d: captured.append(d),
+            )
+
+            # The good record is still processed; the run does not crash.
+            self.assertEqual(result.routed, 1)
+            self.assertIn(str(tmp / "good.md"), captured)
+
+            # The broken record is reported with its line number, not
+            # silently hashed via a defaulted-to-empty substitute.
+            self.assertEqual(
+                getattr(result, "missing_required_field_count", 0),
+                1,
+                "missing-required-field records must be counted in a distinct "
+                "HarvestResult bucket, not silently absorbed",
+            )
+            self.assertEqual(
+                getattr(result, "missing_required_field_lines", []),
+                [2],
+                "the broken record's 1-based source line number must be reported",
+            )
+            self.assertNotIn(
+                str(tmp / "broken.md"),
+                captured,
+                "a record missing a required digest field must never be written",
+            )
+
+
+class TestMissingRequiredFieldBucketParticipatesInTheRecordTotal(unittest.TestCase):
+    """INF-400b-2-i: the seventh (module docstring: "sixth record-level")
+    bucket must not be a hole a record can fall through unaccounted for.
+
+    ``TestTextlessRecordsCountedSeparately`` and
+    ``TestMalformedCountIsSeparateBucket`` (INF-700c-1 / INF-700c-1-i,
+    written before this bucket existed) each assert a sum over only five
+    record-level buckets. That sum is still numerically correct in both of
+    those tests only because neither test ever produces a record missing a
+    required digest field -- ``missing_required_field_count`` is always 0
+    there, so its absence from the sum is invisible. Neither test would
+    catch a regression in which a record legitimately landed in
+    ``missing_required_field_count`` and simply vanished from the total.
+
+    This test closes that gap directly: it constructs one record of each of
+    the six record-level kinds (routed, previously_processed, skipped_unknown,
+    write_failure, no_learning_text, missing_required_field) in a single
+    sink and asserts the six-bucket sum equals the total record count -- the
+    invariant the module docstring states for ``HarvestResult`` -- with
+    ``missing_required_field_count`` an explicit term in the sum, not an
+    incidental zero.
+    """
+
+    def test_missing_required_field_bucket_is_a_term_in_the_six_bucket_total(
+        self,
+    ) -> None:
+        # covers: INF-400b-2-i
+        # angle: criterion
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            state = tmp / "harvest_state.json"
+
+            routed_record = _make_bare_event(
+                entry_kind="adr",
+                destination=str(tmp / "routed.md"),
+                agent="python-coder",
+                component="knowledge_system",
+                timestamp="2026-06-16T00:00:00Z",
+            )
+            routed_record["text"] = "A genuine learning that will be routed."
+
+            textless_record = _make_bare_event(
+                entry_kind="claude-md",
+                destination=str(tmp / "textless.md"),
+                agent="python-coder",
+                component="knowledge_system",
+                timestamp="2026-06-16T00:01:00Z",
+            )
+
+            unroutable_record = _make_bare_event(
+                entry_kind="never-seen-kind",
+                destination=str(tmp / "unroutable.md"),
+                agent="python-coder",
+                component="knowledge_system",
+                timestamp="2026-06-16T00:02:00Z",
+            )
+            unroutable_record["text"] = "Has text but an unrecognised entry_kind."
+
+            will_fail_write_record = _make_bare_event(
+                entry_kind="adr",
+                destination=str(tmp / "will_fail.md"),
+                agent="python-coder",
+                component="knowledge_system",
+                timestamp="2026-06-16T00:03:00Z",
+            )
+            will_fail_write_record["text"] = "A learning whose write will fail."
+
+            missing_field_record = _make_bare_event(
+                entry_kind="adr",
+                destination=str(tmp / "missing_field.md"),
+                agent="python-coder",
+                component="knowledge_system",
+                timestamp="2026-06-16T00:04:00Z",
+            )
+            missing_field_record["text"] = "A learning whose record is missing `component`."
+            del missing_field_record["component"]
+
+            # Run 1, sink with only the routed record, so its hash is
+            # persisted -- gives us a genuine previously_processed record on
+            # run 2 rather than a second synthetic bucket-filler.
+            previously_processed_record = dict(routed_record)
+            sink_run1 = tmp / "sink_run1.jsonl"
+            _write_sink(sink_run1, [previously_processed_record])
+            result1 = harvest(
+                sink_path=sink_run1, state_path=state, capture_fn=lambda t, d: None
+            )
+            self.assertEqual(result1.routed, 1)
+
+            def selective_fail(learning_text: str, destination_path: str) -> None:
+                if destination_path == str(tmp / "will_fail.md"):
+                    raise OSError("simulated write failure")
+                # Real writes for everything else so this is a genuine
+                # capture_fn, not a pure counter stub.
+                dest = Path(destination_path)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                with open(dest, "a", encoding="utf-8") as fh:
+                    fh.write(learning_text + "\n")
+
+            all_six_records = [
+                previously_processed_record,  # -> previously_processed
+                textless_record,  # -> no_learning_text
+                unroutable_record,  # -> skipped_unknown
+                will_fail_write_record,  # -> write_failures
+                missing_field_record,  # -> missing_required_field_count
+                routed_record,  # duplicate timestamp/dest/entry_kind/agent/
+                # component of previously_processed_record is intentional --
+                # it is the SAME record replayed, not a distinct routed one;
+                # a genuinely new routed record is added below instead.
+            ]
+            new_routed_record = _make_bare_event(
+                entry_kind="claude-md",
+                destination=str(tmp / "new_routed.md"),
+                agent="python-coder",
+                component="knowledge_system",
+                timestamp="2026-06-16T00:05:00Z",
+            )
+            new_routed_record["text"] = "A second genuine learning, newly routed this run."
+            all_six_records[-1] = new_routed_record
+
+            sink_run2 = tmp / "sink_run2.jsonl"
+            _write_sink(sink_run2, all_six_records)
+
+            result2 = harvest(sink_path=sink_run2, state_path=state, capture_fn=selective_fail)
+
+            self.assertEqual(result2.routed, 1, "only new_routed_record should be freshly routed")
+            self.assertEqual(result2.previously_processed, 1)
+            self.assertEqual(result2.skipped_unknown, 1)
+            self.assertEqual(result2.write_failures, 1)
+            self.assertEqual(result2.no_learning_text, 1)
+            self.assertEqual(
+                result2.missing_required_field_count,
+                1,
+                "the record missing `component` must land in its own bucket",
+            )
+
+            total_records = len(all_six_records)
+            six_bucket_sum = (
+                result2.routed
+                + result2.previously_processed
+                + result2.skipped_unknown
+                + result2.write_failures
+                + result2.no_learning_text
+                + result2.missing_required_field_count
+            )
+            self.assertEqual(
+                six_bucket_sum,
+                total_records,
+                "the six record-level buckets -- including "
+                "missing_required_field_count -- must sum to the number of "
+                "knowledge_captured records read; a record missing a "
+                "required digest field must never vanish from this total "
+                "(the 'bucket that doesn't participate in a total' defect "
+                "INF-700c-1 warned about, applied to this newer bucket)",
+            )
 
 
 if __name__ == "__main__":
