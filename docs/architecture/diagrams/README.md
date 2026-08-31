@@ -1,13 +1,13 @@
 ---
-title: "Architecture Diagrams"
+title: Architecture Diagrams
 type: reference
 status: active
 created: 2026-08-31
 last_updated: 2026-08-31
 components: []
 flight_level: L1-Context
+description: Overview of Architecture Diagrams.
 ---
-
 # Architecture Diagrams
 
 This folder holds one Markdown file per C4/sequence/ERD/state/dataflow diagram,

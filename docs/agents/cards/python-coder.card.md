@@ -1367,6 +1367,8 @@ flowchart TD
 - BP-900h-5-i: A guardrail whose comparison source exists only in the package repository still reaches a verdict in a vendoring consumer
 - BP-900h-5-ii: Every executable the package deploys is started in the consumer install, not only the ones a registry names
 - BP-900h-6: The simulation uses the install, not just builds it — a first commit is attempted
+- BP-900h-6-i: The use-the-install step mutates only a target it is entitled to destroy, and refuses anything else untouched
+- BP-900h-6-ii: The executed-guard record accounts for the guard population the adopter would face, and a narrowed run cannot report an unqualified pass
 - BP-901: goal_to_epic.py main() only resolves the worktree root when a default path is actually needed
 - CR-100a-1: Structural bucket names exactly its six Modern smells
 - CR-100a-2: Design bucket names exactly its six Modern smells

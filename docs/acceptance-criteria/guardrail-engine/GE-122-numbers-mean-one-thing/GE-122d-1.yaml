@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -124,6 +124,35 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: "work_status REVERTED done -> todo. The done flip was wrong and this records why, not just that."
+  by: manual
+  at: 2026-08-31
+  note: >-
+    I flipped this to done earlier today via mark_ac_done.py --test-root, which
+    enforces a coverage gate and exits 3 when no passing covers-tagged test
+    exists. It exited 0. That gate was satisfied and the conclusion was still
+    false, which is the part worth recording.
+
+    An adversarial review then established, and I confirmed by direct
+    measurement, that check_identifier_uniqueness_authoring.py appears ZERO
+    times in the ten hooks wired in .leafcutter/settings.json. Nothing invokes
+    the authoring stage. Its tests prove the module behaves correctly WHEN
+    CALLED; nothing calls it. That is the copy tier, not the reachability tier
+    — presence of an artifact is not the same as an entry point reaching it,
+    and only the second one is what this criterion asks for.
+
+    A second, independent defect found by the same review: the authoring stage
+    returns {"contested_numbers": []} — clean — on a collection root where the
+    commit stage exits 1 fail-closed, because it discards
+    namespace_verdict.passed. Two stages of one guard disagreeing on the same
+    input is exactly what this criterion forbids, so the criterion is violated
+    on its own terms even setting reachability aside.
+
+    Do not flip this back on a green suite alone. The evidence this record
+    needs is (a) the hook registered where the authoring path actually reads
+    it, demonstrated by invoking that path, and (b) the three stages returning
+    the same verdict on a root where they currently differ. covered_by is [] —
+    also fix that when the flip is earned.
 superseded_by: null
 covered_by: []
 implemented_by:

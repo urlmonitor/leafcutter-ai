@@ -71,7 +71,18 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-from _use_install_step import run_use_install_and_report
+_THIS_DIR = Path(__file__).resolve().parent
+if str(_THIS_DIR) not in sys.path:
+    # Guarantees the sibling module resolves for an import-based caller too,
+    # not only under direct script execution (where the interpreter already
+    # adds argv[0]'s directory to sys.path implicitly). See BP-900h-6-i
+    # review finding (b): an unqualified `from _use_install_step import ...`
+    # relies on that implicit script-execution behaviour and raises
+    # ModuleNotFoundError for any caller that imports this module instead of
+    # running it as __main__.
+    sys.path.insert(0, str(_THIS_DIR))
+
+from _use_install_step import check_target_entitlement, run_use_install_and_report
 
 _MINIMAL_SKILLS_CONFIG: dict[str, str] = {
     "_comment": "Minimal config for consumer-install simulation (BP-900h-1).",
@@ -328,6 +339,24 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.use_install and target_dir.exists():
+        # Entitlement (BP-900h-6-i) must be checked BEFORE any mutation at
+        # all — including the scratch-environment bootstrap below, which
+        # writes a skills_config.json into target_dir when one is absent.
+        # Skipped when target_dir does not exist yet: a not-yet-created
+        # directory holds nothing a census could catch as mutated, and
+        # run_use_install_and_report re-checks entitlement once the
+        # directory exists, later in this same flow.
+        entitlement_violation = check_target_entitlement(target_dir)
+        if entitlement_violation is not None:
+            print(
+                f"CONSUMER INSTALL SIMULATION REFUSED: target {target_dir} is not "
+                f"entitled to the use-install step's destructive actions: "
+                f"{entitlement_violation}.",
+                file=sys.stderr,
+            )
+            return 1
 
     setup_code = _ensure_scratch_environment(target_dir)
     if setup_code != 0:
