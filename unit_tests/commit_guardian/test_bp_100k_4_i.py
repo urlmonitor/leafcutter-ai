@@ -212,6 +212,7 @@ class TestRealRegistryYieldsZeroUnreachableGatesAndExitsZero(unittest.TestCase):
             match,
             msg=f"No RESULT summary line from a run over the real registry. Output:\n{combined}",
         )
+        assert match is not None  # narrowing for mypy; assertIsNotNone above is the real check
         self.assertEqual(
             0,
             int(match.group(2)),
@@ -272,6 +273,7 @@ class TestWholeTreeGateWithoutAPathFilterIsNotFlagged(unittest.TestCase):
         self.assertIsNotNone(
             match, msg=f"No RESULT summary line was emitted. Output:\n{combined}"
         )
+        assert match is not None  # narrowing for mypy; assertIsNotNone above is the real check
         self.assertEqual(
             0,
             int(match.group(2)),

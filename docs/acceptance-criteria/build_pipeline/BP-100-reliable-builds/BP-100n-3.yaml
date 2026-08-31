@@ -1,4 +1,4 @@
-id: BP-100k-8
+id: BP-100n-3
 components:
   - build_pipeline
 title: "The build-equality guard covers every platform the build can emit, taken from the build's own platform set — a guard that proves equality only for the platforms it chose to enable proves nothing about the rest"
@@ -29,9 +29,9 @@ criteria: |
   And an output family produced only under a platform that was not exercised is
     never counted as covered by the equality assertion.
 depends_on:
-  - BP-100k
+  - BP-100n
 doc_links:
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n.yaml"
     relationship: parent
     status: exists
   - path: "docs/build-pipeline.md"
@@ -109,9 +109,23 @@ amended_by:
       unit_tests/build_guards/test_bp_100k_8.py and passes under
       AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests run clean
       apart from the unrelated test_ge_122e_1.py failure from another branch).
+  - by: ac-tree-split
+    at: 2026-08-26
+    note: >-
+      Renamed BP-100k-8 -> BP-100n-3 and reparented from BP-100k to BP-100n
+      (Pattern C, split of BP-100k 8 children -> 5 + 3). The rename is forced,
+      not cosmetic: check_ac_limits.py derives a child's parent from its ID
+      string rather than from covered_by (GE-106), so a child that kept the
+      BP-100k- prefix would still count against BP-100k's cap. The covering
+      test moved with it — unit_tests/build_guards/test_bp_100k_8.py is now
+      unit_tests/build_guards/test_bp_100n_3.py and its "# covers:" tags read
+      BP-100n-3, so the ac-reconcile entry above names the pre-split filename
+      and tag. The expects_from contract still points at BP-100k-2, which stays
+      under BP-100k — a cross-L1 contract, not a dangling reference. Criteria,
+      title, work_status and evidence unchanged.
 superseded_by: null
 covered_by:
-  - unit_tests/build_guards/test_bp_100k_8.py
+  - unit_tests/build_guards/test_bp_100n_3.py
 implemented_by:
   - scripts/build_phases.py
   - scripts/build_helpers.py

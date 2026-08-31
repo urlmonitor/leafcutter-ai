@@ -1,6 +1,6 @@
 """
-MODULE: unit_tests/build_guards/test_bp_100k_7.py
-GOAL: BP-100k-7 -- ``check_command_reachability``'s skip decision for
+MODULE: unit_tests/build_guards/test_bp_100n_2.py
+GOAL: BP-100n-2 -- ``check_command_reachability``'s skip decision for
     name-form workflow handoff targets must be taken from the DECLARED
     ``config["workflows"]["enabled"]`` value, and from nothing else -- never
     inferred from whether ``output_root/workflows/`` happens to exist on
@@ -17,7 +17,7 @@ BUSINESS CONTEXT: scripts/build_phases.py (around lines 408-409, 467-475)
           command referencing a workflow by name is now unreachable, and
           this is exactly the failure the guard exists to catch.
     See docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/
-    BP-100k-7.yaml.
+    BP-100n-2.yaml.
 DETECTOR SEAM: These tests call ``check_command_reachability(output_root,
     config)`` -- a signature EXTENSION python-coder must add (today's
     function accepts only ``output_root``). Calling with the extended
@@ -112,7 +112,7 @@ def _make_output_root(
 
 
 class TestEnabledButOutputAbsentReportsUnreachableAndFails(unittest.TestCase):
-    """AC BP-100k-7: capability declared enabled, output absent -> reported."""
+    """AC BP-100n-2: capability declared enabled, output absent -> reported."""
 
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory()
@@ -120,7 +120,7 @@ class TestEnabledButOutputAbsentReportsUnreachableAndFails(unittest.TestCase):
         self.base = Path(self._tmpdir.name)
 
     def test_enabled_but_output_absent_reports_unreachable_and_fails(self) -> None:
-        # covers: BP-100k-7
+        # covers: BP-100n-2
         """
         The declared configuration says workflows ARE enabled, yet no
         ``workflows/`` output exists at all (the build failed to deploy
@@ -158,7 +158,7 @@ class TestEnabledButOutputAbsentReportsUnreachableAndFails(unittest.TestCase):
 
 
 class TestDisabledCapabilityIsSkippedWithAStatedReason(unittest.TestCase):
-    """AC BP-100k-7: capability declared disabled -> skipped, reason stated."""
+    """AC BP-100n-2: capability declared disabled -> skipped, reason stated."""
 
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory()
@@ -166,7 +166,7 @@ class TestDisabledCapabilityIsSkippedWithAStatedReason(unittest.TestCase):
         self.base = Path(self._tmpdir.name)
 
     def test_disabled_capability_is_skipped_with_a_stated_reason(self) -> None:
-        # covers: BP-100k-7
+        # covers: BP-100n-2
         """
         The declared configuration says workflows are disabled. The
         name-form reference must be skipped (not reported), AND the
@@ -218,7 +218,7 @@ class TestDisabledCapabilityIsSkippedWithAStatedReason(unittest.TestCase):
 
 
 class TestSkipDecisionDoesNotChangeWhenOnlyOutputPresenceChanges(unittest.TestCase):
-    """AC BP-100k-7 decisive descriptor.
+    """AC BP-100n-2 decisive descriptor.
 
     Holding the declared config value constant, adding or removing
     ``output_root/workflows/`` must not change the skip verdict. Flipping
@@ -233,7 +233,7 @@ class TestSkipDecisionDoesNotChangeWhenOnlyOutputPresenceChanges(unittest.TestCa
     def test_skip_decision_does_not_change_when_only_the_output_presence_changes(
         self,
     ) -> None:
-        # covers: BP-100k-7
+        # covers: BP-100n-2
         # --- Hold config constant at enabled=True; vary the filesystem. ---
         # A declaration of "enabled" must ALWAYS cause the guard to check
         # reachability against the real registry, regardless of whether the
@@ -319,7 +319,7 @@ class TestSkipDecisionDoesNotChangeWhenOnlyOutputPresenceChanges(unittest.TestCa
 
 
 class TestUnreadableDeclarationIsReportedRatherThanTreatedAsOff(unittest.TestCase):
-    """AC BP-100k-7: a value that cannot be read is a reported condition."""
+    """AC BP-100n-2: a value that cannot be read is a reported condition."""
 
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory()
@@ -329,7 +329,7 @@ class TestUnreadableDeclarationIsReportedRatherThanTreatedAsOff(unittest.TestCas
     def test_unreadable_declaration_is_reported_rather_than_treated_as_off(
         self,
     ) -> None:
-        # covers: BP-100k-7
+        # covers: BP-100n-2
         """
         ``config["workflows"]`` is malformed (not a dict, so ``.get(...)``
         on it is meaningless) rather than absent. This must not silently
@@ -371,7 +371,7 @@ class TestUnreadableDeclarationIsReportedRatherThanTreatedAsOff(unittest.TestCas
 
 
 class TestEverySkipTheGuardPerformsNamesItsReason(unittest.TestCase):
-    """AC BP-100k-7: no skipped check may be indistinguishable from a pass."""
+    """AC BP-100n-2: no skipped check may be indistinguishable from a pass."""
 
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory()
@@ -379,7 +379,7 @@ class TestEverySkipTheGuardPerformsNamesItsReason(unittest.TestCase):
         self.base = Path(self._tmpdir.name)
 
     def test_every_skip_the_guard_performs_names_its_reason(self) -> None:
-        # covers: BP-100k-7
+        # covers: BP-100n-2
         """
         Two distinct commands, each with a distinct name-form workflow
         target, are skipped in the same run (workflows declared disabled).

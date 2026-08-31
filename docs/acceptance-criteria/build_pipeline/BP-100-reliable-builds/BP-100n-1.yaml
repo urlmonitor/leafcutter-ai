@@ -1,4 +1,4 @@
-id: BP-100k-6
+id: BP-100n-1
 components:
   - build_pipeline
 title: "A deployed output the build recorded writing but that is absent from disk is reported and fails the run — deletion is the most complete drift there is, and it is the only kind the gate ignores"
@@ -25,9 +25,9 @@ criteria: |
   When the gate runs again,
   Then it is reported as matching its recorded source and the run passes.
 depends_on:
-  - BP-100k
+  - BP-100n
 doc_links:
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n.yaml"
     relationship: parent
     status: exists
   - path: "docs/build-drift-hook.md"
@@ -111,9 +111,22 @@ amended_by:
       unit_tests/commit_guardian/test_bp_100k_6.py and passes under
       AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests run clean
       apart from the unrelated test_ge_122e_1.py failure from another branch).
+  - by: ac-tree-split
+    at: 2026-08-26
+    note: >-
+      Renamed BP-100k-6 -> BP-100n-1 and reparented from BP-100k to BP-100n
+      (Pattern C, split of BP-100k 8 children -> 5 + 3). The rename is forced,
+      not cosmetic: check_ac_limits.py derives a child's parent from its ID
+      string rather than from covered_by (GE-106), so a child that kept the
+      BP-100k- prefix would still count against BP-100k's cap. The covering
+      test moved with it — unit_tests/commit_guardian/test_bp_100k_6.py is now
+      unit_tests/commit_guardian/test_bp_100n_1.py and its "# covers:" tags
+      read BP-100n-1, so the ac-reconcile entry above names the pre-split
+      filename and tag. Criteria, title, work_status and evidence unchanged;
+      this AC's substance is untouched by the split.
 superseded_by: null
 covered_by:
-  - unit_tests/commit_guardian/test_bp_100k_6.py
+  - unit_tests/commit_guardian/test_bp_100n_1.py
 implemented_by:
   - templates/scripts/commit_guardian/check_output_drift.py
   - templates/scripts/commit_guardian/check_build_drift.py

@@ -213,7 +213,7 @@ def _deploy_agents_and_write_manifest(workspace: Path, pkg_root: Path):
     """Run the REAL build_agents phase + install_shims + write_build_manifest.
 
     Deploys the "agents" family for every platform the build itself declares
-    active — i.e. whatever ``config["platforms"]`` resolves to (BP-100k-8: a
+    active — i.e. whatever ``config["platforms"]`` resolves to (BP-100n-3: a
     fixture must never pin a platform off internally, since that silently
     withholds that platform's whole output family from any equality
     assertion built on top of this manifest, regardless of what the build's
@@ -440,7 +440,7 @@ class TestOutputMappingCoversEveryDeployPhaseOutput(unittest.TestCase):
         # covers: BP-100k-2
         build_helpers_mod, build_phases_mod, config_loader_mod = _load_pkg_modules(self.pkg_root)
         config = config_loader_mod.load_config(None, self.workspace)
-        # No "platforms" override here (BP-100k-8): the build's own default
+        # No "platforms" override here (BP-100n-3): the build's own default
         # (claude + antigravity both active) governs which families this
         # fixture exercises, rather than a literal pinned inside the test
         # that would silently withhold a whole platform's output family from

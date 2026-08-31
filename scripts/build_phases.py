@@ -312,7 +312,7 @@ def _resolve_declared_workflows_enabled(
 
     This is the ONLY source ``check_command_reachability`` consults to decide
     whether a name-form workflow reference should be skipped — never whether
-    ``output_root/workflows/`` happens to exist on disk (BP-100k-7). The
+    ``output_root/workflows/`` happens to exist on disk (BP-100n-2). The
     default (``config`` absent, or ``config["workflows"]`` absent) is
     ``False``, matching ``build_workflow_scripts()``'s own documented default
     so the guard and the producer can never disagree about whether the
@@ -372,7 +372,7 @@ def check_command_reachability(
     Whether a name-form workflow reference is skipped is decided SOLELY from
     the declared ``config["workflows"]["enabled"]`` value (via
     ``_resolve_declared_workflows_enabled``), never from whether
-    ``output_root/workflows/`` happens to exist on disk (BP-100k-7). A
+    ``output_root/workflows/`` happens to exist on disk (BP-100n-2). A
     declaration of "enabled" with no deployed output is exactly the failure
     this guard exists to catch and is reported, not skipped; a malformed
     declaration is reported as a distinct "unreadable" condition; every skip
@@ -473,7 +473,7 @@ def check_command_reachability(
         {p.stem for p in workflows_dir.glob("*.js")} if workflows_deployed else set()
     )
     # The SKIP decision below is taken from the declared configuration value
-    # ONLY (BP-100k-7) — `workflows_deployed` above is used solely to build
+    # ONLY (BP-100n-2) — `workflows_deployed` above is used solely to build
     # the registry `registered_workflows` resolves against, never to decide
     # whether a name-form reference should be skipped, on ANY call path.
     #
@@ -539,7 +539,7 @@ def check_command_reachability(
             # toggle, which is the case BP-900g-1 actually exists to catch.
             #
             # The skip decision for a name-form workflow reference is taken
-            # from the DECLARED configuration value alone (BP-100k-7) — never
+            # from the DECLARED configuration value alone (BP-100n-2) — never
             # from whether output_root/workflows/ happens to exist. That
             # conflated two opposite states: deliberately disabled (skip is
             # correct) versus enabled but undeployed (every reference is now
@@ -1014,7 +1014,7 @@ def build_agents(target_root: Path, config: dict[str, Any],
 
             # A write failure for one active platform must never be silently
             # absorbed into "the build succeeded" — that is exactly the
-            # silent-success shape BP-100k-8 forbids. Name the platform that
+            # silent-success shape BP-100n-3 forbids. Name the platform that
             # could not be exercised and state it is unverified, rather than
             # letting a bare OSError (or a clean return) hide which platform
             # failed.
