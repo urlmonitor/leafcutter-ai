@@ -2289,14 +2289,44 @@ if (target_type === "epic") {
       // same `no_longer_present` field and used to carry the same "were not
       // built" sentence, so a partition applied only to the completion returns
       // would leave the defect live at the one site that can show it.
-      const haltRecheck = epicRecheckReport(
-        compareEpicTicketSets(
-          plannedTicketPaths,
-          await recheckEpicTicketSet(worktreeEpicPath),
-          realWorktreePath
-        ),
-        completedWorkPaths(completedBatches, realWorktreePath)
+      const cmpForHalt = compareEpicTicketSets(
+        plannedTicketPaths,
+        await recheckEpicTicketSet(worktreeEpicPath),
+        realWorktreePath
       );
+      const completedForHalt = completedWorkPaths(completedBatches, realWorktreePath);
+      const haltRecheck = epicRecheckReport(cmpForHalt, completedForHalt);
+
+      // BO-300d-1 — KI-BO-025: `plannedTicketPaths` already contains every
+      // ticket from EVERY batch the planner computed, including batches after
+      // the one that just halted. Those later-batch tickets are still plan
+      // members and still present in the epic folder, so `cmpForHalt` above
+      // classifies them as neither an addition nor a removal and
+      // `epicRecheckReport` says nothing about them at all — only the
+      // ticket(s) that failed IN THIS BATCH are named, via `haltSummary`.
+      // This names the rest explicitly, by identity (the plan set itself
+      // minus what is proven completed, currently failing in this batch, or
+      // removed) and states the resulting count, so the operator does not
+      // have to compare the plan against the epic folder by hand.
+      const haltedPathsThisBatch = haltedTickets
+        .map((r) => toWorktreePath(r.ticket_path, realWorktreePath))
+        .filter(Boolean);
+      const notYetAttemptedPaths = plannedTicketPaths.filter(
+        (p) =>
+          completedForHalt.indexOf(p) === -1 &&
+          haltedPathsThisBatch.indexOf(p) === -1 &&
+          cmpForHalt.removals.indexOf(p) === -1
+      );
+      // COUNT THE NAMED SET, DO NOT SUBTRACT (BO-300d-1) — the stated number
+      // below is the cardinality of this concatenation, not total-minus-built,
+      // so the count and the names it is drawn from cannot disagree.
+      const unbuiltNamedPaths = [
+        ...haltedPathsThisBatch,
+        ...notYetAttemptedPaths,
+        ...(haltRecheck.fields.discovered_after_planning || []),
+        ...(haltRecheck.fields.no_longer_present_not_completed || []),
+      ];
+      const unbuiltCount = unbuiltNamedPaths.length;
 
       return Object.assign(
         {
@@ -2305,6 +2335,10 @@ if (target_type === "epic") {
             `Epic "${epicTitle}" halted at batch ${batchNumber} — ` +
             `${haltedTickets.length} ticket(s) failed or blocked.` +
             (haltRecheck.headline ? ` Also: ${haltRecheck.headline}.` : "") +
+            (unbuiltCount > 0
+              ? ` ${unbuiltCount} piece(s) of work in total were not built: ` +
+                `${unbuiltNamedPaths.join(", ")}.`
+              : "") +
             haltRecheck.suffix,
           epic_path: worktreeEpicPath,
           title: epicTitle,
@@ -2318,6 +2352,9 @@ if (target_type === "epic") {
             "Resolve the blocker(s) and re-run /build-feature to resume.",
         },
         haltRecheck.fields,
+        notYetAttemptedPaths.length > 0
+          ? { not_yet_attempted: notYetAttemptedPaths }
+          : {},
         { epic_complete: false }
       );
     }
