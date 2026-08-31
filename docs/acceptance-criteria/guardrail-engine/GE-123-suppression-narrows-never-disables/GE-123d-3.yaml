@@ -129,7 +129,8 @@ amended_by:
   date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/23_TICKET-20260831-GE-123d-3.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -178,3 +179,4 @@ notes: |
   the guarantee that the NEW generic-credential exemption does not acquire the
   same shape. The fence is now also an it_requirement so a coder cannot reach
   for the existing file-level exemption as a template.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

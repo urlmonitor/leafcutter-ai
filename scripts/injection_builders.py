@@ -742,27 +742,72 @@ def _cmd_assemble_bundle(parsed: argparse.Namespace) -> int:
         Process exit code: 0 on success. 1 when a required layer is missing
         or unreadable — never a zero exit with a partial or empty bundle.
     """
-    layer_paths = (
+    # Required and optional layers are read in separate passes so their types
+    # differ honestly: a required layer is a str, an optional one is str|None.
+    # A single pass over both produced a dict[str, str | None] whose required
+    # entries were then passed to str parameters — which type-checks as an
+    # error even though it cannot happen at runtime, because argparse marks
+    # these three required=True and _read_optional_layer only returns None for
+    # a None path.
+    required_layer_paths = (
         ("architecture", parsed.architecture),
         ("high_level", parsed.high_level),
         ("prior_tests", parsed.prior_tests),
+    )
+    optional_layer_paths = (
         ("prior_outputs", parsed.prior_outputs),
         ("working_diff", parsed.working_diff),
     )
-    contents: dict[str, str | None] = {}
-    for layer_name, path_str in layer_paths:
+
+    required: dict[str, str] = {}
+    for layer_name, path_str in required_layer_paths:
         content, error = _read_optional_layer(path_str, layer_name)
         if error is not None:
             print(f"injection_builders assemble-bundle: {error}", file=sys.stderr)
             return 1
-        contents[layer_name] = content
+        if content is None:
+            # Unreachable while argparse marks this layer required=True. Kept
+            # as a fail-closed guard rather than an assert: were that flag ever
+            # relaxed, the alternative is None reaching the "\n\n".join() and
+            # raising a TypeError far from its cause -- or, worse, a layer
+            # silently emptied.
+            print(
+                "injection_builders assemble-bundle: required layer "
+                f"'{layer_name}' has no path",
+                file=sys.stderr,
+            )
+            return 1
+        if not content.strip():
+            # An empty required layer is refused HERE, at assembly time, because
+            # this is the only place the fact is knowable. Downstream the layers
+            # are concatenated into one string and the boundaries are gone, so a
+            # consumer can only guess at emptiness from formatting -- which is
+            # exactly what the lane used to do, by looking for a run of 4+
+            # newlines, and exactly why it refused perfectly good bundles whose
+            # architecture layer happened to end in a blank line. Refusing here
+            # names the layer and needs no heuristic.
+            print(
+                "injection_builders assemble-bundle: required layer "
+                f"'{layer_name}' at {path_str!r} is empty",
+                file=sys.stderr,
+            )
+            return 1
+        required[layer_name] = content
+
+    optional: dict[str, str | None] = {}
+    for layer_name, path_str in optional_layer_paths:
+        content, error = _read_optional_layer(path_str, layer_name)
+        if error is not None:
+            print(f"injection_builders assemble-bundle: {error}", file=sys.stderr)
+            return 1
+        optional[layer_name] = content
 
     bundle = assemble_context_bundle(
-        architecture=contents["architecture"],
-        high_level=contents["high_level"],
-        prior_tests=contents["prior_tests"],
-        prior_outputs=contents["prior_outputs"],
-        working_diff=contents["working_diff"],
+        architecture=required["architecture"],
+        high_level=required["high_level"],
+        prior_tests=required["prior_tests"],
+        prior_outputs=optional["prior_outputs"],
+        working_diff=optional["working_diff"],
         breakpoint_marker=parsed.breakpoint_marker,
     )
     print(bundle)

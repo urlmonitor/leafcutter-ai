@@ -132,7 +132,8 @@ amended_by:
   date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/27_TICKET-20260831-GE-123d-5.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -179,3 +180,4 @@ notes: |
   an observation — a reviewer aligning the two announcement contracts would
   otherwise reasonably add the verbatim text back, which is the one change this
   AC exists to prevent.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

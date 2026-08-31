@@ -2613,3 +2613,90 @@ session by an operator who had read it.
 
 **Pattern:** a correct guard reachable from exactly one entry point, protecting against a
 condition whose only symptom is silence.
+
+---
+
+### KI-BP-20260831-0620 — The mypy CI job's `scripts/**/*.py` pathspec matches no file directly in `scripts/`, so 59 of 107 tracked scripts have never been type-checked and the job reports SUCCESS for checking nothing
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 2 confirmed from CI logs (PRs #611 and #624); the pathspec has been wrong
+  for the life of the job, so the true count is every PR that changed only a top-level script
+- **First seen:** 2026-08-31 (found); defect predates it
+- **Where:** `.github/workflows/ci.yml:347` — the `CHANGED=$(git diff … )` line of the
+  `Type-check changed files (mypy, informational)` job. The only occurrence of this pattern
+  in `.github/workflows/`; every other workflow file is clean.
+
+**Symptom.** The job reports SUCCESS in two indistinguishable situations: when mypy ran and
+found nothing, and when mypy never ran at all.
+
+**Cause.** The pathspec is:
+
+```
+git diff --name-only --diff-filter=ACM "origin/$BASE"...HEAD \
+  -- 'scripts/**/*.py' 'tests/**/*.py' 'unit_tests/**/*.py'
+```
+
+`scripts/**/*.py` requires a `/` between the `**` and the `*.py`, so it only matches a file
+at least one directory *below* `scripts/`. A file sitting directly in `scripts/` never
+matches. Demonstrated against a real merge that changed three top-level scripts:
+
+```console
+$ git diff --name-only --diff-filter=ACM origin/main~1...origin/main -- 'scripts/**/*.py'
+$ git diff --name-only --diff-filter=ACM origin/main~1...origin/main -- 'scripts/*.py'
+scripts/build.py
+scripts/build_helpers.py
+scripts/build_phases.py
+```
+
+The first command prints nothing. **59** tracked `.py` files sit directly in `scripts/` and
+are invisible to this gate; 48 live in subdirectories and are seen. The invisible majority
+includes `build.py`, `injection_builders.py`, `roadmap_query.py`, `knowledge_query.py` and
+the rest of the top-level tooling.
+
+`unit_tests/**/*.py` is unaffected in practice only because tests live in subdirectories
+(`unit_tests/workflows/…`). The same trap is waiting for any test file placed directly in
+`unit_tests/`.
+
+**Two confirmed instances, both from CI logs rather than inference.**
+
+- **PR #611** changed `scripts/injection_builders.py` along with four test files. The job
+  logged `Type-checking changed files:` followed by exactly the four `unit_tests/workflows/`
+  paths. `scripts/injection_builders.py` is absent from the list. The job passed.
+- **PR #624** changed `scripts/injection_builders.py` and a changelog — nothing else. The job
+  logged `No changed Python files under scripts/, tests/, or unit_tests/ — skipping mypy.`
+  and exited 0. **That PR existed specifically to fix three mypy errors in that file**, and
+  the check that was supposed to confirm the fix never looked at it.
+
+The second is the sharper one: a green mypy check on a PR whose entire purpose was to make
+mypy green, achieved by not running mypy.
+
+**How the errors ever surfaced at all.** Not through the gate's own pathspec. `BO-2400c-1-vii`
+added a test under `unit_tests/workflows/` that imports `scripts.injection_builders`; mypy
+followed the import and reported the errors as coming from that module. So the only reason
+this file was ever type-checked is that something *in a matched directory* happened to import
+it. Coverage is therefore accidental and depends on import graphs, not on what a PR changed.
+
+**Fix.** Replace `'scripts/**/*.py'` with a pair that covers both depths — `'scripts/*.py'`
+and `'scripts/**/*.py'` — or use git's explicit glob magic, or simply `'scripts/'` with a
+`*.py` filter applied afterwards. Do the same for `tests/` and `unit_tests/`. Expect a burst
+of pre-existing findings on the first run that actually sees the top-level files; the job is
+`continue-on-error: true`, so that is noise rather than a merge blocker, but it should be
+triaged rather than left to accumulate.
+
+**And make the skip distinguishable from a pass.** Even fixed, the current shape emits
+SUCCESS when `CHANGED` is empty. That is legitimate for a PR touching no Python, but it is the
+same signal as a clean run, which is what let this hide. The skip branch should say what it
+skipped and why, in a form a reader scanning the checks list can tell apart from a real pass.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — a gate whose *selection* step
+silently resolves to the empty set, so it passes by checking nothing. Same family as
+`KI-ACS-001`, where `validate_ac_schema.py` given a bare directory matched no files, printed
+`No YAML files to validate.` and exited 0 for eight days while being cited as the defence
+against store rot. The lesson repeats: **when a gate's scope is computed, the computation is
+part of the gate, and an empty scope must never be reported the same way as a satisfied one.**
+
+**Related.** `KI-ACS-001` (empty-scope run reported as clean). `KI-BO-20260826-1900` (the
+done-proof gate's nodeid lookup that cannot match a parametrized test — the fail-*closed*
+counterpart; this one fails open). `BP-1100b-5` (presence-only assertions ceasing to count as
+coverage — the same underlying question of whether a check actually examined anything).

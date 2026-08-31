@@ -171,10 +171,56 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-900g-9-i
-implemented_by: []
+implemented_by:
+- scripts/build_phases.py
+- scripts/build.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
+  IMPLEMENTATION LANDED 2026-08-31, work_status DELIBERATELY LEFT todo.
+
+  The behaviour this AC specifies is shipped and covered by
+  unit_tests/test_bp_900g_9.py (4 tests, all four test_spec entries). All five
+  declared-entry deploy loops now record a DeployFailure and the build raises
+  once at the end, exiting non-zero and naming every finding.
+
+  work_status stays todo because the child L3, BP-900g-9-i, is todo and its
+  third clause is NOT satisfied by this change: it requires that after a
+  failure the target directory "does not contain a subset of the declared
+  files presented as if it were the complete deploy". The implementation here
+  lets the resolvable entries write and raises at the end of the run, so the
+  target DOES hold a partial deploy — recognisable as failed by the non-zero
+  exit and the report, but a partial deploy nonetheless. Flipping this L2 to
+  done over an unfinished -i constraint is the dominant phantom-done shape
+  CLAUDE.md names, so it is not being done.
+
+  THE OPEN DESIGN QUESTION for whoever builds BP-900g-9-i: satisfying that
+  clause means choosing between (a) validating every declaration's sources in
+  a preflight before any phase writes, leaving the target untouched — clean,
+  but the phase never runs, which sits awkwardly with this AC's "When the
+  phase runs" framing; (b) writing a failure marker into the target; or
+  (c) rolling back what was written. That is a real decision, not an
+  oversight, and it belongs to that AC rather than being pre-empted here.
+
+  ENUMERATION OF ENFORCEMENT POINTS (required by n_location_rule: all).
+  Five declared-entry loops were found and flipped:
+    1. build_ac_store                     — iterates AC_STORE_DEPLOY_MAP
+    2. build_workflow_tools               — iterates a hardcoded deploy list
+    3. build_knowledge_scripts            — iterates a hardcoded deploy list
+    4. build_agent_support_scripts        — iterates AGENT_SUPPORT_SCRIPT_FILES
+    5. _deploy_fast_lane_release_dependency — one declared path, warn+return 0
+  Three further `is_file()` sites were audited and deliberately NOT flipped,
+  because they iterate a GLOB of what exists on disk rather than a
+  declaration — build_build_orchestration_scripts, build_template_standalone_scripts,
+  and the pattern loop at ~3442. A glob cannot have a missing declared source;
+  there the check filters directories and skipping is correct. Flipping them
+  would manufacture failures for files nothing ever promised to ship.
+
+  PRE-EXISTING STALE SET: EMPTY, verified rather than assumed. Every declared
+  entry in all five loops resolves today — confirmed by running the real build
+  and checking each loop actually executed and copied entries, not by the
+  absence of warnings. So this flip turns no existing build red.
+
   HOLE B, second build-time half — the fail-open that hides the first one.
 
   WHY THIS IS SEPARATE FROM BP-900g-8. g-8 catches a dependency that was never

@@ -180,7 +180,8 @@ amended_by:
       untouched.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/26_TICKET-20260831-GE-123d-4-ii.md
 change_target: prompt
 risk_surface: contract_boundary
 notes: |
@@ -221,3 +222,4 @@ notes: |
   reference documentation about a program's behaviour, so documentation-expert
   is the correct owner. The ADR-001 obligation is the same either way: the
   templates/ copy is canonical and the deployed copies are build outputs.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

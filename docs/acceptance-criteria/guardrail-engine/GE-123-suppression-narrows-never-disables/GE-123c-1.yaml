@@ -132,7 +132,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-123c-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/12_TICKET-20260831-GE-123c-1.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -173,3 +174,4 @@ notes: |
   the multi-file scan function the pre-commit check imports. Left at python-coder,
   complexity M (one predicate plus its announcement, in one module, with the
   existing warn-and-skip path reused rather than rebuilt).
+target_epic: EPIC-SuppressionNarrowsNeverDisables
