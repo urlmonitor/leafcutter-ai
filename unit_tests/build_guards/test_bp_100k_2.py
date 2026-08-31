@@ -67,6 +67,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -82,9 +83,58 @@ _CONFIG_DIR = _REPO_ROOT / "config"
 _CG_TEMPLATES_SRC = _TEMPLATES_DIR / "scripts" / "commit_guardian"
 _RESOLVE_ROOT_SRC = _CG_TEMPLATES_SRC / "_resolve_root.py"
 _CHECK_OUTPUT_DRIFT_SRC = _CG_TEMPLATES_SRC / "check_output_drift.py"
+_BUILD_PHASES_SRC = _SCRIPTS_DIR / "build_phases.py"
 
 _SUBPROCESS_TIMEOUT_SECONDS = 20
 _UNIQUE_COUNTER = [0]
+
+# Top-level dirs _build_synthetic_full_package() already copies wholesale.
+# _derive_additional_package_root_dirs() uses this to skip anything already
+# covered rather than re-deriving what these three already guarantee.
+_WHOLESALE_COPIED_TOP_DIRS = {"templates", "scripts", "config"}
+
+# A "PACKAGE_ROOT / "seg1" / "seg2" / ..." literal chain in build_phases.py —
+# e.g. ``PACKAGE_ROOT / "docs" / "product-truth"`` in build_product_truth().
+_PACKAGE_ROOT_CHAIN_RE = re.compile(r'PACKAGE_ROOT((?:\s*/\s*"[^"/]+")+)')
+_CHAIN_SEGMENT_RE = re.compile(r'"([^"/]+)"')
+
+
+def _derive_additional_package_root_dirs() -> list[Path]:
+    """Find real-package directories a deploy phase declares as a source
+    but which aren't already covered by the wholesale templates/scripts/config
+    copies below, so this fixture tracks new deploy sources automatically
+    instead of going stale again the way it did for BP-900g-9
+    (``build_product_truth``'s ``docs/product-truth`` source was never added
+    here, so the synthetic package had no ``docs/`` at all).
+
+    Scans the REAL ``scripts/build_phases.py`` source text for
+    ``PACKAGE_ROOT / "seg1" / "seg2" / ...`` literal chains (how every
+    current deploy-source constant in that file is written — see
+    ``product_truth_src = PACKAGE_ROOT / "docs" / "product-truth"``), keeps
+    only the chains whose first segment is not already wholesale-copied, and
+    returns each one that resolves to a real, on-disk directory. A chain
+    resolving to a file (e.g. ``config/agent_registry.json``) or to nothing
+    is skipped — this only adds fixture coverage for confirmed real
+    directories, it never fabricates one.
+
+    Returns:
+        Repo-relative ``Path`` objects (e.g. ``Path("docs/product-truth")``),
+        deduplicated, in first-seen order.
+    """
+    try:
+        text = _BUILD_PHASES_SRC.read_text(encoding="utf-8")
+    except OSError:
+        return []
+
+    seen: dict[Path, None] = {}
+    for chain_match in _PACKAGE_ROOT_CHAIN_RE.finditer(text):
+        segments = _CHAIN_SEGMENT_RE.findall(chain_match.group(1))
+        if not segments or segments[0] in _WHOLESALE_COPIED_TOP_DIRS:
+            continue
+        rel_path = Path(*segments)
+        if (_REPO_ROOT / rel_path).is_dir():
+            seen.setdefault(rel_path, None)
+    return list(seen.keys())
 
 
 # ---------------------------------------------------------------------------
@@ -93,14 +143,27 @@ _UNIQUE_COUNTER = [0]
 
 
 def _build_synthetic_full_package(workspace: Path) -> Path:
-    """Copy the REAL templates/, scripts/, and config/ trees into a
-    synthetic package root under ``workspace``.
+    """Copy the REAL templates/, scripts/, config/ trees — plus any other
+    directory a deploy phase declares as a source — into a synthetic package
+    root under ``workspace``.
 
     Mirrors the self-hosting production layout
     (``package_root.parent == target_root passed to build.py``) so
     ``_compute_output_mappings()``'s relative-path arithmetic behaves
     exactly as it does for a real ``python scripts/build.py --target-dir .``
     run, without mutating this worktree's own real ``.build_manifest.json``.
+
+    ``build_product_truth()`` sources from ``docs/product-truth/{scripts,
+    schemas}`` (a directory this helper never copied), so a build against
+    this fixture aborted under BP-900g-9's fail-closed missing-source guard
+    even though the fixture's own name claims "full package" (BP-900g-9
+    test-fixture staleness finding). Rather than hardcode that one path back
+    in — the same hardcoding that let it go stale — this now derives any
+    additional required top-level source directory from
+    ``scripts/build_phases.py`` itself via
+    ``_derive_additional_package_root_dirs()``, so a ninth deploy phase
+    sourcing from a new location in the future is picked up automatically
+    instead of silently reproducing this same gap.
 
     Args:
         workspace: Temp directory to build the synthetic layout inside.
@@ -113,6 +176,10 @@ def _build_synthetic_full_package(workspace: Path) -> Path:
     shutil.copytree(_TEMPLATES_DIR, pkg_root / "templates", ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copytree(_SCRIPTS_DIR, pkg_root / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copytree(_CONFIG_DIR, pkg_root / "config", ignore=shutil.ignore_patterns("__pycache__"))
+    for rel_path in _derive_additional_package_root_dirs():
+        dest = pkg_root / rel_path
+        if not dest.exists():
+            shutil.copytree(_REPO_ROOT / rel_path, dest, ignore=shutil.ignore_patterns("__pycache__"))
     return pkg_root
 
 

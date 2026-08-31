@@ -2359,3 +2359,55 @@ was overwritten by `4c47882a` within the hour. The deploy tree, the main checkou
 tree, and a worktree's very existence are all writable by a session that does not know you
 exist — so treat an uncommitted edit anywhere outside your own worktree as volatile, and commit
 register entries immediately rather than leaving them staged.
+
+---
+
+### KI-BP-20260831-0728 — The hook-script integrity check strips the `hooks/` segment off every declared entry, so it reports three real scripts as missing on every build
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/build_precommit.py`, `_check_hook_script_integrity()`
+
+**Symptom.** Every build prints three integrity warnings:
+
+```
+Hook 'check-agent-spawn-consistency': script 'check_agent_spawn_consistency.py' not found
+  at canonical path .../templates/scripts/commit_guardian/check_agent_spawn_consistency.py
+Hook 'check-agent-verification-consistency': script ... not found at canonical path ...
+Hook 'check-predone-scope': script 'check_files_touched_reconciliation.py' not found ...
+```
+
+All three scripts exist. They live under a `hooks/` subdirectory, and
+`commit_guardian.json`'s `entry` fields point at them correctly —
+`.../commit_guardian/hooks/check_agent_spawn_consistency.py`. The check computes
+`cg_dir = TEMPLATES_DIR / "scripts" / "commit_guardian"`, strips the path prefix off the
+declared entry, and looks for a flat filename in `cg_dir`. The `hooks/` segment is discarded,
+so the lookup can never succeed for any hook that lives in a subdirectory.
+
+**Not a fixture artefact.** Found while diagnosing an unrelated synthetic-package test failure,
+where the first hypothesis was that the test fixture had not copied those files. It had — the
+fixture copies `templates/` wholesale including `hooks/`. The mismatch reproduces identically
+against the real, non-synthetic tree. Confirmed by reading the `entry` values in
+`commit_guardian.json` against the resolution in `_check_hook_script_integrity()`.
+
+**Why it has survived.** The check is warning-only — it does not abort the build and does not
+change the exit status. So it has been printing three false alarms on every build for however
+long those hooks have lived in `hooks/`, and the cost has been paid in attention rather than in
+failures. That is also the hazard: an integrity check whose output is known-noisy trains
+everyone to skim past it, so a *real* missing hook script would read exactly like the three
+false ones.
+
+**Fix direction.** Resolve the declared `entry` path relative to the commit-guardian root
+instead of discarding its directory component, so a hook declared at `hooks/<name>.py` is looked
+for at `hooks/<name>.py`. Then check whether any hook is genuinely missing once the false
+positives clear — that is currently unknowable from the output. Consider whether the check
+should fail rather than warn once it is accurate; a hook registered in the manifest whose script
+does not exist is the `KI-BP-018` fail-open shape, and `build_precommit.py` separately emits a
+registered hook into the generated config even when its script is absent (its own docstring says
+it "does not raise or return an error").
+
+**Pattern:** a check that mangles the path it was given and reports the result as the file's
+absence — the same family as `KI-BP-018`, where the guard's own input is wrong rather than the
+thing it guards.
