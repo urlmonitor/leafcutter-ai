@@ -54,14 +54,14 @@ if str(_SCRIPTS_DIR) not in sys.path:
 import build_phases as _bp  # noqa: E402 -- after sys.path setup
 
 _BUILD_PY = _SCRIPTS_DIR / "build.py"
-_DECLARED_SOURCE = _SCRIPTS_DIR / "ac_store" / "_component_migration_map.py"
-_BUILD_PHASES_PY = _SCRIPTS_DIR / "build_phases.py"
 
-# Reused for the three newly-converted-site tests below (angle: reachability).
-# Loaded read-only via spec_from_file_location under a private module name,
-# per the established pattern in unit_tests/commit_guardian/test_bp_100k_3_i.py
-# et al. — a second, hand-authored copy of the same synthetic-package builder
-# is worse than reusing the proven one.
+# Reused by every test below that mutates a declared source and therefore
+# must not touch this worktree's own real scripts/build_phases.py or
+# scripts/ac_store/ — tests 2, 4, 6, and 7. Loaded read-only via
+# spec_from_file_location under a private module name, per the established
+# pattern in unit_tests/commit_guardian/test_bp_100k_3_i.py et al. — a
+# second, hand-authored copy of the same synthetic-package builder is worse
+# than reusing the proven one.
 _SYNTHETIC_PACKAGE_HELPER_PATH = (
     _REPO_ROOT / "unit_tests" / "build_guards" / "test_bp_100k_2.py"
 )
@@ -105,13 +105,16 @@ def _load_build_synthetic_full_package():
 def _run_build_in_scratch_pkg(pkg_root: Path, target: Path) -> subprocess.CompletedProcess[str]:
     """Run ``<pkg_root>/scripts/build.py`` as a subprocess against *target*.
 
-    Used by the three newly-converted-site tests below. These mutate (delete)
-    a declared source under the package tree, so they run against a
+    Used by tests 2, 4, 6, and 7 below. Each of these mutates (deletes or
+    rewrites) a declared source under the package tree, so they run against a
     ``shutil.copytree`` scratch copy (built by
     ``_build_synthetic_full_package``) rather than this worktree's own real
-    ``scripts/build_phases.py`` — deleting a real source directory or
-    template out from under this worktree, even temporarily, is not an
-    acceptable way to drive a subprocess test.
+    ``scripts/`` tree — deleting a real source directory, rewriting the real
+    tracked ``build_phases.py``, or deleting a real template out from under
+    this worktree, even temporarily restored in a ``finally``, is not an
+    acceptable way to drive a subprocess test: a ``finally`` does not survive
+    the process being killed (CI cancellation, OOM, sandbox termination, or a
+    concurrent session sharing this checkout).
     """
     return subprocess.run(
         [sys.executable, str(pkg_root / "scripts" / "build.py"), "--target-dir", str(target)],
@@ -185,29 +188,37 @@ def test_bp_900g_9_build_subprocess_exits_non_zero_on_a_declared_but_absent_sour
     this test was written. The exit code is the whole assertion; the naming
     assertions below are the criterion's "names the phase, the entry, and the
     source path", not a substitute for it.
+
+    Runs against a ``shutil.copytree`` scratch package built by
+    ``_build_synthetic_full_package`` (the same helper tests 5-7 use), rather
+    than deleting the real tracked ``scripts/ac_store/_component_migration_map.py``
+    in this worktree and restoring it in a ``finally``. A ``finally`` does not
+    survive the process being killed (CI cancellation, OOM, sandbox
+    termination) — a leftover deletion would corrupt this worktree's real
+    ``scripts/ac_store/`` and, unlike before BP-900g-9, would then make every
+    subsequent ``build.py`` invocation exit non-zero instead of just warning.
     """
-    original = _DECLARED_SOURCE.read_bytes()
-    try:
-        _DECLARED_SOURCE.unlink()
+    build_synthetic_full_package = _load_build_synthetic_full_package()
+    pkg_root = build_synthetic_full_package(tmp_path / "workspace")
+    declared_source = pkg_root / "scripts" / "ac_store" / "_component_migration_map.py"
+    declared_source.unlink()
 
-        result = _run_build(tmp_path / "withheld_target")
-        combined = result.stdout + result.stderr
+    result = _run_build_in_scratch_pkg(pkg_root, tmp_path / "withheld_target")
+    combined = result.stdout + result.stderr
 
-        assert result.returncode != 0, (
-            "build.py exited 0 while the deploy declaration named "
-            "'scripts/ac_store/_component_migration_map.py', whose source was "
-            "deleted. The build reported a consumer install it did not produce. "
-            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
-        )
-        assert "build_ac_store" in combined, (
-            f"The failure must name the declaring phase. Output:\n{combined}"
-        )
-        assert "_component_migration_map.py" in combined, (
-            f"The failure must name the entry and its source path. "
-            f"Output:\n{combined}"
-        )
-    finally:
-        _DECLARED_SOURCE.write_bytes(original)
+    assert result.returncode != 0, (
+        "build.py exited 0 while the deploy declaration named "
+        "'scripts/ac_store/_component_migration_map.py', whose source was "
+        "deleted. The build reported a consumer install it did not produce. "
+        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    assert "build_ac_store" in combined, (
+        f"The failure must name the declaring phase. Output:\n{combined}"
+    )
+    assert "_component_migration_map.py" in combined, (
+        f"The failure must name the entry and its source path. "
+        f"Output:\n{combined}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +285,16 @@ def test_bp_900g_9_three_unresolvable_entries_are_all_named_in_one_run(
     deleting three more real files — three real deletions that each dodge every
     earlier guard do not exist, and "the declaration names a path with no
     source" is exactly what a synthetic entry is.
+
+    Injects into a ``shutil.copytree`` scratch package built by
+    ``_build_synthetic_full_package`` (the same helper tests 5-7 use), rather
+    than rewriting the real tracked ``scripts/build_phases.py`` in this
+    worktree and restoring it in a ``finally``. A ``finally`` does not survive
+    the process being killed (CI cancellation, OOM, sandbox termination, an
+    ``xdist``-concurrent session in the same checkout) — a leftover injected
+    copy would stage three bogus ``AC_STORE_DEPLOY_MAP`` entries into the real
+    ``build_phases.py`` unnoticed, and unlike before BP-900g-9, that leftover
+    would then make every subsequent ``build.py`` exit 1.
     """
     probe_names = (
         "__bp900g9_absent_one.py",
@@ -283,33 +304,33 @@ def test_bp_900g_9_three_unresolvable_entries_are_all_named_in_one_run(
     injected = "".join(
         f'    ("scripts/ac_store/{name}", "{name}"),\n' for name in probe_names
     )
-    original_text = _BUILD_PHASES_PY.read_text(encoding="utf-8")
+
+    build_synthetic_full_package = _load_build_synthetic_full_package()
+    pkg_root = build_synthetic_full_package(tmp_path / "workspace")
+    scratch_build_phases = pkg_root / "scripts" / "build_phases.py"
+    original_text = scratch_build_phases.read_text(encoding="utf-8")
     anchor = "AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (\n"
     assert anchor in original_text, (
         "Fixture anchor not found — the declaration's literal form changed and "
         "this test can no longer inject entries into it."
     )
+    scratch_build_phases.write_text(
+        original_text.replace(anchor, anchor + injected, 1), encoding="utf-8"
+    )
 
-    try:
-        _BUILD_PHASES_PY.write_text(
-            original_text.replace(anchor, anchor + injected, 1), encoding="utf-8"
-        )
+    result = _run_build_in_scratch_pkg(pkg_root, tmp_path / "three_target")
+    combined = result.stdout + result.stderr
 
-        result = _run_build(tmp_path / "three_target")
-        combined = result.stdout + result.stderr
-
-        assert result.returncode != 0, (
-            "build.py exited 0 with three declared entries whose sources do not "
-            f"exist.\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
-        )
-        missing_from_report = [n for n in probe_names if n not in combined]
-        assert not missing_from_report, (
-            "A single build run must name EVERY unresolvable entry, so one build "
-            "tells the author the whole remediation set. These were not named: "
-            f"{missing_from_report}.\nOutput:\n{combined}"
-        )
-    finally:
-        _BUILD_PHASES_PY.write_text(original_text, encoding="utf-8")
+    assert result.returncode != 0, (
+        "build.py exited 0 with three declared entries whose sources do not "
+        f"exist.\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    missing_from_report = [n for n in probe_names if n not in combined]
+    assert not missing_from_report, (
+        "A single build run must name EVERY unresolvable entry, so one build "
+        "tells the author the whole remediation set. These were not named: "
+        f"{missing_from_report}.\nOutput:\n{combined}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -467,6 +488,53 @@ def test_bp_900g_9_build_orchestration_missing_source_dir_produces_a_failure_rec
     assert record.source_path == str(empty_pkg / "scripts" / "build_orchestration"), (
         f"The record must carry the source path that was not found. "
         f"Got: {record.source_path!r}"
+    )
+
+    with pytest.raises(_bp.DeployDeclarationError):
+        _bp.raise_if_deploy_failures()
+
+
+def test_bp_900g_9_build_orchestration_and_fast_lane_dependency_both_named_in_one_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # covers: BP-900g-9
+    """``build_build_orchestration_scripts`` has TWO declared sources —
+    its own ``scripts/build_orchestration/`` directory, and, via the call to
+    ``_deploy_fast_lane_release_dependency`` at the end of the same function,
+    ``scripts/release/check_changelog_presence.py``. When BOTH are absent, a
+    single call must record BOTH failures — the same "every finding in one
+    run, not one per run" property test 4 asserts for
+    ``AC_STORE_DEPLOY_MAP``, applied to this function's own two-site shape.
+
+    Regression test for a review finding: the fail-closed fix for the
+    directory case did ``record_deploy_failure(...); return 0``, correct for
+    that check in isolation, but the early ``return`` also skipped the call
+    to ``_deploy_fast_lane_release_dependency()`` that follows it in the SAME
+    function body. So a consumer install missing both declared sources got
+    only the directory failure recorded per build — one build-fix-build
+    cycle per source instead of both surfacing together, exactly what
+    accumulate-then-raise exists to prevent. The fix guards only the glob
+    loop and always reaches the fast-lane dependency check.
+    """
+    empty_pkg = tmp_path / "empty_pkg"
+    empty_pkg.mkdir()
+    monkeypatch.setattr(_bp, "PACKAGE_ROOT", empty_pkg)
+
+    _bp.reset_deploy_failures()
+    _bp.build_build_orchestration_scripts(tmp_path / "target", {}, dry_run=True, force=False)
+
+    failures = _bp.get_deploy_failures()
+    entries = {f.entry for f in failures if f.phase == "build_build_orchestration_scripts"}
+
+    assert "scripts/build_orchestration" in entries, (
+        "The function's own declared source directory must be recorded when "
+        f"absent. Recorded entries: {entries}"
+    )
+    assert "scripts/release/check_changelog_presence.py" in entries, (
+        "The fast-lane release dependency, declared and checked later in the "
+        "SAME function, must ALSO be recorded when absent — an early return "
+        "for the first miss must not skip the second check. "
+        f"Recorded entries: {entries}"
     )
 
     with pytest.raises(_bp.DeployDeclarationError):
