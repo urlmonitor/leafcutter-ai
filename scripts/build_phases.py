@@ -3316,9 +3316,15 @@ def build_build_orchestration_scripts(target_root: Path, config: dict[str, Any],
     written = 0
 
     if not src_dir.is_dir():
-        _log.warning(
-            "build_build_orchestration_scripts: source directory not found, skipping: %s",
-            src_dir,
+        # BP-900g-9 (n_location_rule: all). This is the phase's OWN declared
+        # source directory, not a glob of what happens to exist on disk — its
+        # absence is a dropped promise, the same shape already closed for the
+        # sibling loops above. Record and return 0: there is nothing further
+        # to iterate in this function's own loop, but the accumulated failure
+        # is still raised later by raise_if_deploy_failures(), so the build
+        # exits non-zero for this too.
+        record_deploy_failure(
+            "build_build_orchestration_scripts", "scripts/build_orchestration", src_dir
         )
         return 0
 

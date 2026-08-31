@@ -410,6 +410,69 @@ def test_bp_900g_9_ac_store_docs_missing_template_fails_build(
     )
 
 
+def test_bp_900g_9_build_orchestration_missing_source_dir_produces_a_failure_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # covers: BP-900g-9
+    """angle: criterion. ``build_build_orchestration_scripts``'s OWN declared
+    source directory (``scripts/build_orchestration``) with no source
+    accumulates a record instead of a bare warning-and-skip.
+
+    NOT run through the real ``build.py`` subprocess like tests 2, 6 and 7.
+    ``fast_lane.py`` (inside ``scripts/build_orchestration/``) is referenced
+    by ``{{config.output_root}}/scripts/build_orchestration/fast_lane.py`` in
+    ``templates/agents/build-ac.md``, so deleting the directory wholesale
+    from a real package tree trips the earlier ``_check_script_reference_guard``
+    preflight before any deploy phase runs — the subprocess would exit
+    non-zero for a reason that has nothing to do with this site, making that
+    form of the test vacuous (verified empirically; see the module docstring's
+    ARCHITECTURE note and test 5's docstring for the same trap on a sibling
+    site). Mirrors test 1 and test 5's fixture choice instead: point
+    ``PACKAGE_ROOT`` at an empty tree so the declared directory check itself
+    is unresolvable, and assert on the accumulated record's fields — never on
+    the log text, since the pre-fix branch already logs the identical
+    "source directory not found, skipping" message.
+
+    Filters accumulated failures to the exact entry
+    ``"scripts/build_orchestration"``, because this function also calls
+    ``_deploy_fast_lane_release_dependency`` (already converted), which
+    records its own, differently-named entry
+    (``scripts/release/check_changelog_presence.py``) against the same
+    ``PACKAGE_ROOT``-pointed empty tree. Asserting on the unfiltered set
+    would pass on that unrelated record alone and never prove this site
+    was reached.
+    """
+    empty_pkg = tmp_path / "empty_pkg"
+    empty_pkg.mkdir()
+    monkeypatch.setattr(_bp, "PACKAGE_ROOT", empty_pkg)
+
+    _bp.reset_deploy_failures()
+    _bp.build_build_orchestration_scripts(tmp_path / "target", {}, dry_run=True, force=False)
+
+    failures = _bp.get_deploy_failures()
+    dir_failures = [
+        f
+        for f in failures
+        if f.phase == "build_build_orchestration_scripts"
+        and f.entry == "scripts/build_orchestration"
+    ]
+    assert dir_failures, (
+        "build_build_orchestration_scripts' own declared source directory "
+        "check met an absent source and accumulated no failure record for "
+        "'scripts/build_orchestration' — it warned and continued, which is "
+        f"the defect. All failures seen: {failures}"
+    )
+
+    record = dir_failures[0]
+    assert record.source_path == str(empty_pkg / "scripts" / "build_orchestration"), (
+        f"The record must carry the source path that was not found. "
+        f"Got: {record.source_path!r}"
+    )
+
+    with pytest.raises(_bp.DeployDeclarationError):
+        _bp.raise_if_deploy_failures()
+
+
 def test_bp_900g_9_product_truth_missing_source_subdir_fails_build(
     tmp_path: Path,
 ) -> None:

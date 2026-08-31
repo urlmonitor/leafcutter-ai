@@ -2925,5 +2925,43 @@ write-if-absent scaffolds whose *target* absence is normal, so it is the missing
 that must fail. If no, say so explicitly in BP-900g-9's notes so the exclusion is a recorded
 decision rather than an artefact of how the audit was framed.
 
+**CORRECTION, 2026-08-31 — this entry was itself incomplete when first written, in a way that
+matters more than the argument above.** As originally filed it debated the *principle* of the
+"warns = in scope, silent = deferred" boundary while a site squarely on the IN-SCOPE side of that
+boundary had never been swept: `build_build_orchestration_scripts`' own declared source-directory
+check still did `_log.warning(...); return 0`. Review found it. Auditing whether a boundary is
+principled is worthless if you have not first confirmed everything inside it was actually covered
+— and this entry did the former while skipping the latter. That site is now converted; the entry
+is corrected rather than quietly amended.
+
+Two things hid it, both worth knowing because both defeat search:
+
+- **The phase name lies about location.** `_deploy_fast_lane_release_dependency`, called nine
+  lines below inside the *same function*, was already converted, and its `record_deploy_failure`
+  call passes the phase string `"build_build_orchestration_scripts"`. Searching that phase name
+  returns a hit inside the function, which reads as "covered". It is not — the hit belongs to the
+  helper, not to the directory check.
+- **The log string had already been "fixed twice".** Its warning uses the same template as
+  `build_agent_support_scripts` and `build_product_truth` — `"source directory not found,
+  skipping"` — so grepping that string and fixing a couple of matches looks complete.
+
+That is now the fifth distinct audit method to miss a site in this one file: a search framed on
+loops using `continue`; a grep keyed on `_log.warning`; a "glob-shaped, out of scope" judgement;
+a `git stash` comparison that could not distinguish a stale build output from a real defect; and
+phase-name matching. Every one failed the same way — the key could not see the thing. Reading
+every `build_*` and `_deploy_*` function and asking what each does when its named source is absent
+is the only method that has found them, and it has found them every time. Treat that as the
+required method for any "find every instance" audit of `scripts/build_phases.py`, not as a
+preference.
+
+**One further candidate, found by that reading and deliberately not fixed here.**
+`build_template_standalone_scripts` globs `templates/scripts/*.py`, but its own docstring names
+`setup_ticket_worktree.py` as the declared deliverable. If the tree exists and that one file is
+deleted, the glob simply omits it — no warning, no failure, nothing anywhere. Arguably worse than
+the nine now converted, because those at least logged. It is left alone because its declaration
+lives in prose rather than in a machine-readable list, which makes it a different shape from the
+rest and a judgement rather than a mechanical conversion. Worth its own decision.
+
 **Pattern:** a scope boundary drawn on a property the governing criterion explicitly says is not
-the observable.
+the observable — and, in this entry's first draft, a boundary audited for principle without being
+audited for coverage.
