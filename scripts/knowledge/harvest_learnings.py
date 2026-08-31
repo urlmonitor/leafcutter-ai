@@ -68,7 +68,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 logger = logging.getLogger("harvest_learnings")
 
@@ -465,7 +465,14 @@ def harvest(
         # INF-700c-1 it_requirements, there is deliberately NO fallback here
         # — a default that synthesises a stand-in string from the record's
         # descriptive fields is exactly the defect this AC closes.
-        learning_text = event.get("text")
+        # cast, not a runtime check: `_is_no_learning_text` above has already
+        # rejected absent / null / blank / self-restating values and issued a
+        # `continue`, so by here `text` is necessarily a non-empty str. mypy
+        # cannot see across that helper, and adding an `isinstance` branch
+        # would be unreachable code asserting an invariant the helper owns.
+        # If that helper's contract ever changes, this cast is the line to
+        # revisit.
+        learning_text = cast(str, event.get("text"))
 
         if not dry_run:
             try:
