@@ -709,6 +709,9 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
     * ``commit_guardian`` scripts: source = ``templates/scripts/commit_guardian/<rel>``
     * ``feedback`` scripts: source = ``templates/scripts/feedback/<name>``
     * template-standalone scripts: source = ``templates/scripts/<name>``
+    * ``doc_compliance`` scripts: source = ``templates/doc-compliance/<rel>``
+      (note the source directory is hyphenated and NOT under ``scripts/``)
+    * ``sync_platforms`` scripts: source = ``templates/scripts/sync_platforms/<rel>``
 
     The guard must check SOURCE paths against the git index (``git ls-files``)
     because deploy paths for template-sourced scripts are never committed — only
@@ -766,6 +769,28 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
             f"'{src_fb}' is absent or contains no .py files. "
             "Restore templates/scripts/feedback/ from git history."
         )
+
+    # doc-compliance: source is templates/doc-compliance/, deployed to
+    # scripts/doc_compliance/. Paired with _manifest_doc_compliance_scripts —
+    # test_guard_source_paths_match_deployable_set asserts equal cardinality, and
+    # it caught this pair being added to only one side (KI-BP-023).
+    src_dc = package_root / "templates" / "doc-compliance"
+    if src_dc.is_dir():
+        for f in src_dc.rglob("*.py"):
+            if f.is_file():
+                source_paths.add(
+                    f"templates/doc-compliance/{f.relative_to(src_dc).as_posix()}"
+                )
+
+    # sync_platforms: source is templates/scripts/sync_platforms/, deployed to
+    # scripts/sync_platforms/. Paired with _manifest_sync_platforms_scripts.
+    src_sp = package_root / "templates" / "scripts" / "sync_platforms"
+    if src_sp.is_dir():
+        for f in src_sp.rglob("*.py"):
+            if f.is_file():
+                source_paths.add(
+                    f"templates/scripts/sync_platforms/{f.relative_to(src_sp).as_posix()}"
+                )
 
     # workflow-tool scripts: source namespace equals deploy namespace.
     scripts_src = package_root / "scripts"
