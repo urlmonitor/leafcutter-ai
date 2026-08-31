@@ -141,8 +141,18 @@ amended_by:
     and {result: not_applicable, reason, remediation}. The negative spells not_applicable,
     NOT the literal false — a reader built against result: false would report every
     conforming negative as a shortfall, which is the false-shortfall failure mode
-    it_requirement 5 forbids. not_applicable is a new enum with no other occurrence in
-    the repo, so this reader is the only thing that will ever validate its spelling.'
+    it_requirement 5 forbids. not_applicable is new IN THE completion_manifest CONTEXT
+    — zero occurrences under templates/ or scripts/ — so this reader is the only thing
+    that will ever validate its spelling there. It is NOT new to the repository: it
+    already exists in config/verification_flow.schema.json as an unrelated boolean field
+    name. Do not treat a match found there as the manifest enum.
+
+    PRIOR ART WORTH READING BEFORE BUILDING THIS. That same schema states the principle
+    this whole tree rests on, in its own words: "The known-bad input that MUST be
+    rejected. A check without one can pass on dead code." It already models an unrun
+    control as state `unverified` rather than an omitted block, so "we never fed it bad
+    input" is visible in the artifact instead of silent. Align with that vocabulary
+    rather than inventing a parallel one.'
 superseded_by: null
 covered_by: []
 implemented_by: []
