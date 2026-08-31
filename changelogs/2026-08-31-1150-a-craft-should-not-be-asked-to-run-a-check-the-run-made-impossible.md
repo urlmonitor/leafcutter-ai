@@ -35,22 +35,24 @@ It is not only the coder. `pr-reviewer` depends on the `pr-review-toolkit:review
 
 ### Where these went, and why not where I first suggested
 
-Under **`BO-1900a`** — "a fit-to-dispatch check runs before any agent is spawned", whose own notes read *"nothing is spawned against a target that has not been proven fit."* A dispatch whose grant omits the agent's mandated capabilities is not fit.
+Under **`BO-1900`** — "every ticket is proven fit to dispatch before an agent is spawned." A dispatch whose grant omits the agent's mandated capabilities is not fit.
+
+These were first authored under `BO-1900a` ("a fit-to-dispatch check runs before any agent is spawned") with the promotion question left open. Later the same day the product owner settled it: they now sit under a new L1, **`BO-1900e`** — *"every agent arrives equipped for the work it was told to do"* — because `BO-1900` decomposes into one L1 for the stage itself (`BO-1900a`) plus one per *dimension of fitness* the stage examines (`b` premises, `c` agent-to-work fit, `d` hand-off shape), and capability provisioning is a fourth such dimension rather than stage mechanics. Ids were renumbered `BO-1900e-1` and `-1-i`…`-1-iv` because parentage in this store is derived positionally from the id string. No criteria text changed. The section below uses the final ids.
 
 `BO-2400g` was the obvious-looking home and is the wrong one, for two reasons. It is fast-lane-only, but the mandating templates are shared with the heavy pipeline, so scoping the fix there leaves every other dispatch unchecked. And it is review-scoped, while the observed victim is the coder, which is not a reading.
 
 ### The five
 
-- **`BO-1900a-5`** — a phase agent is not dispatched into a run that withholds the capabilities its instructions require. Its third clause is load-bearing: a dispatch that *does* grant them proceeds, **and once the agent returns the run can show each capability was actually invoked**. Without that, the criterion is satisfiable by a text comparison that never establishes anything ran.
-- **`-5-i`** — a required capability that nothing declares is *unconfirmed*, not satisfied. Fail-closed, so "nothing declared" stays distinguishable from "requirements met".
-- **`-5-ii`** — a run that proceeds without a required capability names it. A clean run carries no such entry, so presence and absence mean different things.
-- **`-5-iii`** — a sign-off carries no outcome for a capability the craft could not invoke, and one that states an outcome anyway is refused.
-- **`-5-iv`** — every dispatched craft is checked, not only the one that writes code, which forces the unverified `pr-reviewer` question to an answer.
+- **`BO-1900e-1`** — a phase agent is not dispatched into a run that withholds the capabilities its instructions require. Its third clause is load-bearing: a dispatch that *does* grant them proceeds, **and once the agent returns the run can show each capability was actually invoked**. Without that, the criterion is satisfiable by a text comparison that never establishes anything ran.
+- **`-1-i`** — a required capability that nothing declares is *unconfirmed*, not satisfied. Fail-closed, so "nothing declared" stays distinguishable from "requirements met".
+- **`-1-ii`** — a run that proceeds without a required capability names it. A clean run carries no such entry, so presence and absence mean different things.
+- **`-1-iii`** — a sign-off carries no outcome for a capability the craft could not invoke, and one that states an outcome anyway is refused.
+- **`-1-iv`** — every dispatched craft is checked, not only the one that writes code, which forces the unverified `pr-reviewer` question to an answer.
 
 ### Two authoring notes worth keeping
 
-`-5-iii` is worded "no craft **produces** a result line for a check that never ran" rather than the natural "no result is written". That is deliberate: `derive_declares_side_effect` is negation-blind (`KI-BP-20260831-0940`), so "is written" inside a negated clause derives a durable side effect the record does not have. The reason is recorded in the record so nobody reverts the wording. All five were pre-tested against the derivation before commit — all derive `False` with the field absent, which is correct.
+`-1-iii` is worded "no craft **produces** a result line for a check that never ran" rather than the natural "no result is written". That is deliberate: `derive_declares_side_effect` is negation-blind (`KI-BP-20260831-0940`), so "is written" inside a negated clause derives a durable side effect the record does not have. The reason is recorded in the record so nobody reverts the wording. All five were pre-tested against the derivation before commit — all derive `False` with the field absent, which is correct.
 
-`BO-1900a` is now **5 of 5** L2s. No `child_limit_override` was added. Any further L2 needs a tree split or promotion to L1 — and `BO-1900` has three free L1 slots, which is where a first-class "a dispatched craft is equipped" capability contract would go. That promotion is recorded as an open option rather than foreclosed by this placement.
+The promotion took `BO-1900a` back to **4 of 5** L2s and `BO-1900` to **5 of 7** L1s. No `child_limit_override` was added at any point, before or after the move. Relieving `BO-1900a` is a consequence of the promotion, not its reason.
 
 All five are `readiness: draft`. The template defect itself — a sign-off block asking for results of skills the agent cannot invoke — is a prompt change these criteria make *detectable*; whether the template should stop asking is a separate decision, not specified here.

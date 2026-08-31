@@ -1,4 +1,4 @@
-id: BO-1900a-5-iv
+id: BO-1900e-1-iv
 components:
   - build_orchestration
   - review_system
@@ -25,7 +25,7 @@ criteria: |
       the same comparison without the comparison being restated for it,
   So the guarantee does not depend on which craft happened to be observed failing.
 depends_on:
-  - BO-1900a-5
+  - BO-1900e-1
 doc_links:
   - path: docs/architecture/agent_delivery_workflows.md
     relationship: describes

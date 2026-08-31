@@ -1,4 +1,4 @@
-id: BO-1900a-5-i
+id: BO-1900e-1-i
 components:
   - build_orchestration
   - agent_registry
@@ -22,7 +22,7 @@ criteria: |
   So an agent's requirements going undeclared is never indistinguishable from its
     requirements being met.
 depends_on:
-  - BO-1900a-5
+  - BO-1900e-1
 doc_links:
   - path: docs/architecture/agent_knowledge_plane.md
     relationship: describes
@@ -37,7 +37,7 @@ implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
-  THE FAIL-CLOSED CASE FOR BO-1900a-5. Today no craft declares the capabilities its own
+  THE FAIL-CLOSED CASE FOR BO-1900e-1. Today no craft declares the capabilities its own
   instructions oblige it to invoke, so a comparison implemented naively has nothing to
   compare and would return "fit" for every dispatch — reproducing the observed defect while
   appearing to be a working check. That is why the absence of a declaration must be its own
