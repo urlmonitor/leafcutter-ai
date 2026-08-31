@@ -46,6 +46,30 @@ prompts actually carry the bundle text, which is the entire content of
 BO-2400c-1-iii's criterion ("the criterion is satisfied only by what the
 dispatched agent receives").
 
+=== BO-2400c-1-vi call-site audit (2026-08-26) ===
+BO-2400c-1-vi removes the `conventions` and `acs` layers from
+assemble_context_bundle() and the `assemble-bundle` CLI subcommand entirely
+(not defaulted to None — removed, so no caller can reintroduce the largest
+duplicate in the payload). This file is a declared call site
+(BO-2400c-1-vi.yaml's it_requirements constraint list) for THREE distinct
+reasons, all fixed in this same change:
+  (a) the CLI-layer helpers below (_write_layer_files, _cli_args) built a
+      five-flag invocation including --conventions/--acs;
+  (b) test_ac2ii_stdout_matches_the_pure_function_output_byte_for_byte calls
+      assemble_context_bundle() directly with conventions=/acs=;
+  (c) the MODULE-SCOPE `_KNOWN_BUNDLE` fixture (further down this file)
+      calls assemble_context_bundle() with conventions=/acs= — a call at
+      IMPORT time, so an unfixed module-scope call would fail this whole
+      file at pytest COLLECTION rather than at assertion, per that AC's own
+      note.
+Classification (Source-of-Truth Discipline Rule 1): TEST DRIFT — production
+has not changed yet, so every rewritten call below now omits arguments the
+CURRENT (unmodified) assemble_context_bundle() still requires as
+keyword-only parameters with no default, and the CLI still requires
+--conventions/--acs. The resulting TypeError / non-zero exit is the
+intended, correctly-red state until BO-2400c-1-vi lands.
+(classification: test_drift)
+
 === Assumed implementation contracts (for python-coder) ===
 Neither the CLI subcommand nor the bundle-obtaining dispatch in
 fast-lane-ship.js exists yet, so these tests necessarily assume specific,
@@ -56,24 +80,29 @@ these tests alongside it (Source-of-Truth Discipline Rule 1: a failing test
 is a question, not an answer) — the underlying BEHAVIOR asserted is what the
 ACs actually require, independent of naming.
 
-  1. BO-2400c-1-ii — scripts/injection_builders.py gains a subcommand named
-     ``assemble-bundle`` invoked as:
+  1. BO-2400c-1-ii, as narrowed by BO-2400c-1-vi — scripts/injection_builders.py
+     gains a subcommand named ``assemble-bundle`` invoked as:
        python3 injection_builders.py assemble-bundle \
-         --architecture <path> --conventions <path> --high-level <path> \
-         --acs <path> --prior-tests <path> \
+         --architecture <path> --high-level <path> --prior-tests <path> \
          [--prior-outputs <path>] [--working-diff <path>] \
          [--breakpoint-marker <str>]
-     Each required/optional layer flag (except --breakpoint-marker, which is
-     a literal string) takes a FILE PATH, not inline text — mirroring the
-     existing fast_lane.py CLI convention (every argument is a path or an
-     id, never large inline text) and matching the it_requirements note that
-     "an argument names content the layer cannot obtain" is a failure mode,
-     which only makes sense if arguments are references to content rather
-     than the content itself. The command reads each required file as UTF-8,
-     calls assemble_context_bundle() with the contents, and prints the
-     result to stdout with nothing else. Missing required flag or unreadable
-     path: non-zero exit, nothing on stdout, the missing/unreadable layer
-     named on stderr.
+     ``--conventions`` and ``--acs`` are REMOVED (BO-2400c-1-vi) — not made
+     optional, not defaulted — because the receiving agent already has the
+     project conventions (the harness injects them) and can already open
+     the run's own AC store, so carrying either duplicated content the
+     agent already had (129,178 of 148,891 bytes, 87%, on the run that
+     failed). Each remaining required/optional layer flag (except
+     --breakpoint-marker, which is a literal string) takes a FILE PATH, not
+     inline text — mirroring the existing fast_lane.py CLI convention
+     (every argument is a path or an id, never large inline text) and
+     matching the it_requirements note that "an argument names content the
+     layer cannot obtain" is a failure mode, which only makes sense if
+     arguments are references to content rather than the content itself.
+     The command reads each required file as UTF-8, calls
+     assemble_context_bundle() with the contents, and prints the result to
+     stdout with nothing else. Missing required flag or unreadable path:
+     non-zero exit, nothing on stdout, the missing/unreadable layer named on
+     stderr.
 
   2. BO-2400c-1-iii/-iv — fast-lane-ship.js gains ONE new agent() dispatch,
      between Resolve/claim and Test Writer, with opts.label ==
@@ -146,20 +175,23 @@ _FAST_LANE_SHIP_JS = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship
 # ===========================================================================
 
 _ARCH_TEXT = "## Architecture\nSTABLE_ARCHITECTURE_MARKER_BO2400C1II — layered repository pattern."
-_CONV_TEXT = "## Conventions\nSTABLE_CONVENTIONS_MARKER_BO2400C1II — docstrings required."
 _HL_TEXT = "## L1 AC\nSTABLE_HIGHLEVEL_MARKER_BO2400C1II — the big picture."
-_ACS_TEXT = "## L2 ACs\nVOLATILE_ACS_MARKER_BO2400C1II — BO-2400c-1-ii."
 _PRIOR_TESTS_TEXT = "## Prior Tests\nVOLATILE_PRIOR_TESTS_MARKER_BO2400C1II."
 _DEFAULT_MARKER = "<!-- CACHE_BREAKPOINT -->"
 
+# _CONV_TEXT and _ACS_TEXT are gone (BO-2400c-1-vi): the conventions and acs
+# layers no longer exist as CLI flags or as bundle content.
+
 
 def _write_layer_files(tmp_path: Path) -> dict[str, Path]:
-    """Write each required layer's content to a real temp file and return paths."""
+    """Write each required layer's content to a real temp file and return paths.
+
+    BO-2400c-1-vi note: only architecture, high_level and prior_tests remain
+    required — conventions and acs are removed.
+    """
     layers = {
         "architecture": _ARCH_TEXT,
-        "conventions": _CONV_TEXT,
         "high_level": _HL_TEXT,
-        "acs": _ACS_TEXT,
         "prior_tests": _PRIOR_TESTS_TEXT,
     }
     paths: dict[str, Path] = {}
@@ -171,15 +203,16 @@ def _write_layer_files(tmp_path: Path) -> dict[str, Path]:
 
 
 def _cli_args(script: Path, paths: dict[str, Path]) -> list[str]:
-    """Build the assumed `assemble-bundle` CLI invocation (see module docstring)."""
+    """Build the assumed `assemble-bundle` CLI invocation (see module docstring).
+
+    BO-2400c-1-vi note: --conventions and --acs are removed.
+    """
     return [
         sys.executable,
         str(script),
         "assemble-bundle",
         "--architecture", str(paths["architecture"]),
-        "--conventions", str(paths["conventions"]),
         "--high-level", str(paths["high_level"]),
-        "--acs", str(paths["acs"]),
         "--prior-tests", str(paths["prior_tests"]),
     ]
 
@@ -215,16 +248,15 @@ def test_ac2ii_valid_invocation_exits_zero_and_emits_assembled_bundle(tmp_path):
         f"Found {stdout.count(_DEFAULT_MARKER)}. stdout={stdout!r}"
     )
     marker_idx = stdout.index(_DEFAULT_MARKER)
-    for stable_text in (_ARCH_TEXT, _CONV_TEXT, _HL_TEXT):
+    for stable_text in (_ARCH_TEXT, _HL_TEXT):
         assert stable_text in stdout[:marker_idx], (
             f"Stable layer content missing before the breakpoint marker: "
             f"{stable_text!r}. stdout={stdout!r}"
         )
-    for volatile_text in (_ACS_TEXT, _PRIOR_TESTS_TEXT):
-        assert volatile_text in stdout[marker_idx:], (
-            f"Volatile layer content missing after the breakpoint marker: "
-            f"{volatile_text!r}. stdout={stdout!r}"
-        )
+    assert _PRIOR_TESTS_TEXT in stdout[marker_idx:], (
+        f"Volatile layer content missing after the breakpoint marker: "
+        f"{_PRIOR_TESTS_TEXT!r}. stdout={stdout!r}"
+    )
 
 
 def test_ac2ii_stdout_matches_the_pure_function_output_byte_for_byte(tmp_path):
@@ -244,9 +276,7 @@ def test_ac2ii_stdout_matches_the_pure_function_output_byte_for_byte(tmp_path):
 
     expected = assemble_context_bundle(
         architecture=_ARCH_TEXT,
-        conventions=_CONV_TEXT,
         high_level=_HL_TEXT,
-        acs=_ACS_TEXT,
         prior_tests=_PRIOR_TESTS_TEXT,
     )
     # At most one trailing newline is tolerated (print() appends one) — any
@@ -298,13 +328,17 @@ def test_ac2ii_unreadable_layer_input_exits_non_zero_never_partial_bundle(tmp_pa
     """An argument that names content the layer cannot obtain (a path that
     does not exist) must exit non-zero and never emit a partial bundle.
 
+    BO-2400c-1-vi note: targets --prior-tests rather than the now-removed
+    --acs flag, since acs is no longer part of the layer set this CLI
+    accepts.
+
     RED today: the module ignores all arguments, so it exits 0 with empty
     stdout regardless of whether the named path exists.
     """
     paths = _write_layer_files(tmp_path)
     args = _cli_args(_INJECTION_BUILDERS_PY, paths)
-    acs_flag_idx = args.index("--acs") + 1
-    args[acs_flag_idx] = str(tmp_path / "does_not_exist.md")
+    layer_flag_idx = args.index("--prior-tests") + 1
+    args[layer_flag_idx] = str(tmp_path / "does_not_exist.md")
 
     proc = subprocess.run(args, capture_output=True, text=True, timeout=15)
     assert proc.returncode != 0, (
@@ -393,19 +427,26 @@ _TIMEOUT = 30  # seconds; Node subprocess spawn per harness run
 _BUNDLE_LABEL = "fastlane-context-bundle"
 
 _STABLE_ARCH = "STABLE_ARCH_TEXT_FOR_BO2400C_III_IV"
-_STABLE_CONV = "STABLE_CONV_TEXT_FOR_BO2400C_III_IV"
 _STABLE_HL = "STABLE_HL_TEXT_FOR_BO2400C_III_IV"
-_VOLATILE_ACS = "VOLATILE_ACS_TEXT_FOR_BO2400C_III_IV"
 _VOLATILE_PRIOR_TESTS = "VOLATILE_PRIOR_TESTS_TEXT_FOR_BO2400C_III_IV"
+
+# _STABLE_CONV and _VOLATILE_ACS are gone (BO-2400c-1-vi): the conventions
+# and acs layers no longer exist as parameters or as bundle content.
 
 # A real bundle produced the same way assemble_context_bundle() would produce
 # it (fixture-authenticity: constructed via the actual pure function, not a
 # hand-typed re-implementation of its ordering rule).
+#
+# BO-2400c-1-vi call-site audit: this is a MODULE-SCOPE call, so dropping
+# conventions=/acs= here (to match the post-change three-layer signature)
+# makes the entire file fail at pytest COLLECTION — not at assertion —
+# against today's unmodified assemble_context_bundle(), which still requires
+# both as keyword-only arguments with no default. That collection failure IS
+# this file's red baseline for the call-site audit until BO-2400c-1-vi lands
+# (see the module docstring's "call-site audit" section).
 _KNOWN_BUNDLE = assemble_context_bundle(
     architecture=f"## Architecture\n{_STABLE_ARCH}",
-    conventions=f"## Conventions\n{_STABLE_CONV}",
     high_level=f"## L1 AC\n{_STABLE_HL}",
-    acs=f"## L2 ACs\n{_VOLATILE_ACS}",
     prior_tests=f"## Prior Tests\n{_VOLATILE_PRIOR_TESTS}",
 )
 
@@ -672,7 +713,7 @@ def test_ac3iii_breakpoint_marker_present_exactly_once_in_dispatched_prompt():
             f"{label}: stable layer content must appear before the "
             f"breakpoint marker."
         )
-        assert _VOLATILE_ACS in prompt[marker_idx:], (
+        assert _VOLATILE_PRIOR_TESTS in prompt[marker_idx:], (
             f"{label}: volatile layer content must appear after the "
             f"breakpoint marker."
         )

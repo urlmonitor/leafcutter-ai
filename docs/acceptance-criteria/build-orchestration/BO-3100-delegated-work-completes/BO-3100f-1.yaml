@@ -1,0 +1,73 @@
+id: BO-3100f-1
+title: "A step that ran and could not get past a blocker is recorded as stopped, naming what stopped it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step that ran, did its preparatory work, and then reported that it was
+    holding at a confirmation it is required to obtain and that no way of obtaining
+    that confirmation was available to it,
+  When the run records the step's outcome,
+  Then the outcome recorded for that step is that it stopped short,
+    And the record names what stopped it, in the words of the step's own account,
+    And the step does not appear in the run's list of steps that completed.
+
+  Given a step that ran and could not get past a permission it was not granted,
+  When the run records the step's outcome,
+  Then the outcome recorded is that it stopped short and the record names the
+    permission,
+  So the two kinds of blocker a step can hit are both recorded as stopping short,
+    each naming its own cause.
+
+  Given a step that ran and completed its work,
+  When the run records the step's outcome,
+  Then the outcome recorded is that it completed, and nothing is recorded as having
+    stopped it,
+  So an outcome of stopped short is a consequence of a step actually stopping and
+    never a state every step passes through.
+
+  Given a step that stopped short,
+  When the run's record is read afterwards,
+  Then the information the step gave about why it stopped is present in that record,
+  So an account the step supplied is never discarded on its way into the record.
+depends_on:
+  - BO-3100f
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-007 — run wf_ebe75602-f98, whose publish step said plainly that it was holding at a mandatory confirmation gate with no user turn available. The step told the truth; the run recorded it as completed."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200c.yaml
+    relationship: related
+    status: exists
+    relevance: "The consent half — that the decision reaches the person entitled to make it and that nothing else is read as their reply. This record starts one step later, at what is recorded once a step has stopped for one."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  CLAUSE 1 OF THREE. The information needed to report honestly was present in the
+  anchor case and was discarded; the fourth scenario is the clause that makes
+  discarding it a failure.
+
+  BOUNDARY vs BO-3100e: that record decides whether a step delivered. This one is
+  what is recorded once it did not. A judgement with no honest report changes
+  nothing a user can see, and a report with no judgement has nothing to report.
+
+  The third scenario is the control that stops "stopped short" becoming a label
+  every step carries, which would make the run's list of stopped steps as
+  uninformative as the completed list it replaces.

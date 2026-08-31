@@ -104,7 +104,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/04_TICKET-20260826-ACD-2100a-3.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -139,3 +140,4 @@ notes: |
   The shared-resolution requirement is therefore stated as an it_requirement, which the
   coder does see. Same reasoning applies to the a-3/b-1..b-3 relationship: those are
   refinements of this read's failure reporting, not prerequisites of it.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

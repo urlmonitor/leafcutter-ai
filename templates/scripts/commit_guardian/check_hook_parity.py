@@ -20,13 +20,15 @@ ARCHITECTURE: Reads directory/manifest paths from a 'hook_parity' section in
        (disabled hooks still require canonical parity).
     3. Deployed output parity: canonical template dir vs deployed output dir.
        If deployed output dir does not exist → skip with an info message (exit 0);
-       pre-build staging state must not self-block. If deployed dir exists but is
-       missing canonical scripts → informational warning only (exit 0); a present-
-       but-stale deployed dir is indistinguishable from genuine drift. Run
-       build.py to resolve gaps. If deployed dir exists AND a script is present in
-       BOTH locations but byte-content differs → blocking violation (exit 1); the
-       deployed dir's existence is the build-freshness signal confirming build.py
-       has run, so content divergence represents genuinely stale deployed code.
+       pre-build staging state must not self-block. If deployed dir is unreadable
+       (permission error or other OSError) → fail-open with a warning (exit 0);
+       an I/O error must never be conflated with a genuine parity gap. If deployed
+       dir exists but is missing canonical scripts → BLOCKING violation (exit 1,
+       BP-100i-3), naming the missing scripts and the deployed dir checked; the
+       deployed dir's existence is the build-freshness signal, so a missing script
+       always means build.py has not been re-run since canonical changed. If
+       deployed dir exists AND a script is present in BOTH locations but
+       byte-content differs → blocking violation (exit 1) for the same reason.
     Runtime-manifest vs canonical-manifest comparison (L-3) is intentionally
     omitted: build.py overwrites scripts/commit_guardian/commit_guardian.json
     directly from templates/scripts/commit_guardian/commit_guardian.json on every
@@ -341,16 +343,22 @@ def check_deployed_parity(
     message to stderr and skips the check — pre-build staging state must not
     self-block.
 
-    If deployed_dir exists but is missing canonical scripts, emits an
-    informational warning to stderr (non-blocking) — a present-but-stale
-    deployed dir (state after adding a hook script before running build.py)
-    is indistinguishable from genuine drift. Run build.py to resolve.
+    If deployed_dir exists but cannot be enumerated (permission error or other
+    OSError), fails open: emits a warning to stderr and skips the check. An
+    unreadable directory is a genuine I/O error, not a parity signal, and must
+    never be conflated with "every canonical script is missing."
+
+    If deployed_dir exists AND is missing scripts present in canonical_dir, that
+    is a BLOCKING violation (BP-100i-3): the violation names each missing script
+    and the deployed output directory that was checked. The deployed dir's
+    existence is the build-freshness signal — if build.py has run and produced
+    the deployed dir, a missing script means canonical changed but the deployed
+    copy was never regenerated, and that must block the commit rather than be
+    downgraded to an informational warning.
 
     If deployed_dir exists AND a script is present in BOTH canonical and deployed
-    locations but byte content differs, that is a BLOCKING violation. The deployed
-    dir's existence is the build-freshness signal: if build.py has run and produced
-    the deployed dir, any content divergence means canonical changed but the
-    deployed copy was not regenerated.
+    locations but byte content differs, that is also a BLOCKING violation: content
+    divergence means canonical changed but the deployed copy was not regenerated.
 
     Args:
         canonical_dir: Absolute path to the canonical template directory.
@@ -359,9 +367,9 @@ def check_deployed_parity(
         excluded: Filenames to suppress from comparison.
 
     Returns:
-        List of human-readable violation strings for content-hash mismatches
-        (blocking). Missing-script findings are non-blocking INFO warnings.
-        Pre-build state (deployed dir absent) always returns an empty list.
+        List of human-readable violation strings — for scripts missing from
+        deployed_dir and for content-hash mismatches. Empty list when deployed_dir
+        is absent (pre-build state) or unreadable (fail-open on I/O error).
     """
     if not deployed_dir.is_dir():
         # L-2: use is_dir() so an exists-but-is-a-file path is treated as absent.
@@ -373,25 +381,38 @@ def check_deployed_parity(
         )
         return []
 
+    try:
+        list(deployed_dir.iterdir())
+    except OSError as exc:
+        # Fail-open: an unreadable deployed dir is an I/O error, not evidence
+        # that every canonical script is missing from it.
+        print(
+            f"check-hook-parity: WARNING — cannot read deployed output dir "
+            f"{deployed_dir}: {exc}. Skipping deployed-output parity check (fail-open).",
+            file=sys.stderr,
+        )
+        return []
+
     canonical_scripts = _collect_hook_scripts(canonical_dir, patterns, excluded)
     deployed_scripts = _collect_hook_scripts(deployed_dir, patterns, excluded)
 
-    # Missing-script check: downgrade to informational (non-blocking).
-    # Cannot distinguish present-but-stale from genuine drift without a
-    # reliable freshness signal. See ARCHITECTURE docstring for rationale.
+    violations: list[str] = []
+
+    # Missing-script check: BLOCKING (BP-100i-3). M-3's non-blocking downgrade
+    # is reversed here — the deployed dir's existence is the build-freshness
+    # signal, so a missing script always represents unregenerated output.
     missing = sorted(canonical_scripts - deployed_scripts)
     if missing:
-        print(
-            f"check-hook-parity: INFO — the following scripts exist in canonical template "
-            f"dir ({canonical_dir}) but are absent from deployed output dir ({deployed_dir}): "
-            f"{', '.join(missing)}. Run build.py to regenerate deployed output. (Non-blocking.)",
-            file=sys.stderr,
+        violations.append(
+            f"  The following scripts exist in canonical template dir ({canonical_dir}) "
+            f"but are absent from deployed output dir ({deployed_dir}): "
+            f"{', '.join(missing)}.\n"
+            f"  Fix: run build.py to regenerate deployed output."
         )
 
     # Content-hash check: BLOCKING for scripts present in BOTH locations.
     # The deployed dir's existence is the build-freshness signal confirming
     # build.py has run; content divergence means the deployed copy is stale.
-    violations: list[str] = []
     for name in sorted(canonical_scripts & deployed_scripts):
         canonical_file = canonical_dir / name
         deployed_file = deployed_dir / name
@@ -559,4 +580,12 @@ if __name__ == "__main__":
 #   L-2: Changed deployed_dir.exists() → deployed_dir.is_dir() so a file at that
 #   path is treated as absent rather than causing a false block.
 #   L-3: Omitted runtime-manifest comparison; documented rationale in ARCHITECTURE.
+# - 2026-08-18 15:10 [python-coder]: BP-100i-3: Reversed the M-3 downgrade.
+#   check_deployed_parity now treats a script present in canonical but absent
+#   from an existing deployed dir as a BLOCKING violation (exit 1), naming the
+#   missing scripts and the deployed dir checked, instead of a non-blocking INFO
+#   warning. Added an explicit iterdir() readability probe on deployed_dir before
+#   comparison so a genuine I/O error (e.g. permission denied) still fails open
+#   (exit 0) and is not conflated with "every script missing."
+#   (#EPIC-BuildPipelinePhantomRemediation/03)
 # ====================================================================

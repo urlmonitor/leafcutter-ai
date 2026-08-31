@@ -1,0 +1,159 @@
+id: GE-126e-4
+title: "A diagram shows where the census sits and what it reads to decide who is in scope"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader trying to understand what the census covers and what it does not,
+  When they consult the component documentation for the check family,
+  Then a diagram shows the census as a participant beside the check family the registration
+    data and the surface a reader invokes it from,
+  And it shows that the population the census examines is derived from the registration data
+    rather than held by the census so a reader can see why a newly registered check is enrolled
+    automatically,
+  And it shows the census reading and reporting without any arrow into the checks it examines
+    so the reporting-not-repairing boundary is visible rather than only written,
+  And it shows the relationship to the existing parity comparison including whether the
+    execution machinery is shared so the two are not mistaken for one another,
+  And every element the diagram names corresponds to something that exists when the diagram
+    ships rather than to a planned one.
+
+  Coverage note: covered by a check that every element named in the diagram resolves to a real
+  participant in the delivered system and that no participant the census actually reads is
+  missing from it. A diagram accepted on inspection alone is the documentation equivalent of a
+  check nobody ran.
+depends_on:
+  - GE-126e
+  - GE-126e-1
+  - GE-126e-2
+  - GE-126e-3
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: modifies
+    status: exists
+    relevance: "The component surface the diagram belongs on."
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: context
+    status: exists
+    relevance: "The layout and numbering conventions the diagram must follow."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c.yaml
+    relationship: context
+    status: exists
+    relevance: "The adjacent parity harness the diagram must distinguish the census from. Read-only reference — that folder must not be edited."
+  - path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The other execution-proof probe in this component. A reader who conflates the census with it will conclude one is redundant, which is what the distinguishing clause exists to prevent."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+it_requirements:
+  - "Every element the diagram names must resolve to something that exists in the delivered system at the commit the diagram ships. A diagram that documents an intention creates a belief worse than no documentation, and this component has a recorded instance of exactly that."
+  - "The absent arrow is a requirement, not a stylistic choice: the census must have no write path into the checks it examines. The reporting-not-repairing constraint is the one most likely to erode once the census returns a long list, and a picture without the arrow is harder to erode quietly than a sentence in a note."
+  - "The population must be drawn as derived from the registration data, not as held by the census. If the diagram shows a census-owned list it documents the design GE-126e-3 forbids."
+  - "The census and the adjacent parity comparison must be visibly distinct, and whether they share execution machinery must be shown rather than left for the reader to infer. Two probes that look identical invite the conclusion that one is redundant."
+  - "Follow the layout, numbering and naming conventions in docs/reference/architecture-docs-layout.md, and satisfy check_diagram_naming, check_mermaid_complexity, check_mermaid_drift and check_mermaid_parent_link at the commit that lands the diagram. These are enforced mechanically and a diagram that trips them does not land."
+  - "The diagram must be covered by a resolution check in both directions - every named element exists, and no participant the census actually reads is missing. A one-directional check passes on a diagram that omits half the system."
+test_spec:
+  - name: test_every_element_named_in_the_diagram_resolves_to_a_real_participant
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "the census diagram in docs/architecture/components/commit-guardian.md"
+    description: "Each element the diagram names is resolved against the delivered system - script, registration surface or invocation entry point - and every one exists. A named element that does not resolve fails."
+  - name: test_no_participant_the_census_actually_reads_is_missing_from_the_diagram
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The set of surfaces the census actually reads at run time is collected from an instrumented run and compared against the diagram's participants - the reverse direction, without which a diagram omitting half the system passes."
+  - name: test_the_diagram_shows_no_write_path_from_the_census_into_the_checks
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The diagram source contains no edge directed from the census into any check it examines, matching GE-126e-2-i's byte-identical-inputs guarantee. The picture and the behaviour are asserted to agree."
+  - name: test_the_census_and_the_parity_comparison_are_distinct_participants
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The diagram renders the census and the adjacent parity comparison as two participants with their shared-or-separate execution machinery shown, so neither reads as the other."
+test_rationale: |
+  A diagram accepted on inspection is the documentation equivalent of a check nobody ran,
+  and this component has already shipped documentation describing behaviour that never
+  existed. Resolving every named element against the delivered system is the forward
+  check; the reverse check — collecting what the census actually reads at run time and
+  comparing — is the one that catches a diagram that is true as far as it goes and omits
+  half the system, and it is the descriptor that would be dropped first. The no-write-arrow
+  descriptor is unusual for a diagram test and is deliberate: it asserts that the picture
+  and GE-126e-2-i's byte-identical-inputs guarantee agree, so the two cannot drift apart
+  when the census returns a long list and someone proposes it start fixing things.
+delivers_to: null
+expects_from:
+  - ac_id: GE-126e-3
+    contract: "The derivation of the census population from the registration data and the reported registration source. The diagram must show the population as derived rather than held and must name the surface it is derived from."
+  - ac_id: GE-126e-2
+    contract: "The census report and the surface a reader invokes it from. The diagram places both as participants."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  SATISFIES THE component-diagram LEG of GE-126e's documentation_triggers. The reference-doc
+  leg is GE-126e-5.
+
+  THE ABSENT ARROW IS THE POINT OF THE DIAGRAM. Reporting rather than repairing is the
+  constraint most likely to be eroded once the census produces a long list, and a picture in
+  which the census has no write path into the checks is harder to erode quietly than a
+  sentence in a note.
+
+  DISTINGUISHING THE CENSUS FROM THE PARITY COMPARISON IS A REQUIREMENT AND NOT CONTEXT. The
+  two want the same execution machinery and answer different questions, and a reader who
+  conflates them will conclude one of them is redundant.
+
+  THE EVERYTHING-EXISTS CLAUSE keeps the diagram from documenting an intention. This component
+  already carries a recorded instance of documentation describing behaviour that never
+  shipped, and the belief it created was worse than no documentation.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: its output is a diagram on the component page. GE-126e-5 is the sibling
+  reference-doc leg of the same L1 and publishes figures rather than reading the picture.
+  DO NOT REFILL.
+
+  AGENT — architecture-diagram-author. This is the only record in the tree assigned to it
+  and it is the one the component-diagram documentation trigger requires. The mermaid
+  guards in this repository (check_diagram_naming, check_mermaid_complexity,
+  check_mermaid_drift, check_mermaid_parent_link) are enforced at commit time and are named
+  in it_requirements so they are not discovered at the gate.
+
+  THE REVERSE-DIRECTION DESCRIPTOR IS THE ONE THAT MATTERS AND THE ONE THAT WILL BE
+  DROPPED. Checking that every named element exists is easy and is half a check: it passes
+  on a diagram showing three of eight participants. Collecting what the census actually
+  reads at run time and comparing against the diagram is what makes the picture a claim
+  about the system rather than a subset of it.
+
+  DEPENDS ON THE CENSUS EXISTING, LITERALLY. The everything-exists clause means this record
+  cannot be built before GE-126e-1 to GE-126e-3 have landed - not as a preference but
+  because there would be nothing for the named elements to resolve to. depends_on already
+  says so; noting it because a driver batching documentation records together would
+  otherwise pull this one forward.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

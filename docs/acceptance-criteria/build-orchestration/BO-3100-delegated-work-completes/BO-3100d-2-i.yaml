@@ -1,0 +1,133 @@
+id: BO-3100d-2-i
+title: "A half-finished supersession is reported: a dangling pointer or an unmarked predecessor"
+component: build-orchestration
+components:
+  - documentation_system
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a newer decision that names a record it replaced, where no record of that name exists,
+  When the recorded decisions are checked,
+  Then the dangling pointer is reported and names both the record carrying it and the target
+    that does not resolve.
+
+  Given an older decision that is named as replaced by a newer one but is not itself marked
+    as superseded,
+  When the recorded decisions are checked,
+  Then the unmarked predecessor is reported, and that report is distinguishable from the
+    dangling-pointer report.
+
+  Given a pair of decisions where both pointers resolve and the predecessor is marked,
+  When the recorded decisions are checked,
+  Then neither is reported.
+depends_on:
+  - BO-3100d-2
+doc_links:
+  - path: docs/architecture/adrs/README.md
+    relationship: describes
+    status: exists
+    relevance: "The decision-record set the checker walks."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Records the shape 'a reference that resolves to nothing reads as coverage to everyone who checks for one'."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "THE TWO REPORTS MUST DIFFER SUBSTANTIVELY, because the repairs differ: one is a wrong name in the new record, the other is a missing mark on the old one. Collapsing them sends the author to the wrong file — the misdirection cost KI-BO-018 records."
+  - "The checker must walk the decision-record set as it stands rather than a recorded list of pairs. A record added later must be checked without editing the checker."
+  - "A run in which zero decision records were examined must FAIL, not report clean (KI-ACS-001)."
+  - "The report must name both ends of each finding: the record carrying the pointer and the target that does not resolve; or the unmarked predecessor and the successor that names it."
+  - "The third scenario is the anti-noise clause: a well-formed pair must produce no output at all. A checker that reports every pair gets switched off, and then reports nothing about the pairs that are actually broken."
+  - "DEPLOY-MANIFEST RULE (CLAUDE.md) if this runs as a commit hook or a CI gate: every module it imports must be in the build deploy list in the same change, verified from a built target directory rather than only from the source tree."
+  - "Reuse BO-3200e's vocabulary if a record cannot be read at all: that is `undetermined` for that record, distinct from a dangling pointer, and it must not be reported as either finding."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3100d-2
+    contract: "Machine-readable supersession metadata on decision records: predecessor {status: superseded, superseded_by: <id>}, successor {supersedes: <id>, false_premise: <string>}. The checker resolves exactly these fields and reads no prose."
+test_spec:
+  - name: test_bo_3100d_2_i_dangling_pointer_is_reported_with_both_ends
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Fixture record naming a predecessor that does not exist: assert the finding is reported and names both the record carrying the pointer and the unresolvable target."
+  - name: test_bo_3100d_2_i_unmarked_predecessor_is_reported_distinguishably
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "THE DISCRIMINATOR. Fixture pair where the successor names its predecessor but the predecessor carries no superseded marking. Assert it is reported AND that the report text differs substantively from the dangling-pointer report, comparing the two captured messages rather than only the exit codes."
+  - name: test_bo_3100d_2_i_well_formed_pair_produces_no_output
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A pair with both pointers resolving and the predecessor marked produces no report line at all. Keeps the checker from reporting everything and being switched off."
+  - name: test_bo_3100d_2_i_runs_over_the_real_adr_set
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run the checker over the repository's ACTUAL docs/architecture/adrs/ tree and assert it reports a non-zero number of records examined — a checker that resolves to zero records is not a pass."
+  - name: test_bo_3100d_2_i_new_record_is_checked_without_editing_the_checker
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Add a new broken pair to the fixture set and re-run the checker unmodified; assert it is reported. A recorded list of known pairs fails here."
+test_rationale: |
+  The whole content of the second scenario is that two findings read DIFFERENTLY, so the
+  covering test must capture and compare both messages — asserting only that each case is
+  reported passes on a checker that emits one generic line for both, which is the defect.
+  The clean-pair test and the real-ADR-set test guard the two ways this instrument silently
+  stops working: reporting everything (and being switched off) or examining nothing (and
+  reporting clean). This repository has the second on record against its own AC-store
+  validator, which was the documented defence against store rot while examining zero files for
+  eight days.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, expects_from, doc_links,
+    test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  A supersession is completed in two places and it is normal for only one of them to be done.
+  The half that gets forgotten is almost always the predecessor's own marking, because the
+  author is working in the new record — and that is the half a reader depends on, since the
+  reader arrives at the old record first.
+
+  A REFERENCE THAT RESOLVES TO NOTHING READS AS COVERAGE. This repository has the shape on
+  record already: the ac-driven-dev triage notes that "a reference that resolves to nothing
+  reads as coverage to everyone who checks for one". An unresolvable supersession pointer is
+  worse than none, because it tells a reader the question has been settled elsewhere.
+
+  THE TWO REPORTS MUST DIFFER because the repairs differ: one is a wrong name in the new
+  record, the other is a missing mark on the old one. Collapsing them sends the author to the
+  wrong file, which is the misdirection cost KI-BO-018 records.
+
+  The third scenario keeps the check from being satisfied by one that reports every pair.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). This AC is the mechanical half of BO-3100d-2. It covers
+  the structural facts about a supersession and makes no claim about whether the replacement
+  reasons well — that boundary is stated on BO-3100d-2 and is discharged by human review. The
+  checker must read only the machine-readable fields; a checker that starts parsing the body
+  prose to judge completeness would be claiming the half that cannot be automated.

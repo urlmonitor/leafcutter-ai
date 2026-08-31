@@ -1,0 +1,176 @@
+id: BO-3100d-1
+title: "Every behavioural claim in the delivery record is paired with a check that exercises it, and a contradicted claim fails"
+component: build-orchestration
+components:
+  - documentation_system
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the recorded account of how this system hands work to specialists,
+    And the claim it currently makes that a dispatch issued from inside a dispatched agent
+    does not execute and raises no error,
+  When that claim is exercised — a dispatch is issued from inside a dispatched agent and the
+    outcome observed,
+  Then the observed outcome is that the dispatch executes,
+    And the claim is reported as contradicted by observation.
+
+  Given the record after it has been corrected to state that a dispatched agent cannot wait
+    for a result, because emitting text without acting ends that agent and the text becomes
+    its result,
+  When that claim is exercised — a dispatched agent emits text without acting, and what the
+    dispatcher receives is observed,
+  Then the observed outcome matches the claim, and the claim is reported as confirmed.
+
+  Given the corrected record,
+  When a claim it makes about dispatch behaviour has no check that exercises it,
+  Then that claim is reported as unchecked, so an unverifiable assertion is distinguishable
+    from a verified one.
+depends_on:
+  - BO-3100d
+  - BO-3100c
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The recorded account whose behavioural claims this AC pairs with checks."
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+    relevance: "Carries the falsifiable claim 'Any call beyond depth 1 is silently blocked — no error'."
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "Carries the same false claim in a slightly different wording; both are exercised by the first scenario."
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001's corrected mechanism — the claim the second scenario confirms."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - docs
+risk_surface: internal
+it_requirements:
+  - "IT-PO DECISION — WHAT COUNTS AS A BEHAVIOURAL CLAIM. A statement in the delivery record that asserts an observable outcome of running the system: what a dispatch does, what a dispatched agent receives or returns, what happens when it emits text without acting, what the harness makes available to a subagent. Statements of intent, rationale, policy or preference are NOT behavioural claims and are out of scope. The distinction must be recorded in the record itself, as an explicit marking on each claim, not inferred from wording — a text heuristic over prose is the shape this tree rejects everywhere else and it would be no better here."
+  - "IT-PO DECISION — WHERE THE CHECKS LIVE. Alongside the repository's other behavioural workflow tests (unit_tests/), each check bound to its claim by an identifier carried in the record. The binding must be data, so that BOTH directions are computable: claim-without-check and check-without-claim."
+  - "EACH CHECK MUST EXERCISE THE BEHAVIOUR, NOT DESCRIBE IT. A check whose assertion is that the record contains a sentence is a grep on prose and does not count; a check that reads the record at all, other than to enumerate its claims, is suspect."
+  - "THE REPORT MUST CARRY THREE STATES PER CLAIM — confirmed, contradicted, unchecked — and unchecked must be reported, not silently omitted. Without it the cheapest way to pass is to pair one claim and leave the rest unexamined, and the record then carries verified and unverified assertions that read identically."
+  - "A CONTRADICTED CLAIM MUST FAIL SOMETHING that runs in CI. A report that names a contradiction while the run exits zero is the false-success shape this repository has hit repeatedly."
+  - "A run in which zero claims were enumerated must FAIL, not pass — the KI-ACS-001 zero-input shape, which would be especially embarrassing in the instrument built to prove the documentation is honest."
+  - "The check for the depth claim must actually issue a dispatch from inside a dispatched agent and observe the outcome. Asserting that nesting works because a test says so, without a dispatch occurring, proves nothing about the claim."
+  - "Reuse BO-3200e's vocabulary for a check whose observation could not be made: that is `undetermined`, and it is distinct from both contradicted and unchecked."
+delivers_to:
+  - agent: reference-author
+    contract: "The claim-to-check binding mechanism (claim identifier in the record, matching identifier on the check) and the three-state report, so BO-3100d-3 and BO-3100a-4 can use one mechanism rather than inventing a second."
+expects_from:
+  - ac_id: BO-3100c
+    contract: "The relocated coordination, in its final shape. Sequenced after it on the parent's instruction: documenting and claim-checking a topology that is about to move describes a design that no longer exists."
+test_spec:
+  - name: test_bo_3100d_1_depth_claim_is_reported_contradicted_by_observation
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Exercise the current claim that a dispatch issued from inside a dispatched agent does not execute: issue one, observe that it DOES execute, and assert the claim-check report marks that claim contradicted."
+  - name: test_bo_3100d_1_no_idle_state_claim_is_reported_confirmed
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Exercise the corrected claim: a dispatched agent emits text without acting; assert what the dispatcher receives is that text as the agent's result, and that the report marks the claim confirmed."
+  - name: test_bo_3100d_1_unpaired_claim_is_reported_unchecked
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "THE ANTI-VACUUM TEST. Add a behavioural claim with no bound check and assert the report lists it as unchecked rather than omitting it, so partial coverage is visible instead of invisible."
+  - name: test_bo_3100d_1_orphan_check_without_a_claim_is_reported
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The reverse direction: a bound check whose claim identifier no longer exists in the record is reported, so a claim deleted from the record does not leave a check silently asserting nothing."
+  - name: test_bo_3100d_1_contradicted_claim_fails_the_run
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert the claim-check runner exits non-zero on a contradiction — the value CI branches on, not only the report text. A report that names the contradiction while the run passes is the false-success shape."
+  - name: test_bo_3100d_1_zero_claims_enumerated_is_a_failure
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Point the runner at a record with no enumerable claims and assert it exits non-zero rather than reporting clean."
+test_rationale: |
+  This is the one child of BO-3100d that can be mechanically enforced, and its whole value comes
+  from the checks EXERCISING behaviour rather than reading the document. So the two headline
+  tests each actually run the thing the claim is about — one issues a nested dispatch and
+  observes that it executes, the other has a dispatched agent emit text without acting and
+  observes what comes back.
+  The unchecked and orphan tests cover the two directions in which the pairing rots: a claim
+  gains no check, or a claim disappears leaving a check that asserts nothing. Both read as
+  coverage to anyone who looks for one, which this repository already has on record.
+  The exit-code test exists because a report is not a gate; it is the value CI branches on that
+  decides whether a contradicted claim actually stops anything.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Settled what counts as a behavioural claim and where the checks live (both
+    left to the IT PO). Added assigned_agent, complexity, it_requirements, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS IS THE ONE CHILD OF BO-3100d THAT IS MECHANICALLY ENFORCEABLE, and it is how the L1
+  escapes being prose. Rather than asserting that a document contains the right words —
+  which is a grep-only test on dead prose, the exact thing the goal's hard constraint
+  rejects — each factual claim about runtime dispatch behaviour becomes an executable check
+  whose result must agree with it. A claim that drifts away from the behaviour then fails
+  something.
+
+  THE FALSE PREMISE, verified against both records on 2026-08-25 rather than taken from the
+  handover note. ADR-006 states "Any call beyond depth 1 is silently blocked — no error" and
+  ADR-019 states "Any call beyond depth 1 is silently dropped — no error is raised, the tool
+  call simply does not execute". Both are falsifiable by a single execution, and both are
+  false: nesting works.
+
+  WHY IT MATTERS BEYOND TIDINESS: the false premise actively misdirects the fix. A reader
+  who believes the constraint is a depth limit will design around depth, and the actual
+  failure has nothing to do with depth. Both records reason from the wrong constraint to
+  conclusions that happen to be partly right — flattening the chain and dispatching inline
+  do both help — which is the worst case, because the reasoning is never challenged by the
+  outcome.
+
+  THE THIRD SCENARIO IS THE ANTI-VACUUM CLAUSE. Without it, the cheapest way to pass is to
+  pair a check with one claim and leave the rest unexamined; the record then carries a mix
+  of verified and unverified assertions that read identically. Reporting unchecked claims
+  makes the coverage of this mechanism visible.
+
+  SEQUENCED AFTER BO-3100c on the parent's instruction: c may change the correct topology, so
+  documenting before it lands describes a design that is about to move.
+
+  Deliberately NOT specified here: which claims count as behavioural, and where the checks
+  live. Both are IT PO decisions. The criterion constrains only that the pairing exists and
+  that disagreement is a failure.
+
+  IT-PO DECISION (2026-08-26). Both open questions are answered in it_requirements. The one
+  worth restating: whether a statement is a behavioural claim must be an explicit MARKING on
+  the claim, not something inferred from its wording. Inferring it would be a text heuristic
+  over prose — the same shape BO-3200a-2 rejects for fact-versus-judgement — and it would let
+  the covered set silently shrink as the record is edited, which is exactly what the third
+  scenario exists to prevent.

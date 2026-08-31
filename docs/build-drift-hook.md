@@ -3,7 +3,7 @@ title: Build-Drift Pre-Commit Hooks (Direction A + Direction B)
 type: how-to
 status: active
 created: 2026-05-13
-last_updated: 2026-05-15
+last_updated: 2026-08-18
 components:
 - commit_guardian
 - infrastructure
@@ -102,9 +102,21 @@ Run build.py to generate it. Skipping drift check.
 
 ### Scope
 
-Direction A (`check-build-drift`) currently covers only
-`leafcutter/templates/agents/`. Other template directories are
-intentionally excluded.
+Direction A (`check-build-drift`) scans two template trees:
+`leafcutter/templates/agents/*.md` and
+`leafcutter/templates/scripts/commit_guardian/*.py` (the commit-guardian hook
+scripts themselves). All other template directories are intentionally
+excluded from Direction A.
+
+`write_build_manifest()` mirrors this exact two-directory scan when it writes
+the `templates` section of `.build_manifest.json` (BP-100k-1, 2026-08-18).
+Before that fix, the manifest only recorded fingerprints for
+`templates/agents/`, so every commit-guardian hook template was permanently
+reported as "not in manifest" by the gate — drift in a hook script could
+never be detected. If a future change adds a third tree to either side of
+that pair, add it to both `check_build_drift.py`'s `_collect_py_template_files`
+scan/registration and `write_build_manifest()`'s scan in the same commit, or
+the same blind spot reappears.
 
 ---
 
@@ -154,8 +166,25 @@ At commit time, `check_output_drift.py`:
 |---|---|
 | `.claude/agents/` | `leafcutter/templates/agents/` |
 | `.claude/skills/` | `leafcutter/templates/skills/` |
-| `.claude/commands/` | `leafcutter/templates/workflows/` |
+| `.claude/commands/` | `leafcutter/templates/commands/` and `leafcutter/templates/workflows/` |
+| `.claude/hooks/` | `leafcutter/templates/hooks/` |
+| `.claude/workflows/` | `leafcutter/templates/workflows-js/` |
 | `.agents/rules/` | `leafcutter/templates/rules/` |
+
+`_compute_output_mappings()` keys every entry in `output_mappings` by the
+**canonical**, post-shim path shown in the left column above — the same path
+`check_output_drift.py` scans — never by the pre-shim,
+`output_root`-relative path (e.g. `agents/README.md`). Before BP-100k-2
+(2026-08-18), the agents/commands/workflows/hooks families were keyed by the
+pre-shim path, so no real deployed file ever matched an `output_mappings`
+entry and the gate reported every deployed output as unregistered. The
+agents/commands/workflows/hooks rows are now derived from
+`build_phases._compute_phase_mappings()` — the same enumeration `build.py`'s
+own deploy-collision guard uses — and translated to their canonical path via
+the module-level `shim_map` in `scripts/build_helpers.py` (the same table
+`install_shims()` uses to create the shims), so a new deploy phase or shim
+entry extends `output_mappings` coverage without a second, independently
+maintained list.
 
 ### Edge cases — safe exits (no false-blocks)
 
@@ -323,18 +352,19 @@ to the `build_drift.template_dirs` array:
 }
 ```
 
-### 5.2 Update `build.py`
+### 5.2 Update `build.py` / `build_helpers.py`
 
-Open `leafcutter/scripts/build.py` and ensure the
-`write_build_manifest()` function hashes files from the new directory.
-`write_build_manifest()` iterates over the directories that the build phases
-compile; adding a new template directory to the build pipeline automatically
-includes it in the manifest if the function is written to enumerate all
-compiled template dirs.
-
-If `write_build_manifest()` uses an explicit list of directories, append the
-new directory to that list. Verify by running `build.py` and checking that
-the new directory's files appear as keys in `.build_manifest.json`.
+Open `leafcutter/scripts/build_helpers.py` and ensure `write_build_manifest()`
+hashes files from the new directory into the `templates` section. As of
+BP-100k-1, `write_build_manifest()` hashes two explicit trees
+(`templates/agents/*.md` and `templates/scripts/commit_guardian/*.py`),
+mirroring `check_build_drift.py`'s own two-directory scan exactly — it does
+not enumerate every template directory automatically. If a new directory
+should be scanned by Direction A, add it to **both** places in the same
+commit: `check_build_drift.py`'s scan/registration and
+`write_build_manifest()`'s explicit list. Verify by running `build.py` and
+checking that the new directory's files appear as keys in
+`.build_manifest.json`.
 
 ### 5.3 Verify end-to-end
 
@@ -361,8 +391,8 @@ the missing layer and category.
 
 | Layer | File | Change required |
 |---|---|---|
-| 1. Shim map | `scripts/build_helpers.py` — `install_shims()` | Add `(".claude/<my-category>", "<output-rel>")` to the `shim_map` list |
-| 2. Output mappings | `scripts/build_helpers.py` — `_compute_output_mappings()` | Add a scanning block for the new template directory→output path pair |
+| 1. Shim map | `scripts/build_helpers.py` — module-level `shim_map` | Add `(".claude/<my-category>", "<output-rel>")` to the `shim_map` list. `install_shims()` and `_compute_output_mappings()` both read this same module-level list (BP-100k-2) — do not add a second copy in either function. |
+| 2. Output mappings | `scripts/build_helpers.py` — `_compute_output_mappings()` | If the new category is a deploy phase enumerated by `build_phases._compute_phase_mappings()` (agents/commands/workflows/hooks-shaped), coverage is derived automatically once step 1 and `_render_phase_source()`'s family dispatch (compile vs. raw copy) handle it — extend `_render_phase_source()` if the category needs a new render step. Otherwise (skills/rules/workflow-js-shaped, i.e. not enumerated by `_compute_phase_mappings()`), add an explicit scanning block for the new template directory→output path pair, keyed at its canonical (post-shim) path. |
 | 3. Managed artifact dirs | `scripts/build_phases.py` — `_MANAGED_ARTIFACT_DIRS` | Add `"<my-category>": "<output-subdir>"` to the dict |
 | 4. Source manifests | `scripts/build.py` — `_build_source_manifests()` | Add a scanning block for the new template directory; include the key in the returned dict |
 
@@ -429,6 +459,24 @@ disables the hook without removing it from `.pre-commit-config.yaml`.
   `.build_manifest.json` after each successful build. The `write_build_manifest()`
   function now records both template hashes (Direction A) and expected output hashes
   (Direction B via `output_mappings`).
+
+- `scripts/build_helpers.py` — where `write_build_manifest()`,
+  `_compute_output_mappings()`, and the module-level `shim_map` actually
+  live (imported by `build.py`). Contains the full ARCHITECTURE docstring and
+  DECISION HISTORY entry for BP-100k-1/-2 (2026-08-18): closing the blind
+  spot where the commit-guardian template tree had no manifest fingerprint
+  (Direction A) and where every deployed output was keyed by a pre-shim path
+  that never matched a real file (Direction B).
+
+- `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/` —
+  `BP-100k-1.yaml` and `BP-100k-2.yaml`, the acceptance criteria this
+  manifest-coverage fix resolves.
+
+- `unit_tests/build_guards/test_bp_100k_1.py` and
+  `unit_tests/build_guards/test_bp_100k_2.py` — behavioral tests that run the
+  real build, then execute `check_build_drift.py` / `check_output_drift.py`
+  as subprocesses against real artifacts to assert match/drift verdicts
+  instead of absent/unregistered notices.
 
 - `unit_tests/portable_dev_workflow/test_output_drift_hook.py` — unit tests for
   Direction B (6 scenarios, < 5 s total).

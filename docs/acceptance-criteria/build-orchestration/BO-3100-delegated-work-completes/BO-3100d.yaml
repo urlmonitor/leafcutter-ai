@@ -1,0 +1,108 @@
+id: BO-3100d
+title: "The written rules match how the system actually behaves"
+component: build-orchestration
+components:
+  - documentation_system
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Guidance you can trust, because it reflects real behaviour not a stale belief.
+
+  The recorded explanation of how this system hands work to specialists says what
+  is actually true of it. Where a past decision was written down on a belief that
+  has since turned out to be false, the record is corrected in the open — the old
+  decision is kept and marked as superseded, so anyone reading later can see both
+  what was believed and what replaced it.
+depends_on:
+  - BO-3100
+doc_links:
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: modifies
+    status: exists
+    relevance: "Rests on the false premise of a hard depth limit with deeper calls silently blocked; a superseding decision is expected."
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: modifies
+    status: exists
+    relevance: "Same false premise — the inline-dispatch rationale is argued from a nesting limit rather than from the inability to await."
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 carries the corrected mechanism these decisions must be reconciled against."
+  - path: docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The numbering rule any superseding ADR authored under this L1 must follow."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: docs
+risk_surface: internal
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-26
+    note: "Added change_target/risk_surface and one ADR doc_link; recorded the human-review boundary in notes. Composite — no assigned_agent. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-3100d-1
+  - BO-3100d-2
+  - BO-3100d-3
+  - BO-3100d-4
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: |
+  THE SPECIFIC FALSE PREMISE, which the BA should confirm by reading both
+  decisions rather than taking this note as given: ADR-006 and ADR-019 assert a
+  hard depth-1 limit on nesting and that deeper calls are silently blocked.
+  Neither is true. Nesting works. The real constraint is that a subagent cannot
+  await — it has no idle state, so emitting text with no tool call ends the agent
+  and that text becomes its result.
+
+  This matters beyond tidiness because the false premise actively misdirects the
+  fix: a reader who believes the constraint is a depth limit will design around
+  depth, and the actual failure has nothing to do with depth. Both decisions
+  reason from the wrong constraint to conclusions that happen to be partly right
+  (flattening the chain and dispatching inline do both help) — which is the worst
+  case, because the reasoning is never challenged by the outcome.
+
+  Two prompt rules written under the old understanding were in force on
+  2026-08-18 and neither fired.
+
+  Scope note: superseding a recorded decision is the expected outcome, but WHICH
+  decisions are superseded and what replaces them is a judgement for the
+  decision-record author, not something to be pre-committed at L1. The customer
+  value asserted here is only that the written guidance stops contradicting
+  observed behaviour. Note that BO-3100c may change the correct topology anyway,
+  so sequence this after it rather than documenting a design that is about to
+  move.
+
+  IT-PO DECISION (2026-08-26) — WHERE THE HUMAN REVIEW SITS, AND WHERE IT DOES
+  NOT. This L1 splits cleanly into a falsifiable part and a part that is not
+  mechanically checkable, and the split is drawn along child boundaries so no
+  test is ever asked to claim more than it can prove:
+
+  - MECHANICAL. BO-3100d-1 (every behavioural claim is paired with an executable
+    check, and a contradicted claim fails), BO-3100d-2-i (a dangling supersession
+    pointer or an unmarked predecessor is reported), and BO-3100d-3's second and
+    third scenarios (each statement is exercised; the resulting arrangement passes
+    BO-3100c-2's sweep). All three are covered by real tests.
+  - NOT MECHANICAL, AND DELIBERATELY NOT AUTOMATED. Whether the superseding
+    decision reasons WELL — whether it draws a sound conclusion from the now-true
+    premise — cannot be asserted by any test. A record can reason correctly from a
+    true premise to a poor conclusion and every structural check will pass. This
+    is discharged by a named human review, recorded on BO-3100d-2 as an explicit
+    review obligation in it_requirements and stated in its test_rationale so the
+    absence of a covering test is a recorded decision rather than a gap. A test
+    that asserted the record "contains" the right reasoning would be the
+    grep-on-prose form this whole tree rejects, and would be worse than no test
+    because it would read as coverage.

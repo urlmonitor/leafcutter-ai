@@ -1,0 +1,51 @@
+id: AGC-100f-1-i
+title: "Matching Markdown counts cannot hide a missing registry variant"
+component: agent-compatibility
+components: [agent_registry, build_pipeline, testing_quality]
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the generated Markdown directory contains 59 files because it includes one
+    unregistered README file,
+  And the canonical registry requires 59 launchable identities including
+    architect-review-deep, which has no standalone Markdown template,
+  And architect-review-deep has not been generated for Codex,
+  When compatibility validation runs,
+  Then the report marks architect-review-deep missing and the README file unexpected,
+  And the overall result is incomplete even though the raw file count equals 59.
+depends_on: [AGC-100f-1]
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - Compare registry identities rather than directory counts.
+  - Treat non-agent files as unexpected unless explicitly allowlisted.
+  - Keep inherited variants expected without standalone Markdown templates.
+test_required: true
+test_spec:
+  - name: test_missing_registry_variant_with_equal_file_count_is_incomplete
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: A missing inherited variant remains incomplete and an unregistered README remains unexpected despite equal counts.
+test_rationale: "This directly protects against the current misleading Markdown-count baseline."
+delivers_to: null
+expects_from: {ac_id: AGC-100f-1, contract: CompatibilityReportV1 identity comparison}
+doc_links:
+  - {path: docs/architecture/components/agent-registry.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, config, pipeline]
+risk_surface: contract_boundary

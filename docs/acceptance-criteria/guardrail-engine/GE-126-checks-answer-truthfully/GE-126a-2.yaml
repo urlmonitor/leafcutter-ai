@@ -1,0 +1,155 @@
+id: GE-126a-2
+title: "A target you named that resolves to nothing is a caller error and never a pass"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the deployed AC-governance check is invoked out of process and named exactly
+    one target that resolves to no file — a path that does not exist on disk,
+  When the check finishes,
+  Then it reports that the target it was named could not be resolved and names that
+    target verbatim in what it reports,
+  And the outcome value it reports is not the ordinary success value a clean run
+    produces so no caller can read it as a pass,
+  And in the same run no acceptance-criterion record anywhere in the store is treated
+    as having been inspected,
+  And when the same invocation names two targets of which one resolves to a record
+    that genuinely violates the rule and one resolves to nothing the run both refuses
+    the violating record by name and reports the unresolved target by name rather than
+    reporting only one of the two.
+
+  Coverage note: covered only by a test that executes the deployed check in a separate
+  process with an unresolvable target and asserts on the outcome value and the named
+  target. The mixed-target arm is not optional — it is what prevents an implementation
+  that abandons the whole run at the first unresolvable target and so stops inspecting
+  the records it could have inspected.
+depends_on:
+  - GE-126a
+  - GE-126a-1
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-018 records that passing paths on the command line does not make the check read them. The unresolved-target case is the arm that distinguishes an honoured argument from a discarded one."
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: modifies
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: context
+    status: exists
+    relevance: "M5 — a validator reporting success having checked nothing. An explicitly named target that matches nothing is the caller-error form of that mechanism."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Where the check family's result vocabulary is described. A fourth outcome value introduced here has to be legible against that description."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Fixes which copy is the deployed gate; all three arms are asserted against that copy."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Every assertion must be made against the copy the build deploys under .leafcutter/. A result obtained by running the templates/ source copy is not evidence for this criterion (ADR-001, ADR-013)."
+  - "Coverage must reach the check through its process entry point rather than through the direct-function-call seam the existing check_ac_governance test module uses by design."
+  - "The mixed-target run must complete its inspection of every target that DID resolve. An implementation that returns at the first unresolvable target satisfies the single-target arm and converts a fail-open into a fail-closed that still inspects nothing - which is this goal's defect with the sign reversed."
+  - "The unresolved-target outcome value must be distinct from BOTH the ordinary success value and the refusal value, so a caller can tell 'your input was wrong' from 'your work was refused' without parsing prose."
+  - "Must not change the exit status of any commit-time invocation that passes today. The component's deliberate fail-open-on-internal-error convention (GE-116a-1-iii) is not repealed."
+  - "Must add no measurable latency to a commit-time run with an empty derived scope; this check runs on every commit in the repository."
+  - "Error handling must follow the four rules in CLAUDE.md. An unresolvable path is a caller error and an expected condition, not an internal error, and must not be routed through the fail-open warning path."
+test_spec:
+  - name: test_single_unresolvable_argv_target_is_reported_and_not_passed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "Deployed check run by subprocess with one argv target that does not exist on disk names that target verbatim and returns an outcome value that is not the ordinary success value."
+  - name: test_unresolvable_target_run_inspects_no_record_in_the_store
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "In the unresolvable-target run the reported examined count is zero and no record in the surrounding store - including one seeded violating record that is NOT named - is reported as inspected."
+  - name: test_mixed_targets_refuse_the_violator_and_name_the_unresolved_one
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "One run naming two targets, one a record that genuinely violates the rule and one a nonexistent path, produces BOTH the refusal naming the violating record and the unresolved-target report naming the missing path - an implementation that aborts at the first unresolvable target fails this."
+  - name: test_unresolved_refused_and_clean_are_three_distinct_outcome_values
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Three runs of the deployed copy - unresolvable target, violating record, clean record - return three values a caller distinguishes without matching message text."
+test_rationale: |
+  The single-target arm alone is satisfiable by an implementation that aborts on any
+  unresolvable input, which stops the check inspecting the records it could have
+  reached — a fail-closed variant of the same abstention. The mixed-target descriptor
+  is the only one that forces both facts out of one run, and it is the descriptor a
+  test suite will omit by default because it looks like a duplicate of the first. The
+  zero-inspected assertion is separate from the outcome-value assertion on purpose: a
+  check can report an unresolved target and still claim to have examined the store.
+delivers_to:
+  agent: python-coder
+  contract: "The unresolved-target outcome: a third machine-readable outcome value, distinct from both ordinary success and refusal, together with the verbatim target string that failed to resolve. GE-126a-3 must produce the identical value from the environment seam, and GE-126a-2-i depends on it NOT being produced when no target was named at all."
+expects_from:
+  ac_id: GE-126a-1
+  contract: "The resolved-target collection for check_ac_governance, populated from argv, with the obligation that each member is judged rather than counted. This record adds the case where a named member resolves to no file."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126a-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE SECOND MANDATORY ARM and the L1 calls it the only one that separates
+  "honoured your argument" from "ignored it and found nothing to complain about". An
+  implementation that quietly drops the command line still passes GE-126a-1's clean
+  control run; it cannot pass this.
+
+  THE MIXED-TARGET CLAUSE IS DELIBERATE AND IS NOT DECORATION. The obvious repair for
+  an unresolvable target is to abort the run. That converts a fail-open into a
+  fail-closed while still inspecting nothing, which is this goal's defect wearing the
+  opposite sign. Requiring both facts from one run — the violation refused AND the
+  unresolved target named — forces the implementation to keep inspecting what it can
+  reach while still reporting what it could not.
+
+  THE BOUNDARY THAT MUST NOT MOVE lives in GE-126a-2-i: naming no target at all in a
+  scope where nothing matches is an ordinary pass. This criterion fires on targets that
+  were NAMED and not resolved. A fix that makes empty-scope runs fail breaks every
+  commit-time invocation of the AC check family and is the regression to watch for.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET, not because this criterion is
+  terminal. DO NOT REFILL from the BA stage — see BP-1100b-5.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND IS NOT TERMINAL. What this record delivers is a VALUE, not
+  a code path: a third outcome distinct from both success and refusal. GE-126a-3 must
+  reproduce that same value through the seam, and GE-126a-2-i is defined as the case
+  where it must NOT appear. Written as a value rather than as a function so that the
+  seam implementation cannot satisfy GE-126a-3 with a fourth, similar-but-different
+  outcome.
+
+  AGENT AND ORDERING. python-coder. depends_on already carries the ordering; the
+  expects_from edge to GE-126a-1 is documentation only and the sequencer does not read
+  it (KI-ACD-015).
+
+  A NOTE FOR THE CODER ON THE MIXED-TARGET ARM. Both facts have to come out of ONE
+  process invocation. Two runs that each produce one of them is a different and weaker
+  guarantee, and it is the shape a test author will reach for first.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

@@ -1,0 +1,114 @@
+id: BO-3100b-5
+title: "A component diagram shows what the exit-time judgement reads and what it can stop"
+component: build-orchestration
+components:
+  - documentation_system
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader deciding whether the exit-time judgement can see a particular kind of work,
+  When they open the component diagram for it,
+  Then it shows the judgement as a distinct element, shows the project's working state as
+    its only input for deciding whether work happened, shows the specialist's reply as an
+    input it does not use for that decision, and shows the step's no-op declaration as a
+    separate input.
+
+  Given the diagram,
+  When it is compared against what the judgement actually reads,
+  Then every input it shows is one the judgement reads, and no input the judgement reads is
+    missing from it.
+depends_on:
+  - BO-3100b
+  - BO-3100b-1
+  - BO-3100b-3
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the component diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page the new diagram must be reachable from."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The hook substrate the judgement element sits on."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: architecture-diagram-author, the leaf author, not documentation-expert — same reason as every other documentation child in this tree."
+  - "THE REPLY MUST BE DRAWN, AND DRAWN AS UNUSED FOR THE WORK-HAPPENED DECISION. Omitting it leaves a reader assuming it is read, which is the belief this tree exists to correct; drawing it with an explicit not-used marking records the decision where the next author will see it before undoing it."
+  - "THE DIAGRAM MUST DISTINGUISH INPUT-EXISTS from INPUT-USED-FOR-THIS-DECISION, as a declared property of each edge and not merely as a visual style. The coherence test has to be able to tell the two apart from the declared data; a dashed line is not machine-readable."
+  - "The working-state snapshot and the no-op declaration must appear as SEPARATE inputs. Collapsing them into one 'step context' box makes it impossible to see that only one of them decides whether work happened."
+  - "The coherence claim must be enforced by an executable test that obtains the judgement's real input set (see expects_from) and asserts set equality in both directions with the diagram's declared inputs, so an input added later — the no-op declaration medium being the likely one — is a failing test."
+  - "The diagram page must declare its elements and edges in a machine-readable form so the coherence test reads data, not a picture."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3100b-1
+    contract: "The judgement's enumerable input set, each entry marked with whether it is consulted for the work-happened decision — including the reply, present but not consulted."
+  - ac_id: BO-3100b-3
+    contract: "The no-op declaration fields {may_produce_no_change, no_change_reason} and the fact that they are a separate input from the working-state snapshot."
+test_spec:
+  - name: test_bo_3100b_5_diagram_declares_three_inputs_with_correct_usage
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Parse the diagram's declared elements and edges; assert the judgement is a distinct element, the working state is its only input marked as used for the work-happened decision, the reply is present and marked NOT used for it, and the no-op declaration is a separate input."
+  - name: test_bo_3100b_5_diagram_matches_the_judgements_real_inputs
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE COHERENCE CHECK. Obtain the judgement's real input set at run time and assert two-way set equality with the diagram's declared inputs, including the used/not-used marking. Adding a fourth input without redrawing must fail."
+  - name: test_bo_3100b_5_diagram_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  The interesting claim here is a negative one — the reply is an input the judgement does NOT
+  use — and negatives are precisely what review misses and what a rendered diagram cannot
+  convey unambiguously. Making the used/not-used flag a declared property lets the coherence
+  test assert it against the judgement's real inputs; a dashed-line convention would leave the
+  claim unverifiable and would drift the first time someone redraws the picture.
+  Deliberately NOT covered: layout and legibility, which are human judgement.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf diagram author), complexity, it_requirements, expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the component-diagram entry in BO-3100b's documentation_triggers.
+
+  Showing the reply explicitly as an input that is NOT used for the work-happened decision is
+  deliberate. Omitting it from the diagram would leave a reader assuming it is read, which is
+  the belief this whole tree exists to correct; drawing it as a deliberately unused input
+  records the decision rather than hiding it.
+
+  The second scenario ties the diagram to the judgement's real inputs, so an input added later
+  — the no-op declaration medium being the likely one — cannot silently diverge from it.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The used/not-used distinction has to be DECLARED DATA,
+  not a line style. That is the one addition this enrichment makes to the BA's criteria-level
+  intent, and it is what turns the negative claim into something a test can assert.

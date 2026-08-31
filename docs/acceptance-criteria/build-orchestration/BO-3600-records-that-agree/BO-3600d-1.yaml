@@ -1,0 +1,77 @@
+id: BO-3600d-1
+title: "A conflict keeps one identity across runs and cannot leave the outstanding list without a decision"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a conflict raised on one run between a named fault entry and a named
+    requirement,
+  When the reconciliation runs again while the two records still disagree,
+  Then the same conflict is presented as the same conflict, under the identity it
+    was first given,
+    And it is not presented as a newly discovered one.
+
+  Given a conflict that was raised and against which no verdict has been recorded,
+  When any number of further runs occur and attention has moved elsewhere,
+  Then it is still listed as outstanding,
+    And its recorded state reads that no decision has yet been made,
+    And it is absent from no run's output while it remains outstanding.
+
+  Given an outstanding conflict,
+  When someone looks up its identity later,
+  Then they find the two records it is between, when it was first raised, and every
+    state it has been in since,
+  So the same disagreement is not re-litigated from scratch six weeks later.
+
+  Given a conflict whose two records have been brought into agreement,
+  When the reconciliation runs again,
+  Then it is no longer listed as outstanding,
+    And its identity and history remain findable,
+  So a conflict leaves the outstanding list by being resolved and never by being
+    forgotten.
+depends_on:
+  - BO-3600d
+  - BO-3600a-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — a finding whose own fix direction, check the BO-2900 family first, was recorded and then, in its own words, that check was not done. A recorded intention with no state is exactly what disappears."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3600-records-that-agree/BO-3600a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Requires that the check reports the store as it is now rather than replaying an earlier run's list. This record supplies the identity that makes 'the same conflict' meaningful across runs without turning the output into a history."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WITHOUT AN IDENTITY THERE IS NOTHING TO DECIDE AGAINST. A verdict has to attach to
+  something that persists, or every run raises fresh anonymous findings and the
+  disposition path BO-3600d requires cannot exist. This record is the precondition
+  for BO-3600d-2 and BO-3600d-3 and is why it comes first.
+
+  The second scenario is the whole L1 in one clause: what must be impossible is the
+  conflict vanishing with no state at all. Note it requires presence in the output,
+  not just persistence in a store — a conflict recorded somewhere nobody reads has
+  vanished for every practical purpose.
+
+  The fourth scenario is the exit, and it is deliberately narrow: agreement between
+  the records, not a decision to stop reporting. Leaving by suppression is
+  BO-3600e-4's subject and is forbidden there.

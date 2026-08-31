@@ -1,0 +1,63 @@
+id: AGC-100c-2
+title: "How to build and verify Codex-native Leafcutter agents"
+component: agent-compatibility
+components: [agent_registry, build_pipeline, template_compiler, skills_system]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given an operator or developer needs to enable Codex-native Leafcutter agents
+    in a fresh or existing consumer project,
+  When they follow the Codex compatibility how-to from beginning to end,
+  Then the guide states the prerequisites and normal Leafcutter build command,
+  And it shows how to verify AGENTS.md, the .codex/agents identity set, and the
+    .agents/skills catalog,
+  And it shows how to confirm the 59-identity baseline and separately verify
+    architect-review-deep and conflict-resolver-deep,
+  And it includes a real Codex spawn check that proves the selected specialist
+    received its intended instructions and declared skill,
+  And it gives one schema-valid project override example and shows how the report
+    identifies the override's provenance,
+  And it shows how to remove the override and return to package defaults,
+  And it provides remediation for unknown aliases, missing skills, invalid TOML,
+    stale identities, and Windows symbolic-link denial with copy fallback.
+depends_on: [AGC-100c, AGC-100a-3, AGC-100b-3, AGC-100c-1, AGC-100d-2, AGC-100f-1]
+assigned_agent: documentation-expert
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - Verify every command, path, identity, and report field against a fresh consumer build.
+  - Distinguish registry identities from raw generated-file counts.
+  - Validate the override example and its clean removal against the version-1 schema.
+  - Give observable failure, diagnostic, correction, and verification for each troubleshooting case.
+test_required: false
+test_spec: null
+test_rationale: "Documentation-verifier checks this documentation against real artifacts, commands, policy validation, and spawned-agent evidence; no separate product test is required."
+delivers_to:
+  agent: documentation-verifier
+  contract: "docs/how-to/codex-native-agents.md with build, verification, spawn proof, override, rollback, and remediation procedures."
+expects_from:
+  - {ac_id: AGC-100a-3, contract: SpawnEvidenceV1}
+  - {ac_id: AGC-100b-3, contract: Override and provenance behavior}
+  - {ac_id: AGC-100c-1, contract: CodexProjectBundleV1}
+  - {ac_id: AGC-100d-2, contract: PublishedSkillCatalogV1}
+  - {ac_id: AGC-100f-1, contract: CompatibilityReportV1}
+doc_links:
+  - {path: docs/how-to/codex-native-agents.md, relationship: creates, status: planned}
+  - {path: docs/architecture/components/agent-registry.md, relationship: describes, status: exists}
+  - {path: docs/architecture/components/template-compiler.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+declares_side_effect: false

@@ -4,7 +4,7 @@ description: "Reference for all pre-commit hooks enforced by the leafcutter comm
 type: reference
 status: active
 created: 2026-05-28
-last_updated: 2026-06-18
+last_updated: 2026-08-26
 components:
   - commit_guardian
 ---
@@ -197,3 +197,96 @@ post-onboard checklist. After installing, run:
 ```bash
 python scripts/onboard_hook_opt_in.py
 ```
+
+## Proof Promise vs. Claim Check (check-proof-promise-claim)
+
+The `check-proof-promise-claim` hook fires on staged ticket markdown files
+(`^tickets/.*\.md$`) and refuses a commit when a ticket's own `## Test
+Requirements` block promises a kind of proof for a stated behaviour that no
+test in the tree has yet claimed a matching tag for.
+
+**Key behaviours:**
+
+- Compares exactly two authored declarations and nothing else: the promise
+  side (each `## Test Requirements` descriptor's `angle` + `covers` fields)
+  and the claim side (`done_proof.collect_test_tag_records` — the same
+  single-pass scanner `check-done-proof` and CI's done-proof gate use).
+  Reading a test's own body to judge what it does is forbidden on every path
+  to this outcome (see `BO-2900a-2.yaml`, linked below).
+- **The promise set is the denominator.** A kind never promised for a given
+  AC is never named in that AC's refusal, and a ticket that promises nothing
+  is never refused (`BO-2900f-1.yaml`).
+- **STATIC only** — no pytest run at pre-commit time, matching the posture
+  `check-done-proof` already established.
+- On refusal, prints one line per unmatched promise naming the AC id, the
+  stated behaviour, and the missing kind by name, e.g.:
+
+  ```
+  BP-1100g-4: promised 'reachability' proof for "..." was never claimed by
+  any test — write a test tagged '# covers: BP-1100g-4' and '# angle:
+  reachability'
+  ```
+
+  On success it prints exactly `promised and claimed` — the outcome is
+  established, never worded as reached, proven, verified, or done.
+- **Bypassable** via `SKIP=check-proof-promise-claim` or `--no-verify`, same
+  as every other judgment-tier hook in this file.
+
+**Relationship to check-done-proof.** Both hooks read the same underlying
+test-tag scanner but govern different moments: `check-done-proof` blocks a
+staged AC YAML from claiming `work_status: done` without a covers-tagged
+test; `check-proof-promise-claim` blocks a staged ticket whose own plan
+promised a kind of proof that the test tree does not yet claim. Neither
+changes which *failing* tests block a commit — that decision is untouched
+and belongs to a separate axis. See
+[`docs/how-to/done-proof-enforcement.md`](how-to/done-proof-enforcement.md)
+for the two-layer (pre-commit + CI) enforcement model this hook's sibling
+uses; the promise/claim gate is pre-commit-only today and has no CI-mode
+counterpart.
+
+**Related AC contracts:**
+
+- `docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml` — the claim/verdict boundary this hook must never cross.
+- `docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-4.yaml` — the promise-side vocabulary this hook reads and does not reinterpret.
+- `docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-1.yaml` — the denominator discipline.
+- `docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100b-5.yaml` — the compatible posture: a diff-time check on the shape of what was written, not a test execution.
+
+There is no `enabled`/`strict` configuration for this hook — it runs
+whenever `tickets/*.md` is staged, once registered under
+`hooks_manifest.hooks` in `scripts/commit_guardian/commit_guardian.json`.
+
+## Presence-Only Assertion Guard (check-presence-only-assertions)
+
+The `check-presence-only-assertions` hook rejects a newly staged test
+assertion whose entire "coverage" is a grep for a symbol's presence in a
+source file — a substring check (`'literal(' in content`,
+`assertIn('literal(', content)`) or a regular-expression declaration check
+(`re.compile(r"function\s+NAME\s*\(")`). A presence-only assertion stays
+green even when the code it names is unreachable, so by itself it is not
+coverage (BP-1100b-5, EPIC-BuildPipelinePhantomRemediation).
+
+**Key behaviours:**
+
+- **Staged hunks only.** The hook reads `git diff --cached` and scans only
+  ADDED lines — never a whole-file or whole-tree scan. This makes it a
+  ratchet: pre-existing presence-only assertions elsewhere in the repo do not
+  block a commit that never touches them (the backlog is a separate,
+  out-of-scope sweep).
+- **Scope: test files only, scanned sources only.** Only files that look like
+  test files (`test_*.py`, `*_test.py`) are scanned, and only when the
+  assertion is proximate to a reference to a file matched by
+  `scanned_source_globs` — an assertion over an unlisted file is not flagged.
+- **Both forms matched.** Substring-form and regex-declaration-form
+  presence-only assertions are both detected, independently.
+- **Waiver:** a `# presence-only: <reason>` comment directly above the
+  assertion suppresses it, provided `<reason>` is non-empty after stripping.
+  An empty or whitespace-only reason does NOT suppress. Accepted waivers and
+  their reasons are listed in the hook's own output.
+
+**Configuration** (in `presence_only_assertion_guard` section of `commit_guardian.json`):
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enabled` | `true` | Set to `false` to disable the hook entirely. |
+| `scanned_source_globs` | `["templates/workflows-js/*.js", "templates/scripts/commit_guardian/*.py"]` | Glob patterns (matched via `fnmatch`) for source files whose presence-only coverage is rejected. DATA read from this key — never hardcoded in the hook. |
+| `waiver_marker` | `"presence-only"` | The comment marker recognised as `# <marker>: <reason>`. |

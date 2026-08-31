@@ -38,7 +38,7 @@ This epic implements AC GE-122d: The numbering guarantee holds at every stage an
 | 06 | [06_TICKET-20260825-GE-122d-4.md](./06_TICKET-20260825-GE-122d-4.md) | The three-stage arrangement is drawn, showing which stage owns which promise | GE-122d-4 | 01, 02 |
 | 07 | [07_TICKET-20260825-GE-122d-5.md](./07_TICKET-20260825-GE-122d-5.md) | Which stage you can skip, and what still catches you, is written down | GE-122d-5 | 02, 03 |
 | 08 | [08_TICKET-20260825-GE-122e-2.md](./08_TICKET-20260825-GE-122e-2.md) | Each work item that exists twice is reduced to the one copy that is right | GE-122e-2 | — |
-| 09 | [09_TICKET-20260825-GE-122e-3.md](./09_TICKET-20260825-GE-122e-3.md) | The repaired collection passes the guard itself, with nothing excused | GE-122e-3 | 08, `../../TICKET-20260817-GE-122e-1.md` (done) |
+| 09 | [09_TICKET-20260825-GE-122e-3.md](./09_TICKET-20260825-GE-122e-3.md) | The repaired collection passes the guard itself, with nothing excused | GE-122e-3 | 08, `../../../99_done/TICKET-20260817-GE-122e-1.md` (done) |
 | 10 | [10_TICKET-20260825-BP-900h-6.md](./10_TICKET-20260825-BP-900h-6.md) | The simulation uses the install, not just builds it — a first commit is attempted | BP-900h-6 | `../EPIC-DeploymentCompleteness/12_TICKET-20260817-BP-900h-1.md` (**not built**) |
 | 11 | [11_TICKET-20260825-GE-122d-6.md](./11_TICKET-20260825-GE-122d-6.md) | The commit-time numbering check is wired into the live registry and fires on a real commit | GE-122d-6 | 01, 05, 09, 10 |
 | 12 | [12_TICKET-20260825-GE-122d-6-i.md](./12_TICKET-20260825-GE-122d-6-i.md) | A pass states what it inspected, so a pass is distinguishable from a hook that never ran | GE-122d-6-i | 11 |

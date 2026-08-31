@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-26
 components:
   - supervisor_system
 related_docs:
@@ -156,3 +156,213 @@ status. That narrows the blast radius (a parked agent can no longer be counted a
 completed phase or a completed epic) but does not close this issue: nothing yet stops an
 agent from parking in the first place, and the registry/hook enforcement above is not
 built.
+
+---
+
+> **Entries `KI-SS-002` … `KI-SS-004` are recovered from an unmerged branch.** They were
+> observed directly on 2026-08-19 while driving `EPIC-GE122UniquenessPassAndRepair` — not
+> inferred from reading the code — and written into the parallel known-issues register PR #495
+> invented (as `KI-SUP-1` … `KI-SUP-3`), which was discarded during reconciliation. All three
+> were re-verified against `main` at `37655862`; `KI-SS-002`'s mechanism had to be **corrected**
+> in the process and the correction is recorded in the entry rather than edited away.
+
+---
+
+### KI-SS-002 — A gate adjudicated `failed` does not stop the drive, so the commit phase still runs
+
+- **Severity:** high — a phantom-done defect one level up from the ones the package exists to
+  prevent
+- **Status:** open — code is on `main` and live, **but by a different mechanism than the one
+  originally recorded** (see the correction below)
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Where:** `templates/workflows-js/build-feature.js:1757-1772` (the `!verdict.verified`
+  branch) and `:305-328` (`phaseOrder`, `commit` at priority 12)
+
+**Symptom as observed.** During the epic drive, `pr-reviewer` and `documentation-verifier` both
+returned `status: blocker` on ticket `01_TICKET-20260818-GE-122a-1.md`. Neither blocker was
+remediated. The drive nevertheless proceeded to the `commit` phase, which committed and set
+`commit: signed_off` while the frontmatter still read:
+
+```yaml
+documentation-verifier: failed
+pr-reviewer: failed
+```
+
+The commit message did name both open blockers, so the record is not dishonest — but a gate that
+reports a blocker and is then committed past provides no enforcement. The two blockers were real:
+one was a performance regression that would have shipped a commit-time gate slow enough to be
+routinely bypassed, the other a malformed contract line.
+
+**CORRECTION — the mechanism named on the branch is closed; the defect is not.** The branch
+recorded the cause as *"the precondition check is missing, not the ordering"*, implying an
+agent-reported blocker walks straight past `commit`. On `main` that specific path is **shut**:
+`build-feature.js:1656` intercepts `resultStatus === "blocker" || "failed"`, and every
+classification outcome either returns `status: "blocked"` (mechanical-retries-exhausted, design,
+halt, unknown) or `break`s out of the phase loop (`cross_agent`). `commit` cannot be reached that
+way. Filing the original text unchanged would have pointed the fix at code that already does the
+right thing.
+
+**What is actually live.** The same shape survives one branch over, on the *verification* path.
+When a phase reports success but its sign-off record cannot be confirmed, the drive adjudicates
+it failed — and then continues:
+
+```js
+if (!verdict.verified) {
+  unverifiedPhases.push({ agent: phaseName, reason: verdict.reason });
+  unverifiedReasons[phaseName] = verdict.reason;
+  log(`VERIFICATION FAILED for '${phaseName}' ... The gate is adjudicated failed and is
+       NOT counted as completed.`);
+} else { ... }
+```
+
+There is no `break` and no `return`. `unverifiedPhases` is collected, threaded into the payload
+at `:1792` and reported at `:955-956` — and consumed by nothing that stops the loop. So the
+iteration advances to the next entry in `phaseOrder`, and `commit` sits at priority 12, last.
+A gate the drive itself has just declared failed is followed by a commit.
+
+The comment above that branch states the intent honestly — *"The drive continues so the remaining
+gates still run and are reported, but the ticket can no longer be recorded complete"* — which is
+right for a *reporting* gate and wrong when the remaining phase is `commit`. Withholding the
+completion claim is not the same as withholding the commit.
+
+**Detection.** After any drive, check for a ticket where `commit: signed_off` coexists with any
+phase in state `failed`, and check the payload for a non-empty `unverified_phases`:
+
+```bash
+grep -n "failed" <ticket>.md
+```
+
+**Workaround.** Do not treat drive completion as evidence. Read the frontmatter `agents:` map
+directly and confirm no phase is `failed` before merging.
+
+**Fix direction.** Gate the `commit` phase specifically on `unverifiedPhases.length === 0` —
+the collection already exists and is already correct, it is simply never consulted. Everything
+before `commit` should keep running and reporting, which is what the current comment argues for
+and what makes the narrow fix the right one.
+
+**Pattern:** a signal computed correctly and then not consumed — the same shape as
+`commit-guardian.md`'s `KI-CG-007` and `KI-CG-026`, here at the orchestration layer.
+
+---
+
+### KI-SS-003 — The adjudication ladder escalates to `brainstorm-lead` without a per-ticket cap and can burn a drive without converging
+
+- **Severity:** medium
+- **Status:** open — code is on `main` and live; the code carries a per-*phase* retry cap and no
+  per-*ticket* escalation cap at all
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Where:** `templates/workflows-js/build-feature.js:1657-1668` (the `failure-classifier`
+  dispatch) and `:296` (`MAX_RETRIES = 2`); `templates/skills/building-epics/SKILL.md` §4
+
+**Symptom.** Three `brainstorm-lead` escalations fired on a single ticket and none produced an
+applied fix. Roughly 50 minutes of a 2.5-hour drive went to them. In one case the blocking agent
+had already written the exact corrective line into its own sign-off comment; the escalation did
+not apply it, and it was later applied by hand in a single edit.
+
+For scale: the full drive covered **one** ticket of five in 2.5 hours. Driving the same gates by
+direct dispatch covered the equivalent ground and found three real defects in roughly 90 minutes.
+
+**Root cause.** `building-epics` §4 specifies a cap of one escalation per ticket. Nothing
+implements it. `build-feature.js` dispatches `brainstorm-lead` as the `failure-classifier` on
+**every** blocker or failure, unconditionally, before any classification exists to gate on. The
+only bound in the code is `MAX_RETRIES = 2` per phase name — so a ticket with several failing
+phases can legitimately escalate many times while every individual counter stays inside its
+limit. The observed behaviour did not violate the code; the code never encoded the rule.
+
+**Detection.** Count `brainstorm-lead` spawns per ticket in the workflow transcript directory.
+More than one on the same ticket is a signal:
+
+```bash
+grep -l brainstorm-lead <session>/subagents/workflows/<run>/agent-*.meta.json
+```
+
+**Workaround.** When a blocker's own remediation text is concrete and mechanical, apply it
+directly rather than routing it through escalation.
+
+**Fix direction.** Two parts, in order of value. (1) Before escalating, check whether the
+blocker's sign-off contains an actionable remediation and attempt that first — in the observed
+case the answer was already written down and the escalation was pure cost. (2) Count escalations
+per *ticket*, not per phase, and enforce the §4 cap of one. A documented cap that no counter
+implements is worse than no cap, because it is read as a guarantee.
+
+---
+
+### KI-SS-004 — A workflow invoked by name can run a stale session-cached script
+
+- **Severity:** low — the workaround is reliable
+- **Status:** open — a harness-level behaviour, independent of repository state; reproduced
+  repeatedly and unaffected by anything on `main`
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** the Workflow tool's by-name resolution, against `.leafcutter/workflows/<name>.js`
+
+**Symptom.** Invoking a workflow by name may execute a stale session-cached script even after
+`build.py` has redeployed it. The redeploy succeeds, the file on disk is correct, and the run
+still exercises the old code — so a verified fix appears not to work.
+
+**Why it costs time out of proportion to its severity.** It presents identically to "the fix is
+wrong". An agent that has just edited a workflow, rebuilt, and re-run has every reason to
+conclude the edit was ineffective, and the disk state supports the opposite conclusion only if
+someone thinks to check it.
+
+**Workaround.** Invoke by `scriptPath` against `.leafcutter/workflows/<name>.js` to force the
+current version.
+
+**Related:** `testing-quality.md`'s `KI-TQ-004` is the same hazard one layer down — a stale
+deployed copy pinned in `sys.modules` for a whole pytest session. Both turn "I rebuilt" into a
+false premise.
+
+---
+
+### KI-SS-005 — Concurrent agents in one worktree each report their siblings' files as another session's stray work
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1 (4 agents, 1 dispatch, all four identical)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/agents/product-owner.md`, `templates/agents/business-analyst.md`,
+  `templates/agents/it-po.md` — none states that the agent may be one of several concurrent
+  writers in the same tree. The fan-out site inherits the gap rather than causing it.
+
+**Symptom.** Four AC-authoring agents were dispatched in parallel into one shared worktree. Each
+ran `git status`, saw untracked AC YAML it had not written, and reported it — unprompted, in its
+sign-off — as unrelated pre-existing work from other parallel sessions, recommending it be left
+alone. Every file so described had been written minutes earlier by a sibling in the same dispatch.
+All four made the same call independently.
+
+**Why it is not just noise.** The inference is locally sound: an agent sees untracked files it did
+not create, and nothing in its prompt says a peer might be writing beside it, so "another session"
+is the only available explanation. That makes it a systematic misreading rather than a mistake any
+one agent could avoid.
+
+Three costs, in ascending order of seriousness:
+
+1. **The operator gets four contamination reports for one clean tree.** Each is individually
+   credible and, read together, suggests the worktree is unusable — the exact opposite of the
+   truth.
+2. **Staging advice is wrong in a way that looks careful.** "Leave these alone, they are not
+   yours" is the correct instinct applied to the wrong facts; followed literally at commit time it
+   drops the sibling work the same drive just produced.
+3. **The failure mode is one step away.** An agent that decides stray untracked files should be
+   cleaned up rather than preserved would destroy peer output, and untracked AC and ticket folders
+   are unrecoverable. Nothing observed here went that far — no work was lost — and the reason is
+   that all four chose the conservative branch, not that anything prevented the other one.
+
+**Fix direction.** Tell the agent what it is. A dispatched agent that may run concurrently should
+be told so, and told the rule that follows: files you did not write are peers' work — never
+foreign, never stray, never yours to clean up or to characterise in a sign-off. The narrow,
+mechanical form of the rule is that an agent stages by explicit path (`git commit -- <paths>`,
+already the project's practice) and reports only on paths it wrote, which makes the whole
+distinction moot rather than requiring the agent to reason about it correctly.
+
+Resist fixing this by having each agent work out who wrote what — timestamps and `git status`
+cannot answer it, and an agent that guesses confidently is what produced the reports above.
+
+**Related:** `build-pipeline.md`'s `KI-BP-20260826-1331` is the same shape at the filesystem layer
+— shared mutable state written by parties who do not know each other exist. There, the writers
+collide; here, they only misdescribe each other. Project memory *"Commit into a dirty shared
+tree"* records the operator-side half of this.
+
+**Pattern:** an agent reasoning correctly from a prompt that never told it it had company.

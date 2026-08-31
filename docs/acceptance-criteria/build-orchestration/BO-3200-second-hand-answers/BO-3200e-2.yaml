@@ -1,0 +1,142 @@
+id: BO-3200e-2
+title: "An undetermined outcome still stops the work — fail-closed is preserved, only its wording changes"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a check that reports it could not tell,
+  When whatever depends on that check continues,
+  Then the work the check guards does not proceed.
+
+  Given the same check reporting it could not tell,
+  When the overall outcome of the run is read by whatever consumes it,
+  Then the outcome is not one that means everything checked out.
+
+  Given a check that reports it could not tell,
+  When its report is compared with the report it produces when it inspects successfully and
+    finds a problem,
+  Then both stop the work, and the two reports differ in what they say happened.
+depends_on:
+  - BO-3200e
+  - BO-3200e-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 — fail-closed was correct; only its wording was wrong. This AC keeps the correct half."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The surrounding guarantees a false pass would undermine."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "FAIL-CLOSED IS PRESERVED. This AC is the guard on BO-3200e-1: converting a substantive refusal into an unknown is a change of WORDING. If the unknown also stops being a refusal, the tree has replaced a false verdict with a false pass, which is strictly worse — the run proceeds on something nobody verified."
+  - "EVERY CONSUMER MUST TREAT UNDETERMINED AS NOT-PASSED, including consumers that are not the workflow runtime. PR #565 covered the runtime; a check site's outcome is also read by hooks, CI gates and scripts, and each of those must refuse it too. The runtime's refusal is not a substitute for the value being refused where it is read."
+  - "THE MACHINE-READABLE OVERALL OUTCOME MUST NOT MEAN EVERYTHING-CHECKED-OUT whenever any check reported undetermined. This is the consumed-in-control-flow clause: a report that says one thing while the value a caller branches on says another is the false-success shape this repository has hit repeatedly, including a cancelled run that returned an ok status having authored nothing."
+  - "THE TWO STOPPING REPORTS MUST STAY DISTINGUISHABLE. Both halt; what differs is what they say happened, and that difference must survive whatever aggregation the overall outcome performs. An aggregate that reduces both to 'failed' loses the distinction at exactly the layer a reader looks at first."
+  - "The undetermined outcome must not be convertible to a pass by a retry, a default, or a tolerance setting. If a check could not look, no configuration may make that acceptable."
+  - "DO NOT RE-SPECIFY THE RUNTIME SIDE — PR #565 shipped it. This AC is the check site's side and its non-runtime consumers."
+delivers_to:
+  - agent: python-coder
+    contract: "The rule, applied at every consumer of a check outcome: undetermined blocks the guarded work and contributes a non-success value to the overall outcome, while remaining distinguishable in the report from a substantive finding. BO-3200e-3 sweeps every check site for compliance."
+expects_from:
+  - ac_id: BO-3200e-1
+    contract: "The three-valued check outcome {in_order | problem_found | undetermined} and its report fields. This AC constrains what consumers must do with the third value."
+test_spec:
+  - name: test_bo_3200e_2_undetermined_blocks_the_guarded_work
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Drive a real check into the undetermined state and assert the work it guards does not proceed — observed by the guarded step not executing, not by reading the check's return value."
+  - name: test_bo_3200e_2_overall_outcome_is_not_everything_checked_out
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE CONSUMED-IN-CONTROL-FLOW CLAUSE. Assert the run's machine-readable overall outcome — the value a caller branches on — is not a success value when any check reported undetermined."
+  - name: test_bo_3200e_2_both_stopping_reports_differ_in_what_they_say
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Drive the same check into undetermined and into problem_found; assert both stop the work AND the two reports differ substantively, including after whatever aggregation the overall outcome performs."
+  - name: test_bo_3200e_2_non_runtime_consumers_also_refuse_undetermined
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Exercise a consumer that is NOT the workflow runtime — a hook or CI gate reading the same outcome — and assert it refuses undetermined too. PR #565 covered the runtime; this is the gap that remains."
+  - name: test_bo_3200e_2_no_configuration_converts_undetermined_to_a_pass
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Assert no retry, default or tolerance setting turns an undetermined outcome into a pass. If a check could not look, nothing may make that acceptable."
+test_rationale: |
+  BO-3200e-1 is one careless step away from being read as permission to continue, and this AC is
+  the guard. So the first test asserts on the GUARDED WORK not executing, rather than on the
+  check's return value — a check can return the right thing while its consumer proceeds anyway,
+  which is the discarded-reply shape from KI-BO-020 arriving at a different site.
+  The overall-outcome test is required by CLAUDE.md's gate rule and by this repository's own
+  history of reports that read correctly beside a machine-readable value that said otherwise.
+  The non-runtime-consumer test is the specific remainder after PR #565: the runtime refuses an
+  undetermined agent result, but a hook or a CI gate reading a check's outcome is a different
+  consumer with its own branch, and nothing yet makes it refuse.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: 'Added assigned_agent, complexity, it_requirements, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched;
+    PR #565 runtime-side scope boundary preserved.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE PARENT L1 IS EXPLICIT: "fail-closed is correct and is not being weakened here. Halting on
+  an unknown is the right behaviour. The requirement is only that the halt be REPORTED as an
+  unknown rather than as a finding, because the two lead a reader to entirely different places."
+
+  This AC exists because BO-3200e-1 is one careless step away from being read as permission to
+  continue. Changing a substantive refusal into an unknown is a change of wording; if the
+  unknown also stops being a refusal, the tree has replaced a false verdict with a false pass,
+  which is strictly worse — the run proceeds on something nobody verified.
+
+  THE SECOND SCENARIO IS THE CONSUMED-IN-CONTROL-FLOW CLAUSE required by CLAUDE.md "Gate /
+  Workflow ACs — Verify Behaviorally, Not by Grep". A report that says one thing while the value
+  a caller branches on says another is the false-success shape this repository has hit
+  repeatedly, including the cancelled run that returned an ok status having authored nothing.
+
+  PARTIALLY SHIPPED, DELIBERATELY NOT RE-SPECIFIED: PR #565 already made the workflow runtime
+  refuse to count an undetermined agent result as a completed phase, ticket or epic. That is the
+  runtime's side. This criterion is the check site's side — the check must produce an outcome
+  the runtime can refuse, at every place a caller reads it, including callers that are not the
+  workflow runtime.
+
+  The third scenario pins the pair together so neither can be satisfied by collapsing the two
+  reports into one.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The non-runtime consumers are the concrete remainder after
+  PR #565 and are easy to miss when reading that PR as "already done": commit-guardian hooks and
+  CI gates read check outcomes directly and each has its own pass/fail branch. An undetermined
+  value that the runtime refuses and a hook treats as truthy is a false pass at the layer that
+  actually blocks merges.

@@ -529,8 +529,10 @@ def _create_fastlane_worktree(slug: str, worktrees_dir: Path, repo_root: Path) -
     Analogous to :func:`_create_ac_worktree` but for one-command AC-scoped
     builds: the new branch is always rooted at ``origin/main`` (never stale
     local ``main``) and uses the ``fast-lane/`` prefix. When the branch already
-    exists locally (a prior run whose worktree was pruned), the checkout-only
-    ``git worktree add <path> <branch>`` form reuses it instead of failing.
+    exists locally (a prior run whose worktree was pruned), the branch is
+    force-reset to the CURRENT ``origin/main`` and the worktree is built from
+    that fresh tip — never from the stale local branch tip left behind by the
+    pruned prior run (BO-2400f-3).
 
     Args:
         slug: Short slug for the build session (derived from the AC id).
@@ -552,7 +554,14 @@ def _create_fastlane_worktree(slug: str, worktrees_dir: Path, repo_root: Path) -
     branch_already_exists = _branch_exists(full_branch, repo_root)
 
     if branch_already_exists:
-        # Reuse the existing branch — checkout-only, no new branch creation.
+        # Reconnect: the branch survived a prior worktree prune, but it may be
+        # stale relative to origin/main (the exact BO-2400f-3 scenario — a
+        # pruned fast-lane worktree must never resurrect the old tip). Use
+        # "-B" (force branch reset) with an explicit "origin/main" start
+        # point so the reconnect rebuilds the branch ref itself, and
+        # therefore the resulting worktree's HEAD, from the CURRENT
+        # origin/main rather than checking out the branch at whatever stale
+        # commit it already happened to point to.
         try:
             subprocess.run(
                 [
@@ -561,19 +570,21 @@ def _create_fastlane_worktree(slug: str, worktrees_dir: Path, repo_root: Path) -
                     str(repo_root),
                     "worktree",
                     "add",
-                    str(worktree_path),
+                    "-B",
                     full_branch,
+                    str(worktree_path),
+                    "origin/main",
                 ],
                 check=True,
             )
         except (subprocess.CalledProcessError, OSError) as exc:
             raise subprocess.SubprocessError(  # noqa: TRY003
-                f"Failed to add fast-lane git worktree at {worktree_path} "
-                f"reusing existing branch '{full_branch}': {exc}"
+                f"Failed to reconnect fast-lane git worktree at {worktree_path} "
+                f"by resetting existing branch '{full_branch}' to origin/main: {exc}"
             ) from exc
         print(
-            f"INFO: Reusing existing branch '{full_branch}' in new worktree "
-            f"at {worktree_path}.",
+            f"INFO: Reconnected branch '{full_branch}' in new worktree "
+            f"at {worktree_path}, rebuilt from the current origin/main.",
             file=sys.stderr,
         )
     else:

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 components:
   - build_pipeline
 related_docs:
@@ -24,9 +24,22 @@ acceptance criterion for something nobody has decided to build yet.
 **Read it before adding new capability to this component.** Fixing what is already
 broken takes precedence over building more.
 
-**Adding an issue.** Append a new `### KI-BP-NNN` section using the next free number.
-Nothing here is generated — edit it by hand. Fill in what you actually know; an issue
-recorded with a thin `Evidence` line is far better than one not recorded.
+**Adding an issue.** Append a new section with a **date-and-slug id**:
+`### KI-BP-YYYYMMDD-short-slug`. Nothing here is generated — edit it by hand. Fill in what
+you actually know; an issue recorded with a thin `Evidence` line is far better than one not
+recorded.
+
+**Why not the next free number.** The sequential `KI-BP-NNN` form is retained for the
+entries that already carry it, and must not be renumbered — inbound references would break.
+But it is not usable for new entries. "Append the next free number" requires every author to
+read the same file at the same moment and act on it before anyone else does, which fails the
+moment two agents or two sessions work in parallel. On 2026-08-25 it produced **ten**
+collisions in a single day, one of which reached `main`, and this register already carries
+two renumbering notes as scar tissue (KI-BP-020, and the KI-CG-012 collision recorded in
+`commit-guardian.md`). KI-BO-024 diagnosed this and named the remedy: *"Make the number
+non-sequential. A date-plus-slug id cannot collide."* Two authors would have to pick the same
+slug on the same day, and if they did they are describing the same defect anyway. Both id
+forms sort and grep identically on the `KI-BP-` prefix.
 
 **Hitting an existing issue.** Increment `Occurrences` and update `Last seen`. Do not
 add a duplicate entry. Occurrences is an escalator, not the score — a blocker seen once
@@ -99,9 +112,26 @@ concurrent author, since it appears in a tree you did not knowingly edit.
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 3
+- **Occurrences:** 4
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
 - **Where:** `scripts/build.py` — the agent-card generation phase; output at `docs/agents/cards/*.md`
+
+**Earlier occurrence, 2026-08-19 — recovered from an unmerged branch.** PR #495's parallel
+known-issues register recorded this independently as `KI-BO-2` while driving
+`EPIC-GE122UniquenessPassAndRepair`. That register was discarded during reconciliation; the
+occurrence is folded in here rather than duplicated, per this file's own rule. `build.py --force`
+regenerated **eight** cards with AC-store content absent from the committed versions — entries
+such as `ACD-1600g-*` and `ACD-1800a-*`, belonging to components unrelated to the work in hand.
+The committed cards were simply older than the store.
+
+It adds two things to the three occurrences below. First, it is the **earliest** recorded
+instance and it is already purely AC-store drift, which dates the drift source to at least a
+week before the 2026-08-25 occurrence that first isolated it. Second, it names the operational
+cost precisely: eight modified files in `git status` during unrelated work, each of which must be
+excluded from every commit by hand — and which makes a genuinely-related card change easy to miss
+in the noise. The workaround used was `git restore docs/agents/cards/` for the unrelated ones
+before staging, keeping any card that reflects a change actually made in the commit. That is the
+same workaround `build-pipeline.md:162` prescribes, arrived at independently.
 
 **Third occurrence, 2026-08-25.** Reproduced again on a clean worktree cut from `origin/main`,
 this time rewriting **four** cards with 68 insertions and zero deletions:
@@ -784,6 +814,13 @@ version of something the source has moved on from.
 **Related.** KI-BP-010 is the cleanup-side counterpart for this same `workflows/` directory:
 its `--clean` entry has never executed, so nothing reaps what this phase declines to rewrite.
 
+KI-BP-20260826-1331 is the **write-side twin**: the identical stale-workflow symptom (same
+file, same missing review and changelog phases) reached on 2026-08-25 by a build whose install
+phase ran fail-open and wrote older bytes from a stale worktree, rather than by this entry's
+skip branch. Counted separately because a skipped-phase alarm would not fire on it — but the
+source-revision stamp proposed in the fix direction above resolves both, and is the reason to
+prefer it over merely making the skip loud.
+
 ---
 
 ### KI-BP-009 — `.claude/skills/` is symlinked wholesale to the generated tree, so an adopter's own skills have nowhere to live and `--clean` targets them
@@ -1264,7 +1301,7 @@ autofix agent and the hook that failed. "Waiting" is not a terminal state a call
 
 - **Severity:** low
 - **Status:** open
-- **Occurrences:** 1
+- **Occurrences:** 3
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `docs/agents/cards/`, generated by `scripts/generate_agent_cards.py` and run as part of `build.py`
 
@@ -1302,6 +1339,101 @@ repair this instance without preventing the next one.
 `Check Product-Truth Derived-Data Drift (generator --check)` job, which already does exactly this
 for a different generated surface). Alternatively stop committing them and generate on demand —
 but they are read by agents from the deployed tree, so the ratchet is the smaller change.
+
+**Occurrences 2 and 3 (2026-08-25, later the same day).** Reproduced twice more at a newer
+`origin/main`, in worktrees `knowledge-harvest-wiring` and `fastlane-ki-findings` — the same four
+cards, dirty immediately after `setup_ticket_worktree.py` bootstrap with no agent having run. A
+third instance in the `inf-400c-2-ii` fast-lane worktree carried seven files (the four cards plus
+`llm-expert` and `test-writer`, plus `docs/INDEX.md`). So the drift is not a one-off snapshot: a
+bootstrapped worktree is dirty from birth, every time.
+
+**Raises the ceiling on this entry's severity via `KI-BO-029`.** The rating of `low` rests on
+"nothing breaks, the cards merely drift". That holds for the drift itself, but the fast lane
+stages with `git add -A`, so this churn is swept into fast-lane pull requests automatically —
+under a generated commit message that cannot describe it. The drift then gets repaired at random
+intervals by PRs that never mention it, which is harder to reason about than steady staleness.
+See `docs/known-issues/build-orchestration.md` → `KI-BO-029`. Fixing either side defuses the
+other; the cheapest single change is `git restore docs/agents/cards/` at the end of bootstrap,
+which is already this file's prescribed manual workaround at line 162.
+
+---
+
+### KI-BP-020 — `_ac_components.py` is missing from the AC-store deploy map, so the deployed `validate_ac_schema.py` crashes on import — and it is the command CLAUDE.md tells consumers to run
+
+> **Numbering note.** Filed as KI-BP-016 and renumbered to 020 at merge: `main` published its
+> own KI-BP-016 (the `docs_root` index defect, below) plus 017-019 while this branch was in
+> review. The free number was re-read against `origin/main` at the moment of landing, per the
+> standing instruction — which is the only reason this was caught rather than shipped as a
+> duplicate. `KI-BO-024` records the same collision class reaching `main` undetected on this
+> date, and argues the convention needs a mechanical duplicate check rather than another
+> paragraph. Physical position kept where the merge left it rather than moved to the end, so
+> the surrounding history stays legible.
+
+- **Severity:** high — the documented store-hygiene command is dead in every consumer layout
+- **Status:** open
+- **Occurrences:** 1 (second occurrence of this defect *class* — see below)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build_phases.py` — `build_ac_store`'s hardcoded `deploy_map`, against
+  `scripts/ac_store/validate_ac_schema.py:45`
+
+**Symptom.** The deployed validator raises on import, before it can check anything:
+
+```
+$ python <target>/.leafcutter/scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/ac-store
+Traceback (most recent call last):
+  File ".../.leafcutter/scripts/ac_store/validate_ac_schema.py", line 45, in <module>
+    from _ac_components import components_field_errors, load_registry_ids
+ModuleNotFoundError: No module named '_ac_components'
+```
+
+**Evidence.** Reproduced by running the deployed copy, not inferred. `validate_ac_schema.py:45`
+imports `_ac_components` at module scope; `grep -n "_ac_components" scripts/build_phases.py`
+returns **nothing**, so the module is never deployed; and `ls` of a freshly built
+`.leafcutter/scripts/ac_store/` lists 18 files with `validate_ac_schema.py` present and
+`_ac_components.py` absent. The build was run from this repo at `origin/main` immediately
+before the reproduction, so this is the current state of the shipped artifact.
+
+**Why the repo's own CI does not catch it.** Nothing in `.github/workflows/` invokes
+`validate_ac_schema.py` — the required "AC store valid" job runs the commit-guardian hook
+`check_ac_schema.py`, which is deployed by a whole-directory rglob and therefore unaffected. In
+*this* repo `scripts/` is source, so every local run imports the module that sits beside it and
+succeeds. The failure is only reachable from the deployed tree, which this repo never exercises.
+
+**Who it actually breaks.** In a consumer install `scripts/` **is** the deployed output. The
+root `CLAUDE.md`, under "AC-store hygiene — bulk pre-flight before a finalization drive",
+instructs precisely:
+
+```bash
+python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/<component>
+```
+
+So the documented defence against store rot is not merely unreliable in a consumer project — it
+cannot start. That instruction has a history of being wrong in the other direction too: the same
+section records that from 2026-08-10 to 2026-08-18 a bare directory argument matched nothing,
+printed `No YAML files to validate.` and exited **0**. This is the second distinct way the same
+prescribed command has failed to do what it says.
+
+**This is the second occurrence of a documented defect class.** `CLAUDE.md` carries a whole
+convention titled *"New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest"*, written
+after `done_proof.py` was created in `scripts/ac_store/` and omitted from this same `deploy_map`,
+crashing the deployed hook with `ModuleNotFoundError: done_proof`. `done_proof.py` is in the map
+today; `_ac_components.py` — added later, by the change that gave the `components` field its
+referential integrity — is not. The convention was written and then not applied to the next
+module that needed it, which suggests the rule needs a mechanical check rather than another
+paragraph.
+
+**Found while** specifying `assigned_agent` referential integrity (`ACS-100i-9`), whose design
+copies `_ac_components.py` into a sibling `_ac_agents.py`. Filing it separately because it is
+live now, independent of that work, and because the new module would inherit the same omission:
+**a fix for `ACS-100i-9` that adds `_ac_agents.py` to the map while leaving `_ac_components.py`
+out would ship a validator that still cannot start.** Fix both in the same change.
+
+**Fix direction.** Add `_ac_components.py` (and any future sibling helper) to `build_ac_store`'s
+`deploy_map`. Then close the class rather than the instance: a test that runs `build.py` into a
+temporary target and **executes** each deployed entry point — import-only is enough to catch this
+— so a module added without its dependency fails at build time instead of at the consumer. A
+grep for import statements is not sufficient; this defect is invisible to any check that reads
+the source tree, because in the source tree the import resolves.
 
 ---
 
@@ -1394,6 +1526,39 @@ index with an all-empty scan: a run that resolves zero documents in every catego
 certainly resolved the wrong directory, and should exit non-zero saying which directory it
 scanned rather than rendering the emptiness as content.
 
+> **Review note, 2026-08-26 — the first half of that fix direction is wrong as written; the
+> second half is the one to build.**
+>
+> "`generate_index` should take the same `target_root / docs_dir`" would reproduce this exact
+> bug rather than fix it. Every entry in `_CATEGORIES` (`generate_doc_index.py:64-74`) already
+> carries the `docs/` prefix — `("Components", "docs/architecture/components", True)`,
+> `("How-To Guides", "docs/how-to", True)`, and so on for all nine. Hand the generator a root
+> that already ends in `docs/` and it scans `<root>/docs/docs/architecture/components`, which
+> exists nowhere, so every category comes back empty and it writes the identical nine-section
+> `No docs found.` stub. The failure would look like no fix had been applied at all. It would
+> also break every link the index renders, since those are built from the same prefixed paths.
+>
+> Whoever picks this up has to choose one of two coherent shapes, not mix them:
+>
+> 1. **Keep `_CATEGORIES` prefixed and pass the repo root.** The generator's contract stays
+>    "give me the root that *contains* `docs/`". The build phase's bug is then simply that it
+>    passes `target_root` where it should pass the root implied by `docs_root` — strip the
+>    trailing `docs/` from `docs_root` and pass that. Smallest change; the generator is
+>    untouched.
+> 2. **Strip the `docs/` prefix from all nine `_CATEGORIES` entries and pass the docs root.**
+>    Then `target_root / docs_dir` is correct. But this changes the generator's contract and
+>    every rendered link path, so the link-rendering code has to be audited in the same commit.
+>
+> Option 1 is smaller and safer, and it is the one that matches how the generator already
+> behaves when invoked directly — the reproduction recorded in this entry passes
+> `--repo-root .../leafcutter-ai`, a root *containing* `docs/` rather than a docs root, and
+> gets a correct 221-line index. That invocation is the working contract; the build phase is
+> what disagrees with it.
+>
+> The refuse-to-overwrite-on-an-all-empty-scan guard is independently correct and worth landing
+> on its own, ahead of either option. It is the part that turns this from a silent 175-line
+> deletion into a loud failure, and unlike the path fix it cannot itself be got subtly wrong.
+
 **Pattern:** a resolver that reads one tree and writes another, with the failure rendering as
 ordinary output.
 
@@ -1479,6 +1644,30 @@ one it already makes. (b) Stop prescribing a relative path: change `SKILL.md:180
 agent templates to invoke `.leafcutter/scripts/feedback/submit_feedback.py`, which resolves in
 both layouts. (b) alone stops the crash but routes the write to the install-tree sink, which
 is `KI-FC-001` — so it must land together with that fix, not before it.
+
+> **Review note, 2026-08-26 — the KI-FC-001 condition belongs on (a) as well, not only (b).**
+>
+> As written, the "must land together with that fix" condition is attached only to (b), which
+> reads as though (a) were safe to ship alone. It is not, and for the same underlying reason.
+>
+> `_find_project_root()` (`templates/scripts/feedback/submit_feedback.py:65-77`) starts from
+> `Path(__file__).resolve().parent`, and `.resolve()` follows symlinks. So the moment
+> `scripts/feedback` in a worktree becomes a **symlink** into the shared install tree — which
+> is precisely what (a) creates — `__file__` resolves into the install tree, the six-level
+> walk-up finds the install tree's `.claude/`, and `_JSONL_DEFAULT` becomes
+> `<install-tree>/debugging/logs/feedback.jsonl`. Same destination as (b). Either way the crash
+> stops and the feedback lands somewhere nobody is looking, which is arguably worse than the
+> loud `(submit-failed)` it replaces, because it reads as success.
+>
+> So the accurate statement is: **KI-FC-001 gates both (a) and (b)**, since both route through
+> a `__file__` resolved into the install tree. Fix the sink resolution first and (a) and (b)
+> become interchangeable in ordering.
+>
+> One thing to check before reproducing: that symlink now **exists** in the GE-120 worktree,
+> created after this entry was filed. A fresh attempt to reproduce the original
+> `(submit-failed)` crash there will not reproduce it — it will silently exercise the
+> install-tree-sink path instead. Confirm whether `scripts/feedback` is a symlink before
+> concluding which of the two failure modes you are looking at.
 
 **Pattern:** a build output that reaches the project root and not the worktrees, called
 through a path that only resolves at the project root.
@@ -1574,6 +1763,14 @@ written. Do **not** fix this by adding to `deploy_map`.
 **Pattern:** a build whose report is a count of what it wrote, in a system where the failure
 mode is not writing something.
 
+**Related.** KI-BP-20260826-1331 is a different defect with the same consequence: many
+worktrees write a shared `.leafcutter/` output root last-writer-wins, so a deployed file may
+carry any worktree's revision. This entry explains why an *absent* artifact is never noticed;
+that one explains why a *present* artifact cannot be attributed to a commit. Together they mean
+the deployed tree does not correspond to any revision. The fixes are complementary, not
+overlapping — BP-900g-8/9 derive the deploy closure and fail closed; a source-revision stamp on
+each deployed artifact makes provenance checkable.
+
 ---
 
 ### KI-BP-019 — A missing `pyyaml` strips the frontmatter from every deployed agent, silently, with no output on any stream
@@ -1607,3 +1804,747 @@ BP-900g-9's fail-closed principle but worth fixing on sight; it is one line.
 
 **Pattern:** an exception handler that makes a missing dependency indistinguishable from a
 satisfied one.
+
+*The changelog-entry validation gap first drafted here as KI-BP-021 was refiled as KI-CL-001 in
+`docs/known-issues/changelog.md`: the `changelog` component owns entry emission and the
+`changelogs/` corpus, whereas this register covers the template compiler. That draft was never
+published, so the number stayed free and is now taken by the entry below — a different defect
+entirely.*
+
+---
+
+### KI-BP-021 — The closure guard's reference lens misses four import idioms, each yielding an empty closure the build reports as clean
+
+- **Severity:** medium
+- **Status:** open — no AC. Found during the BP-900g-8 build (PR #578); disclosed by the
+  operator rather than by any gate, and deliberately not fixed in that PR to keep the diff
+  reviewable.
+- **Occurrences:** 1 (latent — **no live instance in the repo**, see Reproduction)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/build_referential_integrity.py:691-708` `_is_syspath_mutation_call`,
+  feeding `_extract_syspath_directories` (`:729-782`) and thence
+  `compute_intra_package_closure` (`:875`)
+
+**Symptom.** `_is_syspath_mutation_call` returns True only for `func.attr in ("insert",
+"append")` reached through a bare `sys` name. A script that instead writes
+
+```python
+sys.path.extend([str(_sibling_dir)])     # or
+sys.path[:0] = [str(_sibling_dir)]       # slice assignment — not an ast.Call at all
+```
+
+produces **no** candidate directory. Every subsequent plain `import sibling_module` then
+resolves against zero candidates and is dropped from the closure.
+
+**Why it matters more than the narrow trigger suggests.** The guard exists to make a missing
+deploy entry fail the build. Its failure mode is not a crash — it is a script whose derived
+closure is *empty*, which is indistinguishable from a script that genuinely has no
+intra-package dependencies. The build then reports that script clean. This is the same
+silent-empty shape the guard was written to eliminate, reintroduced one level down in the
+guard itself.
+
+Worse, the two forms differ in how far they get. `extend` at least reaches
+`_is_syspath_mutation_call` and is rejected there, so it is a candidate for the one-line
+widening. A slice assignment is an `ast.Assign` with an `ast.Subscript` target — it never
+becomes an `ast.Call`, so the `ast.walk` loop in `_extract_syspath_directories:761-762`
+skips it before any predicate runs. Widening the tuple does **not** cover it.
+
+**The disclosure guarantee does not hold here.** `_extract_syspath_directories` logs a
+WARNING naming file and line whenever a pushed path *fails to reduce statically* — the
+module's docstring at `:752-757` states that "no path through this module produces an
+unresolved intra-package reference with zero log output." That promise is true for a
+mutation the lens **recognises** and cannot evaluate. It is false for a mutation the lens
+does not recognise at all: `continue` at `:762` fires before any logging, so an `extend`
+or a slice assignment is dropped in complete silence, at every log level. The docstring
+should be corrected in the same change, or it will be read as coverage this code does not
+have.
+
+**Reproduction / current exposure.** Verified 2026-08-26 against the BP-900g-8 branch:
+
+```bash
+grep -rn "sys\.path\.extend\|sys\.path\[" scripts/ templates/
+```
+
+returns two hits, both **comments** mentioning `sys.path[0]`
+(`scripts/ac_store/audit_authoring_components.py:51`,
+`scripts/ac_store/validate_ac_schema.py:43`) and no executable instance of either form. So
+nothing is mis-derived today; the entry records a gap that opens the moment someone writes
+one of the two idioms, which no gate or reviewer would flag as unusual.
+
+**Fix direction.** Widen the predicate to `("insert", "append", "extend")` and handle the
+list-valued argument `extend` takes — its single positional is a *sequence* of paths, not one
+path, so `_syspath_pushed_path_node` (`:711-726`, which returns `args[0]` for the one-arg
+form) would hand `_eval_static_path` an `ast.List` and get None back, i.e. a warning rather
+than a resolution. Both sides need the change; widening the tuple alone converts a silent
+drop into a spurious warning. For the slice-assignment form, add a separate `ast.Assign`
+branch. Then add the case the current tests lack: a fixture script that pushes via each
+unsupported form and imports through it, asserting the dependency **appears** in the derived
+closure — a negative fixture, since a test that only checks `insert`/`append` cannot fail
+when the other forms are dropped.
+
+**Three further idioms the lens does not see** — found by an independent adversarial review
+round on 2026-08-26, after the entry above was first written. All three land in the same
+place as the `sys.path` gap (empty closure, script reported clean) and all three are latent:
+
+| idiom | why it is invisible | log output | live instances |
+|---|---|---|---|
+| `importlib.import_module("sibling")` / `__import__("sibling")` | `_extract_static_import_candidates` recognises only `ast.Import`/`ast.ImportFrom`; `_is_spec_from_file_location_call` matches only `spec_from_file_location` | **none** | 0 — grep of `scripts/` and `templates/` returns nothing |
+| `from . import <subpackage>` | `:841-849` adds only `base/"{name}.py"` as a candidate, never `base/name/"__init__.py"`, and a plain import that resolves to nothing is treated as external by design | **none** | 0 — no `from . import` anywhere in either tree |
+| `sibling: Path = Path(__file__).parent / "x.py"` | `_build_local_assignments` (`:500-539`) captures `ast.Assign` targets only, not `ast.AnnAssign` | WARNING (the "unresolvable" path) | 0 |
+
+The annotated-assignment case is the least severe of the three precisely because it *is*
+logged. The other two are silent, which makes them the same defect as the `sys.path` gap
+rather than a milder relative of it — and in a codebase that annotates heavily, the
+`AnnAssign` gap is the one most likely to appear first.
+
+**Do not trust `git log` on this one.** The commit that introduced the lens, `4627c634`
+("close the sys.path-insert blind spot in the closure guard"), describes the capability in
+general terms that the code does not have — it reads as though `sys.path` mutation is now
+handled, rather than two of its four idioms. That over-claim was caught after the commit
+landed and is left in history rather than rewritten; this entry is the correction. It is a
+live instance of the repo's own "commit messages must match the diff" rule
+(`CLAUDE.md`, sourced to EPIC-PhantomDoneFilesTouched KI-4), which is worth noting because
+the mechanism is the same one that rule exists to stop: a reviewer reading the log believes
+a broader change landed than did.
+
+**Pattern:** an allowlist of syntactic forms, guarding against a class of mistake, where an
+unlisted form is silence rather than a warning.
+
+---
+
+### KI-BP-022 — A deployable script that fails to parse gets an empty closure and a clean bill of health — and 107 of the 152 scripts the guard parses are in `templates/`, which CI's ruff run excludes
+
+- **Severity:** high
+- **Status:** open — no AC. Found by an adversarial third review round on PR #578,
+  2026-08-26, after two prior rounds had passed the same code.
+- **Occurrences:** 1 (latent — no unparseable source today, see Exposure)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/build_referential_integrity.py:863-873` `_closure_walk`;
+  amplifier at `.github/workflows/ci.yml:74`
+
+**Symptom.** `_closure_walk` reads and parses each script inside two handlers:
+
+```python
+try:
+    text = script.read_text(encoding="utf-8")
+except OSError as exc:
+    _log.warning("... cannot read %s: %s", script, exc)
+    return                      # <-- closure stays empty
+try:
+    tree = ast.parse(text, filename=str(script))
+except SyntaxError as exc:
+    _log.warning("... cannot parse %s: %s", script, exc)
+    return                      # <-- closure stays empty
+```
+
+Both return early, so the script's closure is `set()` and
+`find_uncovered_closure_dependencies` reports **zero** missing dependencies for it. A
+script with real, undeployed intra-package imports comes back indistinguishable from one
+with no dependencies at all. The build proceeds and reports it clean.
+
+There is a WARNING, so this is not literally silent — but it is one line in a build that
+emits many, it does not change exit status, and nothing downstream distinguishes "this
+script has no dependencies" from "this script's dependencies could not be determined."
+That distinction is the entire value of the guard.
+
+**Why the obvious mitigation does not apply.** The natural objection is that a committed
+`.py` with a `SyntaxError` would be caught by the required `Lint (ruff)` gate long before
+this mattered. That is true for 45 of the guard's inputs and false for the other 107.
+
+CI runs `ruff check scripts tests unit_tests` (`ci.yml:74`), and `ci.yml:8` states the
+exclusion outright: "The templates/ source tree is excluded (see ruff.toml)." Measured on
+the BP-900g-8 branch by resolving every Set B entry through
+`_source_file_for_deploy_path` and recording where it lands:
+
+```
+SET B: 152
+PARSED FROM templates/ (ruff-excluded): 107
+PARSED FROM scripts/  (ruff-covered):    45
+```
+
+So **70% of what this guard parses is never linted**, and that 107 is not an arbitrary
+slice — it is `templates/scripts/commit_guardian/` in its entirety, every AC hook and
+schema validator in the repository, which is the single most consequence-bearing deploy
+population there is. A syntax error there is caught by neither ruff nor this guard; the
+guard actively reports the file clean.
+
+**Related, same boundary: `except OSError` does not catch `UnicodeDecodeError`.**
+`read_text(encoding="utf-8")` on a file with invalid UTF-8 raises `UnicodeDecodeError`,
+which subclasses `ValueError`, not `OSError`. It therefore escapes the handler and
+propagates out of `compute_intra_package_closure` and
+`_check_intra_package_closure_guard`, aborting `build.py` with a raw traceback instead of
+the designed `[CLOSURE GUARD]` message. This one **fails closed** — the build stops
+non-zero, which is the correct outcome — so it is a diagnosability defect rather than a
+false-green, and it is worth noting that it accidentally protects against the read-failure
+half of the symptom above. It still violates the repo's own Rule 1 (catch what the
+operation can actually raise) and should be fixed alongside, not instead of, the parse case.
+
+**Exposure today.** Verified 2026-08-26: all 152 Set B sources parse, none raise on read,
+and both silent-skip branches at `build.py:1109-1113` (`resolved is None`,
+`not source_file.is_file()`) fire zero times. Nothing is mis-reported now.
+
+**Fix direction.** Treat "could not determine" as a distinct third outcome from "no
+dependencies," not as a synonym for it. The guard is a *preflight* gate whose whole
+purpose is to fail closed, so an unparseable or unreadable deployable script should exit
+non-zero naming the file — there is no legitimate build in which one of the 152 scripts
+about to be deployed cannot be parsed. If that proves too strict during rollout, the
+minimum is to surface the count in the guard's own summary output so a human sees "N
+scripts could not be analysed" rather than nothing. Widen the read handler to
+`(OSError, UnicodeDecodeError)` in the same change. Independently, and cheaper than
+either: add `templates/` to the ruff invocation, or add a standalone
+`ast.parse`-every-deployable-source check — the 107-file blind spot is worth closing on
+its own merits regardless of what this guard does with the result.
+
+**Pattern:** an analyser that reports "I found nothing" and "I could not look" through the
+same return value, wired to a gate that only understands the first.
+
+---
+
+### KI-BP-023 — The closure guard's "every script this build will deploy" covers eight deploy families and the build has ten
+
+- **Severity:** medium
+- **Status:** open — no AC. Found in the same third review round as KI-BP-022.
+- **Occurrences:** 1 (latent — see Exposure)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/build.py:535-573` `_get_source_deployable_scripts` (docstring at
+  `:538-539`, `:552-554`); missed phases at `scripts/build_phases.py:1546`
+  `build_doc_compliance` and `build_sync_platforms`
+
+**Symptom.** `_get_source_deployable_scripts` is the guard's Set B — the universe it checks
+closures against and, per its docstring, the set of "all scripts that will be deployed to
+the target project on the next build run." It unions eight per-phase manifest helpers. The
+build has at least two more deploy phases that ship `.py` files and neither is among them:
+
+- `build_doc_compliance` (`build_phases.py:1546`) copies `templates/doc-compliance/*` to
+  `<target>/scripts/doc_compliance/`. `templates/doc-compliance/cli.py` has five real
+  sibling imports — `bootstrap`, `generator`, `verifier`, `scanner`, `config`.
+- `build_sync_platforms` deploys `scripts/sync_platforms/sync_platforms.py`, which
+  `_manifest_template_standalone_scripts` cannot see because it globs only the **top
+  level** of `templates/scripts/` (`.glob("*.py")`, non-recursive, `:529`) and that file
+  lives one directory deeper.
+
+Because these paths never enter Set B, the loop at `build.py:1107` never calls
+`compute_intra_package_closure` on them at all. An entire deployed Python package is
+invisible to the guard, with no warning and no error. Confirmed by querying the function
+directly:
+
+```
+SET B SIZE: 152
+DOC_COMPLIANCE IN SET B: []
+SYNC_PLATFORMS  IN SET B: []
+```
+
+**Exposure today is nil, and the reason matters.** Both phases deploy their **whole source
+directory** — `build_doc_compliance` iterates `dc_dir.rglob("*")` and copies every file.
+So all five of `cli.py`'s siblings ship automatically, and a sixth added tomorrow ships
+too. These phases are structurally immune to the "one file forgotten from a curated list"
+defect that BP-900g-8 exists to close, which is precisely why nobody noticed they were
+outside the guard.
+
+**Why file it anyway.** Two reasons, neither hypothetical:
+
+1. **The docstring is wrong in a load-bearing way.** "Eight deployment locations are
+   covered" and "every script this build will deploy" are the sentences a future author
+   will read before deciding whether a new phase needs registering. They currently say the
+   coverage is total when it is enumerated, and nothing detects the divergence — there is
+   no test asserting Set B is complete against the `build_*` functions in
+   `build_phases.py`.
+2. **The immunity is a property of the deploy mechanism, not of the guard.** The moment
+   either phase is refactored toward a curated `deploy_map` — which is exactly the pattern
+   `build_ac_store` used until this ticket replaced it — the blind spot becomes a live
+   silent regression vector with zero guard coverage, and the refactor will look safe
+   because it matches the shape of the fix that just landed.
+
+**Fix direction.** Derive Set B rather than unioning hand-written helpers, or — since that
+is the larger BP-900g-9 job — add a test that enumerates `build_*` functions in
+`build_phases.py` and asserts each one that writes `.py` files has a corresponding manifest
+helper, failing on a new phase that has none. Fix `_manifest_template_standalone_scripts`
+to `rglob` rather than `glob` while there. Correct the docstring in the same change; a
+comment that overstates coverage is how the next author concludes their phase is already
+handled.
+
+**Pattern:** a completeness claim written as prose in the docstring of the function whose
+incompleteness it is describing.
+
+---
+
+### KI-BP-20260826-1331 — a shared deployed `.leafcutter/` is a per-file collage of whatever each writing worktree last wrote — no single commit produces the tree the gates actually run
+
+> **This id is a timestamp, not a sequence number — and that is deliberate.**
+> `KI-<COMPONENT>-<YYYYMMDD>-<HHMM>`, minted at authoring time.
+>
+> This entry was first authored as `KI-BP-018`, renumbered to `KI-BP-021` when 018/019/020
+> were taken mid-review, and would have had to move a **third** time: `KI-BP-021` was itself
+> claimed on `main` before this PR could land. Across two rounds, **four ids collided twice**
+> — eight collisions in one day, all while the PR sat open being reviewed. Renumbering is a
+> race the reviewer always loses, because review is exactly the interval during which `main`
+> moves.
+>
+> `KI-BO-024` predicted this and proposed a duplicate-heading check. That check is still worth
+> building, but it detects collisions rather than preventing them. A timestamp prevents them:
+> two entries collide only if authored in the same component register in the same minute,
+> which no observed workflow does. Cost is a longer id; the benefit is that an id, once
+> written down and cited, never has to move.
+>
+> **Existing sequential ids are not being renumbered.** Mass-renaming would break every
+> citation in the repo to fix a problem only new entries have. The convention is
+> forward-only: sequential ids stay valid and stay cited, new entries are timestamped. Both
+> forms will coexist indefinitely, and that is fine — the id's only job is to be unique and
+> stable.
+>
+> Worth an ADR rather than a note buried in one entry; recorded here because the convention
+> was adopted to unblock this PR.
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build.py --target-dir <workspace-root>` · the workflow-scripts install
+  phase in `scripts/build_phases.py` · the single shared output root
+  `/home/henzeh/projects/leafcutter/.leafcutter/`
+
+**Symptom.** Caught during a pre-flight parity check before launching a fast-lane run.
+The deployed `.leafcutter/workflows/fast-lane-ship.js` had an **mtime of 22:15 today** —
+newer than every source file — while its **content was seven days old**. It predated both
+PR #485 (2026-08-18) and PR #510 (2026-08-24):
+
+```text
+grep -c "exclude-structural-parent|Phase 4.6 — Changelog|
+         fastlane-context-bundle|fastlane-review"  ->  0
+```
+
+Zero occurrences of all four markers. No review phase, no changelog phase, no context
+bundle, no `--exclude-structural-parent`.
+
+It was not one file. A substitution-neutral comparison — building current `origin/main` to a
+scratch target and diffing that against the deployed tree, so `{{config.output_root}}`
+expansion could not be mistaken for drift — found **six of nine workflows regressed,
+4,114 drifted lines**:
+
+| workflow | drifted lines |
+|---|---|
+| `build-feature.js` | 1631 |
+| `build-ticket.js` | 1110 |
+| `quick-fix.js` | 781 |
+| `fast-lane-ship.js` | 467 |
+| `plan-feature.js` | 64 |
+| `finalize-feature.js` | 61 |
+
+**Root cause — a mutable shared surface with many writers and no ownership.**
+`build.py --target-dir` is last-writer-wins: it compares deployed content against *its own*
+templates and rewrites whatever differs, in either direction. It has no notion of which
+revision the deployed tree came from, so it cannot tell "this file is older than mine" from
+"this file is newer than mine" — it only sees "different", and makes it match. A build run
+from a worktree behind `origin/main` therefore *downgrades* the shared surface for every
+worktree pointing at it.
+
+**Correction, 2026-08-26 — the first draft of this entry said "58 worktrees, all resolving
+`.leafcutter` to the same workspace-root directory". That is false, and the entry contradicted
+itself three paragraphs later.** Measured:
+
+Resolving each worktree's `.leafcutter` with `readlink -f` rather than reading the link text:
+
+```text
+symlink, resolving to leafcutter/.leafcutter   ->  ~20   (one shared inode)
+private real directory                         ->  ~47
+no .leafcutter at all                          ->    5
+```
+
+A few of the symlinks are transient, created by one session on 2026-08-26 and pointing at a
+scratch build under `/tmp`. Absolute counts drift by the hour as worktrees come and go — two
+probes minutes apart returned 72 and 73 — so **treat the shape as the finding and re-measure
+the numbers before relying on them**.
+
+The distribution matters more than the total:
+
+- **The symlinked population really does share one root.** `leafcutter-ai/.leafcutter` is
+  itself a symlink to `leafcutter/.leafcutter`, so link text that appears to name two roots
+  resolves to a single inode. "Rebuild the shared tree" is unambiguous and reaches all of them.
+- **The larger group (~47) are private real directories**, not shares. Those cannot be
+  corrected by any rebuild of a shared root; each holds whatever the build wrote when that
+  worktree was created. That is KI-BP-004, and it is the *more common* case rather than the
+  exception this entry originally implied — though "frozen indefinitely" overstates it for the
+  roughly one-third created within the last two days.
+- **Five have no `.leafcutter` at all** — including `deploy-main2`, which this entry names
+  further down as a plausible overwrite source. A worktree with no deployed tree cannot have
+  written one, which weakens that particular attribution.
+
+So a remedy aimed at the shared root fixes the shared population and silently misses the
+private one. The collage claim below is unaffected — it concerns what happens *within* the
+shared root, and was verified directly against it.
+
+**How the error happened — twice, which is the instructive part.** The "58" came from a
+`git worktree list` count, and "all resolving to the same directory" was assumed rather than
+measured, while the very next section of this entry described a worktree with a private frozen
+copy the author had found by hand. A counter-example sat three paragraphs from a claim it
+falsifies and neither was checked against the other.
+
+**The first correction then introduced a second false claim, in the same shape.** It reported
+"not one shared root but **two**", derived from counting the *raw link text* of each symlink —
+which really does split into two spellings. One `readlink -f` shows both resolve to a single
+inode, because `leafcutter-ai/.leafcutter` is itself a symlink to `leafcutter/.leafcutter`.
+The correction fixed the magnitude and broke the mechanism, and it argued the remedy was
+harder than it is.
+
+Both errors are the same move: **a property established on part of a set, asserted of the
+whole**, where the discriminating command is about one line long. Worth stating plainly in an
+entry whose subject is deployed trees that are not what they appear to be — the register is
+not exempt from the failure it documents, and this one has now demonstrated that twice.
+
+The install accounting confirms the write happened rather than being skipped. Today's
+corrective build reported `6 installed (3 unchanged)` — exactly matching the observed mtime
+split, where the same six carried 22:15 stamps and `build-epic.js`, `create-ticket.js` and
+`fast-lane-build.js` kept stamps from July and August 18. The phase writes only files whose
+content differs, so the six that were stale are precisely the six some earlier build wrote.
+
+**It is not staleness. It is a collage — and that is the finding.** The first pass through
+this called the deployed tree "seven days old", which is wrong in a way worth correcting,
+because a coherent older revision is something you can reason about and this is not that.
+Rebuilding `origin/main` to a scratch target and diffing the whole `commit_guardian/`
+directory against the deployed one shows the deployed tree holds **more** files than
+`origin/main`, not fewer:
+
+```text
+Only in <deployed>: check_presence_only_assertions.py   _presence_only_scanner.py
+Only in <deployed>: check_identifier_uniqueness.py      _uniqueness_scanners.py
+Only in <deployed>: check_outcome.py                    check_hook_trigger_reachability.py
+Only in <deployed>: _work_items_scanner.py              repair_work_item_duplicates.py   (+6 more)
+```
+
+None of those exist on any merged branch. They come from unmerged feature worktrees
+(`EPIC-BuildPipelinePhantomRemediation`, `epic/ge122-registration`) that ran a build at some
+point. So at the same instant the deployed tree was **behind** `origin/main` on six workflows
+and **ahead** of it on a dozen guardian modules — while also *missing* content those same
+guardian files should have (see below).
+
+The right mental model is not "the deployed tree is at revision X". It is: **each file is at
+whatever revision the last worktree to write that file happened to be at.** There is no X.
+Anything that reasons about the deployed tree as a version — a drift check, a manifest, a
+human — is reasoning about something that does not exist.
+
+**The same build left a guardian module missing a rule its own source has.** After the
+corrective build, `_ac_schema_validators.py` in the deployed tree had **0** occurrences of
+`declares_side_effect`, against **12** in both the template and a scratch build from the same
+source in the same run:
+
+```text
+template                         12
+scratch target (fresh dir)       12
+workspace root (existing tree)    0
+```
+
+One `build.py` invocation, one source, two targets, different results — so writing into an
+existing deployment does not converge it on the source the way writing into an empty one
+does. The consequence was immediate and load-bearing: `check_ac_schema` ran locally over 16
+staged AC records and exited **0**, while calling `validate_declares_side_effect` directly
+against the same records returned real errors on two of them. CI, which builds fresh, would
+have failed the required `AC store valid` check on a change that passed every local gate.
+
+That run also printed `WARNING: config/ac_store_schema.json not found at
+/home/henzeh/projects/leafcutter; falling back to manual field validation` — the hook had
+resolved its root to the workspace root rather than the worktree being committed, and
+degraded to a weaker check rather than refusing. Exit 0 from a gate that never saw the files
+it was asked about.
+
+**This is not KI-BP-008, though the symptom is identical.** That entry's cause is the
+version gate *refusing* to install (`return 0` on a parsed-and-too-old `claude --version`).
+Here the gate ran its documented **fail-open** path — `[WARNING] Claude Code version
+unknown. Installing workflow scripts (fail-open).` — and the install proceeded and wrote
+stale bytes. KI-BP-008 is "the phase declined to run"; this is "the phase ran, from the
+wrong source". Its occurrence count is deliberately **not** incremented, because the two
+have different fixes: a skipped-phase alarm would not have fired on this event.
+
+Worth recording that KI-BP-008's own fix direction already anticipates this case — *"record
+the deployed workflow's source revision … so a stale deployed file is reported as drift
+regardless of why it was skipped"*. A source-revision stamp is the one fix that covers both.
+
+**Consequence, had the pre-flight check not run.** The fast-lane launch that prompted this
+would have executed the pre-#485 lane, which has **no changelog phase**. Its PR would then
+have failed the required `Changelog entry present` CI check — the exact defect #485 was written
+to fix, reappearing not through a regression in the source but through the deployment layer
+serving an older copy of the fix. It would also have run without
+`--exclude-structural-parent` (#510), resolving a larger build set than the operator aimed
+at, and without the pr-reviewer gate — committing unreviewed. Three separate protections,
+all present in `main`, all absent at the point of use.
+
+**Why high.** The failure is invisible from every angle an operator would normally check.
+The source tree is correct. `git status` is clean. The build reports success. The deployed
+file's mtime is *newer* than the source, so every freshness heuristic based on timestamps
+reports it as current — the one signal an operator would trust is actively inverted. And
+because the surface is shared, a worktree that never runs a build at all still inherits
+another worktree's regression.
+
+The collage shape makes it worse than plain staleness in one specific way: a *missing* rule
+and an *extra* module are indistinguishable from a correct tree by inspection. A guardian
+directory holding twelve modules that main does not have looks like a tree that is ahead, not
+one that is broken — so the natural reading of the evidence is the reassuring one.
+
+**A second, independent copy problem sits underneath it.** Not every worktree even shares the
+surface. `worktrees/ac-pipeline-work/.leafcutter` is a **real directory dated 2026-08-18**,
+not a symlink — a frozen private copy that the workspace-root rebuild cannot reach. So the
+population splits into worktrees that share one incoherent tree and worktrees pinned to a
+private snapshot of an arbitrary past build, with nothing distinguishing the two from inside.
+That is KI-BP-004 observed live, and it means "rebuild and re-run" is not a reliable remedy:
+it fixes the shared tree and silently misses the frozen ones.
+
+**Fix direction.** Stamp provenance and check it. Record the source revision alongside each
+deployed artifact (the build manifest already tracks output mappings) and have `build.py`
+refuse — or at minimum loudly report — a write that would replace an artifact built from a
+descendant commit with one built from an ancestor. That single change turns this from silent
+to blocking, and covers KI-BP-008's skip case in the same mechanism.
+
+Two cheaper mitigations worth having regardless: (a) a pre-flight parity check in the
+fast-lane and build-feature entry points, comparing deployed workflow content against the
+invoking worktree's templates before dispatching anything — the check that caught this,
+promoted from ad-hoc to automatic; (b) stop deploying from arbitrary worktrees, or give each
+worktree its own output root so the surface stops being shared. Note `deploy-main2` is
+pinned detached at `93dfba23` (2026-08-17), a commit predating all four missing markers, and
+is a plausible source for this particular overwrite — but the mechanism does not depend on
+which worktree it was, and naming a culprit is not the fix.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
+from the source you are reading), in its stale form — here reached by an install that ran
+successfully rather than one that was skipped.
+
+**Related.** KI-BP-018 — a different defect with the same consequence, and the two should be
+read together. That entry is about what the build *never verifies*: no phase can fail the
+build, the deploy set is hand-listed in ~26 places, and nothing checks the deployed tree is
+complete. This entry is about what the build *overwrites*: many worktrees write a shared output
+root last-writer-wins. Between them the deployed tree cannot be trusted to correspond to any
+revision — 018 explains why a missing file is never noticed, 021 explains why a present file
+may be from anywhere. The fixes are complementary: BP-900g-8/9 make the deploy set derived and
+fail-closed; a source-revision stamp makes each deployed artifact's provenance checkable.
+Neither alone gives you a tree you can name a commit for.
+
+Also KI-BP-008 (same symptom, skip-side cause). KI-BP-004 (a worktree's deployed hooks frozen
+at build time — the same shared-surface staleness for hooks rather than workflows).
+KI-BP-011 (`.build_manifest.json` written to the package that ran the build rather than the
+target it describes — which is precisely why the deployed tree carries no usable provenance
+today).
+
+**A dangling id, noted in passing.** Earlier drafts of this entry cited **`KI-BO-001`** for the
+changelog-presence gate. That id has **no definition anywhere in the registers** — it is cited
+seven times across the repo, including in `fast-lane-ship.js`'s own source comments and in two
+other register entries, and defined zero times. The citations here have been replaced with
+plain description. Whoever owns `build-orchestration.md` should either write the entry or
+retire the id; a reference that resolves to nothing is indistinguishable from one whose target
+was deleted, and readers cannot tell which they are looking at.
+
+---
+
+**Independently rediscovered, 2026-08-26 (EPIC-BuildPipelinePhantomRemediation).** A second
+session hit the same mechanism from the drift-gate side and authored a duplicate entry as
+`KI-BP-20260826-1340`, nine minutes after this one and — independently — with the same
+timestamped-id convention. That duplicate is withdrawn in favour of this entry; its distinct
+evidence is folded in below rather than filed twice. Two sessions converging on the same
+hazard and the same fix for ids, in the same hour, without either knowing of the other, is
+itself the strongest available argument that the convention above was the right call.
+
+Five further observations, all from the drift-gate side, all cleared by a single rebuild from
+the correct worktree:
+
+1. `check-output-drift` reported `drifted=27`. Twenty-six were files the branch never touched —
+   `git diff origin/main...HEAD` showed no change to `templates/agents/adr-author.md` or the
+   other nine agent templates flagged.
+2. Later in the same session the same gate reported `drifted=55`, again entirely cleared by a
+   rebuild.
+3. Three failures in `unit_tests/commit_guardian/test_ge_120_doc_types_deployed_resolution.py`,
+   which reads the shared tree. Its `doc_type_validators.py` had been rewritten while the
+   `doc_types.json` beside it was a week older — the tree was internally inconsistent, mixing
+   two builds. They passed again later with no code change.
+4. `unit_tests/commit_guardian/test_bp_100k_4.py`'s real-registry test flipped red three
+   separate times while the source registry held the fix throughout, each time because a build
+   from the main checkout redeployed main's pre-fix `commit_guardian.json` over it. Fixed by
+   pointing the test at the *source* registry via `HOOK_TEST_CONFIG` — a test that asserts a
+   property of this repository must read the version-controlled artifact, not a build output of
+   unknown provenance.
+5. Seventeen orphaned files (12 of them `.py` under `scripts/commit_guardian/`) sat in the
+   shared tree with no template in any worktree and no git history in any commit — another
+   session's uncommitted work, leaked in and reported as coverage gaps against an unrelated
+   branch.
+
+**Beyond the deploy tree: any shared mutable state here has the same property.** On the same
+day a concurrent session removed an *active* worktree mid-drive, snapshotting first as
+`8cd1e3c0` (`WIP SNAPSHOT ... not for merge`, author `manual`, `git add -A --no-verify`).
+Nothing was lost, but a foreign commit appeared on the branch and one subagent's edits were
+silently absent afterwards. Separately, an uncommitted known-issues entry in the main checkout
+was overwritten by `4c47882a` within the hour. The deploy tree, the main checkout's working
+tree, and a worktree's very existence are all writable by a session that does not know you
+exist — so treat an uncommitted edit anywhere outside your own worktree as volatile, and commit
+register entries immediately rather than leaving them staged.
+
+---
+
+### KI-BP-20260826-1421 — a worktree provisioned with a `/tmp` hook tree loses every package gate when `/tmp` is cleared, and pre-commit's own error message recommends disabling the gates to make it go away
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 2 (same session, 2026-08-26)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** the documented worktree provisioning fix in `CLAUDE.md` → "Worktree pre-commit
+  config" · `pre-commit`'s missing-config error path
+
+**Background.** A fresh worktree has no `.pre-commit-config.yaml` and no populated
+`.leafcutter`, so every package hook is skipped unless provisioned. `CLAUDE.md` prescribes a
+symlink to the main tree's `.leafcutter`. Where the shared tree is untrustworthy — see
+`KI-BP-20260826-1331`, the per-file collage — the natural alternative is to build a clean tree
+to a scratch directory and symlink at that instead.
+
+**Symptom.** Do that with a scratch directory under `/tmp` and the provisioning silently
+expires. Twice in one session, a hook tree built to `/tmp/lc-build-check` was gone by the next
+commit:
+
+```text
+$ ls /tmp/lc-build-check/
+exit: 2
+
+$ git commit …
+No .pre-commit-config.yaml file was found
+- To temporarily silence this, run `PRE_COMMIT_ALLOW_NO_CONFIG=1 git ...`
+- To permanently silence this, install pre-commit with the --allow-missing-config option
+```
+
+The `.leafcutter` symlink still exists and still looks right in `ls -la`; it points into a
+directory that no longer does. Nothing about the symlink indicates it is dangling until a hook
+tries to run.
+
+**The dangerous part is the remediation advice, not the wipe.** This particular failure is
+**fail-closed** — the commit is refused, loudly. That is the good outcome. But the first
+suggestion pre-commit prints is `PRE_COMMIT_ALLOW_NO_CONFIG=1`, which converts it into the
+**silent skip** this repository already has an entry for: every package hook bypassed, commit
+succeeds, no output. An operator — or an agent — following the tool's own advice turns a
+refusal into exactly the fail-open state `KI-BP-004` and the `CLAUDE.md` checklist exist to
+prevent. The escape hatch is one environment variable and it is printed at the moment of
+maximum incentive to use it.
+
+Both times, the fix was to rebuild the tree, not to set the variable. Recorded because that is
+a judgement call made twice under time pressure, and it will not always go that way.
+
+**Cause not established — and one plausible culprit is ruled out.** `wsl-reclaim.timer` runs
+hourly and fired at `14:02:32`, minutes before the second failure, which is suggestive. It is
+not the cause: `~/.local/bin/wsl-reclaim` contains **no reference to `/tmp`**, walks only
+`$PROJECT_ROOT`, and applies a 24-hour age floor (`AGE_MIN=1440`), while the deleted tree was
+minutes old and outside that root.
+
+Both disappearances also coincided with a Claude Code process exit, which is the other
+candidate — but coincidence is all that has been established. Naming a mechanism here on the
+strength of the timing alone would be the same error this register documents repeatedly, so it
+is left open. What is established is the operational fact: **in this environment, `/tmp` does
+not reliably survive a session boundary**, and anything a worktree depends on for gate
+enforcement must not live there.
+
+**Fix direction.** Three, in increasing order of value:
+
+1. **Do not provision hook trees under `/tmp`.** A persistent path works —
+   `/home/henzeh/projects/worktrees/.hooktree` is in use now. Cheap, immediate, and the
+   documented `CLAUDE.md` procedure should say so rather than leaving the location to the
+   operator.
+2. **Make a dangling `.leafcutter` detectable before commit time.** A symlink whose target has
+   vanished is indistinguishable from a healthy one by inspection; the pre-drive checklist's
+   `ls <worktree-root>/.leafcutter` passes on a broken link. `ls -L` or `test -e` would not.
+3. **Never accept `PRE_COMMIT_ALLOW_NO_CONFIG`.** Whatever else changes, an environment
+   variable that disables every gate should not be reachable by following an error message.
+   If the repo cannot stop pre-commit printing it, the checklist should name it explicitly as
+   a thing not to do, and say why.
+
+**Pattern:** provisioning that expires without a signal, plus a tool whose remediation advice
+for the loud failure is to convert it into a quiet one.
+
+**Related.** `KI-BP-004` (a worktree's deployed hooks frozen at build time — the same
+provisioning surface failing by staleness rather than absence). `KI-BP-20260826-1331` (the
+shared-root collage, which is *why* a scratch tree gets built in the first place — fixing that
+removes the incentive that leads here). `KI-BP-003` (`config/doc_types.json` missing from the
+deployed tree, which makes `check-doc-frontmatter` fail on every commit from a freshly built
+scratch tree and trains operators to reach for `SKIP=`).
+
+---
+
+### KI-BP-20260826-worktree-hooks-only-on-one-path — A worktree made with plain `git worktree add` has no hooks, and nothing at commit time says so
+
+> **First entry using the date-and-slug id form.** See "Adding an issue" at the top of this
+> file, and KI-BO-024 for why the sequential form was abandoned for new entries.
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 3 in one session (2026-08-26), all in the same session by the same operator
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/scripts/setup_ticket_worktree.py` — `_establish_pre_commit_config`
+  (~:585-670) and the AC-5 fail-fast probe at `~:864-872`. Also `CLAUDE.md` → "Worktree
+  pre-commit config (MANDATORY for worktree-based drives)".
+
+**The provisioning code is correct. That is the point of this entry.**
+`_establish_pre_commit_config` is well built: no-op if already present, symlink `.leafcutter`
+first, fall back to copying `.pre-commit-config.yaml` on filesystems where `os.symlink`
+raises, warn and continue if neither source exists — and then a fail-fast probe converts that
+last warn-and-continue into a hard `BootstrapError`. Nothing below is a criticism of it.
+
+The defect is that **this is the only path that runs it.** `git worktree add` is the obvious
+way to make a worktree, it is what the git documentation teaches, and it performs none of
+this. A worktree created that way has no `.pre-commit-config.yaml`, so `git commit` runs with
+`PRE_COMMIT_ALLOW_NO_CONFIG=1` and **every package hook is skipped in silence**.
+
+**Evidence — three for three, in one session.** An operator created three worktrees with
+`git worktree add` (`po-edit`, `ac-supervisor`, `red-baseline`). All three lacked
+`.pre-commit-config.yaml`. This was noticed only because one commit happened to refuse
+outright; the other two would have committed clean with no hooks at all.
+
+The cost is not hypothetical. Once the config was in place, the AC guards on ONE of those
+branches caught three real defects that would otherwise have merged:
+
+| guard | what it caught |
+|---|---|
+| `check-ac-governance` | a new AC file with no `origin_agent` |
+| `check-ac-parent-covered-by` | **8** missing L2→L3 parent back-links |
+| `check-ac-schema` | a `declares_side_effect` mismatch |
+
+Fifty-one new AC records were about to be committed with none of that checked.
+
+**A second, separable defect: the probe's success condition is an OR, and it is wrong.**
+
+```python
+if not config_path.exists() and not (leafcutter_path.exists() or leafcutter_path.is_symlink()):
+    raise BootstrapError.missing_config(config_path, build_exc)
+```
+
+The comment above it states the intent plainly: *"a `.leafcutter` symlink alone is a valid
+established state."* **It is not.** `pre-commit` looks for `.pre-commit-config.yaml` at the
+repository root and nothing else. Directly observed twice this session: with the
+`.leafcutter` symlink present and correct, `git commit` still returned
+
+```
+No .pre-commit-config.yaml file was found
+- To temporarily silence this, run `PRE_COMMIT_ALLOW_NO_CONFIG=1 git ...`
+```
+
+and only began running hooks once the config file itself was copied in. In this workspace
+`/home/henzeh/projects/leafcutter/.leafcutter/.pre-commit-config.yaml` does not exist, so the
+symlink cannot be supplying it. So the probe passes a worktree in which hooks are entirely
+disabled — a fail-open in the guard written specifically to prevent a fail-open. Note that
+`CLAUDE.md`'s documented check has the same shape (`ls ... .pre-commit-config.yaml || ls
+... .leafcutter`) and will likewise report a healthy worktree that has no hooks.
+
+**Why the silence is the severity.** A skipped hook and a passing hook produce identical
+output: nothing. There is no line in the commit output saying "0 hooks ran". The operator
+learns about it at merge time, or never. KI-BO-027 records an epic worktree that *did* have
+both markers, so this is inconsistent rather than uniformly broken, which is worse — the
+condition cannot be inferred from experience.
+
+**Fix direction.**
+
+1. **Detect at commit time, not creation time.** Provisioning at creation only helps
+   worktrees created the blessed way. A guard that notices at commit — "this repository has
+   `.leafcutter/` but this worktree has no `.pre-commit-config.yaml`" — covers every creation
+   path including ones that do not exist yet. This is the highest-value half.
+2. **Fix the probe's OR to require `.pre-commit-config.yaml` specifically**, since that is
+   the file `pre-commit` actually reads, and correct the comment that asserts otherwise.
+   Correct `CLAUDE.md`'s check in the same change.
+3. Optionally hook `git worktree add` itself, or make the documentation lead with
+   `setup_ticket_worktree.py create-only` rather than presenting the raw git command as
+   equivalent.
+
+Do **not** fix this by adding a manual step to a checklist. There already is one — in
+`CLAUDE.md`, marked MANDATORY, with both fix recipes — and it was missed three times in one
+session by an operator who had read it.
+
+**Pattern:** a correct guard reachable from exactly one entry point, protecting against a
+condition whose only symptom is silence.

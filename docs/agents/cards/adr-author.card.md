@@ -129,4 +129,5 @@ flowchart TD
 
 ### adr-author
 
+- BO-3100d-2: A decision replaced on a false premise stays readable, marked superseded, and linked both ways
 - INF-400c-1: An ADR documents the decision on whether learning emissions reuse the existing telemetry sink

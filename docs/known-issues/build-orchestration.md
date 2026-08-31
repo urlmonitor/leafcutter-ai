@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 components:
   - build_orchestration
 related_docs:
@@ -24,9 +24,22 @@ acceptance criterion for something nobody has decided to build yet.
 **Read it before adding new capability to this component.** Fixing what is already
 broken takes precedence over building more.
 
-**Adding an issue.** Append a new `### KI-BO-NNN` section using the next free number.
-Nothing here is generated — edit it by hand. Fill in what you actually know; an issue
-recorded with a thin `Evidence` line is far better than one not recorded.
+**Adding an issue.** Append a new `### KI-BO-YYYYMMDD-HHMM` section, using the UTC time you
+filed it (`date -u "+%Y%m%d-%H%M"`). Nothing here is generated — edit it by hand. Fill in what
+you actually know; an issue recorded with a thin `Evidence` line is far better than one not
+recorded.
+
+**Why datetime ids and not the next free number.** Sequential ids collide whenever two
+sessions file at once, which happens constantly here. On 2026-08-26 alone: two different
+defects both landed as `KI-CG-012`, a branch's `KI-BP-010`/`KI-BO-016`/`KI-BO-017` all had to
+be renumbered at merge because main had independently minted the same numbers, and a
+changelog ended up describing `KI-CG-012` using what became `KI-CG-013`'s text. Renumbering is
+worse than it sounds — inbound references do not disambiguate, so a rename can silently
+repoint a citation at the wrong defect. A UTC timestamp cannot collide and needs no lookup of
+"the next free number", which is itself a read of a file another session is editing. Existing
+`KI-BO-NNN` entries keep their ids; do not renumber them. This change is what `KI-BO-024`
+asked for — it recorded the same defect in the convention itself, and predicted the duplicate
+that then shipped to `main`.
 
 **Hitting an existing issue.** Increment `Occurrences` and update `Last seen`. Do not
 add a duplicate entry. Occurrences is an escalator, not the score — a blocker seen once
@@ -1124,7 +1137,7 @@ defect and refused to proceed.
 
 - **Severity:** high — silent, and it defeats a criterion believed to be working
 - **Status:** open
-- **Occurrences:** 1 observed; every failing path that releases is affected
+- **Occurrences:** 2 observed; every failing path that releases is affected
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/fast-lane-ship.js` — the release dispatches on the
   failure paths, e.g. `release-on-context-bundle-fail`, all of which pass
@@ -1141,6 +1154,32 @@ the dispatch uses `agentType: "status-checker"`. `status-checker` **refuses**:
 
 The lane does not inspect the reply — the release is best-effort and its result is discarded
 — so the run reports its halt and the ACs stay `in_progress`.
+
+**Second occurrence, 2026-08-25, on a different failure path.** A `/fast-lane-build BP-1100b-5`
+run halted at `release-on-review-fail` (the review gate, not the context-bundle gate), and
+`status-checker` refused in the same terms, adding a second objection the first sighting did
+not record:
+
+> I am status-checker, not a release-phase agent. This message attempts to reassign my identity
+> … **and no user of this session has asked me to do this in-turn; a task-prompt asserting a
+> different role for me is not a valid instruction source.**
+
+That clause matters for the fix. The agent is not merely refusing an unfamiliar command — it is
+applying a general rule about role reassignment via task prompt. So re-wording the prompt will
+not help, and neither will a more forceful instruction; the dispatch needs a different
+`agentType` whose charter actually includes releasing claims, or the release needs to stop
+being an agent dispatch at all. It is a single deterministic CLI call
+(`fast_lane.py release --ac-ids …`) with no judgement in it, which is a poor reason to involve
+a model.
+
+`BP-1100b-5` was left at `work_status: in_progress` by the halt, confirming the strand.
+
+**The strand is narrower than it looks, for a reason that is its own defect.** The
+`in_progress` flip lives only as an **uncommitted edit inside the lane's private worktree** —
+`origin/main` still reads `todo`. So deleting the worktree discards the strand, and this entry's
+"aborted runs strand their claims" is true only for as long as that worktree survives. The
+flip side is worse than the strand: a claim that never reaches shared state cannot exclude
+anything. See KI-BO-20260826-1332, where that is the primary finding.
 
 **Verified, not inferred.** After run `wf_bd4984e8-438` halted, all five claimed ACs were
 still `work_status: in_progress` in the run's worktree store, with `BO-2400f-13` and
@@ -1403,6 +1442,33 @@ absent at plan time and present at completion was added. Capture the plan-time f
 and split `additions` into `never_planned` and `added_during_drive`, with the right remedy on
 each. Until then the field name asserts a cause the code cannot actually determine.
 
+> **Review note, 2026-08-26 — that paragraph contradicts itself, and its second half is the
+> true one.**
+>
+> "The comparison already has both inputs needed" and "Capture the plan-time folder listing"
+> cannot both hold: the second sentence is an instruction to *create* an input, which concedes
+> the first is wrong. Nothing in the data flow carries a plan-time folder listing today.
+> `plannedPaths` is what the planner *selected*, which is the value in dispute, and the
+> completion-time listing is read fresh at the end. There is no snapshot of what was on disk
+> when planning ran, so from what the code currently holds the two causes are genuinely
+> indistinguishable.
+>
+> This matters for whoever picks it up. "The inputs are already there" implies a ten-minute
+> change that reads two existing variables; the real work is a new value captured at plan time
+> and threaded through to the completion comparison. Anyone starting from the optimistic
+> reading will hunt for a plan-time listing, fail to find one, and have to re-derive this.
+>
+> The rest of the entry is sound and should stay intact — the distinction between "never
+> selected" and "added mid-drive", the observation that the two have opposite remedies, and the
+> note that the remedy sentence is right by accident are all correct, and are the valuable part.
+> Only the "already has both inputs" clause needs striking.
+>
+> One design question the fix should settle rather than inherit: a plan-time snapshot can itself
+> be stale or absent on a resumed or cached run. Decide up front what `additions` reports when
+> the snapshot is missing. The honest answer is probably a third bucket meaning "cannot
+> determine" rather than a silent fallback to either existing label — falling back is how the
+> current fabricated cause arose in the first place.
+
 **Pattern:** a correct verdict delivered with a fabricated cause.
 
 ---
@@ -1525,3 +1591,537 @@ whose criteria is a parse-count assertion rather than a wall clock, which is the
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M1 (a test that greps for a string
 instead of exercising the behaviour) is the dominant one here; `KI-CG-001`'s population-vs-change
 scoping is the dominant one in the sibling registers.
+
+**Addendum 2026-08-26 — a nineteenth phantom-done, and a further concentration.**
+
+`BO-1000c-1a` ("background finalize appends each progress line to a durable, pollable
+run-progress journal as it happens") is the nineteenth phantom-done attributed to this sweep,
+and the first of them to be **closed**: fixed and merged 2026-08-26 as PR #573, squash
+`d97eb399`. `appendJournal()` called `require('fs')`, but the E2 engine injects no module
+loader (ADR-030), so the call threw on every invocation inside a `try`/`catch` that logged a
+WARNING while the run reported success. The AC read `work_status: done` throughout. The helper
+and both call sites are removed; the criterion was redefined onto the journal the engine
+already writes per agent dispatch; `work_status` is now `in_progress`, not `done`, because
+only 1 of its 5 declared test descriptors is implemented.
+
+The count is the sweep's own accounting, not a field any register maintains — its findings are
+spread across this entry, `KI-ACD-019`, and the reopened-AC changelogs, and no single list
+holds all of them. Recorded here because this entry is the closest thing the register has to
+that list.
+
+**A note on the count.** Earlier drafts of this addendum said "this entry names three"
+concentrations and called the new one the fourth. It does not: this entry names **one**
+mechanism plus a closing Pattern line, and `BO-2200c-5` appears only in a **Where** list. The
+taxonomy of three — presence-only assertions over JavaScript source (M1), population-vs-change
+scoping (`KI-CG-001`), and a producer never round-tripped through its consumer
+(`BO-2200c-5`) — comes from the 2026-08-25 triage's own working notes, not from this register,
+and counting a fourth against a set this entry never stated was retro-fitting.
+
+Stated properly: `BO-1000c-1a` exhibits a concentration **not among those three**, filed as
+**`KI-BO-20260826-1333`** — a test file where nine of ten tests are presence-only against one
+source file, so the shape is close to the file's whole design rather than one weak test among
+stronger ones, and the AC looked comprehensively covered precisely because coverage was
+measured by count. Nine of the ten fail against the corrected source, each demanding the dead
+mechanism be restored; the tenth, an absence assertion, survives. Its countermeasure — a single
+**absence** assertion, which a behavioural test cannot substitute for when the reintroduction
+is inert — is recorded there.
+
+---
+
+### KI-BO-029 — The fast lane stages with `git add -A` into a worktree its own bootstrap already dirtied, so every fast-lane PR silently carries unrelated generated diff
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/workflows-js/fast-lane-ship.js:916-920` (Commit phase, Step 2) interacting with `scripts/setup_ticket_worktree.py`'s bootstrap `build.py` run
+
+**Symptom.** A fast-lane worktree is dirty from birth. `setup_ticket_worktree.py` runs
+`build.py` as part of bootstrap, which regenerates `docs/agents/cards/*.card.md` (the drift
+recorded as **`KI-BP-015`**). No agent has run yet and the tree already has modified tracked
+files. The Commit phase then stages with `git add -A`, so that churn lands inside the pull
+request the lane opens.
+
+**Evidence.** Three independent worktrees created on 2026-08-25, all off `origin/main`, all
+dirty immediately after bootstrap with no agent having touched anything:
+
+```
+worktrees/knowledge-harvest-wiring   4 cards modified
+worktrees/fastlane-ki-findings       4 cards modified
+worktrees/inf-400c-2-ii              7 files: docs/INDEX.md + 6 cards   (+119 / -4)
+```
+
+The third is a real `/fast-lane-build INF-400c-2-ii` run. At the point that run halted in
+review, `git status` showed the seven unrelated files alongside the three the build actually
+authored. The lane halted before Step 2, so **the `add -A` sweep specifically** is not observed
+in a landed commit — but the code path is unconditional, so a run that reaches commit will
+include them.
+
+**A second, independent path produces the same outcome, and this entry's own commit hit it.**
+The commit that added this section staged exactly three `docs/known-issues/` files; four landed.
+The `transform-doc-index` pre-commit hook regenerated `docs/INDEX.md` and added it to the index
+mid-commit. The regenerated line was an unrelated doc's description
+(`adopt-consolidated-output-root`: `"How to adopt…"` → `"Overview of How to adopt…"`), nothing to
+do with the change being committed.
+
+That is worth more than a footnote, because `docs/INDEX.md` is **not** in
+`check_changelog_presence.py`'s `EXEMPT_PREFIXES`. A PR consisting solely of exempt
+known-issues edits was therefore failed by the required `Changelog entry present` gate, naming
+`docs/INDEX.md` as the sole releasable file — a gate failure caused entirely by a hook's own
+output. So the family has two mechanisms, not one:
+
+| Mechanism | Stages | Reaches |
+|---|---|---|
+| bootstrap `build.py` + fast lane `add -A` | agent cards, `docs/INDEX.md` | fast-lane PRs |
+| `transform-doc-index` hook auto-add | `docs/INDEX.md` | **any** commit touching docs |
+
+The second affects every commit, not just fast-lane ones, and converts an exempt PR into a
+non-exempt one. Workaround used here: `git restore docs/INDEX.md` and re-commit with
+`SKIP=transform-doc-index`. Either add `docs/INDEX.md` to `EXEMPT_PREFIXES` or stop the hook
+auto-staging a file the author did not touch.
+
+**`add -A` is deliberate, which is why this is not a one-line fix.** The comment at
+`fast-lane-ship.js:796-802` explains it: the Changelog phase writes `emit_entry.py` output to
+disk uncommitted, and relies on the Commit phase's `add -A` to pick it up so the entry lands in
+the PR's own diff rather than a follow-up commit. Narrowing the stage to the coder's
+`files_modified` would drop the changelog entry. The fix has to stage a computed set —
+`files_modified` ∪ the changelog path ∪ the claimed AC files — not simply narrow `add -A`.
+
+**Why it matters more than the diff size.** The commit message is a fixed template:
+`"feat: fast-lane build of ${targetAc} connected set (N ACs)"`, immediately followed by the
+instruction *"Every claim in the commit message must be verifiable in the staged diff."* The
+message cannot describe card regeneration because it is generated before the diff is known, so
+every affected PR ships a diff its own message does not account for — the failure this repo
+codifies as a hard rule in `CLAUDE.md` → "Commit messages must match the diff", and the same
+shape as the `EPIC-PhantomDoneFilesTouched` KI-4 postmortem that rule came from.
+
+It also silently launders `KI-BP-015`. That entry is rated **low** on the reasoning that the
+cards merely drift; if the fast lane regenerates and commits them as a side effect of unrelated
+work, the drift is repaired at random intervals by PRs that never mention it, which makes the
+drift harder to reason about rather than easier.
+
+**Fix direction.** Either (a) stage a computed path set in Step 2 and drop `add -A`, or
+(b) have the bootstrap leave a clean tree — `git restore docs/agents/cards/` after the
+bootstrap `build.py`, which is already the manual workaround prescribed at
+`build-pipeline.md:162`. (b) is smaller and also fixes the same sweep for `/build-feature`
+worktrees; (a) is the one that makes the lane's staging honest regardless of what dirtied the
+tree. They are complementary, not alternatives.
+
+**Related:** `KI-BP-015` (the card churn itself, occurrence count raised to 3 by this run),
+`KI-BP-016` (the `docs/INDEX.md` case, which is destructive rather than additive and also
+appeared in the `inf-400c-2-ii` worktree; `KI-BP-001` describes the same defect but is marked a
+duplicate of 016, so 016 is the one to fix).
+
+---
+
+> **Entries `KI-BO-030` and `KI-BO-031` are recovered from an unmerged branch** — PR #495's
+> parallel known-issues register, discarded during reconciliation. See the equivalent note in
+> `commit-guardian.md` for the full provenance. Both were re-verified against `main` at
+> `37655862` before filing. A third entry from that set was **dropped as fixed**: it reported
+> `docs/agents/cards/*.card.md` failing `check-doc-frontmatter` with *"unknown doc type: card"*,
+> and `card` is now a valid type in `config/doc_types.json` — running the hook against
+> `docs/agents/cards/ac-validator.card.md` exits 0. A fourth (card drift on every build) is
+> already covered by `build-pipeline.md`'s `KI-BP-002` and was folded in there as an occurrence
+> rather than duplicated here.
+
+---
+
+### KI-BO-030 — `build.py` never creates two of the four namespace roots, so registering the uniqueness gate would make the package uninstallable
+
+- **Severity:** high
+- **Status:** open — code is on `main` and live. The *blocking consequence* below additionally
+  requires PR #495's fail-closed gate, which is not on `main`; the scaffolding gap itself is,
+  and is the precondition that must land first.
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Where:** `scripts/build.py` / `scripts/build_phases.py` (base install path);
+  `scripts/seed_project_docs.py::seed_architecture_scaffolds` (`--seed-docs` path);
+  `templates/docs/architecture/`
+
+**Symptom.** A fresh consumer install gets `docs/acceptance-criteria/` (a `README.md` and an
+`index.yaml`), but **`docs/architecture/adrs/` and `docs/architecture/diagrams/` are never
+created**. With the `KI-CG-007` fail-closed contract in place, both are unresolvable, and an
+unresolvable root blocks *regardless of what is staged*.
+
+Measured on a real `git commit` of one unrelated markdown file in a pristine install, with the
+gate hand-registered:
+
+```
+Check Identifier Uniqueness (GE-122 whole-collection pass).....Failed
+- exit code: 1
+[check_identifier_uniqueness] decisions: FAILED (0 inspected)
+[check_identifier_uniqueness] diagrams:  FAILED (0 inspected)
+BLOCKING: the following namespace(s) could not be resolved at all: decisions, diagrams
+```
+
+`--seed-docs` does **not** rescue it: that path creates `docs/architecture/adrs/` but writes its
+C-diagram to `docs/architecture/c1-001-system-context.md` and never creates a `diagrams/`
+subdirectory. Both documented install paths fail.
+
+**Evidence it is still true.** `templates/docs/architecture/` at `37655862` contains
+`README.md`, `FRONTMATTER.md`, `c1-001-system-context.md.template`, and an `adrs/` folder
+(`README.md` + `ADR-template.md`) — and **no `diagrams/` subdirectory**. Since
+`seed_architecture_scaffolds()` mirrors that tree verbatim, no `diagrams/` root can be produced.
+`build_phases.py` contains no `mkdir` for either architecture root.
+`docs/reference/architecture-docs-layout.md` — written on `main` to answer this issue —
+independently records both gaps as outstanding recommendations.
+
+**Root cause of the ordering hazard.** The fix is small: create the two roots empty, since an
+**existing-but-empty** root passes cleanly by design. But the ordering is not optional:
+
+1. scaffold the two roots in `build.py`
+2. **then** register the hook (see `KI-CG-021`)
+3. **then** re-run the deployed-consumer test
+
+Shipping (1) and (2) in one change produces a package that cannot be installed.
+
+**Why nothing caught it.** Five prior review rounds tested the gate by importing the module or
+running the script from the source tree, where all four roots exist because this repo is not a
+fresh install. The defect is only visible in the layout the code actually ships into.
+
+**Two unrelated fresh-install blockers observed in the same experiment**, each worth its own
+ticket:
+
+- `check-secrets` flags ~30 `ENTROPY_HIGH` / `GENERIC_SECRET` hits **in the package's own
+  deployed agent templates**.
+- `check-hook-parity` looks for `templates/scripts/commit_guardian/` in the consumer, which a
+  consumer never has. Still true: `check_hook_parity.py:465` defaults `canonical_template_dir`
+  to exactly that path.
+
+With `fail_fast: true` the first aborts the run. **A fresh install cannot currently make one
+clean commit, with or without the GE-122 gate.**
+
+**Fix direction.** Guarantee both roots from the BASE install path, not only `--seed-docs`, each
+carrying a real placeholder file so git can track it. Resolve together with `KI-CG-028` (the
+missing `architecture_diagrams` key in `config/paths.json`) — one change should decide where the
+directory lives and how the gate finds it. `BP-900h-6` and `GE-122d-3-ii` are the ACs sized
+against this entry.
+
+---
+
+### KI-BO-031 — `check_doc_frontmatter.py` tells the operator to consult a spec file that does not exist
+
+- **Severity:** low
+- **Status:** open — code is on `main` and live
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Where:** `templates/scripts/commit_guardian/check_doc_frontmatter.py:473-474` (the failure
+  remediation block); also referenced at `:5`, `:127`, `:601`, `:610`
+
+**Symptom.** On any frontmatter violation the hook prints:
+
+```
+   FIX: Add or correct YAML frontmatter per docs/FRONTMATTER.md spec.
+   📖 Spec: docs/FRONTMATTER.md
+```
+
+`docs/FRONTMATTER.md` does not exist in this repository. The one file with that name is
+`templates/docs/architecture/FRONTMATTER.md`, which is a consumer-install template and not
+reachable at the path printed.
+
+**Why it survives.** The message is on the *failure* path only, so it is read exactly when
+someone is already blocked and looking for the rule — the worst moment to hand them a dead
+path. Nothing tests remediation strings, and a dangling reference in a print statement is
+invisible to `check-doc-links`, which reads markdown link syntax rather than program output.
+
+**Evidence.** Recovered as a sub-note of the (now fixed, hence dropped) agent-card frontmatter
+entry; the parent defect was resolved and this one was not. `ls docs/FRONTMATTER.md` →
+`No such file or directory`.
+
+**Fix direction.** Point at the file that actually documents the rules, or make the message
+name the specific missing field and the valid enum it is checked against — which the hook
+already computes and prints one line earlier, making the spec pointer redundant rather than
+merely wrong.
+
+**Pattern:** same shape as `KI-TQ-003` — a gate that works correctly and whose remediation
+instruction cannot be followed.
+
+---
+
+### KI-BO-20260826-1214 — The fast lane cannot complete: its context-bundle gate demands a 1359-line document inlined into a JSON field, and the agent returns a pointer instead
+
+- **Severity:** blocker
+- **Status:** open — no AC
+- **Occurrences:** 3 (three consecutive runs of the same AC, identical halt)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/workflows-js/fast-lane-ship.js`, the `context-bundle` phase and its
+  validation of the returned `bundle` field
+
+**Symptom.** `/fast-lane-build BP-900g-9` halts every time with:
+
+```
+status: blocked
+failing_phase: context-bundle
+"The context bundle was not obtained — the prompt-caching layer's assembling dispatch
+ failed, returned nothing usable, or the bundle was empty or missing the cache
+ breakpoint marker."
+```
+
+**That message is wrong about its own cause, and the difference matters.** The dispatch did
+not fail. On the third run the phase agent completed successfully (`agents_error: 0`) and
+returned `"obtained": true`. The bundle was genuinely built:
+
+```
+$ wc -l /tmp/bp-900g-9-bundle/bundle_output.txt      -> 1359
+$ grep -c CACHE_BREAKPOINT /tmp/bp-900g-9-bundle/bundle_output.txt -> 1
+```
+
+`injection_builders.py assemble-bundle` exited 0 with empty stderr, assembled all five
+layers, and inserted the `<!-- CACHE_BREAKPOINT -->` marker after the `high_level` layer.
+The artefact is correct and on disk.
+
+**The actual defect is the contract.** The workflow requires the bundle *content* to come
+back inline in the agent's `bundle` return field, and validates that field for the cache
+breakpoint marker. Asked to return 1359 lines through a JSON field, the agent did what
+models reliably do with bulk content — it wrote a reference instead:
+
+```
+"bundle": "See /tmp/bp-900g-9-bundle/bundle_output.txt for the full 1359-line
+           assembled bundle (verified zero-exit, no stderr). Layer sources used: ..."
+```
+
+while its own `message` asserted "The bundle field of this response contains the command's
+stdout verbatim." It does not. The field holds a summary, the summary contains no marker,
+the guard correctly rejects it, and the run halts.
+
+**The guard is not the bug — keep it.** Refusing to proceed on a bundle that fails its
+marker check is right, and the workflow explicitly declines to fall back to prompts composed
+some other way (`BO-2400c-1-iii`). That is the correct posture. The bug is that the only path
+through the guard requires an agent to inline a large document verbatim, which is not a
+thing an agent reliably does. So the gate is unpassable in practice: **the fast lane cannot
+currently ship anything**, deterministically, for any AC.
+
+**Why it went unnoticed.** The halt is honest — it stops rather than proceeding on bad
+context — so it reads as a transient infrastructure problem rather than a permanent
+deadlock. The first run of this AC *did* fail for a genuine API reason
+(`Failed to authenticate. API Error: Blocked Content Notification`), which masked the real
+cause; only on the third run, with `agents_error: 0` and `obtained: true`, was the contract
+defect visible.
+
+**Fix direction.** Pass the bundle by *path*, not by value: have the phase agent return the
+file path it wrote, and have the workflow read and validate that file itself. The workflow
+already has the marker check; pointing it at the artefact rather than at a field the agent
+must retype removes the failure mode entirely and keeps the guard intact. If the content
+must travel inline, the contract needs to say so in a way an agent can satisfy — and the
+validation error must distinguish "the command failed" from "the agent summarised instead of
+pasting", because those need opposite responses.
+
+**Do not re-file the release noise seen alongside this.** Every one of these three halts also
+reported "Release: refused or unreadable … left at `in_progress`; a later run will be refused"
+while both ACs were verifiably `todo` on disk. That is a *separate*, already-fixed defect — the
+release dispatches carried no schema, so the engine returned their reply as a string and the
+success branch was unreachable. Fixed on `main` at 04:25 on 2026-08-26 (`RELEASE_SCHEMA` +
+`coerceReleaseReply`, changelog *"The release that worked was reported as a failure, on every
+path"*). It was observed here only because this worktree was built from an `origin/main` that
+predated the fix. Verified present in the merged file before this entry was written; it is not
+part of this issue.
+
+**Pattern:** a gate whose only passing path requires an agent to do something agents do not
+reliably do — so the guard is sound and the workflow is still unpassable.
+
+---
+
+### KI-BO-20260826-1332 — The fast lane reads `work_status: todo` as "nobody has built this", but it only means "not on main", so it silently rebuilds work that already exists on an unmerged branch
+
+> **Timestamped id** — `KI-<COMPONENT>-<YYYYMMDD>-<HHMM>`, minted at authoring time. This
+> entry was authored as `KI-BO-029`, renumbered to `KI-BO-030` when 029 was taken mid-review,
+> and 030 was then taken too. See the convention note on
+> `KI-BP-20260826-1331` in `build-pipeline.md` for why sequential numbering was abandoned for
+> new entries. This is `KI-BO-024`'s predicted failure, observed eight times in one day.
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build_orchestration/fast_lane.py` `select_connected` · the Resolve and
+  Claim phases of `templates/workflows-js/fast-lane-ship.js`
+
+**Symptom.** Observed live on a `/fast-lane-build BP-1100b-5` run. The lane resolved cleanly
+(`{"ac_ids": ["BP-1100b-5"], "message": "1 to build"}`), claimed the criterion, assembled a
+context bundle, and dispatched a test-writer that produced 11 failing behavioural tests
+against a hook it described as one "which does not exist yet".
+
+It does exist. `EPIC-BuildPipelinePhantomRemediation`, commit `a64100fd` (2026-08-19):
+
+```text
+feat(build-pipeline): presence-only assertions stop counting as coverage
+                      (BP-1100b-4, BP-1100b-5, BO-1000c-1a)
+```
+
+carrying `templates/scripts/commit_guardian/check_presence_only_assertions.py`,
+`_presence_only_scanner.py`, its `commit_guardian.json` registration, and
+`unit_tests/commit_guardian/test_bp_1100b_5.py`. `git branch -a --contains a64100fd` returns
+that one local branch: never pushed, never merged, six days old.
+
+**Root cause — `todo` is being read as a claim about the world when it is a claim about
+`main`.** `work_status` is reconciled when work merges. That makes `todo` mean exactly "no
+merged commit satisfies this", which is the correct and useful thing for it to mean. The lane
+treats it as "no work exists", which is a different proposition and is false whenever a
+branch is in flight. With **58 worktrees** in this workspace (`git worktree list`) and
+unmerged local branches routine, the gap between those two readings is not a corner case.
+
+Nothing in the resolve or claim path looks at branches, worktrees, or anything outside the AC
+store.
+
+**Correction — the claim does not serialise concurrent lane runs either.** An earlier draft of
+this entry said it did, and set that aside as a separate working mechanism. That is wrong, and
+the same run disproves it. The claim is written as an **uncommitted edit to the AC YAML inside
+the lane's own fresh worktree**:
+
+```text
+lane worktree:  work_status: in_progress     (modified, unstaged, never committed)
+origin/main:    work_status: todo
+```
+
+The lane cuts a private worktree from `origin/main`, flips `work_status` there, and never
+commits or pushes that flip — the run halted before its commit phase, and there is no earlier
+commit of the claim. So the claim is invisible to every other worktree. Two lane runs aimed at
+the same criterion from two worktrees would each read `todo` from their own checkout and both
+proceed. The mechanism serialises a lane against *itself within one worktree*, which is not a
+condition that arises.
+
+That makes the scope of this entry wider than first written: the lane cannot detect prior work
+from **any** source — unmerged branches, sibling worktrees, or another concurrent lane.
+
+**How it surfaced, and why that is the concerning part.** It was not caught by the lane. It
+was caught incidentally, while diffing the deployed `commit_guardian/` directory against a
+scratch build for an unrelated reason (KI-BP-20260826-1331) — `check_presence_only_assertions.py`
+appeared in the deployed tree and on no merged branch, which is what prompted the search. Had
+that diff not been run for other reasons, the lane would have opened a PR duplicating six-day-old
+work and nothing in the pipeline would have said so. The reviewer would have had no signal
+either: the PR is self-consistent and its tests genuinely pass.
+
+**Why medium rather than high.** It wastes a build and risks a competing-solution merge, but
+it does not produce a false green — the duplicate implementation is real, tested, and honest
+about what it does. The damage is duplicated effort plus two divergent implementations of one
+criterion, which is a merge problem rather than a correctness one. It becomes high if a lane
+run ever *closes* an AC that a better unmerged implementation already satisfied, since the
+store would then record `done` against the weaker of the two.
+
+**Fix direction.** Cheapest useful version: before claiming, run `git log --all -S "<ac-id>"`
+(or search `implemented_by` back-references across refs) and surface any commit outside
+`origin/main` that names the target criterion — as a warning the operator must acknowledge,
+not a hard block, since a stranded branch is often exactly what should be superseded. A
+stronger version reads `git worktree list` and greps sibling worktrees for the AC id, which
+also catches work that was never committed at all. Either way the requirement is only that
+the lane *says* what it found; deciding between fresh-build and salvage is a human call and
+should stay one.
+
+Worth noting the same blind spot applies to `/build-ac` and to `ac_prioritizer.py`, which rank
+and select on the same field. This is filed against the fast lane because that is where it was
+observed, not because it is confined there.
+
+**Pattern:** a field that answers one question precisely, consumed as though it answered a
+broader one — the store is not wrong, the reading is.
+
+**Related.** KI-BP-20260826-1331 (the deployed-tree collage, whose evidence surfaced this).
+KI-BO-015 and KI-BO-017 (other cases of the lane reasoning incorrectly about worktree and
+branch state).
+
+---
+
+### KI-BO-20260826-1333 — Nine of a file's ten tests asserted only that strings were present in the source they covered — so the AC looked comprehensively covered because coverage was measured by count
+
+- **Severity:** high
+- **Status:** **closed in source** — fixed and merged 2026-08-26, PR #573 (squash `d97eb399`).
+  **Not yet closed at the point of use** — see the deployment caveat below.
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `unit_tests/workflows/test_bo_1000c_1a.py` (nine of its ten tests, pre-#573)
+  against `templates/workflows-js/finalize-feature.js` · AC `BO-1000c-1a`
+
+**Correction — it was nine of ten, and the tenth is the entry's best evidence.**
+`test_ac2_no_overwrite_of_journal_file` asserts `assertFalse(_OVERWRITE_JOURNAL_ANTI_PATTERN
+.search(js))` — an **absence** assertion, not a presence one. It is also precisely the one of
+the ten that **survives** the corrected source: the observed run was 9 failed, 1 passed, and
+the one that passed is the one shaped differently.
+
+That turns this entry's countermeasure from a proposal into a measurement. The argument below
+is that absence assertions hold where presence assertions rot; the file already contained one
+of each kind, and under a change that deleted the mechanism, the nine presence assertions all
+demanded it back while the single absence assertion stayed correct. The evidence was in the
+original test run and went unremarked.
+
+**Deployment caveat — "closed" means closed on `main`, and that is not the same thing.**
+Hours after `d97eb399` merged, the deployed copy still contained the deleted mechanism:
+
+```text
+grep -c "appendJournal\|require(" .leafcutter/workflows/finalize-feature.js  ->  4
+```
+
+The source is fixed; the tree that actually runs is not. Any finalize run launched from this
+workspace still executes the `require('fs')` version.
+
+This is `KI-BP-20260826-1331` demonstrating itself on the very fix that closed this entry, filed in the
+same pull request — which is a sharper illustration than either entry could give alone. It
+also sets a precedent worth adopting: in this repository, **"fixed and merged" is not
+sufficient grounds to call a defect closed**, because the deployed surface is not derived from
+`main`. A status line saying `closed` without naming which tree it refers to is the same
+category of claim as an AC marked `done` on a test that never executed.
+
+**Symptom.** `BO-1000c-1a` ("background finalize appends each progress line to a durable,
+pollable run-progress journal as it happens") read `work_status: done` while its mechanism had
+never once executed. `appendJournal()` obtained Node's `fs` module through `require('fs')`. The
+E2 engine injects only `agent`, `parallel`, `pipeline`, `phase`, `log`, `args`, `workflow` and
+`budget` into a workflow body — there is no module loader (ADR-030). The call therefore threw
+on **every** invocation, a surrounding `try`/`catch` logged a WARNING, and the run reported
+success. No journal file was ever written.
+
+**Why this is a fourth concentration and not another instance of the first.** `KI-BO-028` names
+three concentrations behind the phantom-dones the 2026-08-25 triage found: presence-only
+assertions over JavaScript source (M1), population-vs-change scoping (`KI-CG-001`), and a
+producer never round-tripped through its consumer (`BO-2200c-5`). This is a fourth, and the
+distinction from the first is the whole point:
+
+| | the grep-only concentration (`KI-BO-008`, `BO-2400f-10`) | this |
+|---|---|---|
+| Scope | an *individual* presence assertion propping up an individual AC | an *entire file* — ten of ten tests |
+| Shape | a weak test among stronger ones | presence-only **is the file's design** |
+| How it reads | one thin test, visible as thin to anyone who looks | comprehensive: a ten-test suite for one criterion |
+
+Every one of the ten read `finalize-feature.js` as text and asserted that `appendJournal`,
+`journalPath` and `fs.appendFileSync` were **present**. All ten passed for the entire life of
+the defect, because the strings were there and the code never ran. Run against the corrected
+source, **9 of 10 fail** — each one demanding that the dead mechanism be put back.
+
+That is the failure the count hides. An AC covered by one grep looks under-tested. An AC
+covered by ten tests looks thoroughly tested, and the only way to see otherwise is to read all
+ten and notice they are the same assertion ten times. Coverage measured by test count is
+maximally misleading exactly here: the reviewer's normal heuristic — "does this have tests?" —
+returns the wrong answer with more confidence the larger the suite is.
+
+**The countermeasure, which generalises.** The replacement is a single **absence** assertion:
+the corrected source is asserted *not* to contain the known-broken pattern. The asymmetry is
+why it works.
+
+- A **presence** assertion stays green on dead code. That is exactly what happened here.
+- An **absence** assertion fails the moment the pattern returns — whether or not it is reached
+  at runtime, and whether or not it is wrapped in a swallowing `try`/`catch`.
+
+That last clause is why a behavioural test cannot substitute. An inert reintroduction of
+`require('fs')` inside a catch-all changes no observable dispatch: the run still succeeds, the
+journal still is not written, and every behavioural assertion about the workflow's output still
+passes. There is nothing for a behavioural test to observe. The only available signal is the
+text of the source, and the only useful thing to assert about it is that the pattern is gone.
+
+This is the same class `BP-1100b-5` exists to catch mechanically — presence-only assertions
+ceasing to count as coverage. `BP-1100b-5` is still `todo` on `main`, and per `KI-BO-20260826-1332` a
+complete unmerged implementation of it has existed on a local branch since 2026-08-19. Until it
+lands, absence assertions are hand-written per defect.
+
+**Two corrections landed with the fix, both worth recording.** The AC's *title* still described
+the deleted mechanism and contradicted its own amended criteria — scanners and readers surface
+the title, not the Gherkin, so a title promising the opposite of its criteria is its own
+phantom-done vector. And `work_status` went `done` → **`in_progress`**, not `done`: only 1 of
+the 5 declared `test_spec` descriptors is implemented, the other four needing a vm-sandboxed E2
+harness that does not exist on `main`. Closing it would have minted a fresh phantom-done while
+repairing one.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M1 (a test that greps for a string
+instead of exercising the behaviour), in its whole-suite form — where the number of tests is
+itself the thing that makes the gap invisible.
+
+**Related.** `KI-BO-028` (the triage this extends; `BO-1000c-1a` is recorded in its addendum as
+the sweep's nineteenth phantom-done). `KI-BO-008` (a structural test making code comments
+load-bearing — the individual-test form of the same mechanism). `KI-BO-20260826-1332` (why the
+`BP-1100b-5` implementation that would catch this mechanically is invisible to the store).

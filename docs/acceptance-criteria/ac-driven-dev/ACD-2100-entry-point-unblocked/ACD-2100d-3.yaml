@@ -41,6 +41,18 @@ doc_links:
     relationship: describes
     status: planned
     relevance: "The reference page authored by ACD-2100d-4 names the startup checks; this record is the guarantee that an install adds none of them to a project that had none."
+  - path: scripts/ci/check_consumer_install.py
+    relationship: implements
+    status: exists
+    relevance: "EDIT SURFACE. The existing gate that already creates a temporary target project, runs the real installer into it as a subprocess, and has its verdict consumed by a CI job. This is the deliverability decision the standing-guarantee requirement names, so the before-and-after measurement is wired here rather than into a new script nothing invokes."
+  - path: unit_tests/_installed_route_probe.py
+    relationship: modifies
+    status: planned
+    relevance: "EDIT SURFACE, CREATED BY ACD-2100d-1. Reused rather than re-authored. This record adds the two-measurement comparison and the precondition-not-met verdict to the shared probe so both records read one implementation of 'how far did the run get'."
+  - path: unit_tests/portability/test_acd_2100d_3.py
+    relationship: creates
+    status: planned
+    relevance: "EDIT SURFACE, DOES NOT EXIST YET. The four test_spec descriptors below, including the boundary descriptor that makes the before-measurement mechanically load-bearing."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
@@ -54,6 +66,8 @@ it_requirements:
   - "STANDING GUARANTEE MEANS IT HAS TO KEEP RUNNING. Wire the check where a change to the startup path or to the installer will re-run it, and have its verdict read by whatever decides that change is deliverable. A script that proved the property once and is never invoked again satisfies the words and not the record -- the inert-gate shape this repo keeps rediscovering."
   - "Must satisfy the repository error-handling policy in any harness code that ships under scripts/ or unit_tests/."
   - "Any dependency the check needs at runtime must be in the build deploy manifest. A check that runs only from the source tree is not the check a consumer's install would run, and this record is about what happens to a consumer."
+  - "THE GATE THAT ACTUALLY RUNS ON AN INSTALLER CHANGE ALREADY EXISTS -- WIRE INTO IT RATHER THAN ADDING A SECOND ONE. scripts/ci/check_consumer_install.py already creates a temporary target project, runs the real installer into it as a subprocess, and has its exit code consumed by the consumer-install simulation job in the repository's CI workflow. That is the deliverability decision the standing-guarantee requirement above names. Extend that script with the before-and-after startup measurement so the verdict is read where an installer change is already gated. The CI workflow definition itself needs no edit, because the job already invokes this script -- and a new standalone script that nothing invokes is the inert-gate shape the requirement forbids."
+  - "THE DEPLOY-MANIFEST REQUIREMENT IS ABOUT THE ROUTE, NOT ABOUT THE CHECKER, AND THE TWO MUST NOT BE CONFLATED. Neither the CI check directory nor the test tree is deployed into a target install, and that is correct: both are package-development tooling. What must be present in a consumer install is everything THE ROUTE reads at startup, and closing that gap is ACD-2100d-1's surface. If reusing ACD-2100d-1's probe from the CI check turns out to be awkward because the probe lives under the test tree, resolve it by having the consumer-install job reach the probe through the test runner, or by relocating the single shared probe. Do NOT resolve it by writing a second probe -- that is the exact outcome the reuse requirement above exists to prevent."
 test_spec:
   - name: test_the_route_reaches_the_first_question_before_and_after_the_install
     target_dir: unit_tests/portability/
@@ -121,7 +135,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/22_TICKET-20260826-ACD-2100d-3.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
@@ -164,3 +179,65 @@ notes: |
   above does not order anything. The it-po does not own depends_on and has not edited it;
   the recommended edit is to add ACD-2100a-5 to ACD-2100d-1's depends_on before the tree
   is approved, which orders this record correctly by transitivity.
+
+  IT PO ENRICHMENT -- 2026-08-26 (files_touched backfill).
+
+  WHY THIS RECORD PRODUCED AN EMPTY files_touched. generate_ticket_from_ac.py derives the
+  ticket surface as the union of path tokens found in it_requirements prose that exist on
+  disk, plus doc_links whose relationship is one of constrains / creates / implements /
+  modifies / specifies. Every doc_link here was "describes" and no it_requirement named a
+  path, so the union was empty. The enrichment below fixes the cause, so a regeneration
+  reproduces the same three paths.
+
+  THE THREE PATHS, AND WHY EACH ONE IS THERE.
+
+  scripts/ci/check_consumer_install.py -- this is the answer to the standing-guarantee
+  requirement, and it was already sitting there. Verified on 2026-08-26: the script
+  creates a temporary target project, runs the real installer into it as a subprocess,
+  and inspects the deployed tree; its exit code is consumed by a dedicated CI job. In
+  other words the "install into a temporary target" half of this record's protocol
+  already exists AND is already read by a deliverability decision. What it does not do is
+  start a run afterwards. Extending it is what turns the requirement's words into a gate
+  that re-runs on every installer change, and it is strictly cheaper than authoring a new
+  script and then having to argue that something invokes it.
+
+  unit_tests/_installed_route_probe.py -- ACD-2100d-1's deliverable, listed here because
+  this record modifies it rather than merely calling it. The two-measurement comparison
+  and the precondition-not-met verdict have to live in the shared probe, not in this
+  record's test file, or the reuse requirement is satisfied in name only: two callers
+  would each carry their own notion of "how far the run got" and would eventually
+  disagree. Declaring it as a shared edit surface is also what tells a change-scope
+  reviewer that a diff to that file under this ticket is expected.
+
+  unit_tests/portability/test_acd_2100d_3.py -- the four descriptors, including the
+  boundary one that makes the before-measurement mechanically load-bearing. The generator
+  already names this exact path in the ticket's Test Requirements block.
+
+  PATHS CONSIDERED AND REJECTED.
+
+  scripts/build_phases.py -- rejected here even though this record's second criterion is
+  violated today by a missing deploy entry (the deployed route reads a charter registry
+  that no build phase deploys; see ACD-2100d-1's enrichment note for the verification).
+  That repair belongs to ACD-2100d-1, which this record depends_on. Listing the file under
+  both tickets would give two tickets authority over one file for two different reasons
+  and would make an out-of-scope deploy edit look in-scope under whichever ticket happened
+  to be open.
+
+  The CI workflow definition -- rejected. The consumer-install simulation job already
+  invokes the script named above, so extending the script needs no workflow edit. If the
+  implementer finds a workflow edit is genuinely required, that is a scope change worth
+  surfacing rather than absorbing.
+
+  A NEW STANDALONE CHECK SCRIPT -- rejected on purpose. It is the shape the
+  standing-guarantee requirement explicitly forbids: a script that proves the property
+  once and is never invoked again.
+
+  UNRESOLVED TENSION, LEFT VISIBLE RATHER THAN SILENTLY DECIDED. The last it_requirement
+  demands the check's runtime dependencies be in the build deploy manifest, but neither
+  the CI check directory nor the test tree is deployed into a target install -- verified
+  on 2026-08-26. The honest reading is that the requirement is about what THE ROUTE needs
+  at runtime (ACD-2100d-1's surface), not about the checker, which is package-development
+  tooling like every other CI gate here. An it_requirement has been added stating that
+  reading and naming the two acceptable resolutions, so the implementer does not resolve
+  it by writing a second probe.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

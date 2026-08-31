@@ -1,0 +1,65 @@
+id: AGC-100d-1
+title: "A spawned Codex specialist can use every supporting skill it declares"
+component: agent-compatibility
+components: [agent_registry, skill_registry, skills_system, testing_quality]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a launchable specialist declares the signoff skill and conditionally
+    invokes knowledge-query,
+  And each skill fixture contains a different expected result marker,
+  When a fresh build completes and Codex starts that specialist for one task
+    requiring signoff and one task requiring knowledge-query,
+  Then the spawned specialist returns the corresponding result marker for each task,
+  And compatibility is reported as incomplete if either declared skill or its
+    translated reference is absent,
+  And a parsed agent definition without an actual spawned-skill exercise is not
+    accepted as proof.
+depends_on: [AGC-100d, AGC-100a-3, AGC-100b-2]
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - Derive declared skills from agent and skill registries rather than prompt-text guessing.
+  - Resolve every declaration to .agents/skills/<id>/SKILL.md with a matching name.
+  - Prove always and conditional skill use through real spawned-agent behavior.
+  - Mark missing, disabled, malformed, or unreachable skills incomplete.
+test_required: true
+test_spec:
+  - name: test_spawned_agent_invokes_declared_skill_markers
+    target_dir: tests/agent_compatibility/
+    framework: pytest
+    type: e2e
+    angle: deployed
+    surface_invoked: native Codex custom-agent and repository skill invocation
+    description: A spawned specialist returns the signoff and conditional knowledge-query markers.
+  - name: test_missing_declared_skill_marks_compatibility_incomplete
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Missing declared skills or translated references make the affected identity incomplete.
+test_rationale: "Static paths cannot prove Codex exposes a skill to the spawned specialist or that conditional invocation works."
+delivers_to:
+  agent: python-coder
+  contract: "SkillExerciseEvidenceV1 containing agent, skill, invocation mode, marker, child response, and success."
+expects_from:
+  - {ac_id: AGC-100a-3, contract: SpawnEvidenceV1 harness}
+  - {ac_id: AGC-100b-2, contract: Skill capability and reference mappings}
+doc_links:
+  - {path: docs/architecture/components/skill-registry.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, config, prompt, pipeline]
+risk_surface: cost

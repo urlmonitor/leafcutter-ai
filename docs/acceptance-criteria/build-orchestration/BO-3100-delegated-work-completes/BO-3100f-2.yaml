@@ -1,0 +1,74 @@
+id: BO-3100f-2
+title: "A run missing a step it was supposed to perform does not lead with a success value"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run in which every step completed except one, which stopped short,
+  When the run returns its outcome,
+  Then the single overall value the run leads with — the one a caller routes on
+    without reading anything else — is not a success value,
+    And a caller reading only that value cannot take the run for successful,
+    And the step that stopped short is named in the same output, so nothing is lost
+      by the leading value no longer reading as success.
+
+  Given a run in which every step completed and none stopped short,
+  When the run returns its outcome,
+  Then the leading value is a success value,
+  So the leading value distinguishes the two runs rather than always warning.
+
+  Given a run in which one step stopped short,
+  When the leading value, the run's own list of completed steps, and the sentence
+    the run states about itself are read together,
+  Then all three agree: none of the three reports success while another denies it,
+    And the stopped step is absent from the completed list in the same output whose
+      leading value is not a success value.
+
+  Given a run in which a step stopped short and a later step then ran and completed,
+  When the run returns its outcome,
+  Then the leading value is still not a success value,
+  So later success does not overwrite an earlier stop.
+depends_on:
+  - BO-3100f
+  - BO-3100f-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-007's anchor: a run returned status ok with the publish step in its completed list, for a branch that had never reached the remote and a review that did not exist. This is the clause that case violates most visibly."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-5-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The same no-contradiction shape already established for an epic's completion verdict. The subject differs — that record is about work added to an epic, this one about a step that stopped — so the parallel is cited, not merged."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  CLAUSE 2 OF THREE, and the one the anchor case violates most visibly.
+
+  The second scenario is the mandatory control: a leading value that never reads as
+  success is worth as little as one that always does, and is the cheapest way to
+  satisfy every other scenario here.
+
+  The fourth scenario closes the ordering hole. A run that recomputes its leading
+  value from the most recent step would pass the first scenario whenever the stopped
+  step is not last, which is most of the time.
+
+  VERIFY BY EXECUTION, per CLAUDE.md: assert on the value a real run returns, not on
+  an internal structure that knows the right answer while the returned value still
+  reads as success.

@@ -6,7 +6,7 @@ components:
 title: "One tracking ticket is created per pre-existing or flaky failure"
 level: L2
 component: finalize
-status: active
+status: deprecated
 parent: FIN-100e
 criteria: |
   Given the triage report contains entries with category "pre_existing" or "flaky"
@@ -41,8 +41,13 @@ doc_links:
     relevance: "Step 6 — create_pre_existing_tickets_and_close"
 depends_on: []
 superseded_by: null
-amended_by: []
-covered_by: []
+amended_by:
+  - reason: "python-coder-reconciliation (EPIC-BuildPipelinePhantomRemediation/04_fin100e_autoticketing_decision.md): RETIRED, no replacement AC authored. This AC described a live create-ticket dispatch loop over pre_existing/flaky triage entries in finalize-feature.js Step 6a. That loop was deliberately DISABLED under EPIC-FinalizeFeatureHardening (create-ticket is a workflow, not a dispatchable agent -- see finalize-feature.js Step 6a comment) and replaced with an untrackedFailures[] structured report (see unit_tests/test_finalize_feature_step6a.py::TestStep6aNoFalseTicketClaim / TestWithFailuresPath, which lock in the replacement behaviour). Per this ticket's default (option b, endorsed by architect-review as lower-risk than re-enabling), the AC is superseded with no successor id: the replacement behaviour is intentionally NOT re-specified as a new AC because it is a simple reporting substitution already fully covered by the existing lock-in test, not a new product requirement. Operators create tracking tickets manually via /create-ticket per the untracked_failures report."
+    by: python-coder
+  - reason: "ac-store-reconciliation (EPIC-BuildPipelinePhantomRemediation): status field corrected from 'superseded_by' to 'deprecated'. Per docs/reference/ac-schema.md the 'superseded_by' lifecycle state requires the superseded_by field to name the replacement AC; this record was retired with NO successor (see the entry above), so 'superseded_by' with 'superseded_by: null' was internally inconsistent and diverged from every sibling retirement in the store, all of which carry a real successor id. 'deprecated' is the schema's state for 'retired; retained for audit', which is exactly what happened here. Enforcement behaviour is unchanged: check_ac_coverage.py excludes both states identically. unit_tests/test_finalize_feature_step6a.py::TestStep6aContractMatchesDecision::test_ac_status_matches_actual_js_dispatch_behaviour explicitly accepts either state plus an amended_by rationale, and stays green. Also recorded the lock-in test that covers the replacement behaviour in covered_by."
+    by: general-purpose
+covered_by:
+  - unit_tests/test_finalize_feature_step6a.py::TestStep6aContractMatchesDecision
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

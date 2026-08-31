@@ -112,7 +112,6 @@ const GATE_SCHEMA = {
 function narrate(progressText, description) {
   const line = progressText + ': ' + description;
   log(line);
-  appendJournal(line);
 }
 
 // ---------------------------------------------------------------------------
@@ -122,11 +121,16 @@ function narrate(progressText, description) {
 // (via log()) after each numbered step's work completes on the success path,
 // AFTER the step's agent() dispatches (distinct from narrate() which fires
 // BEFORE the first dispatch). Also records the outcome to stepOutcomes[] in
-// insertion order so BO-1000b-2 can compose an end-of-run summary and
-// BO-1000c-1a can relay it via the live journal channel.
+// insertion order so BO-1000b-2 can compose an end-of-run summary.
 //
 // The 'progressText' argument carries the literal 'Step X of N' label so the
 // text is statically visible to tooling and tests that parse the source file.
+//
+// BO-1000c-1a / BP-1100b-45 NOTE: in-flight visibility of a running finalize workflow is
+// provided by the E2 engine's own per-agent run journal
+// (<transcriptDir>/journal.jsonl), not by anything this script writes. See
+// the removal note where the old on-disk journal helper used to live,
+// further down this file, for the full rationale.
 // ---------------------------------------------------------------------------
 
 const stepOutcomes = [];
@@ -139,8 +143,8 @@ const stepOutcomes = [];
  * carries the concrete result data for the step — not a bare 'done' notice.
  *
  * Also records to stepOutcomes[] so downstream consumers (BO-1000b-2
- * end-of-run summary; BO-1000c-1a live journal relay) can read the ordered
- * per-step record without re-parsing log output.
+ * end-of-run summary) can read the ordered per-step record without
+ * re-parsing log output.
  *
  * @param {string} progressText - Literal position label, e.g. 'Step 0 of 9'.
  * @param {string} description  - Concrete result description for the step.
@@ -150,7 +154,6 @@ function outcome(progressText, description) {
   stepOutcomes.push(entry);
   const line = progressText + ': ' + description;
   log(line);
-  appendJournal(line);
 }
 
 // ---------------------------------------------------------------------------
@@ -574,36 +577,30 @@ if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
 }
 
 // ---------------------------------------------------------------------------
-// Run-progress journal — AC BO-1000c-1a
+// Run-progress journal — AC BO-1000c-1a (REDEFINED, BP-1100b-45, 2026-08-18)
 //
-// Durable append-only file at a worktree-keyed path so the launcher
-// (BO-1000c-1b) can read it while the run is in flight. Each narrate call
-// and outcome call appends a line incrementally (append-as-you-go),
-// not only at end-of-run, so an external poller sees progress live.
+// This script previously defined its own on-disk append-only journal
+// (a helper function plus a path variable, writing run-progress.journal.jsonl)
+// so an external launcher could poll in-flight progress. That mechanism could
+// never work: it loaded the Node.js "fs" module via the CommonJS module
+// loader, and the real E2 engine injects only
+// agent/parallel/pipeline/phase/log/args/workflow/budget into a workflow
+// script's top-level body — no filesystem primitive, no module loader
+// (ADR-030; docs/reference/workflow-authoring-contract.md #4/#6). The append
+// was wrapped in a try/catch that swallowed the throw and logged a WARNING
+// while the run still reported success, so the AC read work_status: done
+// while the mechanism had never once written a line.
 //
-// Path: run-progress.journal.jsonl under WORKTREE_ROOT — deterministically
-// locatable by the launcher without parsing log output.
+// The E2 engine already writes its own per-run journal at
+// <transcriptDir>/journal.jsonl — a `{"type":"started",...}` /
+// `{"type":"result",...}` record pair per agent() dispatch. In-flight
+// visibility is provided by that engine-native journal, not by anything
+// this script writes. This is a granularity change from the old per-step
+// (narrate/outcome) journal to per-agent-dispatch — the engine journal does
+// not persist log() output, so per-step text lines are not recoverable from
+// it. See this ticket's Comments for the full decision record, and
+// BO-1000c-1a's amended_by entries for the AC-level history.
 // ---------------------------------------------------------------------------
-const journalPath = WORKTREE_ROOT + '/run-progress.journal.jsonl';
-
-/**
- * Append one progress line to the durable run-progress journal.
- *
- * Best-effort: a journal-write failure is logged at WARNING level and
- * never aborts the finalize run (AC BO-1000c-1a policy). The journal is
- * append-only (fs.appendFileSync) so emission order is preserved across
- * all steps (AC BO-1000c-1a AC-2).
- *
- * @param {string} line - The progress line to append (newline appended automatically).
- */
-function appendJournal(line) {
-  try {
-    const fs = require('fs');
-    fs.appendFileSync(journalPath, line + '\n');
-  } catch (journalErr) {
-    log('[finalize-feature] WARNING: journal write failed (best-effort) — ' + journalErr.message);
-  }
-}
 
 // Track completed and skipped steps for the final summary.
 const completedSteps = [];

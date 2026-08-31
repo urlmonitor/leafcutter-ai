@@ -1,0 +1,95 @@
+id: INF-700c-3
+components:
+  - infrastructure
+  - knowledge_system
+  - documentation_system
+title: "Reference documentation states what may be written as knowledge and what the waiting count means"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c.yaml"
+criteria: |
+  Given the content of a knowledge surface and the count of knowledge waiting
+    to be written are both things a person reads to judge whether the loop is
+    working,
+  When a reader opens the reference documentation for the agent knowledge
+    system,
+  Then it states what makes a record eligible to be written to a knowledge
+    surface, and states that a record with no learning text is not eligible,
+  And it states what the waiting count means, and that history already honoured
+    is not part of it,
+  And it records the disposition reached for the retained body of records and
+    the reason for it,
+  And it does not describe a recovery or a drain of that body as pending work,
+  And every claim it makes about a count or a file is one a reader can check
+    against the artefact named.
+depends_on:
+  - INF-700c
+  - INF-700c-1
+  - INF-700c-2
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "TARGET SURFACE: docs/architecture/agent_knowledge_system.md, the same document INF-700b-4 and INF-700b-5 amend. Coordinate the three rather than each rewriting the other's section; this AC owns the eligibility rule, the waiting count's definition and the disposition record."
+  - "THE ELIGIBILITY RULE MUST BE STATED AS A RULE, NOT AS A ONE-OFF. Write it as: a record is eligible to be written only if it carries non-empty learning text; a record without it is ineligible and is not outstanding. The disposition of the 28 then follows from the rule rather than being a special case, which is the whole reason the mechanism was chosen that way (INF-700c-2). A reference that describes the 28 as 'excluded' without stating the rule invites the next reader to add a second exclusion list."
+  - "THE WAITING COUNT'S DEFINITION MUST MATCH INF-700c-2-ii's exactly: records carrying non-empty text that have not yet been written. State the two exclusions (no text, already written) and state that nothing else adjusts the figure. Distinguish it explicitly from the capture-health figures of INF-700b-3, which count agent runs rather than records — a reader who sums the two is reading a report this documentation authored."
+  - "THE DISPOSITION RECORD, with every claim checkable against a named artefact: 28 knowledge_captured records emitted between 2026-06-16 and 2026-08 into debugging/logs/agent_telemetry.jsonl, carrying exactly six fields and no learning text; 10 distinct destinations, of which 9 exist and hold 3.6-23 KB of real content and 1, memory/feedback_itpo_bo1700_worktree_gate_parity.md, has never existed in git history; the records remain in place and were neither moved nor marked; resolving them wrote nothing to any surface; revisiting them requires no un-marking step."
+  - "SUPERSESSION LANGUAGE — remove the pending-recovery framing wherever it appears, not only in the new section. INF-400c-4-ii and INF-400c-5-ii are both status: superseded_by, and INF-700c's own criteria record the reason. A document that describes the drain as future work reinstates the false backlog at the documentation layer after the code layer has removed it."
+  - "DO NOT DOCUMENT THE HARVESTER'S DEFAULT SINK AS THE SINK. debugging/logs/knowledge_emissions.jsonl is the argparse default at harvest_learnings.py line 409 and has never existed; the live records are in agent_telemetry.jsonl. INF-400c-4 owns the reconciliation. Describe the discrepancy plainly rather than picking a side, and do not tell a reader to run the harvester with its defaults against a file that is not there."
+  - "STATE THE EXIT CODES AS THEY NOW STAND, since a reader judging the loop will read them: 0 clean, 1 sink unreadable, 2 state file corrupt, 3 unroutable records remain, 4 a destination write failed and/or the state file could not be persisted (outranking 3). Note that after INF-700c-2 a run over the retained corpus returns 0, and that this is the observable form of the resting state."
+  - "Every path named must resolve at the time of writing, and every count named must be reproducible by a reader from the artefact named. This is the clause the rest of the feature is about; a reference that fails it is the defect one layer up."
+test_required: false
+test_rationale: |
+  A reference document produces no executable behaviour, so there is nothing
+  for test-writer to make fail. The document's factual claims are checkable but
+  not by a unit test: asserting that a paragraph states the eligibility rule
+  would be a grep over prose, which passes on a document that names the rule and
+  describes it backwards. The numbers the document quotes are asserted directly
+  against the artefacts by INF-700c-1's and INF-700c-2's test suites, so a
+  documentation test would restate coverage that already exists at the layer
+  that can actually fail. test_required is set explicitly so test-writer skips
+  with an accurate reason rather than the absence being read as an unauthored
+  contract.
+delivers_to: null
+expects_from:
+  - ac_id: INF-700c-2
+    contract: "The disposition reached for the retained body of records — a data-driven eligibility rule, corpus left byte-for-byte in place, nothing written — which the reference records as settled rather than pending"
+  - ac_id: INF-700c-1
+    contract: "The eligibility rule and its result buckets, which the reference states as the general rule from which the disposition of the 28 follows"
+  - ac_id: INF-700c-2-i
+    contract: "The audit facts that must appear in the record: what remains retrievable, the evidence that nothing was written, and that revisiting needs no un-marking step"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Specified the disposition text down to the checkable facts, since the criteria's last clause makes uncheckable claims a failure. Required the eligibility rule be documented as a general rule rather than as an exclusion of one corpus, matching the mechanism chosen in INF-700c-2 and preventing a second exclusion list from being added later. Expanded expects_from to three upstreams and recorded the harvester's phantom default sink as a trap for the writer."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the reference-doc entry in INF-700c's documentation_triggers. The
+  "does not describe a recovery as pending" clause matters because two ACs
+  currently on the books describe exactly that (INF-400c-4-ii, and INF-400c-5-ii
+  which is already withdrawn), and a reference that keeps repeating it would
+  reintroduce the false backlog at the documentation layer after the code layer
+  has been fixed.
+change_target: docs
+risk_surface: internal

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 components:
   - ac_store
 related_docs:
@@ -46,9 +46,25 @@ in the commit message. If it earns real work, author an AC for it and note the A
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 2
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
+- **Occurrences:** 6
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-26
 - **Where:** `scripts/ac_store/generate_ticket_from_ac.py` — the `--verify` readiness report
+
+**2026-08-26 — four more, consecutively, on one AC chain.** Every ticket generated for the
+`BP-1100g` chain needed its surface corrected by hand before it could be dispatched, and in each
+case the generated `files_touched` was non-empty, so the readiness check passed:
+
+| ticket | generated surface | what was missing |
+|---|---|---|
+| `BP-1100g-1` | 1 path | named the **deployed** `.claude/agents/test-writer.md`; the source is `templates/` |
+| `BP-1100g-3` | 1 path | the entire **prompt** surface — `llm-expert` sat in the agents map with no file to edit — plus both test files |
+| `BP-1100g-3-i` | 1 path | named `done_proof.py`, the one file that AC's `n_location_rule: 0` **forbids** touching, and gave the tests nowhere to land |
+| `BP-1100g-4` | 1 path | the new hook module, the deploy-manifest entry, and the test file — see **KI-ACS-014**, the path it *did* name is untracked |
+
+The `BP-1100g-3-i` case is the sharpest: `reference_file_path` is the file the tests **observe**,
+and the generator copies it into `files_touched` as the file the ticket **edits**. On a negative
+control those are opposites, so the readiness report passed a surface that instructed the
+implementer to do the one thing the AC prohibits.
 
 **Symptom.** The readiness report's surface check asserts only that *some* paths were
 derived. Its output reads `[PASS] files_touched has N path(s) from doc_links` — N > 0 is
@@ -540,10 +556,29 @@ is indistinguishable from one that passes).
 
 - **Severity:** medium
 - **Status:** open — no AC
-- **Occurrences:** 1
-- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Occurrences:** 2
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-26
 - **Where:** `CLAUDE.md` → "AC-store hygiene — bulk pre-flight", against the
   `check-ac-schema` pre-commit hook that the required `AC store valid` job runs
+
+**2026-08-26 — reproduced exactly, on the same rule this entry's retraction story is about.**
+Generating the `BP-1100g-4` ticket, `validate_ac_schema.py` over the whole `BP-1100`
+feature folder reported `OK: all 58 AC YAML files are valid`. The very next `git commit`
+was blocked by `check-ac-schema` on one of those 58:
+
+```
+BP-1100g-4.yaml: declares_side_effect is authored as True but this AC's own Then
+clause derives False — the two disagree ... (BO-2900g-2)
+```
+
+Same store, same moment, two validators, opposite verdicts — and the weaker one is the
+command `CLAUDE.md` still prescribes. Two details worth adding to the record. First, the
+disagreement was **pre-existing since 2026-08-17** and surfaced only because that record
+happened to be staged: the hook reads the git index, so a store-wide violation is
+structurally invisible until something touches the file (the forward-ratchet property this
+register keeps rediscovering). Second, the resolution direction is not symmetric —
+`criteria` is the authored requirement and the fixed point, so the derived boolean yields
+to it, never the reverse.
 
 **Symptom.** There are two AC validators and they enforce different rules.
 `scripts/ac_store/validate_ac_schema.py` checks the record against the schema. The
@@ -851,3 +886,299 @@ be a decision, not a drift.
 asked of tests rather than of contracts; a record can appear in both). `KI-KM-008` (241
 `todo` records with a covering test — the store lying in the opposite direction).
 `KI-ACS-010` (the other diff-scoped landmine population found the same day).
+
+---
+
+### KI-ACS-013 — `delivers_to` and `expects_from` are the two ends of one edge keyed on different things, so the forward half is not traversable and nothing validates either
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `config/ac_store_schema.json` (the `delivers_to` / `expects_from` declarations);
+  `scripts/ac_store/validate_ac_schema.py`; `templates/scripts/commit_guardian/check_ac_schema.py`
+
+**Symptom.** You cannot ask the store "what consumes this criterion?" and get an answer from
+the criterion itself. You have to build a reverse index over every record in the store, which
+is what had to be done to answer that question for a single record on 2026-08-25.
+
+**Root cause — the two ends of the edge are keyed on different things.** Measured across all
+3,376 records:
+
+```
+delivers_to entry shapes            expects_from entry shapes
+  714  [agent, contract]              1651  [ac_id, contract]
+   51  [ac_id, agent, contract]         46  [agent, contract]
+   14  [ac_id, contract]               119  {}          <- empty dict
+    3  [<bare AC id as the KEY>]         7  [<bare AC id as the KEY>]
+```
+
+`expects_from` is **AC-keyed**; `delivers_to` is **agent-keyed**. These are supposed to be the
+reverse of each other. An agent name does not identify a record, so the forward direction
+cannot be walked: `expects_from` gives you "which criterion produces what I need", and
+`delivers_to` gives you a role name shared by hundreds of records.
+
+**The store has already voted.** 65 `delivers_to` entries carry an `ac_id` key that no schema
+documents and no validator reads — 51 alongside `agent`, 14 instead of it. Authors reached for
+the missing field and added it themselves.
+
+**Nothing validates either field.** `config/ac_store_schema.json` accepts
+`null | string | object (additionalProperties: true) | array`. `validate_ac_schema.py` and
+`check_ac_schema.py` contain **zero** occurrences of `delivers_to`. So:
+
+- **29 `delivers_to.agent` values name no registered agent** (60 are registered). Crucially,
+  most are **not errors** — `finalize-feature` (×6), `create-ticket` (×6),
+  `diagram-classifier` (×5), `build-feature` (×2), `create-ac-workflow`, `ci`, `eval-runner`.
+  These name a real consumer that simply is not an agent: a workflow, a CI job, a runner.
+  One genuinely is malformed: `TKT-100g` carries
+  `agent: "product-owner | business-analyst-v3"`, two names in one string.
+- **119 `expects_from` entries are empty dicts** — a contract declaring nothing.
+- **10 entries across both fields are shape-malformed**, with a bare AC id used as the dict
+  *key* rather than as a value (`BP-006a-1`, `BP-006a-2`, `BP-006b-1`, `BP-006b-2`,
+  `BP-006c-1`, `BP-006c-2`, `UXP-600` ×3).
+
+**Why "restrict `agent` to the registry" is the wrong fix on its own.** It is the obvious
+first idea and it would refuse 29 records, of which roughly two-thirds name a legitimate
+non-agent consumer. That mistakes *not an agent* for *wrong*, and would push authors to name
+a plausible agent instead of the true consumer — strictly worse information. The precedent
+worth copying is `ADR-035`, which made the fast lane's producer roster **data** rather than
+a hardcoded literal while keeping it closed; the equivalent here is a declared consumer
+vocabulary that admits workflows and CI, not the agent registry alone.
+
+**Fix direction.** Three separable pieces, most valuable first:
+
+- **Document `ac_id` on `delivers_to` and make it the edge key**, mirroring `expects_from`.
+  That is what makes the graph traversable in both directions, and 65 records already do it.
+  `agent` stays as useful colour — which role will do the work — but stops being the identity.
+- **Validate what is present.** An `ac_id` must resolve to a record in the store; an `agent`
+  must resolve against a declared consumer vocabulary wider than
+  `config/agent_registry.json`. Follow `ACS-100i-9`'s shape: one shared helper imported by
+  both entry points, one format string, no second list in the JSON schema.
+- **Refuse the malformed shapes** — the 10 bare-AC-id-as-key entries and the 119 empty
+  `expects_from` dicts. These are unambiguous, and unlike the 29 they have no defensible
+  reading.
+
+**Scope note.** `assigned_agent` is getting exactly this treatment right now
+(`ACS-100i-9..11`, registry validation via a shared `_ac_agents.py`; `ADR-035` for the
+roster). `delivers_to.agent` and `expects_from.agent` were not in that scope and remain
+unvalidated, so the store now has one producer field that is checked and two consumer fields
+that are not.
+
+**What it costs today.** Quiet, but not small, and the quietness is the problem.
+
+Nothing here breaks a build. The only live readers are `pr-reviewer`'s Cross-File Contract
+Tracing and `ac-validator` §2d, both LLMs told to open the consuming file named in the
+contract, so a wrong or absent value degrades a review pass rather than failing a gate.
+
+**Raised from `medium` to `high` on 2026-08-26.** The first assessment weighed the blast
+radius of a single bad value, which is genuinely low. That was the wrong unit. Three things
+together make this a `high`:
+
+- **It silently disables two review checks across the whole store.** `ac-validator` treats a
+  contract gap as a **blocker** and `pr-reviewer` as a **high-confidence finding**. Point
+  either at a contract naming no openable consumer and it has two options — skip, or invent
+  a consumer. The first makes the check a no-op that reads as performed; the second produces
+  a fabricated finding against correct work. Both are the false-green shape this repo exists
+  to prevent, sitting *inside* the machinery meant to catch it.
+- **The traversal gap has a compounding cost.** Every question of the form "what depends on
+  this?", "is this AC terminal?", "what breaks if I change this contract?" requires a
+  full-store scan. That is not a one-off inconvenience: it is a tax on every future
+  reasoning pass over the store, and it is why an authoring session in 2026-08-25 had to
+  build a reverse index over 3,376 records to answer that question for one record.
+- **The store is actively drifting away from the fix.** 64% of populated `delivers_to`
+  entries name their own `assigned_agent`, and 65 records have already invented an
+  undocumented `ac_id` key. Every week this stays open, more records are authored to a
+  convention the schema does not describe, and the eventual correction gets larger. The
+  sibling field `assigned_agent` is being validated right now (`ACS-100i-9..11`), so the gap
+  between the checked producer field and the unchecked consumer fields is widening rather
+  than closing.
+
+The severity reflects the store-wide, compounding, self-concealing character of the defect —
+not the cost of any one wrong value.
+
+**Related.** `KI-ACS-012` (approved code leaves with no test contract — the same shape asked
+of `test_spec`). `KI-ACD-015` (`expects_from` is invisible to the build sequencer, so
+ordering must live in `depends_on` — a separate defect, and the reason neither of these
+fields should be used to express ordering).
+
+---
+
+### KI-ACS-014 — `reference_file_path` can name a symlinked build output that git does not track, and nothing checks it resolves to a source file
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `it_requirements.reference_file_path` in any AC record;
+  `templates/scripts/commit_guardian/_ac_schema_validators.py` (no resolution check);
+  `scripts/ac_store/generate_ticket_from_ac.py` (copies the value into `files_touched`)
+
+**Symptom.** An AC's `reference_file_path` — the field that tells the implementer which file
+the work lives in, and which the generator copies into the ticket's `files_touched` — can name a
+path that exists on disk but is **not tracked by git**. Work done there is not wiped by the next
+build. It is never committed at all.
+
+**Evidence.** `BP-1100g-4` names `scripts/commit_guardian/commit_guardian.json`:
+
+```
+scripts/commit_guardian -> ../.leafcutter/scripts/commit_guardian
+git ls-files scripts/commit_guardian                                 ->  (no output)
+git ls-files templates/scripts/commit_guardian/commit_guardian.json  ->  tracked
+```
+
+`scripts/commit_guardian` is a symlink into the build-output tree created by `install_shims`.
+The source is `templates/scripts/commit_guardian/`. An implementer following the AC literally
+would register the new hook in the deployed manifest, watch it work locally — the deployed copy
+is what the hooks actually load — and ship nothing.
+
+**Why this is worse than the ordinary deployed-copy trap.** The familiar failure (KI-BP-004, and
+the `.claude/agents` case corrected on the `BP-1100g-1` ticket) is *edit the output, lose it on
+the next build*. There the change is at least visible in `git status` until then, so a routine
+`git add -A` or a review catches it. Here the path is untracked, so:
+
+- `git status` shows nothing,
+- the commit contains nothing,
+- the PR diff contains nothing,
+- and every local check passes, because locally the change is real.
+
+The failure is silent at every layer that would normally notice, and it presents as "the work is
+done and working" right up until someone else pulls.
+
+**It is not a flaw in this AC's authoring.** `BP-1100g-4`'s own constraint explains that the
+primary implementation is a new module and that `reference_file_path` *must resolve to an
+existing file* — the field's contract forces the author toward whatever path exists today, and
+the deployed symlink resolves while the not-yet-created source module does not. The field's
+validation rule ("must exist") and its purpose ("the file you will edit") are in tension, and the
+rule that is mechanically checked is the one that does not matter.
+
+**Scope.** Not yet measured across the store. The exposure is any AC whose `reference_file_path`
+points under `scripts/commit_guardian/`, `scripts/doc_compliance/`, `scripts/feedback/`,
+`.claude/`, or `.leafcutter/` — the symlinked shim roots listed in `build.py`'s `install_shims`
+output. Worth a sweep; deliberately not asserted here without one.
+
+**Fix direction.** Add a resolution check to `check-ac-schema`: `reference_file_path` must be a
+path `git ls-files` reports as tracked. That is one call, it is exact, and it catches every
+member of this family rather than the symlink roots someone remembers to enumerate. A path that
+exists but is untracked should fail with the tracked source suggested where one can be inferred
+(`scripts/X/...` → `templates/scripts/X/...`).
+
+Then resolve the field's tension, which the check will expose rather than fix: either allow
+`reference_file_path` to name a file the work will *create* (a `reference_file_status: planned`
+sibling), or rename the field to what it currently means — the nearest existing anchor — and give
+the generator a separate, honest surface field. As long as one field means both "where to look"
+and "what to edit", tickets will keep being generated with the wrong one.
+
+**Related.** `KI-ACS-002` (the generator copies this value into `files_touched` and the readiness
+report passes it on a count, so nothing downstream catches it either). `KI-ACS-009` (a rule that
+lives in `templates/` while agents grep the deployed copy — the same source-versus-output
+confusion, one layer up).
+
+**Pattern:** a required field validated for existence but not for the property that makes it
+useful, where the wrong answer is silent at every layer that would normally catch it.
+
+---
+
+### KI-ACS-015 — A `test_spec` descriptor has no link to the criterion it was promised for, so "which behaviour is this proof for" is unrepresentable
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `config/ac_store_schema.json` → `properties.test_spec[]`
+
+**Symptom.** A `test_spec` entry carries `name`, `target_dir`, `framework`, `type`, `angle` and
+`description`. It carries **nothing identifying which Then clause it was written to prove.** An
+AC with four criteria clauses and four descriptors records no mapping between them; the pairing
+exists only in the author's head and, loosely, in the prose of `description`.
+
+**Where it bites.** `BP-1100g-4` requires a refusal naming *"the piece of work, the stated
+behaviour, and the kind of proof that was promised and never claimed."* Two of those three are
+directly available — the AC id, and the `angle`. The third is not derivable from the store at
+all, so the AC as written cannot be satisfied exactly. That ticket resolves it by approximation
+(name the AC leaf and its `criteria`, plus the descriptor's `description`), which is adequate for
+L2/L3 leaves where one leaf is roughly one behaviour, and explicitly forbids the implementer from
+adding a `criterion_ref` field as an unscoped schema change.
+
+**Why medium and not low.** It is fine today because leaves are small. It stops being fine in two
+directions that are already in motion: an L2 with several distinct Then clauses cannot say which
+descriptor covers which, and any future check comparing promises against claims per-behaviour —
+which is precisely the direction `BP-1100g` is heading — has to operate per-AC instead, coarsening
+its own signal. The approximation is also invisible: nothing marks the resulting refusal message
+as approximate, so it reads as precise.
+
+**Fix direction.** An optional `criterion_ref` on the descriptor, identifying the clause by index
+or by a short authored slug. Optional matters — 3,000+ existing descriptors have no such link and
+a required field would fail the store wholesale. Then have `it-po` populate it going forward, and
+let any per-behaviour consumer degrade explicitly to per-AC when it is absent, rather than
+silently.
+
+Do **not** infer the mapping by matching descriptor `description` text against clause text. That
+is the same "read the prose and guess" move this component family exists to eliminate, and it
+would be a guess presented as a citation.
+
+**Related.** `KI-ACS-013` (`delivers_to`/`expects_from` keyed on different things — the same
+class: an edge the store implies but does not represent). `KI-ACS-012` (leaves with no
+`test_spec` at all).
+
+**Pattern:** a record that carries the *what* of a promise but not the *what for*, where the
+missing half is only noticed by the first consumer that needs to cite it.
+
+---
+
+### KI-ACS-016 — There is no retired `work_status`, so a superseded child stays in its parent's `covered_by` and the parent can never be proved done
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 3
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
+- **Where:** `scripts/ac_store/done_proof.py` / the `check-done-proof` hook; the
+  `work_status` enum in the AC store schema
+
+**Symptom.** When an AC is withdrawn (`status: superseded_by` + `superseded_by: [<id>]`),
+the store has no matching resting value for `work_status`. The enum offers
+`not_started` / `todo` / `in_progress` / `done` / `null` and nothing that means *retired*.
+`done` is no longer true; `todo` is false in the other direction.
+
+The parent is the sharper half. `check_done_proof` reads the parent's `covered_by`, and
+the convention — followed consistently across the store — is to **leave the withdrawn
+child listed**, preserving the audit trail. Once the parent is marked `done`, that child
+must be accounted for, and both routes are closed:
+
+- no `# covers:` tag for the withdrawn child → the parent fails with "uncovered children";
+- add one → it is a dangling tag, because the child's `status` is no longer `active`.
+
+**Current instances.** `INF-400c-4` still lists `INF-400c-4-ii`, and `INF-400c-5` still
+lists `INF-400c-5-ii`; both children were withdrawn 2026-08-26. `INF-400c-2` lists
+`INF-400c-2-i`, withdrawn 2026-08-25.
+
+**It is latent, not live — and that is the trap.** `INF-400c-4` and `INF-400c-5` are both
+`work_status: todo`, so the gate does not fire on them today; it fires on whoever
+eventually finishes that work. `INF-400c-2` is already `done` with a withdrawn child and
+passes, because these hooks validate only the files present in that commit's index — the
+parent was staged before the child was withdrawn, and nothing rechecks the store
+afterwards. So the store contains a passing composite whose proof set no longer holds, and
+two more that will block on a future commit for a reason unrelated to the work in it.
+
+**Do not fix by stripping the child from `covered_by`.** That trades a blocked gate for a
+lost audit trail and diverges from the store-wide convention, leaving no record that the
+parent ever had that child. The workaround used on `INF-400c-2-i` — setting
+`work_status: null` — is also not a considered state; it was chosen because nothing better
+existed, and it is recorded as a workaround in that record's own `it_requirements`.
+
+**Fix direction.** Either add a real `retired` (or `superseded`) value to the `work_status`
+enum and teach `done_proof` to discharge such children, or teach `done_proof` to skip any
+`covered_by` entry whose record has `status` starting with `superseded` — the same
+predicate `scan_ac_store.py`'s `exclude_superseded` already applies when building the
+ready queue. The second is smaller and reuses a rule the store already trusts. Note the
+scanner and the gate currently disagree about supersession: the scanner understands it
+(verified — neither withdrawn AC appears in `ready` or `blocked`), the gate does not.
+
+**Numbering note.** This entry was drafted as `KI-ACS-014` on 2026-08-26 and renumbered on
+filing: `014` and `015` were taken by unrelated branches that merged in the interim. The
+changelog entry `2026-08-26-1125-…` and the commit message of `04dfdba5` both cite the
+draft number `KI-ACS-014` and should be read as pointing here.
+
+**Related.** `KI-ACS-004` (`mark_ac_done.py` leaves `covered_by`/`implemented_by` empty —
+the same proof set, corrupted from the writing side). `KI-KM-009` (the supersessions that
+surfaced this). The "AC-store commits — stage the parent alongside the child" rule in
+`CLAUDE.md`, which explains why the `INF-400c-2` instance passes.

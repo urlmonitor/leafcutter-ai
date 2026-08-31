@@ -1,0 +1,84 @@
+id: BO-3200b
+title: "Steps that must happen actually happen"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A required action is carried out, never left to someone who may decline.
+
+  When the build must make something happen — releasing a claim, tidying up after
+  a failure, putting things back as they were — it performs that action itself.
+  Nothing required is delegated to a specialist that might reasonably refuse, and
+  no cleanup is treated as best-effort and left unchecked, so a run that stops
+  early does not leave your work in a stuck state.
+depends_on:
+  - BO-3200
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-020 — the release-on-failure path dispatched a reporting specialist, which refused the role, so aborted runs stranded their claims. KI-BO-022 records the adjacent raise-escapes-uncaught defect."
+  - path: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
+    relationship: modifies
+    status: exists
+    relevance: "The fast-lane loop whose failure paths carry the release dispatches this L1 replaces."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-26
+    note: "Added change_target/risk_surface and one diagram doc_link. Composite — no assigned_agent. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-3200b-1
+  - BO-3200b-2
+  - BO-3200b-3
+  - BO-3200b-4
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+notes: |
+  Anchor case (KI-BO-020, high, open): every failure path in the fast lane
+  released its claimed work by dispatching a specialist whose prompt opened "You
+  are the release-phase agent" while the dispatch named a read-only reporting
+  specialist. It refused — correctly, since reassigning its role is out of scope
+  — and because the release is best-effort its reply was discarded. The run
+  reported its halt; the claims stayed stuck.
+
+  TWO INDEPENDENT DEFECTS, and the BA should cover both. Doing the action
+  directly is the fix. But "the result is discarded" is a separate hazard that
+  survives the fix: a required action whose outcome is never inspected cannot be
+  known to have happened. Best-effort cleanup is acceptable only where failing to
+  clean up is genuinely harmless, and that must be an explicit, recorded choice
+  rather than an omission.
+
+  Why the damage was contained, per the known issue — and why that is luck rather
+  than design: a fast-lane run claims work in its own throwaway copy of the
+  store, so the shared copy was untouched. Any path where a claim reaches a
+  shared store strands it for real, and a later guard will then correctly refuse
+  to proceed. Cover the shared-store case; do not let the observed harmlessness
+  set the severity.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). All four children are workflow-JS and
+  fast-lane Python work, assigned to python-coder (which owns both .py and .js per
+  the registry) except the diagram, which goes to architecture-diagram-author
+  directly rather than through documentation-expert. The lane's claim and release
+  helpers are the concrete subject; KI-BO-022 is recorded as adjacent-but-not-
+  claimed by BO-3200b-1-i and that boundary is preserved in the enrichment — these
+  ACs specify required BEHAVIOUR of partial claim and partial release, and adopt
+  neither that entry's mechanism nor its remediation.

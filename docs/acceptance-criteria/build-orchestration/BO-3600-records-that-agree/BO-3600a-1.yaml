@@ -1,0 +1,86 @@
+id: BO-3600a-1
+title: "An open fault naming a requirement that reads finished is reported as a conflict, and nothing else is"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fault entry whose status reads open and whose body names requirement R,
+    And R's record reads finished,
+  When the two records are reconciled,
+  Then that pairing is reported as a conflict,
+    And the report names the fault entry and names R,
+    And it states which claim each record makes.
+
+  Given a fault entry whose status reads resolved and whose body names requirement
+    R, where R reads finished,
+  When the two records are reconciled,
+  Then no conflict is reported for that pairing.
+
+  Given a fault entry whose status reads open and whose body names requirement S,
+    where S reads unfinished,
+  When the two records are reconciled,
+  Then no conflict is reported for that pairing,
+  So the conflict is the conjunction of an open fault and a finished requirement,
+    and neither half alone raises one.
+
+  Given a fault entry whose status reads open and whose body names three
+    requirements, of which one reads finished and two read unfinished,
+  When the two records are reconciled,
+  Then one conflict is reported, naming the entry and the one finished requirement,
+    And the two unfinished requirements are not named as being in conflict,
+  So an entry naming several requirements produces a conflict per disagreeing pair
+    rather than one conflict for the whole entry.
+depends_on:
+  - BO-3600a
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — eight requirement records reading done while faults in this same register falsified them; nothing read the two against each other. The live instances at authoring time were BO-2400d-3 and BO-2400d-1-i against KI-BO-012."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Where the finished claim lives: the work_status field on a requirement record. One half of the pair the reconciliation reads."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100a.yaml
+    relationship: related
+    status: exists
+    relevance: "The identical two-declaration reconciliation on a different pair of records, and the statement of the principle: a check that reads only one of them cannot see the drift, because the drift IS the disagreement between them."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3600a-1-i
+implemented_by: []
+notes: |
+  MECHANICAL, NOT ADVISORY. Both halves of the pair are already structured — a
+  status line, a named requirement id, a work_status field — so the conflict is
+  decided by extraction and lookup. Nothing here reduces to "the author should also
+  update the other record", which BO-3600's binding constraint requires be rejected
+  at L2.
+
+  The second and third scenarios are the specificity controls. A check that fires on
+  every open fault, or on every finished requirement, is noise, and BO-3600d's own
+  notes record what happens to a detector that produces noise.
+
+  The fourth scenario comes from the register's real shape: entries routinely name
+  several requirements, and KI-BO-012 named four while only some were done.
+
+  VERIFY BY EXECUTION over real records. A test asserting that the check contains
+  the words "open" and "done" would pass on a check that never runs — the mechanism
+  KI-BO-028 itself identifies as dominant in this component.
