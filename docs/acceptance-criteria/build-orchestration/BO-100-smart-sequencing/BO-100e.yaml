@@ -7,8 +7,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Start the build once and it finishes the whole thing, however deeply layered.
@@ -102,9 +102,12 @@ it_requirements:
 origin_agent: product-owner
 created: 2026-08-26
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-31
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-31
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by:
   - BO-100e-1

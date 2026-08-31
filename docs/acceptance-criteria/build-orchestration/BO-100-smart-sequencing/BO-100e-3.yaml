@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a run over a set of work fixed when the run started, containing a chain
@@ -168,9 +168,12 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-08-26
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-31
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-31
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []
