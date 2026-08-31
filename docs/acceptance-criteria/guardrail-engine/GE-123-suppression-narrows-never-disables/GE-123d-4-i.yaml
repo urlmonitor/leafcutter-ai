@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -86,8 +86,21 @@ test_rationale: "Both criteria are about which of two gates wins for a file the 
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18)"
-    detail: "Criteria untouched. Complexity held at S. Authored six policy-level it_requirements, three of which turn on a fact measured after the BA wrote this AC and recorded as KI-CG-004 in docs/known-issues/commit-guardian.md: the existing high-entropy exemption is file-level over a prefix list that includes the skill-prompt area, so a high-entropy token is already unreported in the scanner's own source. The requirements name the known-issue id explicitly, fence it as out of scope, and forbid the specific reuse that would widen it — sharing the location list without sharing the kind gate. Added a known-issues doc_link carrying the measured evidence. Authored a four-entry test_spec plus test_rationale, the fourth entry being a standing fence that the two exemptions reach different verdicts for the same path. readiness draft->reviewed; work_status and priority untouched."
+- reason: it-po-v3 technical enrichment (2026-08-18)
+  detail: 'Criteria untouched. Complexity held at S. Authored six policy-level it_requirements,
+    three of which turn on a fact measured after the BA wrote this AC and recorded
+    as KI-CG-004 in docs/known-issues/commit-guardian.md: the existing high-entropy
+    exemption is file-level over a prefix list that includes the skill-prompt area,
+    so a high-entropy token is already unreported in the scanner''s own source. The
+    requirements name the known-issue id explicitly, fence it as out of scope, and
+    forbid the specific reuse that would widen it — sharing the location list without
+    sharing the kind gate. Added a known-issues doc_link carrying the measured evidence.
+    Authored a four-entry test_spec plus test_rationale, the fourth entry being a
+    standing fence that the two exemptions reach different verdicts for the same path.
+    readiness draft->reviewed; work_status and priority untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []

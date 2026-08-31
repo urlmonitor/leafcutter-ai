@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -121,7 +121,21 @@ test_rationale: "The parent asserts what the scan REPORTS; this asserts what the
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18): complexity S->M, because the announcement is not a print statement — `_load_allowlist` returns an unordered set of 3-tuples and discards the allowlist path, line number and verbatim text, so the loader's return shape must change and every call site (scan_files, and the existing unit_tests/commit_guardian/test_scan_secrets_suppression.py which builds 3-tuples directly) must be audited in the same change. Authored it_requirements reusing GE-113c-3-v's warning contract rather than a second one, naming the stream discipline, the exactly-once cardinality, and the both-directions exit-status proof; tightened expects_from to name the provenance the parent must carry. Authored a 6-entry test_spec plus test_rationale, every descriptor driving scan_files with real files and a real allowlist. No descriptor is a regression guard: all three arms measured red (no output on either stream). Criteria unchanged."
+- reason: 'it-po-v3 technical enrichment (2026-08-18): complexity S->M, because the
+    announcement is not a print statement — `_load_allowlist` returns an unordered
+    set of 3-tuples and discards the allowlist path, line number and verbatim text,
+    so the loader''s return shape must change and every call site (scan_files, and
+    the existing unit_tests/commit_guardian/test_scan_secrets_suppression.py which
+    builds 3-tuples directly) must be audited in the same change. Authored it_requirements
+    reusing GE-113c-3-v''s warning contract rather than a second one, naming the stream
+    discipline, the exactly-once cardinality, and the both-directions exit-status
+    proof; tightened expects_from to name the provenance the parent must carry. Authored
+    a 6-entry test_spec plus test_rationale, every descriptor driving scan_files with
+    real files and a real allowlist. No descriptor is a regression guard: all three
+    arms measured red (no output on either stream). Criteria unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []
