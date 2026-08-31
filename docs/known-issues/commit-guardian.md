@@ -831,9 +831,10 @@ whether it moves the other two.
 > work and not a drive-by fix — attempting it as a side effect of unrelated work is how the
 > `016`/`017` collision below was created in the first place.
 >
-> **Next free id is `KI-CG-034`.** The earlier note here said `018`; that was true on
-> 2026-08-25 and has been overtaken three times since. Do not allocate by reading this line —
-> read the file, on a fresh `origin/main`, immediately before you land.
+> **Next free id is `KI-CG-035`.** The note here said `018`, then `034`; each was true when
+> written and overtaken shortly after — `034` was consumed by the very PR that wrote the line
+> claiming it was free. Do not allocate by reading this line — read the file, on a fresh
+> `origin/main`, immediately before you land.
 
 - **Severity:** high
 - **Status:** open
@@ -2328,15 +2329,51 @@ nothing and reports success).
 ### KI-CG-034 — `check_output_drift` examines every output file and compares none of them: the scanner and the installer key paths in two namespaces that never intersect
 
 - **Severity:** high
-- **Status:** open
+- **Status:** **resolved — and it was already resolved when this entry was filed.** See
+  "Correction" immediately below before reading anything else here.
 - **Occurrences:** 1
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26 (fixed by `ab9e91c41`, PR #593)
 - **Where:** `scripts/commit_guardian/check_output_drift.py` — the directory scan and the
   `not in output_mappings` branch; `scripts/build_helpers.py::write_build_manifest` supplies
   the mapping it is compared against
 
-**Symptom.** The Direction-B drift guard passes on every working copy because it never
-performs a comparison. Run against a freshly built worktree at `18c8e10a`:
+**Correction, 2026-08-26.** This entry was filed against a worktree pinned at `18c8e10a`. PR
+#593 (`ab9e91c41`, "gates that could not check stop reporting passes") had already rewritten
+the scanner by then — and `ab9e91c41` is an **ancestor** of the commit that added this entry.
+So the defect was fixed on `main` before the entry describing it reached `main`. Re-run
+against `d0fa881c`:
+
+```
+$ python scripts/commit_guardian/check_output_drift.py ; echo "exit: $?"
+exit: 0
+check-output-drift: RESULT verified=466 uncomparable=5 exempt=5 gaps=0 drifted=0 missing=0 unreadable=0
+```
+
+466 files hash-compared against the manifest, zero skipped into the fail-open branch, and the
+five uncomparables are declared exemptions that name their ground (`CLAUDE.md`, the glossary
+seeds, `roadmap.json`, `vision.md` — write-if-absent scaffolds whose content is human-owned
+from creation). `_derive_scan_dirs()` now derives the scan set from the manifest's own
+`output_mappings` keys, which is precisely the fix direction recorded below.
+
+**How this happened, since it is the more useful half.** The evidence was gathered in a
+long-lived worktree and never re-checked against current `main` before landing. Everything
+downstream inherited that: the severity argument, the `ACD-2100d-2` framing, the commit
+message. A stale baseline does not announce itself — the run really did print 169 skips and
+zero comparisons, so every check of the *evidence* passed. Only a check of the *baseline*
+would have caught it. Pin the commit you measured, and re-measure on `origin/main`
+immediately before you land.
+
+**The reverse error is the one worth guarding against.** The `ACD-2100d-2` coder read this
+entry, found production already correct, and refused to write a no-op edit to manufacture a
+diff. That was right. An entry like this one — confident, evidenced, wrong — is exactly what
+pressures an agent into "fixing" working code.
+
+The original report follows unchanged, because the mechanism it describes was real at
+`18c8e10a` and is worth keeping as a pattern.
+
+**Symptom (as of `18c8e10a`; no longer reproducible).** The Direction-B drift guard passes on
+every working copy because it never performs a comparison. Run against a freshly built
+worktree at `18c8e10a`:
 
 ```
 $ python scripts/commit_guardian/check_output_drift.py ; echo "exit: $?"
@@ -2366,20 +2403,26 @@ the missing coverage is **shaped like success**:
   **never** worked — there is no regression to point at, which is why nothing noticed.
 - It is the guard that `ACD-2100d-2` is written to strengthen. An acceptance criterion built
   on the assumption that the check works, when it has never run a comparison, would be
-  satisfied by an implementation that leaves it inert.
+  satisfied by an implementation that leaves it inert. *(Superseded: `ab9e91c41` landed the
+  comparison, so `ACD-2100d-2` found its premise already satisfied.)*
 - The registration compounds it: the hook's `files` trigger in
   `scripts/commit_guardian/commit_guardian.json` carries the same stale path prefixes, so a
   deployed file under a differently-configured output root does not match and the hook does
   not fire at all. Repairing the script alone leaves a gate that computes the right answer
   and is never invoked.
 
-**Fix direction.** Derive both the set of files to check and the key each is looked up under
-from the installer's mapping itself, rather than from a hardcoded directory list, so a newly
-deployed directory is covered the day it appears. Make the unmapped case report rather than
-skip — a deployed file with no mapping entry is either a mapping defect or an untracked
-output, and both are findings. Fix the hook's `files` trigger in the same change. Cover it
-with a test that asserts a run examining files while checking none of them **fails**; that is
-today's behaviour, and a test written without that assertion passes against the defect.
+**Fix direction — implemented by `ab9e91c41` before this entry was written.** Derive both the
+set of files to check and the key each is looked up under from the installer's mapping itself,
+rather than from a hardcoded directory list, so a newly deployed directory is covered the day
+it appears. Make the unmapped case report rather than skip — a deployed file with no mapping
+entry is either a mapping defect or an untracked output, and both are findings. Cover it with
+a test that asserts a run examining files while checking none of them **fails**; a test
+written without that assertion passes against the defect.
+
+`ab9e91c41` did all of that: `_derive_scan_dirs()` reads the manifest keys, the unmapped case
+reports `GAP`/`EXEMPT` instead of skipping, and the `verified == 0` floor treats an empty
+`output_mappings` as INDETERMINATE rather than clean. Recorded here as the shape of the fix,
+not as outstanding work.
 
 **Caution for whoever fixes this.** `_compute_output_mappings`'s docstring says it enumerates
 four template directories by hand and therefore cannot see the route file. **That docstring is
@@ -2389,9 +2432,10 @@ correct; the defect is entirely on the scan side. An agent working from the docs
 the `ACD-2100d-2` enrichment pass reached the wrong conclusion and caught it only by running
 the check. Run it; do not read it.
 
-**Related.** `ACD-2100d-2` (the acceptance criterion that will repair this as a side-effect of
-being implemented). `KI-CG-019`, `KI-CG-012` (the sibling exit-0-having-checked-nothing
-routes). `KI-BP-016` (the same output-root confusion in the build's doc-index phase).
+**Related.** `ACD-2100d-2` (written to repair this; found it already repaired). `KI-CG-019`,
+`KI-CG-012` (the sibling exit-0-having-checked-nothing routes — those are still open, and
+unlike this one they have regressed from working states). `KI-BP-016` (the same output-root
+confusion in the build's doc-index phase).
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
 nothing and reports success).
