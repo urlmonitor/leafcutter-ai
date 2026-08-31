@@ -91,6 +91,24 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: implementation-shape-pinned
+  by: llm-expert
+  at: '2026-08-31'
+  note: 'SHIPPED SHAPE, recorded so BP-1100g-5-i''s reader is built against what
+    this AC actually emits rather than against a re-derivation. The fixed key token
+    is cross_layer_seam_answer, written verbatim in templates/agents/test-writer.md
+    Rule 3 and templates/skills/signoff/SKILL.md §2b.2. Conforming shapes:
+    {result: covered, producing_side, consuming_side} and
+    {result: not_applicable, reason, remediation}. The negative spells the outcome
+    not_applicable rather than the literal false: it_requirement 2 forbids only a
+    BARE false (which trips the §2b Bare-False Rule''s auto-retry), and what keeps
+    this key safe from that rule is the nested-object STRUCTURE, not the enum string.
+    not_applicable is preferred because a reasoned negative is a first-class
+    conforming answer, not a failure, and generic tooling scanning completion_manifest
+    for result: false to find failed checklist items must not mistake it for one.
+    NOTE: not_applicable is a NEW enum value — zero occurrences existed anywhere under
+    templates/ or scripts/ on origin/main before this change, so nothing validates its
+    spelling yet. That validator is BP-1100g-5-i. criteria untouched.'
 superseded_by: null
 covered_by:
   - BP-1100g-5-i
