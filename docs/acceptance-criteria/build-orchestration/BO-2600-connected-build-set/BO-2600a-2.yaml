@@ -66,7 +66,7 @@ superseded_by: null
 covered_by:
 - unit_tests/build_orchestration/test_bo_2600a_2.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/02_TICKET-20260811-BO-2600a-2.md
+- tickets/99_done/EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/02_TICKET-20260811-BO-2600a-2.md
 - scripts/build_orchestration/fast_lane.py
 change_target: code
 risk_surface: internal

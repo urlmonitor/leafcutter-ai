@@ -57,7 +57,7 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/07_TICKET-20260721-BP-1400b-1-i.md
+- tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/07_TICKET-20260721-BP-1400b-1-i.md
 notes: |
   Real-regression anchor: the react/no-unescaped-entities class of error is named
   here (per the authoring brief) because it is the concrete incident this gate

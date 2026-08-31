@@ -101,7 +101,7 @@ superseded_by: null
 covered_by:
 - unit_tests/build_orchestration/test_bo_2600a_5.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/05_TICKET-20260811-BO-2600a-5.md
+- tickets/99_done/EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/05_TICKET-20260811-BO-2600a-5.md
 - scripts/goal_to_epic.py
 change_target: code
 risk_surface: contract_boundary
