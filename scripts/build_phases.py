@@ -55,6 +55,7 @@ import json
 import logging
 import re
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -746,6 +747,111 @@ def get_uptodate_count() -> int:
 
 
 # ---------------------------------------------------------------------------
+# Declared-deploy failures (BP-900g-9) — fail closed on a missing source
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class DeployFailure:
+    """One declared deploy entry whose source file was not found.
+
+    Accumulating records rather than logging strings is what makes "report
+    every entry, not only the first" implementable and testable: a log line is
+    gone once emitted, a record can be counted and asserted on.
+
+    Attributes:
+        phase: The deploy phase that declared the entry (e.g. ``build_ac_store``),
+            so the author knows which declaration to edit.
+        entry: The declaration entry as written, so it can be located in the
+            map without guessing.
+        source_path: The source path that was not found.
+    """
+
+    phase: str
+    entry: str
+    source_path: str
+
+
+class DeployDeclarationError(Exception):
+    """One or more declared deploy entries had no source file.
+
+    Raised ONCE, after every deploy phase has run, carrying the whole
+    accumulated set. Raising per-entry would turn N stale entries into N
+    build-fix-build cycles with a green build between each one, so an author
+    who stops at the first green ships the remaining N-1.
+
+    Args:
+        failures: Every unresolvable declared entry found during the run.
+    """
+
+    def __init__(self, failures: list[DeployFailure]) -> None:
+        self.failures = list(failures)
+        detail = "\n".join(
+            f"  - {f.phase}: declared entry '{f.entry}' has no source at "
+            f"{f.source_path}"
+            for f in self.failures
+        )
+        super().__init__(
+            f"{len(self.failures)} declared deploy "
+            f"{'entry' if len(self.failures) == 1 else 'entries'} could not be "
+            f"resolved to a source file:\n{detail}\n"
+            "A build that completes while silently omitting a declared file "
+            "reports a consumer install that was never produced. Either deploy "
+            "the source, or remove the entry from its declaration."
+        )
+
+
+# Accumulated across ALL deploy phases of one run, so a single build reports
+# the whole remediation set. build.py resets this before the phases run and
+# raises on it afterwards, mirroring the _uptodate_count idiom above.
+_deploy_failures: list[DeployFailure] = []
+
+
+def reset_deploy_failures() -> None:
+    """Clear the accumulated declared-deploy failures.
+
+    Must be called before the build phases run so consecutive invocations in
+    one process (notably the test suite) do not inherit each other's findings.
+    """
+    _deploy_failures.clear()
+
+
+def record_deploy_failure(phase: str, entry: str, source_path: Path | str) -> None:
+    """Record a declared deploy entry whose source file was not found.
+
+    Callers continue iterating after calling this — the point is to reach the
+    end of the declaration and report every unresolvable entry at once.
+
+    Args:
+        phase: Name of the declaring deploy phase.
+        entry: The declaration entry as written.
+        source_path: The path that was not found.
+    """
+    _deploy_failures.append(
+        DeployFailure(phase=phase, entry=entry, source_path=str(source_path))
+    )
+
+
+def get_deploy_failures() -> list[DeployFailure]:
+    """Return the declared-deploy failures accumulated so far this run."""
+    return list(_deploy_failures)
+
+
+def raise_if_deploy_failures() -> None:
+    """Raise :class:`DeployDeclarationError` when any declared entry was unresolvable.
+
+    A no-op when the run found none — "nothing to ship" and "everything
+    shipped" are both success; only "something was promised and dropped" is a
+    failure.
+
+    Raises:
+        DeployDeclarationError: Carrying every accumulated record.
+    """
+    if _deploy_failures:
+        raise DeployDeclarationError(_deploy_failures)
+
+
+# ---------------------------------------------------------------------------
 # Internal write helpers (thin wrappers; callers can also use build.write_file)
 # ---------------------------------------------------------------------------
 
@@ -1391,9 +1497,11 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
 
     for src_file, dest_name in deploy_map:
         if not src_file.is_file():
-            _log.warning(
-                "build_ac_store: source script not found, skipping: %s", src_file
-            )
+            # BP-900g-9: was warn-and-continue, which let a declared entry
+            # vanish from the deployed tree while the build exited 0. Record
+            # and keep going so one run reports the whole remediation set;
+            # build.py raises once at the end.
+            record_deploy_failure("build_ac_store", dest_name, src_file)
             continue
 
         output_path = output_dir / dest_name
@@ -2876,9 +2984,10 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     for script_name in deploy_scripts:
         src_file = scripts_src / script_name
         if not src_file.is_file():
-            _log.warning(
-                "build_workflow_tools: source script not found, skipping: %s", src_file
-            )
+            # BP-900g-9 (n_location_rule: all) — same warn-and-continue shape as
+            # build_ac_store. Fixing only the loop the AC names leaves the
+            # identical hole in its siblings.
+            record_deploy_failure("build_workflow_tools", script_name, src_file)
             continue
 
         output_path = output_dir / script_name
@@ -2948,10 +3057,8 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     for script_name in deploy_scripts:
         src_file = knowledge_src / script_name
         if not src_file.is_file():
-            _log.warning(
-                "build_knowledge_scripts: source script not found, skipping: %s",
-                src_file,
-            )
+            # BP-900g-9 (n_location_rule: all).
+            record_deploy_failure("build_knowledge_scripts", script_name, src_file)
             continue
 
         output_path = output_dir / script_name
@@ -3102,10 +3209,11 @@ def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
     for file_name in AGENT_SUPPORT_SCRIPT_FILES:
         src_file = scripts_src / file_name
         if not src_file.is_file():
-            _log.warning(
-                "build_agent_support_scripts: source script not found, skipping: %s",
-                src_file,
-            )
+            # BP-900g-9 (n_location_rule: all). Note this guards the DECLARED
+            # AGENT_SUPPORT_SCRIPT_FILES list only; the rglob loop just above
+            # iterates what exists on disk, where a missing file is not a
+            # dropped promise and must stay a skip.
+            record_deploy_failure("build_agent_support_scripts", file_name, src_file)
             continue
         written += _copy_agent_support_file(
             src_file, target_root, file_name, dry_run, force
@@ -3276,9 +3384,12 @@ def _deploy_fast_lane_release_dependency(target_root: Path, dry_run: bool,
     output_path = target_root / "scripts" / "release" / "check_changelog_presence.py"
 
     if not src_file.is_file():
-        _log.warning(
-            "build_build_orchestration_scripts: fast_lane.py's release dependency "
-            "not found, skipping: %s",
+        # BP-900g-9 (n_location_rule: all). A single declared path rather than a
+        # loop, but the same promise: fast_lane.py's release dependency is
+        # declared, so its absence is a dropped promise, not a skip.
+        record_deploy_failure(
+            "build_build_orchestration_scripts",
+            "scripts/release/check_changelog_presence.py",
             src_file,
         )
         return 0
