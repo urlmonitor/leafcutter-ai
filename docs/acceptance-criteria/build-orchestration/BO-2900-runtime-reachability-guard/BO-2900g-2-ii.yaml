@@ -145,7 +145,41 @@ test_rationale: |
   came from the derivation rather than from permissiveness.
 origin_agent: safety-security-expert
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - reason: implementation-note
+    date: '2026-08-31'
+    by: safety-security-expert
+    entry: 'A FOURTH NON-DURABLE SHAPE WAS FOUND AFTER THE FIRST FIX LANDED, AND IT IS
+      COVERED BY THIS AC ALREADY. criteria unchanged — the second criterion''s "a document
+      SAYS something happens, where the happening is another piece of work''s job and this
+      one only has to describe it" is exactly this case, so the AC did not need widening,
+      only implementing further.
+
+      THE SHAPE: a Because clause. GE-123c-3-i''s Then asserts that NO warning is emitted
+      for any line of the repository''s own allowlist; its Because says "the same file is
+      deployed to consumer projects". The derivation matched `deployed to` — an alternative
+      the first fix never touched — and concluded the record asserts a durable effect. A
+      Because clause states WHY a criterion exists and routinely cites effects owned by
+      other work, so reading it as an assertion by this record is a category error.
+      _BECAUSE_CLAUSE_RE now strips those clauses before the search.
+
+      MEASURED: 90 -> 89 marked, exactly one record flips (GE-123c-3-i, the false positive
+      it was written for), zero authored values break, zero records newly marked.
+
+      THE CASE-SENSITIVITY IS LOAD-BEARING AND WAS FOUND BY MEASURING, NOT BY REASONING.
+      The first version of the stripper was case-insensitive and flipped TWO records. The
+      second, BP-1500d-3, is a genuine durable effect — "leaves the record file written to
+      disk in that project" — that was being swallowed because one of its WRAPPED lines
+      happens to begin with a lowercase "because" mid-sentence. Gherkin keywords are
+      capitalised at line start, so the pattern is case-sensitive and a regression test
+      pins that using BP-1500d-3''s own phrasing. Had the blast radius not been measured
+      record by record, that fix would have silently discarded a real declaration to
+      suppress a false one.
+
+      This is the fifth false positive in this family and the third distinct mechanism —
+      after the bare verb and the reported clause. The count is itself evidence about the
+      approach: a keyword matcher over natural language keeps finding new ways to be wrong,
+      and the false-NEGATIVE side (the eight pinned records) has not been addressed at all.'
 superseded_by: null
 covered_by: []
 implemented_by: []
