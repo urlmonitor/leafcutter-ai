@@ -2939,18 +2939,72 @@ predicate. Consistently, `check-ticket-signoff-parity` is *not* in the nine-entr
    Building it as specified would produce a reader reachable from nothing — the exact failure
    its own `it_requirements` warn about: *"A reader that is not reachable from a registered
    hook is inert."* Four `TQ-500` acceptance criteria now depend on the same host.
-3. **The 24 are unaudited.** Only three were probed individually. The other 21 may include
-   scripts that are deliberately library-only, superseded, or CI-invoked — but each is
-   currently indistinguishable from a guard everyone believes is running. Until triaged, the
-   commit-guardian surface's real coverage is unknown, and it is smaller than 66.
+3. **19 of the 24 are unaudited.** Each is currently indistinguishable from a guard everyone
+   believes is running. Until triaged, the commit-guardian surface's real coverage is unknown,
+   and it is smaller than 66.
+
+**AMENDED 2026-08-31 — the 24 are two different populations, and only one is a defect.** The
+entry above was written before the registry itself was read. `commit_guardian.json` →
+`hooks_manifest.hooks` holds **59** entries, of which **5** carry `enabled: false` and are
+filtered out by `scripts/build_precommit.py`, leaving the 54 emitted. So:
+
+| population | count | status |
+|---|---|---|
+| registered and enabled | 54 | fine |
+| registered, `enabled: false` | 5 | **deliberate.** `check-mermaid-drift`, `check-diagram-naming`, `check-duplicate-code`, `check-diff-coverage`, `check-surface-components-e2` |
+| absent from the registry entirely | 19 | the defect |
+
+The 19: `check_ac_coverage`, `check_complexity`, `check_debug_scripts`, `check_doc_coverage`,
+`check_doc_links`, `check_docstrings`, `check_documentation`, `check_file_size`,
+`check_folder_density`, `check_identifier_uniqueness`, `check_pytest_style`, `check_root_files`,
+`check_sql_complexity`, `check_sql_dependencies`, `check_test_ac_tags`,
+`check_test_fixture_bloat`, `check_ticket_signoff_parity`, `check_ticket_test_requirements`,
+`check_v2_ac_store_alignment`.
+
+This distinction is load-bearing for any fix: a check that reports the 5 deliberate ones
+produces five false alarms on the day it lands, and a false alarm has exactly one natural
+remedy — weakening the check until it stops. Three states, not two:
+registered-and-enabled, registered-and-disabled (valid, silent), absent (reported).
+
+**ONE HALF OF THIS CHECK ALREADY EXISTS.** `scripts/build_precommit.py` calls
+`_check_hook_script_integrity(hooks, cg_dir)`, which iterates the registry and warns for every
+**registered hook whose script is missing from disk**. The converse — a script on disk that no
+registry entry names — was simply never written. The asymmetry is the whole defect in one
+function: the build already knows to ask whether the registry points at real files, and has
+never asked whether real files are in the registry.
 
 **Remediation.** Register `check-ticket-signoff-parity` (restoring the documented id rather
 than minting a new one — `commit_guardian.json` is a package-surface registry, so a *new* id
 trips `check-package-surface-declaration` and requires the structured five-field spec). Then
-triage the remaining 23: register, delete, or add to the exemption registry with a stated
-ground. Finally, close the enumeration gap — the reachability guard should walk the scripts on
-disk and report any that no `entry:` names, rather than walking the registry and trusting it
-to be complete.
+triage the remaining 18: register, delete, or record as a declared non-gate with a stated
+ground. Finally, close the enumeration gap — the guard should walk the scripts on disk and
+report any that no registry entry names, rather than walking the registry and trusting it to
+be complete.
+
+**SCHEDULED WORK — acceptance criteria already exist. Do not re-derive them.**
+
+| AC | level | covers |
+|---|---|---|
+| `BP-100n-4` | L2 | the enumeration itself: scripts on disk vs registry in effect, with registered-but-disabled as a valid silent third state |
+| `BP-100n-4-i` | L3 | the declared-non-gate register — an honest exemption path, keyed so an unregistered script (which has no hook id) can be named at all |
+| `BP-100n-4-ii` | L3 | the no-op floor: the check must state how many scripts it compared, so "compared nothing" is unrepresentable rather than merely guarded |
+
+Placed under `BP-100n` ("no guard infers from an empty result that there was nothing to
+verify") rather than as a sibling to `BP-100k-4`, for two reasons. `BP-100k` is at its cap of
+5 L2 children and its `child_limit_override: 9` was **discharged, not raised**, in the
+2026-08-26 split — adding a sixth child would re-instate a waiver deliberately retired. And
+`BP-100n`'s cluster rule is this defect verbatim: *"an absence must be reported as an absence
+and never inferred to mean there is nothing to check."*
+
+`BP-100k-4` remains the direct counterpart and is cross-linked: its title carries the scope
+limit in its first word — *"A **registered** commit gate whose activation condition can never
+match…"*. **Extend that check's enumeration; do not build a second reachability guard beside
+it.**
+
+Each absence-asserting clause in the three ACs carries a named mutation in its `notes` — the
+concrete injection that must turn it red — because those clauses are green on arrival today
+for the trivial reason that nothing is reported at all. That is `KI-TQ-010`'s shape, and
+writing them without a stated mutation would reproduce it.
 
 **How it was found.** An `it-po` agent enriching the `TQ-500` tree checked whether the host
 its ACs pin was actually registered, instead of accepting the README's claim that it was. The
@@ -2958,7 +3012,74 @@ brief it was given asserted the hook was registered; it was the brief that was w
 
 **Related.** `KI-CG-034`, `KI-CG-019`, `KI-CG-012` (sibling exit-0-having-checked-nothing
 routes). `BP-1100g-5-i` and `TQ-500b-1` / `TQ-500c-2` / `TQ-500c-3` / `TQ-500e-2` (the
-scheduled work that depends on this host).
+scheduled work that depends on this host). `TQ-500b-1` overlaps deliberately and is
+complementary, not duplicate: it makes registering *that one* hook a precondition of its own
+reader, while `BP-100n-4` covers the class.
 
 **Pattern:** a completeness guard whose input is the registry it is meant to be checking —
 so anything missing from the registry is invisible to the check for missing things.
+
+---
+
+### KI-CG-20260831-fictional-config-schema-fragment — two approved acceptance criteria declare a package-surface config key that was never created, and the validator that demanded the declaration cannot tell
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 2 (same defect, two sibling records)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4.yaml`
+  (`it_requirements.config_schema_fragment.hook_trigger_reachability`) and `BP-100k-4-i.yaml`
+  (`…hook_trigger_reachability_indeterminate`); `templates/scripts/commit_guardian/_package_surface_registry.py`;
+  `check_package_surface_declaration`
+
+**Symptom.** Both records carry a structured `config_schema_fragment` naming a top-level key
+of `commit_guardian.json`, complete with `type`, `description` and a `reference_file_path`.
+Neither key exists. Measured in the worktree:
+
+```
+commit_guardian.json top-level keys                 36
+hook_trigger_reachability                       ABSENT
+hook_trigger_reachability_indeterminate         ABSENT
+```
+
+Both ACs are `work_status: done` and `readiness: approved`. The behaviour they describe
+shipped; the configuration surface they declare did not.
+
+**Cause.** `check-package-surface-declaration` requires a record that registers a package
+surface to carry a structured `it_requirements` spec. It checks that the declaration is
+*present and well-formed*. It does not check that the key it names is *real* — there is no
+step that opens `commit_guardian.json` and looks. So the cheapest way to clear the gate is to
+write a plausible fragment, and a plausible fragment is indistinguishable from a true one.
+
+**Why this matters more than a stale field.** The spec is machine-checked, which is exactly
+what makes it dangerous: a reader who knows the validator ran will trust the fragment
+describes the surface. Two records now assert a configuration contract that has never
+existed, and the assertion carries the authority of a passed gate. **A spec that is validated
+for shape but not for existence is worse than no spec** — no spec prompts a reader to go and
+look.
+
+It also propagates. An `it-po` enriching a sibling reached for the same pattern as precedent
+and had to be told not to, which would have made three. That near-miss is how this was found.
+
+**Remediation.** Decide per record whether the key should exist. If yes, create it in
+`commit_guardian.json` and keep the fragment. If no, remove the fragment and re-derive
+whether `package_surface` is truthfully `true` at all. Then close the gap in the validator:
+when a `config_schema_fragment` names a key in a `reference_file_path`, open that file and
+require the key to be present — the same disk-versus-declaration comparison
+`KI-CG-20260831-hook-scripts-never-invoked` asks for one layer down. Both are the same
+omission: a check that reads the declaration and never the thing declared.
+
+**Not fixed here, deliberately.** Found while enriching `BP-100n-4-ii`, which was steered away
+from copying the pattern and carries an `it_requirement` saying why. Repairing two approved,
+done records is a store-integrity change with its own blast radius and belongs in its own
+change rather than riding along with unrelated criteria.
+
+**How it was found.** An `it-po` agent checked whether the precedent it was about to copy
+described a real key, instead of copying it because a validator had passed it.
+
+**Related.** `KI-CG-20260831-hook-scripts-never-invoked` (the same declaration-versus-reality
+gap, one layer down). `BP-100n-4-ii` (the record that declined to repeat it). `BO-2000d` (the
+thin-or-fictional-spec rule this violates).
+
+**Pattern:** a validator that checks a declaration is well-formed and never checks that what
+it declares exists — so the cheapest way to pass it is to invent something plausible.
