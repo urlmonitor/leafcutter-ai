@@ -1,0 +1,161 @@
+id: BP-1100g-3-ii
+components:
+  - build_pipeline
+  - testing_quality
+title: "The set of taught proof kinds resolves to the same set wherever the scanner runs from"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the check that reports a test whose declared kind is not one of the taught
+      kinds,
+    And two ways of reaching that check that the product really uses — from the
+      working copy, and from the installed copy the commit-time and merge-time
+      checks actually run,
+  When a test declaring a taught kind is examined by each,
+  Then neither reports it, and the set of kinds each one recognises is the same set,
+    And a test declaring a kind that is genuinely not taught is still reported by
+      each, so the two agree about what is wrong as well as about what is fine,
+    And if the taught set cannot be read at all, that is reported as the failure it
+      is, rather than being treated as a set with nothing in it.
+depends_on:
+  - BP-1100g-3
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "Holds the loader whose module-relative path resolution differs between the working copy and the installed copy, and the reporting pass that consumes its result."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Establishes that the set of taught kinds is single and resolvable from one source. This AC is that guarantee holding from every place the set is read, not only from the working copy."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The parent whose third Then clause — an unrecognised kind is reported, naming the test and the value — is the clause this AC keeps true from the installed copy."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The prohibition this AC's test contract respects: a written statement is never evidence that anything was reached, so the proof here is an execution from the installed copy, not an assertion about a path string."
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+it_requirements:
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1 — the single path expression the permitted-kind loader resolves its source with"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ unit_tests/commit_guardian/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The invariance this AC asserts: the recognised-kind set is a function of the one authoritative source, never of which copy of the module was imported. Both resolutions must yield the same set, and an unreadable source must be distinguishable from an empty one."
+    required:
+      - recognised_kinds_from_source_tree
+      - recognised_kinds_from_deployed_copy
+    properties:
+      recognised_kinds_from_source_tree:
+        type: array
+        items:
+          type: string
+      recognised_kinds_from_deployed_copy:
+        type: array
+        items:
+          type: string
+      source_unreadable:
+        type: boolean
+        description: "True only when the authoritative source could not be read at all. Must never be conflated with a successfully-read empty set."
+  constraints:
+    - "DO NOT FIX THIS BY HAND-COUNTING PARENTS DIFFERENTLY. The defect is that the number of parents between the module and the repository root is not the same in the two layouts, so any fixed count is correct in one and wrong in the other. Resolve the root by a property that holds in both — an upward search for a marker that exists in each layout, or the resolver siblings already use — never by changing the integer."
+    - "AN UNREADABLE SOURCE AND AN EMPTY SET MUST NOT BE THE SAME OUTCOME. Today the loader fail-softs to an empty set on a read failure, and an empty permitted set makes EVERY declared kind unrecognised — so the failure presents as a flood of false reports about the tests rather than as a problem reading one file. Whatever the recovery, the two conditions must be distinguishable in the output."
+    - "THE PROOF MUST BE AN EXECUTION FROM THE INSTALLED COPY, NOT AN ASSERTION ABOUT A PATH. A test that checks the path expression looks right passes on a path that does not resolve. Import the installed copy in a fresh process and read the set it actually produces (BO-2900a-2)."
+    - "THE TWO SETS MUST BE COMPARED TO EACH OTHER, NOT EACH TO A HAND-TYPED LIST. Restating the expected kinds in the test reintroduces the second vocabulary BP-1100g-1 exists to prevent; assert set equality between the two resolutions and non-emptiness of each."
+    - "DEPLOY-MANIFEST OBLIGATION: if the fix depends on a file being present in the installed layout, that file must be added to the build's deploy map, or the installed copy still cannot read it and the fix is inert where it matters most."
+delivers_to: null
+expects_from:
+  - ac_id: BP-1100g-1
+    contract: "The single authoritative source of the taught kinds, against which an unrecognised value is decided."
+test_spec:
+  - name: test_bp_1100g_3_ii_recognised_kind_set_is_identical_from_both_layouts
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Import the loader from the working copy and from the installed copy in two fresh subprocesses, and assert both return the SAME non-empty set of kinds. Compared to each other, never to a hand-typed list. The source-tree import alone is structurally blind to this defect, which exists only in the installed layout."
+  - name: test_bp_1100g_3_ii_a_taught_kind_is_never_reported_from_the_installed_copy
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Write a real test file on disk declaring a taught kind, scan it through the INSTALLED copy, and assert the reporting pass names nothing. This is the observable defect today: the taught kind comes back reported, so every correctly-tagged test in the repository is a false positive."
+  - name: test_bp_1100g_3_ii_a_genuinely_untaught_kind_is_still_reported_from_both
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "The negative control that stops the fix being 'report nothing'. A file declaring a kind outside the taught set must still be reported, by BOTH resolutions, naming the test and the value. Without this a loader that always returns every possible kind would pass the other two tests."
+  - name: test_bp_1100g_3_ii_an_unreadable_source_is_reported_as_unreadable_not_as_empty
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Point the loader at a genuinely absent source and assert the outcome is distinguishable from a successfully-read empty set — not that every declared kind silently becomes unrecognised. The boundary between 'could not read' and 'read, found none' is where this defect hid."
+test_rationale: |
+  This defect was invisible to BP-1100g-3's own reachability test, and understanding why
+  is the whole reason for this contract. That test exercised the tag-collecting function
+  through the installed copy and passed; the sibling function added in the same change
+  reads a different file by a different path and was never reached from that layout. So
+  the angle was right and the coverage was partial — one function proven reachable, one
+  assumed. Every descriptor here therefore compares the two resolutions against each
+  other rather than against a restated expectation, and the failure and boundary cases
+  exist so that "recognise everything" and "recognise nothing" both fail.
+origin_agent: testing-expert
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/ac_store/done_proof.py
+- scripts/build_phases.py
+- unit_tests/ac_store/test_bp_1100g_3_ii.py
+change_target: code
+risk_surface: internal
+notes: |
+  FOUND BY RUNNING IT, NOT BY READING IT. Measured on 2026-08-26 against
+  BP-1100g-3 as merged (2f740cc4): from the working copy the loader returns all
+  seven taught kinds and a test declaring `criterion` is correctly ignored; from
+  the installed copy the loader returns the EMPTY set and that same test is
+  reported as declaring an unrecognised kind. The reporting pass is therefore
+  inverted in the layout where the commit-time and merge-time checks actually
+  run — a 100% false-positive rate, not an edge case.
+
+  WHY NOTHING CAUGHT IT. BP-1100g-3's third Then clause is true in the working
+  copy and false in the installed one, and its `reachability` descriptor covered
+  the neighbouring function rather than this one. The parent is currently
+  `work_status: done` on the strength of that partial proof.
+
+  WHY IT IS NOT YET CAUSING DAMAGE, AND WHY THAT IS NOT A REASON TO WAIT.
+  Nothing in production consumes the reporting pass today, so there are no live
+  false reports. The moment anything does — and BP-1100g-4 has just made the
+  neighbouring axis load-bearing at commit time — every correctly-tagged test in
+  the repository becomes a reported violation from the installed copy. A guard
+  that fires on everything is indistinguishable from a guard that is wrong, and
+  the reliable response to one is to switch it off.
+
+  THE ID. `BP-1100g-3-ii` appears once in BP-1100g-3's own notes as a proposed
+  child for an unrelated purpose (splitting the authoring-convention clause out
+  to llm-expert). That proposal was rejected and never minted, so the id was
+  free; it now means this. The note in the parent is left as written because it
+  is a record of a decision, not a reservation.
+
+  RELATED, SAME ROOT CAUSE, DIFFERENT SURFACE: KI-ACS-014 (a store field naming
+  a path that resolves differently, or not at all, between the two layouts) and
+  KI-TQ-004 (a stale installed copy shadowing the canonical module through
+  `sys.modules`, which is how this defect first surfaced as an order-dependent
+  test failure rather than as a functional bug).

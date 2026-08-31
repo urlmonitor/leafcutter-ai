@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -110,7 +110,20 @@ test_rationale: "This is the positive arm that stops the rest of GE-123a being s
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder and complexity S; added expects_from GE-123a-1 scoped explicitly to the SECOND arm only, because the first and third arms are observable against today's code and depends_on (protected) correctly names GE-123a alone — this arm-level dependency is raised as a caveat rather than resolved by editing depends_on; authored it_requirements pinning the frozen-baseline filename set and its no-derivation rule, widening-is-not-failure, by-rule-id-not-by-count observation of the name finding, the shared scan_files/CLI-subprocess/fixture/loader/allowlist rules, and the GE-123d boundary that forbids reducing noise by ceasing to report; added a test-angles doc_link; authored a 4-entry test_spec plus test_rationale flagging three of the four descriptors as green on arrival, which is correct for a deletion guard. Criteria, depends_on and notes unchanged."
+- reason: 'it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder
+    and complexity S; added expects_from GE-123a-1 scoped explicitly to the SECOND
+    arm only, because the first and third arms are observable against today''s code
+    and depends_on (protected) correctly names GE-123a alone — this arm-level dependency
+    is raised as a caveat rather than resolved by editing depends_on; authored it_requirements
+    pinning the frozen-baseline filename set and its no-derivation rule, widening-is-not-failure,
+    by-rule-id-not-by-count observation of the name finding, the shared scan_files/CLI-subprocess/fixture/loader/allowlist
+    rules, and the GE-123d boundary that forbids reducing noise by ceasing to report;
+    added a test-angles doc_link; authored a 4-entry test_spec plus test_rationale
+    flagging three of the four descriptors as green on arrival, which is correct for
+    a deletion guard. Criteria, depends_on and notes unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []

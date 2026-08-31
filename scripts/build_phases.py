@@ -1424,6 +1424,24 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
             print(f"  scripts/ac_store/{dest_name}")
             written += 1
 
+    # BP-1100g-3-ii: done_proof.py reads config/ac_store_schema.json to learn
+    # the single taught set of proof kinds (BP-1100g-1). The DEPLOYED copy has
+    # to be able to read it too, and in the self-hosting workspace layout it
+    # cannot reach the package's own config/ by walking up -- .leafcutter/ sits
+    # BESIDE leafcutter-ai/ there, not inside it, so no ancestor of the deployed
+    # module holds the file. Deploying the schema next to the deployed scripts
+    # is what makes the module's upward search succeed from every layout.
+    # Without this the loader fail-softs to an empty permitted set and every
+    # correctly-tagged test is reported as declaring an unrecognised kind.
+    # Mirrors build_feedback's config/feedback_categories.yaml deployment.
+    schema_src = PACKAGE_ROOT / "config" / "ac_store_schema.json"
+    if schema_src.is_file():
+        schema_output = target_root / "config" / "ac_store_schema.json"
+        if _write(schema_output, schema_src.read_text(encoding="utf-8"), dry_run, force):
+            written += 1
+            if not dry_run:
+                print("  config/ac_store_schema.json")
+
     return written
 
 
@@ -3690,4 +3708,21 @@ def clean_stale_artifacts(
 #   back to the non-resolving path form. COMMAND-SIDE analogue of BP-811 (the
 #   .claude/workflows shim); does not modify or re-parent BP-811.
 #   (#EPIC-BuildPipelinePhantomRemediation/06)
+# - 2026-08-26 [python-coder/TICKET-20260826-BP-1100g-4]: Verified, made NO
+#   functional change. BP-1100g-4 adds a new commit_guardian hook module,
+#   templates/scripts/commit_guardian/check_proof_promise_claim.py, that
+#   imports done_proof.collect_test_tag_records (the same seam
+#   check_done_proof.py already uses). That module deploys wholesale via
+#   build_commit_guardian's directory copy of templates/scripts/commit_guardian/
+#   (see that function below), not via AC_STORE_DEPLOY_MAP, so it needs no
+#   entry of its own here. Its one runtime dependency — done_proof.py, and
+#   done_proof.py's own dependency test_enforcement.py — were already added to
+#   AC_STORE_DEPLOY_MAP by BP-1100g-3 (see the two entries above), so the
+#   import chain already resolves in the deployed layout with no further
+#   change. Confirmed by running the deployed hook via run_hook.py after a
+#   fresh build.py pass (unit_tests/commit_guardian/test_bp_1100g_4.py's
+#   reachability test). This is the DEPLOY-MANIFEST OBLIGATION check the AC's
+#   own Implementation Notes require — recorded here since it resolved to "no
+#   change needed" rather than a new deploy_map line, so the verification
+#   would otherwise leave no trace. (#TICKET-20260826-BP-1100g-4)
 # ====================================================================

@@ -1,0 +1,32 @@
+id: AGC-100e
+title: "Keep Claude and Gemini working as they do today"
+component: agent-compatibility
+components:
+  - build_pipeline
+  - template_compiler
+  - skills_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  All specialists, project guidance, and supporting playbooks available to Claude
+  and Gemini remain available after Codex support is introduced, with no separately
+  maintained compatibility branch.
+depends_on:
+  - AGC-100
+documentation_triggers:
+  - reference-doc
+covered_by:
+  - AGC-100e-1
+  - AGC-100f-2
+implemented_by: []
+origin_agent: product-owner
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null

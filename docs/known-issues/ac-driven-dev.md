@@ -1327,3 +1327,73 @@ lives).
 
 **Pattern:** a dispatcher that selects a conditional consumer on one field while the consumer
 reads another, with a similarly-named third field present to make the omission look handled.
+
+---
+
+### KI-ACD-023 — The generated `files_touched` surface admits bare directories and incidental prose while excluding the deliverable the record creates
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1 (five records in one epic)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/ac_store/generate_ticket_from_ac.py::_build_files_touched` — the
+  prose-token extractor and its on-disk existence gate
+
+**Symptom.** `files_touched` on a generated ticket is not a reliable statement of the record's
+edit surface. Three failure directions, all observed in `EPIC-StartingNewWorkTheProperWayAlways`
+(#596) and repaired by hand in #604:
+
+| Direction | Observed |
+|---|---|
+| Empty when it should not be | 4 of 25 tickets — `ACD-2100d-1`, `-d-2`, `-d-2-i`, `-d-3` |
+| Populated but wrong | `ACD-2100d-4` — three incidental prose mentions, **omitting the one document the record creates** |
+| Too wide | ticket 24 (`ACD-2100e-1`) carries the bare directory `docs/architecture` |
+
+**Cause.** The surface is the union of two derivations, and both leak:
+
+1. **Path tokens in `it_requirements` prose that exist on disk.** Any slash-bearing token an
+   author writes descriptively enters the surface, including bare directory names. Conversely
+   the existence gate drops any path that does not exist *yet* — which is precisely the shape
+   of a deliverable the record is written to create.
+2. **`doc_links` whose `relationship` is one of `constrains` / `creates` / `implements` /
+   `modifies` / `specifies`.** A record whose links are all `describes` contributes nothing.
+   The whole `ACD-2100d` family carried only `describes` links and named no paths in prose, so
+   every list came out empty.
+
+**Why this is high.** `files_touched` drives the surface `change-scope-reviewer` and the AC
+fulfillment gate reason about. The failure is not that the field is untidy — it is that each
+direction defeats the gate differently, and the middle one is the worst:
+
+- **Empty** is visibly unusable, but it fails *open*: a reviewer with nothing to compare
+  against sees every diff as in-scope, and a ticket that changed nothing looks equally fine.
+- **Populated-but-wrong is worse than empty**, because it does not look broken.
+  `ACD-2100d-4`'s list looked like a considered answer while consisting entirely of incidental
+  mentions and omitting its actual deliverable — so the real work would have read as
+  *out of scope* to a reviewer, which is the inverse of what the field is for.
+- **A bare directory** silently widens the surface to everything beneath it.
+
+This repo has a recorded history of wrong `files_touched` producing phantom-done
+(`EPIC-PhantomDoneFilesTouched`, and the CLAUDE.md rule that came out of it). The defect is in
+the generator, so it applies to **every** ticket the AC-first path produces — which is the
+mandated path for all new work under ADR-012.
+
+**Also a trap for authors, not just a generator bug.** Because prose tokens are extracted, an
+`it_requirement` that mentions a real path descriptively silently changes the ticket's scope
+gate. There is no way for an author to refer to a file without listing it, and nothing warns
+them. Any fix should give authors an explicit way to say "this path is context, not surface".
+
+**Fix direction.** Stop deriving the surface from prose. Take `files_touched` from `doc_links`
+alone, where the relationship vocabulary already distinguishes edit surfaces from references,
+and give not-yet-existing deliverables a first-class representation instead of dropping them
+at an existence gate — the `creates` relationship already exists for this and is the one thing
+that currently survives. Reject bare directories, or expand them explicitly. Until then, the
+manual workaround is the one applied in #604: mark the created deliverable's link `creates`,
+and check every generated `files_touched` against the criteria before driving the ticket.
+
+**Related.** `KI-ACD-014` (absolute `implemented_by` paths from the same generator),
+`KI-ACD-016`, `KI-ACD-018` (the other three generator-output defects from the same family).
+`ACD-2100d-1` … `-d-4` carry the repaired lists and dated `IT PO ENRICHMENT` notes recording
+the per-path reasoning.
+
+**Pattern:** a derived field whose derivation is invisible to its author, failing in three
+directions at once — and whose most damaging failure is the one that looks correct.

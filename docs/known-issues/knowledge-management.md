@@ -381,3 +381,246 @@ like `KM-ADM-005`'s would hold the floor in the meantime.
 half of the same reconciliation gap). `KI-ACS-008` (the oracle's tag-to-test layer cannot
 see async or parametrised tests, so any automated measurement here inherits that
 undercount).
+
+---
+
+### KI-KM-009 — ADR-034 says the knowledge loop "has never closed"; nine files on disk say otherwise, and work was specified against the wrong premise
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `docs/architecture/adrs/ADR-034-knowledge-write-ownership.md` §1 (closing
+  sentence) and §2 item 2
+
+**Symptom.** ADR-034 §1 ends "So the loop has never closed, in any direction, in any
+install." §2 then demotes inline agent-side capture (its Option A) from *deferred* to
+**rejected**, and that demotion rests on the §1 finding.
+
+The sentence is false. Resolving all 10 distinct `destination` paths named by the 28
+`knowledge_captured` events in `debugging/logs/agent_telemetry.jsonl` finds **9 of 10
+present in the repo**, sized 3608–23474 bytes and full of substantive content. The
+busiest, `memory/feedback_itpo_agent_assignment_by_surface.md` (23 KB, the target of 10
+events), opens "Captured 2026-06-16 during BO-210 / GE-102 technical enrichment" —
+matching the timestamp, `agent` and `destination` of the first event exactly. `git log`
+shows them committed during normal work in June 2026.
+
+So the loop *did* close, informally: agents wrote the learning themselves and then emitted
+a receipt. Inline capture is not merely an unrejected alternative — it is the **only**
+mechanism that has ever produced knowledge in this repository. The harvester has never
+written a single line.
+
+**Why it matters beyond the wording.** Two ACs were specified on the strength of the false
+premise, both proposing to *recover* the 28 events into knowledge surfaces. Because the
+event schema carries no learning body (see `KI-KM-010`), executing either would have
+appended 28 placeholder strings of the form `[agent-assignment-pattern] Learning from ` on
+top of nine curated files that already hold the real content. Both are now withdrawn —
+`INF-400c-5-ii` (`superseded_by: [INF-700c]`) and `INF-400c-4-ii`
+(`superseded_by: [INF-700c-2]`) — but they reached `reviewed` readiness first.
+
+**The honest reading is narrower than "Option A wins."** Inline capture is the only
+mechanism that has produced anything, but partly because the harvester was never wired,
+not because deferred harvest cannot work. What the evidence does establish is that the
+write must hang off something that actually runs, and today the agent's own run is the
+only such thing.
+
+**Fix direction.** Correct §1's closing sentence and re-examine §2 item 2 against the
+corrected premise. ADR-034 §6 already contains the trigger: review criterion 1, "a caller
+for the harvester proves impractical, making deferred capture unreachable in practice
+rather than merely unwired." Two months with one emission is evidence for that criterion.
+Do not delete the ADR's history — amend with a dated correction, because the withdrawn ACs
+cite it. The ADR carries `deciders: BrainCandy`; the §1 retraction is the author's to make,
+not an agent's.
+
+**Trap.** The 28 events look like a stranded backlog and invite a recovery ticket. Resolve
+the `destination` paths **before** specifying any recovery: the interesting question is not
+"can we route these?" but "is there anything in them to route, and is it already
+somewhere?" Here the answer was no and yes respectively.
+
+**Related.** `KI-KM-010` (the receipt-shaped schema). `KI-BP-007` (the dead
+`route-learning` / `capture-learning` references that made the fail-open path the only
+reachable one). `INF-700b`, `INF-700c` (the replacement features).
+
+---
+
+### KI-KM-010 — The emission event is a receipt with no payload, and `_event_hash` keys on a field that is empty in every real record
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/skills/signoff/SKILL.md` §7 step 4 (the emitter contract);
+  `scripts/knowledge/harvest_learnings.py` `_event_hash` and the `learning_text` fallback
+
+**Symptom.** All 28 `knowledge_captured` events on disk share exactly one key set:
+`event, timestamp, agent, component, destination, entry_kind`. There is **no `text`
+field, and there never was one** — §7 step 4 specifies precisely these fields. The event
+records that a write happened; it does not carry what was written.
+
+The harvester was nonetheless built to route these events into knowledge surfaces, falling
+back to `f"[{entry_kind}] Learning from {ticket}"` when `text` is absent. `ticket` is also
+absent from all 28, so the fallback yields a trailing-space placeholder naming nothing.
+`INF-400c-2`'s own Gherkin specifies three example events each carrying a *learning text* —
+a shape that has never existed on disk. **The harvester was specified against an event
+schema no emitter has ever produced.**
+
+The durable anchor for the fallback is the string
+`learning_text = event.get("text", f"[{entry_kind}] Learning from {ticket}")` — cite that
+rather than a line number, which has already moved once.
+
+**The second half: a hash keyed on nothing.** `_event_hash` builds its digest from
+`(ticket, timestamp, destination, entry_kind)`. Since `ticket` is empty in every real
+record, one of the four key components contributes a constant. Idempotency currently holds
+only because the remaining three happen to differ — but **17 of the 28** timestamps are
+day-resolution, so two learnings routed to the same destination with the same kind on the
+same day would collide and the second would be silently treated as already processed.
+Verified: the 28 records yield 28 distinct `(timestamp, destination, entry_kind)` triples,
+so the corpus alone cannot demonstrate the bug — the collision must be constructed.
+
+**A pre-existing contract violation nobody had noticed.** §7 step 4 documents an event
+keyed on `ticket`; the three v3 agent templates (`product-owner.md:473`,
+`business-analyst.md:911`, `it-po.md:812`) document `agent` + `component` instead. Every
+one of the 28 on-disk records uses the v3 shape. `INF-400b-2` requires v3 emissions to be
+"structurally identical" to §7 step 4's — that clause is **already violated in the shipped
+artefacts**, and has been since both were written.
+
+**Fix direction.** Three separable changes, and they must not be conflated:
+1. Add a `text` field to the emission contract, additively — required of producers,
+   optional to consumers, so the 28 six-field records stay structurally valid and simply
+   classify as ineligible-to-write. All four emission surfaces (§7 step 4 plus the three
+   v3 templates) change in one commit or the parity clause breaks further.
+2. Reconcile §7 step 4 against the v3 templates so `ticket` versus `agent`+`component` is
+   settled one way. This is `INF-400b-2`'s to own; it needs amending either way, because
+   its enumerated field list goes stale the moment `text` ships.
+3. Re-key `_event_hash` on fields that are actually populated, and add a collision test
+   using two same-day same-destination same-kind records. Guard the over-correction too:
+   hashing the whole record restores discrimination and destroys idempotency.
+
+**Trap.** The hash defect is invisible today — no collisions exist among the 28 (verified).
+It becomes reachable the moment emissions resume at any volume, which is exactly when the
+loop is repaired. Fix it *with* the repair, not after.
+
+**Related.** `KI-KM-009` (the false premise this schema misled). `INF-400b-2-i` and
+`INF-400b-2-ii` (the owning ACs, authored 2026-08-26). `INF-700b-1` (requires the record to
+carry the learning text).
+
+---
+
+### KI-KM-011 — A valid-JSON non-object line crashes the harvester with an unhandled `AttributeError`, and the sink already contains junk lines the repo's own checklist puts there
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/knowledge/harvest_learnings.py` — the per-line loop, at
+  `event.get("event")`; `CLAUDE.md` → Pre-Drive Checklist → "Feedback sink reachable"
+
+**Symptom.** The harvester catches `json.JSONDecodeError` and continues, so a malformed
+line is survivable. A line that is **valid JSON but not an object** — `"done"`, `42`,
+`[]` — passes `json.loads` and then raises `AttributeError: 'str' object has no attribute
+'get'`, which is outside the caught type. The run dies with an unhandled traceback and
+exit `1`, a code documented as "sink file not found or unreadable". Every well-formed
+record after the offending line is never processed.
+
+Reproduced directly against the production entry point with a two-line sink whose first
+line is `"just a string"`: the valid `knowledge_captured` record on line 2 was not routed.
+
+**This is not hypothetical — the sink is already dirty.** `debugging/logs/agent_telemetry.jsonl`
+is 33 lines: 28 knowledge records, **4 probe lines**, and 1 malformed line (line 19 is the
+bare string `</content>`, a fragment from an agent hand-writing its JSON append — itself
+corroboration of `INF-400c-5`'s claim that free-hand appends caused the vocabulary sprawl).
+
+**The repo instructs people to write the probe lines.** `CLAUDE.md`'s Pre-Drive Checklist
+prescribes `echo '{"probe":"pre-drive-check"}' >> debugging/logs/agent_telemetry.jsonl` as
+a writability test. Lines 1, 21, 31 and 33 are that probe. So the documented pre-drive
+check is itself a producer of non-event lines in the shared stream the harvester reads —
+a small instance of the same shape as `KI-BP-007`: an instruction that quietly creates the
+condition another component must tolerate.
+
+**Fix direction.** Widen the guard to `isinstance(event, dict)` before `.get()`, and count
+skipped lines with their line numbers rather than dropping them silently — a reader
+currently cannot tell a whole-file read from one truncated at line 19. Do **not** add a
+sixth exit code for it. Separately, change the checklist's probe to a `test -w` style check
+that does not append, or point it at a scratch path.
+
+**Related.** `INF-700c-1-i` (owns the resilience-and-reporting behaviour, with test specs
+authored). `INF-400c-4-iii` (owns filtering the harvester's own stream out of the shared
+telemetry file). `KI-BP-007` (documented instruction, silent consequence).
+
+---
+
+### KI-KM-20260826-id-convention-diverged-across-registers — two registers adopted different replacement id forms, eleven still teach the one known not to work
+
+> **First entry in this file using the date-and-slug id form,** for the reason the entry
+> itself describes. The sequential `KI-KM-NNN` entries above keep their ids.
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** ongoing (introduced 2026-08-26)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** the `## How to use this file` → **Adding an issue** block in all thirteen
+  `docs/known-issues/*.md` registers
+
+**Background.** `KI-BO-024` established that *"append the next free number"* cannot work
+under concurrent authors: it requires every author to read the same file at the same moment
+and act before anyone else does. On 2026-08-25 it produced ten collisions in one day, one
+of which reached `main`. The prescribed remedy is a date-plus-slug id, which cannot collide.
+
+**Symptom, measured 2026-08-26 against `origin/main`.** Of the thirteen registers, **two**
+adopted a replacement id form and they do not agree with each other, and **eleven** still
+instruct the author verbatim to do the thing that is known not to work:
+
+```text
+**Adding an issue.** Append a new `### KI-XX-NNN` section using the next free number.
+```
+
+| register | its "Adding an issue" says |
+|---|---|
+| `build-pipeline.md` | `KI-BP-YYYYMMDD-short-slug`, with a full "Why not the next free number" rationale |
+| `build-orchestration.md` | `KI-BO-YYYYMMDD-HHMM`, using UTC `date -u "+%Y%m%d-%H%M"` |
+| the other eleven | "append the next free number" — unchanged |
+
+So a register's declared convention now depends on which register you open, and neither of
+the two that changed mentions the other. An author landing in any of the eleven is told to
+use the sequential form by a file that does not mention `KI-BO-024` at all.
+
+**Three id forms are live, and none of them is wrong.** Filed within hours of each other:
+
+| form | example | status |
+|---|---|---|
+| sequential | `KI-SS-004` | historical, all registers |
+| date + time | `KI-BP-20260826-1421` | in four registers; the declared form in `build-orchestration.md` |
+| date + slug | `KI-BP-20260826-worktree-hooks-only-on-one-path` | the declared form in `build-pipeline.md` |
+
+Both replacements are collision-free, so this is a consistency problem, not a correctness
+one. What makes it worth an entry is *how* it happened: the two forms were adopted
+independently, hours apart, by sessions that could not see each other's work — which is the
+same concurrency `KI-BO-024` exists to survive, reproduced on the fix for `KI-BO-024`.
+
+**Do not renumber to unify them.** Measured, not assumed: the date-and-time ids already
+carry **20 inbound references across four registers**. Renumbering breaks every one, and
+`build-pipeline.md`'s own note says the sequential ids must not be renumbered for exactly
+this reason. Both forms sort and grep identically on the `KI-XX-` prefix, so the cost of
+leaving them is cosmetic and the cost of unifying them is broken cross-references. This
+register already carries renumbering scar tissue (`KI-BP-020`, and the `KI-CG-012`
+collision) from the last attempt.
+
+**Fix direction.**
+
+1. **Pick one of the two replacement forms and propagate it to all thirteen.** Either works;
+   the choice matters less than that it is the same everywhere. Date-and-slug carries more
+   information at the grep line, date-and-time is shorter and mechanically derivable from
+   `date -u` with no naming judgement — that is the whole trade-off.
+2. **Say explicitly that no existing id gets renumbered,** in whichever block is propagated.
+   Both replacement forms are already load-bearing.
+3. **Keep the block in one place.** `docs/known-issues/README.md` exists; hosting the
+   convention there once, with the per-register sections pointing at it, removes the failure
+   mode directly. Thirteen copies of one convention is how they came to disagree, and
+   propagating a fourteenth copy of the *right* text still leaves the next author free to
+   edit one of them.
+
+**Related.** `KI-BO-024` (diagnosed the collision and named the remedy). `KI-BP-020` and the
+`KI-CG-012` collision in `commit-guardian.md` (the scar tissue from renumbering).
+
+**Pattern:** a convention fixed in the copy the author happened to be editing, in a system
+with thirteen copies.

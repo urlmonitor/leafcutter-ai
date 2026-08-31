@@ -200,7 +200,7 @@ if (!diagnosis || !diagnosis.target_file || !diagnosis.root_cause) {
   }
 }
 
-const { target_file, location_hint, symptom, root_cause } = diagnosis
+const { target_file, location_hint, symptom, root_cause, divergence_decision } = diagnosis
 
 // Step 0a — OBSERVE. This call only reports what the current location is; it
 // creates nothing and decides nothing. The decision is made in JS below.
@@ -564,20 +564,102 @@ if (redResult.passed === true || redResult.outcome === 'passed') {
 log(`Red phase confirmed under AC_ENFORCE_STRICT=1: test fails as expected.`)
 
 // Check for root-cause divergence (BP-600e-2)
+//
+// The previous check asked whether the FIRST WHITESPACE TOKEN of the prose
+// root cause appeared anywhere in the pytest output. That fails in both
+// directions and for the same reason: one word is not a topic. A root cause
+// beginning "the ..." matched almost any failure text, so real divergence went
+// unreported; a correct diagnosis paraphrased without its own first word was
+// reported as divergent. What distinguishes the two cases is whether the two
+// texts are ABOUT the same thing, so the comparison is over their content
+// vocabulary rather than over any single token.
 const failureMsg = redResult.failure_message || redResult.output_summary || ''
-const divergenceCheck = failureMsg.length > 0 &&
-  !failureMsg.toLowerCase().includes(root_cause.toLowerCase().split(' ')[0])
 
-if (divergenceCheck) {
+// Words that carry no diagnostic weight. Counting these is what let the old
+// check "match" on the accident of ordinary English.
+const DIVERGENCE_STOPWORDS = new Set([
+  'and', 'are', 'because', 'been', 'being', 'but', 'did', 'does', 'for',
+  'from', 'had', 'has', 'have', 'into', 'its', 'not', 'occur', 'occurs',
+  'that', 'the', 'their', 'then', 'there', 'these', 'this', 'those', 'was',
+  'were', 'when', 'where', 'which', 'while', 'with', 'you', 'your',
+])
+
+/**
+ * Reduce free text to its comparable content words: lowercase, split on
+ * non-alphanumerics, drop stopwords and 1-2 character fragments, and strip
+ * common inflectional endings so "exhausted"/"exhausts" and
+ * "header"/"headers" compare as the same word.
+ */
+function divergenceContentWords(text) {
+  const words = new Set()
+  for (const token of String(text).toLowerCase().split(/[^a-z0-9]+/)) {
+    if (token.length < 3 || DIVERGENCE_STOPWORDS.has(token)) continue
+    let word = token
+    if (word.length > 4) {
+      if (word.endsWith('ing')) word = word.slice(0, -3)
+      else if (word.endsWith('ed') || word.endsWith('es')) word = word.slice(0, -2)
+      else if (word.endsWith('s')) word = word.slice(0, -1)
+    }
+    words.add(word)
+  }
+  return words
+}
+
+const diagnosisWords = divergenceContentWords(root_cause)
+const failureWords = divergenceContentWords(failureMsg)
+
+let sharedWords = 0
+for (const word of diagnosisWords) {
+  if (failureWords.has(word)) sharedWords += 1
+}
+
+// With no failure text, or a diagnosis carrying no content words at all, there
+// is nothing to compare. Say so rather than inventing a verdict in either
+// direction — an unanalysable diagnosis is not evidence of divergence.
+const comparable = failureMsg.length > 0 && diagnosisWords.size > 0
+
+// The test is TOTAL DISJOINTNESS: warn only when the two texts share no
+// substantive vocabulary whatsoever.
+//
+// A proportional threshold was tried first and rejected on evidence. Requiring
+// some fraction of the diagnosis's vocabulary to reappear means picking a
+// number, and any number is wrong somewhere: at 0.3 a real diagnosis paired
+// with a terse one-line assertion ("stub root cause for harness execution" vs
+// "stub AssertionError: bug not fixed", overlap 0.2) is flagged as divergent
+// and a correct run halts. Halting correct work is the more expensive error
+// here, because this gate sits in front of every fix the workflow makes, and a
+// missed warning still faces human review of the fix itself.
+//
+// Being explicit about the limitation: one incidental shared word suppresses
+// the warning. That is the honest ceiling of a lexical comparison and the
+// reason BP-600e-2's it_requirements ask for a semantic one. What this rule
+// does guarantee is that it never fires on a pair that genuinely shares a
+// topic — which is what makes it safe to run unattended.
+const divergenceCheck = comparable && sharedWords === 0
+
+if (!comparable && failureMsg.length > 0) {
+  log('Divergence check skipped: the diagnosed root cause carries no content words to compare.')
+}
+
+// An explicit decision from the operator resolves the pause. This is what
+// makes the step a PAUSE rather than a permanent halt: the criterion says the
+// workflow "waits for user confirmation before proceeding to the fix phase",
+// and a halt that can only be answered by re-running into the same halt is not
+// waiting for anything.
+if (divergenceCheck && divergence_decision === 'continue') {
+  log('Divergence acknowledged by an explicit continue decision — proceeding to the Fix phase.')
+} else if (divergenceCheck) {
   log(`Warning: test failure may diverge from diagnosed root cause.`)
   return {
     status: 'blocked',
     phase: 'Red Phase (divergence warning)',
-    message: `The test failure suggests the root cause may differ from your diagnosis.\n\n  Diagnosed: ${root_cause}\n  Observed:  ${failureMsg}\n\nTo continue, re-run /quick-fix with the same args. To re-diagnose, update the root_cause field.`,
+    message: `The test failure suggests the root cause may differ from your diagnosis.\n\n  Diagnosed: ${root_cause}\n  Observed:  ${failureMsg}\n\nContinue or re-diagnose?\n\nTo continue with the diagnosis as written, re-run /quick-fix with the same args plus divergence_decision: 'continue'.\nTo re-diagnose, re-run with an updated root_cause field.`,
     halt_reason: 'divergence_warning',
     test_file: testFile,
     ac_id,
     observed_failure: failureMsg,
+    shared_content_words: sharedWords,
+    diagnosis_content_words: diagnosisWords.size,
   }
 }
 

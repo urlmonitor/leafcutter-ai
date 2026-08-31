@@ -146,6 +146,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-1100g-3-i
+  - BP-1100g-3-ii
 implemented_by:
 - tickets/00_inbox/TICKET-20260825-BP-1100g-3.md
 - scripts/ac_store/done_proof.py

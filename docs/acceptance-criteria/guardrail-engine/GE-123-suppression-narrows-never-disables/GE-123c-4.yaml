@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -83,12 +83,37 @@ expects_from:
   contract: "The settled behaviour to describe: which entry shapes are rejected as unmatchable, the exact warning an author sees, the stream it appears on, and the guarantee that the warning alone never blocks a commit."
 origin_agent: business-analyst
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: gating-correction
+    date: '2026-08-25'
+    by: safety-security-expert
+    entry: 'ONE FIELD. risk_surface safety -> contract_boundary. Nothing else changed, and in
+      particular assigned_agent STAYS documentation-expert and change_target STAYS docs —
+      unlike GE-123a-4, GE-123b-5, GE-123c-5 and GE-123d-4-ii, which were rerouted to
+      llm-expert / prompt on the same day.
+
+      THE DIFFERENCE IS THE TARGET FILE, AND IT IS THE WHOLE REASON THOSE FOUR MOVED. Those
+      four modify templates/skills/security-scanner/SKILL.md, which documentation-expert
+      cannot author: it delegates all authoring to genre specialists and every genre in
+      config/doc_types.json has a default_path under docs/, so a skill file is unreachable for
+      it. THIS record modifies docs/how-to/managing-pre-commit-hooks.md — a real how-to in the
+      docs tree. That is precisely what documentation-expert exists to route, the how_to genre
+      resolves to how-to-author with a default_path under docs/how-to/, and the assignment is
+      correct. Recording the distinction so a later sweep does not "finish the job" by
+      rerouting this one for consistency; the four were not moved because they were
+      documentation, they were moved because of where their output lands.
+
+      GATING, WHICH WAS WRONG HERE TOO. config/guardrail_gates.yaml maps docs.safety to an
+      EMPTY mandatory-agent list, against docs.contract_boundary -> [documentation-expert,
+      pr-reviewer]. This record required no reviewer at all on a guide telling authors how to
+      write a suppression that narrows a security check. Choosing the more alarming-sounding
+      risk surface is what removed the reviewers. docs.auth, docs.privacy and docs.cost are
+      empty in the same block; only internal and contract_boundary carry agents.'
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: docs
-risk_surface: safety
+risk_surface: contract_boundary
 notes: |
   WHY A HOW-TO AND NOT ONLY A REFERENCE. Writing a suppression is a task a person
   performs by hand, under time pressure, immediately after being blocked. The

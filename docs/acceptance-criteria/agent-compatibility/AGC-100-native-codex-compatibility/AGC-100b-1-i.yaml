@@ -1,0 +1,54 @@
+id: AGC-100b-1-i
+title: "Quotes, backslashes, Unicode, and multiline guidance remain valid Codex strings"
+component: agent-compatibility
+components: [template_compiler, testing_quality]
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a canonical description contains Review "risk" at C:\models\α,
+  And its guidance contains multiple lines, backticks, square brackets, and three
+    consecutive apostrophes,
+  When the Codex native definition is generated and loaded by a TOML parser,
+  Then the definition parses successfully,
+  And the parsed description and guidance are character-for-character equal to
+    the compiled canonical values,
+  And no line is truncated, reinterpreted as TOML structure, or replaced by an
+    escape sequence.
+depends_on: [AGC-100b-1]
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - Round-trip every emitted string through a TOML 1.0 parser.
+  - Serialize deterministic UTF-8 independent of operating-system newline defaults.
+  - Do not construct descriptions or instructions through unescaped concatenation.
+test_required: true
+test_spec:
+  - name: test_codex_toml_round_trips_special_and_multiline_content
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: Special characters and multiline guidance parse back to the exact canonical strings.
+test_rationale: "A parser round trip tests the consumer contract and catches visually plausible invalid TOML."
+delivers_to:
+  agent: python-coder
+  contract: "TomlSerializationContractV1 producing deterministic UTF-8 whose parsed fields equal compiled values."
+expects_from: {ac_id: AGC-100b-1, contract: Native agent values awaiting TOML serialization}
+doc_links:
+  - {path: docs/architecture/components/template-compiler.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, config, prompt]
+risk_surface: contract_boundary

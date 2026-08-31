@@ -1806,14 +1806,24 @@ def _resolve_genres_from_parent(
     list.  Multiple triggers each contribute a genre to the returned list
     (BO-2200c-3 multi-trigger requirement).
 
-    Returns a non-empty list in all cases:
+    Returns a list of genre strings — possibly empty — in all cases:
 
     - When *ac_root* is ``None``: ``[leaf_genre]`` (backward-compat).
     - When the parent resolves and has triggers: all genre strings from the
       parent's ``documentation_triggers``.
-    - When the parent cannot be resolved OR has no triggers: the explicit
-      marker ``["(unspecified genre)"]`` so the omission is visible
+    - When the parent cannot be resolved, OR the parent record has no
+      ``documentation_triggers`` KEY at all: the explicit marker
+      ``["(unspecified genre)"]`` so the omission is visible
       (BO-2200c-3-i fail-soft).
+    - When the parent resolves and its ``documentation_triggers`` key is
+      present but an EXPLICIT empty list (``[]``): the empty list ``[]`` is
+      returned as-is — NOT the ``(unspecified genre)`` marker. Per the AC
+      store's convention (see e.g. BP-900g.yaml's ``documentation_rationale``
+      field), an explicit ``documentation_triggers: []`` is the parent's
+      deliberate declaration that no documentation is required, not an
+      omission to paper over with a placeholder (BO-2200c-5 / KI-ACD-002).
+      The caller (:func:`_build_agent_contracts_section`) treats an empty
+      return as "emit no documentation-expert contract line".
 
     Args:
         ac_id: Leaf AC identifier.
@@ -1821,13 +1831,23 @@ def _resolve_genres_from_parent(
         leaf_ac: The parsed leaf AC record.
 
     Returns:
-        Non-empty list of genre strings.
+        List of genre strings. Empty only when the parent explicitly
+        declares ``documentation_triggers: []``; every other unresolved case
+        falls back to the ``["(unspecified genre)"]`` marker.
 
     DECISION HISTORY:
         BO-2200c-3 / BO-2200c-3-i (2026-08-11): Introduced as the single
         entry-point for genre resolution so that _build_agent_contracts_section
         can be extended cleanly while keeping _extract_doc_genre unchanged for
         backward compatibility with callers that do not supply ac_root.
+        BO-2200c-5 (2026-08-26): An explicit ``documentation_triggers: []`` on
+        the parent was previously treated identically to "parent could not be
+        resolved" (both fell back to the ``(unspecified genre)`` marker), which
+        the caller rendered as a phantom documentation contract line for ACs
+        whose parent deliberately declares no documentation is needed. Now
+        distinguishes an ABSENT ``documentation_triggers`` key (still
+        `(unspecified genre)`, fail-soft) from a present, explicitly EMPTY list
+        (deliberate — returns ``[]``, no fallback marker).
     """
     if ac_root is None:
         # Backward-compat: no ac_root provided → use leaf's own triggers.
@@ -1838,13 +1858,38 @@ def _resolve_genres_from_parent(
         # BO-2200c-3-i: parent unresolved — emit explicit marker (not blank).
         return ["(unspecified genre)"]
 
-    triggers = parent_ac.get("documentation_triggers") or []
-    if not triggers:
-        # BO-2200c-3-i: parent found but has no documentation_triggers.
+    if "documentation_triggers" not in parent_ac:
+        # BO-2200c-3-i: parent found but the field is absent entirely — an
+        # omission, not a deliberate declaration. Fail-soft to the marker.
         logger.warning(
-            "Parent AC of %r has no documentation_triggers; "
+            "Parent AC of %r has no documentation_triggers key; "
             "emitting (unspecified genre) marker (BO-2200c-3-i)",
             ac_id,
+        )
+        return ["(unspecified genre)"]
+
+    triggers = parent_ac.get("documentation_triggers")
+    if triggers == []:
+        # BO-2200c-5 / KI-ACD-002: parent EXPLICITLY declares no documentation
+        # triggers — a deliberate "no documentation required" (see
+        # documentation_rationale on the parent record), not an omission.
+        # Return empty so the caller emits no contract line at all.
+        logger.info(
+            "Parent AC of %r declares documentation_triggers: [] "
+            "(deliberate — no documentation required); suppressing the "
+            "documentation-expert contract line (BO-2200c-5)",
+            ac_id,
+        )
+        return []
+
+    if not triggers:
+        # Present but not a usable list (e.g. null or a falsy non-list value)
+        # — treat as an omission, same as the absent-key case above.
+        logger.warning(
+            "Parent AC of %r has an empty/invalid documentation_triggers "
+            "value (%r); emitting (unspecified genre) marker (BO-2200c-3-i)",
+            ac_id,
+            triggers,
         )
         return ["(unspecified genre)"]
 
@@ -1984,11 +2029,17 @@ def _build_agent_contracts_section(
     Emits the section when either of the following conditions is met:
 
     * ``documentation-expert`` appears in *agents_map* with status ``'needed'``
-      (BO-2200c-1): a ``### documentation-expert`` subsection is appended listing
-      one globally-numbered ``- [ ] AC-1:`` checklist item.  Per BO-2200c-2, the
-      checklist item carries three parts: the Diataxis genre (from
-      ``documentation_triggers``), the target doc path (from ``doc_links`` or a
-      computed default), and a content constraint derived from the AC criteria.
+      AND genre resolution (:func:`_resolve_genres_from_parent`) yields at
+      least one genre (BO-2200c-1): a ``### documentation-expert`` subsection
+      is appended listing one globally-numbered ``- [ ] AC-1:`` checklist
+      item per genre. Per BO-2200c-2/BO-2200c-5, each checklist item is
+      pipe-delimited with three fields — ``<genre> | <target_path> |
+      <content_constraint>`` — matching documentation-verifier.md Step 2's
+      documented parse rule verbatim. When the resolved parent L1 explicitly
+      declares ``documentation_triggers: []`` (deliberate "no documentation
+      required" — BO-2200c-5 / KI-ACD-002), genre resolution returns an empty
+      list and this subsection is suppressed entirely rather than emitting a
+      placeholder line.
     * The AC record has a non-null ``delivers_to`` or ``expects_from`` field
       (TKT-500f-10): the contract details are rendered under ``### Delivers To``
       or ``### Expects From`` subsections.
@@ -2020,7 +2071,19 @@ def _build_agent_contracts_section(
     expects_from = ac.get("expects_from") or None
     doc_expert_needed = (agents_map or {}).get("documentation-expert") == "needed"
 
-    if not doc_expert_needed and delivers_to is None and expects_from is None:
+    # BO-2200c-5 / KI-ACD-002: resolve genres up front so a parent's DELIBERATE
+    # documentation_triggers: [] (empty list returned by
+    # _resolve_genres_from_parent) suppresses the whole documentation-expert
+    # subsection rather than emitting a phantom contract line. An empty list
+    # here is the store's documented way of saying "no documentation
+    # required" — distinct from the "(unspecified genre)" fail-soft marker
+    # used when the parent can't be resolved at all.
+    genres: list[str] = []
+    if doc_expert_needed:
+        genres = _resolve_genres_from_parent(ac_id, ac_root, ac)
+    emit_doc_expert_subsection = doc_expert_needed and bool(genres)
+
+    if not emit_doc_expert_subsection and delivers_to is None and expects_from is None:
         return ""
 
     lines: list[str] = ["## Agent Contracts", ""]
@@ -2036,10 +2099,9 @@ def _build_agent_contracts_section(
     #   Multiple parent triggers each produce one AC-N line.
     # BO-2200c-3-i: when the parent cannot be resolved, emit [(unspecified genre)]
     #   rather than crashing or leaving the genre slot silently blank.
-    if doc_expert_needed:
-        genres = _resolve_genres_from_parent(ac_id, ac_root, ac)
+    if emit_doc_expert_subsection:
         # Use the first genre for doc_path derivation (consistent with single-genre legacy).
-        path_genre = genres[0] if genres else "explanation"
+        path_genre = genres[0]
         doc_path = _extract_doc_path(ac, path_genre, ac_id)
         constraint = _derive_content_constraint(ac, ac_id)
         lines.extend([
@@ -2060,8 +2122,15 @@ def _build_agent_contracts_section(
         # BO-2200c-3: emit one AC-N line per genre so that multiple parent triggers
         # are each reflected.  Single-genre (legacy or single trigger) produces one
         # line — identical output to the pre-BO-2200c-3 behaviour.
+        #
+        # BO-2200c-5 / KI-ACD-002: the line MUST be pipe-delimited
+        # '<genre> | <target_path> | <content_constraint>' to match the
+        # consumer's documented parse rule (documentation-verifier.md Step 2,
+        # "Parse Required Docs"). The prior bracket + em-dash format
+        # ('[genre] path — constraint') has zero pipe separators and is
+        # rejected outright by that documented algorithm.
         for i, genre in enumerate(genres, 1):
-            lines.append(f"- [ ] AC-{i}: [{genre}] {doc_path} — {constraint}")
+            lines.append(f"- [ ] AC-{i}: {genre} | {doc_path} | {constraint}")
         lines.append("")
 
     # TKT-500f-10: emit delivers_to / expects_from contract fields when present.
@@ -3395,5 +3464,21 @@ DECISION HISTORY
   ac-fulfillment-gate (via the new ac_coverage_resolver module) is the sole
   consumer. The producer's emitted two-key {id, path} shape is unchanged
   (ACD-1900b-5-i). (#ACD-1900b-5-i)
+- 2026-08-26 [python-coder BO-2200c-5 / KI-ACD-002]: Fixed two producer/consumer
+  format defects in the ## Agent Contracts -> ### documentation-expert block.
+  (1) Changed each '- [ ] AC-N:' checklist line from the bracket + em-dash
+  format ('[<genre>] <doc_path> — <constraint>', zero pipe separators) to the
+  pipe-delimited format documentation-verifier.md Step 2 actually documents
+  and parses ('<genre> | <target_path> | <content_constraint>'). Every real
+  doc-required ticket previously failed the verifier's documented parse rule.
+  (2) _resolve_genres_from_parent now distinguishes a parent L1's ABSENT
+  documentation_triggers key (still falls back to the "(unspecified genre)"
+  fail-soft marker, BO-2200c-3-i) from an explicit, present
+  documentation_triggers: [] (returns [] — the store's documented way of
+  declaring "no documentation required", e.g. BP-900g.yaml's
+  documentation_rationale). _build_agent_contracts_section now suppresses the
+  entire documentation-expert subsection when genre resolution yields an
+  empty list, instead of emitting a phantom '(unspecified genre)' contract
+  line. (#BO-2200c-5)
 ====================================================================
 """

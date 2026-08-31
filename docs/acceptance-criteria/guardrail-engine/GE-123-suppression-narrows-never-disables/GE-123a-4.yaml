@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -64,7 +64,7 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The reference ships through build.py. templates/skills/security-scanner/SKILL.md is the canonical source; every deployed copy is a build output and must never be hand-edited."
-assigned_agent: documentation-expert
+assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
   - "Edit the canonical source at templates/skills/security-scanner/SKILL.md and let build.py propagate it (ADR-001). Editing a deployed copy under .claude/, .gemini/, .leafcutter/, EPIC-*/ or worktrees/** leaves the shipped reference unchanged, which is the failure this AC is least able to detect from its own output."
@@ -96,12 +96,39 @@ expects_from:
   contract: "The settled additive behaviour: that a name match contributes its own result and the content rules still run for that file, and the resulting shape of what an environment-named file is reported for. The reference records what that AC delivers; written before it lands, it documents an intention rather than the behaviour."
 origin_agent: business-analyst
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: gating-correction
+    date: '2026-08-25'
+    by: safety-security-expert
+    entry: 'ROUTING FIELDS ONLY. change_target docs -> prompt, risk_surface safety ->
+      contract_boundary, assigned_agent documentation-expert -> llm-expert. criteria, title,
+      level, depends_on, it_requirements, test contract, work_status, readiness and priority
+      are untouched; still work_status: todo.
+
+      SAME CORRECTION ALREADY APPLIED TO GE-123c-5 AND GE-123d-4-ii IN #554. This record was
+      missed there and is one of FOUR in this tree whose doc_links name
+      templates/skills/security-scanner/SKILL.md as the file it modifies. Found while sizing
+      the tree for /build-ac: goal mode would have generated a ticket dispatching
+      documentation-expert at a SKILL.md.
+
+      GATING. config/guardrail_gates.yaml maps docs.safety to an EMPTY mandatory-agent list, so
+      this record required no reviewer at all on documentation describing a security control.
+      prompt.contract_boundary is [llm-expert, architect-review, pr-reviewer], and
+      documentation_gates.risk_surface_triggers adds documentation-expert and
+      documentation-verifier independently of change_target, so the genre owner stays on as a
+      reviewer. Nothing is lost.
+
+      AGENT. documentation-expert never authors files ("all authoring is delegated to
+      specialists") and every genre in config/doc_types.json has a default_path under docs/.
+      Handed a file under templates/skills/ its only route emits docs/reference/<topic>.md — a
+      second copy of a passage the whole GE-123 documentation set is written to keep in one
+      place. Store precedent: 8 ACs naming a SKILL.md chose llm-expert, 0 chose
+      documentation-expert.'
 superseded_by: null
 covered_by: []
 implemented_by: []
-change_target: docs
-risk_surface: safety
+change_target: prompt
+risk_surface: contract_boundary
 notes: |
   THIS DISCHARGES THE PARENT L1's documentation_triggers OF [reference-doc]. GE-123a
   declares that trigger and its other three children are all code ACs assigned to

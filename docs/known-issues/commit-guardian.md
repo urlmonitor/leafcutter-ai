@@ -2325,6 +2325,79 @@ nothing and reports success).
 
 ---
 
+### KI-CG-034 — `check_output_drift` examines every output file and compares none of them: the scanner and the installer key paths in two namespaces that never intersect
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/commit_guardian/check_output_drift.py` — the directory scan and the
+  `not in output_mappings` branch; `scripts/build_helpers.py::write_build_manifest` supplies
+  the mapping it is compared against
+
+**Symptom.** The Direction-B drift guard passes on every working copy because it never
+performs a comparison. Run against a freshly built worktree at `18c8e10a`:
+
+```
+$ python scripts/commit_guardian/check_output_drift.py ; echo "exit: $?"
+exit: 0
+$ grep -c  "not in output_mappings" <output>   → 169
+$ grep -vc "not in output_mappings" <output>   → 0
+```
+
+**169 files examined, 169 skipped, zero compared, and not one line of any other kind.** The
+`grep -vc` is the load-bearing half of that evidence: it establishes that the skip branch is
+not merely common but *total*. A count of skips alone would be consistent with a check that
+also did some real work.
+
+**Cause.** The scanner walks a hardcoded list of directory names and keys each result
+relative to the repository root — `.claude/agents/README.md`. The installer keys every
+manifest entry under the *configured output root* — `<output_root>/agents/README.md`. The two
+key namespaces are disjoint, so every lookup misses and every file takes the fail-open
+`not in output_mappings → INFO → continue` path.
+
+**Why this is high rather than medium.** The severity is not the missing coverage, it is that
+the missing coverage is **shaped like success**:
+
+- An unmapped file prints an informational line and is skipped. From outside, that is
+  indistinguishable from a file that was checked and found clean. The hook exits 0 either way.
+- This is the fourth distinct route to "exit 0 having checked nothing" in this hook family
+  (`KI-CG-012`@380, `KI-CG-012`@800, `KI-CG-019`). Unlike the other three, this one has
+  **never** worked — there is no regression to point at, which is why nothing noticed.
+- It is the guard that `ACD-2100d-2` is written to strengthen. An acceptance criterion built
+  on the assumption that the check works, when it has never run a comparison, would be
+  satisfied by an implementation that leaves it inert.
+- The registration compounds it: the hook's `files` trigger in
+  `scripts/commit_guardian/commit_guardian.json` carries the same stale path prefixes, so a
+  deployed file under a differently-configured output root does not match and the hook does
+  not fire at all. Repairing the script alone leaves a gate that computes the right answer
+  and is never invoked.
+
+**Fix direction.** Derive both the set of files to check and the key each is looked up under
+from the installer's mapping itself, rather than from a hardcoded directory list, so a newly
+deployed directory is covered the day it appears. Make the unmapped case report rather than
+skip — a deployed file with no mapping entry is either a mapping defect or an untracked
+output, and both are findings. Fix the hook's `files` trigger in the same change. Cover it
+with a test that asserts a run examining files while checking none of them **fails**; that is
+today's behaviour, and a test written without that assertion passes against the defect.
+
+**Caution for whoever fixes this.** `_compute_output_mappings`'s docstring says it enumerates
+four template directories by hand and therefore cannot see the route file. **That docstring is
+stale and the claim is false** — the generated manifest contains nine `workflows-js` entries
+including the deployed `plan-feature.js`. The mapping side is installer-derived and already
+correct; the defect is entirely on the scan side. An agent working from the docstring during
+the `ACD-2100d-2` enrichment pass reached the wrong conclusion and caught it only by running
+the check. Run it; do not read it.
+
+**Related.** `ACD-2100d-2` (the acceptance criterion that will repair this as a side-effect of
+being implemented). `KI-CG-019`, `KI-CG-012` (the sibling exit-0-having-checked-nothing
+routes). `KI-BP-016` (the same output-root confusion in the build's doc-index phase).
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
+nothing and reports success).
+
+---
+
 ### KI-CG-20260826-1612 — Every AC guardian filters the index on `--diff-filter=AM`, so a *renamed* AC record is invisible to all six — and renaming is exactly what a tree split requires
 
 - **Severity:** high

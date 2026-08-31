@@ -1573,12 +1573,23 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
   if (typeof liveGateFn === "function") {
     try { gateAnswer = await liveGateFn(); } catch (_err) { gateAnswer = null; }
   }
-  // Valid explicit decision.
+  // Valid explicit decision — UNLESS it is the dispatched gate agent refusing the
+  // role rather than a human answering (AC BO-2300a-1 / KI-ACD-005). A refusal is
+  // well-formed and carries a valid `action`, so the shape check above cannot tell
+  // it from a real decision; accepting it silently converted "no reachable human
+  // answerer" into "the user chose cancel" and discarded the run's work.
   if (gateAnswer !== null && gateAnswer !== undefined && typeof gateAnswer === "object" &&
       (typeof gateAnswer.action === "string" || typeof gateAnswer.choice === "string")) {
-    return gateAnswer;
+    if (!isAgentRefusal(gateAnswer)) {
+      return gateAnswer;
+    }
+    log(
+      "[plan-feature] Gate '" + gateId + "' was answered by a REFUSAL from the dispatched " +
+      "gate agent, not by a human. Treating it as 'no reachable human answerer' and pausing " +
+      "the run instead of acting on it."
+    );
   }
-  // Headless or unparseable: pause and persist.
+  // Headless, unparseable, or an agent refusal: pause and persist.
   return pauseAtGate(gateId, runId, context, descriptor);
 }
 
@@ -1669,6 +1680,191 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
   return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
 }
 
+/**
+ * Phrases that mark a dispatched agent's REFUSAL of the gate role it was handed
+ * (KI-ACD-005), as opposed to a decision a human actually made.
+ *
+ * A refusal is well-formed JSON carrying a valid `action`/`choice` — that is
+ * exactly why it used to sail through resolveGate's shape check — so it can only
+ * be told apart by what its free-text field SAYS. These markers are deliberately
+ * multi-word: single words like "scope" or "route" appear in ordinary user
+ * feedback ("cancel, this is out of the release scope") and must not pause a run
+ * the user really did decide.
+ *
+ * @type {string[]}
+ */
+const AGENT_REFUSAL_MARKERS = [
+  "defined scope",
+  "out of scope",
+  "outside the scope",
+  "outside its scope",
+  "outside my scope",
+  "outside your scope",
+  "no defined process",
+  "has no process for",
+  "recommend routing",
+  "routing this approval",
+  "not responsible for",
+  "not the right agent",
+  "not the agent responsible",
+  "cannot approve",
+  "can not approve",
+  "unable to approve",
+  "cannot make this decision",
+  "not authorized to",
+  "no authority to",
+  "beyond my remit",
+  "i decline",
+  "declines to",
+  "refuses to",
+  "was provided for this dispatch",
+];
+
+/**
+ * Detect a dispatched-agent REFUSAL masquerading as a gate decision (AC BO-2300a-1).
+ *
+ * The gate agent (status-checker) is a proxy for a human answerer. When it replies
+ * that the question is outside its charter, no human answered — the correct reading
+ * is "no reachable human answerer", which per BO-2300a-1 must PAUSE the run, not
+ * cancel it and discard the work. Prior to this check any object with a string
+ * `action` was accepted verbatim, so a refusal reading `{"action":"cancel", ...}`
+ * was indistinguishable from a user typing "cancel".
+ *
+ * Detection is deliberately conservative: an explicit refusal flag, or refusal
+ * language in a free-text field. A bare `{"action":"cancel"}` (a real user's own
+ * choice, which carries no explanation) is NOT a refusal and still cancels.
+ *
+ * @param {object} answer - A gate reply that already passed the shape check.
+ * @returns {boolean} True when the reply is the gate agent refusing the role.
+ */
+function isAgentRefusal(answer) {
+  if (!answer || typeof answer !== "object") { return false; }
+  if (answer.refusal === true || answer.refused === true) { return true; }
+  if (typeof answer.status === "string" && answer.status.toLowerCase() === "refused") { return true; }
+  const textFields = ["feedback", "rationale", "reason", "message", "text", "explanation", "note"];
+  for (let i = 0; i < textFields.length; i++) {
+    const value = answer[textFields[i]];
+    if (typeof value !== "string" || !value.trim()) { continue; }
+    const haystack = value.toLowerCase();
+    for (let m = 0; m < AGENT_REFUSAL_MARKERS.length; m++) {
+      if (haystack.indexOf(AGENT_REFUSAL_MARKERS[m]) !== -1) { return true; }
+    }
+  }
+  return false;
+}
+
+/**
+ * Classify the workspace-setup permission lookup into exactly ONE outcome
+ * (AC BO-1500f-1 / KI-ACD-009).
+ *
+ * `permits_shell` ends up not-true for four distinct reasons and only the LAST is
+ * a permissions problem with the target agent. Failing closed is correct for all
+ * four; asserting a specific false cause is not. Previously every one of them
+ * produced the identical halt text — "<agent>'s registered charter does not permit
+ * running repository/shell commands" — which sends an operator to edit a registry
+ * entry that is frequently correct (and, on a read failure, was never even read).
+ *
+ * Outcomes:
+ *   granted           — the registry was read, parsed, the agent found, permits_shell true.
+ *   read_failure      — the registry was never obtained (no reply, non-zero exit, empty stdout).
+ *   parse_failure     — stdout was obtained but is not a registry document.
+ *   agent_not_found   — the registry parsed but contains no entry for this agent id.
+ *   permission_denied — the entry exists and genuinely denies shell access.
+ *
+ * @param {*}      permissionResult - Raw reply from the registry-read dispatch.
+ * @param {string} agentId          - Target agent id for the workspace-setup step.
+ * @param {string} registryPath     - Path the read was attempted at, for the message.
+ * @returns {{ outcome: string, permits: boolean, cause: string, remedy: string }}
+ */
+function classifyWorkspaceSetupPermission(permissionResult, agentId, registryPath) {
+  let parsed = null;
+  try {
+    parsed = parseAgentJson(
+      permissionResult,
+      { stage: "resolve-workspace-setup-permission", agent: "status-checker" }
+    );
+  } catch (_registryParseErr) {
+    parsed = null;
+  }
+
+  // (1) READ FAILURE — the file never resolved, so nothing about ANY agent's
+  // charter was consulted. Reporting this as a permissions verdict is a lie.
+  const exitCode = (parsed && typeof parsed === "object") ? parsed.exit_code : undefined;
+  const rawOutput = (parsed && typeof parsed.output === "string") ? parsed.output : null;
+  const exitedNonZero = (exitCode !== undefined && exitCode !== null && Number(exitCode) !== 0);
+  if (!parsed || typeof parsed !== "object" || exitedNonZero || rawOutput === null || rawOutput.trim() === "") {
+    return {
+      outcome: "read_failure",
+      permits: false,
+      cause:
+        "the agent registry could not be READ at " + registryPath +
+        " (exit code " + String(exitCode === undefined ? "unknown" : exitCode) +
+        ", " + (rawOutput === null || rawOutput.trim() === "" ? "no stdout" : "stdout present") + "). " +
+        "The registry was never obtained, so NOTHING about the charter registered for '" +
+        agentId + "' was consulted. This is a lookup failure, not a permissions verdict.",
+      remedy:
+        "Check that " + registryPath + " exists and resolves from the directory this workflow " +
+        "runs in, then re-run /plan-feature. Do NOT edit the registry entry for '" + agentId +
+        "' — it was never read, and it may well be correct.",
+    };
+  }
+
+  // (2) PARSE FAILURE — bytes came back, but they are not a registry document.
+  let registryJson = null;
+  try {
+    registryJson = JSON.parse(rawOutput);
+  } catch (_registryJsonErr) {
+    registryJson = null;
+  }
+  if (!registryJson || typeof registryJson !== "object" || !Array.isArray(registryJson.agents)) {
+    return {
+      outcome: "parse_failure",
+      permits: false,
+      cause:
+        "the agent registry read from " + registryPath + " could not be PARSED as a registry " +
+        "document (expected JSON with an `agents` array). No agent's charter could be looked " +
+        "up, so this says nothing about '" + agentId + "'.",
+      remedy:
+        "Repair " + registryPath + " so it is valid JSON containing an `agents` array, then " +
+        "re-run /plan-feature.",
+    };
+  }
+
+  // (3) NOT FOUND — a real registry that simply has no entry for this id.
+  const match = registryJson.agents.find((e) => e && e.id === agentId);
+  if (!match) {
+    return {
+      outcome: "agent_not_found",
+      permits: false,
+      cause:
+        "agent '" + agentId + "' was NOT FOUND in the agent registry at " + registryPath +
+        ". The registry was read and parsed successfully; it simply registers no charter " +
+        "under that id (a rename or a typo in workspace_setup_agent both look like this).",
+      remedy:
+        "Point workspace_setup_agent at an id that exists in " + registryPath + ", or register " +
+        "'" + agentId + "' there with an explicit permits_shell value.",
+    };
+  }
+
+  // (4) A genuine permissions verdict from a registry that WAS read.
+  if (match.permits_shell === true) {
+    return { outcome: "granted", permits: true, cause: "", remedy: "" };
+  }
+  return {
+    outcome: "permission_denied",
+    permits: false,
+    cause:
+      "agent '" + agentId + "' IS registered in " + registryPath + ", and its entry has " +
+      "permits_shell: " + JSON.stringify(match.permits_shell === undefined ? null : match.permits_shell) +
+      ". This is a genuine permissions verdict: that agent's registered charter does not permit " +
+      "running repository/shell commands.",
+    remedy:
+      "Dispatch the workspace-setup step to an agent whose charter permits shell commands, or — " +
+      "if '" + agentId + "' is genuinely meant to run them — set permits_shell: true on its entry " +
+      "in " + registryPath + ".",
+  };
+}
+
 // ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
 // ---------------------------------------------------------------------------
@@ -1741,12 +1937,13 @@ const sessionSlug = component
 // agent rename (and so a read-only reporting agent like status-checker,
 // the mis-assigned target of the original incident, can never receive it).
 const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "worktree-agent";
+const AGENT_REGISTRY_PATH = "{{config.output_root}}/config/agent_registry.json";
 
 let permissionResult;
 try {
   permissionResult = await agent(
     "Run the following command and return ONLY the raw stdout output:\n" +
-    "cat {{config.output_root}}/config/agent_registry.json\n" +
+    "cat " + AGENT_REGISTRY_PATH + "\n" +
     "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number> }",
     { agentType: "status-checker", label: "resolve-workspace-setup-permission" }
   );
@@ -1754,39 +1951,32 @@ try {
   permissionResult = null;
 }
 
-let permitsShell = false; // fail closed — missing/false/unresolvable all deny.
-try {
-  const registryParsed = parseAgentJson(
-    permissionResult,
-    { stage: "resolve-workspace-setup-permission", agent: "status-checker" }
-  );
-  if (registryParsed && typeof registryParsed.output === "string") {
-    const registryJson = JSON.parse(registryParsed.output);
-    const entries = (registryJson && Array.isArray(registryJson.agents)) ? registryJson.agents : [];
-    const match = entries.find((e) => e && e.id === workspaceSetupAgentId);
-    permitsShell = !!(match && match.permits_shell === true);
-  }
-} catch (_parseErr) {
-  permitsShell = false; // fail closed on any parse error
-}
+// Fail closed on all four not-granted outcomes, but report WHICH one it was:
+// a read failure, a parse failure, a missing entry and a real denial have four
+// different remedies, and three of them say nothing about the agent's charter.
+const registryVerdict = classifyWorkspaceSetupPermission(
+  permissionResult, workspaceSetupAgentId, AGENT_REGISTRY_PATH
+);
+const permitsShell = registryVerdict.permits;
 
 if (!permitsShell) {
   await agent(
     "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
-    workspaceSetupAgentId + "', but that agent's registered charter (config/agent_registry.json) " +
-    "does not permit running repository-mutating shell commands. Halting before any authoring " +
-    "agent is dispatched. Report this mis-assignment to the operator: step='worktree-setup', " +
-    "agent='" + workspaceSetupAgentId + "'.",
+    workspaceSetupAgentId + "', and the run was halted before any authoring agent was dispatched " +
+    "because that dispatch could not be confirmed as permitted.\n" +
+    "Cause (" + registryVerdict.outcome + "): " + registryVerdict.cause + "\n" +
+    "Remedy: " + registryVerdict.remedy + "\n" +
+    "Report this to the operator: step='worktree-setup', agent='" + workspaceSetupAgentId + "'.",
     { agentType: "status-checker", label: "workspace-setup-mis-assignment" }
   );
   return {
     status: "error",
+    halt_cause: registryVerdict.outcome,
     message:
       "Workspace-setup step 'worktree-setup' is configured to dispatch to agent '" +
-      workspaceSetupAgentId + "', whose registered charter does not permit running " +
-      "repository/shell commands. Halting before any authoring agent is dispatched. " +
-      "Fix the workspace_setup_agent configuration or config/agent_registry.json's " +
-      "permits_shell field for that agent.",
+      workspaceSetupAgentId + "'. Halting before any authoring agent is dispatched, because " +
+      registryVerdict.cause + "\n" +
+      "Remedy: " + registryVerdict.remedy,
   };
 }
 
@@ -2120,8 +2310,11 @@ if (ptRunSet.skip) {
 
         if (ptAction === "cancel") {
           // NO-PR GUARANTEE (PT cancel): prior committed PT stages preserved, current draft uncommitted.
+          // AC BO-2300a-2 — distinct terminal status for a cancelled run. `cancelled_at`
+          // alone was not enough: nothing machine-readable reads it, so a caller
+          // branching on `status` saw a plain success.
           return {
-            status: "ok",
+            status: "cancelled",
             message:
               `Pipeline cancelled at the product-truth gate (${ptStep.agent}). No PR was opened. ` +
               `Prior committed product-truth stages are preserved; the current ${ptStep.stage} draft is left uncommitted on disk.`,
@@ -2434,8 +2627,13 @@ for (const step of pipeline) {
       if (action === "cancel") {
         // AC BO-1500c-1-i — NO-PR GUARANTEE (mid-pipeline cancel).
         const cancelLabel = `gate after ${step.agent}`;
+        // AC BO-2300a-2 — a cancelled run must be machine-readably distinct from a
+        // successful one. `status: "ok"` here made "the user aborted and zero ACs
+        // shipped" indistinguishable from "the pipeline completed" for any caller
+        // that branches on `status` — which is the only reason the field exists.
         return {
-          status: "ok",
+          status: "cancelled",
+          cancelled_at: `gate-${step.stage}`,
           message: buildCancelMessage(committedAcs, written, cancelLabel, acStoreDir, authoringWorktreePath),
           committed_acs: committedAcs,
           acs_as_drafts: written,
@@ -2534,8 +2732,10 @@ for (const step of pipeline) {
 
       if (finalAction === "cancel") {
         // AC BO-1500c-1-i — NO-PR GUARANTEE (final-gate cancel).
+        // AC BO-2300a-2 — distinct terminal status (see the mid-gate cancel above).
         return {
-          status: "ok",
+          status: "cancelled",
+          cancelled_at: "final-gate",
           message: buildCancelMessage(committedAcs, written, "final gate (IT-PO)", acStoreDir, authoringWorktreePath),
           committed_acs: committedAcs,
           acs_as_drafts: written,

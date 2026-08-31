@@ -256,7 +256,10 @@ class TestPtGating(unittest.TestCase):
     def test_cancel_no_pr_prior_commits_preserved(self) -> None:
         cfg = {"classifier": {"outcome": "full-set", "component": "ux-prototyping"}, "cancelStage": "mockup"}
         res, side = _run(cfg)
-        self.assertEqual(res.get("status"), "ok")
+        # BO-2300a-2: a cancelled run must NOT report "ok" — that is
+        # indistinguishable from a run that completed. This assertion read
+        # "ok" until 2026-08-26; it encoded the defect, not the requirement.
+        self.assertEqual(res.get("status"), "cancelled")
         self.assertEqual(res.get("cancelled_at"), "pt-gate-mockup")
         self.assertIn("No PR", res.get("message", ""))
         # Prior stage (mock-data) WAS committed; the cancelled stage (mockup) was NOT.

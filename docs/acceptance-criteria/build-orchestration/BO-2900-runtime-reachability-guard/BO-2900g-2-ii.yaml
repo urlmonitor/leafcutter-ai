@@ -1,0 +1,226 @@
+id: BO-2900g-2-ii
+components:
+  - build_orchestration
+  - ac_store
+  - testing_quality
+title: "The declaration is not handed out for merely mentioning a write, so an author is never asked to choose between two false statements"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a leaf piece of work whose stated behaviour is that some text reaches a
+      stream a person watches, and nothing outlives the run,
+    And a second whose stated behaviour is that a document SAYS something happens,
+      where the happening is another piece of work's job and this one only has to
+      describe it,
+    And a third whose stated behaviour merely names where something lives — the
+      place entries of a certain kind are kept,
+  When each is asked whether it changes something real,
+  Then none of the three is said to,
+    And a fourth, whose stated behaviour is that a file exists and can be read
+      back after the run, still is,
+  Because the parent asks for a durable, observable change and names what it
+    means by one; a line on a screen that is gone when the terminal closes is not
+    that, a sentence describing someone else's write is not that, and the name of
+    a folder is not that.
+
+  Given an author who has read their own record and can see it changes nothing
+      real, while the check insists it does,
+  When they try to record what is true,
+  Then they can, and the record is accepted,
+  Because today they cannot: the value is rejected when it disagrees with the
+    check, so the only two moves available are to declare an effect the work does
+    not have, or to reword the requirement until the check stops objecting.
+    Both put a false statement in the store, and the second quietly edits a
+    requirement to satisfy a tool. An author who is right must not be forced to
+    be wrong.
+
+  Given the change to what counts is being made,
+    And some records already in the store carry the declaration on the strength
+      of the old, looser reading,
+  When the change lands,
+  Then every record the change itself turns into a contradiction is corrected in
+    the same change,
+    And the number of records whose recorded answer disagrees with the check does
+      not go up,
+    And a record that already disagreed before the change, and still disagrees
+      for the same reason afterwards, is left alone and written down instead,
+  Because a stricter reading that leaves new contradictions behind converts one
+    wrong answer into a queue of broken builds on other people's work — while
+    quietly rewriting records that were already wrong, in trees this change has
+    no business in, hides an unrelated fault instead of fixing it.
+depends_on:
+  - BO-2900g-2
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-2.yaml
+    relationship: describes
+    status: exists
+    relevance: "The parent this constrains, and the authority for the narrowing. Its own criteria name what a durable change is — 'a file that exists and can be read back afterwards, a record that is persisted, a command that leaves the system in a different state'. A stream write is none of those, so the shipped derivation is wider than the requirement it implements. This AC does not introduce a new rule; it makes the implementation match the one already written."
+  - path: templates/scripts/commit_guardian/_ac_schema_validators.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source of derive_declares_side_effect and validate_declares_side_effect. Per ADR-001 the templates/ copy is authoritative; scripts/ and .leafcutter/scripts/ are build outputs."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Why a false positive is not cosmetic: a true declaration force-routes user-surface-smoker into the generated ticket NON-OVERRIDABLY. On a record that produces prose there is no surface to invoke, so the phase is fail-closed on work that was never wrong."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "The declares_side_effect description states the intended rule — 'set it to true whenever the AC's Then clause asserts something observable outside the process'. Note this wording is itself looser than the parent AC's and is part of why the implementation drifted; reconcile the two rather than treating the schema text as authority."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+it_requirements:
+    - "SURFACE. The canonical source is templates/scripts/commit_guardian/_ac_schema_validators.py — specifically _DURABLE_EFFECT_RE and derive_declares_side_effect. Per ADR-001 edit the templates/ copy; scripts/ and .leafcutter/scripts/ are build outputs. After editing run `python scripts/build.py --target-dir .` and then `python -m pytest unit_tests/commit_guardian/ unit_tests/ac_store/ -q`, because the hook executes from the deployed layout, not the source tree."
+    - "MEASURED BLAST RADIUS, 2026-08-25, against the real store at origin/main. Of the records with a Then clause, 139 derive true under the shipped pattern and 31 under one with the bare `\\bis written\\b` and `\\bare written\\b` alternatives removed. So 108 of 139 positives — 78 percent — rest entirely on those two alternatives. Sixteen of the 108 already carry an authored declares_side_effect: true and would, after the narrowing, DISAGREE with the derivation and fail check-ac-schema the next time they are staged: BO-1500a-1, BO-2600b-2, BO-2900g-1-i, BO-400a-2-ii, BP-1500d-1, BP-600b-2, BP-600b-3, BP-900g-10, BP-900g-8, BP-900h-4-i, GE-122d-6, GE-125d-1, GE-125d-3, INF-400c-4-iii, UXP-612, UXP-614. Re-measure before implementing; the store moves."
+    - "NINE RECORDS ALREADY DISAGREED BEFORE THIS CHANGE — EIGHT ARE LEFT FOR THEIR OWNERS. BO-2400g-4, BO-2400g-4-i, BO-2900g-1, BO-2900g-2, BO-2900g-2-i, BO-2900g-4, BP-1100g-4, BP-1100g-4-i and BP-1100g-5-i carried declares_side_effect: true while the derivation returned false BEFORE the narrowing as well as after, invisible only because the check is a forward ratchet over staged records. Eight are pinned in the test allowlist rather than edited; deciding records in trees this change has no business in would be a bulk sweep in the opposite direction. BO-2400g-4-i is the likeliest genuine FALSE NEGATIVE — findings appearing on a pull request is durable, externally visible, and asserted in its Then."
+    - "THE NINTH, BO-2900g-2, HAD TO BE RESOLVED, AND HOW IT RESOLVED IS THE USEFUL PART. Adding this AC as its child required staging the parent (the AC-store rule that a parent is staged alongside its child, because the hooks only read the index). The forward ratchet then refused the commit until the pre-existing disagreement was settled — so a record cannot gain a child while it holds a stale declaration, which is a coupling nobody designed and worth knowing before touching any of the other eight. It was set to false for CONSISTENCY, not convenience: its Then clause states what a record CARRIES, exactly the shape of BO-2600b-2's 'that statement appears in the record', which this same change sets false. The rule applied throughout is that the declaration follows what the Then clause STATES, per the parent's own 'obtained from the behaviour that work already states', not what the implementation incidentally writes. Several of the remaining eight will resolve the same way once anyone stages them."
+    - "EACH RECORD IS A JUDGEMENT, NOT A SWEEP. For each, decide whether the record truly asserts a durable effect and correct either the authored value or nothing. Do NOT bulk-set them to false to make the gate quiet, and do NOT bulk-keep them true by widening the pattern back. The list spans eight components and other people's trees; a wrong call in either direction is exactly the silent-wrong-value failure this family exists to prevent."
+    - "THE THREE SHAPES THAT MUST STOP MATCHING, each observed live on a real record. (1) A stream write: `a notice is written to the error stream` (GE-125d-1, GE-123b-5) — observable, not durable. (2) A REPORTED clause, where the sentence's subject is a document and the write belongs to a different AC: `the reference states that a notice ... is written to the error stream` (GE-123d-4-ii). (3) A relative clause naming a location: `names the file suppressions are written in` (GE-123c-4) — no write is asserted at all."
+    - "THE SHAPE THAT MUST KEEP MATCHING: a file or record that outlives the run. Use the parent's own words as the test — 'a file that exists and can be read back afterwards, a record that is persisted, a command that leaves the system in a different state'. The 31 records that survive the narrowing are the regression set; if that count collapses toward zero the pattern has been cut too far."
+    - "DERIVED, NOT OPINION — DO NOT SOLVE THE SECOND CRITERION WITH AN OVERRIDE FLAG. The parent's central property is that the value comes from the record's own words rather than from whoever wrote it, and BO-2900g-2-i exists to keep that property from being faked. An escape hatch, a suppression comment, or an `i_know_better: true` field would satisfy the second criterion by discarding the parent's. The second criterion is satisfied by making the derivation right, so that an author who is right and the derivation never disagree in the first place."
+    - "SECOND OVER-MATCH, MEASURED AND DEFERRED — DO NOT SILENTLY FOLD IT IN. The derivation reads from the FIRST `Then` to the end of the criteria, so on a multi-scenario record it also reads later Given and When clauses, contradicting its own docstring. Bounding each scenario on a line-initial `Given` was implemented and measured during this work, then reverted: it moves three further records into disagreement — BO-2400c-1-v, UXP-612, UXP-614 — and two of those are arguable rather than wrong, since UXP-612 and UXP-614 genuinely produce a rendered file and happen to say so only in a `When`. Folding it in would breach this AC's own third criterion that disagreements must not rise, and would settle two judgement calls inside a change about a regular expression. The gap is now stated in the function's docstring with those three ids. It wants its own AC, whose real question is not the split but whether a durable effect asserted in a `When` counts."
+    - "Verify against the REAL store, not fixtures. Run the before-and-after derivation across every record under docs/acceptance-criteria/ and diff the two result sets; a hand-built fixture reproduces the author's model of the phrasing, which is the bias that produced the shipped pattern."
+delivers_to: null
+expects_from:
+  - ac_id: BO-2900g-2
+    contract: "derive_declares_side_effect and validate_declares_side_effect as shipped, plus the parent's definition of a durable observable change, which this AC treats as the authority when the implementation and the schema description disagree with it."
+test_spec:
+  - name: test_bo_2900g_2_ii_stream_writes_and_described_writes_do_not_derive_true
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The three non-durable shapes, taken verbatim from the real records that exhibited them — a notice written to the error stream, a reported clause where a document states that a write happens, and a relative clause naming where entries are kept — each derive false, while a fourth asserting a file readable after the run derives true."
+  - name: test_bo_2900g_2_ii_narrowing_adds_no_new_disagreement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "STORE-WIDE, AGAINST THE REAL FILES: every record under docs/acceptance-criteria/ whose authored declares_side_effect disagrees with the derivation must appear in the KNOWN_PRE_EXISTING allowlist pinned in the test. The test fails on any disagreement outside that list, so a future widening or narrowing cannot add one silently. Deliberately NOT 'zero disagreements' — nine records disagreed before this change and are held by that allowlist rather than edited, because they are a separate defect in the opposite direction."
+  - name: test_bo_2900g_2_ii_an_author_who_is_right_can_record_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A record whose Then clause asserts no durable effect and which authors declares_side_effect: false is ACCEPTED by validate_declares_side_effect. Guards the second criterion without an override: the acceptance must come from the derivation agreeing, so the same test fails if the fix is an escape hatch that accepts any authored value."
+  - name: test_bo_2900g_2_ii_durable_effects_still_route_the_smoker
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "REGRESSION FLOOR: a record asserting a file readable after the run still derives true and still causes generate_ticket_from_ac.py to place user-surface-smoker in the generated ticket's agents map as needed. The narrowing must not quietly disable the guard it feeds."
+  - name: test_bo_2900g_2_ii_later_scenario_over_match_is_pinned_as_known
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "CHARACTERISATION, NOT AN ENDORSEMENT: a multi-scenario record whose first Then asserts nothing durable and whose SECOND scenario's Given mentions a written file currently derives TRUE, because the search runs from the first Then to the end of the criteria. The test asserts the present behaviour and names it as the deferred defect, so the day someone bounds the scenarios this test fails and points them at the three affected records rather than letting the change land unnoticed."
+test_rationale: |
+  Four of the five descriptors use phrasing lifted verbatim from records that actually
+  tripped this, rather than invented examples, because invented examples are how the
+  original pattern came to accept "is written" in the first place — the author pictured
+  "a file is written" and the regex also accepts "the file suppressions are written in".
+
+  The store-wide descriptor is the load-bearing one and is deliberately an integration
+  test over the real directory. The parent's guarantee is about the STORE, not about the
+  function: a unit test of the narrowed pattern passes while sixteen records sit in
+  disagreement waiting to fail on whoever stages them next. Only a run across the actual
+  files can see that, and it is also the test that keeps the correction honest, since it
+  fails identically whether the sixteen were left alone or bulk-set to the convenient value.
+
+  The third descriptor is written so that the obvious wrong fix fails it. If the second
+  criterion is satisfied by adding an override, an authored false is accepted for a record
+  that genuinely does assert a durable effect too — so the descriptor asserts acceptance
+  for a non-durable record AND, by pairing with the first descriptor, that the acceptance
+  came from the derivation rather than from permissiveness.
+origin_agent: safety-security-expert
+created: 2026-08-25
+amended_by:
+  - reason: implementation-note
+    date: '2026-08-31'
+    by: safety-security-expert
+    entry: 'A FOURTH NON-DURABLE SHAPE WAS FOUND AFTER THE FIRST FIX LANDED, AND IT IS
+      COVERED BY THIS AC ALREADY. criteria unchanged — the second criterion''s "a document
+      SAYS something happens, where the happening is another piece of work''s job and this
+      one only has to describe it" is exactly this case, so the AC did not need widening,
+      only implementing further.
+
+      THE SHAPE: a Because clause. GE-123c-3-i''s Then asserts that NO warning is emitted
+      for any line of the repository''s own allowlist; its Because says "the same file is
+      deployed to consumer projects". The derivation matched `deployed to` — an alternative
+      the first fix never touched — and concluded the record asserts a durable effect. A
+      Because clause states WHY a criterion exists and routinely cites effects owned by
+      other work, so reading it as an assertion by this record is a category error.
+      _BECAUSE_CLAUSE_RE now strips those clauses before the search.
+
+      MEASURED: 90 -> 89 marked, exactly one record flips (GE-123c-3-i, the false positive
+      it was written for), zero authored values break, zero records newly marked.
+
+      THE CASE-SENSITIVITY IS LOAD-BEARING AND WAS FOUND BY MEASURING, NOT BY REASONING.
+      The first version of the stripper was case-insensitive and flipped TWO records. The
+      second, BP-1500d-3, is a genuine durable effect — "leaves the record file written to
+      disk in that project" — that was being swallowed because one of its WRAPPED lines
+      happens to begin with a lowercase "because" mid-sentence. Gherkin keywords are
+      capitalised at line start, so the pattern is case-sensitive and a regression test
+      pins that using BP-1500d-3''s own phrasing. Had the blast radius not been measured
+      record by record, that fix would have silently discarded a real declaration to
+      suppress a false one.
+
+      This is the fifth false positive in this family and the third distinct mechanism —
+      after the bare verb and the reported clause. The count is itself evidence about the
+      approach: a keyword matcher over natural language keeps finding new ways to be wrong,
+      and the false-NEGATIVE side (the eight pinned records) has not been addressed at all.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A CONSTRAINT ON BO-2900g-2 RATHER THAN A DEFECT REPORT AGAINST IT. The
+  parent is right and its implementation is wider than its own words. BO-2900g-2's
+  criteria define a durable change as "a file that exists and can be read back
+  afterwards, a record that is persisted, a command that leaves the system in a
+  different state". None of those is a line on standard error. The shipped
+  _DURABLE_EFFECT_RE nonetheless accepts a bare "is written" and "are written", and
+  78 percent of everything it currently marks depends on exactly those two alternatives.
+  The function's docstring says it was calibrated to mark "a STRICT subset ... ~3.6% of
+  records with a Then clause (114 of 3148)"; the same measurement today gives 139, so the
+  drift is visible in the code's own terms.
+
+  HOW IT WAS FOUND, WHICH IS THE PART WORTH KEEPING. Four records tripped this gate in one
+  day — GE-125b-4, GE-123d-4-ii, GE-123b-5, GE-123c-4 — and every one was a false positive.
+  The first two were resolved by rewording the criteria, each recorded in the record's own
+  amended_by, and the second of those carries an explicit instruction that a third
+  occurrence should fix the derivation instead. The third and fourth arrived within the
+  hour. Rewording a requirement so a regular expression stops objecting is not a fix; it
+  is a slow edit of the specification by a tool that is wrong, and it leaves no trace
+  anywhere except in the record that was quiet enough to change.
+
+  THE SECOND CRITERION IS THE ONE THAT MATTERS MOST AND IS EASIEST TO MISREAD. It is not a
+  request for an override. validate_declares_side_effect rejects an authored value that
+  disagrees with the derivation, in either direction, which is correct and is the parent's
+  whole point. The consequence, unnoticed until a false positive appeared, is that on a
+  false positive there is NO WAY TO STATE THE TRUTH: declaring true asserts an effect the
+  work does not have, and declaring false is rejected. The way out is a derivation that
+  does not produce false positives, not a way to disagree with it.
+
+  A FALSE POSITIVE HERE IS NOT COSMETIC. declares_side_effect: true force-routes
+  user-surface-smoker into the generated ticket and BP-1100f-5 makes that routing
+  non-overridable. On a documentation record the phase agent looks for a user-facing
+  surface, finds none, and is fail-closed. So the gate does not merely mislabel the
+  record; it blocks work that was correct.
+
+  SCOPE FENCE. This AC narrows what counts and reconciles the records that were marked on
+  the old reading. It does NOT touch the routing (BP-1100f-5), the non-overridability, the
+  authoring-time enforcement (BO-2900g-2-i), or the schema property itself. A coder who
+  finds themselves editing generate_ticket_from_ac.py has left this AC's scope.
