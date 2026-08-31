@@ -1424,6 +1424,24 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
             print(f"  scripts/ac_store/{dest_name}")
             written += 1
 
+    # BP-1100g-3-ii: done_proof.py reads config/ac_store_schema.json to learn
+    # the single taught set of proof kinds (BP-1100g-1). The DEPLOYED copy has
+    # to be able to read it too, and in the self-hosting workspace layout it
+    # cannot reach the package's own config/ by walking up -- .leafcutter/ sits
+    # BESIDE leafcutter-ai/ there, not inside it, so no ancestor of the deployed
+    # module holds the file. Deploying the schema next to the deployed scripts
+    # is what makes the module's upward search succeed from every layout.
+    # Without this the loader fail-softs to an empty permitted set and every
+    # correctly-tagged test is reported as declaring an unrecognised kind.
+    # Mirrors build_feedback's config/feedback_categories.yaml deployment.
+    schema_src = PACKAGE_ROOT / "config" / "ac_store_schema.json"
+    if schema_src.is_file():
+        schema_output = target_root / "config" / "ac_store_schema.json"
+        if _write(schema_output, schema_src.read_text(encoding="utf-8"), dry_run, force):
+            written += 1
+            if not dry_run:
+                print("  config/ac_store_schema.json")
+
     return written
 
 
