@@ -35,9 +35,9 @@ criteria: |
 depends_on: [ACD-2100e, ACD-2100c-3, ACD-2100c-3-i, ACD-2100a-4, ACD-2100e-1]
 doc_links:
   - path: docs/how-to/resume-a-paused-plan-feature-run.md
-    relationship: describes
+    relationship: creates
     status: planned
-    relevance: "THE TARGET FILE. ACD-2100c-3 and ACD-2100c-3-i already link this exact path as planned; publishing under any other name leaves both dangling and check-doc-links cannot catch a target that never appears."
+    relevance: "THE TARGET FILE, AND THIS RECORD'S SOLE DELIVERABLE. Relationship is 'creates' rather than 'describes' because this record authors the page -- the two siblings that merely reference it (ACD-2100c-3, c-3-i) keep 'describes'. It read 'describes' until 2026-08-31, which made both of those inherit this path as their own documentation target while leaving this record indistinguishable from a consumer; see BO-2200c-5-i. Publishing under any other name leaves both dangling and check-doc-links cannot catch a target that never appears."
   - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
