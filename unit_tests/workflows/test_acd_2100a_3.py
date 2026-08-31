@@ -64,7 +64,6 @@ import json
 import subprocess
 import sys
 import tempfile
-import textwrap
 from pathlib import Path
 
 _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
