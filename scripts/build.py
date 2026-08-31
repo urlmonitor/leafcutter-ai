@@ -64,6 +64,7 @@ from build_phases import (
     _compute_phase_mappings,
     check_command_reachability,
     AC_STORE_DEPLOY_MAP,
+    DeploySourceMissingError,
 )
 from registry_validator import validate_agent_registry
 from project_context_discovery import (  # noqa: F401 — re-exported for callers
@@ -1862,7 +1863,21 @@ def main(argv: list[str] | None = None) -> int:
     if _check_deploy_collision_guard(output_root, config):
         return 1
 
-    total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
+    try:
+        total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
+    except DeploySourceMissingError as exc:
+        print(
+            "[DEPLOY GUARD] Build aborted: declared deploy source(s) not found:",
+            file=sys.stderr,
+        )
+        for failure in exc.failures:
+            print(
+                f"[DEPLOY GUARD]  phase:       {failure['phase']}\n"
+                f"[DEPLOY GUARD]  entry:       {failure['entry']}\n"
+                f"[DEPLOY GUARD]  source_path: {failure['source_path']}",
+                file=sys.stderr,
+            )
+        return 1
 
     # Command-reference reachability guard (BP-900g-1 / BP-900g-1-i): after
     # the deploy phases have written real files, scan every deployed

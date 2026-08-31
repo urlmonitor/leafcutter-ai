@@ -73,6 +73,37 @@ SKILLS_TEMPLATE_DIR = TEMPLATES_DIR / "skills"
 
 _log = logging.getLogger(__name__)
 
+
+class DeploySourceMissingError(FileNotFoundError):
+    """Raised once, at the end of a deploy phase's loop, when one or more
+    entries it was declared to ship name a source file that does not exist
+    on disk (AC BP-900g-9).
+
+    Deliberately NOT raised per-entry inside the loop: the loop must
+    accumulate every unresolvable entry first (COLLECT, THEN FAIL) so a
+    single build run reports the whole remediation set rather than one
+    entry per build-fix-build cycle.
+
+    Attributes:
+        failures: One dict per unresolvable declared entry, each carrying
+            the keys ``"phase"`` (the deploy phase name, e.g.
+            ``"build_ac_store"``), ``"entry"`` (the declaration's dest_name,
+            as written, so it can be located in the map without guessing),
+            and ``"source_path"`` (the resolved source path that was not
+            found).
+    """
+
+    def __init__(self, failures: list[dict[str, str]]) -> None:
+        self.failures = failures
+        detail = "\n".join(
+            f"  phase={f['phase']} entry={f['entry']} source_path={f['source_path']}"
+            for f in failures
+        )
+        super().__init__(
+            f"{len(failures)} declared deploy source(s) not found:\n{detail}"
+        )
+
+
 # ---------------------------------------------------------------------------
 # Components-table injection helpers (ACS-300k-1)
 # ---------------------------------------------------------------------------
@@ -1388,11 +1419,19 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
 
     output_dir = target_root / "scripts" / "ac_store"
     written = 0
+    failures: list[dict[str, str]] = []
 
     for src_file, dest_name in deploy_map:
         if not src_file.is_file():
             _log.warning(
                 "build_ac_store: source script not found, skipping: %s", src_file
+            )
+            failures.append(
+                {
+                    "phase": "build_ac_store",
+                    "entry": dest_name,
+                    "source_path": str(src_file),
+                }
             )
             continue
 
@@ -1423,6 +1462,9 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
                 raise
             print(f"  scripts/ac_store/{dest_name}")
             written += 1
+
+    if failures:
+        raise DeploySourceMissingError(failures)
 
     return written
 
@@ -2353,11 +2395,29 @@ def build_ac_store_docs(target_root: Path, config: dict[str, Any],
     Returns:
         Count of files written (or that would be written in dry-run mode).
 
+    Raises:
+        DeploySourceMissingError: When one or more declared doc entries in
+            ``doc_files`` name a ``template_path`` that does not exist on
+            disk. Every unresolvable entry is accumulated and reported
+            together in a single raise at the end of the loop (COLLECT, THEN
+            FAIL), matching ``build_ac_store`` / ``build_workflow_tools`` /
+            ``build_knowledge_scripts`` / ``build_agent_support_scripts``.
+
     # DECISION HISTORY
     # - 2026-06-04 13:10 [documentation-expert/EPIC-ACTraceabilityStore/09]:
     #   Created to install how-to and reference docs for the AC store.
     #   Both files are write-if-absent so user-edited versions are preserved.
     #   (#EPIC-ACTraceabilityStore/09)
+    # - 2026-08-31 [python-coder/BP-900g-9]: A declared doc entry whose
+    #   template_path was missing used to log a bare `print(...[WARNING]...)`
+    #   and continue, silently shipping a consumer install missing a declared
+    #   AC-store doc while the build reported success — the same fail-open
+    #   shape BP-900g-9 closed in build_ac_store / build_workflow_tools /
+    #   build_knowledge_scripts / build_agent_support_scripts, just spelled
+    #   with `print` instead of `_log.warning`, which is why it survived those
+    #   earlier passes. Now accumulates a DeploySourceMissingError failure
+    #   record per missing entry and raises once at the end of the loop.
+    #   (#BP-900g-9)
     """
     docs_dir = config.get("docs_root", "docs/").rstrip("/")
     docs_template_dir = TEMPLATES_DIR / "docs"
@@ -2375,9 +2435,19 @@ def build_ac_store_docs(target_root: Path, config: dict[str, Any],
     ]
 
     written = 0
+    failures: list[dict[str, str]] = []
     for template_path, dest_path, display_name in doc_files:
         if not template_path.exists():
-            print(f"  [WARNING] AC store docs: template not found: {template_path}")
+            _log.warning(
+                "build_ac_store_docs: template not found: %s", template_path
+            )
+            failures.append(
+                {
+                    "phase": "build_ac_store_docs",
+                    "entry": display_name,
+                    "source_path": str(template_path),
+                }
+            )
             continue
         if dest_path.exists():
             print(f"  ac-store-docs: docs/{display_name} exists (skipped)")
@@ -2393,6 +2463,9 @@ def build_ac_store_docs(target_root: Path, config: dict[str, Any],
             dest_path.write_text(content, encoding="utf-8")
             print(f"  docs/{display_name}")
             written += 1
+
+    if failures:
+        raise DeploySourceMissingError(failures)
 
     return written
 
@@ -2854,12 +2927,20 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     ]
     output_dir = target_root / "scripts"
     written = 0
+    failures: list[dict[str, str]] = []
 
     for script_name in deploy_scripts:
         src_file = scripts_src / script_name
         if not src_file.is_file():
             _log.warning(
                 "build_workflow_tools: source script not found, skipping: %s", src_file
+            )
+            failures.append(
+                {
+                    "phase": "build_workflow_tools",
+                    "entry": script_name,
+                    "source_path": str(src_file),
+                }
             )
             continue
 
@@ -2891,6 +2972,9 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
             print(f"  scripts/{script_name}")
             written += 1
 
+    if failures:
+        raise DeploySourceMissingError(failures)
+
     return written
 
 
@@ -2921,11 +3005,18 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     #   package source scripts/knowledge/ to consumer scripts/knowledge/. Closes
     #   the Class B deploy gap for knowledge-harvester agent.
     #   (#EPIC-BuildGuardFalsePositive/03)
+    # - 2026-08-31 [python-coder/BP-900g-9]: A declared-but-absent source used
+    #   to log a warning and continue, silently shipping a consumer install
+    #   that never got harvest_learnings.py while the build reported success.
+    #   Now accumulates a DeploySourceMissingError failure record and raises
+    #   once at the end of the loop, matching build_ac_store /
+    #   build_workflow_tools. (#BP-900g-9)
     """
     knowledge_src = PACKAGE_ROOT / "scripts" / "knowledge"
     deploy_scripts = ["harvest_learnings.py"]
     output_dir = target_root / "scripts" / "knowledge"
     written = 0
+    failures: list[dict[str, str]] = []
 
     for script_name in deploy_scripts:
         src_file = knowledge_src / script_name
@@ -2933,6 +3024,13 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
             _log.warning(
                 "build_knowledge_scripts: source script not found, skipping: %s",
                 src_file,
+            )
+            failures.append(
+                {
+                    "phase": "build_knowledge_scripts",
+                    "entry": script_name,
+                    "source_path": str(src_file),
+                }
             )
             continue
 
@@ -2963,6 +3061,9 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
                 raise
             print(f"  scripts/knowledge/{script_name}")
             written += 1
+
+    if failures:
+        raise DeploySourceMissingError(failures)
 
     return written
 
@@ -3065,9 +3166,18 @@ def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
     #   both for module-scope imports of undeployed siblings (the ac_parent_id.py
     #   lesson from BP-900g-4): neither has one — both import stdlib only.
     #   (#BP-900g-6)
+    # - 2026-08-31 [python-coder/BP-900g-9]: Both loops below used to log a
+    #   warning and continue when a declared directory or file went missing
+    #   from source, silently shipping a consumer install with a dead agent
+    #   capability while the build reported success. Both loops now accumulate
+    #   DeploySourceMissingError failure records into one shared list and raise
+    #   ONCE at the end of the function, so a build missing one declared
+    #   directory AND one declared file reports both findings together rather
+    #   than one per build-fix-build cycle. (#BP-900g-9)
     """
     scripts_src = PACKAGE_ROOT / "scripts"
     written = 0
+    failures: list[dict[str, str]] = []
 
     for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
         src_dir = scripts_src / dir_name
@@ -3075,6 +3185,13 @@ def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
             _log.warning(
                 "build_agent_support_scripts: source directory not found, skipping: %s",
                 src_dir,
+            )
+            failures.append(
+                {
+                    "phase": "build_agent_support_scripts",
+                    "entry": dir_name,
+                    "source_path": str(src_dir),
+                }
             )
             continue
         for src_file in sorted(src_dir.rglob("*.py")):
@@ -3088,10 +3205,20 @@ def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
                 "build_agent_support_scripts: source script not found, skipping: %s",
                 src_file,
             )
+            failures.append(
+                {
+                    "phase": "build_agent_support_scripts",
+                    "entry": file_name,
+                    "source_path": str(src_file),
+                }
+            )
             continue
         written += _copy_agent_support_file(
             src_file, target_root, file_name, dry_run, force
         )
+
+    if failures:
+        raise DeploySourceMissingError(failures)
 
     return written
 
@@ -3168,6 +3295,14 @@ def build_build_orchestration_scripts(target_root: Path, config: dict[str, Any],
     Returns:
         Count of files written (or that would be written in dry-run mode).
 
+    Raises:
+        DeploySourceMissingError: When the declared ``scripts/build_orchestration``
+            source directory itself is absent. This is a single declared
+            entry (there is nothing else to accumulate before it), so the
+            failure is raised immediately with a one-element ``failures``
+            list rather than collected across a loop — matching
+            ``_deploy_fast_lane_release_dependency``'s single-entry shape.
+
     # DECISION HISTORY
     # - 2026-08-14 [BrainCandy/BP-900g-4]:
     #   Added build_build_orchestration_scripts() phase. Deploys .py files from
@@ -3176,6 +3311,13 @@ def build_build_orchestration_scripts(target_root: Path, config: dict[str, Any],
     #   consumer install. Scans the directory dynamically rather than using a
     #   hardcoded file list, so a new module added there cannot silently go
     #   undeployed. (#BP-900g-4)
+    # - 2026-08-31 [python-coder/BP-900g-9]: The source-directory-absent path
+    #   used to log a warning and `return 0`, fail-open in the same direction
+    #   as this function's own already-converted
+    #   _deploy_fast_lane_release_dependency call. Now raises
+    #   DeploySourceMissingError, naming the declared directory as the entry,
+    #   so a renamed/deleted scripts/build_orchestration/ fails the build
+    #   instead of silently shipping nothing. (#BP-900g-9)
     """
     src_dir = PACKAGE_ROOT / "scripts" / "build_orchestration"
     output_dir = target_root / "scripts" / "build_orchestration"
@@ -3183,10 +3325,18 @@ def build_build_orchestration_scripts(target_root: Path, config: dict[str, Any],
 
     if not src_dir.is_dir():
         _log.warning(
-            "build_build_orchestration_scripts: source directory not found, skipping: %s",
+            "build_build_orchestration_scripts: source directory not found: %s",
             src_dir,
         )
-        return 0
+        raise DeploySourceMissingError(
+            [
+                {
+                    "phase": "build_build_orchestration_scripts",
+                    "entry": "scripts/build_orchestration",
+                    "source_path": str(src_dir),
+                }
+            ]
+        )
 
     for src_file in sorted(src_dir.glob("*.py")):
         if not src_file.is_file():
@@ -3253,6 +3403,24 @@ def _deploy_fast_lane_release_dependency(target_root: Path, dry_run: bool,
 
     Returns:
         1 when the file was written (or would be in dry-run mode), else 0.
+
+    Raises:
+        DeploySourceMissingError: When the declared source file is absent.
+            This is a single-entry deploy site (there is nothing else to
+            accumulate within this helper), so the failure is raised
+            immediately with a one-element ``failures`` list rather than
+            collected by a caller. (#BP-900g-9)
+
+    # DECISION HISTORY
+    # - 2026-08-31 [python-coder/BP-900g-9]: This declared entry used to log a
+    #   warning and `return 0` when its source was missing, which is fail-open
+    #   in the same direction as the sibling loops in this file — the build
+    #   reported success while fast_lane.py's release dependency silently
+    #   never shipped, which per the function's own docstring kills the whole
+    #   fast_lane module at import (ModuleNotFoundError), not just the
+    #   changelog path. Now raises DeploySourceMissingError, matching
+    #   build_ac_store / build_workflow_tools / build_knowledge_scripts /
+    #   build_agent_support_scripts. (#BP-900g-9)
     """
     src_file = PACKAGE_ROOT / "scripts" / "release" / "check_changelog_presence.py"
     output_path = target_root / "scripts" / "release" / "check_changelog_presence.py"
@@ -3260,10 +3428,18 @@ def _deploy_fast_lane_release_dependency(target_root: Path, dry_run: bool,
     if not src_file.is_file():
         _log.warning(
             "build_build_orchestration_scripts: fast_lane.py's release dependency "
-            "not found, skipping: %s",
+            "not found: %s",
             src_file,
         )
-        return 0
+        raise DeploySourceMissingError(
+            [
+                {
+                    "phase": "build_build_orchestration_scripts",
+                    "entry": "check_changelog_presence.py",
+                    "source_path": str(src_file),
+                }
+            ]
+        )
 
     if not _should_overwrite(output_path, force):
         return 0
@@ -3398,6 +3574,23 @@ def build_product_truth(target_root: Path, config: dict[str, Any],
 
     Returns:
         Count of files written (or that would be written in dry-run mode).
+
+    Raises:
+        DeploySourceMissingError: When one or both of the declared
+            ``deploy_groups`` source subdirectories is absent. Both entries
+            are checked before raising (COLLECT, THEN FAIL) so a single run
+            names every missing subdirectory rather than only the first.
+
+    # DECISION HISTORY
+    # - 2026-08-31 [python-coder/BP-900g-9]: Each ``deploy_groups`` entry's
+    #   source subdirectory used to log a warning and `continue` when absent,
+    #   which is fail-open in the same direction as the sibling deploy loops
+    #   in this file (build_ac_store, build_workflow_tools,
+    #   build_knowledge_scripts, build_agent_support_scripts): the glob only
+    #   applies WITHIN a declared subdir, so the subdir itself is a declared
+    #   entry whose absence must not be swallowed. Now accumulates a
+    #   DeploySourceMissingError failure record per missing subdirectory and
+    #   raises once after the loop. (#BP-900g-9)
     """
     product_truth_src = PACKAGE_ROOT / "docs" / "product-truth"
 
@@ -3410,12 +3603,20 @@ def build_product_truth(target_root: Path, config: dict[str, Any],
 
     output_base = target_root / "docs" / "product-truth"
     written = 0
+    failures: list[dict[str, str]] = []
 
     for src_dir, pattern, dest_subdir in deploy_groups:
         if not src_dir.is_dir():
             _log.warning(
                 "build_product_truth: source directory not found, skipping: %s",
                 src_dir,
+            )
+            failures.append(
+                {
+                    "phase": "build_product_truth",
+                    "entry": f"docs/product-truth/{dest_subdir}",
+                    "source_path": str(src_dir),
+                }
             )
             continue
 
@@ -3452,6 +3653,9 @@ def build_product_truth(target_root: Path, config: dict[str, Any],
                     raise
                 print(f"  docs/product-truth/{dest_subdir}/{src_file.name}")
                 written += 1
+
+    if failures:
+        raise DeploySourceMissingError(failures)
 
     return written
 
