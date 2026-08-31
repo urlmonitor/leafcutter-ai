@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a body of work of four pieces present in the set before the run begins,
@@ -49,13 +49,128 @@ doc_links:
     relationship: modifies
     status: exists
     relevance: "Where the planning step and the batch loop that consumes its output are defined; the topology this criterion changes."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page describing the single epic-planner dispatch and the batch loop; it becomes stale the moment the loop is widened."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "The E2 top-level-body form the widened loop must stay in; a re-introduced run() wrapper is never invoked by the Workflow tool."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Source of the four angles charged below, and of the reachability rule that a result must be shown CONSUMED in control flow rather than merely produced."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Per-look planner exchange. Each look is a fresh epic-planner dispatch whose reply is consumed by the batch loop in the same iteration; the loop's exit condition is a look that returns zero tickets."
+    properties:
+      look_number: {type: integer}
+      completed_before_this_look:
+        type: array
+        items: {type: string}
+        description: "Ticket paths recorded successfully complete at the moment this look was taken. This is what makes the look a re-decision rather than a repeat."
+      batches:
+        type: array
+        description: "The planner's reply for this look, in the existing PLANNER_SCHEMA shape."
+      released:
+        type: array
+        items: {type: string}
+        description: "Ticket paths this look newly made eligible."
+    required: [look_number, completed_before_this_look, batches, released]
+  reference_file_path: "templates/workflows-js/build-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The single epic-planner agent() call (~line 2145) must move INSIDE a loop whose body is the existing `for (const batch of batches)` work (~line 2206). One look per iteration; the loop exits when a look releases nothing. The planner prompt itself needs no eligibility change — it already computes 'all depends_on met' correctly against whatever is done at the moment it is asked."
+    - "Each look must be asked against what has finished BY THAT MOMENT. The dispatch for look N must carry the set of tickets recorded successfully complete after look N-1, and must instruct a fresh read of the epic folder's ticket frontmatter. A look that re-sends the look-1 prompt unchanged is a repeat, not a re-decision, and satisfies nothing here."
+    - "The flat case must not be made slower. A set in which every piece is eligible at the start must complete in ONE wave plus the one terminating look that releases nothing — never one look per piece. This is the cost control on the widening, and it is a criterion, not a nicety."
+    - "MUST NOT be discharged by a batch count. The pre-fix run produced 8 batches over 17 of 37 tickets purely from files_touched partitioning; a count of batches, waves, or planner dispatches is compatible with the defect and may not be used as the proof of ordering. Assert WHICH tickets were driven and in WHAT order."
+    - "TEST HARNESS PRECONDITION (blocking, and not visible from the criteria). unit_tests/_workflow_engine_harness.py's run_workflow_under_e2 currently maps each label to ONE static response object, so the 'epic-planner' label cannot express a second, different wave and the shared 'ticket-planner' label cannot differentiate per-ticket replies. Extend the harness so a label response may be an ordered SEQUENCE served one per call (with a declared exhaustion value), additively and backward-compatibly: an existing single-object response must keep behaving exactly as it does today. Without this extension no behavioural test in the BO-100e family can be written, and the family would fall back to the grep-only proof CLAUDE.md forbids."
+    - "Preserve every existing exit that already works: the empty-plan return (~line 2166), the halted-ticket return (~line 2292), the unconfirmed-ticket backstop (~line 2337) and the final return (~line 2414) each re-read the epic set and each must keep doing so. Adding a loop around them must not reduce the number of sites that call epicRecheckReport."
+    - "Preserve the E2 top-level-body form (ADR-030) and the flat depth-1 dispatch topology (ADR-006): the widening adds a loop, not a supervisor."
+    - "Deployed/template parity (ADR-001): after the change, the deployed .leafcutter/workflows/build-feature.js produced by build.py must carry the widened loop. A template-only fix is BP-811-shaped phantom-done."
+delivers_to:
+  agent: python-coder
+  contract: "The repeated-eligibility-look loop in templates/workflows-js/build-feature.js, plus the per-look record defined by BO-100e's config_schema_fragment ({ looks, look_records[{look_number, released, released_count}], run_set, ended_because, unbuilt }) carried on every return the epic path can take. Also delivers the sequenced-label-response extension to unit_tests/_workflow_engine_harness.py that BO-100e-1-i, BO-100e-2, BO-100e-2-i, BO-100e-3 and BO-100e-4 all test through."
+expects_from:
+  ac_id: BO-100e
+  contract: "The eligibility-look record shape and the family-wide scope fence (BO-300d owns what the run says about leftovers; BO-300a-5 owns mid-run additions)."
+test_spec:
+  - name: test_four_deep_chain_is_carried_to_the_end_by_one_start
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "run_workflow_under_e2(build-feature.js) over a four-piece chain A<-B<-C<-D, with sequenced epic-planner replies keyed to what is complete at each look: all four ticket paths appear in the terminal payload's completed set from a single invocation."
+  - name: test_each_layer_is_not_begun_before_its_prerequisite_finished
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In the captured agent() call sequence, the first phase dispatch for B follows the last for A, C follows B and D follows C. Asserted on dispatch ORDER for named tickets, never on the number of batches or waves."
+  - name: test_eligibility_is_decided_again_against_what_has_finished_by_then
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The second and later epic-planner dispatches carry the set of tickets completed since the previous look and instruct a fresh read of the epic folder — i.e. each look is a re-decision, not a resend of the look-1 prompt."
+  - name: test_later_wave_planner_reply_is_consumed_in_control_flow_not_merely_produced
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The real planner reply for look 2 is piped into the real batch loop: the tickets named ONLY in that second reply receive phase dispatches. A run that dispatches the second planner call but drives none of its tickets must fail this test."
+  - name: test_widened_loop_runs_through_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "templates/workflows-js/build-feature.js (E2 top-level body, via run_workflow_under_e2)"
+    description: "The chain is carried by executing the workflow script's own top-level body under the E2 harness — not by importing or calling any helper directly — and the terminal payload returned by that body reports the full chain."
+  - name: test_flat_four_piece_set_still_completes_in_one_wave
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Control: over four pieces with no prerequisites, all four are driven and the run takes exactly one work-releasing look plus one terminating look — the widening did not force a flat set through layers it does not have."
+  - name: test_deployed_build_feature_js_carries_the_widened_loop
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "build.py deploys into a temp target; the DEPLOYED build-feature.js is then driven over the same four-deep chain built from real on-disk NN_*.md ticket frontmatter, and carries the chain to the end. Covers the deployed and real-artifact triggers in one subprocess test."
+test_rationale: |
+  A direct-import unit test of an extracted "compute the next wave" helper would
+  pass on the defect: the defect is not that eligibility is computed wrongly, it is
+  that a correctly computed answer is asked for once and never asked for again.
+  Only executing the workflow's own top-level body and observing which tickets get
+  phase dispatches, in what order, can tell the two apart.
+
+  The four-deep chain is the load-bearing fixture. A fan-out, or any set where every
+  piece is eligible at the start, goes green on today's unchanged code — that is a
+  vacuous red baseline, and it is the specific substitution this record's notes and
+  BO-100e's decomposition warning both forbid.
+
+  Batch counts are excluded from every descriptor on purpose. The observed failing
+  run produced eight batches, seven of them single-ticket, and they were a
+  files_touched parallelism split rather than a dependency sequence — a test that
+  counts them cannot distinguish the fix from the bug.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-31
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by:
   - BO-100e-1-i
@@ -73,3 +188,5 @@ notes: |
 
   Ordering is on SUCCESSFUL completion, not on the earlier piece's attempt ending;
   that distinction is BO-100e-1-i and is deliberately not restated here.
+change_target: pipeline
+risk_surface: contract_boundary

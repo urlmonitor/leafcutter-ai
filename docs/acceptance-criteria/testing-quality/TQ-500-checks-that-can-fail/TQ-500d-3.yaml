@@ -1,0 +1,203 @@
+id: TQ-500d-3
+components:
+  - testing_quality
+  - build_orchestration
+title: "Ordinary before-and-after evidence answers the question outright, and asks nothing more"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work whose tests objected before the work was done and accepted
+      after, and whose hand-off record states so,
+  When that record is read,
+  Then the piece of work is placed in the answer-taken state, and no substitute
+    evidence is asked of it,
+    And no shortfall is reported for it,
+    And a run made up entirely of such pieces of work produces no falsifiability
+      finding at all,
+    And this holds however the piece of work's requirement is worded, so ordinary work
+      acquires no new obligation from the wording of what it asks for.
+depends_on:
+  - TQ-500d
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-010 names the red baseline as the pipeline's existing falsifiability check
+      and asks for a substitute only where it is structurally unavailable. The
+      substitute replaces the ordinary evidence; it is never additional to it.
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500b-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Supplies the answer-taken state this AC asserts ordinary work reaches, by the
+      ordinary route.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE SUBSTITUTE REPLACES THE ORDINARY EVIDENCE; IT IS NEVER ADDITIONAL TO IT.
+    A work item whose record carries an ordinary before-and-after answer reaches
+    answer_taken and is asked for nothing further. The predictable overshoot is a
+    check that demands a substitute of all work, which turns a targeted question
+    into a tax on every work item in the repository — and a tax whose only
+    natural remedy is to switch the check off.
+  - >-
+    THE LAST CLAUSE IS THE ANTI-CLASSIFIER CONSTRAINT SEEN FROM THE OTHER SIDE.
+    TQ-500a-1-i forbids inferring that a work item OWES a substitute; this
+    forbids that inference surviving as a demand made of work that already
+    answered. An implementation that reads an absence-shaped requirement and asks
+    for a substitute anyway, despite a recorded red baseline, fails here even if
+    it passes there. The requirement's wording must not be an input on this path
+    either.
+  - >-
+    THIS AC IS ALL-ABSENCE AND IS THE MOST DANGEROUS RECORD IN THE TREE. Every
+    Then clause asserts that nothing is reported, so it is satisfied in full by
+    an implementation that does nothing at all — including one where the whole
+    falsifiability reading was never wired up. It cannot be signed off on a green
+    result alone; its falsifiability answer MUST be of the substitute kind and
+    must name the injections in test_spec.
+  - >-
+    Consume TQ-500b-1's state entries; do not re-derive. Re-deriving here is how
+    a second, stricter classification quietly appears on the ordinary path.
+  - >-
+    Adds no new production behaviour beyond the state reading itself. It is a
+    boundary assertion over TQ-500b-1 and must not be closed by special-casing
+    fixtures.
+delivers_to: null
+expects_from:
+  ac_id: TQ-500b-1
+  contract: >-
+    The three states and the reading that assigns them. This AC asserts the ordinary
+    before-and-after answer reaches the answer-taken state without any substitute
+    being asked for.
+test_spec:
+  - name: test_tq500d_3_ordinary_before_and_after_evidence_reaches_answer_taken
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      A work item whose record states its tests objected before the work and
+      accepted after is placed in answer_taken, no substitute is asked of it, and
+      no shortfall is reported. NAMED MUTATION (this descriptor asserts an
+      absence): require an alteration field on every answer regardless of
+      declared kind. Under that injection the ordinary answer is reported and
+      THIS TEST MUST GO RED; revert and it returns to green.
+  - name: test_tq500d_3_a_run_made_entirely_of_ordinary_work_emits_no_falsifiability_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      THE FALSE-OBLIGATION CONTROL FOR THE WHOLE TREE, and it asserts a total
+      absence. Over a run of several work items all carrying ordinary
+      before-and-after answers, the falsifiability finding list is empty. NAMED
+      MUTATION: make the reading demand a substitute of every work item
+      unconditionally. Under that injection every item is reported and THIS TEST
+      MUST GO RED; revert and it returns to green. Note this descriptor is green
+      on an implementation that reports nothing at all, so the injection is the
+      only thing that gives it meaning.
+  - name: test_tq500d_3_wording_of_the_requirement_creates_no_obligation_for_answered_work
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      THE ANTI-CLASSIFIER CONSTRAINT FROM THE OTHER SIDE. Two work items with
+      identical ordinary before-and-after answers, one whose requirement is
+      absence-shaped (an absence-shaped Then clause, n_location_rule 0, the
+      phrase "negative control" in its notes) and one whose requirement is not:
+      both reach answer_taken and neither is reported. NAMED MUTATION: make the
+      reading demand a substitute when the requirement text is absence-shaped
+      even though an ordinary answer is present. Under that injection the first
+      item is reported and THIS TEST MUST GO RED; revert and it returns to green.
+      This is the alteration this AC's own falsifiability answer must name — it
+      is the inference TQ-500a-1-i forbids, surviving on the opposite path.
+  - name: test_tq500d_3_the_check_is_not_inert_over_the_same_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      THE ANTI-VACUITY CONTROL, and it is the reason this AC has four descriptors
+      rather than three. In the SAME run and the SAME reading that leaves all the
+      ordinary-answer items unreported, add one item whose record carries no
+      answer and require it to be reported as answer_owed_absent. Without this,
+      every other descriptor here is satisfied by a reading that is switched off,
+      and this AC — which exists to prevent over-reporting — would itself be the
+      test that cannot fail.
+  - name: test_tq500d_3_the_records_are_built_by_the_projects_own_writer
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py
+    description: >-
+      Build the ordinary-answer records with yaml.safe_dump per the signoff §2b
+      recipe and run them through the registered hook as a subprocess, asserting
+      the hook's exit status is zero. An in-process assertion that a helper
+      returned an empty list does not establish that the commit path is
+      unaffected.
+test_rationale: |
+  This AC is the tree's purest negative control and needs saying plainly: EVERY
+  ONE of its criteria clauses asserts that nothing is reported, so an
+  implementation in which the falsifiability reading was never wired up passes
+  all of them, permanently and greenly. Signed off on a green result alone it
+  would become the clearest instance in the corpus of the defect the tree exists
+  to remove.
+
+  Three named injections give the absence descriptors meaning — requiring an
+  alteration field on every answer, demanding a substitute of every work item
+  unconditionally, and demanding one whenever the requirement text is
+  absence-shaped despite a recorded ordinary answer. The third is the one to
+  record: it is the classifier TQ-500a-1-i forbids, surviving on the opposite
+  path, and it is the only injection that leaves the other two descriptors green
+  while turning this one red.
+
+  The fourth descriptor is the anti-vacuity control and is not optional: one
+  unanswered item in the same run, which must still be reported. Without it,
+  "nothing was reported" is indistinguishable from "nothing is running".
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept python-coder and change_target code. Flagged in it_requirements that
+      this is the tree's most dangerous record — all four criteria clauses assert
+      absences, so an unwired implementation passes them all. Added three named
+      injections plus an anti-vacuity descriptor (one unanswered item in the same
+      run, still reported) that the BA's criteria do not contain, since without
+      it "nothing reported" cannot be told from "nothing running". criteria
+      untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE FALSE-OBLIGATION CONTROL FOR THE WHOLE TREE. Every other AC here adds something a
+  writer must do. The predictable overshoot is a check that demands a substitute of all
+  work, which turns a targeted question into a tax on every piece of work in the
+  repository — and a tax whose only natural remedy is to switch the check off. The vast
+  majority of work has an ordinary red baseline and must be untouched by this.
+
+  THE LAST CLAUSE IS THE ANTI-CLASSIFIER CONSTRAINT SEEN FROM THE OTHER SIDE. TQ-500a-1-i
+  forbids inferring that a piece of work owes a substitute; this forbids the inference
+  surviving as a demand made of work that already answered. An implementation that reads
+  an absence-shaped requirement and asks for a substitute anyway, despite a captured red
+  baseline, fails here even if it passes there.
+
+  BOUNDARY. Placed under TQ-500d because it is the boundary the guidance must draw:
+  TQ-500d-2 presents the substitute as what to do when the ordinary evidence is
+  impossible, and this is the observable form of that sentence.

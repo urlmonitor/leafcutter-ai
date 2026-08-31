@@ -1,0 +1,146 @@
+id: TQ-500e-3
+components:
+  - testing_quality
+  - ac_store
+title: "Reference documentation defining the answer's recorded form and every state it can hold"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given someone who must write a falsifiability answer, read one, or check one,
+  When they consult the project's reference documentation,
+  Then it defines the answer's recorded form: where in the hand-off record it sits, the
+    two conforming shapes, the reasoned-negative shape with its reason and next step,
+    and the per-test-per-alteration outcomes,
+    And it names each state the answer can hold — no record, answer not owed, answer
+      owed and absent, reasoned negative, and answer taken — and states which of them
+      report the work as incomplete,
+    And it states that which shape applies is declared by the writer, and that it is
+      not derived from the wording of the requirement,
+    And it records the incident this form exists to catch, including the case where
+      three of four sibling tests objected to an injected fault and the fourth, carrying
+      the headline claim, did not,
+    And it states that finished work predating the record carries no answer and is not
+      a shortfall.
+depends_on:
+  - TQ-500e
+  - TQ-500e-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      The neighbouring reference surface, and the model for how a record format is
+      documented here: field by field, with the enum values named.
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Owns the hand-off record the reference describes. The reference must agree with
+      section 2b rather than restating it in different words.
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Entry KI-TQ-010, the incident the fourth clause requires the reference to record,
+      including the four-test evidence table.
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    ONE REFERENCE, UNDER docs/reference/, ANSWERING FIVE TRIGGERS. This page
+    stands in for the reference-doc trigger on all five L1s. Five copies of one
+    record format would drift, and the drift would land on the reader trying to
+    check an answer. Must satisfy check-doc-frontmatter and check-doc-length and
+    be registered in the doc index.
+  - >-
+    AGREE WITH §2b, DO NOT RESTATE IT IN DIFFERENT WORDS.
+    templates/skills/signoff/SKILL.md owns the completion_manifest; this
+    reference describes where the falsifiability answer sits within it and links
+    to §2b for the manifest's own rules. Two independent descriptions of one
+    format is the drift this AC exists to prevent, not an instance of it.
+  - >-
+    SPELL THE KEY AND EVERY ENUM VALUE VERBATIM. The manifest key and the state
+    names must be byte-identical to TQ-500a-1's token and TQ-500b-1's five state
+    names. Where the reference documents the not-applicable outcome shared with
+    BP-1100g-5's cross_layer_seam_answer, note that spelling is unguarded until
+    BP-1100g-5-i's validator exists — a reference that misspells it will be
+    copied.
+  - >-
+    THE FOURTH CLAUSE IS UNUSUAL FOR A REFERENCE AND MUST NOT BE TRIMMED. Record
+    the incident — three of four sibling tests objected to the injected fault and
+    the fourth, carrying the headline claim, did not — with the evidence table.
+    A record format documented without the failure that motivated it is followed
+    while the reason is convenient and dropped when it is not, and this incident
+    is the only thing in the corpus that makes the per-test requirement look
+    necessary rather than fussy.
+  - >-
+    STATE THE DECLARATION RULE AS A PROHIBITION. Which shape applies is declared
+    by the writer and is NOT derived from the requirement's wording. A reference
+    that omits the prohibition invites the next author to add the inference as a
+    convenience.
+  - >-
+    THE DELIVERABLE IS THE DOCUMENT AND ONLY THE DOCUMENT. No behavioural AC in
+    this tree may be closed by pointing at this reference, and a state being named
+    in it is not evidence that anything produces that state.
+delivers_to: null
+expects_from:
+  ac_id: TQ-500e-2
+  contract: >-
+    The retained record form and the state names. The reference documents them and must
+    be corrected if they change; it is not an independent definition of either.
+test_required: false
+test_rationale: |
+  change_target is docs; the deliverable is a reference page. There is no
+  executable behaviour to constrain.
+
+  Deliberately NOT given a presence test. A test asserting the reference names
+  the five states would be green from the moment the page is written, could never
+  fail for any reason connected to a run, and would then be citable as evidence
+  that the five states exist and are produced — which is exactly the
+  document-as-proxy substitution this AC's own notes forbid. The states'
+  existence is asserted over emitted records by TQ-500b-1 and TQ-500b-1-i;
+  agreement between page and behaviour is a review obligation against TQ-500b-1
+  and TQ-500e-2, which own the definitions.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept documentation-expert and change_target docs. Placed the page under
+      docs/reference/ as the single answer to the reference-doc trigger on all
+      five L1s, required byte-identical spelling of the manifest key and the five
+      state names, and flagged that the not-applicable spelling shared with
+      BP-1100g-5 is unguarded until BP-1100g-5-i's validator lands — a reference
+      that misspells it will be copied. test_required false with an explicit
+      rationale for why a presence test would itself be the document-as-proxy
+      substitution the AC's notes forbid. criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Authored to satisfy TQ-500e's reference-doc documentation trigger, and standing in for
+  the same trigger on TQ-500a, TQ-500b, TQ-500c and TQ-500d. All five ask for a
+  reference to one record format and one set of states; five copies would drift, and the
+  drift would land on the reader trying to check an answer. Recorded here rather than by
+  amending the L1s, whose text is the product owner's.
+
+  THIS AC'S DELIVERABLE IS THE DOCUMENT, AND ONLY THE DOCUMENT. It is deliberately not a
+  proxy for any behavioural check in this tree. No behavioural AC here may be closed by
+  pointing at this reference, and a state being named in it is not evidence that anything
+  produces that state.
+
+  THE FOURTH CLAUSE IS UNUSUAL FOR A REFERENCE AND IS DELIBERATE. A record format
+  documented without the failure that motivated it is followed while the reason is
+  convenient and dropped when it is not. The incident is short, concrete, and the only
+  thing in the corpus that makes the per-test requirement look necessary rather than
+  fussy.

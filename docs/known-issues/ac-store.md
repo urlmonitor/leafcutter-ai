@@ -1182,3 +1182,86 @@ draft number `KI-ACS-014` and should be read as pointing here.
 the same proof set, corrupted from the writing side). `KI-KM-009` (the supersessions that
 surfaced this). The "AC-store commits — stage the parent alongside the child" rule in
 `CLAUDE.md`, which explains why the `INF-400c-2` instance passes.
+
+---
+
+### KI-ACS-017 — `approve_acs.py` corrupts any record whose `amended_by` holds a multi-line entry, and returns success for the files it broke
+
+- **Severity:** blocker
+- **Status:** open
+- **Occurrences:** 1 (5 files corrupted in a single run)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/ac_store/approve_acs.py` — `_promote_leaf()` and `_build_amended_by_block()`
+
+**Symptom.** `_promote_leaf` appends the approval entry by rebuilding the `amended_by`
+block as **text** rather than by round-tripping the parsed document. On a record whose
+existing `amended_by` contains a multi-line entry, it emits YAML that no longer parses:
+
+```
+yaml.parser.ParserError: while parsing a block mapping
+  in "<unicode string>", line 126, column 3:
+    - action: approved
+      ^
+expected <block end>, but found '<scalar>'
+```
+
+**The dangerous part is not the corruption, it is the return code.** The run reported
+`rc=0` for all 31 records **including the five it had just made unparseable**. Nothing in
+the tool's own output distinguished a successful promotion from a destroyed file. It
+surfaced only because the calling script re-read every file from disk afterwards and
+asserted it still parsed — a check nobody is obliged to perform, and which the tool's
+success-shaped output actively discourages.
+
+**Evidence.** 2026-08-31, promoting the 31 records under `GE-123`. Five files were left
+unparseable: `GE-123a-4`, `GE-123b-5`, `GE-123c-4`, `GE-123c-5`, `GE-123d-4-ii` — exactly
+the five carrying the multi-line gating-correction entries added in #554 and #594. All five
+were already committed, so nothing was lost; they were restored with `git checkout` and
+their `readiness` set by hand. Had the promotion been run on uncommitted records, or
+committed without the re-read, five acceptance criteria would have entered the store
+unparseable — and `validate_ac_schema` would then have failed for every subsequent commit
+touching that tree, with a cause several steps removed from the change that produced it.
+
+**Detection.** After any `approve_acs.py` run, re-parse every file it touched. Do not trust
+the exit code or the per-record `promoted …` lines; both are emitted before the write is
+validated. `find <dir> -name '*.yaml' -exec python scripts/ac_store/validate_ac_schema.py {} +`
+is sufficient and takes seconds.
+
+**Workaround.** For a record with a multi-line `amended_by`, set `readiness` by hand — it is
+a one-line edit — rather than letting the tool rewrite the block.
+
+**Fix direction.** Stop rebuilding the block textually. Either round-trip through a YAML
+library that preserves the document, or append the entry without re-emitting the entries
+already there. Whatever the approach, `_promote_leaf` must re-read and parse the file it
+just wrote before returning 0: a writer that cannot tell whether its own output is valid
+has no business reporting success.
+
+**Related.** `KI-ACS-018` (the sibling generator, same "output never validated against the
+gates that will judge it" shape).
+
+---
+
+### KI-ACS-018 — withdrawn as a duplicate; see `ac-driven-dev.md`
+
+Filed 2026-08-31 as "four defects in `goal_to_epic.py`'s generated output" and withdrawn the
+same day. **All four were already filed**, in `ac-driven-dev.md`, which is the correct register
+for the AC-driven generator:
+
+| Defect observed | Already filed as |
+|---|---|
+| `depends_on` written without the numeric filename prefix, so every edge dangles | `KI-ACD-018` |
+| `Master_Plan.md` missing the fields `ticket_frontmatter_guard` requires | `KI-ACD-012` |
+| Absolute `/home/…` paths stamped into `implemented_by` | `KI-ACD-014` |
+| Epic name truncated mid-phrase onto a dangling article | `KI-ACD-011` |
+
+The `EPIC-SuppressionNarrowsNeverDisables` run is recorded as a fresh occurrence on each of
+those four, which is what this register's own rule asks for — *"Hitting an existing issue.
+Increment `Occurrences` and update `Last seen`. Do not add a duplicate entry."*
+
+**Kept as a stub rather than deleted**, because the id was published in a merged commit and a
+dangling reference is worse than a redirect. Do not reuse the number.
+
+**Worth recording, since it is the second time this has happened here.** The duplicate was
+filed after checking that the *id* was free but not that the *defect* was. Those are different
+checks, and only the first is mechanical. Before filing against a component you do not own,
+grep the register for the symptom — `grep -rn "goal_to_epic" docs/known-issues/` would have
+returned all four in one line of output.

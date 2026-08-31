@@ -1018,9 +1018,10 @@ permission. Not implemented — this entry records the defect and the proposed d
 ### KI-BO-019 — The context bundle is passed through an agent's JSON return value, so a large bundle arrives as a file path and the fail-closed gate halts a run whose bundle was fine
 
 - **Severity:** blocker — the fast lane cannot complete an end-to-end run on a real target
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Status:** open. The mitigation that shipped is the third fix option below, and the
+  second occurrence **disproves** it — see "Second occurrence" at the end of this entry.
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-31
 - **Where:** `templates/workflows-js/fast-lane-ship.js` — the `fastlane-context-bundle`
   dispatch and the `contextBundleUsable` gate that reads it (the `CACHE_BREAKPOINT_MARKER`
   constant and the `contextBundle.includes(...)` check)
@@ -1073,6 +1074,57 @@ its verdict because `obtained` and *usable* are being conflated in the operator-
 - *Keep the verbatim contract and enforce it*, by making the agent's schema reject a value
   that looks like a path and by stating the size expectation in the prompt. Cheapest, and the
   least robust — it fights the model rather than the design.
+
+**Second occurrence, 2026-08-31 — and it disproves the option that shipped.**
+
+The third option above is what landed: `fast-lane-ship.js`'s bundle prompt now states
+`SIZE EXPECTATION: the assembled bundle is roughly twenty kilobytes (~20 KB)` and refuses a
+reply that "names where the text can be found instead of containing the text". Run
+`wf_22fae0b9-291`, target `BP-900g-9-i`, failed anyway — in a **new and worse way**.
+
+The agent did not return a path this time. It returned the content **in-band, and altered**:
+
+```
+&amp;lt;!-- CACHE_BREAKPOINT --&amp;gt;        <-- what arrived
+<!-- CACHE_BREAKPOINT -->              <-- what assemble-bundle emits
+```
+
+The whole payload had been HTML-escaped in transit — every `-->` in the architecture doc's
+mermaid arrived as `--&gt;` — and the marker, which contains `<`, was escaped twice. The
+source doc on disk contains **zero** HTML entities, confirmed by grep, so the escaping is
+introduced by the transport and not present in the input.
+
+Three things follow, and each is worse than the first occurrence.
+
+**The reference-rejection guard cannot see this.** It was added precisely for occurrence 1
+and it is working correctly — the reply *is* content, not a pointer. Mangled content passes
+every check that distinguishes content from a reference, because it is content.
+
+**The size hypothesis is wrong.** Occurrence 1 was 149 KB and this entry concluded "the
+contract is unsound at this size and will fail again on any comparably sized target". The
+agent reported `"bytes": 18190` for occurrence 2 — **18 KB, under the ~20 KB the prompt
+itself names as the expectation**. It failed at the size the design targets. The contract is
+not unsound at 149 KB; it is unsound at any size, because byte-exact reproduction of markup
+is not something a model does reliably however short the text.
+
+**Only the marker check caught it.** Nothing else in the lane compares what arrived against
+what was assembled. Had the bundle contained no marker-shaped token, silently corrupted
+context would have been handed to the test-writer and coder dispatches as though intact, and
+the run would have completed green on a mangled prompt. The gate that saved this run exists
+for cache correctness, not integrity — it caught an integrity failure by luck of shape.
+
+**What this does to the fix calculus.** Option three is no longer "least robust"; it has been
+tried and has failed at its design size, in a way its own new guard cannot detect. Option one
+(let the Python side emit a small verdict and gate on that, keeping the payload off the agent
+boundary) is the only remaining shape that does not require an fs primitive the engine lacks.
+Whatever is chosen, the lane needs an integrity check comparing what arrived against what was
+assembled — a byte count or digest returned by `assemble-bundle` and re-derived on the
+received text — because "it looks like content" is demonstrably not the same as "it is the
+content", and that distinction is currently unmade.
+
+**Operational consequence right now: the fast lane cannot complete a run on any target.**
+Both occurrences halted at the same phase, five to six agents in, after creating a worktree
+and claiming the build set. The worktree is left behind.
 
 Whichever is chosen, the operator-facing message must stop saying "was not obtained" when
 `obtained` was true. Distinguish *not obtained* from *obtained but unusable, because X* —
@@ -1342,7 +1394,8 @@ references, and a missed one silently points a reader at someone else's defect.
 ### KI-BO-025 — `/build-feature` plans only the first ready wave, so an epic with any dependency depth cannot be driven to completion in one run
 
 - **Severity:** high
-- **Status:** open
+- **Status:** open · ACs **BO-100e** (carry the layers) and **BO-300d** (say what was left),
+  both authored 2026-08-26, both `readiness: draft` awaiting the approval gate
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/build-feature.js` — the `epic-planner` `agent()` call
@@ -1385,12 +1438,32 @@ harness — unbuilt after a run that did substantial correct work on the other 1
 **Not a false-complete, at least.** The completion guard does catch the shortfall and withholds
 the "complete" verdict — but it misdescribes the cause; see KI-BO-026.
 
+**Why it misdescribes it, found 2026-08-31 while enriching the ACs.** The run has no record of
+the epic's contents at plan time that is separate from the plan. `plannedTicketPaths`
+(deployed `~:2156`) is built by iterating `batches` — the comment above it calls this "the set
+of work the plan was built from … the baseline the completion-time re-read is compared against,
+by identity (BO-300a-5)", but under this defect the baseline is 17, not 37. The 20 dropped
+tickets are therefore absent from the baseline, and at completion time `compareEpicTicketSets`
+can only see them as *additions*. **KI-BO-025 and KI-BO-026 are one defect observed from two
+ends**, and separating the run's *set* from the run's *schedule* is a precondition for fixing
+either — not an optimisation. It also changes what BO-300a-5 (`done`) reports, so it cannot be
+done quietly.
+
 **Fix direction.** Either loop the planner until it returns an empty batch set (re-reading
 frontmatter each round, which the code comment at `~:2400` already anticipates as the resume
 mechanism), or have it emit the full topological schedule as ordered waves rather than one
 antichain. If the single-wave behaviour is deliberate, the run must state it: report the count
 of unscheduled-but-ready-later tickets and instruct the caller to re-invoke, rather than
 leaving the arithmetic to whoever compares the plan against the folder.
+
+**A test-harness precondition blocks all of it, found 2026-08-31.**
+`unit_tests/_workflow_engine_harness.py::run_workflow_under_e2` takes
+`label_responses: dict[str, Any]` — **one** response object per label, serialised to a flat
+JSON literal and returned on every call to that label. The `epic-planner` label therefore
+cannot express wave 1 followed by a *different* wave 2, and `ticket-planner` is shared across
+every ticket so it cannot differentiate per-ticket replies either. Until the harness supports
+sequenced per-label responses, **not one behavioural test for this fix can be written**, and
+the work collapses to exactly the grep-only proof CLAUDE.md forbids. Extend the harness first.
 
 **Pattern:** a stage that does part of the job correctly and reports no signal that the rest
 exists.
@@ -1400,7 +1473,10 @@ exists.
 ### KI-BO-026 — Work the planner never selected is reported as work "added to the epic after the plan was fixed"
 
 - **Severity:** medium
-- **Status:** open
+- **Status:** open · AC **BO-300d** (authored 2026-08-26, `readiness: draft`), whose criteria
+  were amended on the same day precisely because the first draft demanded an attribution the
+  run cannot make. See the 2026-08-31 note on KI-BO-025 for why: the baseline this compares
+  against is the plan, not the epic.
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/build-feature.js` — `compareEpicTicketSets()`

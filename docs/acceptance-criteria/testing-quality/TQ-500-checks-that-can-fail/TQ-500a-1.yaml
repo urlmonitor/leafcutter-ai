@@ -1,0 +1,177 @@
+id: TQ-500a-1
+components:
+  - testing_quality
+  - build_orchestration
+title: "Exactly one falsifiability answer per piece of work, and the writer says which kind it is"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test-writing side hands on two pieces of work in one run —
+      piece P, whose tests objected before the work was done and accepted after,
+      and piece Q, whose tests were correct and passing from the moment they were
+        written, so no before-and-after objection was ever available,
+  When each piece of work is handed on,
+  Then its hand-off record carries exactly one answer to the falsifiability
+    question for that piece of work, in one of two shapes — the ordinary
+    before-and-after evidence, naming the tests that objected before the work; or
+    the substitute evidence, naming the deliberate alteration made to the guarded
+    behaviour and what each test did under it,
+    And which of the two shapes applies is taken from the writer's own statement
+      in that record and from nothing else: no part of the run derives it from the
+      wording of the requirement, from the shape of the outcome the requirement
+      asks for, or from any phrase appearing in the requirement's notes,
+    And the answer sits in the same hand-off record that already carries the
+      writer's other machine-checkable statements, not in prose a reader has to
+      interpret,
+    And piece P and piece Q each carry their own answer, so a run leaves one
+      answer per piece of work and never one answer standing for the run.
+depends_on:
+  - TQ-500a
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Entry KI-TQ-010, Fix direction item 1 — make the obligation explicit at the
+      contract layer — and the explicit ruling out of automatic detection that the
+      second Then clause enforces.
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The writing surface. It already mandates a red_baseline block and a
+      completion manifest but has no place to put a substitute answer, and its
+      green-on-arrival row currently reads "PROBLEM ... Do NOT sign off with
+      all-green", which is the inversion TQ-500d removes.
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Section 2b owns the completion manifest — the record the answer must ride,
+      one entry per item, so that the reader specified in TQ-500b-1 has a single
+      surface to read.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The precedent for this record shape: one answer per piece of work under a
+      single fixed key token in the existing completion manifest, with a reasoned
+      negative as a first-class outcome. Reuse its convention rather than
+      introducing a second manifest.
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE TOKEN IS FIXED AND MUST BE SPELLED VERBATIM IN BOTH WRITING SURFACES.
+    Use `falsifiability_answer` as the completion_manifest key, written
+    identically in templates/agents/test-writer.md and in a new section of
+    templates/skills/signoff/SKILL.md alongside §2b.2. Verified during
+    enrichment: `falsifiability_answer` has zero occurrences anywhere on
+    origin/main, so nothing validates its spelling until TQ-500b-1's reader
+    exists — a divergence between the two templates would be silent.
+  - >-
+    THIS IS A SECOND KEY ON AN EXISTING READING, NOT A SECOND RECORD. BP-1100g-5
+    (PR #626) defines the first key on this surface, `cross_layer_seam_answer`,
+    in the same completion_manifest block. Add `falsifiability_answer` beside
+    it. Do not introduce a second manifest, a sidecar file, or a prose block.
+  - >-
+    MIRROR THE BP-1100g-5 SHAPE DELIBERATELY AND SAY SO. The two conforming
+    shapes are nested objects on the §2b.2 model —
+    {result: red_baseline, objecting_tests: [...]} and
+    {result: substitute, alteration, per_test_outcomes: [...]}. What keeps this
+    key clear of the §2b Bare-False Rule's auto-retry is the nested-object
+    STRUCTURE, not the enum string. Spell the outcome as a named result value,
+    never as a bare boolean.
+  - >-
+    THE `not_applicable` SPELLING IS LOAD-BEARING AND UNGUARDED. If this key
+    reuses the not-applicable outcome that BP-1100g-5 introduced, note that
+    `not_applicable` is a brand-new enum value in the completion_manifest
+    context with no other occurrence under templates/ or scripts/ (the only
+    matches on main are an unrelated boolean in
+    config/verification_flow.schema.json). BP-1100g-5-i is the only thing that
+    will ever validate its spelling. A typo here is undetectable until that
+    reader lands, so keep the spelling byte-identical to §2b.2's.
+  - >-
+    ONE ENTRY PER WORK ITEM, NEVER PER RUN. The template must instruct the
+    writer to derive each work item's answer from that work item's own work, and
+    must forbid copying a sibling's answer forward within one run — the same
+    instruction PR #626 added for the seam key, for the same reason
+    (BO-1000b-1-i shipped a double-recording defect on exactly this shape).
+  - >-
+    THE SECOND THEN CLAUSE MUST APPEAR AS AN EXPLICIT PROHIBITION IN THE
+    TEMPLATE TEXT, not merely as an omission. State that the writer declares the
+    kind and that nothing downstream may derive it from the requirement's
+    wording, its expected-outcome shape, or its notes. An omission reads as an
+    oversight to the next author and gets "helpfully" filled in.
+  - >-
+    Must not state or imply that an immediate pass is itself an answer — that
+    exit is closed by TQ-500d-1 and reopening it here would contradict a sibling
+    in the same tree.
+  - >-
+    Must not add any obligation to work that captured an ordinary red baseline
+    beyond stating the answer it already has. TQ-500d-3 is the observable form
+    of this constraint; a template that asks all work for a substitute fails
+    there.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500b-1
+    contract: >-
+      One falsifiability answer per piece of work, riding the existing hand-off
+      record under a single fixed token, in one of two conforming shapes: ordinary
+      before-and-after evidence naming the objecting tests, or substitute evidence
+      naming the alteration and the per-test outcomes under it. Absent and
+      duplicated are the non-conforming states TQ-500b-1 reads for. The reader must
+      not need to inspect any requirement text to tell the two shapes apart.
+expects_from: null
+test_required: false
+test_rationale: |
+  Genuinely test-free at this AC's boundary, on the BP-1100g-5 precedent. Every
+  Then clause here describes what a WRITER must state in a template; the
+  deliverable is template prose in templates/agents/test-writer.md and
+  templates/skills/signoff/SKILL.md. A test asserting that an instruction is
+  present in a template is exactly the source-presence proof the anti-grep
+  constraint forbids — it passes on an implementation that never records
+  anything. The falsifiable half of this AC is TQ-500a-1-i, which asserts over
+  the records a run actually emitted, and it carries the test contract.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept llm-expert and change_target prompt — the deliverable is template
+      text, matching the BP-1100g-5 precedent (PR #626, prompt-only). Pinned the
+      token `falsifiability_answer` (verified unused on origin/main), pinned it
+      as a SECOND KEY on the completion_manifest reading BP-1100g-5 opened
+      rather than a second record, and flagged that `not_applicable`'s spelling
+      is unguarded until BP-1100g-5-i lands. test_required false with rationale;
+      the falsifiable half is TQ-500a-1-i. criteria untouched.
+superseded_by: null
+covered_by:
+  - TQ-500a-1-i
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  THE SECOND THEN CLAUSE IS THE HARD NON-GOAL, WRITTEN AS A REQUIREMENT. KI-TQ-010
+  states plainly that the affected family of work cannot be spotted from the text
+  of a requirement — an absence-shaped expected outcome, a zero-location rule, and
+  the phrase "negative control" are each suggestive and none is dependable. So the
+  clause does not merely omit classification: it forbids the requirement text from
+  being an input at all. TQ-500a-1-i is its falsifiable half, and it is written so
+  that an implementation which quietly classifies fails it.
+
+  ONE ANSWER PER PIECE OF WORK, NEVER PER RUN — carried forward from BP-1100g-5,
+  whose predecessor BO-1000b-1-i shipped a double-recording defect for exactly this
+  reason. A run-level answer lets one piece of work inherit another's.
+
+  DELIBERATELY NOT SPECIFIED HERE: what a good alteration is. That is the writer's
+  judgement, guided by TQ-500d-2. This AC specifies only that the answer exists,
+  is singular, is declared, and rides the record that is already read.

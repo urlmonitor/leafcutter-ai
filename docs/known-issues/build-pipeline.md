@@ -2616,6 +2616,134 @@ condition whose only symptom is silence.
 
 ---
 
+### KI-BP-20260831-0620 — The mypy CI job's `scripts/**/*.py` pathspec matches no file directly in `scripts/`, so 59 of 107 tracked scripts have never been type-checked and the job reports SUCCESS for checking nothing
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 2 confirmed from CI logs (PRs #611 and #624); the pathspec has been wrong
+  for the life of the job, so the true count is every PR that changed only a top-level script
+- **First seen:** 2026-08-31 (found); defect predates it
+- **Where:** `.github/workflows/ci.yml:347` — the `CHANGED=$(git diff … )` line of the
+  `Type-check changed files (mypy, informational)` job. The only occurrence of this pattern
+  in `.github/workflows/`; every other workflow file is clean.
+
+**Symptom.** The job reports SUCCESS in two indistinguishable situations: when mypy ran and
+found nothing, and when mypy never ran at all.
+
+**Cause.** The pathspec is:
+
+```
+git diff --name-only --diff-filter=ACM "origin/$BASE"...HEAD \
+  -- 'scripts/**/*.py' 'tests/**/*.py' 'unit_tests/**/*.py'
+```
+
+`scripts/**/*.py` requires a `/` between the `**` and the `*.py`, so it only matches a file
+at least one directory *below* `scripts/`. A file sitting directly in `scripts/` never
+matches. Demonstrated against a real merge that changed three top-level scripts:
+
+```console
+$ git diff --name-only --diff-filter=ACM origin/main~1...origin/main -- 'scripts/**/*.py'
+$ git diff --name-only --diff-filter=ACM origin/main~1...origin/main -- 'scripts/*.py'
+scripts/build.py
+scripts/build_helpers.py
+scripts/build_phases.py
+```
+
+The first command prints nothing. **59** tracked `.py` files sit directly in `scripts/` and
+are invisible to this gate; 48 live in subdirectories and are seen. The invisible majority
+includes `build.py`, `injection_builders.py`, `roadmap_query.py`, `knowledge_query.py` and
+the rest of the top-level tooling.
+
+`unit_tests/**/*.py` is unaffected in practice only because tests live in subdirectories
+(`unit_tests/workflows/…`). The same trap is waiting for any test file placed directly in
+`unit_tests/`.
+
+**Two confirmed instances, both from CI logs rather than inference.**
+
+- **PR #611** changed `scripts/injection_builders.py` along with four test files. The job
+  logged `Type-checking changed files:` followed by exactly the four `unit_tests/workflows/`
+  paths. `scripts/injection_builders.py` is absent from the list. The job passed.
+- **PR #624** changed `scripts/injection_builders.py` and a changelog — nothing else. The job
+  logged `No changed Python files under scripts/, tests/, or unit_tests/ — skipping mypy.`
+  and exited 0. **That PR existed specifically to fix three mypy errors in that file**, and
+  the check that was supposed to confirm the fix never looked at it.
+
+The second is the sharper one: a green mypy check on a PR whose entire purpose was to make
+mypy green, achieved by not running mypy.
+
+**How the errors ever surfaced at all.** Not through the gate's own pathspec. `BO-2400c-1-vii`
+added a test under `unit_tests/workflows/` that imports `scripts.injection_builders`; mypy
+followed the import and reported the errors as coming from that module. So the only reason
+this file was ever type-checked is that something *in a matched directory* happened to import
+it. Coverage is therefore accidental and depends on import graphs, not on what a PR changed.
+
+**Fix.** Replace `'scripts/**/*.py'` with a pair that covers both depths — `'scripts/*.py'`
+and `'scripts/**/*.py'` — or use git's explicit glob magic, or simply `'scripts/'` with a
+`*.py` filter applied afterwards. Do the same for `tests/` and `unit_tests/`. Expect a burst
+of pre-existing findings on the first run that actually sees the top-level files; the job is
+`continue-on-error: true`, so that is noise rather than a merge blocker, but it should be
+triaged rather than left to accumulate.
+
+**And make the skip distinguishable from a pass.** Even fixed, the current shape emits
+SUCCESS when `CHANGED` is empty. That is legitimate for a PR touching no Python, but it is the
+same signal as a clean run, which is what let this hide. The skip branch should say what it
+skipped and why, in a form a reader scanning the checks list can tell apart from a real pass.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — a gate whose *selection* step
+silently resolves to the empty set, so it passes by checking nothing. Same family as
+`KI-ACS-001`, where `validate_ac_schema.py` given a bare directory matched no files, printed
+`No YAML files to validate.` and exited 0 for eight days while being cited as the defence
+against store rot. The lesson repeats: **when a gate's scope is computed, the computation is
+part of the gate, and an empty scope must never be reported the same way as a satisfied one.**
+
+**Related.** `KI-ACS-001` (empty-scope run reported as clean). `KI-BO-20260826-1900` (the
+done-proof gate's nodeid lookup that cannot match a parametrized test — the fail-*closed*
+counterpart; this one fails open). `BP-1100b-5` (presence-only assertions ceasing to count as
+coverage — the same underlying question of whether a check actually examined anything).
+
+**ADDENDUM, 2026-08-31 (same day, same job): a SECOND defect, and it is the one that hid the
+first.** Observed on PR #634. The job failed — not on a type error, but on the step before it:
+
+```text
++ f0d22094...9ad2aec2 main       -> origin/main  (forced update)
+fatal: origin/main...HEAD: no merge base
+##[error]Process completed with exit code 128.
+```
+
+The step runs `git fetch --no-tags --depth=1 origin "$BASE"` and then computes
+`git diff "origin/$BASE"...HEAD` — a **three-dot** diff, which needs the merge base. A
+`--depth=1` fetch does not reliably make the merge base reachable, and when the base branch
+has moved since checkout (here: another PR merged minutes earlier, hence the *forced update*)
+the diff aborts with exit 128 before mypy is ever invoked.
+
+So the job has two independent ways of telling you nothing:
+
+| | pathspec (above) | shallow fetch (this) |
+|---|---|---|
+| Failure direction | fails **open** — SUCCESS having checked nothing | fails **loud** — exit 128 |
+| Trigger | any PR touching only a top-level `scripts/` file | base branch moves between checkout and fetch |
+| What the reader sees | a green check | a red check that is not about types |
+
+The second is why the first survived. A check that goes red for reasons unrelated to its
+subject trains everyone to discount it — and once discounted, a *green* from that same check
+is not read carefully either. The pathspec bug needed exactly that inattention to last as long
+as it did. Fixing the pathspec without fixing this leaves the signal untrustworthy in the
+other direction.
+
+**Fix.** Either drop `--depth=1` (the checkout already uses `fetch-depth: 0`, so the shallow
+fetch buys nothing and costs the merge base), or switch the diff to two-dot
+`origin/$BASE..HEAD`, which needs no merge base. Prefer dropping `--depth=1`: two-dot changes
+which commits are considered, and the intent here really is "what this PR adds relative to the
+fork point".
+
+**A note on the ordering, since it recurs.** This addendum exists because merging the PR that
+*filed* this KI moved `main` and broke the very next PR's run of the same job. Not a
+coincidence worth writing down for its own sake — but it does mean the failure is most likely
+in exactly the situation where PRs are being merged in sequence, which is when CI signal
+matters most.
+
+---
+
 ### KI-BP-20260831-0940 — `derive_declares_side_effect` is negation-blind, so a refusal criterion is forced to declare the side effect whose absence is its entire content
 
 - **Severity:** medium — it does not fail open, it forces a FALSE value into the store
@@ -2662,10 +2790,10 @@ unavailable:
 - `false` contradicts the derivation, and `BO-2900g-2` states the value must be derived rather
   than authored — so hand-setting it is exactly what the rule forbids.
 
-`KI-ACD-…`'s note on `BP-1100g-4` records the same collision from the other side and asserts
-that for a commit-time refusal "the derivation correctly returns `False`". On the evidence
-above that claim does not generalise: whether a refusal derives correctly depends only on
-whether its wording happens to avoid the phrase list.
+The `ac-driven-dev` register's note on `BP-1100g-4` records the same collision from the other
+side and asserts that for a commit-time refusal "the derivation correctly returns `False`". On
+the evidence above that claim does not generalise: whether a refusal derives correctly depends
+only on whether its wording happens to avoid the phrase list.
 
 **Population.** Every refusal, guard, gate and no-op criterion in the store is a candidate, and
 this component is full of them — the whole `BO-3500a` family, `BO-2400f-12`'s producibility

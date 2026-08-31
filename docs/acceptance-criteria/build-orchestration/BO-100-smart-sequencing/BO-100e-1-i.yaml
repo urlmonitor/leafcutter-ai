@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a chain in which piece B's only prerequisite is piece A,
@@ -32,13 +32,114 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "KI-BO-025 — the eligibility rule this constrains: 'all prerequisites met' is re-asked during the run, and what counts as met is what this record fixes."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "Where the per-ticket completion verdict (ticket_completed === true) and the halted/unconfirmed filters are described — the existing machinery this eligibility rule must be built on rather than beside."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The fail-closed rule behind the failure angle charged below: BO-1700's gate was fail-open and no test fed known-bad input through it."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "The eligibility verdict for one piece of work at one look. An affirmative successful outcome is required; absence of an outcome is its own state and is never success."
+    properties:
+      ticket_path: {type: string}
+      eligible: {type: boolean}
+      withheld_by:
+        type: array
+        items: {type: string}
+        description: "Prerequisite ticket paths that were not satisfied. Non-empty whenever eligible is false for a prerequisite reason."
+      prerequisite_states:
+        type: object
+        description: "Per-prerequisite state as read at this look."
+        additionalProperties:
+          type: string
+          enum: [succeeded, failed, no_outcome_recorded, unrecognised_outcome, not_in_run_set]
+    required: [ticket_path, eligible]
+  reference_file_path: "templates/workflows-js/build-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "FAIL CLOSED ON ABSENT EVIDENCE. Eligibility must require an AFFIRMATIVE recorded success for every prerequisite. Any state that is not an affirmative success — failed, no outcome recorded, an outcome the run cannot read, an outcome whose value is not in the recognised set — withholds the dependant. Absence of a record must never be reducible to the same code path as a success. This is the same polarity build-feature.js already uses at compareEpicTicketSets (`readable !== true`, not `readable === false`) and the widened loop must not introduce a looser one."
+    - "REUSE THE EXISTING VERDICT, DO NOT INVENT A SECOND ONE. build-feature.js already treats `ticket_completed === true` as the machine-readable per-ticket verdict (~line 2338) and already filters halted tickets. The per-look eligibility check must read that same verdict. A second, parallel notion of 'finished' introduced for the loop is a defect, not an implementation choice, and is exactly how the loop would come to disagree with the completion report."
+    - "'STOPPED BEING IN PROGRESS' IS NOT 'FINISHED'. A re-look that reads a piece's absence from the in-progress set as completion turns the widening into a way to build work whose prerequisites failed. The verdict must come from the recorded outcome, never from the piece no longer appearing somewhere."
+    - "Every withheld piece must be recorded with the prerequisite that withheld it, in the `unbuilt` field of BO-100e's look record. This record owns the eligibility rule and the naming of the unsatisfied prerequisite; what the run's closing message SAYS about withheld work is BO-300d and must not be specified here."
+    - "Deployed/template parity (ADR-001): the rule must hold in the deployed .leafcutter/workflows/build-feature.js, not only in the template."
+delivers_to:
+  agent: python-coder
+  contract: "The per-look eligibility predicate: given a ticket path and the run's recorded outcomes, returns { ticket_path, eligible, withheld_by[], prerequisite_states{} } where eligible is true only when every prerequisite has an affirmative recorded success. Consumed by BO-100e-2 (a look that releases nothing ends the run), BO-100e-3 (a removed piece is not a satisfied one) and BO-100e-4 (only the work behind a failure is withheld)."
+expects_from:
+  ac_id: BO-100e-1
+  contract: "The repeated-eligibility-look loop that calls this predicate once per piece per look, and the sequenced-label-response harness extension without which the three cases below cannot be driven."
+test_spec:
+  - name: test_dependant_withheld_when_prerequisite_ended_unsuccessfully
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Chain A<-B driven under the E2 harness with A's phase drive returning a failure verdict: no phase dispatch is ever made for B, and the run's unbuilt record names B withheld by A."
+  - name: test_dependant_withheld_when_prerequisite_recorded_no_outcome_at_all
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The load-bearing case: A's drive returns a reply carrying no completion verdict at all. B is still not dispatched. A run that dispatches B here has reduced absent evidence to success and must go red."
+  - name: test_dependant_begun_when_prerequisite_recorded_an_affirmative_success
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Positive control on the same fixture: with A returning ticket_completed true, B receives its phase dispatches in the same run."
+  - name: test_unrecognised_outcome_value_does_not_release_the_dependant
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "A's reply carries a completion field whose value is malformed-but-parseable (a truthy non-true value, or a status string outside the recognised set). B stays withheld — the predicate accepts only an affirmative success, not merely a non-failure."
+  - name: test_withheld_dependant_is_recorded_with_the_prerequisite_that_withheld_it
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In both withholding cases the run's unbuilt record names B and names A as the unsatisfied prerequisite. Asserts the record's content only — not the wording of any operator-facing message, which is BO-300d."
+  - name: test_eligibility_verdict_is_reached_through_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "templates/workflows-js/build-feature.js (E2 top-level body, via run_workflow_under_e2)"
+    description: "Every case above is produced by executing the workflow's own top-level body and observing dispatches and the terminal payload — never by calling an extracted predicate directly, which would pass even if the loop never consulted it."
+test_rationale: |
+  The three cases differ only in what the run HOLDS about A, so a test that calls an
+  extracted predicate with hand-built state proves nothing about whether the loop
+  consults it. The state must come from the run's own record of A's drive, which
+  means driving the workflow body.
+
+  The second case is the one a naive re-plan gets wrong and is therefore the one
+  that must be red before the fix: re-reading state and finding no record for A is,
+  to a loose implementation, the same shape as finding A complete. Without a test
+  that feeds exactly that, the widening ships fail-open — the BO-1700 failure
+  recorded in docs/testing/test-angles.md.
+
+  The malformed-but-parseable case is charged boundary rather than folded into
+  failure because a truthy-but-not-true completion field is the shape most likely to
+  survive a JSON round-trip through an agent reply.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-31
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -51,3 +152,5 @@ notes: |
 
   This is an eligibility rule, not a reporting rule. What the run SAYS about the
   withheld work at the end is BO-300d.
+change_target: pipeline
+risk_surface: internal
