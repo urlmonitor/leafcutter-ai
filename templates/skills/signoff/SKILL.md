@@ -794,10 +794,62 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
 1. Ask: "Describe the learning in one to three sentences."
 2. Load `.claude/skills/route-learning/SKILL.md` and apply the decision tree to classify the learning.
 3. Load `.claude/skills/capture-learning/SKILL.md` and execute the write.
-4. Emit a `knowledge_captured` telemetry event to `agent_telemetry.jsonl`:
+4. Emit a `knowledge_captured` telemetry event to `agent_telemetry.jsonl`. **This
+   step is the single normative definition of the `knowledge_captured` emission
+   shape for the whole package.** The S9 knowledge-emission block in each v3
+   agent template (`templates/agents/product-owner.md`,
+   `templates/agents/business-analyst.md`, `templates/agents/it-po.md`)
+   references this step by path instead of restating the field list — if a
+   template's emission block ever appears to disagree with what is written
+   here, this step is correct and the template is stale and must be fixed to
+   match, never the reverse.
+
    ```json
-   {"event": "knowledge_captured", "timestamp": "<ISO>", "ticket": "<ticket_path>", "destination": "<routed_file>", "entry_kind": "<entry_kind>"}
+   {
+     "event": "knowledge_captured",
+     "timestamp": "<ISO-8601>",
+     "agent": "<agent-name>",
+     "component": "<component-id>",
+     "destination": "<routed_file_path>",
+     "entry_kind": "<entry_kind>",
+     "ticket": "<ticket_path>"
+   }
    ```
+
+   **Required of every producer:** `event`, `timestamp`, `agent`, `component`,
+   `destination`, `entry_kind`.
+
+   **Optional — `ticket`:** include it only when the emitting agent has a
+   ticket path in hand. Phase agents invoked with a `ticket_path` — this
+   skill's own call sites — include it. The v3 AC-authoring agents
+   (`product-owner`, `business-analyst`, `it-po`) run outside any ticket and
+   omit the field entirely; its absence is not an error and is not a
+   deviation from this shape.
+
+   **Consumer guard (load-bearing — read this before writing any code that
+   reads this sink):** `ticket` MUST NOT be used by any consumer — script,
+   hook, harvester, report, or dedupe/idempotency key — to key, group, count,
+   or deduplicate `knowledge_captured` records. It is present-when-available
+   metadata only. Conformance to this shape, and any idempotency digest
+   computed over it, are both defined over the **required** field set above
+   only.
+
+   **This guard is currently violated, and saying so is the point.**
+   `scripts/knowledge/harvest_learnings.py` `_event_hash` keys its digest on
+   `(ticket, timestamp, destination, entry_kind)` — and `ticket` is empty in
+   every one of the 28 records on disk, so one of four key components is a
+   constant. `INF-400b-2-i` owns removing it. Until that lands, treat this
+   paragraph as the rule the codebase is being brought into line with, not a
+   property it already has. Do not add a second consumer that keys on
+   `ticket` in the meantime.
+
+   **Scope of "normative": the record's SHAPE, not its destination.** Which
+   file these events are written to is a separate, still-unreconciled
+   question — producers append to `debugging/logs/agent_telemetry.jsonl`
+   while `harvest_learnings.py` reads `debugging/logs/knowledge_emissions.jsonl`,
+   which has never existed. `INF-400c-4` owns that. This step defines what a
+   record looks like; it does not settle where it goes, and a reader should
+   not infer agreement on the sink from agreement on the fields.
 
 This step is **mandatory** — skipping it is a protocol violation. If `route-learning` or `capture-learning` are unavailable, log a warning and proceed (do not block sign-off).
 
