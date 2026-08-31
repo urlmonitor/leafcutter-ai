@@ -277,7 +277,8 @@ def _resolve_repository_with_search_fallback(anchor: Path | None = None) -> Path
             f"Failed to resolve a repository: the anchor at {anchor} is not "
             f"inside a git repository, and a bounded search of the immediate "
             f"subdirectories of {search_dir} found {len(candidates)} "
-            f"candidate repositories (need exactly 1): {candidates}"
+            f"candidate repositories (need exactly 1) and will not choose "
+            f"between them: {candidates}"
         ) from None
 
 
