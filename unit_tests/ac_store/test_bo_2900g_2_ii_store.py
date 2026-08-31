@@ -58,6 +58,16 @@ from generate_ticket_from_ac import _build_agents_map  # noqa: E402
 # BP-1100g-4 was in this set and is no longer: it was reconciled on main while this
 # branch was open, and the staleness test below caught it in CI on the merge ref
 # before a human did. That is the set shrinking on its own, which is the intent.
+#
+# BP-1100g-5-i removed 2026-08-31, reconciled rather than aged out. It declared
+# declares_side_effect: true while every Then clause in it reports a shortfall and
+# writes nothing; the derivation excludes transient destinations, so false is the
+# honest value. Two mechanisms disagreed about whether this was visible, and both
+# were right about their own scope: the commit-time AC hooks read only the staged
+# index, so they had never been handed the file and never fired — while this
+# store-wide test walks the real store, which is exactly why it exists. The hook's
+# silence was not a pass. This test's allowlist was the only record that the
+# disagreement was known at all.
 _KNOWN_PRE_EXISTING_DISAGREEMENTS = frozenset({
     "BO-2400g-4",
     "BO-2400g-4-i",
@@ -65,7 +75,6 @@ _KNOWN_PRE_EXISTING_DISAGREEMENTS = frozenset({
     "BO-2900g-2-i",
     "BO-2900g-4",
     "BP-1100g-4-i",
-    "BP-1100g-5-i",
 })
 
 
