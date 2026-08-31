@@ -86,6 +86,43 @@ class TestTheObjectDecidesNotTheVerb:
             assert derive_declares_side_effect(_record(phrase)) is False, phrase
 
 
+class TestRationaleIsNotAssertion:
+    def test_bo_2900g_2_ii_a_because_clause_does_not_confer_the_declaration(self) -> None:
+        # covers: BO-2900g-2-ii
+        """A Because clause explains WHY; it is not something the record asserts.
+
+        Verbatim from GE-123c-3-i, whose Then asserts that NO warning is emitted
+        and whose Because mentions that the file "is deployed to consumer
+        projects" — an effect belonging to the build, not to this criterion.
+        """
+        rationale_only = _record(
+            "Then no unmatchable-entry warning is emitted for any line of any of them,\n"
+            "Because the same file is deployed to consumer projects, and a false\n"
+            "  warning there is a defect shipped to every installation.\n"
+        )
+        assert derive_declares_side_effect(rationale_only) is False
+
+    def test_bo_2900g_2_ii_because_stripping_is_case_sensitive(self) -> None:
+        # covers: BO-2900g-2-ii
+        """A wrapped line starting with lowercase "because" is prose, not a clause.
+
+        REGRESSION GUARD WITH A REAL VICTIM. The first version of the stripper was
+        case-insensitive and swallowed the remainder of BP-1500d-3's Then clause —
+        including a genuine "leaves the record file written to disk" — because one
+        of its wrapped lines begins with "because". Phrasing below is taken from
+        that record. If this fails, the stripper has become case-insensitive again
+        and real durable effects are being discarded.
+        """
+        wrapped_lowercase = _record(
+            "Then the build reports failure and names the record it could not produce,\n"
+            "  and the build's own report is not enough to satisfy this,\n"
+            "because the build's own report is the last place this failure shows up,\n"
+            "  And the identical build, run once the record can be produced, reports\n"
+            "  success and leaves the record file written to disk in that project.\n"
+        )
+        assert derive_declares_side_effect(wrapped_lowercase) is True
+
+
 class TestAnAuthorWhoIsRightCanRecordIt:
     def test_bo_2900g_2_ii_an_author_who_is_right_can_record_it(self) -> None:
         # covers: BO-2900g-2-ii

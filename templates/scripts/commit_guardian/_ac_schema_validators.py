@@ -557,6 +557,23 @@ def validate_test_contract(path: Path, data: dict[str, Any]) -> list[str]:
 # same reasoning check_ac_schema's other Gherkin-aware helpers already use.
 _THEN_CLAUSE_START_RE = re.compile(r"\bThen\b", re.IGNORECASE)
 
+# A "Because" clause states WHY a criterion exists. It routinely describes effects
+# belonging to OTHER work — "the same file is deployed to consumer projects" — so
+# reading it as something this record asserts is a category error (BO-2900g-2-ii).
+# It is stripped before the durable-effect search.
+#
+# CASE-SENSITIVE ON PURPOSE. Gherkin keywords are capitalised at line start; a
+# wrapped line beginning with a lowercase "because" is mid-sentence prose. An
+# earlier case-insensitive version of this pattern swallowed the rest of
+# BP-1500d-3's Then clause — including a genuine "leaves the record file written
+# to disk" — because one of its wrapped lines happens to start with "because".
+# Measured: case-sensitive flips exactly one record (the false positive it was
+# written for) and breaks no authored value; case-insensitive flipped two.
+_BECAUSE_CLAUSE_RE = re.compile(
+    r"^[ \t]*Because\b.*?(?=^[ \t]*(?:Given|When|Then)\b|\Z)",
+    re.MULTILINE | re.DOTALL,
+)
+
 # Nouns whose being written outlives the run. BO-2900g-2-ii: the discriminator
 # for a durable effect is the OBJECT written, not the verb — "a record file is
 # written" persists, "before any test is written" is a human authoring a test
@@ -625,6 +642,10 @@ def derive_declares_side_effect(data: dict[str, Any]) -> bool:
     phrase appearing only in a ``Given`` clause does not count, because the
     Given describes pre-existing state, not what this AC's own work does.
 
+    ``Because`` clauses are stripped before the search: they state why a
+    criterion exists, not what it asserts, and routinely cite effects owned by
+    other work (BO-2900g-2-ii).
+
     KNOWN GAP, DELIBERATELY NOT FIXED HERE (BO-2900g-2-ii). The paragraph above
     is the intent; it is not quite the behaviour. The search runs from the FIRST
     ``Then`` to the END of the criteria, so on a multi-scenario record every
@@ -653,10 +674,13 @@ def derive_declares_side_effect(data: dict[str, Any]) -> bool:
     criteria = data.get("criteria")
     if not criteria or not isinstance(criteria, str):
         return False
-    match = _THEN_CLAUSE_START_RE.search(criteria)
+    # Rationale is not assertion: a Because clause explains why the criterion
+    # exists and often cites effects owned by other work (BO-2900g-2-ii).
+    asserted = _BECAUSE_CLAUSE_RE.sub("", criteria)
+    match = _THEN_CLAUSE_START_RE.search(asserted)
     if match is None:
         return False
-    then_onward = criteria[match.start():]
+    then_onward = asserted[match.start():]
     return bool(_DURABLE_EFFECT_RE.search(then_onward))
 
 
