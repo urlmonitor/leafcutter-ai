@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -96,10 +96,14 @@ expects_from:
   contract: "The complete set of shapes the loader classifies as unmatchable, and the single warning path they raise — this criterion is the measurement of that set against the real artifacts."
 origin_agent: business-analyst
 created: 2026-08-18
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/17_TICKET-20260831-GE-123c-3-i.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -130,3 +134,4 @@ notes: |
   guard fails for the wrong reason the first time anyone adds a suppression, and
   the usual repair is to delete the assertion. Same reasoning for the second arm:
   discover the copies by walking the tree, never by listing paths.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

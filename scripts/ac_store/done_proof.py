@@ -121,9 +121,48 @@ _ANGLE_TAG_RE = re.compile(r"(?:#|//)\s*angle:\s*(\S+)")
 # properties.test_spec[].angle enum (the same file
 # unit_tests/prompt_assembly/test_bp_1100g_1.py reads). Never restate the set
 # as a hand-typed literal here; see _load_permitted_angle_kinds().
-_PERMITTED_ANGLES_SCHEMA_PATH = (
-    Path(__file__).resolve().parent.parent.parent / "config" / "ac_store_schema.json"
-)
+_SCHEMA_RELATIVE_PATH = Path("config") / "ac_store_schema.json"
+
+
+def _resolve_permitted_angles_schema_path() -> Path:
+    """Locate config/ac_store_schema.json from either layout this module runs in.
+
+    BP-1100g-3-ii. This module is imported from two places and the distance to
+    the repository root is NOT the same in both:
+
+        <repo>/scripts/ac_store/done_proof.py               root is parents[2]
+        <repo>/.leafcutter/scripts/ac_store/done_proof.py   root is parents[3]
+
+    The original expression hand-counted ``parent.parent.parent``, which is
+    correct from the source tree and lands on ``.leafcutter/config/`` -- a
+    directory that exists but does not contain this file -- from the deployed
+    copy. Because :func:`_load_permitted_angle_kinds` fail-softs to an empty set
+    on a read failure, and an empty permitted set makes EVERY declared kind
+    unrecognised, the deployed copy reported every correctly-tagged test as a
+    violation. Measured 2026-08-26: source tree returned all seven kinds, the
+    deployed copy returned none and flagged a valid ``criterion`` tag.
+
+    The fix is not a different integer -- no fixed count is right in both
+    layouts. It is an upward search for the directory that actually holds the
+    file, which is the same real directory from either starting point: the
+    deployed copy sits under ``<repo>/.leafcutter/``, so walking up from it
+    reaches ``<repo>`` and finds ``config/ac_store_schema.json`` there.
+
+    Returns:
+        The resolved path when found. When no ancestor holds the file, returns
+        the source-tree-relative candidate unchanged, so the caller's existing
+        "cannot read" branch reports a real path rather than this function
+        inventing a plausible-looking one.
+    """
+    here = Path(__file__).resolve()
+    for ancestor in here.parents:
+        candidate = ancestor / _SCHEMA_RELATIVE_PATH
+        if candidate.is_file():
+            return candidate
+    return here.parent.parent.parent / _SCHEMA_RELATIVE_PATH
+
+
+_PERMITTED_ANGLES_SCHEMA_PATH = _resolve_permitted_angles_schema_path()
 
 # Directory names excluded from ALL test-file scanning (.py AND .ts/.tsx).
 # Prevents traversing node_modules and other non-test subtrees.
@@ -749,9 +788,19 @@ def find_unrecognised_angle_tags(records: list[dict]) -> list[dict]:
     A reporting pass over data :func:`collect_test_tag_records` already
     collected -- it never drops, alters, or re-filters the offending record;
     a test carrying an unrecognised kind stays fully present in
-    ``collect_test_tag_records()``'s own output. Never raises: an unreadable
-    permitted-kind source degrades to "nothing recognised" (see
-    :func:`_load_permitted_angle_kinds`), not a crash.
+    ``collect_test_tag_records()``'s own output. Never raises.
+
+    BP-1100g-3-ii: an EMPTY permitted set means the taught set could not be
+    determined, and it is reported as that rather than being treated as "no
+    kind is taught". The distinction matters because the two readings produce
+    opposite output from the same state: treating an unreadable source as an
+    empty set makes every declared kind unrecognised, so a problem reading one
+    file presents as every correctly-tagged test in the repository being
+    wrong. A check that fires on everything carries no signal and the
+    reasonable response to it is to switch it off. This function therefore
+    reports NOTHING when the permitted set is empty, and says loudly why.
+    That is deliberately fail-soft, which is safe here and only here: this
+    output is advisory and feeds no verdict (the BP-1100g-3-i boundary below).
 
     BP-1100g-3-i boundary: this function's output is advisory only. It must
     never be wired into :func:`_classify_outcomes`, :func:`verify_done_eligible`,
@@ -769,6 +818,18 @@ def find_unrecognised_angle_tags(records: list[dict]) -> list[dict]:
         deduplicated upstream).
     """
     permitted = _load_permitted_angle_kinds()
+    if not permitted:
+        # BP-1100g-3-ii: cannot decide. Reporting every declared kind here
+        # would be a 100% false-positive rate caused by a file read, not by
+        # anything wrong with the tests.
+        print(
+            "WARNING: done_proof: the taught angle-kind set is empty, so no tag "
+            f"can be checked against it (source: {_PERMITTED_ANGLES_SCHEMA_PATH}). "
+            "Reporting no unrecognised kinds — this is 'could not check', NOT "
+            "'everything checked out'.",
+            file=sys.stderr,
+        )
+        return []
     unrecognised: list[dict] = []
     for record in records:
         for angle in record.get("angles", []):

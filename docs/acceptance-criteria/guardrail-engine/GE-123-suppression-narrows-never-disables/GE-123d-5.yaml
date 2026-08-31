@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -114,11 +114,26 @@ test_rationale: "The claim this AC makes is that an author is told something, an
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18)"
-    detail: "Criteria untouched. Complexity held at S. Authored nine policy-level it_requirements. The deliberate departure from the GE-113c-3-v warning contract is restated as an explicit instruction NOT to harmonise the matched value back into the notice, so a later reviewer aligning the two contracts cannot undo it. Two requirements come from the code rather than the criteria: allowlist suppressions are removed before the post-filter ever sees a finding, and the pre-existing file-level high-entropy prose exemption (KI-CG-004) is a third, separate removal mechanism — pooling any of them into the count makes it unreviewable. Added commit-guardian and ADR-001 doc_links. Authored a six-entry test_spec plus test_rationale; both streams are captured separately in every entry, and the withheld-value arm is asserted by the absence of an embedded marker rather than by matching expected notice text. readiness draft->reviewed; work_status and priority untouched."
+- reason: it-po-v3 technical enrichment (2026-08-18)
+  detail: 'Criteria untouched. Complexity held at S. Authored nine policy-level it_requirements.
+    The deliberate departure from the GE-113c-3-v warning contract is restated as
+    an explicit instruction NOT to harmonise the matched value back into the notice,
+    so a later reviewer aligning the two contracts cannot undo it. Two requirements
+    come from the code rather than the criteria: allowlist suppressions are removed
+    before the post-filter ever sees a finding, and the pre-existing file-level high-entropy
+    prose exemption (KI-CG-004) is a third, separate removal mechanism — pooling any
+    of them into the count makes it unreviewable. Added commit-guardian and ADR-001
+    doc_links. Authored a six-entry test_spec plus test_rationale; both streams are
+    captured separately in every entry, and the withheld-value arm is asserted by
+    the absence of an embedded marker rather than by matching expected notice text.
+    readiness draft->reviewed; work_status and priority untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/27_TICKET-20260831-GE-123d-5.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -165,3 +180,4 @@ notes: |
   an observation — a reviewer aligning the two announcement contracts would
   otherwise reasonably add the verbatim text back, which is the one change this
   AC exists to prevent.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

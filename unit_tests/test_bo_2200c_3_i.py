@@ -141,11 +141,18 @@ class TestUnresolvedParentFailSoft(unittest.TestCase):
             f"Actual section:\n{section}",
         )
         # A contract line must still be emitted (path + constraint written).
+        #
+        # The separator was an em-dash until 2026-08-26. BO-2200c-5 moved the
+        # line to the pipe-delimited shape documentation-verifier documents as
+        # its parse rule, so producer and consumer agree on one format. What
+        # BO-2200c-3-i asserts is unchanged: a line is still emitted, carrying
+        # a path and a constraint, when the genre cannot be resolved.
         self.assertRegex(
             section,
-            r"- \[ \] AC-\d+:.*/.+\s*—",
-            "A '- [ ] AC-N:' line with a path separator '/' and a constraint marker '—' "
-            "must be present even when the genre cannot be resolved.\n"
+            r"- \[ \] AC-\d+: .+ \| .*/.+ \| .+",
+            "A '- [ ] AC-N:' line carrying a genre field, a path (with '/') and a "
+            "constraint, pipe-delimited, must be present even when the genre "
+            "cannot be resolved.\n"
             f"Actual section:\n{section}",
         )
 

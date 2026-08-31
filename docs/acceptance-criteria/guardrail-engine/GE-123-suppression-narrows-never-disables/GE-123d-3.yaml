@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -114,11 +114,23 @@ test_rationale: "This is the counter-arm for the whole GE-123d widening, so the 
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18)"
-    detail: "Criteria untouched. Complexity held at S — this AC adds little code of its own; its weight is in the test contract. Authored eight policy-level it_requirements, including the two cheapest wrong implementations the red baseline must exclude (file-level exemption; naive contains-whitespace) and an explicit out-of-scope fence around KI-CG-004 so the pre-existing file-level high-entropy hole is never cited as precedent. Added a known-issues doc_link for the same reason. Authored a five-entry test_spec plus test_rationale, every entry asserting on the real process exit status rather than a predicate return. readiness draft->reviewed; work_status and priority untouched."
+- reason: it-po-v3 technical enrichment (2026-08-18)
+  detail: Criteria untouched. Complexity held at S — this AC adds little code of its
+    own; its weight is in the test contract. Authored eight policy-level it_requirements,
+    including the two cheapest wrong implementations the red baseline must exclude
+    (file-level exemption; naive contains-whitespace) and an explicit out-of-scope
+    fence around KI-CG-004 so the pre-existing file-level high-entropy hole is never
+    cited as precedent. Added a known-issues doc_link for the same reason. Authored
+    a five-entry test_spec plus test_rationale, every entry asserting on the real
+    process exit status rather than a predicate return. readiness draft->reviewed;
+    work_status and priority untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/23_TICKET-20260831-GE-123d-3.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -167,3 +179,4 @@ notes: |
   the guarantee that the NEW generic-credential exemption does not acquire the
   same shape. The fence is now also an it_requirement so a coder cannot reach
   for the existing file-level exemption as a template.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

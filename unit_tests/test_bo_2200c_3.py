@@ -179,9 +179,17 @@ class TestGenreResolvedFromParentL1(unittest.TestCase):
             "The '### documentation-expert' subsection must be present.\n"
             f"Actual section:\n{section}",
         )
-        self.assertIn(
-            "[how-to]",
+        # Matched as the contract line's FIRST field rather than as a bare
+        # substring, so a doc path such as docs/how-to/... cannot satisfy it.
+        #
+        # This read assertIn("[how-to]") until 2026-08-26. The bracketed form
+        # was incidental: BO-2200c-3 requires the genre to be SOURCED FROM THE
+        # PARENT, not to be punctuated any particular way. BO-2200c-5 then
+        # moved the line to the pipe-delimited shape documentation-verifier
+        # actually parses, which is what this now matches.
+        self.assertRegex(
             section,
+            r"- \[ \] AC-\d+: how-to \|",
             "Genre 'how-to' (from parent's documentation_triggers) must appear in "
             "the contract line. The leaf's own documentation_triggers is empty, so "
             "'how-to' can only come from the resolved parent L1.\n\n"

@@ -1,0 +1,15 @@
+---
+title: "fix(guardrail-engine): rationale is not assertion, and GE-123 is approved for build"
+date: "2026-08-31"
+time: 0812
+type: manual
+components: 
+  - guardrail_engine
+  - build_orchestration
+  - ac_store
+summary: "The check that spots work changing something real was reading the sentence explaining WHY a requirement exists as if it were a promise the requirement made. Fifth false alarm from the same check, third distinct cause."
+description: "An acceptance criterion in this store ends with a Because clause explaining why it exists, and those sentences routinely mention things other work does. One criterion promises that NO warning is produced, and explains itself by noting that the same file is deployed to consumer projects. The durable-effect check read the explanation, saw a deployment, and marked the criterion as producing a lasting change — which then forces an end-to-end smoke phase onto work that has no surface to smoke. Because clauses are now removed before the check looks, since an explanation is not a promise. No requirement needed widening: the governing criterion already covers a document that merely describes something another piece of work does, so only the implementation moved. Measured against the real store the change marks one record fewer, flips exactly the one false alarm it was written for, breaks no recorded value, and marks nothing new. The detail worth keeping is how nearly it went wrong. The first version of the removal was case-insensitive, and a criterion whose text happens to wrap onto a line beginning with a lowercase because had the rest of its promise swallowed — including a genuine record file written to disk. Measuring the effect record by record caught it; reasoning about it would not have, and the fix would have quietly discarded a true declaration in order to silence a false one, which is the same mistake in the opposite direction. The pattern is now case-sensitive, matching how these keywords are written, and a regression test pins it using the near-victim's own wording. Five false alarms from three distinct causes across two patches is itself a finding about the approach rather than about any one pattern, and the opposite failure — real effects the check misses, including one that posts findings to a pull request — remains untouched. Separately, the GE-123 tree is approved so its epic can be generated: thirty-one records move from reviewed to approved with no change to any requirement, and all of them remain to-do. Approving them surfaced two defects in the approval tool. It walks only one level of the tree, so on a four-level goal it approves four records and reports success while its own help text promises to approve every leaf. And it rebuilds a record's amendment history as text, which corrupts any record whose history contains a multi-line entry — five files were left unparseable while the tool returned success for every one of them. Nothing was lost, since all five were already committed, but the corruption was visible only because the run re-read every file afterwards and checked it still parsed."
+breaking: false
+---
+
+## Entry

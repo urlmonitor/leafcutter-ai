@@ -1,0 +1,275 @@
+id: BP-1500e
+components:
+  - build_pipeline
+title: "One run tells you every problem the build can see, not just the first one"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  The whole list in one pass -- and every item says which check found it.
+
+  A build's preflight checks all get to run, and their findings arrive together,
+  so a single run hands you the complete set of things to fix instead of
+  revealing them one repair at a time. You stop paying a full build for each
+  problem, and you can see at a glance whether you are looking at one fault or
+  five.
+
+  Every finding names the check that made the judgement. Today a problem is
+  described by whichever check happened to reach it first, which may be a check
+  that does not understand it -- so the advice you are given can be for a
+  problem you do not have, and following it does not help. Naming the source of
+  each finding is what makes the advice trustworthy and what lets you tell two
+  findings apart when they describe the same file.
+
+  Where a check genuinely cannot give a verdict after an earlier one has failed,
+  the run says that check did not run. It is never left to look like a check
+  that passed, because a check that was skipped and a check that was satisfied
+  are the two things an operator must never confuse.
+depends_on:
+  - BP-1500
+doc_links:
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The preflight sequence whose account of itself this L1 constrains. Its guards are invoked as a chain in which the first failing guard ends the run, so every later guard is never reached. That shape -- not any one guard -- is the subject here."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "PRIOR ART, WITHIN ONE GUARD. Requires the registry-completeness report to list every promised-but-undeployed script rather than the first. Read it before decomposing: this L1 applies the same reporting property ACROSS guards and must NOT re-derive it within one. Approved."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-9.yaml"
+    relationship: describes
+    status: exists
+    relevance: "PRIOR ART, WITHIN ONE GUARD, and the source of consequence (2). Requires the deploy loop to report EVERY unresolvable entry in one run, with the rationale that halting at the first turns N stale entries into N build-fix-build cycles with a green build between each. Its own must_block fixture was satisfiable by an earlier guard, which is the second observed consequence recorded in notes. Approved; implementation landed 2026-08-31."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-2.yaml"
+    relationship: describes
+    status: exists
+    relevance: "THE AMENDMENT THIS L1 REQUIRES AND DOES NOT MAKE. Approved, work_status done, and it constrains the emitted record to EXACTLY the keys missing_path, referencing_template and suggested_action. The 'every finding names its check' clause above needs a fourth key, which contradicts that record as written. See the OPEN AMENDMENT section in notes -- BP-900c-2 must NOT be widened as a side effect of building this L1."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "NO entry covers this defect yet; the two consequences in notes were observed on 2026-08-31 and a KI entry should be opened. KI-BP-018 is the structural neighbour -- 'no build phase can fail the build ... nothing verifies the deployed tree is complete' -- and is the fail-open counterpart to this fail-early one. Neither covers the other."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "The final criteria clause is a fail-open variant catalogued there: a check that is absent rather than failing is indistinguishable from a check that passed. That is why 'did not run' must be said out loud rather than inferred from silence."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Consequence (2) is a must_block problem in that vocabulary: a must_block fixture satisfied by a guard other than the one under test proves nothing about that guard. The BA should carry that into the test angles for every child here."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-31
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHAT IS ACTUALLY WRONG, AND WHY IT HAS NO OWNER TODAY.
+
+  The preflight guards run as a chain in which the first guard to fail ends the
+  run. Every later guard therefore never executes. Individual guards have been
+  built carefully to report their FULL finding set rather than halting at the
+  first -- BP-900e-4 requires that of the registry-completeness report, BP-900g-9
+  requires it of the deploy loop, and both are approved. That property holds
+  WITHIN each guard and does not hold ACROSS them. Each guard owns its own scope;
+  none owns the run's account of itself across scopes. That gap is what this L1
+  owns, and it is the reason a BA correctly refused to write it as a constraint
+  under any existing record.
+
+  TWO CONSEQUENCES, BOTH OBSERVED 2026-08-31, NEITHER THEORISED.
+
+  (1) One underlying condition is diagnosed by whichever guard reaches it first.
+      Deleting a declared deploy source produced a "missing script reference"
+      report advising "add a deploy phase" -- for a file a deploy phase already
+      declares. Deleting a different declared source, identical in kind but named
+      by no template, got past that guard, reached the deploy loop, and was
+      correctly reported as a deploy-declaration failure. Same defect, two
+      diagnoses, decided by an unrelated property of the file (whether some
+      template happens to name it). The operator who follows the first diagnosis
+      is sent to fix something that is not broken.
+
+  (2) A must_block test can be satisfied by an earlier guard while the gate under
+      test never runs. Writing BP-900g-9's must_block test, the obvious fixture
+      passed for exactly this reason and had to be worked around. The workaround
+      is undocumented and unenforced, so nothing warns the next author. A gate
+      whose must_block proof was actually produced by a different gate has not
+      been proven at all -- which is this repository's central failure shape,
+      occurring inside the tests written to prevent it.
+
+  ==========================================================================
+  DECISION (a) -- SETTLED: MERGED, NOT MERELY ORDERED. This is binding on the
+  BA; it is the decision that determines what can be written at L2.
+  ==========================================================================
+  The choice was between (i) all guards run and their findings arrive as one
+  combined account, and (ii) leaving first-wins in place but making the ordering
+  an explicit, documented, testable promise. Both satisfy "one condition, one
+  diagnosis". They are different products. MERGED is chosen, for three reasons,
+  in decreasing order of weight.
+
+  FIRST, AND DECISIVELY: the store has already ratified this exact argument one
+  level down, twice, and first-wins contradicts it. BP-900g-9's own constraint
+  reads "COLLECT, THEN FAIL -- DO NOT HALT ON THE FIRST FINDING. Halting at the
+  first turns a set of N stale entries into N build-fix-build cycles, and every
+  intermediate build is green, so an author who stops at the first green ships
+  the remaining N-1." Every word of that applies unchanged when the N findings
+  are spread across guards instead of within one loop. Choosing option (ii) would
+  mean asserting that an argument the project accepted as compelling for entries
+  inside a loop stops being compelling at the loop boundary, which nobody has
+  argued and which is not true of the operator's experience -- N repairs cost N
+  builds either way.
+
+  SECOND: option (ii) does not fix consequence (1). Making the ordering assertable
+  makes the wrong diagnosis PREDICTABLE, not correct. The deleted declared source
+  would still be reported as a missing script reference with advice to add a
+  deploy phase it already has; you would simply be able to write a test proving
+  it always happens. Predictably wrong advice is still wrong advice, and the
+  operator following it still loses the round trip.
+
+  THIRD: option (ii) is a promise about execution order, which is not something an
+  operator wants or can act on. It reads as a specification of the current
+  implementation rather than of a benefit -- the L1 would be describing how the
+  chain behaves instead of what the person running it gets.
+
+  THE COST OF MERGED IS REAL AND IS NOT BEING HIDDEN. Some guards may be unable
+  to produce a meaningful verdict once an earlier one has failed -- a later check
+  reading a tree the first check has already declared broken. That is why the
+  final criteria clause exists: the honest outcome for such a guard is "did not
+  run", stated, not a silent omission and not a pass. Do NOT let the BA satisfy
+  the merged clause by having every guard run and swallow its own errors; a guard
+  that crashes and is counted as clean is a worse product than the chain we have.
+
+  ==========================================================================
+  DECISION (b) -- POSITION: YES, A FINDING MUST NAME ITS CHECK. THE AMENDMENT
+  IT IMPLIES IS RECORDED OPENLY BELOW AND HAS NOT BEEN MADE.
+  ==========================================================================
+  It is in the criteria deliberately, for two reasons. It is the minimum that lets
+  a must_block test distinguish WHICH guard fired, so it is the only clause here
+  that directly addresses consequence (2). And a merged report without attribution
+  is a flat list in which two guards can describe the same file in two voices and
+  the operator has no way to tell which advice is the informed one -- merging
+  without attribution makes consequence (1) easier to hit, not harder.
+
+  OPEN AMENDMENT -- BP-900c-2, FOR THE OWNER TO DECIDE, NOT FOR THIS L1 TO TAKE.
+
+  BP-900c-2 is req_status approved, readiness approved, work_status done. Its
+  criteria say the emitted report is "one JSON object per line (JSONL format)
+  with keys missing_path, referencing_template, and suggested_action", and its
+  it_requirements go further: "Each JSON object must contain exactly the keys:
+  missing_path, referencing_template, suggested_action". A fourth key naming the
+  emitting check contradicts that record as written. This is not free and it is
+  not being smuggled in.
+
+  What is being asked for, precisely: BP-900c-2's exactly-three-keys clause is
+  amended to require a fourth key identifying the check that produced the record,
+  its three existing keys unchanged in name, meaning and content. Nothing else
+  about BP-900c-2 changes -- not the stderr-only rule, not the clean-stdout rule,
+  not the non-zero exit. That amendment must be made ON BP-900c-2, by whoever owns
+  it, with the amended_by entry it deserves, BEFORE any child of this L1 emits a
+  fourth key. Building this L1 first and widening BP-900c-2 quietly afterwards is
+  the failure this paragraph exists to prevent.
+
+  ONE PIECE OF CONTEXT, WHICH IS NOT A LICENCE. BP-900c-2's own notes already
+  record a known schema inconsistency: referencing_template serialises as a bare
+  string for one template and as a list for several, so the emitted record already
+  deviates from a strict reading of its contract, and no test covers the exact
+  three-key set. That is evidence the record is already due a visit -- it is NOT
+  an argument that the constraint is soft, and it must not be cited as one. An
+  approved record is amended in the open or not at all.
+
+  IF THE AMENDMENT IS REFUSED. Then the attribution clause comes out of this L1's
+  criteria and consequence (2) stays open, and that should be recorded as an
+  accepted gap rather than worked around by attributing findings everywhere except
+  in the one report that is contractually frozen. A report format that is
+  attributed in three guards and unattributed in the fourth is worse than either
+  consistent choice, because a consumer cannot rely on the field being there.
+
+  ==========================================================================
+  WHY BP-1500 IS THE PARENT -- VERIFIED, NOT TAKEN ON THE BA'S WORD.
+  ==========================================================================
+  Counts checked on disk 2026-08-31, and every rejection re-derived:
+
+  - BP-1500 (this parent): 4 L1s (a, b, c, d) against the hard cap of 7, no
+    child_limit_override. Room for a fifth without a waiver. And the fit is not
+    merely structural: this L0's own notes state its thesis as "is the build's
+    ACCOUNT of its own work complete and true", explicitly the third question that
+    BP-900 (did everything PROMISED arrive) and BP-100 (did every artifact land in
+    the right PLACE) do not pose. A run that reports one fault and conceals four is
+    an incomplete account of its own work. Recorded honestly: the L0's criteria
+    body enumerates what the build CHANGED, REMOVED and LEFT BEHIND, and this L1 is
+    about what it CHECKED. That is a widening of the L0's illustration, not of its
+    thesis, and it is flagged here rather than glossed.
+  - BP-900 (L0, "every capability you install actually works"): 8 L1s a-h against
+    child_limit_override: 8. Full. A ninth needs a further waiver. Rejected on the
+    cap AND on theme -- BP-900 asks whether what was promised arrived, not whether
+    the run described itself completely.
+  - BP-900g ("every command you run can reach what it calls"): 10 L2s against
+    child_limit_override: 10. Full, and its own override note already reads
+    "Remove once a PO-owned split rebalances this tree" -- adding to it is the
+    opposite of what that note asks for.
+  - BP-900e: 5 L2s (e-1..e-5) against the 5 cap. Full.
+  - BP-900c: 4 L2s, so it has a slot -- rejected on scope, not capacity. It is the
+    broken-reference-report L1; a child there would be scoped to one guard, which
+    is precisely the scoping that produced this gap. Note also that BP-900c-4 and
+    BP-900c-4-i are being worked by the IT PO concurrently and were not touched.
+  - BP-900d: a single deployability criterion for the onboarding script. Unrelated.
+  - BP-1300 ("every guardrail gives the same verdict everywhere"): 3 L1s of 7, so
+    it had room, and it was the one genuine alternative. Rejected because its
+    subject is ENVIRONMENT-dependence -- a green local run hiding a real break.
+    The defect here is environment-independent: it reproduces identically in CI and
+    on any machine, because the guards are chained the same way everywhere.
+    BP-1300's promise can be met in full while this defect stands untouched.
+
+  ==========================================================================
+  BOUNDARIES FOR THE BA -- WHAT NOT TO RE-DERIVE.
+  ==========================================================================
+  - Do NOT restate BP-900e-4 or BP-900g-9. Their property is complete reporting
+    WITHIN one guard and both are approved. This L1 begins where they stop. A
+    child here that makes a single guard report more findings is duplicating an
+    approved record and has not touched the gap.
+  - Do NOT close consequence (2) by documenting BP-900g-9's fixture workaround.
+    Documentation of a trap is not removal of a trap; the criteria ask for a run
+    in which the trap cannot be sprung.
+  - Do NOT re-derive BP-1500d-4. That child is about a check with no readable
+    RECORD in a project where the record was never written. The final clause here
+    is about a check skipped by an earlier failure IN THE SAME RUN. Same family --
+    an absent check must not look like a passing one -- different cause, different
+    surface. Cite it; do not merge them.
+  - Do NOT re-derive BP-1500b's report clause. It rejects a clean bill of health
+    printed over a surviving orphan, which is one guard lying about its own scope.
+    This L1 is about a run that is silent on scopes it never entered.
+
+  MANDATORY PROOF SHAPE, binding on every child, for the BA and the IT PO.
+  A child is proved by running the real build entry point as a subprocess against
+  a tree carrying TWO OR MORE INDEPENDENT DEFECTS THAT DIFFERENT GUARDS OWN, and
+  asserting that a single run names all of them. One defect proves nothing here --
+  the current chain already reports one defect correctly, which is exactly why
+  this survived. And each child needs the negative control that distinguishes the
+  two implementations: a tree whose first-reached defect belongs to a guard OTHER
+  than the one under test, on which the check must still be seen to fire. A test
+  that cannot fail on a first-wins chain has not been shown to test anything.
+  This repo's standing rule "Gate / Workflow ACs -- Verify Behaviorally, Not by
+  Grep" applies in full and with extra force: the ordering property is invisible
+  to every source-level check that exists.
+
+  FIELD DEVIATIONS, recorded for the reviewer rather than left to be noticed.
+  readiness is `draft` and priority is `medium`, which are the standing defaults
+  for a newly authored L1 -- the user sets readiness and urgency at approval. The
+  four siblings all carry priority: high, so `medium` here is a default and not a
+  judgement that this matters less than they do; raise it at the approval gate if
+  it should match. `component` is the hyphenated `build-pipeline`, matching
+  BP-1500 and a-d and this component's PROJECT_CONTEXT.md convention; the graph
+  vocabulary id `build_pipeline` is carried in `components`, which is the field
+  that axis belongs to.

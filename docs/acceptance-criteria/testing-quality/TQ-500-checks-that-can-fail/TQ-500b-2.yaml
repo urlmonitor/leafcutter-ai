@@ -1,0 +1,248 @@
+id: TQ-500b-2
+components:
+  - testing_quality
+  - build_pipeline
+title: "The missing answer changes the outcome, rather than being printed and passed over"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run in which one piece of work's hand-off record carries no falsifiability
+      answer while every other requirement of that piece of work is met and its
+      phase reported itself finished,
+  When the run reaches the point at which it decides whether that piece of work is
+    finished,
+  Then the decision is that it is not finished, and the stated cause names the
+    absent falsifiability answer,
+    And withholding only the falsifiability finding from that same run, with every
+      other input identical, changes the decision to finished — which is what
+      establishes that the finding is consulted rather than only printed,
+    And a run in which every piece of work carries a conforming answer reaches the
+      finished decision, so the finding does not block work that answered,
+    And the decision is reached from the findings the run emitted; a run that
+      emitted no finding for a piece of work does not have that piece of work
+      declared unfinished on the strength of a finding that was never produced.
+depends_on:
+  - TQ-500b
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-010 Fix direction item 2 — "treat green on arrival, no mutation proof as
+      an incomplete phase rather than a pass". The consequence, not just the report,
+      is what that asks for.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Produces the shortfall records this decision consumes, and establishes the
+      registered-hook reachability requirement — a reader not reachable from the
+      path that decides anything reports to nobody.
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the mark-time completion decision this AC feeds is documented, including
+      the dispatch-topology trap that lets a gate be defined and never consulted.
+  - path: templates/scripts/commit_guardian/check_ticket_signoff_parity.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE CONSUMER PINNED BY IT-PO. Its sign-off completeness verdict — surfaced
+      as the hook's process exit status and its blocking finding list — IS "the
+      point at which the run decides whether that piece of work is finished". It
+      already decides exactly that: README check #6 blocks when a signed-off agent
+      with requires_ticket_section has unchecked tasks. NOT REGISTERED TODAY (see
+      TQ-500b-1's it_requirements); registration is a shared precondition.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The manifest that makes the consumer reachable. A decision point not
+      reachable from a registered hook decides nothing.
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+it_requirements:
+  - >-
+    THE CONSUMER IS NAMED AND IT IS NOT A PRINTER. The decision point is the
+    sign-off completeness verdict computed by
+    templates/scripts/commit_guardian/check_ticket_signoff_parity.py, observable
+    as the hook's process exit status and its blocking finding list. That script
+    already answers "is this work item's hand-off complete" — README check #6
+    blocks a commit when a signed-off agent with requires_ticket_section has
+    unchecked tasks — so the falsifiability finding joins an existing verdict
+    rather than inventing one. The finding must be an INPUT to that verdict, not
+    a line printed beside it.
+  - >-
+    THE SECOND THEN CLAUSE IS AN EXECUTABLE EXPERIMENT, NOT A DESCRIPTION.
+    Withhold ONLY the falsifiability finding — every other input byte-identical,
+    the parity findings untouched — and the process exit status must flip from
+    non-zero to zero. Run it against the production entry point, not against an
+    in-process helper. This is the alteration that distinguishes a consulted
+    finding from the fast-lane inert-runner shape, which passed its structural
+    tests while never executing its own gates.
+  - >-
+    THE FOURTH CLAUSE FORBIDS DEFAULT-DENY. A work item for which no finding was
+    emitted must not be declared unfinished. Default-deny would fail every work
+    item covered by TQ-500b-1-i's no-record carve-out, and the natural remedy for
+    that flood of false blocks is to switch the whole check off.
+  - >-
+    CONSUME TQ-500b-1's STATE ENTRIES; DO NOT RE-DERIVE ANY STATE. Re-deriving
+    creates a second classification that will diverge from the reported one, and
+    the reported one is what a reader sees.
+  - >-
+    REACHABILITY IS A PRECONDITION SHARED WITH TQ-500b-1. The consumer must be
+    registered in templates/scripts/commit_guardian/commit_guardian.json as hook
+    id `check-ticket-signoff-parity` — verified absent at enrichment
+    (origin/main 8be523f48) despite the README documenting it as live. Assert the
+    registration; do not infer it from the README.
+  - >-
+    BOUNDARY — DO NOT WIDEN INTO done_proof. scripts/ac_store/done_proof.py and
+    the required CI Proof-of-done gate are a different decision at a different
+    altitude. This AC changes one verdict at the sign-off hook. Escalating the
+    finding into done-eligibility is separate work and must be raised, not
+    assumed.
+  - >-
+    This AC decides nothing about whether a test is any good. It consumes one
+    record-shape observation and lets it reach an existing completion decision.
+  - >-
+    Must handle errors gracefully per the project error handling policy; a
+    failure to read the state entries must not silently resolve to "finished".
+delivers_to: null
+expects_from:
+  ac_id: TQ-500b-1
+  contract: >-
+    Per-piece-of-work state entries naming answer taken, answer not owed, or answer
+    owed and absent. This AC consumes them at the completion decision and must not
+    re-derive any state.
+test_spec:
+  - name: test_tq500b_2_absent_answer_makes_the_decision_not_finished_and_names_the_cause
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A run in which one work item's record carries no falsifiability answer
+      while every other requirement is met and its phase reported itself
+      finished: the decision is not-finished and the stated cause names the
+      absent falsifiability answer by that name.
+  - name: test_tq500b_2_withholding_only_the_falsifiability_finding_flips_the_decision
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py
+    description: >-
+      THE CRITERIA'S OWN NAMED ALTERATION, RUN THROUGH THE REGISTERED HOOK. Two
+      subprocess invocations over byte-identical inputs; the second withholds
+      ONLY the falsifiability finding and leaves the parity findings untouched.
+      The exit status must be non-zero in the first and zero in the second. A run
+      that prints the finding and decides on other grounds passes the criterion
+      test above and fails here — which is the whole point, because that is the
+      inert-runner shape the fast lane shipped. Also assert hook id
+      `check-ticket-signoff-parity` is present in
+      templates/scripts/commit_guardian/commit_guardian.json; it is absent today.
+  - name: test_tq500b_2_a_run_in_which_every_item_answered_reaches_the_finished_decision
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      The false-block control. Over a run whose every work item carries a
+      conforming answer — a mix of red_baseline, substitute and reasoned-negative
+      shapes — the decision is finished and no falsifiability finding is emitted.
+      NAMED MUTATION (this descriptor asserts an absence): make the decision block
+      on the PRESENCE of any falsifiability entry rather than on the
+      answer_owed_absent state. Under that injection the all-conforming run is
+      blocked and THIS TEST MUST GO RED; revert and it returns to green.
+  - name: test_tq500b_2_a_work_item_with_no_finding_is_not_declared_unfinished
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The anti-default-deny control, over TQ-500b-1-i's no-record cases (D and E)
+      in the same run as an answered item. Neither D nor E is declared unfinished
+      and the run's exit status is a function of G alone. NAMED MUTATION (this
+      descriptor asserts an absence): make the decision default-deny when no
+      falsifiability entry exists for a work item. Under that injection D and E
+      are both blocked and THIS TEST MUST GO RED; revert and it returns to green.
+      Record this alteration and its per-test outcomes in this AC's own
+      falsifiability answer.
+  - name: test_tq500b_2_the_decision_consumes_the_state_entries_rather_than_re_deriving_them
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      Feed the decision a state entry list in which one entry's state has been
+      changed to disagree with the underlying record, and assert the decision
+      follows the ENTRY, not the record. If the decision re-derives, it will
+      follow the record and this test goes red — which is the seam being pinned:
+      TQ-500b-1 produces, TQ-500b-2 consumes, and only one of them classifies.
+test_rationale: |
+  The first clause alone is satisfied by a run that computes the finding, prints
+  it, and decides on other grounds — the inert-report failure this repository has
+  already shipped, when fast-lane-build.js passed its grep-only structural tests
+  while never executing its red/green gates. So the load-bearing descriptor is
+  the withhold experiment, run twice through the registered hook against
+  byte-identical inputs, asserting the process exit status flips. That is a
+  consumption proof; nothing weaker is one.
+
+  Two descriptors assert an absence (the all-answered run is not blocked; a
+  no-finding item is not blocked) and both are green on arrival on any
+  implementation that blocks nothing at all — including one that never consults
+  the finding. Each therefore names its injection: block-on-presence for the
+  first, default-deny for the second. Both must be shown RED under injection and
+  green on revert, and recorded in this AC's substitute-kind falsifiability
+  answer.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      CONSUMER NAMED (the hand-off's open item 2): the decision point is the
+      sign-off completeness verdict of
+      templates/scripts/commit_guardian/check_ticket_signoff_parity.py, observable
+      as its process exit status — the script already decides ticket hand-off
+      completeness at commit time, so the finding joins an existing verdict rather
+      than inventing one. Boundary drawn against scripts/ac_store/done_proof.py,
+      which is explicitly out of scope. reachability angle per the hand-off steer;
+      the withhold experiment runs through the registered hook. declares_side_effect
+      corrected true -> false: the derivation asks whether the Then clause writes a
+      DURABLE object outliving the run, and explicitly excludes transient
+      destinations. This AC's consequence is a process EXIT STATUS, which is the
+      transient case however load-bearing it is — flipping a verdict is not writing
+      a file. criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE SECOND CLAUSE IS THIS AC'S OWN SUBSTITUTE EVIDENCE, WRITTEN INTO THE
+  REQUIREMENT. Withholding the finding and requiring the decision to flip is a named,
+  repeatable alteration of the guarded behaviour — precisely the shape TQ-500a-3
+  asks writers to record. It is here because the first clause on its own is
+  satisfiable by a run that computes the finding, prints it, and decides on other
+  grounds, which is the inert-report failure this repository has shipped before: the
+  fast-lane runner passed its structural tests while never executing its own gates.
+
+  THE FOURTH CLAUSE PREVENTS THE OPPOSITE ERROR. A decision that treats "no finding"
+  as "unfinished" would fail every piece of work covered by TQ-500b-1-i's no-record
+  carve-out, and the natural remedy for that flood of false blocks is to switch the
+  whole check off.
+
+  BOUNDARY. This AC decides nothing about whether a test is any good. It consumes one
+  record-shape observation and lets it reach the completion decision.

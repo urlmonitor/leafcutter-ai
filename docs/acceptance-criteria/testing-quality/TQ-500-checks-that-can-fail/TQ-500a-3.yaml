@@ -1,0 +1,139 @@
+id: TQ-500a-3
+components:
+  - testing_quality
+  - build_orchestration
+title: "The substitute names the alteration precisely and confirms the behaviour was put back"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work whose writer takes the substitute evidence — alter the
+      guarded behaviour on purpose, re-run the tests, then put the behaviour back,
+  When that piece of work is handed on,
+  Then its hand-off record names the alteration specifically enough for another
+    person to apply the same alteration without asking the writer: which behaviour
+    was changed, and what it was changed to,
+    And the record states that the alteration was reverted, and that the tests were
+      re-run after the revert and returned to the outcomes they held before the
+      alteration was applied,
+    And a record naming an alteration but stating nothing about the revert is
+      distinguishable from one stating both,
+    And a record claiming the substitute evidence while naming no alteration at all
+      is distinguishable from one that names it.
+depends_on:
+  - TQ-500a
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-010 Fix direction item 1 states the substitute in exactly three parts —
+      name the mutation, show the test red under it, show it green after revert.
+      This AC covers the first and third; the second is TQ-500c-1.
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The writing surface. Its existing red_baseline block already requires the
+      actual error text from the verification run rather than a paraphrase — the
+      same specificity bar this AC sets for the alteration.
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE ALTERATION FIELD MUST BE REQUIRED, NOT MERELY PERMITTED. Record U —
+    claiming the substitute evidence while naming no alteration — is only
+    detectable by TQ-500a-3-i if the template states the field as mandatory
+    within the substitute shape. A field described as optional produces a
+    conforming-looking record with nothing in it.
+  - >-
+    THE REVERT IS TWO SEPARATE STATEMENTS, NOT ONE. "Reverted" and "the tests
+    returned to their pre-alteration outcomes after re-running" are different
+    facts and TQ-500a-3-i detects their omissions by different mechanisms — a
+    presence check for the first, a comparison of two outcome sets for the
+    second. A template that folds them into one sentence makes record T
+    indistinguishable from record R.
+  - >-
+    THE SPECIFICITY BAR IS "ANOTHER PERSON CAN REAPPLY IT WITHOUT ASKING". Set
+    it against the precedent already in templates/agents/test-writer.md, whose
+    red_baseline block requires the actual error text from the verification run
+    rather than a paraphrase. "Broke the behaviour and the tests went red" is
+    unfalsifiable prose and must be shown as a non-example.
+  - >-
+    Must not require or imply that the writer justify the alteration as the
+    right one. Whether the alteration is the leak the requirement actually
+    forbids is not establishable from any record, and a template that asks for it
+    invites the self-certified non-vacuity KI-TQ-010 names.
+  - >-
+    Must carry the revert instruction as a safety obligation, not a formality:
+    this is the only procedure in the pipeline that deliberately breaks working
+    behaviour, and an unconfirmed revert leaves a live defect introduced by the
+    act of proving the tests catch defects.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500a-3-i
+    contract: >-
+      Within the substitute-evidence answer: a named alteration (behaviour changed,
+      and what to), a revert statement, and a post-revert re-run result. Absent
+      revert, non-restoring revert, and unnamed alteration are the three
+      non-conforming states TQ-500a-3-i reads for and reports by name.
+expects_from:
+  ac_id: TQ-500a-1
+  contract: >-
+    The declaration that this piece of work's answer is of the substitute kind.
+    This AC specifies what that answer must contain; it does not decide which
+    pieces of work carry it.
+test_required: false
+test_rationale: |
+  Genuinely test-free at this AC's boundary, on the BP-1100g-5 precedent. Every
+  Then clause describes what a writer must state; the deliverable is template
+  prose. The three non-conforming states this AC's contract names — revert not
+  stated, revert did not restore, alteration not named — are asserted over
+  emitted records by TQ-500a-3-i, which carries the test contract and names the
+  injection for its own must-not-report clauses.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept llm-expert and change_target prompt. Required the alteration field
+      rather than permitting it, and split the revert into two separately-stated
+      facts so TQ-500a-3-i's records S and T remain distinguishable — an
+      implementation commonly collapses them. test_required false; the
+      falsifiable half is TQ-500a-3-i. criteria untouched.
+superseded_by: null
+covered_by:
+  - TQ-500a-3-i
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  WHY THE REVERT CLAUSE IS NOT CEREMONY. The substitute evidence is the only
+  procedure in the pipeline that deliberately breaks working behaviour. A revert
+  that is not confirmed leaves the alteration in the tree, where it is a live
+  defect introduced by the very act of proving the tests would catch defects. And a
+  revert that is confirmed only by re-reading the change, rather than by re-running
+  the tests, does not establish that the tree is where it started.
+
+  WHY "SPECIFICALLY ENOUGH TO APPLY AGAIN". "Broke the behaviour and the tests went
+  red" is unfalsifiable prose: nobody can check it, and it reads identically whether
+  the alteration was the one the requirement guards or something incidental that
+  happened to break the suite. Naming the alteration to the point of repeatability
+  is what makes TQ-500e's later reader able to judge the evidence rather than take
+  it on faith.
+
+  DELIBERATELY OUT OF SCOPE: whether the alteration was a good choice — whether it
+  is the leak the requirement actually forbids. No record can establish that, and
+  claiming it could would be the self-certified non-vacuity KI-TQ-010 warns about.
+  What this tree can establish is that the tests discriminate against a named,
+  repeatable alteration, and that a later reader can see which one.

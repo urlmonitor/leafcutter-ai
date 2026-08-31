@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -114,10 +114,23 @@ test_rationale: "This record exists because the parent's scenario contains ONE e
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder and complexity S (no code change beyond GE-123a-1; the whole cost is the multi-file fixture set); authored it_requirements pinning the single-scan_files-call rule that makes the aggregation arm falsifiable, the multiset-of-(rule_id, file_path) assertion shape, per-file rather than total comparison for order independence, five distinct filenames rather than one name in five directories, and the shared fixture/loader/allowlist constraints; added a test-angles doc_link; authored a 4-entry test_spec plus test_rationale distinguishing red-on-counts from green-on-mechanism for the order-independence and aggregation arms. Criteria, depends_on, expects_from and notes unchanged."
+- reason: 'it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder
+    and complexity S (no code change beyond GE-123a-1; the whole cost is the multi-file
+    fixture set); authored it_requirements pinning the single-scan_files-call rule
+    that makes the aggregation arm falsifiable, the multiset-of-(rule_id, file_path)
+    assertion shape, per-file rather than total comparison for order independence,
+    five distinct filenames rather than one name in five directories, and the shared
+    fixture/loader/allowlist constraints; added a test-angles doc_link; authored a
+    4-entry test_spec plus test_rationale distinguishing red-on-counts from green-on-mechanism
+    for the order-independence and aggregation arms. Criteria, depends_on, expects_from
+    and notes unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/02_TICKET-20260831-GE-123a-1-i.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -174,3 +187,4 @@ notes: |
   VERIFY THROUGH THE REAL MULTI-FILE ENTRY POINT with real files on disk. A test
   that calls the per-file scan five times in a loop asserts nothing this criterion
   is about and specifically cannot fail the third arm.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

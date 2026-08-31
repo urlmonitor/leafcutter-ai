@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -105,10 +105,14 @@ expects_from:
   contract: "The load-time predicate that a line-number field which is neither the wildcard nor a decimal line number makes the entry unmatchable, together with the warn-and-skip announcement it reuses."
 origin_agent: business-analyst
 created: 2026-08-18
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/13_TICKET-20260831-GE-123c-1-i.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -137,3 +141,4 @@ notes: |
   rule reaches both shapes. The load-bearing it_requirement is the prohibition on
   a shape-specific branch — the moment either shape gets its own code path, the
   next variant escapes.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

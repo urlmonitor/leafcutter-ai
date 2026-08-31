@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -105,10 +105,22 @@ test_rationale: "This criterion IS the measured defect stated as post-fix behavi
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder and complexity S (no new code surface beyond GE-123a-1; the cost is the five-file plus allowlist fixture); authored it_requirements pinning the literal-wildcard suppression form as the only repository-wide one that parses, the exactly-one-entry constraint, by-rule-id rather than by-count observation, the innocuous-text constraints for the third arm, and the shared scan_files/CLI-subprocess/fixture/loader/allowlist rules; added a test-angles doc_link; authored a 4-entry test_spec plus test_rationale flagging the paired-positive and legitimate-use arms as green on arrival, the former vacuously so. Criteria, depends_on, expects_from and notes unchanged."
+- reason: 'it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder
+    and complexity S (no new code surface beyond GE-123a-1; the cost is the five-file
+    plus allowlist fixture); authored it_requirements pinning the literal-wildcard
+    suppression form as the only repository-wide one that parses, the exactly-one-entry
+    constraint, by-rule-id rather than by-count observation, the innocuous-text constraints
+    for the third arm, and the shared scan_files/CLI-subprocess/fixture/loader/allowlist
+    rules; added a test-angles doc_link; authored a 4-entry test_spec plus test_rationale
+    flagging the paired-positive and legitimate-use arms as green on arrival, the
+    former vacuously so. Criteria, depends_on, expects_from and notes unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/03_TICKET-20260831-GE-123a-2.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -132,3 +144,4 @@ notes: |
   Env filenames are the subject of this criterion, as in GE-123a-1 — not a
   casual example. Depends on GE-123a-1 because there is nothing to observe until
   the content scan actually runs on these files.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

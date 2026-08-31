@@ -414,7 +414,7 @@ def _compute_output_mappings(
     for source, target in phase_mappings:
         # ``target`` is the PRE-shim, output_root-relative path the real
         # deploy phase (build_agents/build_commands/build_workflows/
-        # build_hooks) actually writes to. Gated on it existing (BP-100k-6
+        # build_hooks) actually writes to. Gated on it existing (BP-100n-1
         # interaction fix): build.py's real sequence writes the manifest
         # BEFORE install_shims() runs, so on an untouched real build this
         # phase's own write always already happened by the time this
@@ -423,7 +423,7 @@ def _compute_output_mappings(
         # narrower subset of phases directly (e.g. only build_agents) — a
         # key predicting an undeployed sibling family (commands/workflows/
         # hooks templates that exist in the SOURCE tree regardless of which
-        # phase actually ran) would otherwise be recorded, and BP-100k-6's
+        # phase actually ran) would otherwise be recorded, and BP-100n-1's
         # missing-artifact verdict would then correctly, but unhelpfully,
         # BLOCK on a file that specific fixture never asked to deploy.
         if not target.exists():
@@ -474,7 +474,7 @@ def _compute_output_mappings(
     if skills_tpl_dir.is_dir():
         # Each entry pairs the canonical (post-shim) directory with its
         # PRE-shim, output_root-relative equivalent — the existence check
-        # below (BP-100k-6 interaction fix, same reasoning as the
+        # below (BP-100n-1 interaction fix, same reasoning as the
         # phase_mappings loop above) must probe the latter, since the shim
         # bridging the former back up to target_root is not created until
         # install_shims() runs, which is AFTER the manifest is written even
@@ -857,7 +857,7 @@ def _compute_output_mappings(
     if rules_tpl_dir.is_dir():
         for tpl in sorted(rules_tpl_dir.glob("*.md")):
             output = output_root / ".agents" / "rules" / tpl.name
-            # Gated on existence (BP-100k-6 interaction fix, same reasoning
+            # Gated on existence (BP-100n-1 interaction fix, same reasoning
             # as the sections above) — this path has no shim involved (no
             # timing concern), so the check purely protects a fixture that
             # never calls build_rules() from getting a phantom MISSING
@@ -903,7 +903,7 @@ def _compute_output_mappings(
     if workflows_js_dir.is_dir() and workflows_enabled:
         for tpl in sorted(workflows_js_dir.glob("*.js")):
             # Gated on the PRE-shim ``output_root/workflows/`` path existing
-            # (BP-100k-6 interaction fix, same shim-timing reasoning as the
+            # (BP-100n-1 interaction fix, same shim-timing reasoning as the
             # phase_mappings and skills sections above) — the canonical
             # ``.claude/workflows`` symlink this family also relies on is not
             # created until install_shims() runs, after the manifest is

@@ -1182,3 +1182,121 @@ draft number `KI-ACS-014` and should be read as pointing here.
 the same proof set, corrupted from the writing side). `KI-KM-009` (the supersessions that
 surfaced this). The "AC-store commits — stage the parent alongside the child" rule in
 `CLAUDE.md`, which explains why the `INF-400c-2` instance passes.
+
+---
+
+### KI-ACS-017 — `approve_acs.py` corrupts any record whose `amended_by` holds a multi-line entry, and returns success for the files it broke
+
+- **Severity:** blocker
+- **Status:** open
+- **Occurrences:** 1 (5 files corrupted in a single run)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/ac_store/approve_acs.py` — `_promote_leaf()` and `_build_amended_by_block()`
+
+**Symptom.** `_promote_leaf` appends the approval entry by rebuilding the `amended_by`
+block as **text** rather than by round-tripping the parsed document. On a record whose
+existing `amended_by` contains a multi-line entry, it emits YAML that no longer parses:
+
+```
+yaml.parser.ParserError: while parsing a block mapping
+  in "<unicode string>", line 126, column 3:
+    - action: approved
+      ^
+expected <block end>, but found '<scalar>'
+```
+
+**The dangerous part is not the corruption, it is the return code.** The run reported
+`rc=0` for all 31 records **including the five it had just made unparseable**. Nothing in
+the tool's own output distinguished a successful promotion from a destroyed file. It
+surfaced only because the calling script re-read every file from disk afterwards and
+asserted it still parsed — a check nobody is obliged to perform, and which the tool's
+success-shaped output actively discourages.
+
+**Evidence.** 2026-08-31, promoting the 31 records under `GE-123`. Five files were left
+unparseable: `GE-123a-4`, `GE-123b-5`, `GE-123c-4`, `GE-123c-5`, `GE-123d-4-ii` — exactly
+the five carrying the multi-line gating-correction entries added in #554 and #594. All five
+were already committed, so nothing was lost; they were restored with `git checkout` and
+their `readiness` set by hand. Had the promotion been run on uncommitted records, or
+committed without the re-read, five acceptance criteria would have entered the store
+unparseable — and `validate_ac_schema` would then have failed for every subsequent commit
+touching that tree, with a cause several steps removed from the change that produced it.
+
+**Detection.** After any `approve_acs.py` run, re-parse every file it touched. Do not trust
+the exit code or the per-record `promoted …` lines; both are emitted before the write is
+validated. `find <dir> -name '*.yaml' -exec python scripts/ac_store/validate_ac_schema.py {} +`
+is sufficient and takes seconds.
+
+**Workaround.** For a record with a multi-line `amended_by`, set `readiness` by hand — it is
+a one-line edit — rather than letting the tool rewrite the block.
+
+**Fix direction.** Stop rebuilding the block textually. Either round-trip through a YAML
+library that preserves the document, or append the entry without re-emitting the entries
+already there. Whatever the approach, `_promote_leaf` must re-read and parse the file it
+just wrote before returning 0: a writer that cannot tell whether its own output is valid
+has no business reporting success.
+
+**Related.** `KI-ACS-018` (the sibling generator, same "output never validated against the
+gates that will judge it" shape).
+
+---
+
+### KI-ACS-018 — Four defects in `goal_to_epic.py`'s generated output, three of them caught by the repo's own hooks
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1 epic (27 tickets), all four present in the same run
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/ac_store/goal_to_epic.py` — `_derive_epic_name()` / `_truncate_pascal_at()`,
+  the `implemented_by` stamp, `Master_Plan.md` assembly, and the `depends_on` writer
+
+**Symptom.** Generating `EPIC-SuppressionNarrowsNeverDisables` from `GE-123` produced output
+with four independent defects. None is specific to that goal; all four will recur on every
+generated epic.
+
+1. **`depends_on` references filenames that cannot exist.** The generator numbers the ticket
+   files it writes (`01_TICKET-…`, `06_TICKET-…`) but writes `depends_on` entries **without**
+   the prefix. All **eight** references in this epic were dangling, in an epic whose entire
+   build order rests on them. `check-doc-frontmatter` refuses the commit, naming each. This is
+   the highest-impact of the four: an epic driven before anyone notices has no dependency
+   ordering at all.
+
+2. **`Master_Plan.md` fails the repo's own `ticket_frontmatter_guard` as generated** — missing
+   `title`, `type`, `depends_on`, `requires_diagram`, `requires_adr`, `change_target` and
+   `risk_surface`, i.e. every required field. The one existing Master_Plan on `main` that passes
+   carries all of them, which means it was hand-corrected too and this has been silently taxing
+   every generated epic.
+
+3. **Absolute paths stamped into committed AC records.** Each leaf AC receives
+   `- /home/henzeh/projects/leafcutter/worktrees/<name>/tickets/…` in `implemented_by` — the
+   generating machine's local worktree path, written into a file everyone reads. A store-wide
+   count on 2026-08-31 found **60** records carrying an absolute `/home/henzeh` path, so this
+   long predates the run that surfaced it.
+
+4. **Epic name truncated mid-phrase.** `_derive_epic_name` cut *"Trust that the last check
+   between you and a leaked credential is still on"* at a character count, yielding
+   `EPIC-TrustThatTheLastCheckBetweenYouAndA` — ending on a dangling article. The LLM
+   summariser it would normally call is unavailable when no `claude` binary is on PATH, and
+   the script offers **no name override**, so there is no supported way to correct it other
+   than renaming the folder and every stamp afterwards.
+
+**Detection.** Defects 1 and 2 are caught by `check-doc-frontmatter` and
+`ticket_frontmatter_guard` at commit time — loudly, which is the good news. Defects 3 and 4
+are silent: nothing rejects an absolute path or a truncated name, and both are committed
+without complaint. For 3: `grep -rl "^- /home/" docs/acceptance-criteria/`.
+
+**Workaround.** Generate, then repair before committing: rename the folder and rewrite the
+`target_epic` stamp in every AC, rewrite `implemented_by` to repo-relative, add the missing
+Master_Plan frontmatter, and prefix every `depends_on` entry. That is roughly 60 edits for a
+27-ticket epic, which is the real cost of leaving this open.
+
+**Fix direction.** The four share one cause: **the generator's output is never checked against
+the gates that will judge it.** The durable fix is a post-generation self-check that runs the
+frontmatter guards over what it just wrote, so the generator fails rather than the human who
+commits an hour later. Individually: write `depends_on` with the same prefix the filename
+writer produces (they should share one function); emit the full Master_Plan frontmatter;
+stamp `implemented_by` relative to the repo root; and truncate the epic name on a word
+boundary, refusing to end on an article — plus an `--epic-name` override for when the
+summariser is unavailable.
+
+**Related.** `KI-ACS-017` (the sibling AC-store writer with the same unvalidated-output
+shape). `KI-CG-035` (the gate that makes the corrected scaffold unlandable anyway).

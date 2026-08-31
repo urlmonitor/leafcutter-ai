@@ -55,6 +55,7 @@ import json
 import logging
 import re
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -311,7 +312,7 @@ def _resolve_declared_workflows_enabled(
 
     This is the ONLY source ``check_command_reachability`` consults to decide
     whether a name-form workflow reference should be skipped — never whether
-    ``output_root/workflows/`` happens to exist on disk (BP-100k-7). The
+    ``output_root/workflows/`` happens to exist on disk (BP-100n-2). The
     default (``config`` absent, or ``config["workflows"]`` absent) is
     ``False``, matching ``build_workflow_scripts()``'s own documented default
     so the guard and the producer can never disagree about whether the
@@ -371,7 +372,7 @@ def check_command_reachability(
     Whether a name-form workflow reference is skipped is decided SOLELY from
     the declared ``config["workflows"]["enabled"]`` value (via
     ``_resolve_declared_workflows_enabled``), never from whether
-    ``output_root/workflows/`` happens to exist on disk (BP-100k-7). A
+    ``output_root/workflows/`` happens to exist on disk (BP-100n-2). A
     declaration of "enabled" with no deployed output is exactly the failure
     this guard exists to catch and is reported, not skipped; a malformed
     declaration is reported as a distinct "unreadable" condition; every skip
@@ -472,7 +473,7 @@ def check_command_reachability(
         {p.stem for p in workflows_dir.glob("*.js")} if workflows_deployed else set()
     )
     # The SKIP decision below is taken from the declared configuration value
-    # ONLY (BP-100k-7) — `workflows_deployed` above is used solely to build
+    # ONLY (BP-100n-2) — `workflows_deployed` above is used solely to build
     # the registry `registered_workflows` resolves against, never to decide
     # whether a name-form reference should be skipped, on ANY call path.
     #
@@ -538,7 +539,7 @@ def check_command_reachability(
             # toggle, which is the case BP-900g-1 actually exists to catch.
             #
             # The skip decision for a name-form workflow reference is taken
-            # from the DECLARED configuration value alone (BP-100k-7) — never
+            # from the DECLARED configuration value alone (BP-100n-2) — never
             # from whether output_root/workflows/ happens to exist. That
             # conflated two opposite states: deliberately disabled (skip is
             # correct) versus enabled but undeployed (every reference is now
@@ -746,6 +747,111 @@ def get_uptodate_count() -> int:
 
 
 # ---------------------------------------------------------------------------
+# Declared-deploy failures (BP-900g-9) — fail closed on a missing source
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class DeployFailure:
+    """One declared deploy entry whose source file was not found.
+
+    Accumulating records rather than logging strings is what makes "report
+    every entry, not only the first" implementable and testable: a log line is
+    gone once emitted, a record can be counted and asserted on.
+
+    Attributes:
+        phase: The deploy phase that declared the entry (e.g. ``build_ac_store``),
+            so the author knows which declaration to edit.
+        entry: The declaration entry as written, so it can be located in the
+            map without guessing.
+        source_path: The source path that was not found.
+    """
+
+    phase: str
+    entry: str
+    source_path: str
+
+
+class DeployDeclarationError(Exception):
+    """One or more declared deploy entries had no source file.
+
+    Raised ONCE, after every deploy phase has run, carrying the whole
+    accumulated set. Raising per-entry would turn N stale entries into N
+    build-fix-build cycles with a green build between each one, so an author
+    who stops at the first green ships the remaining N-1.
+
+    Args:
+        failures: Every unresolvable declared entry found during the run.
+    """
+
+    def __init__(self, failures: list[DeployFailure]) -> None:
+        self.failures = list(failures)
+        detail = "\n".join(
+            f"  - {f.phase}: declared entry '{f.entry}' has no source at "
+            f"{f.source_path}"
+            for f in self.failures
+        )
+        super().__init__(
+            f"{len(self.failures)} declared deploy "
+            f"{'entry' if len(self.failures) == 1 else 'entries'} could not be "
+            f"resolved to a source file:\n{detail}\n"
+            "A build that completes while silently omitting a declared file "
+            "reports a consumer install that was never produced. Either deploy "
+            "the source, or remove the entry from its declaration."
+        )
+
+
+# Accumulated across ALL deploy phases of one run, so a single build reports
+# the whole remediation set. build.py resets this before the phases run and
+# raises on it afterwards, mirroring the _uptodate_count idiom above.
+_deploy_failures: list[DeployFailure] = []
+
+
+def reset_deploy_failures() -> None:
+    """Clear the accumulated declared-deploy failures.
+
+    Must be called before the build phases run so consecutive invocations in
+    one process (notably the test suite) do not inherit each other's findings.
+    """
+    _deploy_failures.clear()
+
+
+def record_deploy_failure(phase: str, entry: str, source_path: Path | str) -> None:
+    """Record a declared deploy entry whose source file was not found.
+
+    Callers continue iterating after calling this — the point is to reach the
+    end of the declaration and report every unresolvable entry at once.
+
+    Args:
+        phase: Name of the declaring deploy phase.
+        entry: The declaration entry as written.
+        source_path: The path that was not found.
+    """
+    _deploy_failures.append(
+        DeployFailure(phase=phase, entry=entry, source_path=str(source_path))
+    )
+
+
+def get_deploy_failures() -> list[DeployFailure]:
+    """Return the declared-deploy failures accumulated so far this run."""
+    return list(_deploy_failures)
+
+
+def raise_if_deploy_failures() -> None:
+    """Raise :class:`DeployDeclarationError` when any declared entry was unresolvable.
+
+    A no-op when the run found none — "nothing to ship" and "everything
+    shipped" are both success; only "something was promised and dropped" is a
+    failure.
+
+    Raises:
+        DeployDeclarationError: Carrying every accumulated record.
+    """
+    if _deploy_failures:
+        raise DeployDeclarationError(_deploy_failures)
+
+
+# ---------------------------------------------------------------------------
 # Internal write helpers (thin wrappers; callers can also use build.write_file)
 # ---------------------------------------------------------------------------
 
@@ -908,7 +1014,7 @@ def build_agents(target_root: Path, config: dict[str, Any],
 
             # A write failure for one active platform must never be silently
             # absorbed into "the build succeeded" — that is exactly the
-            # silent-success shape BP-100k-8 forbids. Name the platform that
+            # silent-success shape BP-100n-3 forbids. Name the platform that
             # could not be exercised and state it is unverified, rather than
             # letting a bare OSError (or a clean return) hide which platform
             # failed.
@@ -1391,9 +1497,11 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
 
     for src_file, dest_name in deploy_map:
         if not src_file.is_file():
-            _log.warning(
-                "build_ac_store: source script not found, skipping: %s", src_file
-            )
+            # BP-900g-9: was warn-and-continue, which let a declared entry
+            # vanish from the deployed tree while the build exited 0. Record
+            # and keep going so one run reports the whole remediation set;
+            # build.py raises once at the end.
+            record_deploy_failure("build_ac_store", dest_name, src_file)
             continue
 
         output_path = output_dir / dest_name
@@ -1423,6 +1531,24 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
                 raise
             print(f"  scripts/ac_store/{dest_name}")
             written += 1
+
+    # BP-1100g-3-ii: done_proof.py reads config/ac_store_schema.json to learn
+    # the single taught set of proof kinds (BP-1100g-1). The DEPLOYED copy has
+    # to be able to read it too, and in the self-hosting workspace layout it
+    # cannot reach the package's own config/ by walking up -- .leafcutter/ sits
+    # BESIDE leafcutter-ai/ there, not inside it, so no ancestor of the deployed
+    # module holds the file. Deploying the schema next to the deployed scripts
+    # is what makes the module's upward search succeed from every layout.
+    # Without this the loader fail-softs to an empty permitted set and every
+    # correctly-tagged test is reported as declaring an unrecognised kind.
+    # Mirrors build_feedback's config/feedback_categories.yaml deployment.
+    schema_src = PACKAGE_ROOT / "config" / "ac_store_schema.json"
+    if schema_src.is_file():
+        schema_output = target_root / "config" / "ac_store_schema.json"
+        if _write(schema_output, schema_src.read_text(encoding="utf-8"), dry_run, force):
+            written += 1
+            if not dry_run:
+                print("  config/ac_store_schema.json")
 
     return written
 
@@ -2858,9 +2984,10 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     for script_name in deploy_scripts:
         src_file = scripts_src / script_name
         if not src_file.is_file():
-            _log.warning(
-                "build_workflow_tools: source script not found, skipping: %s", src_file
-            )
+            # BP-900g-9 (n_location_rule: all) — same warn-and-continue shape as
+            # build_ac_store. Fixing only the loop the AC names leaves the
+            # identical hole in its siblings.
+            record_deploy_failure("build_workflow_tools", script_name, src_file)
             continue
 
         output_path = output_dir / script_name
@@ -2930,10 +3057,8 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     for script_name in deploy_scripts:
         src_file = knowledge_src / script_name
         if not src_file.is_file():
-            _log.warning(
-                "build_knowledge_scripts: source script not found, skipping: %s",
-                src_file,
-            )
+            # BP-900g-9 (n_location_rule: all).
+            record_deploy_failure("build_knowledge_scripts", script_name, src_file)
             continue
 
         output_path = output_dir / script_name
@@ -3084,10 +3209,11 @@ def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
     for file_name in AGENT_SUPPORT_SCRIPT_FILES:
         src_file = scripts_src / file_name
         if not src_file.is_file():
-            _log.warning(
-                "build_agent_support_scripts: source script not found, skipping: %s",
-                src_file,
-            )
+            # BP-900g-9 (n_location_rule: all). Note this guards the DECLARED
+            # AGENT_SUPPORT_SCRIPT_FILES list only; the rglob loop just above
+            # iterates what exists on disk, where a missing file is not a
+            # dropped promise and must stay a skip.
+            record_deploy_failure("build_agent_support_scripts", file_name, src_file)
             continue
         written += _copy_agent_support_file(
             src_file, target_root, file_name, dry_run, force
@@ -3258,9 +3384,12 @@ def _deploy_fast_lane_release_dependency(target_root: Path, dry_run: bool,
     output_path = target_root / "scripts" / "release" / "check_changelog_presence.py"
 
     if not src_file.is_file():
-        _log.warning(
-            "build_build_orchestration_scripts: fast_lane.py's release dependency "
-            "not found, skipping: %s",
+        # BP-900g-9 (n_location_rule: all). A single declared path rather than a
+        # loop, but the same promise: fast_lane.py's release dependency is
+        # declared, so its absence is a dropped promise, not a skip.
+        record_deploy_failure(
+            "build_build_orchestration_scripts",
+            "scripts/release/check_changelog_presence.py",
             src_file,
         )
         return 0
@@ -3690,4 +3819,21 @@ def clean_stale_artifacts(
 #   back to the non-resolving path form. COMMAND-SIDE analogue of BP-811 (the
 #   .claude/workflows shim); does not modify or re-parent BP-811.
 #   (#EPIC-BuildPipelinePhantomRemediation/06)
+# - 2026-08-26 [python-coder/TICKET-20260826-BP-1100g-4]: Verified, made NO
+#   functional change. BP-1100g-4 adds a new commit_guardian hook module,
+#   templates/scripts/commit_guardian/check_proof_promise_claim.py, that
+#   imports done_proof.collect_test_tag_records (the same seam
+#   check_done_proof.py already uses). That module deploys wholesale via
+#   build_commit_guardian's directory copy of templates/scripts/commit_guardian/
+#   (see that function below), not via AC_STORE_DEPLOY_MAP, so it needs no
+#   entry of its own here. Its one runtime dependency — done_proof.py, and
+#   done_proof.py's own dependency test_enforcement.py — were already added to
+#   AC_STORE_DEPLOY_MAP by BP-1100g-3 (see the two entries above), so the
+#   import chain already resolves in the deployed layout with no further
+#   change. Confirmed by running the deployed hook via run_hook.py after a
+#   fresh build.py pass (unit_tests/commit_guardian/test_bp_1100g_4.py's
+#   reachability test). This is the DEPLOY-MANIFEST OBLIGATION check the AC's
+#   own Implementation Notes require — recorded here since it resolved to "no
+#   change needed" rather than a new deploy_map line, so the verification
+#   would otherwise leave no trace. (#TICKET-20260826-BP-1100g-4)
 # ====================================================================

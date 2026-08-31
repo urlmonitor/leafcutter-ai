@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -125,11 +125,15 @@ expects_from:
   contract: "The existing warn-and-skip path for malformed allowlist lines: a warning on the error stream carrying the allowlist file, the 1-based line number and the verbatim line text; skipping per line, never per file; the scan still completing with its exit status set by the findings alone."
 origin_agent: business-analyst
 created: 2026-08-18
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by:
   - GE-123c-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/12_TICKET-20260831-GE-123c-1.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -170,3 +174,4 @@ notes: |
   the multi-file scan function the pre-commit check imports. Left at python-coder,
   complexity M (one predicate plus its announcement, in one module, with the
   existing warn-and-skip path reused rather than rebuilt).
+target_epic: EPIC-SuppressionNarrowsNeverDisables

@@ -87,7 +87,7 @@ doc_links:
     relationship: context
     status: exists
     relevance: "IT-PO 2026-08-25 — the scaffold prerequisite, and the reason it is a depends_on rather than a preference. Until every namespace root exists in a plain install and resolves through declared path configuration, registering this hook makes every commit in every fresh install fail closed on an unresolvable root."
-  - path: docs/architecture/adrs/ADR-034-whole-collection-uniqueness-pass.md
+  - path: docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md
     relationship: context
     status: exists
     relevance: "The accepted decision describing the pass being registered, including the four namespaces it holds itself responsible for."
@@ -157,7 +157,7 @@ covered_by:
   - GE-122d-6-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/08_TICKET-20260825-GE-122d-6.md
-declares_side_effect: true
+declares_side_effect: false
 change_target:
   - code
   - pipeline
