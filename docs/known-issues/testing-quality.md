@@ -454,11 +454,14 @@ production one**, so a bug shows up as a failure rather than as agreement.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Occurrences:** 2
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-31
 - **Where:** `templates/agents/test-writer.md` (red-baseline protocol);
   `templates/agents/test-runner.md`; `templates/workflows-js/build-feature.js` `phaseOrder`;
   `CLAUDE.md` → "TDD Order — test-writer Must Precede python-coder"
+- **2026-08-31: a second occurrence, in a different shape and with a shipped consequence** —
+  see the end of this entry. Four green tests, an AC marked `done`, and the behaviour never
+  worked; found only when the unfixed code broke a live 27-ticket build.
 
 **Symptom.** The pipeline's only evidence that a test constrains anything is the **red baseline**:
 the suite must fail before the coder runs. That check is structurally unavailable to a whole class
@@ -522,6 +525,57 @@ suggestive and none is reliable. Instead:
 3. **Prefer per-mutation results over a single pass/fail.** The table above is what located the
    defect — three tests caught the leak and the aggregate looked fine. A mutation proof reported
    as one boolean would have said "the suite catches it" and test 3 would still be inert today.
+
+**2026-08-31 — second occurrence: a fixture made vacuous by the very gate the code was supposed
+to stop relying on. `TKT-600a-1` was marked `done` on a test that would pass on entirely
+unfixed code.**
+
+`TKT-600a-1` says *"files_touched contains only real edit-surface paths … and NOT illustrative
+file paths that merely appear inside prose it_requirements bullets"*. It carries four tagged
+tests. All four pass. It is `work_status: done`. The behaviour was never implemented.
+
+The mechanism is worth stating precisely, because it is not the usual "the test asserts the
+wrong thing" — the test asserts exactly the right thing, on inputs that cannot exercise it:
+
+```
+the test's own fixture — src/foo.py, deploy/foo.py (do not exist on disk)
+   _build_files_touched(...)  ->  []                                    PASSES
+
+the same narrative shape, naming paths that DO exist
+   -> ['docs/acceptance-criteria', 'docs/retrospectives', 'templates/skills']
+
+a real file mentioned only in order to say DO NOT edit it
+   "Do not edit templates/skills/security-scanner/SKILL.md here; it is context only."
+   -> ['templates/skills/security-scanner/SKILL.md']
+```
+
+`_build_files_touched` still harvests every slash-bearing token from prose. What removes the
+fixture's paths is the **on-disk existence gate** — not the fix. The test therefore passes
+identically before and after the change it was written to prove, which is this entry's question
+("can this test fail?") answered *no*, arrived at by a route the red-baseline protocol cannot
+see: the test was green on arrival because its inputs were unreachable, not because the
+assertion was weak.
+
+The third line is the sharpest consequence. An `it_requirement` whose entire purpose is to say
+*"this file is context, do not edit it"* makes that file the ticket's declared edit surface.
+
+**The consequence was not hypothetical.** The unfixed extractor produced the surfaces for
+`EPIC-SuppressionNarrowsNeverDisables`: 10 of 27 tickets unusable, three carrying nothing but
+bare directories, and two pointed at `docs/known-issues/commit-guardian.md` — a live document —
+as the file to modify. The build was stopped mid-drive. Five days and one "done" AC after the
+test was written, the first thing to actually detect the defect was a production run.
+
+**What this adds to the fix direction above.** The three prescriptions there are about negative
+controls with no red phase. This case adds a fourth, for tests that DO have a red phase on
+paper: **a fixture must be capable of reaching the code under test.** A path-filtering test
+whose fixture paths do not exist is filtered by the existence gate before the filter under test
+ever runs. The cheap general form is the mutation proof this entry already recommends — reverting
+the fix must turn the test red, and here it would not have.
+
+**Related.** `KI-ACD-023` (the `files_touched` defect this test was supposed to prevent, now at
+two occurrences). `KI-ACS-004` (`TKT-600a-1` is already cited there for a *different* failure —
+`done` with an empty `implemented_by` — so the same record has now produced two distinct
+done-quality defects).
 
 **Related.** `KI-TQ-009` (a test-local oracle reproducing the production bug — same family: the
 test agrees with the code instead of constraining it). `KI-TQ-005` (fixtures that never built the
