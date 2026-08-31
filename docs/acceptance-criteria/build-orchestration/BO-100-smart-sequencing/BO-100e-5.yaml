@@ -48,13 +48,71 @@ doc_links:
     relationship: modifies
     status: exists
     relevance: "The delivery-topology page the new diagram must be reachable from, and whose single-planning-pass description this change makes stale."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page for the surface the diagram depicts; its description of one planning pass and one batch loop is the text the diagram must not contradict."
+  - path: docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+    relationship: related
+    status: exists
+    relevance: "The nearest existing sequence diagram in this component; the shape, front-matter and numbering convention the new c3-NNN diagram should follow."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+test_required: false
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "The interaction set the diagram must show, in order. Each entry corresponds to an observable event in a real run's look record, which is what makes the diagram checkable rather than decorative."
+    properties:
+      interactions:
+        type: array
+        items:
+          type: string
+          enum:
+            - run_set_fixed_at_start
+            - first_eligibility_look
+            - eligible_pieces_built
+            - piece_finished_successfully
+            - further_look_against_what_has_finished
+            - newly_eligible_piece_built
+            - look_releases_nothing
+            - run_ends
+        description: "Every interaction shown must have occurred, in this order, in the real four-deep-chain run the diagram is reconciled against."
+      stop_decision:
+        type: object
+        description: "The stopping point drawn as a distinct decision node with its condition stated."
+        properties:
+          condition: {type: string}
+          matches_ended_because: {type: boolean}
+        required: [condition]
+      mid_run_additions_shown_as_excluded: {type: boolean}
+    required: [interactions, stop_decision, mid_run_additions_shown_as_excluded]
+  reference_file_path: "docs/architecture/agent_delivery_workflows.md"
+  n_location_rule: "1"
+  required_skills:
+    - architecture-diagram-author
+  post_write_commands:
+    - "python scripts/next_diagram_seq.py"
+  constraints:
+    - "DELIVERABLE: one Mermaid sequence diagram under docs/architecture/diagrams/, numbered with scripts/next_diagram_seq.py (c3 tier, alongside c3-002-interactive-pause-resume-sequence.md), PLUS the single link from docs/architecture/agent_delivery_workflows.md that makes it reachable. An unlinked diagram is not discoverable and does not satisfy the reader scenario."
+    - "THE DIAGRAM IS RECONCILED AGAINST A REAL RUN, NOT AGAINST THE DESIGN. Every interaction it draws must have occurred, in the order drawn, in the four-deep-chain run that BO-100e-1's tests execute; it must draw no interaction that did not occur. The stopping condition it states must be the ended_because value that actually ended that run. A diagram of an intended design that was never built fails this record — that is what makes it a testable documentation AC rather than a request for a picture."
+    - "DRAW THE STOP AS A DISTINCT DECISION with its condition written out — not an unlabelled arrow off the end of the lifeline. The condition is BO-100e-2's conjunction (a look released nothing AND nothing finished since the previous look), so a diagram showing a bare 'empty look -> end' is drawing the shortcut this family forbids."
+    - "SHOW MID-RUN ADDITIONS AS EXCLUDED. The diagram must make visible that work appearing after the run started is not drawn into the run's set (BO-100e-3 / BO-300a-5). A diagram silent on this can be read as promising absorption, which is the boundary the product deliberately settled the other way."
+    - "DO NOT DEPICT WHAT THE RUN SAYS ABOUT LEFTOVER WORK. That reporting is BO-300d and is out of scope for this family; the diagram may show the run ending and the set of unbuilt pieces existing, not the operator-facing message."
+    - "AUTHOR AFTER THE BEHAVIOUR EXISTS. This record depends on BO-100e-1 and BO-100e-2 precisely because the second scenario cannot be satisfied before there is a real run to reconcile against. Authoring the diagram first and reconciling later inverts the only check that makes it falsifiable."
+    - "STALENESS: agent_delivery_workflows.md and docs/architecture/components/build-orchestration.md both currently describe a single planning pass. Both statements become wrong when BO-100e-1 lands, and correcting them is part of this deliverable — a new diagram sitting beside prose that contradicts it is worse than no diagram."
+delivers_to:
+  agent: documentation-expert
+  contract: "One numbered Mermaid sequence diagram under docs/architecture/diagrams/ showing the eight ordered interactions and the stop decision with its condition, plus the link from docs/architecture/agent_delivery_workflows.md and the corrected single-planning-pass prose in that page and in docs/architecture/components/build-orchestration.md."
+expects_from:
+  ac_id: BO-100e-2
+  contract: "The executed four-deep-chain run and its look record ({ looks, look_records, ended_because }) from BO-100e-1's and BO-100e-2's behavioural tests — the real run the diagram's interaction list and stopping condition are reconciled against."
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -68,3 +126,13 @@ notes: |
   assigned_agent deliberately unset — the diagram surface belongs to the IT Product
   Owner's assignment pass; the architecture-diagram-author surface is the obvious
   candidate.
+
+  IT PO 2026-08-31: assigned architecture-diagram-author, as anticipated above.
+  test_required: false is set deliberately and is not a silent skip — the second
+  scenario IS a verification, but it is a documentation-verifier reconciliation of
+  the drawn interactions against the look record produced by BO-100e-1's and
+  BO-100e-2's behavioural runs, not an executable test of its own. Inventing a code
+  test for a Mermaid file would produce exactly the structural, grep-shaped proof
+  this family exists to avoid.
+change_target: docs
+risk_surface: internal

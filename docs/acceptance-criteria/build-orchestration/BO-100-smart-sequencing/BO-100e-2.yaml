@@ -52,13 +52,128 @@ doc_links:
     relationship: modifies
     status: exists
     relevance: "The batch loop whose exit condition this criterion fixes."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page describing the loop's current single pass and its four exit returns; the exit condition documented there becomes wrong when the loop is widened."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Justifies the boundary and failure angles charged below: a loop bound is a limit, and a terminating condition that cannot be reached is a fail-open gate."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "The run's own record of how it looked. This is what makes the third scenario falsifiable: a run that never re-looked and a run that re-looked and found nothing must not produce the same record."
+    properties:
+      looks: {type: integer, description: "Total looks taken. A single-pass run records 1."}
+      look_records:
+        type: array
+        items:
+          type: object
+          properties:
+            look_number: {type: integer}
+            released: {type: array, items: {type: string}}
+            released_count: {type: integer}
+            work_in_progress_at_look: {type: boolean}
+          required: [look_number, released_count]
+      look_ceiling: {type: integer, description: "The bound, derived from the size of the run's fixed set. Never a hard-coded constant."}
+      ended_because:
+        type: string
+        enum: [no_further_work_eligible, unsatisfiable_prerequisites, look_ceiling_reached, halted]
+    required: [looks, look_records, look_ceiling, ended_because]
+  reference_file_path: "templates/workflows-js/build-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "TERMINATION MUST BE PROVABLE, NOT HOPED FOR. The loop must carry an explicit bound derived from the size of the run's fixed set — not a hard-coded constant, and not merely the expectation that a look will eventually release nothing. Reaching the bound is itself a terminating condition with its own ended_because value. A hang is a worse outcome than the shortfall being fixed, because the shortfall at least ends."
+    - "THE BOUND MUST BE DATA-DRIVEN. It derives from the run set's cardinality, so a larger epic inherits a larger bound automatically and no set size is special-cased. A fixed numeric ceiling would silently truncate a deep chain and reproduce KI-BO-025 with a different cause."
+    - "DO NOT STOP AT THE FIRST EMPTY LOOK. The cheapest way to guarantee termination is to exit as soon as a look releases nothing, and that reintroduces the defect exactly: while the first layer is still in progress, nothing else is eligible. The exit condition must be 'a look released nothing AND nothing finished since the previous look' — both conjuncts, not either."
+    - "NO SILENT LOOK. The look count and per-look release count must be recorded on EVERY return the epic path can take, including the empty-plan return (~line 2166), the halted return (~line 2292), the unconfirmed-ticket backstop (~line 2337) and the final return (~line 2414). A field present on only the happy return is a record a degraded run never writes, and a degraded run is the one whose look count matters."
+    - "FALSIFIABILITY IS THE POINT OF THE THIRD SCENARIO: a run that looked exactly once must be DISTINGUISHABLE in its own record from a run that looked repeatedly and found nothing after the first. Without that distinction a build that quietly kept the old behaviour produces identical output and the criterion cannot be falsified — which is the same shape as the grep-only proof CLAUDE.md forbids."
+    - "The run must state that it ended because nothing further could be built and name the remaining pieces. That naming is the RECORD (ended_because plus unbuilt), not the operator-facing prose — BO-300d owns the message. This record requires only that the run does not claim to have finished."
+    - "Deployed/template parity (ADR-001) applies: the bound must hold in the deployed copy."
+delivers_to:
+  agent: python-coder
+  contract: "The loop exit condition and the run's look record: { looks, look_records[{look_number, released, released_count, work_in_progress_at_look}], look_ceiling, ended_because }, present on all four epic returns. Consumed by BO-100e-2-i (unsatisfiable prerequisites set ended_because), by BO-100e-4 (a failure must not become an early exit) and by BO-100e-5 (the diagram's stopping condition is compared against this record from a real run)."
+expects_from:
+  ac_id: BO-100e-1
+  contract: "The repeated-eligibility-look loop this bounds, its per-look released set, and the run's fixed set whose cardinality the look ceiling derives from."
+test_spec:
+  - name: test_run_ends_when_a_look_releases_nothing_and_nothing_finished_since
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A set whose remaining pieces can never become eligible: the run terminates, ended_because is no_further_work_eligible, and the remaining pieces are named in unbuilt."
+  - name: test_run_does_not_end_on_an_empty_look_while_a_piece_is_still_in_progress
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Four-deep chain: the look taken while layer 1 is still in progress releases nothing, and the run continues. Ending here would satisfy termination trivially and reproduce KI-BO-025, so this must go red on that shortcut."
+  - name: test_run_ends_only_after_the_look_that_follows_the_last_piece_finishing
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "On the same chain, the terminating look is the one taken after D completes — asserted from the look record's ordering against the captured dispatch sequence."
+  - name: test_look_count_is_bounded_by_the_size_of_the_run_set
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Across an empty set, a one-piece set and a many-piece chain, recorded looks never exceed look_ceiling, and look_ceiling is derived from the run set's cardinality rather than a constant (it changes when the set size changes)."
+  - name: test_reaching_the_look_ceiling_ends_the_run_with_the_cause_stated
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Fed a set contrived so no look ever releases anything and progress is always reported, the run still stops at the ceiling with ended_because look_ceiling_reached rather than circling. The negative control that proves the bound can actually fire."
+  - name: test_look_record_reports_look_count_and_per_look_release_count
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The terminal payload carries looks and one look_records entry per look, each with its released_count."
+  - name: test_single_look_run_is_distinguishable_from_a_repeated_look_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Anti-silence control: a flat set (one releasing look plus one terminating look) and a four-deep chain produce different look records. A build that kept the old single-pass behaviour makes these two records identical and must go red."
+  - name: test_look_record_is_present_on_every_epic_return_path
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "templates/workflows-js/build-feature.js (E2 top-level body, via run_workflow_under_e2)"
+    description: "Driving the workflow body to each of the four epic returns — empty plan, halted ticket, unconfirmed ticket, normal completion — the terminal payload carries looks and ended_because every time."
+test_rationale: |
+  Termination cannot be proved by inspection of the loop: a `while` whose exit
+  condition is never reachable looks correct in source. It has to be executed,
+  including on input contrived so that no look releases anything, which is why the
+  ceiling test is a negative control rather than an implementation detail.
+
+  The second descriptor is the one that makes this record more than a hang guard. A
+  fix that terminates at the first empty look passes every other assertion here and
+  reintroduces the original defect, because while the first layer is in progress
+  nothing else is eligible. It must be red on that shortcut.
+
+  The last two descriptors exist because a run that never re-looked and a run that
+  re-looked and found nothing are otherwise indistinguishable in the output. That
+  indistinguishability is the phantom-done shape this whole family is guarding
+  against, and the look record is what removes it.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
 superseded_by: null
 covered_by:
   - BO-100e-2-i
@@ -75,3 +190,5 @@ notes: |
   The third scenario is the anti-silence clause. Without it, a run that never
   re-looked and a run that re-looked and found nothing produce identical output, and
   the criterion cannot be falsified by a build that quietly kept the old behaviour.
+change_target: pipeline
+risk_surface: internal
