@@ -1,7 +1,7 @@
 id: BO-1900
 components:
   - build_orchestration
-title: "Every ticket is proven fit to dispatch before an agent is spawned"
+title: "Every dispatch is proven fit before an agent is spawned"
 component: build-orchestration
 level: L0
 status: active
@@ -11,13 +11,14 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
-  Catch a bad ticket before it burns a run -- fitness is checked at the dispatch moment.
+  Catch an unfit dispatch before it burns a run -- fitness is checked at spawn.
 
-  When a supervisor is about to spawn a phase agent for a ticket, a fast fitness
-  check runs first. It confirms the ticket's stated premises still hold, that the
-  agent about to receive the work is the right one for it, and that the hand-off
-  carries only a safe, minimal pointer. Tickets that fail the check are held back
-  with a clear reason instead of being dispatched, running, and then failing. You
+  When a supervisor is about to spawn a phase agent, a fast fitness check runs
+  first. It confirms the ticket's stated premises still hold, that the agent about
+  to receive the work is the right one for it, that the hand-off carries only a
+  safe, minimal pointer, and that the agent can actually reach the checks its own
+  instructions oblige it to perform. A dispatch that fails the check is held back
+  with a clear reason instead of being spawned, running, and then failing. You
   stop paying for doomed runs and retry loops caused by problems that were visible
   before the first token was spent. This stage sits between reading a ticket and
   spawning its agent -- distinct from BO-100 (which only decides the ORDER tickets
@@ -33,7 +34,10 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-07-07
-amended_by: []
+amended_by:
+  - reason: "Retitled 'Every ticket is proven fit to dispatch before an agent is spawned' -> 'Every dispatch is proven fit before an agent is spawned', and the criteria moved with it. The subject had drifted: four of the five L1s beneath this goal now concern the DISPATCH rather than the ticket -- BO-1900c (is this the right agent for the work), BO-1900d (is the hand-off a safe pointer), BO-1900e (can the agent reach the checks its own instructions demand), and BO-1900a (does the check run at all). Only BO-1900b is about the ticket's own claims. The criteria had drifted the same way and were additionally incomplete after BO-1900e was promoted on 2026-08-31: the benefit statement enumerated three dimensions of fitness (premises, agent fit, hand-off shape) and did not mention the fourth, so the goal's own text understated what sits beneath it. Enumeration extended and the ticket-framed phrasings ('Catch a bad ticket', 'Tickets that fail the check') changed to dispatch-framed ones. No L1 or below was touched. WHY A TITLE IS WORTH A DEDICATED AMENDMENT: titles are what scanners, roadmap views and human readers surface, so a drifted title is read as the specification by everyone who does not open the record. This repository had just spent a PR on precisely that cost -- BO-2400d-1's title promised 'Each agent invocation records duration and token counts' while its Gherkin only specified what a record must CONTAIN once written, and a fast-lane coder read the title, concluded a cleanup would regress the promise, and refused to build. The drift, not the code, blocked the work."
+    by: BrainCandy
+    at: 2026-08-31
 superseded_by: null
 covered_by: [BO-1900a, BO-1900b, BO-1900c, BO-1900d, BO-1900e]
 implemented_by: []

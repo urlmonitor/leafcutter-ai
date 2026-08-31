@@ -9,7 +9,7 @@ status: active
 req_status: draft
 work_status: todo
 readiness: draft
-priority: medium
+priority: high
 roadmap_phase: phase_1
 criteria: |
   An agent gets the tools its job needs -- and cannot claim a check it never ran.
