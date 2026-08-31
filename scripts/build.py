@@ -28,6 +28,9 @@ from pathlib import Path
 
 from config_loader import load_config, validate_config, _JSONSCHEMA_AVAILABLE  # noqa: F401
 from build_phases import (
+    DeployDeclarationError,
+    raise_if_deploy_failures,
+    reset_deploy_failures,
     build_agents,
     build_workflow_scripts,
     build_ac_store,
@@ -2027,7 +2030,18 @@ def main(argv: list[str] | None = None) -> int:
     if _check_deploy_collision_guard(output_root, config):
         return 1
 
+    # BP-900g-9: clear any accumulated declared-deploy failures before the
+    # phases run, so consecutive in-process invocations do not inherit each
+    # other's findings, then raise ONCE afterwards carrying the whole set.
+    reset_deploy_failures()
+
     total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
+
+    try:
+        raise_if_deploy_failures()
+    except DeployDeclarationError as exc:
+        print(f"[DEPLOY DECLARATION] {exc}", file=sys.stderr)
+        return 1
 
     # Command-reference reachability guard (BP-900g-1 / BP-900g-1-i): after
     # the deploy phases have written real files, scan every deployed
