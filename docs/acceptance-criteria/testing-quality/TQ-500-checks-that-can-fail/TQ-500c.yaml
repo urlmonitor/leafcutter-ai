@@ -1,0 +1,48 @@
+id: TQ-500c
+components:
+  - testing_quality
+title: "See which individual tests caught the problem, and which slept through it"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Per-test results, not one combined verdict that hides the inert one.
+
+  When the guarded behaviour is deliberately broken, the outcome is reported for
+  each test on its own. A single combined answer says "the group noticed" and
+  lets the one test that noticed nothing stay in place, still green, still
+  counted as protection it does not provide.
+depends_on:
+  - TQ-500
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: "KI-TQ-010 records the worked case: of four sibling tests, three objected to the injected fault and one did not — the one carrying the headline clause. A single aggregate verdict would have reported success and left it inert."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500c-1
+  - TQ-500c-2
+  - TQ-500c-3
+implemented_by: []
+change_target:
+  - pipeline
+risk_surface: internal
+documentation_triggers:
+  - reference-doc
+notes: |
+  This is the axis that actually located the recorded defect. Reporting one
+  boolean over a group is the difference between finding the inert test and
+  leaving it in place indefinitely — it is not a presentation preference.

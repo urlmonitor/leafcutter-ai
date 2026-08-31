@@ -1,0 +1,223 @@
+id: TQ-500c-2-i
+components:
+  - testing_quality
+title: "The recorded incident replayed: three of four objected, and the fourth carried the headline claim"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the recorded incident reconstructed as a hand-off record — four sibling tests
+      and three successive alterations to the guarded behaviour, with the outcomes as
+      they actually occurred: the first test objected under the first alteration; the
+      second objected under the second but not the first; the third, which carries
+      the piece of work's headline claim, objected under neither the first nor the
+      second; and the fourth objected only under the third alteration, the other
+      three never having been exposed to it,
+  When that record is read,
+  Then the third test is reported by name as having objected under no alteration it
+    was exposed to,
+    And the first, second and fourth tests are each reported as having objected under
+      at least one alteration, and none of the three is reported as never objecting,
+    And the piece of work is not reported as satisfied, notwithstanding that three of
+      its four tests objected to something,
+    And every test-and-alteration pair present in the record appears in the report,
+      including the pairs where a test that objected elsewhere did not object here,
+      and the pairs where a test was not exposed,
+    And the same reading, over the identical record with the third test's outcome
+      under the second alteration changed to an objection, reports no test as never
+      objecting and reports the piece of work satisfied.
+depends_on:
+  - TQ-500c-2
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE SOURCE OF THE FIXTURE. Entry KI-TQ-010 carries the four-row, three-column
+      evidence table this AC replays cell for cell, including which test held the
+      headline clause and which cells are dashes. Copy the table; do not invent an
+      approximation of it.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The piece of work the incident happened to. Its third test carried the headline
+      claim that removing every kind tag changes no run outcome and no completion
+      decision anywhere, and that test could not observe the leak it existed to
+      forbid.
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      The authenticity discipline for building the replay: reconstruct the record
+      with the project's own writer rather than hand-typing it, since hand-typed
+      fixtures have twice reproduced the bias that hid a parser no-op here.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    COPY THE TABLE, DO NOT APPROXIMATE IT. docs/known-issues/testing-quality.md
+    KI-TQ-010 carries the four-row, three-column table cell for cell, including
+    which test held the headline clause (test 3, angle real_artifact, AC-5) and
+    which cells are dashes (three of the four in the last column). Transcribe it;
+    an invented approximation loses the exact shape that makes the reading
+    necessary.
+  - >-
+    BUILD THE FIXTURE WITH THE PROJECT'S OWN WRITER. yaml.safe_dump into the
+    ## Comments completion_manifest block per the signoff SKILL §2b recipe, never
+    hand-typed YAML. Hand-typed fixtures reproduced the column-0 indentation bias
+    that hid the files_touched parser no-op through seven green sign-offs, and
+    the first behavioural spot-check during that remediation reused the indented
+    fixture and missed it again.
+  - >-
+    EVERY PAIR PRESENT IN THE RECORD MUST APPEAR IN THE REPORT, including the
+    cells where a test that objected elsewhere did not object here, and the cells
+    where a test was not exposed. A report that silently drops unexposed pairs
+    looks complete while hiding the shape of the exposure; one that renders them
+    as non-objections marks three sound tests inert.
+  - >-
+    Adds no behaviour. This is a regression test over TQ-500c-1's record shape
+    and TQ-500c-2's reading, and must not be closed by a change that
+    special-cases this fixture.
+delivers_to: null
+expects_from:
+  ac_id: TQ-500c-2
+  contract: >-
+    The set of tests that objected under no alteration, plus the full set of
+    test-and-alteration outcomes. This AC asserts the third test alone appears in the
+    first set, and that flipping one cell empties it.
+test_spec:
+  - name: test_tq500c_2_i_the_headline_claim_test_is_the_only_one_reported_as_never_objecting
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Over the replayed incident table, test 3 — the one carrying AC-5, the
+      headline claim — is reported by name as having objected under no alteration
+      it was exposed to, and tests 1, 2 and 4 are each reported as having
+      objected under at least one and none of them as never objecting.
+  - name: test_tq500c_2_i_the_work_item_is_not_reported_satisfied_though_three_of_four_objected
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The aggregate that would have hidden the defect. Notwithstanding that three
+      of the four tests objected to something, the work item is not satisfied.
+  - name: test_tq500c_2_i_the_original_leak_injected_makes_the_headline_test_look_objecting
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      THE NAMED MUTATION FOR THIS AC, AND IT IS THE ORIGINAL LEAK. Inject into
+      the reading the exact fault KI-TQ-010 records — treat a test that carries a
+      proof-kind (`# angle:`) tag as having objected, without consulting its
+      per-alteration cells. Under that injection test 3 (angle real_artifact) is
+      counted as objecting, the first descriptor above goes RED and the second
+      goes RED, while the pair-completeness descriptor stays green. Revert and
+      both return to green. This is KI-TQ-010's own leak re-run against the fix
+      for KI-TQ-010; record it and the per-descriptor outcomes as this AC's
+      substitute-kind falsifiability answer.
+  - name: test_tq500c_2_i_flipping_one_cell_empties_the_never_objected_set
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      THE CONTROL THE BA WROTE INTO THE CRITERIA. Over the identical record with
+      test 3's outcome under the second alteration changed to an objection, no
+      test is reported as never objecting and the work item is reported
+      satisfied. This is the second alteration in the same scenario and must be
+      recorded as such; without it every other descriptor here is satisfied by a
+      reading that reports every test as never objecting.
+  - name: test_tq500c_2_i_every_pair_including_the_three_dashes_appears_in_the_report
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      All twelve cells of the 4x3 table appear in the report, the three
+      not_exposed cells in the last column included and labelled as not exposed.
+      NAMED MUTATION (this descriptor asserts a completeness that a trimmed
+      report would silently satisfy in appearance): drop not_exposed cells from
+      the report. THIS TEST MUST GO RED under it and green on revert.
+  - name: test_tq500c_2_i_the_incident_record_is_reconstructed_by_the_projects_own_writer
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py
+    description: >-
+      Build the incident ticket on disk with yaml.safe_dump per the signoff §2b
+      recipe — column-0 block lists, exactly as the writer produces them — and
+      read it through the registered hook as a subprocess, not by importing the
+      reader. Hand-typed fixtures have twice reproduced the bias that hid a
+      parser no-op in this repository.
+test_rationale: |
+  This is the canonical regression fixture for the tree and the reason the L0
+  exists: the only case in the corpus where a test that could not fail was
+  caught, and it was caught by hand, after merge, by someone who ran the
+  alteration out of curiosity.
+
+  Every descriptor except the flipped-cell one asserts that something specific is
+  reported, and a reading that reports every test as never objecting satisfies
+  all of them. Two controls therefore make this AC able to fail, and both are
+  named concretely rather than described: the flipped-cell variant (criteria
+  clause 5) and — the sharper one — injecting the original leak, counting an
+  angle-tagged test as objecting without reading its cells. The second is the
+  discipline this AC is about, applied to this AC: run KI-TQ-010's own fault
+  through the instrument built to detect it and require the instrument to notice.
+
+  real_artifact per the hand-off steer, and it is not decoration: the recorded
+  defect had perfect fixture realism and was still inert, so the real-artifact
+  test guards the parser while the mutation guards the reading. Neither
+  substitutes for the other.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept python-coder and change_target code. Six descriptors; real_artifact
+      angle per the hand-off steer, with the fixture required to be built by
+      yaml.safe_dump per the signoff recipe rather than hand-typed. The named
+      mutation is KI-TQ-010's ORIGINAL leak — count an angle-tagged test as
+      objecting without consulting its cells — which turns the headline-claim
+      descriptor red while leaving the pair-completeness descriptor green. The
+      criteria's flipped-cell variant is carried as a second alteration. criteria
+      untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE CANONICAL REGRESSION FIXTURE FOR THIS TREE, and the reason the L0 exists. It is
+  the only case in the corpus where a test that could not fail was caught, and it was
+  caught by hand, after the work had merged, by someone who ran the alteration out of
+  curiosity. Nothing in the pipeline would have found it.
+
+  WHY THE LAST CLAUSE MATTERS MOST. Every other clause asserts that something is
+  reported. A reading that reports every test as never objecting satisfies all of
+  them. The flipped-cell variant is the control that makes this AC able to fail — and
+  writing it is the same discipline the AC itself is about, applied to the AC.
+
+  WHY THE FOURTH CLAUSE. Three of the four cells in the incident's last column are
+  dashes: those tests were never exposed to the third alteration. A report that
+  silently drops unexposed pairs would look complete while hiding the shape of the
+  exposure, and a report that renders them as non-objections would mark three sound
+  tests inert.
+
+  BOUNDARY. Adds no behaviour of its own. It is satisfied only by a regression test
+  over TQ-500c-1's record shape and TQ-500c-2's reading, and must not be closed by a
+  change that special-cases this fixture.

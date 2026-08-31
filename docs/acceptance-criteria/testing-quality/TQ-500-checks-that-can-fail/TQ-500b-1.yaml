@@ -1,0 +1,345 @@
+id: TQ-500b-1
+components:
+  - testing_quality
+  - build_pipeline
+title: "Answer taken, answer not owed, answer owed and absent — three states, never two"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the hand-off records a run produced for three pieces of work:
+      piece A, whose record carries a conforming falsifiability answer,
+      piece B, whose test-writing phase ran and handed the work on but whose record
+        carries no falsifiability answer at all,
+      and piece C, for which no test-writing phase was required and none ran,
+  When those records are read,
+  Then each piece of work is placed in exactly one of three states, each named in
+    the output — answer taken, answer not owed, or answer owed and absent,
+    And piece A is answer taken, piece B is answer owed and absent, and piece C is
+      answer not owed,
+    And piece B is reported in words stating that the work is incomplete, and in no
+      words stating that the question did not apply to it,
+    And piece B and piece C are distinguishable in the output, so a reader cannot
+      take one for the other,
+    And the state given to each piece of work is established from the records the
+      run actually produced, not from whether the writing side was observed to have
+      been asked for an answer,
+    And the falsifiability answer is read by the same reading of the hand-off record
+      that reports on the record's other machine-checkable answers, so a record
+      missing two different required answers yields both findings from one reading
+      rather than requiring a second.
+depends_on:
+  - TQ-500b
+  - BP-1100g-5-i
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      HARD DEPENDENCY, NOT MERELY A PRECEDENT. That AC builds the mechanical reader
+      over the hand-off record's completion manifest, with the shortfall-naming, the
+      no-record-versus-bad-record distinction, and the pre-epoch legacy carve-out
+      this AC's last three clauses reuse. Extend that reader with a second key; do
+      not build a second parser. If it has not yet landed, the obligation is to build
+      the shared reader once.
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Section 2b defines the completion manifest being read, and its Legacy
+      Compatibility rule states that pre-epoch sign-offs carry no manifest at all —
+      the source of the no-record state that TQ-500b-1-i pins down.
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-010 Fix direction item 2 names precisely the collapse this AC removes:
+      the recorded value for these cases currently means "correctly not applicable"
+      and should mean "and here is what replaced it".
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY. BO-2900f concerns a requested gate that did not run. This reads an
+      answer the doer was required to write into a record it already writes. Same
+      completeness instinct, different producer and different record.
+  - path: templates/scripts/commit_guardian/_signoff_parity_checks.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      PINNED BY IT-PO AS THE HOST, and it is the SAME host BP-1100g-5-i pins.
+      This is the canonical source; scripts/commit_guardian/_signoff_parity_checks.py
+      is a build output of build_phases.build_commit_guardian and is overwritten by
+      build.py, so edit the template and mirror in the same change. Extend the
+      reading BP-1100g-5-i builds with a second key; do not add a second parser.
+  - path: templates/scripts/commit_guardian/check_ticket_signoff_parity.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The intended hook entry point. WARNING, VERIFIED AT ENRICHMENT TIME
+      (2026-08-31, origin/main 8be523f48): this script is NOT registered anywhere
+      — zero occurrences of "signoff" in templates/scripts/commit_guardian/commit_guardian.json,
+      in the deployed scripts/commit_guardian/commit_guardian.json, or in
+      .leafcutter/pre-commit-config.yaml — even though
+      templates/scripts/commit_guardian/README.md documents it as hook id
+      `check-ticket-signoff-parity` with "current config uses --enforce".
+      BP-1100g-5-i's doc_link calling it "the registered hook entry point" is
+      therefore false today. Registering it is a precondition of this AC, not an
+      assumption it may rest on.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The hook manifest the registration must be added to. This is a package
+      surface per config/ac_store_schema.json; see the package_surface caveat in
+      this AC's it_requirements.
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the mark-time completion gates this reader feeds are documented,
+      including the dispatch-topology trap that lets a gate be defined and never
+      consulted.
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+it_requirements:
+  - >-
+    HOST PINNED, AND IT IS THE SAME HOST BP-1100g-5-i PINS. The reader lives in
+    templates/scripts/commit_guardian/_signoff_parity_checks.py, reached through
+    templates/scripts/commit_guardian/check_ticket_signoff_parity.py. Mirror
+    every edit into scripts/commit_guardian/ in the same change — that tree is a
+    build output of build_phases.build_commit_guardian and build.py overwrites
+    it. A second parser over the same completion_manifest is a defect, not an
+    implementation choice: two parsers drift, and a record missing both the seam
+    answer and the falsifiability answer would then need two runs to surface
+    both.
+  - >-
+    THE ENTRY POINT IS NOT REGISTERED TODAY — THIS IS A PRECONDITION, NOT AN
+    ASSUMPTION. Verified at enrichment (origin/main 8be523f48): "signoff" has
+    zero occurrences in templates/scripts/commit_guardian/commit_guardian.json,
+    in the deployed scripts/commit_guardian/commit_guardian.json, and in
+    .leafcutter/pre-commit-config.yaml, while
+    templates/scripts/commit_guardian/README.md documents hook id
+    `check-ticket-signoff-parity` as live with --enforce. A hook not reachable
+    from a registered hook path is inert and reports to nobody. Adding the
+    manifest entry for `check-ticket-signoff-parity` is in scope for this AC and
+    must be asserted by the reachability test, not taken on trust from the
+    README.
+  - >-
+    CAVEAT ON PACKAGE SURFACE. config/ac_store_schema.json names
+    templates/scripts/commit_guardian/commit_guardian.json as a package-surface
+    registry, and check-package-surface-declaration reconciles registry entries a
+    change adds against the declaring AC. package_surface is deliberately left
+    unset here, following BP-1100g-5-i, which carries the same registration
+    obligation without the declaration — this work restores a documented-but-
+    absent registration rather than bringing a new surface into existence. If the
+    implementer instead introduces a NEW hook id, that hook will fire and the AC
+    needs package_surface true plus the structured five-field spec. Raise it
+    rather than working around it.
+  - >-
+    DEPLOY MANIFEST. build_commit_guardian deploys every file in
+    templates/scripts/commit_guardian/, so a helper added inside that directory
+    needs no manifest change. An import from OUTSIDE it — anything under
+    scripts/ac_store/, for instance — must be added to the deploy map in
+    scripts/build_phases.py, or the hook raises ModuleNotFoundError at runtime
+    from the DEPLOYED layout while the unit tests, which import from the source
+    tree, stay green.
+  - >-
+    A SECOND KEY ON ONE READING. Read `falsifiability_answer` in the same parse
+    of the same ## Comments completion_manifest block that yields
+    `cross_layer_seam_answer`. The sixth Then clause is the observable form of
+    this: a record missing both required answers must yield both findings from
+    one reading.
+  - >-
+    BP-1100g-5-i IS UNBUILT AS OF 2026-08-31. BP-1100g-5 (PR #626) is OPEN, not
+    merged, and it is prompt-only — it changes templates/agents/test-writer.md
+    and templates/skills/signoff/SKILL.md and builds no reader. Nothing under
+    scripts/ reads completion_manifest today. So this AC and BP-1100g-5-i must
+    build the shared reader ONCE, as one artifact serving both keys. Whichever is
+    scheduled first owns the parser; the second adds a key to it.
+  - >-
+    THE ANTI-GREP CLAUSE IS BINDING. Every state must be established from the
+    records the run actually emitted. A test asserting that the writing side was
+    told to answer, or that a call to record the answer exists in the source,
+    passes on an implementation that never records anything.
+  - >-
+    THREE STATES, NEVER TWO, AND EACH NAMED IN THE OUTPUT. A reader that reports
+    two has not implemented this AC. answer_owed_absent must be described in
+    words stating the work is incomplete, and in no words stating the question
+    did not apply — TQ-500d-1-i asserts the wording separately from the state
+    because a right state described as "not applicable" is the recorded defect.
+  - >-
+    LEGACY COMPATIBILITY. Pre-epoch sign-offs carry no completion_manifest at
+    all and the signoff SKILL §2b accepts that absence without back-fill. Those
+    fall in the no-record state, never the answer-owed shortfall, or the check
+    false-fails every historical work item on its first run. The carve-out keys
+    on the ABSENCE OF A RECORD, never on a date.
+  - >-
+    The report is a record-shape observation, not a verdict about any test. It
+    must not open a test file, consult a test result, or read a coverage record.
+  - >-
+    Must handle errors gracefully per the project error handling policy; a
+    record that cannot be parsed must not silently leave the population, or a
+    parse failure becomes indistinguishable from a conforming answer.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500b-2
+    contract: >-
+      Per piece of work, one state entry carrying at minimum the work item's
+      identity, the state name (answer_taken, answer_not_owed, answer_owed_absent),
+      and a detail string. Pieces of work with no record at all produce no entry.
+      TQ-500b-2 consumes this and must not re-derive the state.
+  - agent: python-coder
+    ac_id: TQ-500e-2
+    contract: >-
+      The same state entries, retained with the finished work so a later reader can
+      retrieve the answer without re-running anything.
+expects_from:
+  ac_id: TQ-500a-1
+  contract: >-
+    One falsifiability answer per piece of work under a single fixed token in the
+    hand-off record, in one of the conforming shapes defined by TQ-500a-1 and
+    TQ-500a-2. The fixed token is what makes this reader buildable.
+test_spec:
+  - name: test_tq500b_1_three_work_items_resolve_to_three_distinct_named_states
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Pieces A, B and C from the criteria resolve to answer_taken,
+      answer_owed_absent and answer_not_owed respectively, each state named in
+      the output, and B and C are distinguishable in the emitted text — not only
+      in an internal enum a reader never sees.
+  - name: test_tq500b_1_the_owed_and_absent_report_states_incomplete_and_never_not_applicable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Piece B's report contains words stating the work is incomplete and
+      contains no words stating the question did not apply — the third Then
+      clause asserted over the emitted string, not the state value.
+  - name: test_tq500b_1_one_reading_yields_both_the_seam_and_falsifiability_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      THE COMPOSITION CLAUSE. One ticket record missing BOTH the seam answer and
+      the falsifiability answer yields both findings from a single invocation of
+      the reader — not from two passes over the same file. NAMED MUTATION (this
+      descriptor is the one most likely to be silently unmet): implement the
+      falsifiability key as a separate second parse of the same file, then assert
+      this test goes RED because the invocation count over the ticket path is two
+      rather than one. Revert to the single parse and it returns to green.
+  - name: test_tq500b_1_states_come_from_emitted_records_not_from_the_phase_that_was_requested
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      THE ANTI-GREP CLAUSE. Two runs whose requested phase lists are identical
+      but whose emitted records differ produce different states; two runs whose
+      emitted records are identical but whose requested phase lists differ
+      produce the same states. NAMED MUTATION: derive answer_owed_absent from
+      "test-writer was in the phase list" rather than from the record; this test
+      must go RED under it.
+  - name: test_tq500b_1_states_are_reported_through_the_registered_hook_from_the_deployed_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py
+    description: >-
+      PRODUCTION ENTRY POINT, run as a subprocess against real ticket files
+      built by the signoff §2b recipe, from the DEPLOYED layout so a missing
+      deploy-manifest entry surfaces as ModuleNotFoundError rather than passing.
+      Assert the three state names appear in the hook's output AND that hook id
+      `check-ticket-signoff-parity` is present in
+      templates/scripts/commit_guardian/commit_guardian.json — verified absent at
+      enrichment time, so this assertion is red today and is the AC's own red
+      baseline for the registration.
+  - name: test_tq500b_1_records_are_parsed_from_files_written_by_the_signoff_recipe
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Build the three ticket files with yaml.safe_dump into the ## Comments
+      completion_manifest block rather than hand-typing markdown, then parse
+      them. Hand-typed fixtures reproduced the column-0 indentation bias that hid
+      the files_touched parser no-op through seven green sign-offs in this repo.
+test_rationale: |
+  A unit test over three dicts passes on a reader nothing invokes, on a second
+  parser that will drift from BP-1100g-5-i's, and on a reader whose states come
+  from the requested phase list rather than the emitted record. Each of those
+  three is a shipped failure mode in this repository, so each gets its own
+  descriptor at its own angle: reachability drives the deployed hook and checks
+  the manifest registration (which is absent today — the hook is unregistered
+  despite the README saying otherwise); seam asserts one parse yields both keys;
+  boundary separates emitted records from requested phases.
+
+  The registration assertion is deliberately red on arrival. That is the ordinary
+  before-and-after evidence for this AC and is why its falsifiability answer can
+  be of the red_baseline kind rather than the substitute kind — unlike its L3
+  children, this AC has a real red phase available.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      HOST PINNED to templates/scripts/commit_guardian/_signoff_parity_checks.py
+      reached via check_ticket_signoff_parity.py — the same host BP-1100g-5-i
+      pins — with the canonical/build-output mirroring rule stated. FINDING: that
+      entry point is NOT registered in commit_guardian.json (verified zero
+      "signoff" occurrences in the canonical manifest, the deployed manifest and
+      .leafcutter/pre-commit-config.yaml) although the README documents it as
+      live, so registration is written in as a precondition and asserted by the
+      reachability test. BP-1100g-5 MERGED 2026-08-31 (PR #626, 78eacffb3) and is
+      prompt-only, defining cross_layer_seam_answer but building no reader; the
+      IT-PO recorded it as still open because it checked before that merge landed.
+      BP-1100g-5-i's reader therefore still does not exist — the shared reader must
+      be built once by whichever of the two is scheduled first. declares_side_effect
+      corrected true -> false: the derivation asks whether the Then clause writes a
+      DURABLE object outliving the run and explicitly excludes transient
+      destinations, and every clause here reports rather than writes. Commit-time
+      output to a stream is exactly the transient case. criteria untouched.
+superseded_by: null
+covered_by:
+  - TQ-500b-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE COLLAPSE THIS REMOVES. Today two of the three states present identically. A
+  piece of work that owed a substitute answer and did not take one records the same
+  thing as one that genuinely owed nothing, and that is how a test with no failure
+  mode collects a clean bill of health from every stage it passes through. The third
+  and fourth clauses are the whole point of the AC; a reader that reports two states
+  has not implemented it.
+
+  THE FIFTH CLAUSE IS THE ANTI-GREP CLAUSE. States must come from emitted records. A
+  test asserting that the writing side was told to answer, or that a call to record
+  the answer exists somewhere, passes on an implementation that never records
+  anything — which is the same inertness this whole tree is about.
+
+  THE SIXTH CLAUSE IS THE COMPOSITION CONSTRAINT. BP-1100g-5-i already builds a
+  reader over this record for the cross-layer seam answer. A second reader over the
+  same manifest would drift from the first, and a record missing both answers would
+  then need two runs to surface both. One reading, two keys.
+
+  DEPENDENCY DECLARED DELIBERATELY. depends_on names BP-1100g-5-i because this AC
+  is not merely similar to it — it is an extension of the same artifact. If
+  BP-1100g-5-i is unbuilt when this is scheduled, build the shared reader as part of
+  it rather than forking.
