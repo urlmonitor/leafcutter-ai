@@ -449,6 +449,87 @@ class TestTheUnbuiltSetIsDeterminedByIdentityAndNotByArithmetic(_UnbuiltCountCas
 
 
 # ---------------------------------------------------------------------------
+# angle: boundary — one piece, noticed twice, counted once
+# ---------------------------------------------------------------------------
+
+
+class TestAPieceNoticedTwiceIsCountedOnce(_UnbuiltCountCase):
+    def test_a_piece_that_both_failed_and_vanished_is_counted_and_named_once(self):
+        # covers: BO-300d-1
+        # angle: boundary
+        """A ticket can enter the unbuilt set by two routes at once.
+
+        The halting ticket fails in this batch (so it is in the halted set)
+        AND is absent from the epic folder at the completion-time re-read (so
+        it is also in `no_longer_present_not_completed`) — which happens when
+        failure handling, or a concurrent process, moves or archives the
+        ticket file before the re-read runs.
+
+        It is ONE unbuilt piece of work and must be stated and named once.
+        Concatenating the source lists without de-duplication reports 2 and
+        prints the path twice, which overstates the shortfall and breaks
+        BO-300d-1's requirement that the stated number equal the cardinality
+        of the set it names — the run would be disagreeing with itself while
+        both halves looked internally consistent.
+        """
+        worktree = self._worktree()
+        names = ["01_a.md", "02_fails.md"]
+        epic_path, paths = self.build_epic(worktree, names)
+
+        batch_defs = [
+            {
+                "batch_number": 1,
+                "tickets": [{"path": paths["01_a.md"], "status": "todo"}],
+            },
+            {
+                "batch_number": 2,
+                "tickets": [{"path": paths["02_fails.md"], "status": "todo"}],
+            },
+        ]
+        reads = [
+            {"present": self.present(paths, names), "batches": batch_defs},
+            # 02_fails.md halted in batch 2 AND is gone at the re-read.
+            {"present": self.present(paths, ["01_a.md"], done={"01_a.md"})},
+        ]
+        tickets = {
+            paths["01_a.md"]: self.completing_ticket("01_a.md"),
+            paths["02_fails.md"]: self.failing_ticket("02_fails.md"),
+        }
+        result = self.run_epic(worktree, epic_path, tickets, reads)["result"]
+
+        self.assertIsInstance(result, dict, f"drive did not return a payload: {result!r}")
+        text = H.output_text(result)
+        message = str(result.get("message") or "")
+
+        # Scoped to the TOTAL clause specifically. The path may legitimately
+        # appear elsewhere in the message — BO-300a-5's pre-existing recheck
+        # headline names the same ticket from its own angle, and that sentence
+        # is not this record's business. What BO-300d-1 requires is that the
+        # stated total and the set THAT clause names agree with each other and
+        # with the number of distinct unbuilt pieces.
+        marker = "were not built: "
+        self.assertIn(marker, message, f"no total clause emitted. message: {message!r}")
+        total_clause = message[message.rindex(marker) + len(marker) :]
+
+        self.assertEqual(
+            total_clause.count(paths["02_fails.md"]),
+            1,
+            "the total clause names the one unbuilt piece twice — it reached "
+            "the unbuilt set by two routes (failed in this batch, and absent "
+            "at the re-read) and the sources were concatenated without "
+            f"de-duplication. total clause: {total_clause!r}",
+        )
+        self.assertIn(
+            " 1 piece(s) of work in total were not built: ",
+            message,
+            "one DISTINCT piece was left unbuilt, so the run must state 1. A "
+            "count taken over an un-de-duplicated concatenation states 2 while "
+            "naming a single path, so the number and the set it is drawn from "
+            f"disagree. message: {message!r}",
+        )
+
+
+# ---------------------------------------------------------------------------
 # angle: seam
 # ---------------------------------------------------------------------------
 

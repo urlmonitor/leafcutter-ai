@@ -2318,13 +2318,26 @@ if (target_type === "epic") {
           cmpForHalt.removals.indexOf(p) === -1
       );
       // COUNT THE NAMED SET, DO NOT SUBTRACT (BO-300d-1) — the stated number
-      // below is the cardinality of this concatenation, not total-minus-built,
-      // so the count and the names it is drawn from cannot disagree.
+      // below is the cardinality of this set, not total-minus-built, so the
+      // count and the names it is drawn from cannot disagree.
+      //
+      // DE-DUPLICATED ACROSS ALL FOUR SOURCES, not just the guarded one.
+      // `notYetAttemptedPaths` already excludes the other three, but
+      // `haltedPathsThisBatch` is not checked against
+      // `no_longer_present_not_completed`: a ticket that fails in THIS batch
+      // and is also gone from the epic folder at the re-read (moved or
+      // archived by failure handling, or by a concurrent process) lands in
+      // both lists. Concatenating would then count and print it twice, so the
+      // stated number would exceed the number of distinct unbuilt pieces —
+      // breaking the very invariant the paragraph above claims. A piece of
+      // work is unbuilt once, however many ways the run noticed it.
       const unbuiltNamedPaths = [
-        ...haltedPathsThisBatch,
-        ...notYetAttemptedPaths,
-        ...(haltRecheck.fields.discovered_after_planning || []),
-        ...(haltRecheck.fields.no_longer_present_not_completed || []),
+        ...new Set([
+          ...haltedPathsThisBatch,
+          ...notYetAttemptedPaths,
+          ...(haltRecheck.fields.discovered_after_planning || []),
+          ...(haltRecheck.fields.no_longer_present_not_completed || []),
+        ]),
       ];
       const unbuiltCount = unbuiltNamedPaths.length;
 
