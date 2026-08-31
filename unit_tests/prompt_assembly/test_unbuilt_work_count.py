@@ -498,7 +498,6 @@ class TestAPieceNoticedTwiceIsCountedOnce(_UnbuiltCountCase):
         result = self.run_epic(worktree, epic_path, tickets, reads)["result"]
 
         self.assertIsInstance(result, dict, f"drive did not return a payload: {result!r}")
-        text = H.output_text(result)
         message = str(result.get("message") or "")
 
         # Scoped to the TOTAL clause specifically. The path may legitimately
