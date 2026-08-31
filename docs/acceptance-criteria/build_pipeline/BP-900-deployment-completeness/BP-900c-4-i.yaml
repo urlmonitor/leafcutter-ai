@@ -1,0 +1,180 @@
+id: BP-900c-4-i
+components:
+  - build_pipeline
+title: "The remediation is read from the deploy declarations the build ships from, so editing a declaration changes the advice"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-4.yaml"
+criteria: |
+  Given the tree of BP-900c-4 — scripts/knowledge/harvest_learnings.py deleted from
+    the source tree, still named individually by the knowledge-scripts deploy
+    declaration, still referenced by agents/knowledge-harvester.md,
+  When the build is run against that tree through its real entry point and the entry
+    for that path is read from the report it produced,
+  Then that entry carries the declaration-already-exists remediation,
+  And when that one path is then removed from the deploy declaration, nothing else
+    in the tree is changed, and the build is run again, the entry for that same path
+    carries the add-a-deploy-phase remediation instead — so the advice tracks the
+    declaration and is not attached to the path,
+  And when the source file is restored at the declared path and the declaration is
+    left naming it, the run produces no report entry for that path at all,
+  And the same three runs are repeated with a path named by a different declaration
+    shape — one declared through a mapping table rather than a file list — and
+    produce the same three outcomes, so the remediation is keyed on being declared
+    rather than on which declaration happens to hold the path,
+  Because a selector that consults a second list of known-declared paths maintained
+    beside the deploy declarations satisfies the first clause and fails the second:
+    editing the real declaration leaves the advice unchanged, and the two lists drift
+    apart silently, which is the same hand-maintained-map staleness BP-900g-8 and
+    BP-900g-9 exist against, reproduced inside the guard that reports it. Only the
+    declaration-edit run distinguishes the two implementations; asserting the
+    corrected text appears cannot, because both emit it.
+depends_on:
+  - BP-900c-4
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-4.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+    relevance: "The selector whose input this AC constrains: it must resolve 'is this path declared' from the deploy declarations the build actually ships from, not from a list maintained alongside them."
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+    relevance: "Holds all three declaration shapes the criterion quantifies over — directory-shipping phases, file lists naming individual paths, and mapping tables. The declaration-shape clause exists because a selector keyed to one shape passes every other clause here."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-9.yaml"
+    relationship: describes
+    status: exists
+    relevance: "The deploy loop that fails a run when a declared source is absent. It reads the same declarations this AC requires the remediation to be derived from; if the two ever read different sets, one of them is wrong and nothing today would say which."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary. The declaration-edit run is a seam assertion, not a criterion one: it proves which input the remediation is a function of."
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the guard whose input this AC constrains; the same doc BP-900c-2 and BP-900c-3 link."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/build_propagation_audit.py
+  n_location_rule: "1 — the declared-path resolution feeding the suggested-action selector. It must derive its answer from the deploy declarations in scripts/build_phases.py that the build ships from. Introducing a second location that lists declared paths is the defect this record exists to exclude, not an acceptable implementation of it."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m pytest unit_tests/test_build_tracked_source_guard.py unit_tests/test_build_guard_real_package.py -q"
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The 'is this path declared' answer must be read from the deploy declarations the build actually ships from. No list of known-declared paths may be maintained alongside them: it satisfies every single-run assertion, drifts silently, and reproduces inside this guard the hand-maintained-map staleness BP-900g-8 and BP-900g-9 exist against."
+    - "Editing a deploy declaration must change the advice on the next run with no other edit — no separate registration step, and no cached map that must be regenerated for the guard to agree with the declarations."
+    - "The derivation must cover every declaration shape that can name an absent path — directory-shipping phases, file lists naming individual paths, and mapping tables. A predicate written against the file-list shape that produced the observed defect leaves the identical hole in the other two."
+    - "Glob-derived deploy phases are out of scope: a glob enumerates what is on disk and cannot name an absent path, so no path is ever already-declared by one. Do not add a branch for them."
+    - "The new state must fire only on a genuinely broken reference: with the source present at the declared path there is no finding at all, so the branch cannot become a source of entries for healthy paths."
+    - "The guard and the deploy loop (BP-900g-9) must resolve declarations from the same source. If the two ever read different sets one of them is wrong and nothing in the build today would say which — so do not introduce a second reader here."
+delivers_to: null
+expects_from:
+  ac_id: BP-900c-4
+  contract: "The third remediation branch and the state it keys on (the path is already named by a deploy declaration). This AC constrains WHERE that state is read from — the deploy declarations the build ships from, across every declaration shape — and pins it by mutating a declaration and observing the remediation change."
+test_spec:
+  - name: test_editing_the_deploy_declaration_moves_the_remediation_for_the_same_path
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Two runs over the same tree differing only in the declaration: run A, with scripts/knowledge/harvest_learnings.py named by the knowledge-scripts declaration, yields the declaration-already-exists remediation for that path; run B, with that one path removed from the declaration and nothing else changed, yields the add-a-deploy-phase remediation for the same path. The pass condition is that the value MOVED between the two runs — a selector fed by a list maintained beside the declarations passes every single-run assertion and fails only here."
+  - name: test_restoring_the_declared_source_emits_no_entry_for_that_path
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Third run of the same fixture: with the source restored at the declared path and the declaration left naming it, the report contains no entry for that path at all — so the new branch fires only on a genuinely broken reference and cannot manufacture findings for healthy declared paths."
+  - name: test_each_declaration_state_is_read_from_build_py_stderr_jsonl_subprocess
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/build.py --target-dir <seeded tree>, run as a subprocess once per declaration state"
+    description: "Every value compared across the runs is parsed from the JSONL the build wrote to stderr when invoked through its real entry point; comparing return values of the remediation selector across two calls does not satisfy this contract, because the selector can be correct in isolation while the report the build emits is not the one it produced."
+  - name: test_mapping_table_declaration_shape_yields_the_same_three_outcomes
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The same declared / declaration-edited / source-restored sequence, repeated against a path declared through a mapping table rather than a file list, produces the same three outcomes — so the predicate is keyed on the path being declared rather than on which declaration shape happens to hold it, and the mapping-table and single-path declarations do not keep the hole the file-list fix closes."
+test_rationale: |
+  This record is separable from BP-900c-4 by exactly one observation, and the test
+  contract has to be built around it. A hard-coded set of the paths that happen to be
+  declared today makes every BP-900c-4 assertion pass and is wrong the first time anyone
+  edits a deploy declaration. Only a run BEFORE and a run AFTER a declaration edit, with
+  the tree otherwise untouched, separates the two implementations — hence the seam entry,
+  and hence a pass condition stated as "the value moved" rather than "the value is X".
+
+  reachability is charged for the same reason it is charged on BP-900c-4: the current
+  build already emits a well-formed, accurate record for this path, so any assertion that
+  a finding exists or that a string appears is green against the broken code. Every
+  compared value must come from the report a real build invocation produced.
+
+  boundary is charged for the declaration-shape quantifier. BP-900g-9's sign-off
+  enumerated declared-entry deploy loops of at least three shapes; a predicate written
+  against the file-list shape that produced the observed defect passes every other clause
+  here and leaves the identical hole elsewhere. That is the EPIC-BOPhantomDoneRemediation
+  T03 shape — a guard present in one check and absent from its structurally identical
+  twin, all tests green — and the second-shape run is the only thing that catches it.
+origin_agent: business-analyst
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Added it_requirements (structured mapping form, six constraints), test_spec (four
+      descriptors: seam / criterion / reachability / boundary), test_rationale, and a
+      template-compiler.md doc_link; readiness draft -> reviewed. assigned_agent,
+      estimated_complexity and expects_from were already authored by the BA and are
+      unchanged. criteria is unchanged. No fourth entry key was added — see BP-900c-4's
+      amendment note.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS IS A SEPARATE RECORD RATHER THAN A CLAUSE IN BP-900c-4.
+
+  BP-900c-4 constrains WHAT the report says for a given tree. This constrains WHAT
+  THE SELECTOR READS, and the two are independently satisfiable: a hard-coded set of
+  the paths that happen to be declared today makes every BP-900c-4 assertion pass and
+  is wrong the first time someone edits a deploy declaration. The only observation
+  that separates them is a run BEFORE and a run AFTER a declaration edit, with the
+  tree otherwise untouched — which is a different fixture from BP-900c-4's, so it is
+  a different test, so it is a different record.
+
+  THE DECLARATION-SHAPE CLAUSE IS NOT DECORATION. BP-900g-9's sign-off enumerated
+  five declared-entry deploy loops of at least three shapes: a mapping table, several
+  hardcoded file lists, and a single declared path. A predicate written against the
+  shape that produced the observed defect — the knowledge-scripts file list — passes
+  every other clause in this AC and leaves the identical hole in the mapping-table
+  and single-path declarations. That is the EPIC-BOPhantomDoneRemediation T03 shape
+  (a guard present in one check and absent from its structurally identical twin, all
+  tests green), and it is why the third run is specified against a second shape.
+
+  THE ADMISSIBLE OBSERVABLE IS THE EMITTED FINDING SET, AND IT CHANGES. Not the
+  presence of a string, and not a log line: the current build already logs the missing
+  path accurately, and the record it emits for it is well-formed and machine-parseable
+  — it is the VALUE of one field that is wrong. So every clause here compares the
+  emitted record across two runs that differ only in the declaration, and the pass
+  condition is that the value moved. A test whose assertion holds on a single run
+  cannot fail on the implementation this AC exists to exclude.
+
+  GLOB-DERIVED PHASES ARE OUT OF SCOPE. BP-900g-9's sign-off records three deploy
+  loops that iterate a glob of what exists on disk rather than a declaration; a glob
+  cannot name an absent path, so no path is ever "already declared" by one and no
+  remediation branch is owed to them. Do not manufacture a fourth state for them.
