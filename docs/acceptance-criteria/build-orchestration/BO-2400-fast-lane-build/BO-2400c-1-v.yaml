@@ -162,6 +162,11 @@ notes: |
   the orphan in its `implemented_by`, so the file being deleted is a done criterion's
   recorded implementation.
 
+  DISCHARGED 2026-08-18/19 — read the next four paragraphs as history, not as a live
+  blocker. BO-2500d-1, -1-i and -3 were amended to match the lane that ships, which is what
+  this section asked for. Kept in full because the reasoning is what a future reader needs
+  in order to trust the discharge.
+
   BLOCKED ON A SPEC DECISION, not on code. BO-2500d-1 reads "Opinion-only gate agents are
   absent from the fast-lane phase order ... it contains no LLM review agent", and its
   tests assert the literal string `pr-reviewer` does not appear in the runner.
@@ -177,7 +182,21 @@ notes: |
   intent worth preserving from BO-2500d is that no LLM opinion may CONFER done-ness; a
   reviewer that can only veto delivery leaves that intact.
 
-  SECOND BLOCKER, found 2026-08-19 — the orphan shelters TWO capabilities, not one, and
+  SECOND BLOCKER, found 2026-08-19 — DISCHARGED 2026-08-31, DOES NOT HOLD. Read this
+  section as history. Its facts were all re-verified and are all true; its CONCLUSION is
+  wrong, and the full reasoning is in the second amended_by entry. In short: all three
+  BO-2400d records are written with CONDITIONAL Givens ("When its telemetry IS RECORDED",
+  "Given the sink is unreachable", "Given telemetry records EXIST for both lanes"), so not
+  one of them obliges any lane to EMIT; and none of them cites the orphan as its
+  implementation — they cite scripts/agent-health/agent_telemetry.py and
+  generate_health_report.py, both of which exist and satisfy what the records literally
+  require. Deleting the orphan therefore regresses no criterion's stated behaviour. The
+  real defect the section found is that NO acceptance criterion anywhere requires a lane to
+  emit telemetry at all — filed as KI-BO-012, an unwritten requirement needing its own AC,
+  not a blocker on this one. Kept in full below because the mistake is instructive: it was
+  believed because BO-2400d-1's TITLE promised more than its Gherkin did.
+
+  The orphan shelters TWO capabilities, not one, and
   only the first was fixed. KI-BO-006 originally warned that deleting this file would
   silently retire prompt caching. That warning was right about the CATEGORY and
   under-counted the instances. BO-2400c-1-iii wired caching into the live lane, which
@@ -202,12 +221,20 @@ notes: |
       guards the wrong failure. It catches a sink that cannot be written; it cannot
       catch a sink nobody calls, which is the failure actually present.
 
-  So this criterion now has two prerequisites, not one: the BO-2500d reconciliation
-  above, and a decision on the BO-2400d family. Deleting the orphan before that decision
-  retires telemetry from the fast lane silently — the exact mistake KI-BO-006 was written
-  to prevent, committed a second time because the warning was read as being about one
-  capability rather than about orphan-sheltering as a class. Do not let the BO-2500d fix
-  create the impression this is now unblocked.
+  [HISTORY — the conclusion below was withdrawn on 2026-08-31; see the discharge note that
+  opens this section.] So this criterion now has two prerequisites, not one: the BO-2500d
+  reconciliation above, and a decision on the BO-2400d family. Deleting the orphan before
+  that decision retires telemetry from the fast lane silently — the exact mistake KI-BO-006
+  was written to prevent, committed a second time because the warning was read as being
+  about one capability rather than about orphan-sheltering as a class. Do not let the
+  BO-2500d fix create the impression this is now unblocked.
+
+  BOTH PREREQUISITES ARE NOW DISCHARGED AND THIS CRITERION IS BUILDABLE. The BO-2500d half
+  was resolved by amendment on 2026-08-18/19; the BO-2400d half was examined on 2026-08-31
+  and does not hold. Nothing above should be read as withholding permission to build. Two
+  things from this section DO survive as real work, and neither blocks the deletion:
+  KI-BO-012 (no AC requires a lane to emit telemetry), and the standing instruction that
+  every re-pointed grep-only assertion is inherited debt rather than new coverage.
 
   The likely-cheap path for the rest, to be confirmed rather than assumed: the criteria
   those tests cover describe the runner, and the runner is now fast-lane-ship.js, so
