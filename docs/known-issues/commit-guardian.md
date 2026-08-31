@@ -2939,18 +2939,72 @@ predicate. Consistently, `check-ticket-signoff-parity` is *not* in the nine-entr
    Building it as specified would produce a reader reachable from nothing — the exact failure
    its own `it_requirements` warn about: *"A reader that is not reachable from a registered
    hook is inert."* Four `TQ-500` acceptance criteria now depend on the same host.
-3. **The 24 are unaudited.** Only three were probed individually. The other 21 may include
-   scripts that are deliberately library-only, superseded, or CI-invoked — but each is
-   currently indistinguishable from a guard everyone believes is running. Until triaged, the
-   commit-guardian surface's real coverage is unknown, and it is smaller than 66.
+3. **19 of the 24 are unaudited.** Each is currently indistinguishable from a guard everyone
+   believes is running. Until triaged, the commit-guardian surface's real coverage is unknown,
+   and it is smaller than 66.
+
+**AMENDED 2026-08-31 — the 24 are two different populations, and only one is a defect.** The
+entry above was written before the registry itself was read. `commit_guardian.json` →
+`hooks_manifest.hooks` holds **59** entries, of which **5** carry `enabled: false` and are
+filtered out by `scripts/build_precommit.py`, leaving the 54 emitted. So:
+
+| population | count | status |
+|---|---|---|
+| registered and enabled | 54 | fine |
+| registered, `enabled: false` | 5 | **deliberate.** `check-mermaid-drift`, `check-diagram-naming`, `check-duplicate-code`, `check-diff-coverage`, `check-surface-components-e2` |
+| absent from the registry entirely | 19 | the defect |
+
+The 19: `check_ac_coverage`, `check_complexity`, `check_debug_scripts`, `check_doc_coverage`,
+`check_doc_links`, `check_docstrings`, `check_documentation`, `check_file_size`,
+`check_folder_density`, `check_identifier_uniqueness`, `check_pytest_style`, `check_root_files`,
+`check_sql_complexity`, `check_sql_dependencies`, `check_test_ac_tags`,
+`check_test_fixture_bloat`, `check_ticket_signoff_parity`, `check_ticket_test_requirements`,
+`check_v2_ac_store_alignment`.
+
+This distinction is load-bearing for any fix: a check that reports the 5 deliberate ones
+produces five false alarms on the day it lands, and a false alarm has exactly one natural
+remedy — weakening the check until it stops. Three states, not two:
+registered-and-enabled, registered-and-disabled (valid, silent), absent (reported).
+
+**ONE HALF OF THIS CHECK ALREADY EXISTS.** `scripts/build_precommit.py` calls
+`_check_hook_script_integrity(hooks, cg_dir)`, which iterates the registry and warns for every
+**registered hook whose script is missing from disk**. The converse — a script on disk that no
+registry entry names — was simply never written. The asymmetry is the whole defect in one
+function: the build already knows to ask whether the registry points at real files, and has
+never asked whether real files are in the registry.
 
 **Remediation.** Register `check-ticket-signoff-parity` (restoring the documented id rather
 than minting a new one — `commit_guardian.json` is a package-surface registry, so a *new* id
 trips `check-package-surface-declaration` and requires the structured five-field spec). Then
-triage the remaining 23: register, delete, or add to the exemption registry with a stated
-ground. Finally, close the enumeration gap — the reachability guard should walk the scripts on
-disk and report any that no `entry:` names, rather than walking the registry and trusting it
-to be complete.
+triage the remaining 18: register, delete, or record as a declared non-gate with a stated
+ground. Finally, close the enumeration gap — the guard should walk the scripts on disk and
+report any that no registry entry names, rather than walking the registry and trusting it to
+be complete.
+
+**SCHEDULED WORK — acceptance criteria already exist. Do not re-derive them.**
+
+| AC | level | covers |
+|---|---|---|
+| `BP-100n-4` | L2 | the enumeration itself: scripts on disk vs registry in effect, with registered-but-disabled as a valid silent third state |
+| `BP-100n-4-i` | L3 | the declared-non-gate register — an honest exemption path, keyed so an unregistered script (which has no hook id) can be named at all |
+| `BP-100n-4-ii` | L3 | the no-op floor: the check must state how many scripts it compared, so "compared nothing" is unrepresentable rather than merely guarded |
+
+Placed under `BP-100n` ("no guard infers from an empty result that there was nothing to
+verify") rather than as a sibling to `BP-100k-4`, for two reasons. `BP-100k` is at its cap of
+5 L2 children and its `child_limit_override: 9` was **discharged, not raised**, in the
+2026-08-26 split — adding a sixth child would re-instate a waiver deliberately retired. And
+`BP-100n`'s cluster rule is this defect verbatim: *"an absence must be reported as an absence
+and never inferred to mean there is nothing to check."*
+
+`BP-100k-4` remains the direct counterpart and is cross-linked: its title carries the scope
+limit in its first word — *"A **registered** commit gate whose activation condition can never
+match…"*. **Extend that check's enumeration; do not build a second reachability guard beside
+it.**
+
+Each absence-asserting clause in the three ACs carries a named mutation in its `notes` — the
+concrete injection that must turn it red — because those clauses are green on arrival today
+for the trivial reason that nothing is reported at all. That is `KI-TQ-010`'s shape, and
+writing them without a stated mutation would reproduce it.
 
 **How it was found.** An `it-po` agent enriching the `TQ-500` tree checked whether the host
 its ACs pin was actually registered, instead of accepting the README's claim that it was. The
@@ -2958,7 +3012,9 @@ brief it was given asserted the hook was registered; it was the brief that was w
 
 **Related.** `KI-CG-034`, `KI-CG-019`, `KI-CG-012` (sibling exit-0-having-checked-nothing
 routes). `BP-1100g-5-i` and `TQ-500b-1` / `TQ-500c-2` / `TQ-500c-3` / `TQ-500e-2` (the
-scheduled work that depends on this host).
+scheduled work that depends on this host). `TQ-500b-1` overlaps deliberately and is
+complementary, not duplicate: it makes registering *that one* hook a precondition of its own
+reader, while `BP-100n-4` covers the class.
 
 **Pattern:** a completeness guard whose input is the registry it is meant to be checking —
 so anything missing from the registry is invisible to the check for missing things.

@@ -1,0 +1,141 @@
+id: BP-100n-4-ii
+components:
+  - build_pipeline
+title: "The check states how many gate scripts it compared, and a run that compared none is an unresolved run that fails — a comparison that never happened must not be able to look like a comparison that found nothing wrong"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the reachability check has completed a run,
+  When it reports,
+  Then its summary states four numbers — how many gate scripts it found on disk
+    and compared, how many registry entries it read, how many scripts it reported
+    as invoked by nothing, and how many it treated as declared non-gates — so a
+    run that examined nothing cannot produce the same output as a run that
+    examined everything,
+  And given the place the gate scripts are kept cannot be listed, or is listed
+    successfully and holds no gate scripts at all,
+  When the check runs,
+  Then it states that it could not establish which gate scripts exist, names
+    which of those two situations it is in, and fails,
+  And given the registry from which the commit-time gate configuration is
+    generated cannot be read, or is read and cannot be parsed,
+  When the check runs,
+  Then it states that it could not establish which scripts are invoked, names the
+    reason, and fails,
+  And in neither of those situations does it state a count of zero scripts
+    invoked by nothing, and in neither does it exit as though the comparison had
+    been performed and had found every script invoked,
+  And given a run in which every gate script on disk is invoked or declared,
+  When it reports,
+  Then the number of scripts it states it compared is greater than zero, and that
+    stated number is what establishes the run as clean — a run is never reported
+    clean on the strength of having found nothing to report.
+depends_on:
+  - BP-100n-4
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/known-issues/commit-guardian.md"
+    relationship: related
+    status: exists
+    relevance: >-
+      KI-CG-20260831-hook-scripts-never-invoked — the source finding for this AC family, and
+      the register a reader is most likely to arrive from. Its Scheduled work table names
+      this criterion, so the link is bidirectional: whoever picks the KI up sees the criteria
+      already exist rather than re-deriving them. The four no-op precedents this criterion
+      exists to prevent are cited in the same register (KI-CG-034 examined 169 files, compared
+      zero, and exited 0).
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4-i.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The same fail-closed contract already written for the registry side of this guard,
+      and the vocabulary to reuse: an INDETERMINATE line naming the reason plus exit 2,
+      never a zero-unreachable clean verdict. Its constraint that the indeterminate path
+      "must be exercised by making the lookup genuinely unavailable at run time, not by
+      asserting that an error branch exists in the source" applies here unchanged.
+  - path: "templates/scripts/commit_guardian/check_hook_trigger_reachability.py"
+    relationship: modifies
+    status: exists
+    relevance: >-
+      _resolve_hooks_or_reason and _resolve_tracked_paths_or_reason are the existing
+      zero-population floors on the registry side, including the finding that a
+      SUCCESSFULLY empty result is the same epistemic state as a failed lookup. The disk
+      side needs the identical floor; add it beside them rather than as a new pattern.
+  - path: "docs/known-issues/commit-guardian.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-CG-034 is the precedent this criterion exists to prevent repeating — a scanner
+      that examined 169 files, skipped all 169, compared none, and exited 0. KI-CG-012 and
+      KI-CG-018 are the same shape on other gates. Read them before choosing what the
+      summary prints: in every one of the three, the missing artifact was a stated count.
+  - path: "CLAUDE.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      "AC-store hygiene" records the sibling fix in the AC-store validator, where a bare
+      directory matched nothing, printed "No YAML files to validate." and exited 0 for
+      eight days — and the habit that survived the fix: before believing a pass, confirm
+      the run actually named some files. That is the positive-count assertion this
+      criterion requires.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-100n-4
+  contract: >-
+    The enumerated disk-side and registry-side populations whose sizes this criterion
+    requires to be stated, and whose unavailability or emptiness it converts from a
+    silent clean exit into a named, non-zero failure.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  WHY THIS IS NOT PARANOIA. This repository has shipped guards that exit 0 having examined
+  nothing at least four times on the commit-guardian surface alone: KI-CG-034 (169 files
+  examined, 169 skipped, zero compared, exit 0), KI-CG-012 (a clean pass on a file never
+  validated), KI-CG-018 (exits 0 without inspecting anything, and its own "did I look?"
+  diagnostic cannot fire on the paths where it did not), and the AC-store validator's
+  bare-directory no-op, which made the documented defence against store rot itself a no-op
+  for eight days while reporting clean the whole time. The check specified in BP-100n-4 has
+  two independent populations to resolve, either of which can come back empty, so it has two
+  new routes into that state on the day it lands.
+
+
+  THE POSITIVE-COUNT FORM IS DELIBERATE. "Fails when it compared nothing" and "states how
+  many it compared" are not the same requirement. The first can be satisfied by a guard on
+  one code path; the second makes the empty state unrepresentable in the output, so a
+  reader — human, agent, or CI log grep — can tell the two runs apart without knowing which
+  branch was taken. Prefer the second and derive the first from it.
+
+
+  MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "In neither situation does it state a count of
+  zero scripts invoked by nothing" asserts that a clean verdict is NOT emitted, and on any
+  implementation that reports nothing it is green on arrival. MUTATION: make the disk
+  listing return an empty collection on error rather than raising or returning an
+  unavailability signal — the ordinary fail-open shape, and the one every one of the four
+  precedents above actually shipped. Under this mutation the check must report zero
+  scripts compared, zero reported, and exit clean; the clause must fail, and it must fail
+  by the exit status as well as by the text. Exercise it by making the listing genuinely
+  unavailable at run time — an unreadable directory, a path that does not exist — not by
+  asserting that an error branch is present in the source.
+
+
+  BOUNDARY WITH BP-100k-4-i. That criterion pins the fail-closed contract for the REGISTRY
+  side and is already done. This one adds the DISK side, which did not exist when it was
+  written, and adds the stated-count requirement, which BP-100k-4-i expresses only as a
+  zero-unreachable count and not as a population size. Extend the existing summary line;
+  a second summary would let the two disagree about whether the run was determinate.
