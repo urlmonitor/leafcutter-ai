@@ -1394,7 +1394,8 @@ references, and a missed one silently points a reader at someone else's defect.
 ### KI-BO-025 — `/build-feature` plans only the first ready wave, so an epic with any dependency depth cannot be driven to completion in one run
 
 - **Severity:** high
-- **Status:** open
+- **Status:** open · ACs **BO-100e** (carry the layers) and **BO-300d** (say what was left),
+  both authored 2026-08-26, both `readiness: draft` awaiting the approval gate
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/build-feature.js` — the `epic-planner` `agent()` call
@@ -1437,12 +1438,32 @@ harness — unbuilt after a run that did substantial correct work on the other 1
 **Not a false-complete, at least.** The completion guard does catch the shortfall and withholds
 the "complete" verdict — but it misdescribes the cause; see KI-BO-026.
 
+**Why it misdescribes it, found 2026-08-31 while enriching the ACs.** The run has no record of
+the epic's contents at plan time that is separate from the plan. `plannedTicketPaths`
+(deployed `~:2156`) is built by iterating `batches` — the comment above it calls this "the set
+of work the plan was built from … the baseline the completion-time re-read is compared against,
+by identity (BO-300a-5)", but under this defect the baseline is 17, not 37. The 20 dropped
+tickets are therefore absent from the baseline, and at completion time `compareEpicTicketSets`
+can only see them as *additions*. **KI-BO-025 and KI-BO-026 are one defect observed from two
+ends**, and separating the run's *set* from the run's *schedule* is a precondition for fixing
+either — not an optimisation. It also changes what BO-300a-5 (`done`) reports, so it cannot be
+done quietly.
+
 **Fix direction.** Either loop the planner until it returns an empty batch set (re-reading
 frontmatter each round, which the code comment at `~:2400` already anticipates as the resume
 mechanism), or have it emit the full topological schedule as ordered waves rather than one
 antichain. If the single-wave behaviour is deliberate, the run must state it: report the count
 of unscheduled-but-ready-later tickets and instruct the caller to re-invoke, rather than
 leaving the arithmetic to whoever compares the plan against the folder.
+
+**A test-harness precondition blocks all of it, found 2026-08-31.**
+`unit_tests/_workflow_engine_harness.py::run_workflow_under_e2` takes
+`label_responses: dict[str, Any]` — **one** response object per label, serialised to a flat
+JSON literal and returned on every call to that label. The `epic-planner` label therefore
+cannot express wave 1 followed by a *different* wave 2, and `ticket-planner` is shared across
+every ticket so it cannot differentiate per-ticket replies either. Until the harness supports
+sequenced per-label responses, **not one behavioural test for this fix can be written**, and
+the work collapses to exactly the grep-only proof CLAUDE.md forbids. Extend the harness first.
 
 **Pattern:** a stage that does part of the job correctly and reports no signal that the rest
 exists.
@@ -1452,7 +1473,10 @@ exists.
 ### KI-BO-026 — Work the planner never selected is reported as work "added to the epic after the plan was fixed"
 
 - **Severity:** medium
-- **Status:** open
+- **Status:** open · AC **BO-300d** (authored 2026-08-26, `readiness: draft`), whose criteria
+  were amended on the same day precisely because the first draft demanded an attribution the
+  run cannot make. See the 2026-08-31 note on KI-BO-025 for why: the baseline this compares
+  against is the plan, not the epic.
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/build-feature.js` — `compareEpicTicketSets()`

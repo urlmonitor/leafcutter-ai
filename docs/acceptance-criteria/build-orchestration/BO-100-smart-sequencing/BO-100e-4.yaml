@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a set of work containing two independent chains — A followed by B, and
@@ -46,13 +46,124 @@ doc_links:
     relationship: modifies
     status: exists
     relevance: "The batch loop and its failure handling — where 'stop the whole run' and 'stop this branch' are distinguished."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "Where the halted-ticket return and the unconfirmed-ticket backstop are described — the two whole-run exits this record must convert into per-branch containment without losing their reporting."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The failure angle, and the FIN-100h incident where a status branch's final else was the success path — the shape the third scenario here guards against."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Per-branch failure containment. Records which pieces were withheld by which failure so the run's shortfall is explained entirely by the failed prerequisites."
+    properties:
+      failed:
+        type: array
+        items: {type: string}
+        description: "Ticket paths whose own drive ended unsuccessfully."
+      withheld_behind_failure:
+        type: array
+        items:
+          type: object
+          properties:
+            ticket_path: {type: string}
+            behind: {type: array, items: {type: string}, description: "The failed prerequisite path(s) transitively responsible."}
+          required: [ticket_path, behind]
+      run_continued_after_failure:
+        type: boolean
+        description: "True when at least one further look was taken after the first failure. A failure that ends the run makes this false."
+    required: [failed, withheld_behind_failure, run_continued_after_failure]
+  reference_file_path: "templates/workflows-js/build-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "THE CHEAP WRONG FIX THIS FORBIDS: making the loop terminate by ending the run at the first failure. Today the halted-ticket branch (~line 2292) returns out of the whole epic loop the moment any ticket in a batch fails. Left as-is under a widened loop, a 37-piece body of work with one failing piece would build LESS than today's single pass does — a regression dressed as a termination guarantee, and it would satisfy BO-100e-2 trivially."
+    - "CONTAINMENT IS TRANSITIVE AND DERIVED. The pieces withheld by a failure are exactly those that depend on it, directly or transitively, computed over the run's fixed set. Never a hand-maintained list, never inferred from which pieces happen not to have run."
+    - "PRESERVE THE HALT REPORTING WHILE CHANGING THE HALT SCOPE. The halted-ticket and unconfirmed-ticket branches already build a per-ticket summary and already call epicRecheckReport. Converting them from whole-run exits into per-branch containment must keep both — the same summaries and the same re-read must still reach the terminal payload. A refactor that narrows the exit and drops the report trades one defect for another."
+    - "A RUN THAT BUILT NOTHING MUST NOT END QUIETLY. When every piece is behind a single failed prerequisite, the run ends without claiming it finished: the terminal status must not be a success shape and epic_complete must not be true. This record requires only the absence of a false completion claim; what the run SAYS about the shortfall is BO-300d."
+    - "DISTINGUISH THE THREE OUTCOMES EXPLICITLY. 'Everything built', 'some built, some withheld behind a failure' and 'nothing built' must be three distinguishable terminal states derived from the record, not two states plus a default else. A trailing else that falls through to success is precisely how an observed refusal was recorded as a clean merge in finalize Step 2."
+    - "Deployed/template parity (ADR-001) applies."
+delivers_to:
+  agent: python-coder
+  contract: "Per-branch failure containment: { failed[], withheld_behind_failure[{ticket_path, behind[]}], run_continued_after_failure } on every epic return, with the halted-ticket and unconfirmed-ticket branches converted from whole-run exits into branch-scoped withholding that preserves their existing per-ticket summaries and epicRecheckReport call. Consumed by BO-100e-2's ended_because and, downstream, by BO-300d."
+expects_from:
+  ac_id: BO-100e-1-i
+  contract: "The eligibility predicate that requires an affirmative recorded success, and its withheld_by output — the mechanism by which a failure withholds only the work behind it."
+test_spec:
+  - name: test_unrelated_branch_second_layer_is_built_after_the_other_branch_fails
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Two independent chains A<-B and C<-D with A failing and C succeeding: D receives its phase dispatches in the same run. The load-bearing assertion of this record."
+  - name: test_dependant_of_the_failed_piece_is_not_built
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "On the same fixture B receives no dispatch, and withheld_behind_failure names B behind A."
+  - name: test_run_does_not_end_at_the_moment_a_piece_fails
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "At least one further look is taken after A's failure (run_continued_after_failure is true) — the negative control against fixing termination by aborting on first failure."
+  - name: test_unbuilt_set_is_exactly_the_work_behind_the_failure
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The run ends having built C and D and not A or B, and the unbuilt set equals the transitive dependants of the failure and no others — asserted by identity over ticket paths."
+  - name: test_halt_reporting_survives_the_change_to_branch_scope
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The per-ticket halt summary and the completion-time re-read that the halted-ticket branch produces today are still present in the terminal payload once that branch withholds only its own branch."
+  - name: test_every_piece_behind_one_failure_ends_the_run_without_a_completion_claim
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "The empty case: the whole set is behind a single failed prerequisite, nothing is built, the run ends, and the terminal status is not a success shape and epic_complete is not true. Containment must not become a way for a run that built nothing to end quietly."
+  - name: test_containment_is_reached_through_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "templates/workflows-js/build-feature.js (E2 top-level body, via run_workflow_under_e2)"
+    description: "All cases are produced by executing the workflow body; the containment record is shown to govern which dispatches happen, not merely to be reported alongside them."
+test_rationale: |
+  Every descriptor here is a negative control for a fix that would otherwise look
+  finished. Ending the run at the first failure satisfies BO-100e-2's termination
+  requirement completely and destroys the value BO-100e-1 buys, so "a further look
+  was taken after the failure" has to be asserted directly rather than inferred from
+  the run having ended.
+
+  The empty case is charged boundary because it is the shape where containment and
+  false-completion meet: a run that withheld everything has an empty completed set,
+  and an empty completed set is exactly what a success-shaped default else would
+  certify. The repo has shipped that branch shape before.
+
+  Assertions are on ticket identity, never on batch or wave counts, for the same
+  reason as the rest of the family: the observed failing run's batch structure was a
+  files_touched partition and is compatible with the defect.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-31
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -65,3 +176,5 @@ notes: |
   The third scenario keeps the containment rule honest: containment must not turn a
   run that built nothing into a run that ends without saying so. What it says is
   BO-300d's subject; that it does not claim success is this record's.
+change_target: pipeline
+risk_surface: internal
