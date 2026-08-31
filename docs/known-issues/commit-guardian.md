@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-26
+last_updated: 2026-08-31
 components:
   - commit_guardian
 related_docs:
@@ -2395,3 +2395,93 @@ routes). `KI-BP-016` (the same output-root confusion in the build's doc-index ph
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
 nothing and reports success).
+
+---
+
+### KI-CG-035 — `check_hook_parity`'s two parity legs alias to one directory in a worktree, and in the symlink layout this repo recommends it compares another branch's build against your templates
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/check_hook_parity.py` — `main()`'s
+  `project_root = Path.cwd()` and the `runtime_dir` / `deployed_dir` assignments that follow;
+  the `hook_parity` block of `templates/scripts/commit_guardian/commit_guardian.json`
+
+**Two defects, one root.** The hook resolves four directories from `Path.cwd()` and runs two
+parity legs: **A** runtime-vs-canonical, and **B** canonical-vs-deployed. Its config names them
+distinctly:
+
+```
+"runtime_dir":            "scripts/commit_guardian",
+"canonical_template_dir": "templates/scripts/commit_guardian",
+"deployed_output_dir":    ".leafcutter/scripts/commit_guardian",
+```
+
+**A — the two legs are the same comparison.** In any worktree that `build.py` has provisioned,
+`scripts/commit_guardian` is a **symlink** to `../.leafcutter/scripts/commit_guardian`:
+
+```
+$ readlink -f scripts/commit_guardian .leafcutter/scripts/commit_guardian
+.../.leafcutter/scripts/commit_guardian
+.../.leafcutter/scripts/commit_guardian
+```
+
+`runtime_dir` and `deployed_output_dir` are the *same directory*. Leg A therefore re-runs leg B
+under a different name, and the question leg A exists to ask — *is the live runtime copy in sync
+with canonical?* — is never asked at all. This holds regardless of how `.leafcutter` itself is
+set up, and is invisible from the output because a passing run prints **nothing**: there is no
+per-leg accounting to reveal that one leg compared the directory the other had already compared.
+
+**B — in the recommended layout it fails on files that are not yours.** `CLAUDE.md`'s pre-drive
+checklist tells you to point a worktree's `.leafcutter` at the **main tree's** install
+(*"Prefer the symlink instead"*). Do that, and `deployed_dir` — and via A, `runtime_dir` — resolve
+into an install tree built from **whatever branch the main checkout last built**. Observed on this
+worktree while committing GE-120 work:
+
+```
+[check-hook-parity] BLOCKED — hook parity violations detected:
+  Script 'check_identifier_uniqueness.py' exists in runtime dir (…/scripts/commit_guardian)
+  but is absent from canonical template dir (…/templates/scripts/commit_guardian).
+  … (2 more of the same shape, then 4 content divergences)
+```
+
+`check_identifier_uniqueness.py` is a file from **PR #495, which is not merged into this branch
+and never was**. The hook was reporting, as a defect in this branch, the presence of another
+branch's file in a shared build directory. The three "runtime-only" scripts and all four
+"diverged" ones are artifacts of the shared install, not of the commit being made. Under this
+layout the hook cannot pass on any branch whose templates differ from the main checkout's last
+build — which is every feature branch, by definition.
+
+**The remediation advice is actively harmful here.** Every violation line ends
+`Fix: run build.py to regenerate the deployed output.` Following that instruction from a worktree
+whose `.leafcutter` is the shared symlink deploys **this branch's unmerged templates over the
+install tree every other worktree and every parallel session reads** — the failure mode
+`KI-BP-016` / `KI-BP-017` already document as a quiet way to lose work. The hook names the one
+action its own operating context makes unsafe, and names it as the fix.
+
+**Cause.** `project_root = Path.cwd()` with plain `/` joins, and no resolution or comparison of
+the results. The hook never asks whether two of its four configured directories are the same
+inode, nor whether the tree it is calling "runtime" belongs to the working copy being committed.
+This is the same cwd-derived-root shortcut recorded in `KI-CG-027`, with a worktree-specific
+consequence.
+
+**Workaround.** `SKIP=check-hook-parity` for the commit. That is what was done here; every other
+guardrail hook passed on the same commit. Do **not** run `build.py` to clear it unless the
+worktree's `.leafcutter` is a real directory rather than a symlink to the shared tree.
+
+**Fix direction.** Resolve all four paths and detect aliasing: if `runtime_dir` and
+`deployed_output_dir` resolve to one path, say so and report leg A as *not run* rather than
+silently passing it twice — an unrunnable leg is a gap, not a pass, which is the `GE-120a-1` rule
+this component is adopting anyway. Separately, establish whether the deployed tree belongs to
+this working copy before comparing against it; when it does not, the honest result is
+`unverified`, not `BLOCKED`. And make the remediation string conditional on that answer, so it
+stops prescribing a shared-tree overwrite.
+
+**Related.** `KI-CG-027` (the same `Path.cwd()` root derivation, canonical resolver unused
+beside it). `KI-CG-009` (a hook resolving to the main checkout instead of the worktree).
+`KI-BP-016` / `KI-BP-017` (what running `build.py` against a shared `.leafcutter` actually does).
+`KI-CG-034` (the sibling drift guard that examines everything and compares nothing).
+
+**Pattern:** two configured paths that are one path, and a fix instruction that is safe in the
+layout the author imagined and destructive in the layout the project recommends.
