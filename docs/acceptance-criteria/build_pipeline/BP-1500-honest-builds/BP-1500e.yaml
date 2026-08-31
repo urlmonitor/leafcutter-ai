@@ -6,8 +6,8 @@ component: build-pipeline
 level: L1
 status: active
 req_status: draft
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 work_status: todo
 criteria: |
@@ -68,7 +68,10 @@ expects_from: null
 origin_agent: product-owner
 created: 2026-08-31
 created_by_ticket: null
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []
