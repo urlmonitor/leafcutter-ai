@@ -79,8 +79,13 @@ amended_by:
   - reason: "IT PO technical enrichment, 2026-08-26. The capability had already shipped (scripts/agent-health/weekly_health.py, merged as d0fa881c / PR #608), so the test contract binds both criteria to the real passing tests in unit_tests/agent_health/test_weekly_health.py rather than commissioning new coverage. Added assigned_agent, estimated_complexity, it_requirements, test_spec, test_rationale, the births-index expects_from contract, and the scripts/agent-health/README.md doc link. Criteria unchanged; work_status deliberately left todo for a separate evidence-bound step."
     by: it-po
     at: 2026-08-26
+  - reason: "Reconciliation pass, 2026-08-31 (python-coder, evidence audit) -- FINDING 5 + covered_by backfill. work_status was flipped from the deliberately-left-todo state recorded in the entry above to done, with nothing recording when or on what evidence; recording it now. Evidence: both tests named in test_spec (TestCollectCycleTimes::test_criterion_with_no_known_birth_is_skipped_not_zero and ::test_birth_after_period_end_clamps_to_zero) exist in unit_tests/agent_health/test_weekly_health.py and pass under AC_ENFORCE_STRICT=1. Also backfilled covered_by, previously empty despite both tests being directly tagged '# covers: INF-500e-3-i'."
+    by: python-coder
+    at: 2026-08-31
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/agent_health/test_weekly_health.py::TestCollectCycleTimes::test_criterion_with_no_known_birth_is_skipped_not_zero
+  - unit_tests/agent_health/test_weekly_health.py::TestCollectCycleTimes::test_birth_after_period_end_clamps_to_zero
 implemented_by:
   - d0fa881ca111665a8ae10b3bb46773c73325c85c
   - scripts/agent-health/weekly_health.py

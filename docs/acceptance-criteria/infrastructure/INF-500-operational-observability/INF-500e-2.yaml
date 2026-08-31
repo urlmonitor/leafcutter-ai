@@ -179,6 +179,9 @@ amended_by:
   - reason: "IT PO technical enrichment, 2026-08-26. The capability had already shipped (scripts/agent-health/weekly_health.py, merged as d0fa881c / PR #608), so the test contract binds each criterion to the real passing test in unit_tests/agent_health/test_weekly_health.py rather than commissioning new coverage. Added assigned_agent, estimated_complexity, it_requirements, test_spec, test_rationale and the expects_from contract against INF-500e-2-i. Recorded the provisional, never-verified lane-event vocabularies as a standing constraint. Criteria unchanged; work_status deliberately left todo for a separate evidence-bound step."
     by: it-po
     at: 2026-08-26
+  - reason: "Reconciliation pass, 2026-08-31 (python-coder, evidence audit) -- FINDING 5. work_status was flipped from the deliberately-left-todo state recorded in the entry above to done, with nothing recording when or on what evidence; recording it now. Evidence: all 10 tests named in test_spec (TestUnknownIsNotZero x5, TestCollectLaneHealth x4, plus their siblings) exist in unit_tests/agent_health/test_weekly_health.py and pass under AC_ENFORCE_STRICT=1. covered_by already correctly names the child INF-500e-2-i and is unchanged; two tests are also tagged directly to this record (TestCollectLaneHealth::test_sink_with_no_lane_events_is_unavailable_not_zero_percent, TestUnknownIsNotZero::test_int_formatter_distinguishes_unknown_from_zero), both present and passing."
+    by: python-coder
+    at: 2026-08-31
 superseded_by: null
 covered_by:
   - INF-500e-2-i

@@ -59,10 +59,10 @@ Only then was anything marked done.
 
 **Evidence recorded.** All eight records carry `work_status: done` set through
 `mark_ac_done.py` with `--test-root` enforcing the coverage gate — no hand-edited status
-flips — plus `implemented_by` pointing at commit `d0fa881c` and the module, and 19
-`# covers:` tags across a suite that grew from 49 tests to 62. The parent `INF-500.yaml`
-is staged alongside its new child, since a hook only ever validates what is in the
-commit's index.
+flips — plus `implemented_by` pointing at commit `d0fa881c` and the module, and 20
+`# covers:` tags. This work's own suite, `test_weekly_health.py`, grew from 49 tests to
+58. The parent `INF-500.yaml` is staged alongside its new child, since a hook only ever
+validates what is in the commit's index.
 
 **A disagreement between two gates, worth knowing about.** `mark_ac_done.py --test-root`
 accepted the L1 `INF-500e` on the composite path (proof derived from its children), while
@@ -71,11 +71,29 @@ the `check-done-proof` pre-commit hook rejected the same record for having no di
 is a defect in one of them; here it pushed toward the better outcome, since writing the
 end-to-end test the hook demanded was the right thing regardless.
 
-**Correction to the previous entry.** The 2026-08-26 11:30 entry stated "54 unit tests
-cover the pure computations and the honesty guarantees". 54 was the whole
-`unit_tests/agent_health/` directory; 49 of those belong to this work and 5 are the
-pre-existing telemetry failsafe tests. The correct figure for that entry was **49**. The
-suite now stands at **58** in the directory, 53 of them this work's.
+**Correction to the previous entry — and to the first version of this one.** The
+2026-08-26 11:30 entry stated "54 unit tests cover the pure computations and the honesty
+guarantees". 54 was the whole `unit_tests/agent_health/` directory; 49 of those belong to
+this work and 5 are the pre-existing telemetry failsafe tests. The correct figure for that
+entry was **49**.
+
+The first version of *this* entry then made the same mistake twice over, in the very
+paragraph written to fix it: it said the suite "grew from 49 tests to 62" and, four
+sentences later, that it "now stands at 58 in the directory, 53 of them this work's".
+Those cannot both be true. 62 was the directory; 58 was the file; 53 was wrong on either
+basis. Mixing the two bases is what produced the original 54/49 error, so the numbers are
+now always stated with the thing they count:
+
+| basis | before this work | now |
+|---|---|---|
+| `unit_tests/agent_health/` directory | 54 | **63** |
+| `test_weekly_health.py` (this work's) | 49 | **58** |
+| `test_agent_telemetry_failsafe.py` (pre-existing) | 5 | 5 |
+
+All three measured by execution, not counted by eye. A code review of this branch caught
+the contradiction; the same review found four defects in the new tests — a tautological
+rename test, an unexercised earliest-add-wins line, and two environment-hygiene traps in
+the git helpers — all fixed on this branch, which is where the 58th test came from.
 
 One shipped-code fix rides along: `--no-gh`'s help text still read "PR columns report
 zero", describing behaviour that changed when unknown stopped rendering as zero. It now

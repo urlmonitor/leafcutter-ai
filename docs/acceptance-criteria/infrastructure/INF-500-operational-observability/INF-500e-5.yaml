@@ -116,8 +116,13 @@ amended_by:
   - reason: "IT PO technical enrichment, 2026-08-26. The capability had already shipped (scripts/agent-health/weekly_health.py, merged as d0fa881c / PR #608), so the test contract binds each criterion to the real passing test in unit_tests/agent_health/test_weekly_health.py rather than commissioning new coverage. Added assigned_agent, estimated_complexity, it_requirements, test_spec, test_rationale and the iso_week_starts delivers_to contract naming the three downstream consumers. Criteria unchanged; work_status deliberately left todo for a separate evidence-bound step."
     by: it-po
     at: 2026-08-26
+  - reason: "Reconciliation pass, 2026-08-31 (python-coder, evidence audit) -- FINDING 5 + covered_by backfill. work_status was flipped from the deliberately-left-todo state recorded in the entry above to done, with nothing recording when or on what evidence; recording it now. Evidence: all 5 tests named in test_spec (TestIsoWeekStarts) exist in unit_tests/agent_health/test_weekly_health.py and pass under AC_ENFORCE_STRICT=1. Also backfilled covered_by, previously empty despite two directly-tagged tests in the suite: TestIsoWeekStarts::test_last_entry_is_the_monday_of_the_reference_week and ::test_ordered_oldest_first (both tagged '# covers: INF-500e-5')."
+    by: python-coder
+    at: 2026-08-31
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/agent_health/test_weekly_health.py::TestIsoWeekStarts::test_last_entry_is_the_monday_of_the_reference_week
+  - unit_tests/agent_health/test_weekly_health.py::TestIsoWeekStarts::test_ordered_oldest_first
 implemented_by:
   - d0fa881ca111665a8ae10b3bb46773c73325c85c
   - scripts/agent-health/weekly_health.py

@@ -1203,6 +1203,19 @@ if __name__ == "__main__":
 #   reason rather than printing a zero, because a 0% completion rate and an
 #   unwired emitter are different facts (KI-BO-012).
 #   ac_birth_dates walks the log once instead of running git log --follow per
-#   criterion (~3,400 files); the cost is that a renamed record reads as newly
-#   born, which understates cycle time. Stated in the docstring, not corrected.
+#   criterion (~3,400 files). A record moving to a new path under the SAME
+#   filename (a folder reorganisation) is unaffected -- ac_key keys on the
+#   filename stem, so the original add date survives. A record given a NEW
+#   identifier (e.g. a renumber) is a different case, empirically verified
+#   (2026-08-31, real temp-repo git log against --diff-filter=A): git's
+#   default rename detection records that as a single R100 diff line, which
+#   --diff-filter=A excludes entirely, so the NEW identifier never gets a
+#   births entry at all. The prior wording here ("reads as newly born, which
+#   understates cycle time") was wrong -- collect_cycle_times looks up the
+#   new identifier, finds no birth, and SKIPS it from the cycle-time sample
+#   rather than assigning it a falsely-recent birth date. Net effect is the
+#   opposite bias from the one previously documented: the closure disappears
+#   from the sample instead of dragging the median down. Stated here, not
+#   corrected -- see also INF-500e-3's KNOWN LIMITATION note, which carries
+#   the same inaccurate description and is owned by the AC store, not this file.
 # ====================================================================

@@ -8,6 +8,7 @@ completion rate, and that a zero denominator never raises.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -20,6 +21,32 @@ _SCRIPTS = Path(__file__).resolve().parents[2] / "scripts" / "agent-health"
 sys.path.insert(0, str(_SCRIPTS))
 
 import weekly_health as wh  # noqa: E402
+
+
+def _clean_git_env(overrides: dict[str, str] | None = None) -> dict[str, str]:
+    """Build a subprocess environment safe for git calls against a temp repo.
+
+    Inherits the ambient environment (rather than pinning `PATH` to a fixed
+    pair of directories) so `git` resolves correctly regardless of where it
+    is installed (nix, homebrew, /usr/local/bin, a conda env, ...). Strips any
+    ambient `GIT_DIR` / `GIT_WORK_TREE` / `GIT_INDEX_FILE` so a call made from
+    inside a git hook or `rebase --exec` cannot escape the fresh temp repo and
+    operate on the outer repository instead. `overrides` layers identity/date
+    pinning on top for deterministic commits.
+
+    Args:
+        overrides: Extra environment variables to set after the base
+            environment is prepared (e.g. GIT_AUTHOR_DATE, HOME).
+
+    Returns:
+        dict[str, str]: The environment to pass to subprocess.run(..., env=...).
+    """
+    env = dict(os.environ)
+    for var in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+        env.pop(var, None)
+    if overrides:
+        env.update(overrides)
+    return env
 
 
 class TestClassifyPath(unittest.TestCase):
@@ -373,6 +400,7 @@ class TestAcBirthDates(unittest.TestCase):
         subprocess.run(
             ["git", "-C", str(self.repo), *args],
             check=True, capture_output=True, text=True,
+            env=_clean_git_env(),
         )
 
     def _commit(self, message, when):
@@ -380,8 +408,7 @@ class TestAcBirthDates(unittest.TestCase):
         subprocess.run(
             ["git", "-C", str(self.repo), "commit", "-q", "-m", message],
             check=True, capture_output=True, text=True,
-            env={
-                "PATH": "/usr/bin:/bin",
+            env=_clean_git_env({
                 "HOME": str(self.repo),
                 "GIT_AUTHOR_DATE": stamp,
                 "GIT_COMMITTER_DATE": stamp,
@@ -389,7 +416,7 @@ class TestAcBirthDates(unittest.TestCase):
                 "GIT_AUTHOR_EMAIL": "test@example.invalid",
                 "GIT_COMMITTER_NAME": "Test",
                 "GIT_COMMITTER_EMAIL": "test@example.invalid",
-            },
+            }),
         )
 
     def test_birth_is_the_first_add_not_the_latest_write(self):
@@ -407,21 +434,59 @@ class TestAcBirthDates(unittest.TestCase):
 
     def test_moving_a_criterion_does_not_reset_its_age(self):
         # covers: INF-500e-3
-        # The move re-adds the file at a new path. Keying by identifier and
-        # keeping the earliest add is what stops the criterion reading as
-        # newly born on the day it was reorganised.
+        # An atomic `git mv` in a single commit is recorded by git as R100
+        # (a rename), which never appears under --diff-filter=A at all -- so
+        # it cannot exercise the earliest-add-wins logic below (verified: any
+        # aggregation strategy passes an atomic-mv scenario, because the walk
+        # only ever observes one A event for the key). A non-atomic move --
+        # deleted in one commit, re-added at a new path in a later one -- is
+        # NOT folded into a rename by git, so it genuinely produces two A
+        # events for the same identifier. That is what this test drives, so
+        # it can actually fail against an implementation that keeps the most
+        # recent add instead of the earliest one.
         (self.store / "AC-2.yaml").write_text("id: AC-2\n", encoding="utf-8")
         self._git("add", "-A")
         self._commit("add AC-2", "2026-08-02")
 
+        self._git("rm", "-q", "docs/acceptance-criteria/comp/AC-2.yaml")
+        self._commit("remove AC-2 (pending reorg)", "2026-08-10")
+
+        # `git rm` prunes now-empty parent directories, so the store tree
+        # itself is gone at this point and must be recreated.
         feature = self.store / "feature"
-        feature.mkdir()
-        self._git("mv", "docs/acceptance-criteria/comp/AC-2.yaml",
-                  "docs/acceptance-criteria/comp/feature/AC-2.yaml")
-        self._commit("move AC-2 into a feature folder", "2026-08-20")
+        feature.mkdir(parents=True)
+        (feature / "AC-2.yaml").write_text("id: AC-2\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("re-add AC-2 into a feature folder", "2026-08-20")
 
         births = wh.ac_birth_dates(self.repo, "HEAD")
         self.assertEqual(births["AC-2"], date(2026, 8, 2))
+
+    def test_earliest_of_two_add_records_wins(self):
+        # covers: INF-500e-3
+        # Deliberately isolates the earliest-add-wins aggregation from any
+        # move/rename concern: the same key is genuinely added twice at the
+        # same path (deleted in between so the second write is its own A
+        # event, not a modification of the first). The log walks newest
+        # first, so an implementation that keeps the FIRST record it sees per
+        # key (e.g. `births.setdefault(key, current)`) would report the
+        # later, wrong, date here -- this is the case that line is for.
+        (self.store / "AC-9.yaml").write_text("id: AC-9\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("add AC-9", "2026-08-05")
+
+        self._git("rm", "-q", "docs/acceptance-criteria/comp/AC-9.yaml")
+        self._commit("remove AC-9", "2026-08-10")
+
+        # `git rm` prunes now-empty parent directories, so the store tree
+        # itself is gone at this point and must be recreated.
+        self.store.mkdir(parents=True)
+        (self.store / "AC-9.yaml").write_text("id: AC-9\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("re-add AC-9 at the same path", "2026-08-15")
+
+        births = wh.ac_birth_dates(self.repo, "HEAD")
+        self.assertEqual(births["AC-9"], date(2026, 8, 5))
 
     def test_registry_index_is_excluded_from_the_index(self):
         # covers: INF-500e-3
@@ -483,6 +548,7 @@ class TestReportEndToEnd(unittest.TestCase):
         subprocess.run(
             ["git", "-C", str(self.repo), *args],
             check=True, capture_output=True, text=True,
+            env=_clean_git_env(),
         )
 
     def _commit(self, message, when):
@@ -490,13 +556,12 @@ class TestReportEndToEnd(unittest.TestCase):
         subprocess.run(
             ["git", "-C", str(self.repo), "commit", "-q", "-m", message],
             check=True, capture_output=True, text=True,
-            env={
-                "PATH": "/usr/bin:/bin",
+            env=_clean_git_env({
                 "HOME": str(self.repo),
                 "GIT_AUTHOR_DATE": stamp, "GIT_COMMITTER_DATE": stamp,
                 "GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "test@example.invalid",
                 "GIT_COMMITTER_NAME": "Test", "GIT_COMMITTER_EMAIL": "test@example.invalid",
-            },
+            }),
         )
 
     def test_one_run_answers_both_health_and_speed(self):

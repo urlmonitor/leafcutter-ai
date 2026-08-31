@@ -77,7 +77,7 @@ it_requirements:
   - "The birth index weekly_health.py::ac_birth_dates(repo, ref) -> dict[str, date] must be built by walking the history ONCE for the whole store rather than following each record individually. Keying on the identifier and keeping the earliest add per identifier is what makes a moved record retain its true age instead of resetting to the move date; the git log walks newest-first, so a later-encountered add for a known key is the older one and must win."
   - "Age collection is weekly_health.py::collect_cycle_times(after, before, births, period_end) -> list[int] and must include a criterion only when it is done in the end snapshot and was NOT done in the start snapshot. It must take the births index as an argument rather than reading git itself, so the ages of a period are computable from literal inputs."
   - "Per the project error-handling policy every git invocation here goes through weekly_health.py::run_git with tolerate_failure set, so a missing ref or an empty grep result yields empty output rather than an unhandled CalledProcessError. Do not add a bare except around these calls."
-  - "KNOWN LIMITATION, do not silently fix here: the single-pass birth index does not follow renames, so a criterion given a NEW identifier reads as newly born and understates its cycle time. That cost is accepted by this record's notes; specifying rename-following is a separate criterion with a very different cost profile, and adding a per-record git log --follow would change the runtime characteristics of the whole report."
+  - "KNOWN LIMITATION, do not silently fix here, CORRECTED 2026-08-31 (previous wording claimed a renamed criterion 'reads as newly born and understates its cycle time' -- that was disproven, see below): the single-pass birth index does not follow a rename made within a single commit's diff. An atomic `git mv` (delete and re-add under a new identifier in the SAME commit) is recorded by git as one R100 rename line, which the --diff-filter=A walk excludes entirely -- so the new identifier gets NO births entry at all. collect_cycle_times then finds no birth for it and SKIPS that closure from the cycle-time sample rather than assigning it a falsely-recent birth date; the closure disappears from the reported population instead of dragging the median down (empirically verified 2026-08-31 against a real temporary repository -- see TestAcBirthDates and the corresponding comment above ac_birth_dates in weekly_health.py). Nuance: this is only true WITHIN a single commit. A non-atomic move -- deleted in one commit, re-added under the new identifier in a LATER commit -- is NOT folded into a rename by git and genuinely produces two add events, so the earliest one wins and that case is unaffected (see test_earliest_of_two_add_records_wins). That residual atomic-rename cost is accepted by this record's notes; specifying rename-following for the atomic case is a separate criterion with a very different cost profile, and adding a per-record git log --follow would change the runtime characteristics of the whole report."
 test_spec:
   - name: TestAcKey::test_same_criterion_in_a_feature_folder_yields_the_same_key
     target_dir: unit_tests/agent_health/
@@ -121,6 +121,36 @@ test_spec:
     type: unit
     angle: boundary
     description: "A criterion done at both ends of the period contributes no age, because it was not closed during this period."
+  - name: TestAcBirthDates::test_birth_is_the_first_add_not_the_latest_write
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Drives ac_birth_dates against a real temporary git repository: a file added on 2026-08-01 and edited on 2026-08-15 reports its birth as the earlier add date, not the later write."
+  - name: TestAcBirthDates::test_moving_a_criterion_does_not_reset_its_age
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "A criterion deleted in one commit and re-added under the same identifier inside a feature folder in a later commit -- a non-atomic move, which git does NOT fold into a rename -- reports its birth as the original add date."
+  - name: TestAcBirthDates::test_earliest_of_two_add_records_wins
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "The same identifier added, deleted and re-added at the same path across three commits reports the EARLIEST add date, proving the newest-first git log walk keeps the earliest record per key rather than the first one encountered."
+  - name: TestAcBirthDates::test_registry_index_is_excluded_from_the_index
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A commit adding both index.yaml and AC-3.yaml produces a birth index containing AC-3 but not index."
+  - name: TestAcBirthDates::test_repository_with_no_store_yields_an_empty_index
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A repository with no acceptance-criteria store at all yields an empty birth index rather than raising."
 test_rationale: |
   The move scenario is the one that decides whether the whole trust tier can be
   trusted, so its descriptor deliberately does not stop at the key comparison: it
@@ -131,15 +161,27 @@ test_rationale: |
   right shape for ac_key and collect_cycle_times because both are pure over
   literal inputs.
 
-  DECLARED GAP: the it_requirement covering ac_birth_dates — that the index is
-  built in one history pass and keeps the EARLIEST add per identifier — has no
-  descriptor here, because no test in the suite executes ac_birth_dates. The
-  cycle-time tests inject a births mapping directly, so the criterion clause
+  FORMERLY A DECLARED GAP, CLOSED 2026-08-31: the it_requirement covering
+  ac_birth_dates — that the index is built in one history pass and keeps the
+  EARLIEST add per identifier — used to have no descriptor here, because no
+  test in the suite executed ac_birth_dates; the cycle-time tests only ever
+  injected a births mapping directly. TestAcBirthDates now drives
+  ac_birth_dates against a real temporary git repository instead:
+  test_birth_is_the_first_add_not_the_latest_write proves the criterion clause
   "measured from the criterion's first appearance, not from the last time its
-  file was written" is covered only for the consumer, not for the producer that
-  establishes the first-appearance date. A follow-up test that walks a small
-  temporary repository would close it; do not read the green suite as proof of
-  that clause.
+  file was written" for the PRODUCER, not just the consumer;
+  test_moving_a_criterion_does_not_reset_its_age and
+  test_earliest_of_two_add_records_wins prove the earliest-add-wins
+  aggregation across a non-atomic cross-commit move and a delete/re-add at the
+  same path; test_registry_index_is_excluded_from_the_index and
+  test_repository_with_no_store_yields_an_empty_index prove the two boundary
+  cases. The green suite is now proof of that clause. The one thing these
+  tests deliberately do NOT close is the atomic single-commit rename case —
+  that is a known, accepted limitation, restated with the corrected direction
+  of bias in this record's it_requirements and notes (previously it was
+  mis-described as making a renamed criterion "read as newly born"; the
+  measured behaviour is the opposite — the closure is skipped from the sample
+  entirely).
 delivers_to:
   agent: python-coder
   contract: "Store identity and age primitives consumed by INF-500e-1's movement computation and by the velocity tier: ac_key(path: str) -> str | None returning the identifier stem or None for index.yaml and non-YAML; work_status_at(repo: Path, rev: str) -> dict[str, str] mapping identifier to work_status at a revision, empty when the store did not exist there; ac_birth_dates(repo: Path, ref: str) -> dict[str, date] mapping identifier to earliest appearance; collect_cycle_times(after, before, births, period_end) -> list[int] of ages in days, one per criterion newly closed, possibly empty."
@@ -150,6 +192,9 @@ amended_by:
   - reason: "IT PO technical enrichment, 2026-08-26. The capability had already shipped (scripts/agent-health/weekly_health.py, merged as d0fa881c / PR #608), so the test contract binds each criterion to the real passing test in unit_tests/agent_health/test_weekly_health.py rather than commissioning new coverage. Added assigned_agent, estimated_complexity, it_requirements, test_spec, test_rationale, the identity/age delivers_to contract, and the scripts/agent-health/README.md doc link. Recorded one declared coverage gap in test_rationale: no test executes ac_birth_dates, so the first-appearance clause is proven only on the consuming side. Criteria unchanged; work_status deliberately left todo for a separate evidence-bound step."
     by: it-po
     at: 2026-08-26
+  - reason: "Reconciliation pass, 2026-08-31 (python-coder, evidence audit). FINDING 5: work_status was flipped from the deliberately-left-todo state recorded in the entry above to done, with nothing recording when or on what evidence; recording it now. Evidence: all 7 previously-named tests (TestAcKey x5, TestCollectCycleTimes x2) plus the 5 TestAcBirthDates tests added below all exist in unit_tests/agent_health/test_weekly_health.py and pass under AC_ENFORCE_STRICT=1. FINDING 4: test_rationale's DECLARED GAP claiming 'no test in the suite executes ac_birth_dates' is now false -- TestAcBirthDates drives ac_birth_dates against a real temporary git repository; test_spec and test_rationale updated to name those five tests and the gap is marked closed. FINDING 6: the KNOWN LIMITATION text in it_requirements and in notes repeated a disproven claim ('a renamed criterion reads as newly born'). Corrected to the measured fact (verified against a real temp-repo git log, 2026-08-31): an atomic single-commit rename produces no births entry at all, so the closure is SKIPPED from the cycle-time sample -- the closure vanishes -- rather than reading young; that is the opposite bias from what was documented. Also added the single-commit rename-detection nuance: a non-atomic delete-then-re-add split across two commits IS captured as two genuine add events and is unaffected."
+    by: python-coder
+    at: 2026-08-31
 superseded_by: null
 covered_by:
   - INF-500e-3-i
@@ -171,9 +216,25 @@ notes: |
   identifier keeps a moved criterion's true age instead of resetting it to the
   move date and reporting a suspiciously fast week.
 
-  KNOWN LIMITATION, RECORDED NOT SPECIFIED. The age index is built by walking
-  the history once rather than following each of several thousand records
-  individually. A record that was renamed — given a different identifier — still
-  reads as newly born and understates its cycle time. That is a deliberate cost
-  and is out of scope here; specifying rename-following would be a separate
-  criterion with a very different cost profile.
+  KNOWN LIMITATION, RECORDED NOT SPECIFIED, CORRECTED 2026-08-31 (previous
+  wording claimed a renamed record "reads as newly born and understates its
+  cycle time" -- disproven, see below). The age index is built by walking the
+  history once rather than following each of several thousand records
+  individually. Within a SINGLE commit, git's own rename detection folds a
+  `git mv` into an R100 diff line, which the birth index's --diff-filter=A
+  walk never observes at all -- so a criterion given a new identifier by an
+  atomic rename gets NO births entry, and collect_cycle_times SKIPS it from
+  the cycle-time sample rather than reading it as freshly born. The bias runs
+  the opposite direction from what was previously claimed here: the closure
+  vanishes from the reported population instead of skewing the median young.
+  This is empirically verified against a real temporary repository (measured
+  2026-08-31; see TestAcBirthDates::test_moving_a_criterion_does_not_reset_its_age
+  and the matching comment above ac_birth_dates in
+  scripts/agent-health/weekly_health.py). The nuance that keeps this from
+  being a total blind spot: git only detects a rename WITHIN a single
+  commit's diff. A non-atomic move -- deleted in one commit, re-added under a
+  new identifier in a LATER commit -- is NOT folded into a rename, so it
+  produces two genuine add events and the earliest one wins (see
+  test_earliest_of_two_add_records_wins). That residual atomic-rename case is
+  a deliberate, out-of-scope cost; specifying rename-following for it would be
+  a separate criterion with a very different cost profile.
