@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-08-25
+last_updated: 2026-08-31
 components:
   - commit_guardian
 ---
@@ -77,3 +77,38 @@ in `main()` to emit `OUTCOME_NOTHING_TO_INSPECT`. See AC `GE-120e-1-i` under
 `docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/` for the
 no-widening-on-empty guarantee this vocabulary entry pins down, and AC `GE-120a-1`
 for the `OUTCOME_OK` / `OUTCOME_COULD_NOT_CHECK` vocabulary it extends.
+
+### `check_ac_parent_covered_by.py` — Cannot-Reach-Prerequisite Reports `OUTCOME_COULD_NOT_CHECK`
+
+`check_ac_parent_covered_by.py` depends on `derive_parent_id()` (imported from
+`scripts/ac_store/ac_parent_id.py`) to identify each staged child AC's immediate
+parent before it can evaluate the `covered_by` back-link. When the working copy
+it runs from does not expose the deployed layout — `ac_parent_id.py` is absent,
+or present as a directory rather than a file — that prerequisite is unreachable
+and the check cannot perform its inspection at all.
+
+Previously this cannot-run condition fell open silently: a single stderr line
+("cannot import derive_parent_id ...; skipping check (fail-open)") followed by
+an ordinary success. That shape is indistinguishable from a genuine clean pass
+to any caller that does not read prose, so a broken deploy and a clean commit
+looked identical. `GE-120a-1` closes this: `main()` now catches
+`(ImportError, OSError)` around prerequisite discovery — the `OSError` arm
+covers the directory-shaped-file case, which previously fell through uncaught
+to the bottom-of-file catch-all — and both arms call `_emit_could_not_check()`.
+
+`_emit_could_not_check()` does two things on every cannot-run path:
+
+1. Prints a reader-actionable `WARNING` to stderr naming both the unreachable
+   prerequisite (`derive_parent_id`) and the unverified scope, e.g. `parent
+   covered_by links were not evaluated for 6 staged files`.
+2. Emits `RESULT: could_not_check` via the shared `check_outcome.emit_result()`
+   (`OUTCOME_COULD_NOT_CHECK`) — independent of exit code, since the check
+   still returns 0 here. Naming the outcome does not by itself decide
+   block-vs-announce; that disposition is `GE-120a-2`'s concern.
+
+The reachable-prerequisite path is unchanged: with `derive_parent_id` importable,
+the same staged set still blocks on the same violations it always did (the
+`GE-118a-1` backward-compatibility precedent). See AC `GE-120a-1` under
+`docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/` for the
+full Gherkin spec and its coverage note (execution-based test required; a
+grep-only test on the warning string does not satisfy it).
