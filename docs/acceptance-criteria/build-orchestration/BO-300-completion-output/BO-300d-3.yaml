@@ -47,13 +47,84 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Already requires the output to state what the operator should do about the pieces its re-read surfaced. This record extends that obligation to every unbuilt piece under every cause, including the undetermined one, rather than restating it."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- epicRecheckReport() (deployed ~1952), where the action text is attached alongside the cause. The action and the cause must be produced together at one place: a remedy chosen anywhere else can go on being right for a reason that no longer holds, which is precisely how the current one survived."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_unbuilt_work_actions.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_unbuilt_work_cause_attribution.py"
+  constraints:
+    - "THE ACTION IS SELECTED BY THE CAUSE, IN CODE. Derive the action from the cause the classifier assigned rather than emitting a fixed remedy sentence beside whatever label was chosen. KI-BO-026's remedy was right by accident: the sentence was correct while the cause it was offered for was fabricated, and nothing in the code connected the two. The connection is the requirement."
+    - "THE UNDETERMINED ACTION MUST BE SAFE UNDER EITHER EXPLANATION. It must finish the piece whether the work was never selected or arrived mid-run. It must not instruct the operator to investigate who changed the body of work, must not ask them to establish the cause first, and must not name a cause the run did not establish. Re-running the build over the same body of work is the shape being asked for -- it is what KI-BO-025 requires and it is harmless if the work did arrive mid-run."
+    - "DIFFERENT SITUATIONS, DIFFERENT REMEDIES. The action for a piece that stopped part-way must differ in substance from the action for a piece that was planned and never started. If a single sentence is emitted for both, the per-cause taxonomy buys the operator nothing and the whole family reduces to a longer list."
+    - "NO BOILERPLATE. Actions appear only when unbuilt work exists. An action block on every run -- including a clean one -- trains the reader to skip it, and this record then hides the very shortfall it was written to surface. BO-300d-4's control case is the paired assertion."
+    - "EVERY NAMED PIECE, NO EXCEPTIONS. Including the undetermined ones. Naming a piece and giving it no next step is how a piece silently drops out of the reader's attention while still appearing in the count."
+    - "ASSERT ON THE EMITTED TEXT. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', a per-cause action map that no rendering path reads is inert. Drive the workflow and read what it printed."
+delivers_to:
+  - agent: reference-author
+    contract: "The action text emitted for each cause. BO-300d-5's reference entry must state, per cause, the action the report gives -- so the entry and the emitted actions are held to agreement and a reworded action here is a change to that document."
+expects_from:
+  - ac_id: BO-300d-2
+    contract: "The cause assigned to each unbuilt piece, drawn from the closed set {planned and not finished, stopped part-way, cause not determined}. This record selects the action from that value."
+  - ac_id: BO-300d-2-i
+    contract: "The guarantee that each piece carries exactly one cause, which is what makes one action per piece well defined."
+test_spec:
+  - name: test_every_named_unbuilt_piece_carries_an_action_including_the_undetermined_ones
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Unbuilt pieces across all three causes. Parse the emitted report and assert every named piece has an action stated in terms of what the operator does next, with none left without one."
+  - name: test_the_stopped_part_way_action_differs_from_the_planned_and_not_finished_action
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Assert the two causes yield substantively different action text. A single remedy sentence emitted for every cause satisfies every other descriptor here and makes the taxonomy decorative."
+  - name: test_the_undetermined_action_names_no_unestablished_cause_and_requires_no_prior_decision
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "For a piece reported with its cause not determined, assert the action does not instruct the operator to find out who added the work or when, does not condition on the operator first deciding which cause held, and is one that finishes the piece either way. This is where the honesty of BO-300d-2 either survives into the remedy or is quietly undone by an action that presumes a cause."
+  - name: test_the_action_is_selected_by_the_cause_and_reaches_the_operator_facing_message
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "From the workflow's real completion entry point, change only the evidence that determines a piece's cause and assert the action text in the emitted message changes with it. This is what distinguishes an action derived from the cause in control flow from a constant sentence printed next to a label -- the exact defect that let KI-BO-026's remedy be right for a reason that did not hold."
+  - name: test_no_action_text_appears_in_a_report_with_no_unbuilt_work
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The zero pole. A run that built every piece emits no action text at all, so an action is a consequence of unbuilt work rather than boilerplate. Paired with BO-300d-4's clean-run control; without it the cheapest way to pass every descriptor above is to print the actions unconditionally."
+test_rationale: |
+  The reachability descriptor is the load-bearing one and is not interchangeable with
+  the criterion descriptors. All three of those would pass against an implementation
+  that prints a fixed remedy paragraph beneath a correctly-computed label, which is
+  structurally the state KI-BO-026 describes: a remedy that was right by accident, for
+  a stated reason that did not hold. Only varying the evidence and observing the action
+  move with it shows the two are connected in the running code. The undetermined
+  descriptor is separate from the general one because an action that presumes a cause
+  reads perfectly well and undoes BO-300d-2's honesty in the sentence the operator
+  actually acts on. The zero-pole descriptor is the anti-boilerplate half; it is
+  asserted here as well as in BO-300d-4 because it is this record's output that would
+  become the permanent banner.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: '2026-08-31'
+    note: "Assigned python-coder, same location as BO-300d-2 (the action and the cause must be produced together). Added estimated_complexity M, a structured it_requirements mapping requiring the action to be derived from the cause in code rather than printed beside it, pinning the shape of the undetermined action and forbidding boilerplate, a delivers_to contract to reference-author, expects_from against BO-300d-2 and BO-300d-2-i, a five-descriptor test_spec over three angles (criterion, reachability, boundary) with test_rationale, and change_target/risk_surface. criteria untouched; readiness and priority left for the approval gate."
 superseded_by: null
 covered_by: []
 implemented_by: []

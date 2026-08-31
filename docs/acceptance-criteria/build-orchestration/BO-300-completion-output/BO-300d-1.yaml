@@ -45,13 +45,80 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The completion guard that already re-reads the body of work by identity and names the pieces. This record adds the count on top of it and must not restate the guard."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- the epic completion path, where compareEpicTicketSets() (deployed ~1838) hands its result to epicRecheckReport() (deployed ~1952) and the Step 6 completion message is assembled. templates/workflows-js/build-ticket.js is the TWIN: it drives one piece of work and has no body of work to count, so it correctly carries no counterpart. Inspect it and record that in the sign-off, per the precedent set on BO-300a-5, so the two drivers do not drift into two different completion contracts by silence."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_unbuilt_work_count.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_epic_ticket_set_recheck.py"
+  constraints:
+    - "THE ARITHMETIC MUST NOT BE THE OPERATOR'S. The count is a value the run states in the text it emits. A report that names the pieces and leaves the reader to count them fails this record even though every piece is present."
+    - "COUNT THE NAMED SET, DO NOT SUBTRACT. Derive the stated number from the cardinality of the named unbuilt set itself, never as total-minus-built. Subtraction is correct only while nothing is added or removed mid-run, and BO-300a-5 already established that assumption does not hold. The two must be the same object, so they cannot disagree."
+    - "ASSERT ON THE EMITTED TEXT, NOT AN INTERNAL TALLY. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', a structure that internally knows the number while the operator-facing message does not state it is the same defect with a better data model. Drive the real workflow through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and read the message the run emits."
+    - "THIS IS AN ADDITION, NOT A REWRITE. BO-300a-2 fixes four completion sections in a specific order; the count line must not disturb them. BO-300a-5's naming of unbuilt pieces is done and correct -- do not re-implement it, count the set it already produces."
+    - "COMPLEXITY NOTE ON THE SURFACE. templates/workflows-js/*.js is JavaScript assigned to python-coder. That is the established convention on this file (BO-300a-5, approved and done): the workflow is exercised from Python/unittest through a .mjs harness by subprocess, so the implementer's checking framework does act on the surface. Flagged rather than split -- see the enrichment report."
+delivers_to:
+  - agent: python-coder
+    contract: "A stated unbuilt count in the emitted completion message, equal by construction to the cardinality of the named unbuilt set -- the number BO-300d-2-i reconciles its per-cause breakdown against, and the number BO-300d-4 requires to be present even when the run's account of its own work is empty."
+expects_from:
+  - ac_id: BO-300a-5
+    contract: "The completion-time re-read of the body of work and the set of unbuilt pieces it names, compared by identity and not by count. This record consumes that set and states its size; it does not re-derive it."
+test_spec:
+  - name: test_unbuilt_count_is_stated_and_equals_the_pieces_named
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive the real epic workflow through harness_build_ticket_guard.mjs over a body of thirty-seven pieces of which seventeen are recorded as built. Assert the emitted completion message states twenty as a number, names twenty pieces, and that the stated number equals the number of names present in the text."
+  - name: test_the_stated_count_reaches_the_operator_facing_message_and_gates_the_completion_verdict
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "From the workflow's real completion entry point, assert the count appears in the emitted message AND that the same value is consumed in control flow -- a non-zero count is what withholds the finished claim. A count computed into a field that nothing reads is inert; asserting only that the number was produced cannot tell the difference."
+  - name: test_a_run_that_built_nothing_reports_a_shortfall_of_thirty_seven
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Zero pieces recorded as built over a body of thirty-seven. Assert the message states thirty-seven unbuilt and names all thirty-seven -- the empty pole, where an implementation that only reports a partial shortfall says nothing at all."
+  - name: test_the_unbuilt_set_is_determined_by_identity_and_not_by_arithmetic
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "One piece removed from the body of work and one added after the plan was fixed, leaving the total unchanged. Assert the removed piece is NOT named as unbuilt and the stated count matches the named set -- a count reached by subtraction passes every other descriptor here and fails this one."
+  - name: test_the_count_line_does_not_disturb_the_four_existing_completion_sections
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Assert the four sections BO-300a-2 fixes remain present and in order in the emitted message with the count line added, so the new value flows into the real report consumer as an addition rather than a rewrite."
+test_rationale: |
+  Every descriptor asserts on the message the run emits, because the failure being
+  fixed is a sentence that was never written -- an internal tally the operator cannot
+  read is the same silence. The reachability descriptor is not a duplicate of the
+  criterion one: a count that is computed and then consumed by nothing would satisfy
+  the criterion assertion if it were read from an intermediate structure, so the
+  entry-point test asserts the value both reaches the text and gates the finished
+  claim. The two boundary descriptors are the two ways a count goes wrong -- the
+  all-unbuilt pole, and the identity-versus-arithmetic case where an unchanged total
+  hides a changed set. The seam descriptor exists because BO-300a-2's four-section
+  contract is a live obligation this addition can silently break.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: '2026-08-31'
+    note: "Assigned python-coder (templates/workflows-js/build-feature.js, per the approved BO-300a-5 precedent on the same file). Added estimated_complexity M, a structured it_requirements mapping pinning the single change location and the build-ticket.js twin-inspection obligation, delivers_to/expects_from contracts against BO-300a-5 and BO-300d-2-i, a five-descriptor test_spec over four angles (criterion, reachability, boundary, seam) with test_rationale, and change_target/risk_surface. criteria untouched; readiness and priority left for the approval gate."
 superseded_by: null
 covered_by: []
 implemented_by: []

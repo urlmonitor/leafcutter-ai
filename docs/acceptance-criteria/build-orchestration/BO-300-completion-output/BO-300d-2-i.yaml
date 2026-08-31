@@ -37,13 +37,75 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The stated count this constraint reconciles against. A count and a per-cause breakdown that disagree are two records of the same run contradicting each other."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- epicRecheckReport() (deployed ~1952), the same location BO-300d-2 changes. This constraint is a property of that function's output and must be implemented in the same pass, not as a later reconciliation step layered on top."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_unbuilt_work_cause_partition.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_unbuilt_work_count.py"
+  constraints:
+    - "PARTITION, NOT TAGGING. Assign each unbuilt piece to exactly one cause as a single classification step over the named set, so exclusivity and exhaustiveness hold by construction. Building three independent lists and then checking they agree re-creates the disagreement this record exists to forbid."
+    - "PRECEDENCE IS STATED ONCE AND IS ORDERED. Stopped part-way is more specific than planned and not finished and wins whenever the run holds a recorded outcome saying the work stopped short. A piece satisfying both must appear only under the more specific one."
+    - "THE COUNT AND THE BREAKDOWN ARE THE SAME OBJECT. The number BO-300d-1 states must be the cardinality of the partitioned set, not a separately computed value that happens to agree. Two independently derived numbers can drift; one cannot disagree with itself."
+    - "AN EMPTY CAUSE IS OMITTED, NOT RENDERED. A cause with no pieces must not appear as an empty heading beside the populated ones. Assert on the emitted text -- an internal map with an empty list is fine so long as nothing renders it."
+    - "ASSERT ON THE EMITTED REPORT. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', parse the message the run emits and count what a reader would count. A test that inspects the classifier's return value cannot see a renderer that lists a piece twice."
+delivers_to:
+  - agent: python-coder
+    contract: "A partition of the named unbuilt set over the closed cause vocabulary: every piece in exactly one class, the classes summing to the stated count, and empty classes absent from the emitted text. BO-300d-3 attaches one action per piece on the strength of that one-cause-per-piece guarantee."
+expects_from:
+  - ac_id: BO-300d-2
+    contract: "The closed cause vocabulary {planned and not finished, stopped part-way, cause not determined} and the evidence rule that selects one for each piece."
+  - ac_id: BO-300d-1
+    contract: "The stated unbuilt count, which is the number this partition must account for exactly."
+test_spec:
+  - name: test_each_unbuilt_piece_appears_under_exactly_one_cause
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Twenty unbuilt pieces across the three causes. Parse the emitted report and assert each of the twenty appears under exactly one cause and none appears under two."
+  - name: test_a_stopped_part_way_piece_is_not_also_listed_as_planned_and_not_finished
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A piece that is both absent from the completed record and carries a stopped-short outcome. Assert it appears only under stopped part-way -- the precedence rule, and the specific double-count that inflates the total."
+  - name: test_the_pieces_listed_across_all_causes_sum_to_the_stated_count
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Reconcile the two values the run emits about the same set: assert the number BO-300d-1 states equals the number of distinct pieces the breakdown lists, and that the two name the same set, not merely the same quantity. A count and a breakdown that disagree are one run contradicting itself."
+  - name: test_a_cause_with_no_pieces_is_omitted_rather_than_rendered_empty
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A run whose unbuilt pieces all fall under one cause. Assert the other two causes do not appear in the emitted text as empty headings, so the reader is never asked to tell an empty cause from one never considered."
+test_rationale: |
+  The count BO-300d-1 buys is only worth having if it cannot be contradicted by the
+  breakdown printed beneath it, so the seam descriptor asserts set-equality and not
+  just equal cardinality -- two lists of the same length naming different pieces put
+  the arithmetic straight back in the operator's hands. The precedence descriptor is
+  separate because double-counting is the one failure here that does not look like a
+  failure: the report is well formed, every piece is present, and the total is simply
+  wrong. All assertions parse the emitted text rather than the classifier's return
+  value, because a correct partition rendered twice is indistinguishable from an
+  incorrect one to the reader.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: '2026-08-31'
+    note: "Assigned python-coder, same location as BO-300d-2 and to be implemented in the same pass. Added estimated_complexity S, a structured it_requirements mapping requiring a single partitioning step rather than three independent lists and fixing the count and the breakdown as one object, delivers_to/expects_from contracts, a four-descriptor test_spec over three angles (criterion, seam, boundary) with test_rationale, and change_target/risk_surface. criteria untouched; readiness and priority left for the approval gate."
 superseded_by: null
 covered_by: []
 implemented_by: []

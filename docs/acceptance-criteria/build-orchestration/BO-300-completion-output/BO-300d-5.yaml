@@ -37,21 +37,86 @@ depends_on:
   - BO-300d-2
   - BO-300d-4
 doc_links:
-  - path: docs/reference/
+  - path: docs/reference/unbuilt-work-reporting.md
     relationship: describes
+    status: planned
+    relevance: "PINNED BY IT-PO: this is the page to author. There is no existing completion-output reference page in docs/reference/ -- the surface is new. It must carry the project reference-doc frontmatter (title / type: reference / status / created / last_updated / components / description) or check_doc_frontmatter blocks the commit."
+  - path: docs/reference/ac-schema.md
+    relationship: related
     status: exists
-    relevance: "Where the reference entry lands, alongside the existing completion-output material."
+    relevance: "The nearest existing reference page, cited for the house shape of a reference entry -- a contract stated in tables, not prose. Not a content dependency."
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
     status: exists
     relevance: "KI-BO-026 — the reader who followed a confident cause and went looking for a change that never happened is the reader this entry is written for."
+assigned_agent: reference-author
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: docs/reference/unbuilt-work-reporting.md
+  n_location_rule: "1 -- one new page at the pinned path. It must also become reachable from docs/INDEX.md, which the doc-index build phase regenerates; do not hand-edit INDEX.md and do not run build.py over this workspace to refresh it (KI-BP-016 overwrites the tracked index with a stub when docs_root points into a subdirectory)."
+  required_skills:
+    - reference-author
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_unbuilt_work_reference_parity.py"
+  constraints:
+    - "THE TAXONOMY IS MIRRORED, NEVER RESTATED FROM MEMORY. The page's cause table must name templates/workflows-js/build-feature.js as the source of truth for the labels a run can emit. A reference page that reproduces a vocabulary from memory becomes the next competing definition, and the mismatch it creates is the same class of defect as the fabricated cause it documents."
+    - "STATE THE LIMIT PLAINLY, AND STATE WHY. The page must say that the run cannot distinguish work it never selected from work that arrived after it started, and give the reason: nothing in the run's data flow records what the body of work contained at the moment the plan was fixed. Without the reason, a reader treats the limitation as an oversight and goes looking for the missing distinction."
+    - "PER CAUSE, THREE FACTS: the label, what the run relies on to establish it, and the action the report gives. All three come from the emitted behaviour, so the page cannot be written before BO-300d-2 and BO-300d-3 have landed."
+    - "AN ABSENT SECTION IS A POSITIVE CLAIM AND MUST BE DOCUMENTED AS ONE. State that no unbuilt-work section means the run accounted for every piece and built them all. BO-300d-4's control case is what makes a clean report mean something; if the page does not say what its absence asserts, that control buys nothing and the operator guesses."
+    - "DO NOT DOCUMENT AN INTENDED VOCABULARY. The page describes what the run emits today, not what it should emit. Any cause the page lists that no run can produce, and any cause a run produces that the page omits, is a defect in this record -- and the parity test is what makes that checkable rather than a matter of opinion."
+    - "USE THE CURRENT VOCABULARY ONLY. 'discovered after planning' is stale terminology surviving in BO-300a-5-i and BO-300a-5-iii and must not appear on this page except, if at all, as an explicitly-labelled retired phrase."
 delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+expects_from:
+  - ac_id: BO-300d-2
+    contract: "The exact, closed set of cause labels a run can emit and, for each, the evidence the run relied on to establish it. The page is held to set-equality with this in both directions."
+  - ac_id: BO-300d-3
+    contract: "The action text emitted for each cause, which the page states per cause."
+  - ac_id: BO-300d-4
+    contract: "The semantics of an absent unbuilt-work section -- that the run accounted for every piece and built them all -- which the page must state as a positive claim."
+test_spec:
+  - name: test_the_reference_entry_and_the_causes_a_run_emits_are_set_equal_in_both_directions
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Parse the cause labels from the reference page as it is on disk, drive the real workflow through harness_build_ticket_guard.mjs across scenarios that exercise every branch of the establishability rule, collect the causes actually emitted, and assert the two sets are equal. Both directions matter: a page listing a cause no run emits documents fiction, and a run emitting a cause the page omits is an undocumented label the reader meets with no explanation."
+  - name: test_the_reference_entry_states_the_undistinguishable_pair_and_the_reason
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert the page states that the run cannot separate work it never selected from work that arrived after it started, and states the reason -- that no record of the body of work at plan time exists in the data flow. This is the one sentence that stops the reader repeating KI-BO-026's mistake in their own head."
+  - name: test_the_reference_entry_states_what_an_absent_unbuilt_section_asserts
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert the page states that a report with no unbuilt-work section means the run accounted for every piece and built them all, so BO-300d-4's clean-run control carries a documented meaning rather than an inferred one."
+test_rationale: |
+  This page is NOT test-free, and that is a deliberate departure from the usual
+  treatment of a reference AC (compare BO-2900g-5, where test_required: false was
+  correct because a sibling record already carried the parity assertion). Here the
+  criteria's second scenario IS the mechanical check and nothing else in the store
+  covers it: the taxonomy exists in exactly two places -- the workflow that emits it
+  and this page -- and no other record compares them. A set-equality test in both
+  directions is what makes "the entry cannot document a taxonomy the run does not
+  implement, nor omit one it does" enforceable rather than aspirational, and it is
+  the only defence against this page drifting into a description of an intended
+  vocabulary. The two remaining descriptors assert the presence of specific
+  load-bearing statements rather than prose quality: both are claims the reader acts
+  on, and both are the kind of sentence that is quietly dropped in a rewrite. Prose
+  quality itself is deliberately not asserted, and frontmatter validity is left to
+  the check-doc-frontmatter hook rather than re-tested here.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+change_target: docs
+risk_surface: internal
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: '2026-08-31'
+    note: "Assigned reference-author rather than documentation-expert, on the registry's own selection_criteria ('requires a new reference document in docs/reference/') and following the approved precedent of BO-2900g-5; documentation-expert still sees the change via the documentation_gates post-coder path. Pinned the page path docs/reference/unbuilt-work-reporting.md (new surface -- no completion-output reference page exists) and updated doc_links accordingly. Added estimated_complexity M, a structured it_requirements mapping, expects_from contracts against BO-300d-2/-3/-4, and a three-descriptor test_spec over two angles (seam, criterion). test_required deliberately NOT set false: the criteria's second scenario is a doc-versus-run parity check that no other record covers. criteria untouched; readiness and priority left for the approval gate."
 superseded_by: null
 covered_by: []
 implemented_by: []
