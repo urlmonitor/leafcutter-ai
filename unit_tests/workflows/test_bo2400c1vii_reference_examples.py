@@ -18,6 +18,16 @@ too.
 This is the same standard BO-2400c-1-vi's tests are held to (real subprocess,
 assert on real output), applied to the documentation surface rather than the
 code surface.
+
+WHY THE THREE EXAMPLE TESTS ARE NOT PARAMETRIZED (KI-BO-20260826-1900):
+the natural shape here is one parametrized test over the example blocks, and
+that shape is unmergeable. The done-proof gate resolves a ``# covers:`` tag to
+a pytest nodeid via ``nodeid.endswith("::" + func_name)``
+(scripts/ac_store/done_proof.py:1000-1006). A parametrized nodeid ends
+``::func[0]``, so the lookup never matches, the gate reports "linked test not
+run", and the required Proof-of-done CI check fails — even though the test
+exists and passes. Do not collapse these back into a parametrize until that
+gate matches parametrized ids.
 """
 
 from __future__ import annotations
@@ -111,13 +121,21 @@ def test_ac1vii_the_page_still_carries_worked_examples():
     )
 
 
-@pytest.mark.parametrize("index", range(3))
-def test_ac1vii_each_documented_example_executes_against_the_real_function(index):
-    # covers: BO-2400c-1-vii
-    """Every worked example on the page runs against the real function.
+def _assert_example_executes(index: int) -> dict[str, object]:
+    """Execute worked example *index* and fail with a readable diagnosis.
 
-    RED before BO-2400c-1-vii: all three examples passed ``conventions=`` and
-    ``acs=``, which BO-2400c-1-vi removed, so each raised TypeError.
+    NOT PARAMETRIZED, DELIBERATELY — see this module's docstring note on
+    KI-BO-20260826-1900. The done-proof gate resolves a ``# covers:`` tag to a
+    pytest nodeid with ``nodeid.endswith("::" + func_name)``, which a
+    parametrized id (``::func[0]``) can never satisfy, so a parametrized test
+    is reported as "not run" and blocks the merge. Each example therefore gets
+    its own named test function, and this helper holds the shared body.
+
+    Args:
+        index: Position of the example among the page's executable blocks.
+
+    Returns:
+        The namespace the example was executed in.
     """
     examples = [b for b in _example_blocks() if _is_executable_example(b)]
     assert index < len(examples), (
@@ -139,6 +157,37 @@ def test_ac1vii_each_documented_example_executes_against_the_real_function(index
 
     assert isinstance(namespace.get("bundle"), str), (
         f"Worked example {index} was expected to bind a string to `bundle`."
+    )
+    return namespace
+
+
+def test_ac1vii_the_minimal_example_executes_against_the_real_function():
+    # covers: BO-2400c-1-vii
+    """The minimal-call example runs.
+
+    RED before BO-2400c-1-vii: it passed ``conventions=`` and ``acs=``, which
+    BO-2400c-1-vi removed, so it raised TypeError.
+    """
+    _assert_example_executes(0)
+
+
+def test_ac1vii_the_optional_layers_example_executes_against_the_real_function():
+    # covers: BO-2400c-1-vii
+    """The prior_outputs + working_diff example runs. RED for the same reason."""
+    _assert_example_executes(1)
+
+
+def test_ac1vii_the_custom_marker_example_executes_against_the_real_function():
+    # covers: BO-2400c-1-vii
+    """The custom-breakpoint-marker example runs. RED for the same reason."""
+    namespace = _assert_example_executes(2)
+    bundle = namespace["bundle"]
+    assert isinstance(bundle, str)
+    assert "<!-- STABLE_END -->" in bundle, (
+        "The custom-marker example should place the overridden marker in the output."
+    )
+    assert "<!-- CACHE_BREAKPOINT -->" not in bundle, (
+        "Overriding the marker should replace the default, not add to it."
     )
 
 
