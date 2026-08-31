@@ -2826,3 +2826,104 @@ ambiguity instead of a verdict.**
 **Related.** `BO-2900g-2` (the derive-don't-author rule this collides with). `KI-BP-20260831-0620`
 (the mypy gate — the other kind of gate defect found today; that one fails open, this one fails
 closed onto a false value).
+
+---
+
+### KI-BP-20260831-0728 — The hook-script integrity check strips the `hooks/` segment off every declared entry, so it reports three real scripts as missing on every build
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/build_precommit.py`, `_check_hook_script_integrity()`
+
+**Symptom.** Every build prints three integrity warnings:
+
+```
+Hook 'check-agent-spawn-consistency': script 'check_agent_spawn_consistency.py' not found
+  at canonical path .../templates/scripts/commit_guardian/check_agent_spawn_consistency.py
+Hook 'check-agent-verification-consistency': script ... not found at canonical path ...
+Hook 'check-predone-scope': script 'check_files_touched_reconciliation.py' not found ...
+```
+
+All three scripts exist. They live under a `hooks/` subdirectory and `commit_guardian.json`'s
+`entry` fields point at them correctly —
+`.../commit_guardian/hooks/check_agent_spawn_consistency.py`. The check computes
+`cg_dir = TEMPLATES_DIR / "scripts" / "commit_guardian"`, strips the path prefix off the declared
+entry, and looks for a flat filename in `cg_dir`. The `hooks/` segment is discarded, so the lookup
+can never succeed for any hook living in a subdirectory.
+
+**Not a fixture artefact.** Found while diagnosing an unrelated synthetic-package test failure,
+where the first hypothesis was that the fixture had not copied those files. It had — the fixture
+copies `templates/` wholesale including `hooks/`. The mismatch reproduces identically against the
+real tree.
+
+**Why it has survived.** The check is warning-only: it neither aborts the build nor changes the
+exit status. So it has printed three false alarms on every build for as long as those hooks have
+lived under `hooks/`, and the cost has been paid in attention rather than failures. That is also
+the hazard — a check known to be noisy trains everyone to skim it, so a genuinely missing hook
+script would read exactly like these three.
+
+**Fix direction.** Resolve the declared `entry` relative to the commit-guardian root instead of
+discarding its directory component. Then check whether any hook is *actually* missing once the
+false positives clear — currently unknowable from the output. Consider whether the check should
+fail rather than warn once accurate: a hook registered in the manifest whose script does not exist
+is the `KI-BP-018` fail-open shape, and `build_precommit.py` separately emits a registered hook
+into the generated config even when its script is absent (its own docstring says it "does not
+raise or return an error").
+
+**Pattern:** a check that mangles the path it was given and reports the result as the file's
+absence — the guard's own input is wrong, rather than the thing it guards.
+
+---
+
+### KI-BP-20260831-1014 — Seven declared package sources are skipped with no log at all, and BP-900g-9's scope line used "does it warn" as the boundary the AC says is not the observable
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/build_phases.py` — `build_vision`, `build_components_registry`,
+  `build_ui_context`, `build_antigravity_instructions`, `build_feedback`'s `config_src` check,
+  `build_commit_guardian`'s manifest check, and two `manifest_path.exists()` checks in
+  `build_ticket_lifecycle`
+
+**Symptom.** Each names a specific package source literally and, when it is absent, skips it with
+**no output on any stream** — a bare `return 0`, or an `if ...exists():` with no `else`. The build
+then reports success. A missing `VISION.template.md`, `feedback_categories.yaml` or
+`commit_guardian.json` produces an install quietly lacking that artefact, and nothing says so.
+
+These are quieter than the defect BP-900g-9 closed. That one at least printed a warning before
+continuing; these print nothing.
+
+**The scope line that left them, recorded because it is the more useful finding.** BP-900g-9
+carries `n_location_rule: all`. The line applied while converting sites was: in scope = a
+literally-named declared source whose absence produces a WARNING and the build continues; out of
+scope = skipped silently.
+
+Review called that **"defensible but convenient"**, and the reason is sharp: BP-900g-9's own
+central constraint is that *the observable is the exit code, not the log text*. Using "does it
+currently emit a warning" as the scope boundary therefore contradicts the criterion being scoped —
+it lets the presence of a log line, which the AC says is not what matters, decide which sites get
+fixed. A site that fails silently needs a non-zero exit at least as much as one that fails loudly.
+
+The line was drawn mid-implementation, after the enforcement set had already grown across several
+passes, and its real function was to stop the ticket expanding without end. That is a fair thing to
+want and not a principle. Recorded here so the next person decides on the merits rather than
+inheriting the rationalisation.
+
+**Why they were not simply folded in.** These are single named package templates and config files,
+not entries in a drifting hand-maintained map, so the recurrence risk that makes `KI-BP-018` a
+blocker is lower. And it is not free: making `build_vision` fail closed means a package missing its
+vision template can no longer build at all. That may be right, but it is a behaviour change
+deserving its own decision rather than a silent ride-along on another ticket.
+
+**Fix direction.** Decide the question the scope line dodged: is a silently-skipped declared source
+in scope for "a declared deploy entry whose source is missing fails the build"? If yes, record them
+through `record_deploy_failure()` like the rest — noting that `build_vision` and friends are
+write-if-absent scaffolds whose *target* absence is normal, so it is the missing *source template*
+that must fail. If no, say so explicitly in BP-900g-9's notes so the exclusion is a recorded
+decision rather than an artefact of how the audit was framed.
+
+**Pattern:** a scope boundary drawn on a property the governing criterion explicitly says is not
+the observable.

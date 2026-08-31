@@ -37,6 +37,8 @@ ARCHITECTURE: Every assertion here is on the exit code, the accumulated
 
 from __future__ import annotations
 
+import importlib.util
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -55,6 +57,16 @@ _BUILD_PY = _SCRIPTS_DIR / "build.py"
 _DECLARED_SOURCE = _SCRIPTS_DIR / "ac_store" / "_component_migration_map.py"
 _BUILD_PHASES_PY = _SCRIPTS_DIR / "build_phases.py"
 
+# Reused for the three newly-converted-site tests below (angle: reachability).
+# Loaded read-only via spec_from_file_location under a private module name,
+# per the established pattern in unit_tests/commit_guardian/test_bp_100k_3_i.py
+# et al. — a second, hand-authored copy of the same synthetic-package builder
+# is worse than reusing the proven one.
+_SYNTHETIC_PACKAGE_HELPER_PATH = (
+    _REPO_ROOT / "unit_tests" / "build_guards" / "test_bp_100k_2.py"
+)
+_SUBPROCESS_TIMEOUT_SECONDS = 300
+
 
 def _run_build(target: Path) -> subprocess.CompletedProcess[str]:
     """Run the REAL build entry point as a subprocess against *target*.
@@ -69,6 +81,44 @@ def _run_build(target: Path) -> subprocess.CompletedProcess[str]:
         text=True,
         timeout=300,
         cwd=str(_REPO_ROOT),
+    )
+
+
+def _load_build_synthetic_full_package():
+    """Load ``_build_synthetic_full_package`` from test_bp_100k_2.py.
+
+    Never imported as a bare ``test_bp_100k_2`` module name, so this does not
+    collide with pytest's own collection of that file.
+
+    Returns:
+        The ``_build_synthetic_full_package(workspace: Path) -> Path``
+        function object from that module.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "_bp900g9_synthetic_package_helper", _SYNTHETIC_PACKAGE_HELPER_PATH
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    return module._build_synthetic_full_package
+
+
+def _run_build_in_scratch_pkg(pkg_root: Path, target: Path) -> subprocess.CompletedProcess[str]:
+    """Run ``<pkg_root>/scripts/build.py`` as a subprocess against *target*.
+
+    Used by the three newly-converted-site tests below. These mutate (delete)
+    a declared source under the package tree, so they run against a
+    ``shutil.copytree`` scratch copy (built by
+    ``_build_synthetic_full_package``) rather than this worktree's own real
+    ``scripts/build_phases.py`` — deleting a real source directory or
+    template out from under this worktree, even temporarily, is not an
+    acceptable way to drive a subprocess test.
+    """
+    return subprocess.run(
+        [sys.executable, str(pkg_root / "scripts" / "build.py"), "--target-dir", str(target)],
+        capture_output=True,
+        text=True,
+        timeout=_SUBPROCESS_TIMEOUT_SECONDS,
+        cwd=str(pkg_root),
     )
 
 
@@ -260,3 +310,136 @@ def test_bp_900g_9_three_unresolvable_entries_are_all_named_in_one_run(
         )
     finally:
         _BUILD_PHASES_PY.write_text(original_text, encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# Tests 5-7 — the three sites converted after the loop above already existed
+# on main: build_agent_support_scripts's AGENT_SUPPORT_SCRIPT_DIRS loop,
+# build_ac_store_docs, and build_product_truth. n_location_rule is 'all' — a
+# fix scoped to the one loop the AC names leaves the identical hole in its
+# siblings, so each one gets its own test.
+# ---------------------------------------------------------------------------
+
+
+def test_bp_900g_9_agent_support_script_dir_missing_source_produces_a_failure_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # covers: BP-900g-9
+    """angle: criterion. An AGENT_SUPPORT_SCRIPT_DIRS entry with no source
+    directory accumulates a record and does not fall back to a bare warning.
+
+    Runs the real deploy iteration with PACKAGE_ROOT pointed at an empty
+    tree, so every declared AGENT_SUPPORT_SCRIPT_DIRS entry is
+    unresolvable — mirrors test 1's fixture choice exactly.
+
+    Deliberately NOT run through the real build.py subprocess like tests 2,
+    6 and 7. Verified empirically: every AGENT_SUPPORT_SCRIPT_DIRS entry
+    (changelog, retrospective, agent-health) is ALSO referenced directly by
+    at least one workflow or agent template outside build_phases.py's own
+    declaration — ``workflows-js/fast-lane-ship.js`` references
+    ``scripts/changelog/emit_entry.py``; ``templates/agents/
+    retrospective-agent.md`` and ``templates/workflows-js/
+    fast-lane-build.js`` reference ``scripts/retrospective`` and
+    ``scripts/agent-health`` respectively. Deleting any of these three
+    directories wholesale from a real package tree therefore trips the
+    EARLIER propagation-audit / closure guard in ``build.py`` before any
+    deploy phase runs at all — the build exits non-zero on that guard's own
+    JSON diagnostic ("add a deploy phase in build_phases.py"), never
+    printing 'build_agent_support_scripts', which would make the subprocess
+    form of this test vacuous (green for a reason that has nothing to do
+    with this AC). This is the same class of vacuous-fixture trap this
+    file's own ARCHITECTURE note describes for build_ac_store's chosen
+    deletion target.
+    """
+    empty_pkg = tmp_path / "empty_pkg"
+    (empty_pkg / "scripts").mkdir(parents=True)
+    monkeypatch.setattr(_bp, "PACKAGE_ROOT", empty_pkg)
+
+    _bp.reset_deploy_failures()
+    _bp.build_agent_support_scripts(tmp_path / "target", {}, dry_run=True, force=False)
+
+    failures = _bp.get_deploy_failures()
+    dir_failures = [f for f in failures if f.phase == "build_agent_support_scripts"]
+    assert dir_failures, (
+        "The AGENT_SUPPORT_SCRIPT_DIRS loop met a declared source directory "
+        "that does not exist and accumulated no failure record — it warned "
+        "and continued, which is the defect."
+    )
+
+    named_entries = {f.entry for f in dir_failures}
+    assert set(_bp.AGENT_SUPPORT_SCRIPT_DIRS) <= named_entries, (
+        "Every declared AGENT_SUPPORT_SCRIPT_DIRS entry should be reported "
+        f"when its source is absent. Got: {named_entries}"
+    )
+
+    with pytest.raises(_bp.DeployDeclarationError):
+        _bp.raise_if_deploy_failures()
+
+
+def test_bp_900g_9_ac_store_docs_missing_template_fails_build(
+    tmp_path: Path,
+) -> None:
+    # covers: BP-900g-9
+    """A declared AC-store doc template with no source must make ``build.py``
+    exit non-zero and name the phase and the entry.
+
+    Before this AC's third site was converted, ``build_ac_store_docs`` used a
+    bare ``print(f"[WARNING] ...")`` on a missing template — invisible to
+    every grep-based audit for ``_log.warning`` warn-and-continue sites,
+    which is precisely why it survived the original landing.
+    """
+    build_synthetic_full_package = _load_build_synthetic_full_package()
+    pkg_root = build_synthetic_full_package(tmp_path / "workspace")
+
+    (pkg_root / "templates" / "docs" / "how-to" / "ac-traceability-store.md").unlink()
+
+    result = _run_build_in_scratch_pkg(pkg_root, tmp_path / "target")
+    combined = result.stdout + result.stderr
+
+    assert result.returncode != 0, (
+        "build.py exited 0 while build_ac_store_docs declared "
+        "'how-to/ac-traceability-store.md', whose template source was "
+        f"deleted. The build reported a consumer install it did not "
+        f"produce.\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    assert "build_ac_store_docs" in combined, (
+        f"The failure must name the declaring phase. Output:\n{combined}"
+    )
+    assert "how-to/ac-traceability-store.md" in combined, (
+        f"The failure must name the declared entry. Output:\n{combined}"
+    )
+
+
+def test_bp_900g_9_product_truth_missing_source_subdir_fails_build(
+    tmp_path: Path,
+) -> None:
+    # covers: BP-900g-9
+    """A declared build_product_truth source subdir with no source must make
+    ``build.py`` exit non-zero and name the phase and the entry.
+
+    The glob in each ``deploy_groups`` triple applies only WITHIN the
+    declared subdir, so the subdir itself — 'schemas' here — is the declared
+    entry, not a bare directory scan. Before this AC's third site was
+    converted, deleting it produced a ``_log.warning(...)`` and ``build.py``
+    exited 0.
+    """
+    build_synthetic_full_package = _load_build_synthetic_full_package()
+    pkg_root = build_synthetic_full_package(tmp_path / "workspace")
+
+    shutil.rmtree(pkg_root / "docs" / "product-truth" / "schemas")
+
+    result = _run_build_in_scratch_pkg(pkg_root, tmp_path / "target")
+    combined = result.stdout + result.stderr
+
+    assert result.returncode != 0, (
+        "build.py exited 0 while build_product_truth's deploy_groups declared "
+        "the 'schemas' source subdir, which was deleted. The build reported "
+        f"a consumer install it did not produce.\nstdout:\n{result.stdout}\n"
+        f"stderr:\n{result.stderr}"
+    )
+    assert "build_product_truth" in combined, (
+        f"The failure must name the declaring phase. Output:\n{combined}"
+    )
+    assert "schemas" in combined, (
+        f"The failure must name the declared entry. Output:\n{combined}"
+    )

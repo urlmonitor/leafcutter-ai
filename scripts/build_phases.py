@@ -2503,7 +2503,12 @@ def build_ac_store_docs(target_root: Path, config: dict[str, Any],
     written = 0
     for template_path, dest_path, display_name in doc_files:
         if not template_path.exists():
-            print(f"  [WARNING] AC store docs: template not found: {template_path}")
+            # BP-900g-9 (n_location_rule: all). Was a bare print(f"[WARNING]
+            # ...") rather than _log.warning — precisely why every
+            # grep-based audit of this file for warn-and-continue sites
+            # missed it. Record and keep going so one run reports the whole
+            # remediation set; build.py raises once at the end.
+            record_deploy_failure("build_ac_store_docs", display_name, template_path)
             continue
         if dest_path.exists():
             print(f"  ac-store-docs: docs/{display_name} exists (skipped)")
@@ -3197,10 +3202,13 @@ def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
     for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
         src_dir = scripts_src / dir_name
         if not src_dir.is_dir():
-            _log.warning(
-                "build_agent_support_scripts: source directory not found, skipping: %s",
-                src_dir,
-            )
+            # BP-900g-9 (n_location_rule: all). A declared source DIRECTORY
+            # going missing is the same dropped promise as a declared file:
+            # was warn-and-continue, which let it vanish from the deployed
+            # tree while the build exited 0. Record and keep going so one
+            # run reports the whole remediation set; build.py raises once at
+            # the end.
+            record_deploy_failure("build_agent_support_scripts", dir_name, src_dir)
             continue
         for src_file in sorted(src_dir.rglob("*.py")):
             rel = src_file.relative_to(scripts_src).as_posix()
@@ -3542,10 +3550,13 @@ def build_product_truth(target_root: Path, config: dict[str, Any],
 
     for src_dir, pattern, dest_subdir in deploy_groups:
         if not src_dir.is_dir():
-            _log.warning(
-                "build_product_truth: source directory not found, skipping: %s",
-                src_dir,
-            )
+            # BP-900g-9 (n_location_rule: all). The glob (pattern) applies
+            # only WITHIN this declared subdir, so the subdir itself is a
+            # declared entry, not a bare directory scan — a missing one is
+            # the same dropped promise as a missing declared file. Was
+            # warn-and-continue. Record and keep going so one run reports
+            # the whole remediation set; build.py raises once at the end.
+            record_deploy_failure("build_product_truth", dest_subdir, src_dir)
             continue
 
         output_dir = output_base / dest_subdir
