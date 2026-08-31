@@ -1670,6 +1670,142 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
 }
 
 // ---------------------------------------------------------------------------
+// Repository-anchored support-script resolution (ACD-2100a-1 / KI-ACD-004).
+// ---------------------------------------------------------------------------
+//
+// `{{config.output_root}}` is a BUILD-TIME placeholder that resolves to a bare
+// relative name (".leafcutter") baked into the compiled template. A shell
+// command built with that placeholder is resolved by the DISPATCHING AGENT'S
+// OWN working directory, not by anything this workflow controls — in the
+// ADR-001 self-hosting dev layout that selects the deployed build-output copy
+// sitting in the untracked workspace parent, not the copy that belongs to the
+// repository this run is actually operating on (KI-ACD-004).
+//
+// The E2 workflow body has no filesystem access of its own (ADR-030: no `fs`,
+// `process`, `__dirname` reachable from the sandboxed script body), so the
+// fix cannot be "read the path here" — it must happen INSIDE a dispatched
+// shell command, at the moment that command actually runs, and the resolved
+// ABSOLUTE path must then be embedded literally into any later command that
+// needs it, so the run's own record of what it issued names a real,
+// repository-anchored location rather than a cwd-relative placeholder.
+
+/**
+ * Build the single-line POSIX-sh resolution command dispatched to a
+ * status-checker agent to find the ABSOLUTE, repository-anchored location of
+ * a support file installed under `.leafcutter/<relPath>`.
+ *
+ * Resolution order:
+ *   1. If the current directory is itself inside a git repository, that
+ *      repository's toplevel IS "the repository being operated on".
+ *   2. Otherwise (the ADR-001 self-hosting layout: cwd is the untracked
+ *      workspace parent, and the repository lives one level down as one of
+ *      its immediate child directories), probe immediate non-dot children
+ *      for a git toplevel.
+ *   3. Print the resolved absolute `.leafcutter/<relPath>` on success. If no
+ *      repository resolves, OR the resolved path does not exist on disk,
+ *      print a diagnostic naming the location that could not be found to
+ *      stderr and exit non-zero — NEVER fall back to printing a cwd-relative
+ *      path that could silently select the wrong physical copy.
+ *
+ * Kept to a single line (no embedded newlines) so it survives this file's
+ * existing "Run the following command...:\n<cmd>\n" single-line convention.
+ *
+ * Shared mechanism: every `{{config.output_root}}`-relative dispatch site in
+ * this workflow is meant to resolve through this same function — this file's
+ * worktree-setup step consumes it directly below; ACD-2100a-3's registry read
+ * and ACD-2100a-4's pause-store reads/writes are the sibling call sites named
+ * in this AC's contract and are expected to consume it too.
+ *
+ * @param {string} relPath - Path under the repo's `.leafcutter/` support
+ *                            directory, e.g. "scripts/setup_ticket_worktree.py".
+ * @returns {string} A single-line POSIX shell command.
+ */
+function buildRepoAnchoredResolutionCommand(relPath) {
+  const target = ".leafcutter/" + relPath;
+  return (
+    "REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null); " +
+    "if [ -z \"$REPO_ROOT\" ]; then " +
+    "REPO_ROOT=$(for d in */; do " +
+    "r=$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null); " +
+    "if [ -n \"$r\" ]; then echo \"$r\"; fi; " +
+    "done | sort -u | head -n1); " +
+    "fi; " +
+    "if [ -z \"$REPO_ROOT\" ]; then " +
+    "echo \"Could not resolve a repository containing " + target + " from the current directory\" >&2; " +
+    "exit 1; " +
+    "fi; " +
+    "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
+    "if [ ! -f \"$SCRIPT\" ]; then " +
+    "echo \"Could not resolve a repository-anchored " + target + " (looked for: $SCRIPT)\" >&2; " +
+    "exit 1; " +
+    "fi; " +
+    "echo \"$SCRIPT\""
+  );
+}
+
+/**
+ * Dispatch buildRepoAnchoredResolutionCommand()'s command to `agentType` and
+ * return either `{ ok: true, path: <absolute path string> }` or
+ * `{ ok: false, message: <diagnostic naming the unresolved location> }`.
+ *
+ * Fails closed: any dispatch error, non-zero exit, or empty/unparseable
+ * output is treated as "could not resolve" and surfaced to the caller —
+ * never silently substituted with a cwd-relative fallback. This is external
+ * I/O (a shell dispatch), so per the repository error-handling policy a
+ * failure to resolve must be reported (returned here for the caller to
+ * report), never swallowed.
+ *
+ * @param {string} relPath   - See buildRepoAnchoredResolutionCommand().
+ * @param {string} agentType - Agent to dispatch the resolution shell command to.
+ * @param {string} label     - agent() call label (for test/observability hooks).
+ * @returns {Promise<{ok: boolean, path?: string, message?: string}>}
+ */
+async function resolveRepoAnchoredScriptPath(relPath, agentType, label) {
+  const cmd = buildRepoAnchoredResolutionCommand(relPath);
+  let raw;
+  try {
+    raw = await agent(
+      "Run the following command and return ONLY the raw stdout output:\n" +
+      cmd + "\n" +
+      "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
+      { agentType: agentType, label: label }
+    );
+  } catch (dispatchErr) {
+    return {
+      ok: false,
+      message:
+        "Failed to dispatch repository-anchored resolution for .leafcutter/" +
+        relPath + ": " + (dispatchErr && dispatchErr.message ? dispatchErr.message : String(dispatchErr)),
+    };
+  }
+
+  let parsed;
+  try {
+    parsed = parseAgentJson(raw, { stage: label, agent: agentType });
+  } catch (_parseErr) {
+    parsed = null;
+  }
+
+  const absPath = (parsed && typeof parsed.output === "string") ? parsed.output.trim() : "";
+
+  if (!parsed || !absPath || (parsed.exit_code != null && parsed.exit_code !== 0)) {
+    const diag =
+      (parsed && parsed.stderr && parsed.stderr.trim()) ||
+      (parsed && parsed.output && parsed.output.trim()) ||
+      "(no diagnostic captured)";
+    return {
+      ok: false,
+      message:
+        "Could not resolve an absolute, repository-anchored location for .leafcutter/" +
+        relPath + " -- refusing to fall back to a location relative to the caller's " +
+        "working directory. " + diag,
+    };
+  }
+
+  return { ok: true, path: absPath };
+}
+
+// ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
 // ---------------------------------------------------------------------------
 
@@ -1793,12 +1929,37 @@ if (!permitsShell) {
 let authoringWorktreePath = null;
 let acStoreDir = "docs/acceptance-criteria"; // default: overridden below
 
+// Resolve the setup script to an ABSOLUTE, repository-anchored location
+// BEFORE building the worktree-setup dispatch's own command text — never a
+// `{{config.output_root}}`-relative path, whose resolution would depend on
+// the dispatching agent's own working directory and could silently select
+// the wrong physical copy (KI-ACD-004, ACD-2100a-1). Learning the resolved
+// path via a dedicated dispatch first (rather than resolving it inline
+// inside the worktree-setup command) is what lets the worktree-setup
+// dispatch's own static command text carry the literal absolute path,
+// satisfying "the run's own record of the command it issued names an
+// absolute location" rather than an unexpanded shell variable.
+const worktreeScriptResolution = await resolveRepoAnchoredScriptPath(
+  "scripts/setup_ticket_worktree.py", "status-checker", "resolve-worktree-setup-script-path"
+);
+
+// The worktree-setup step is dispatched EXACTLY ONCE either way. On success
+// it runs the resolved, absolute, repository-anchored invocation. On
+// failure it re-issues the SAME resolution command, which fails again for
+// real and deterministically — so the failure, and the exact location that
+// could not be resolved, is observable on the worktree-setup step's own
+// record. This must never silently fall back to a `{{config.output_root}}`-
+// relative invocation that could select the wrong physical copy (AC-3).
+const worktreeSetupCommand = worktreeScriptResolution.ok
+  ? "python \"" + worktreeScriptResolution.path + "\" create-ac-worktree" +
+    (sessionSlug ? ` "${sessionSlug}"` : "")
+  : buildRepoAnchoredResolutionCommand("scripts/setup_ticket_worktree.py");
+
 let worktreeSetupResult;
 try {
   worktreeSetupResult = await agent(
     "Run the following command and return ONLY the raw stdout output:\n" +
-    "python {{config.output_root}}/scripts/setup_ticket_worktree.py create-ac-worktree" +
-    (sessionSlug ? ` "${sessionSlug}"` : "") + "\n" +
+    worktreeSetupCommand + "\n" +
     "Return JSON: { \"output\": \"<raw stdout line>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
     { agentType: workspaceSetupAgentId, label: "worktree-setup" }
   );

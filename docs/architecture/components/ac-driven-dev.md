@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-07-10
-last_updated: 2026-08-18
+last_updated: 2026-08-31
 components:
   - ac_driven_dev
 ---
@@ -24,7 +24,19 @@ AC-Driven Development is the pipeline that treats the acceptance-criteria store 
 
 ## Entry Points
 
-- `templates/workflows-js/plan-feature.js` — AC authoring workflow
+- `templates/workflows-js/plan-feature.js` — AC authoring workflow. Its authoring-worktree
+  creation step resolves the [worktree-manager](worktree-manager.md)'s
+  `scripts/setup_ticket_worktree.py` to an absolute, repository-anchored location rather
+  than a session-cwd-relative one (`buildRepoAnchoredResolutionCommand` /
+  `resolveRepoAnchoredScriptPath`), so the copy invoked is always the one inside the
+  repository being operated on, never the deployed copy outside it under the
+  [ADR-001](../adrs/ADR-001-self-hosting-boundary.md) self-hosting layout. See
+  [`docs/known-issues/ac-driven-dev.md`](../../known-issues/ac-driven-dev.md) → `KI-ACD-004`
+  for the failure this fixes and the sibling sites still open against the same mechanism.
+  Independent of that caller-side fix, `setup_ticket_worktree.py`'s `create-only`
+  subcommand also hardens the resolution site itself with a bounded-search fallback for
+  when the script is invoked from outside any git repository at all (AC `ACD-2100a-2`)
+  — see [worktree-manager](worktree-manager.md) for the resolution contract.
 - `templates/skills/build-ac/SKILL.md` — AC selection and ticket generation
 
 ## Integration

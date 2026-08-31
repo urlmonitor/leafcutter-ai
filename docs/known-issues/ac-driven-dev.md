@@ -5,12 +5,14 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-26
+last_updated: 2026-08-31
 components:
   - ac_driven_dev
 related_docs:
   - docs/architecture/components/ac-driven-dev.md
   - docs/architecture/components/phantom-done-prevention.md
+  - docs/architecture/components/worktree-manager.md
+  - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
 ---
 
 # Known issues — ac-driven-dev
@@ -208,10 +210,16 @@ field, other code path.
 ### KI-ACD-004 — `/plan-feature` cannot start in the self-hosting layout: worktree setup resolves git from the untracked workspace
 
 - **Severity:** blocker
-- **Status:** open
+- **Status:** fixed for the worktree-setup site, defense-in-depth (2026-08-31 — landed via
+  `ACD-2100a-1` at the caller and, independently, `ACD-2100a-2` inside the script itself).
+  The two sibling `{{config.output_root}}`-relative sites this issue's "Fix direction" also
+  names — the registry read (`ACD-2100a-3`) and the pause-store read/write (`ACD-2100a-4`) —
+  are tracked separately and remain **open** until they consume the same shared mechanism;
+  see "Fix landed" below.
 - **Occurrences:** 1
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `templates/workflows-js/plan-feature.js:1740` → `scripts/setup_ticket_worktree.py` `_git_toplevel()`
+- **Where:** `templates/workflows-js/plan-feature.js:1740` → `scripts/setup_ticket_worktree.py`
+  `_git_toplevel()` / `_resolve_repository_with_search_fallback()`
 
 **Symptom.** `/plan-feature` dies before triage, before the product-truth phase, and
 before any authoring agent runs. It returns
@@ -274,6 +282,84 @@ the fixture bias that hid this recurs.
 fallback above, warning on stderr when it fires. This is **build output** — `build.py`
 overwrites it from `templates/`, so the workaround evaporates on the next build and is
 not a fix.
+
+**Fix landed 2026-08-31 (`ACD-2100a-1`).** Took the second "Fix direction" candidate,
+in `templates/workflows-js/plan-feature.js` (the source template — not the deployed
+`.leafcutter/` copy per ADR-001's self-hosting boundary):
+
+- `buildRepoAnchoredResolutionCommand(relPath)` builds a single-line POSIX-sh command
+  that resolves `.leafcutter/<relPath>` to an absolute path anchored at the actual git
+  repository — `git rev-parse --show-toplevel` first, falling back to probing the
+  session cwd's immediate child directories for exactly one git toplevel when that
+  fails (the self-hosting layout this issue's root cause names). It never falls back to
+  a cwd-relative guess: an unresolved repository or a resolved-but-missing file both
+  exit non-zero with a diagnostic naming the location that could not be found.
+- `resolveRepoAnchoredScriptPath(relPath, agentType, label)` dispatches that command to
+  a `status-checker` agent and fails closed — any dispatch error, non-zero exit, or
+  unparseable output is returned as `{ ok: false, message }`, never silently swallowed
+  into a fallback, per this repository's error-handling policy for external I/O.
+- The worktree-setup dispatch (`create-ac-worktree`) resolves `scripts/setup_ticket_worktree.py`
+  through this mechanism *before* building its own command text, and embeds the
+  resolved absolute path literally into that command — so the run's own record of the
+  command it issued names the absolute, repository-anchored location, not a
+  `{{config.output_root}}`-relative one. On resolution failure, the same diagnostic is
+  re-issued under the `worktree-setup` step's own label rather than a separate early
+  return, so a wrong-copy failure is observable on that step's own record.
+- Covered by `unit_tests/workflows/test_acd_2100a_1.py` (a real, on-disk two-copy
+  reproduction driven from an untracked, non-repository cwd — not a mock-only test).
+
+**Fix landed 2026-08-31 (`ACD-2100a-2`), as defense-in-depth inside the script itself.**
+Independent of the caller-side fix above, `_git_toplevel()`'s own anchor-based resolution
+in `scripts/setup_ticket_worktree.py` now falls back to a bounded search when the anchor
+fails — implementing the first "Fix direction" candidate above (the second is what
+`ACD-2100a-1` took), so the script recovers on its own even when a caller other than the
+now-fixed `plan-feature.js` invokes it from an unexpected `cwd`:
+
+- `_search_immediate_subdirectory_repos()` probes the *immediate* subdirectories of the
+  process's current working directory for git toplevels — never walking upward past the
+  starting directory, never following a symlinked child out of it, and rejecting a
+  candidate whose own `git rev-parse --show-toplevel` resolves to some ancestor rather
+  than the candidate itself.
+- `_resolve_repository_with_search_fallback()` keeps the anchor as the first choice,
+  unchanged for every caller that already works; the bounded search runs only when the
+  anchor raises, and only a single unambiguous candidate is accepted — zero or multiple
+  candidates raise rather than guessing.
+- A search-based resolution always announces itself on stderr at WARNING level, naming
+  the selected repository and stating that the selection came from a search rather than
+  the script's own location — silence here would be indistinguishable from the anchor
+  having worked and would leave a future wrong-repository incident undiagnosable.
+- An explicit `--repo-root` flag on the `create-only` subcommand bypasses both the anchor
+  and the search outright, so callers with a known-good location are unaffected.
+- Covered by `unit_tests/ac_driven_dev/test_acd_2100a_2.py` — real-subprocess integration
+  tests driven from a genuinely non-repository directory with exactly one git repository
+  among its immediate subdirectories, exercising the script's actual command-line entry
+  point rather than importing the resolver.
+
+**Known related gap, left open by design.** `_create_ac_worktree()` and
+`_create_fastlane_worktree()` share the same anchor-only `_git_toplevel()` call (and the
+same historical stdout-pollution pattern on `git worktree add`, also fixed for
+`create-only` in this pass) but were not brought onto this fallback — they are outside
+`ACD-2100a-2`'s AC/test scope. Track as a future ticket rather than treating the
+worktree-setup site as fully hardened across all three subcommands.
+
+This is explicitly a **shared** mechanism, not a per-site patch: `buildRepoAnchoredResolutionCommand`
+/ `resolveRepoAnchoredScriptPath` are written for reuse by the sibling
+`{{config.output_root}}`-relative sites named in the "Fix direction" above — the AC
+registry read (`ACD-2100a-3`) and the pause-store read/write (`ACD-2100a-4`). Those two
+sites had not yet been migrated onto this mechanism as of this fix and remain open; a
+per-site fix here alone is exactly what left three sites standing after this class of
+defect was first filed. See
+[`docs/architecture/components/ac-driven-dev.md`](../architecture/components/ac-driven-dev.md)
+and
+[`docs/architecture/components/worktree-manager.md`](../architecture/components/worktree-manager.md)
+for the components this resolution site touches, and
+[ADR-001](../architecture/adrs/ADR-001-self-hosting-boundary.md) for the self-hosting
+layout this fix resolves against. A standing reference page for `/plan-feature`'s
+layout and startup-time resolution checks (covering this behaviour alongside the
+sibling sites once they land) is planned at
+`docs/reference/plan-feature-layout-and-startup-checks.md` — not yet authored as of
+this entry; cross-link from there back to this entry once it exists rather than
+duplicating this narrative.
 
 ---
 
@@ -1083,7 +1169,10 @@ covering tests all assert `result.isascii()`, which is `True` for a comma.
 in `plan-feature.js:2057-2097` — an agent's reply is accepted as a user's decision — and both
 ACs went `done` against it in the same ticket. Fixing either half alone leaves the other
 false. Likewise `KI-ACD-004` and `KI-ACD-009` are both `{{config.output_root}}` resolving
-relative to the session cwd, and both halt `/plan-feature` before triage.
+relative to the session cwd, and both halted `/plan-feature` before triage. **Update
+2026-08-31:** `KI-ACD-004`'s worktree-setup site is now fixed (`ACD-2100a-1`, see its entry
+above); `KI-ACD-009` is a separate step (the `resolve-workspace-setup-permission` gate, not
+the script-path resolution) and remains open independently.
 
 **A correction to `KI-ACD-012`, which names the wrong gate.**
 `templates/hooks/ticket_frontmatter_guard.py` is a Claude Code `PreToolUse` hook on

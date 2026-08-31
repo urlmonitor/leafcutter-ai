@@ -539,28 +539,33 @@ def test_dispatch_order_plan_feature() -> None:
            the harness's built-in default label_responses resolves this against
            the REAL config/agent_registry.json, which grants the default target
            agent, 'worktree-agent', permits_shell=true)
-        3. worktree-agent   label='worktree-setup' (BO-1500f-1: dispatched to the
+        3. status-checker   label='resolve-worktree-setup-script-path' (ACD-2100a-1:
+           resolves .leafcutter/scripts/setup_ticket_worktree.py to an absolute,
+           repository-anchored path at runtime instead of trusting the cwd-relative
+           {{config.output_root}} placeholder, which resolved against the parent
+           copy when the cwd was not the repo root — KI-ACD-004)
+        4. worktree-agent   label='worktree-setup' (BO-1500f-1: dispatched to the
            permission-gate's resolved target agent, no longer hardcoded to
            'status-checker')
 
       Orphan scan (scanOrphanedAcDrafts):
-        4. status-checker  label='scan-orphans-git-status'
+        5. status-checker  label='scan-orphans-git-status'
 
       Stage detection (scanCommittedStages):
-        5. status-checker  label='scan-committed-stages'
+        6. status-checker  label='scan-committed-stages'
 
       Stage 0:
-        6. ac-triage       label='stage-0-triage'
+        7. ac-triage       label='stage-0-triage'
 
       Product-Truth phase (always-on classifier; stub returns no 'outcome' so the
       PT phase self-skips straight to the AC pipeline):
-        7. pt-classifier   label='pt-classify'
+        8. pt-classifier   label='pt-classify'
 
       Authoring (it-po, technical route — ac-triage stub returns no 'route'):
-        8. it-po           label='stage-itpo-author'
+        9. it-po           label='stage-itpo-author'
 
       Final gate (stub returns action=defer):
-        9. status-checker  label='final-gate'
+       10. status-checker  label='final-gate'
 
     A dropped, reordered, or mis-typed agent type FAILS this test (AC-2 / M-1).
     """
@@ -578,6 +583,10 @@ def test_dispatch_order_plan_feature() -> None:
         ("status-checker", "detect-current-branch"),
         # BO-1500f-1: registry-driven permission gate ahead of worktree-setup.
         ("status-checker", "resolve-workspace-setup-permission"),
+        # ACD-2100a-1: resolve the setup script to a repository-anchored
+        # absolute path before dispatching, so worktree-setup cannot run the
+        # parent copy when the cwd is not the repo root (KI-ACD-004).
+        ("status-checker", "resolve-worktree-setup-script-path"),
         # BO-1500f-1: dispatched to the resolved target agent (default
         # 'worktree-agent'), not the retired hardcoded 'status-checker'.
         ("worktree-agent", "worktree-setup"),
