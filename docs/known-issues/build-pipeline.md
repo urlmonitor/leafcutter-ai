@@ -3130,3 +3130,128 @@ hit this and will either bypass it or stall.
 
 **Pattern:** a gate that failed to fire where the defect was introduced, and fires instead on
 everyone who arrives afterwards.
+
+---
+
+### KI-BP-20260901-0914 — `ac-store-valid`'s per-PR diff scope means a schema-invalid AC record can sit on `main` indefinitely, invisible to CI, while the documented whole-component pre-flight that would catch it is optional, manual, and never wired in
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1 (the two records below); the scope gap itself applies to every AC ever
+  merged before 2026-08-17 or untouched since
+- **First seen:** 2026-09-01
+- **Where:** `.github/workflows/ci.yml:223-292` (the `ac-store-valid` job, `name: "AC store
+  valid"`) and `docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/BP-1400c-1.yaml`
+  + `BP-1400c-1-i.yaml`
+
+**Symptom.** `AC store valid` is a required PR check and has been green on every PR that
+touched this repo for two weeks. `scripts/ac_store/validate_ac_schema.py
+docs/acceptance-criteria/build_pipeline` — the whole-component bulk pre-flight `CLAUDE.md`
+"AC-store hygiene" tells you to run before a finalization drive, and the same
+`config/ac_store_schema.json` + `jsonschema.Draft7Validator` mechanism the CI job itself uses
+— dies before printing `OK: all N ... valid` for that same component, on `main`, today.
+
+**First correction: the surface symptom was misdiagnosed, twice.** This entry was opened to
+fix a reported "missing `angle` field" in `BP-1400c-1.yaml` and `BP-1400c-1-i.yaml`'s
+`test_spec` entries. `angle` is optional in `config/ac_store_schema.json` (only `name` and
+`target_dir` are `required` on a `test_spec` item), so its absence cannot have been the
+validator's real complaint — jsonschema's `oneOf` failure message
+(`... is not valid under any of the given schemas`) just doesn't say which sub-schema actually
+failed, so the missing-optional-field theory was plausible enough to act on. Re-running with
+`Draft7Validator.iter_errors(...).context` inspected directly (the CLI wrapper prints only the
+top-level message) isolates the real cause on the **original, unmodified** files:
+
+```
+CONTEXT: 'playwright' is not one of ['unittest', 'pytest'] ['test_spec', 0, 'framework']
+```
+
+Both records' Playwright e2e `test_spec` entries (`test_about_route_smoke`,
+`test_route_smoke_harness_iterates_all_routes`) declare `framework: playwright`, and
+`config/ac_store_schema.json`'s `test_spec[].framework` enum is `["unittest", "pytest"]` —
+it has never included an e2e/browser framework. `grep -rl "framework: playwright"
+docs/acceptance-criteria/` returns exactly these two files store-wide, so this looks like the
+first AC ever authored against a Playwright test, and it tripped a real gap in the vocabulary
+rather than a typo. Adding the requested `angle: reachability` / `angle: real_artifact` values
+to both files (done, in the same commit as this entry — see the diff) is correct on its own
+merits but, being scoped away from `framework` and from `config/ac_store_schema.json`, does
+**not** and cannot make `validate_ac_schema.py` print `OK` for this component. That fix needs
+either the schema's `framework` enum widened, or a decision about what `framework` should say
+for a browser-driven e2e test if not `playwright` — a call for whoever owns the AC-store
+schema, not something to guess at while holding a two-file write scope.
+
+**Second, and the actual question this entry answers: why did the required CI check never
+catch it?** `ac-store-valid` (`ci.yml:223`) runs `if: github.event_name == 'pull_request'`,
+resets `HEAD` back to the PR's base ref via `git reset --soft "origin/${{ github.base_ref
+}}"`, and then runs the `check-ac-schema` pre-commit hook — which reads its file set from
+`git diff --cached --name-only --diff-filter=AM` (`_get_staged_ac_paths` in
+`templates/scripts/commit_guardian/check_ac_schema.py`). That is **exactly** the set of AC
+files the current PR adds or modifies. It is not the whole store, not the whole component, and
+not even every file the PR's branch has ever touched — only the diff against the PR's base.
+The job's own comment names the reason: *"the store currently has 57 orphaned children, so a
+whole-store gate applied per-PR would fail every contributor on day one and get switched
+off"* — and separately documents that the whole-store backstop is *"NOT YET IMPLEMENTED —
+ACS-200h (whole-store run on push to main as a merge-vector backstop) ... deliberately omitted
+rather than added informationally: it would be red from the first run."*
+
+**The timeline closes the gap completely, it isn't even a near miss.**
+
+```
+2026-07-21   PR #367 (f73896fa6) merges BP-1400c-1.yaml and BP-1400c-1-i.yaml — both invalid
+             on `framework` from the moment they were authored.
+2026-08-17   PR #444 (0a22e9e93) adds the ac-store-valid job to ci.yml. First time ANY CI
+             mechanism validates AC schema on a pull request.
+2026-09-01   validate_ac_schema.py, run by hand against the whole build_pipeline component,
+             is the first thing to notice — 27+ days and an unknown number of merged PRs
+             after the gate that would eventually exist was itself created.
+```
+
+`git log -1 --format=%ad 0a22e9e93` confirms the gate's creation date; `git log --format=%ad
+--follow -- docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/BP-1400c-1.yaml`
+confirms the record's. Before 2026-08-17 there was no CI gate of any kind for AC schema
+validity — only the local, commit-time `check-ac-schema` pre-commit hook, which requires
+`.pre-commit-config.yaml` / `.leafcutter` to be established in the committing worktree, a
+prerequisite this same repo's own `CLAUDE.md` documents as frequently missing ("Worktree
+pre-commit config" — six historical drives ran with zero hooks active). Since 2026-08-17, the
+diff-scoped design means the gate can only ever validate a record the moment it is added or
+next modified — and these two records have been modified by no PR since. They are not an edge
+case the gate almost caught; they predate the gate's existence and have never once been in a
+diff it inspected.
+
+**The consequence, stated plainly.** A `build_pipeline` component can be schema-invalid on
+`main` for an unbounded period — this instance is 42 days and counting — while the one
+required, always-green CI check named for exactly this purpose (`AC store valid`) has nothing
+to say about it, because its scope and the invalid record's location in time never intersect.
+The one thing that *would* say something — the whole-component `validate_ac_schema.py` sweep
+— is a manual, unscheduled, un-gated step: nobody runs it unless they remember to, per
+`CLAUDE.md`'s own framing ("before a finalization drive"), and per this ticket's cover note,
+"if anyone runs it, dies before it can report" was true right up until this session ran it.
+
+**Is the CI job wrong, or is the pre-flight's documentation overselling it?** Neither is
+simply broken — the CI job's diff-scoping is a deliberate, reasoned trade-off against 57
+known pre-existing orphans, documented in its own source as a stopgap pending ACS-200h. But
+`CLAUDE.md`'s "AC-store hygiene" section presents the bulk `validate_ac_schema.py` sweep as
+the reader's own responsibility with no cross-reference to the fact that CI's required check
+covers a categorically narrower scope and cannot be treated as a substitute — a reader who
+sees `AC store valid` green on every recent PR has no signal telling them the store itself may
+already be red. That asymmetry, not a bug in either script, is the actual gap.
+
+**Fix direction.** Land ACS-200h (the whole-store push-to-main backstop `ci.yml` already
+names as the intended remedy) as an informational (non-blocking) job first, specifically so it
+can report the current backlog without failing every contributor's PR on day one — the same
+graduated-rollout shape `ci.yml`'s own comment anticipates for the diff-scoped job's origin.
+Separately, `CLAUDE.md`'s "AC-store hygiene" section should say explicitly that
+`validate_ac_schema.py` and the required `AC store valid` CI check cover different scopes and
+neither substitutes for the other, so a green required check is never read as store-wide
+reassurance.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M3 ("AC-store hooks see the git
+index, not the store"), the CI/per-PR-diff variant: M3 is about a single commit's staged set
+missing a parent that was not re-staged; this is the same shape one layer up — a required
+CI gate's diff-against-base-ref scope missing every record that existed before the gate did
+and has not been touched since. Both are "the gate's notion of 'what to check' is narrower
+than 'the store', and the store is what people believe was checked."
+
+**Related.** `KI-ACS-001` (a validator invocation resolving to zero files reported success for
+eight days) is the sibling failure at the tooling layer — this entry's whole-component sweep
+is the fix KI-ACS-001 made trustworthy again, which is exactly why it was the tool that caught
+this.
