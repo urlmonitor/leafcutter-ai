@@ -9,7 +9,7 @@ req_status: draft
 readiness: approved
 priority: high
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 criteria: |
   Given a real build aimed at a project outside the producing package's own parent
     folder, under a condition in which the record of what the build put there cannot
