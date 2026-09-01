@@ -2503,7 +2503,12 @@ def build_ac_store_docs(target_root: Path, config: dict[str, Any],
     written = 0
     for template_path, dest_path, display_name in doc_files:
         if not template_path.exists():
-            print(f"  [WARNING] AC store docs: template not found: {template_path}")
+            # BP-900g-9 (n_location_rule: all). Was a bare print(f"[WARNING]
+            # ...") rather than _log.warning — precisely why every
+            # grep-based audit of this file for warn-and-continue sites
+            # missed it. Record and keep going so one run reports the whole
+            # remediation set; build.py raises once at the end.
+            record_deploy_failure("build_ac_store_docs", display_name, template_path)
             continue
         if dest_path.exists():
             print(f"  ac-store-docs: docs/{display_name} exists (skipped)")
@@ -3197,10 +3202,13 @@ def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
     for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
         src_dir = scripts_src / dir_name
         if not src_dir.is_dir():
-            _log.warning(
-                "build_agent_support_scripts: source directory not found, skipping: %s",
-                src_dir,
-            )
+            # BP-900g-9 (n_location_rule: all). A declared source DIRECTORY
+            # going missing is the same dropped promise as a declared file:
+            # was warn-and-continue, which let it vanish from the deployed
+            # tree while the build exited 0. Record and keep going so one
+            # run reports the whole remediation set; build.py raises once at
+            # the end.
+            record_deploy_failure("build_agent_support_scripts", dir_name, src_dir)
             continue
         for src_file in sorted(src_dir.rglob("*.py")):
             rel = src_file.relative_to(scripts_src).as_posix()
@@ -3308,43 +3316,50 @@ def build_build_orchestration_scripts(target_root: Path, config: dict[str, Any],
     written = 0
 
     if not src_dir.is_dir():
-        _log.warning(
-            "build_build_orchestration_scripts: source directory not found, skipping: %s",
-            src_dir,
+        # BP-900g-9 (n_location_rule: all). This is the phase's OWN declared
+        # source directory, not a glob of what happens to exist on disk — its
+        # absence is a dropped promise, the same shape already closed for the
+        # sibling loops above. Record it and skip ONLY the glob loop below —
+        # do NOT return early. This function has a SECOND declared dependency,
+        # `_deploy_fast_lane_release_dependency()`, and accumulate-then-raise
+        # exists precisely so both absences are recorded from ONE run instead
+        # of trickling out one per build-fix-build cycle (that was the bug:
+        # an early `return 0` here skipped the call below on the same pass).
+        record_deploy_failure(
+            "build_build_orchestration_scripts", "scripts/build_orchestration", src_dir
         )
-        return 0
+    else:
+        for src_file in sorted(src_dir.glob("*.py")):
+            if not src_file.is_file():
+                continue
 
-    for src_file in sorted(src_dir.glob("*.py")):
-        if not src_file.is_file():
-            continue
+            output_path = output_dir / src_file.name
 
-        output_path = output_dir / src_file.name
+            if not _should_overwrite(output_path, force):
+                continue
 
-        if not _should_overwrite(output_path, force):
-            continue
+            if _files_content_identical(src_file, output_path):
+                global _uptodate_count  # noqa: PLW0603
+                _uptodate_count += 1
+                continue
 
-        if _files_content_identical(src_file, output_path):
-            global _uptodate_count  # noqa: PLW0603
-            _uptodate_count += 1
-            continue
-
-        if dry_run:
-            print(f"  [DRY-RUN] would copy scripts/build_orchestration/{src_file.name}")
-            written += 1
-        else:
-            try:
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src_file, output_path)
-            except OSError as exc:
-                _log.warning(
-                    "build_build_orchestration_scripts: failed to copy %s → %s: %s",
-                    src_file,
-                    output_path,
-                    exc,
-                )
-                raise
-            print(f"  scripts/build_orchestration/{src_file.name}")
-            written += 1
+            if dry_run:
+                print(f"  [DRY-RUN] would copy scripts/build_orchestration/{src_file.name}")
+                written += 1
+            else:
+                try:
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src_file, output_path)
+                except OSError as exc:
+                    _log.warning(
+                        "build_build_orchestration_scripts: failed to copy %s → %s: %s",
+                        src_file,
+                        output_path,
+                        exc,
+                    )
+                    raise
+                print(f"  scripts/build_orchestration/{src_file.name}")
+                written += 1
 
     written += _deploy_fast_lane_release_dependency(target_root, dry_run, force)
 
@@ -3542,10 +3557,13 @@ def build_product_truth(target_root: Path, config: dict[str, Any],
 
     for src_dir, pattern, dest_subdir in deploy_groups:
         if not src_dir.is_dir():
-            _log.warning(
-                "build_product_truth: source directory not found, skipping: %s",
-                src_dir,
-            )
+            # BP-900g-9 (n_location_rule: all). The glob (pattern) applies
+            # only WITHIN this declared subdir, so the subdir itself is a
+            # declared entry, not a bare directory scan — a missing one is
+            # the same dropped promise as a missing declared file. Was
+            # warn-and-continue. Record and keep going so one run reports
+            # the whole remediation set; build.py raises once at the end.
+            record_deploy_failure("build_product_truth", dest_subdir, src_dir)
             continue
 
         output_dir = output_base / dest_subdir
@@ -3836,4 +3854,18 @@ def clean_stale_artifacts(
 #   own Implementation Notes require — recorded here since it resolved to "no
 #   change needed" rather than a new deploy_map line, so the verification
 #   would otherwise leave no trace. (#TICKET-20260826-BP-1100g-4)
+# - 2026-08-31 [python-coder]: Fixed a BP-900g-9 review finding.
+#   build_build_orchestration_scripts()'s own fail-closed branch did
+#   `record_deploy_failure(...); return 0` when its declared source directory
+#   was absent -- correct for that check alone, but the early return also
+#   skipped the call to _deploy_fast_lane_release_dependency() that follows
+#   it in the SAME function, so when BOTH declared sources were absent only
+#   one failure was recorded per build instead of both -- one
+#   build-fix-build cycle per source rather than both surfacing together.
+#   Guarded the glob loop with `else:` instead of returning early so the
+#   fast-lane dependency check always runs; corrected the in-code comment
+#   that had justified the old early return. Added
+#   test_bp_900g_9_build_orchestration_and_fast_lane_dependency_both_named_in_one_run
+#   to unit_tests/test_bp_900g_9.py; confirmed it fails on the pre-fix code
+#   via a `git stash` of this file. (#BP-900g-9)
 # ====================================================================
