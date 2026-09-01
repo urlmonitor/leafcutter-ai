@@ -2249,6 +2249,337 @@ load-bearing — the individual-test form of the same mechanism). `KI-BO-2026082
 
 ---
 
+### KI-BO-20260901-0920 — The commit-phase serialization lock is specified, its helper script was never written, and the workflow that inherited the responsibility does not take a lock at all — so N tickets commit concurrently into one shared index
+
+- **Severity:** medium — **downgraded from high after the predicted failure did not occur.**
+  The lock is genuinely absent; a second, unrelated convention is currently preventing the
+  damage. See "Why nothing broke" below, which is the most useful part of this entry.
+- **Status:** open — no AC
+- **Occurrences:** 1 (found by inspection during the `EPIC-TheNumberingGuaranteeHoldsAtEveryStage` drive, then **observed directly in the same run** — see "Observed, not just reasoned about" below)
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `templates/workflows-js/build-feature.js` (batch dispatch, `BATCH_SIZE = 12`) ·
+  `templates/skills/building-epics/SKILL.md` §5 · `scripts/epic_lock.py` (absent)
+
+**Symptom.** `/build-feature` dispatches every ticket in a dependency batch through
+`parallel()` into **one shared worktree**, and each of those parallel ticket drives runs its
+own `commit` phase. Nothing serialises them. In the run that surfaced this, batch 1 held four
+tickets, so four `commit` agents were on course to `git add` and `git commit` against the same
+index concurrently.
+
+**The lock is absent in three independent places, which is why no single fix closes it.**
+
+1. **The spec describes it.** `building-epics` §5 defines a commit-phase serialization lock at
+   `<worktree_root>/.epic-commit-lock`, and opens with the correct reasoning: "The commit and
+   pull-request phases mutate the git index and `HEAD`; they cannot run concurrently across
+   sibling tickets in the same worktree."
+2. **The prescribed helper does not exist.** §5.2 says to acquire via
+   `python3 scripts/epic_lock.py --acquire ...`. That file is present in neither `scripts/`
+   nor `templates/scripts/`. It is named in approved criteria and has never been written.
+3. **The holder is no longer dispatched.** §5 assigns the lock to `ticket-supervisor`. ADR-006
+   flattened the chain, and `build-feature.js` now states plainly: "No ticket-supervisor is
+   dispatched here." Its inlined phase loop contains no lock of any kind — a grep for `lock`
+   across the file returns only the word `block`.
+
+So the responsibility was transferred without the mechanism, to a caller that never had one,
+backed by a helper that was never built. §5 still reads as though it is in force.
+
+**Observed, not just reasoned about.** This entry was opened from a code read, and the
+predicted state appeared in the same run minutes later. Mid-drive, with batch 1's four tickets
+in flight, the shared index held staged changes belonging to two different tickets driven by
+two different agents:
+
+```text
+$ git diff --cached --name-only          # first poll
+tickets/00_inbox/epics/EPIC-.../01_TICKET-20260825-GE-122d-1.md
+tickets/00_inbox/epics/EPIC-.../08_TICKET-20260825-GE-122e-2.md
+
+$ git diff --cached --name-only          # ~4 minutes later, still no commit
+tickets/00_inbox/epics/EPIC-.../01_TICKET-20260825-GE-122d-1.md
+tickets/00_inbox/epics/EPIC-.../03_TICKET-20260825-GE-122d-3.md
+tickets/00_inbox/epics/EPIC-.../08_TICKET-20260825-GE-122e-2.md
+```
+
+No agent had committed at either sample. The window is not theoretical and not narrow: it
+stayed open across two polls minutes apart, and it *widened* — the index accumulates staged
+work from each ticket as that ticket's sign-off phases run, so exposure grows with batch size
+rather than being a brief race at commit time. `BATCH_SIZE = 12` makes the worst case twelve
+tickets deep.
+
+What a commit landing in that window actually did is recorded under "Why nothing broke" below
+— the outcome was **clean**, for a reason unrelated to the lock.
+
+**Why the failure is silent rather than loud.** The obvious hazard — two `git commit`
+invocations colliding on `index.lock` — is the *safe* one: git fails that loudly and the phase
+reports an error. The damaging interleaving is quieter:
+
+```text
+agent A: git add <A's files>
+agent B: git add <B's files>
+agent A: git commit          <- commits A's files AND B's
+agent B: git commit          <- "nothing to commit", or commits a fragment
+```
+
+A's commit would then contain B's work under A's message. That would defeat the repo's
+commit-message-matches-diff rule mechanically rather than by author error, and strand B's
+ticket with its changes committed under someone else's traceability. `check-commit-scope` is
+**warn-only**, so it would observe this and not stop it.
+
+**Why nothing broke — and why that is not the same as being safe.** The run reached a commit
+with three *other* tickets' files sitting staged, and produced a clean single-file commit:
+
+```text
+$ git show --stat d6a7fe470
+ .../10_TICKET-20260825-BP-900h-6.md   | 477 +++++++++++++++-
+ 1 file changed, 458 insertions(+), 19 deletions(-)
+
+$ git status --short          # immediately after — the other three are STILL staged
+M  .../01_TICKET-20260825-GE-122d-1.md
+M  .../03_TICKET-20260825-GE-122d-3.md
+M  .../08_TICKET-20260825-GE-122e-2.md
+```
+
+The `commit` agent commits by explicit pathspec, so it took its own file and left the rest of
+the index alone. That is what saved the run, and it is worth recording plainly: **the
+prediction above did not come true, and the reason is a convention in a different component.**
+
+What that changes, and what it does not:
+
+- **It does not restore the guarantee.** `commit.md` §"Never run `git add -A` / `git add .`.
+  Stage by name" is prose in an agent template. Nothing enforces it, no test asserts it, and
+  the driver does not depend on it — it simply happens to hold. A single commit path that
+  omits the pathspec reintroduces the whole failure, and the autofix retry loop (`commit.md`
+  Step 5, "re-stage the changed files") is exactly the kind of place where that is easy to
+  get wrong.
+- **It narrows the severity but not the surface.** Two independent mechanisms would both have
+  to be correct forever for this to stay safe, and only one of them is written down as a
+  requirement. The lock exists precisely so correctness does not depend on every future
+  commit path remembering to scope itself.
+- **It makes the `pull-request` half untested.** §5 covers commit *and* pull-request. The
+  pull-request phase is deferred for epic members (`isEpicMember=true`), so this run never
+  exercised concurrent `HEAD`/branch mutation at all. The observation above says nothing
+  about that path.
+
+Recording the non-occurrence matters as much as the occurrence would have: an entry claiming
+a corruption that never materialises gets dismissed on the next read, and the real finding —
+a missing control masked by an unenforced convention — gets dismissed with it.
+
+**Why it has not been seen before.** The exposure needs a batch with two or more tickets whose
+`files_touched` are disjoint enough to pass the parallelism gate — which is exactly the case
+the gate is designed to *produce*. The better the batching works, the wider the window. Drives
+that happened to yield single-ticket batches were never at risk, so the absence of prior
+occurrences is not evidence of safety.
+
+**Detection.** After any multi-ticket batch, verify each commit against its ticket rather than
+trusting the drive's payload:
+
+```bash
+git -C <worktree> log --format="%h %s" --name-only <base>..HEAD
+```
+
+Every file in a commit must appear in that ticket's `files_touched`. A commit carrying a
+sibling ticket's files is this defect, already realised.
+
+**Countermeasure.** Two candidates, and the cheap one is worth taking first:
+
+- **Set `BATCH_SIZE = 1`** — costs the parallelism but restores serial commits with a
+  one-token change, and needs no new script. The dependency batching still does its work;
+  only the within-batch concurrency is given up.
+- **Write `scripts/epic_lock.py` and call it** from `driveTicketPhases` around the `commit`
+  and `pull-request` phases, per §5.2. This is the specified fix, and it also closes the
+  dangling reference in §5 that currently points at a non-existent file.
+
+Whichever is chosen, §5's own caveat should be honoured: it already warns that the lock
+"cannot be released after a child crash (lock-recovery requires user intervention)". A lock
+added without stale-lock recovery converts a silent corruption into a permanent deadlock.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a control specified in a runbook,
+absent in the code path that inherited the runbook's responsibility. The document asserting
+the guarantee is the reason nobody checks for it.
+
+**Related.** `KI-BO-030` (the fresh-install blocker set, which also turns on a gate that is
+registered but cannot run). The user-memory note "No parallel supervisors in shared worktree"
+records the same hazard observed from the opposite direction — git object-store corruption
+under concurrent supervisors — and predates this entry by months without the mechanism being
+traced to a missing lock.
+
+---
+
+### KI-BO-20260901-1000 — The per-ticket phase list is frozen before the first phase runs, so a phase that a later phase declares necessary can never be dispatched — and `architect-review`, whose job is to declare exactly that, is ordered after the phases it gates
+
+- **Severity:** blocker
+- **Status:** open — no AC
+- **Occurrences:** 1 run, **2 of 4 tickets in the batch** (`GE-122d-3`, `BP-900h-6`) — both halted, neither recoverable within the drive
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `templates/workflows-js/build-feature.js` — `driveTicketPhases()` Step 2/Step 3
+  (`neededPhases` computed once at ~:1345, iterated at ~:1430) · `phaseOrder` (~:305)
+
+**Symptom.** Two independent tickets in one batch halted with the same shape: `architect-review`
+ran, concluded an ADR was required, flipped `requires_adr: true` and set
+`agents.adr-author: needed` — and `adr-author` was then never dispatched. `python-coder`
+subsequently refused to write code against a contract that had not been recorded, which is the
+correct refusal, so the drive ends with two tickets stuck behind a phase the drive itself will
+never run.
+
+**Root cause — the list is a snapshot, not a queue.** Step 2 computes the phase list exactly
+once, from the planner's opening snapshot:
+
+```js
+const neededPhases = sortByCanonicalPriority(
+  selectDispatchPhases(orderedPhases.filter((p) => p.status === "needed"), isEpicMember)
+);
+```
+
+Step 3 then walks it:
+
+```js
+for (const currentPhase of neededPhases) {
+```
+
+`neededPhases` is never recomputed. A phase promoted to `needed` *during* the drive is
+invisible to the loop, because the loop is iterating a value captured before any phase ran.
+
+**Two orderings make this specifically unrecoverable rather than merely late.** `phaseOrder`
+puts `adr-author` at priority 2 and `architecture-diagram-author` at 3, but `architect-review`
+— the phase that decides whether either is needed — at 4. So even if the list *were*
+recomputed, a forward-only walk would already be past both slots by the time the decision is
+made. The gating phase runs after the phases it gates. Freezing the list and ordering the
+decider last are two independent bugs that happen to produce one symptom; fixing either alone
+leaves the other.
+
+**The signal is computed correctly and then discarded.** This is not a case of the system
+failing to notice. The driver re-reads the ticket record after each phase, and those re-reads
+returned the right answer — from this run's own journal, after `architect-review` signed off:
+
+```text
+"needed_phases":["ac-fulfillment-gate","ac-validator","adr-author","commit",
+                 "documentation-expert","documentation-verifier","pr-reviewer",
+                 "pull-request","python-coder","test-runner","test-writer"]
+```
+
+`adr-author` is right there, named, in a value the driver received and parsed. Nothing consumes
+it. The read-back exists to feed the *completion* decision, not the *dispatch* decision, and no
+code path connects the two. This is the fourth recorded instance in this register of a signal
+being derived accurately and then not wired into the control flow it was derived for.
+
+**Why the phase agents look worse than they are.** Both halts were well-reasoned and both were
+right. `python-coder` on `GE-122d-3` verified ADR-037's status on disk rather than from memory,
+found it `Proposed` with no amendment, noted six sibling ACs already consuming the
+`NamespaceVerdict` shape it would have had to narrow, and stopped. `python-coder` on
+`BP-900h-6` checked that `ADR-038` did not exist and cited architect-review's explicit
+sequencing instruction. `test-runner` then re-derived the same blocker independently and
+confirmed the red baseline was intact under `AC_ENFORCE_STRICT=1` (7 failed, matching
+test-writer's record) rather than reporting a regression. The adjudication ladder classified
+correctly at every step. The agents did their jobs; the driver had no way to act on the result.
+
+**Countermeasure.** Both halves need addressing:
+
+1. **Re-derive the pending set each iteration** instead of iterating a frozen array — drive
+   from the record's live `needed` set, so a phase promoted mid-drive is picked up. The
+   re-read already happens and already carries the answer; it needs connecting to dispatch.
+2. **Move `architect-review` ahead of the phases it gates** in `phaseOrder`, or give
+   `adr-author` and `architecture-diagram-author` a second slot after it. A decider that runs
+   after the phases conditioned on its decision cannot work under any forward-only walk.
+
+Until then, a ticket whose `requires_adr` is flipped by `architect-review` cannot be completed
+by `/build-feature` and must be finished by hand — author the ADR, then re-drive.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a correctly-computed signal with no
+consumer. Distinct from the phantom-done family: nothing here claims success. The drive halts
+honestly and reports the blocker; the defect is that the blocker is one the drive created for
+itself and cannot clear.
+
+**Related.** `KI-BO-20260901-0920` (filed the same run — the commit-phase lock, also a control
+that the runbook describes and the flattened driver does not implement; ADR-006's flattening
+dropped both). `KI-ACD-020` (a readiness gate dropping leaves silently — the same
+computed-then-discarded shape one layer up, in `goal_to_epic.py`).
+
+---
+
+### KI-BO-20260901-1052 — `python-coder` signals a test handoff exactly as its template prescribes, and the driver rejects it for omitting a field the template never mentions — so the documented delegation path dead-ends every ticket that uses it
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1 (the only ticket in the batch that produced working production code)
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `templates/agents/python-coder.md` §"Test Delegation" (~:454-460) ·
+  `templates/workflows-js/build-feature.js` (~:1595-1610)
+
+**Symptom.** `GE-122d-1` was the one ticket in batch 1 that got real work done — a verified
+77-line deploy-manifest fix in `scripts/build_phases.py`, checked against a live `build.py`
+run. The drive then discarded the ticket with:
+
+```text
+Phase 'python-coder' returned 'status: handoff' but named no recognizable
+handoff_target ('undefined'). Refusing to guess a re-dispatch target and refusing
+to advance to the next phase in phaseOrder.
+```
+
+**The two sides define "handoff" differently, and neither references the other.**
+
+`python-coder.md` §"Test Delegation" is unambiguous about the protocol, and the agent followed
+it to the letter:
+
+> 1. Add task items under the `### test-writer` section of `## Implementation Tasks`
+>    describing what needs testing.
+> 2. When signing off, use `(status: handoff)` instead of `(status: ok)` to signal that
+>    test-writer must run next.
+> 3. Do NOT create files under `unit_tests/` or any test directory.
+
+Three steps, all performed. The target is named — in the ticket body section and again in the
+returned `message` ("handed off to test-writer via a new `## Implementation Tasks` /
+`### test-writer` section with the exact fix"). What the template never asks for, anywhere, is
+a `handoff_target` key in the JSON return. The driver reads exactly that key and nothing else:
+
+```js
+const handoffTarget = phaseResult.handoff_target;   // undefined
+```
+
+So the agent communicated the target through the two channels its template defines — ticket
+body and prose — and the driver looked in a third channel it was never told to populate.
+
+**Why the driver's refusal is right and still produces the wrong outcome.** Refusing to guess
+a re-dispatch target is correct; guessing would be worse. The defect is upstream of the
+refusal: the contract the agent was given cannot produce the field the driver requires. A
+fail-closed check is only as good as the contract it closes against, and here it fails closed
+on conformant output.
+
+**This is the documented happy path, not an edge case.** §"Test Delegation" exists because
+`python-coder` is forbidden from writing tests: "You MUST NOT write or modify unit test files
+directly." Any coder run that discovers its tests need adjusting — which the same template
+makes *mandatory* for bug fixes ("every bug fix requires a regression test... add the test
+requirement to the `### test-writer` section") — is routed into `status: handoff`. So the
+prescribed route for a common, template-mandated situation terminates the ticket.
+
+**What it cost.** `GE-122d-1`'s fix was complete and verified; 4 of its 6 red-baseline tests
+remained red for a diagnosed test-fixture path bug (the fixture assumed a bare
+`<target>/hooks/`, contradicting ADR-004's shim design) that `python-coder` correctly
+classified as `test_drift` and correctly declined to fix itself. That is the system working
+as designed right up to the moment the handoff was dropped. The work survives only because it
+was left staged — nothing committed it, and nothing recorded that it exists.
+
+**Countermeasure.** Make the two ends agree, in whichever direction is cheaper:
+
+- **Have the driver accept the template's channel** — read the handoff target from the
+  ticket's `## Implementation Tasks` subsection heading when `handoff_target` is absent,
+  before refusing. The information is already on disk in a structured, parseable place.
+- **Or add the field to the template contract** — state in §"Test Delegation" that the JSON
+  return must carry `handoff_target: "test-writer"`, and add it to the result schema so a
+  missing value is caught at authoring time rather than at dispatch time.
+
+Either fixes it; doing neither leaves the delegation path unusable. The first is preferable
+because it makes the *record* authoritative, consistent with how every other phase decision
+in this driver is taken from the ticket read-back.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a contract split across two
+components with no shared definition and no test spanning both. The agent template and the
+workflow are versioned together and deployed together, and still disagree.
+
+**Related.** `KI-BO-20260901-1000` (same run, same driver, also a dispatch decision that
+ignores what the ticket record already says). Both are instances of the driver's dispatch
+logic and the ticket record having drifted apart; the record is right in both cases.
+
+---
+
 ### KI-BO-20260826-1900 — The done-proof gate collects parametrized pytest ids and then cannot match one, so a covers-tagged parametrized test reads as "not run" and blocks the merge
 
 - **Severity:** medium
