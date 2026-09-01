@@ -246,11 +246,42 @@ _DEFAULT_AGENT_REGISTRY = "config/agent_registry.json"
 #: Default path of the guardrail gates config relative to the repo root.
 _DEFAULT_GUARDRAIL_GATES = "config/guardrail_gates.yaml"
 
+#: Default path of the location-keyed phase-deferral declaration (TKT-600b-1)
+#: relative to the repo root.
+_DEFAULT_PHASE_DEFERRAL = "config/phase_deferral.yaml"
+
 # ---------------------------------------------------------------------------
 # Type alias
 # ---------------------------------------------------------------------------
 
 AcRecord = dict[str, Any]
+
+
+# ---------------------------------------------------------------------------
+# Phase-deferral declaration (TKT-600b-1)
+# ---------------------------------------------------------------------------
+
+
+class PhaseDeferralDeclarationError(Exception):
+    """Raised when the location-keyed phase-deferral declaration cannot be
+    loaded or is malformed.
+
+    Deliberately a distinct exception type (not a bare ValueError/OSError) so
+    that a caller — chiefly ``main()`` — can tell "the declaration is missing
+    or broken" apart from a malformed AC record or a missing CLI argument
+    (TKT-600b-1-i's "distinguishable in kind" requirement). A missing
+    declaration must refuse generation rather than silently fall back to a
+    built-in default (TKT-600b-1).
+    """
+
+
+class UnresolvedDestinationError(Exception):
+    """Raised when the phase-deferral declaration is location-dependent (it
+    defers a different phase set for at least two location kinds) but no
+    ``resolved_destination`` was supplied, so the phase record cannot be
+    soundly computed without guessing the ticket's final location
+    (TKT-600b-1-i).
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -550,7 +581,7 @@ def _resolve_worktree_root_or_none() -> "Path | None":
 
 
 def _is_real_prose_path(token: str, worktree_root: "Path | None") -> bool:
-    """Return True when *token* names a file that actually exists on disk.
+    """Return True when *token* names a real **file** that exists on disk.
 
     TKT-600a-1: a narrative it_requirements bullet may quote example paths
     purely to illustrate a scenario (e.g. ``"src/foo.py"`` in a sentence
@@ -560,6 +591,23 @@ def _is_real_prose_path(token: str, worktree_root: "Path | None") -> bool:
     (per the AC's own remediation note: "gate on file existence") distinguishes
     illustrative examples from real paths without narrowing the token-detection
     regex, which would risk dropping genuine paths that happen to look unusual.
+
+    ``is_file()``, not ``exists()`` — a **directory is never an edit surface**,
+    and this is the distinction the existence gate alone got wrong. A bullet
+    naming ``docs/acceptance-criteria`` or ``templates/skills`` to describe
+    *where* a rule applies passes ``exists()`` precisely because those
+    directories do exist, so three bare directories were written into a
+    generated ticket's ``files_touched`` and blocked an epic drive. Requiring a
+    file keeps the discrimination mechanical: it asks a property of the
+    filesystem, never of the sentence's intent.
+
+    This deliberately leaves one case in ``TKT-600a-1``'s criteria unmet: an
+    illustrative path that both has an extension and happens to exist is still
+    harvested. Separating that from a genuine surface needs authorial intent
+    read out of English prose, which the AC's ``it_requirements`` note records
+    as a rejected approach — it fires on no cue in the real failing bullet and
+    silently drops real surfaces elsewhere. A false exclusion is the worse
+    error of the two, so the mechanical rule stops here.
 
     When *worktree_root* is ``None`` (root could not be resolved), the gate is
     skipped and the token is treated as real — this preserves prior behaviour
@@ -571,12 +619,13 @@ def _is_real_prose_path(token: str, worktree_root: "Path | None") -> bool:
         worktree_root: Resolved worktree root, or ``None``.
 
     Returns:
-        True when the file exists (or the root could not be resolved), False
-        when the root resolved but the file does not exist there.
+        True when the token names an existing file (or the root could not be
+        resolved), False when the root resolved and the token names a
+        directory or nothing at all.
     """
     if worktree_root is None:
         return True
-    return (worktree_root / token).exists()
+    return (worktree_root / token).is_file()
 
 
 def _build_files_touched(ac: dict[str, Any]) -> list[str]:
@@ -744,6 +793,155 @@ def _load_production_code_agents(agent_registry_path: Path) -> set[str]:
     return producers
 
 
+def _default_phase_deferral_path() -> Path:
+    """Resolve the default location of config/phase_deferral.yaml.
+
+    Mirrors the fallback pattern already used for the guardrail-gates config:
+    resolves relative to the discovered worktree root when possible, and
+    falls back to a path relative to the current working directory when no
+    ``.git`` marker can be found.
+
+    Returns:
+        Absolute (or best-effort relative) path to config/phase_deferral.yaml.
+    """
+    try:
+        repo_root = _find_worktree_root(Path(__file__))
+    except FileNotFoundError:
+        return Path(_DEFAULT_PHASE_DEFERRAL)
+    return repo_root / _DEFAULT_PHASE_DEFERRAL
+
+
+def _load_phase_deferral(path: Path) -> dict[str, list[str]]:
+    """Load the location-keyed phase-deferral declaration (TKT-600b-1).
+
+    Args:
+        path: Path to the declaration YAML (e.g. config/phase_deferral.yaml).
+
+    Returns:
+        Mapping of location kind (e.g. ``"epic_member"``, ``"standalone"``)
+        to the list of phase-agent names deferred (not dispatched by the
+        drive) at that location.
+
+    Raises:
+        PhaseDeferralDeclarationError: When the file cannot be read/parsed,
+            or does not contain a YAML mapping. Deliberately never caught and
+            defaulted internally — a missing declaration must refuse
+            generation rather than silently substitute a built-in phase set
+            (TKT-600b-1's "must refuse rather than default" constraint).
+    """
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except (OSError, yaml.YAMLError) as exc:
+        raise PhaseDeferralDeclarationError(
+            f"could not load phase deferral declaration at {path}: {exc}"
+        ) from exc
+    if not isinstance(data, dict):
+        raise PhaseDeferralDeclarationError(  # noqa: TRY003
+            f"phase deferral declaration at {path} must be a YAML mapping, "
+            f"got {type(data).__name__}"
+        )
+    return data
+
+
+def _location_kind_for_destination(resolved_destination: str) -> str:
+    """Classify a resolved ticket destination into a phase_deferral.yaml key.
+
+    Args:
+        resolved_destination: Repo-relative path the ticket will finally
+            occupy.
+
+    Returns:
+        ``"epic_member"`` when the path contains an ``"epics"`` path segment
+        (i.e. the ticket lives under ``tickets/**/epics/EPIC-*/``); otherwise
+        ``"standalone"``.
+    """
+    return "epic_member" if "epics" in Path(resolved_destination).parts else "standalone"
+
+
+def _resolve_deferred_phases(
+    resolved_destination: "str | None",
+    phase_deferral_path: "Path | str | None",
+    location_kind: "str | None" = None,
+) -> set[str]:
+    """Resolve the set of phase agents deferred for one generation call.
+
+    Loads the location-keyed deferral declaration and returns the phase set
+    that applies to *resolved_destination*. When the declaration defers the
+    SAME set (including an empty set) for every location kind it names, the
+    location does not actually matter for this call, and the single common
+    set is returned even when *resolved_destination* is ``None`` — this is
+    TKT-600b-1-i's "a generation whose declared deferral set is empty for
+    every location has nothing to resolve and must not be blocked"
+    exemption, generalised to "identical for every location" rather than
+    hard-coded to "empty".
+
+    Args:
+        resolved_destination: The ticket's final repo-relative location, or
+            ``None`` when unresolved.
+        phase_deferral_path: Path to the declaration YAML, or ``None`` to use
+            :func:`_default_phase_deferral_path`.
+
+    Returns:
+        Set of phase-agent names deferred for this call.
+
+    Raises:
+        PhaseDeferralDeclarationError: propagated from :func:`_load_phase_deferral`.
+        UnresolvedDestinationError: the declaration defers a different phase
+            set per location (location-dependent) and *resolved_destination*
+            is ``None``.
+    """
+    path = (
+        Path(phase_deferral_path)
+        if phase_deferral_path is not None
+        else _default_phase_deferral_path()
+    )
+    declaration = _load_phase_deferral(path)
+    location_sets = [frozenset(v or []) for v in declaration.values()]
+
+    # An explicitly DECLARED kind. This is the path a caller takes when it
+    # knows what it is building but not where the file will finally sit —
+    # /build-ac generating a loose ticket knows it is standalone without
+    # knowing a folder. It is deliberately a declaration and NOT a default:
+    # defaulting to "standalone" when nobody says would classify every epic
+    # member as standalone (no caller passes a destination today), silently
+    # restoring the exact `pull-request: needed` defect TKT-600b exists to
+    # remove. A caller must state its case; silence still refuses.
+    if location_kind is not None:
+        if location_kind not in declaration:
+            raise UnresolvedDestinationError(
+                f"unknown location kind {location_kind!r}; the declaration at "
+                f"{path} names {sorted(declaration)}"
+            )
+        if resolved_destination is not None:
+            derived = _location_kind_for_destination(resolved_destination)
+            if derived != location_kind:
+                # Both were supplied and they disagree. The generator can see
+                # the contradiction, so it must not silently pick a winner.
+                raise UnresolvedDestinationError(
+                    f"contradictory location: --location-kind says "
+                    f"{location_kind!r} but --resolved-destination "
+                    f"{resolved_destination!r} classifies as {derived!r}"
+                )
+        return set(declaration.get(location_kind, []) or [])
+
+    if resolved_destination is not None:
+        derived_kind = _location_kind_for_destination(resolved_destination)
+        return set(declaration.get(derived_kind, []) or [])
+
+    if len(set(location_sets)) > 1:
+        affected = sorted(set().union(*location_sets))
+        raise UnresolvedDestinationError(
+            "the ticket's final location is unresolved and the phase "
+            "deferral declaration is location-dependent; the phase(s) "
+            f"whose status could not be determined: {affected}"
+        )
+
+    # Every declared location defers the same (possibly empty) set — there is
+    # nothing location-specific to resolve, so proceed without a destination.
+    return set(location_sets[0]) if location_sets else set()
+
+
 def _build_agents_map(
     assigned_agent: str,
     change_targets: list[str] | None = None,
@@ -754,6 +952,10 @@ def _build_agents_map(
     files_touched: list[str] | None = None,
     declares_side_effect: bool = False,
     has_authored_test_spec: bool = False,
+    resolved_destination: str | None = None,
+    phase_deferral_path: Path | str | None = None,
+    deferred_phases: list[str] | None = None,
+    location_kind: str | None = None,
 ) -> dict[str, str]:
     """Build the agents map for the ticket frontmatter.
 
@@ -801,14 +1003,57 @@ def _build_agents_map(
         has_authored_test_spec: When True, the AC carries an it-po-authored
             test_spec, so test-writer and test-runner are needed even though
             no production_code agent is in the chain. Default: False.
+        resolved_destination: The ticket's final repo-relative location (e.g.
+            ``tickets/00_inbox/epics/EPIC-Foo/01_bar.md``), distinct from a
+            staging ``--tickets-root``. Used with *phase_deferral_path* to
+            look up which phases the drive will not dispatch for this
+            location (TKT-600b-1). Only consulted when *deferred_phases* is
+            not given. Default: None (no location-aware deferral).
+        phase_deferral_path: Path to the location-keyed phase-deferral
+            declaration (default: config/phase_deferral.yaml resolved from
+            the worktree root). Only consulted when *deferred_phases* is not
+            given. Passing this (even without *resolved_destination*)
+            activates declaration-based deferral resolution — see
+            :func:`_resolve_deferred_phases`.
+        deferred_phases: Explicit set of phase-agent names to record as
+            excluded (``not_needed``) for this call, bypassing declaration
+            lookup entirely. Intended for callers that have already resolved
+            the deferred set themselves. Default: None.
 
     Returns:
-        Ordered dict suitable for YAML frontmatter serialisation.
+        Ordered dict suitable for YAML frontmatter serialisation. Every
+        agent in _CANONICAL_PHASE_ORDER receives an explicit entry — either
+        'needed' or 'not_needed' — never silently omitted (TKT-600b-1-ii).
+
+    Raises:
+        PhaseDeferralDeclarationError: propagated when a declaration lookup
+            is requested (*resolved_destination* or *phase_deferral_path*
+            given) and the declaration cannot be loaded.
+        UnresolvedDestinationError: propagated when a declaration lookup is
+            requested, the declaration is location-dependent, and
+            *resolved_destination* is None.
     """
     overrides: dict[str, str] = not_needed_overrides or {}
 
     if change_targets is not None and risk_surface is not None:
         # --- Computed path ---
+        # Location-keyed deferral (TKT-600b-1). Resolved only in the computed
+        # path — the legacy path below has no location-sensitive phase to
+        # defer, and a legacy call must never be made to refuse over a
+        # declaration lookup it never asked for.
+        if deferred_phases is not None:
+            effective_deferred: set[str] = set(deferred_phases)
+        elif (
+            resolved_destination is not None
+            or phase_deferral_path is not None
+            or location_kind is not None
+        ):
+            effective_deferred = _resolve_deferred_phases(
+                resolved_destination, phase_deferral_path, location_kind
+            )
+        else:
+            effective_deferred = set()
+
         # Resolve config paths
         if guardrail_config_path is None:
             # Try to locate the repo root relative to this script
@@ -1049,6 +1294,25 @@ def _build_agents_map(
         )
         doc_protected: set[str] = all_needed & _DOC_MANDATORY
 
+        # Location-keyed deferral (TKT-600b-1): a phase the drive will not
+        # dispatch for this ticket's resolved location is excluded from the
+        # record, PERIOD — unlike a hand-authored not_needed_override (which
+        # protection exists to stop an AC author sneaking past a mandatory
+        # gate), the deferral declaration states a fact about what the drive
+        # will actually run. TDD/side-effect/doc protection must not override
+        # it, or the record would claim a phase is needed that the drive will
+        # never dispatch for this location — the disagreement TKT-600b-1
+        # exists to close. This is the criterion's own second scenario made
+        # concrete: the declaration can name ANY phase, including one that
+        # would otherwise be mandatory-protected. The phase's entry is NOT
+        # deleted from the map; the catch-all branch in the phase_order walk
+        # below records it as explicit "not_needed" (TKT-600b-1-ii) rather
+        # than omitting it.
+        if effective_deferred:
+            all_needed -= effective_deferred
+            all_protected -= effective_deferred
+            doc_protected -= effective_deferred
+
         # Remove any agent that has an explicit not_needed override,
         # but protect all mandatory agents — TDD-mandated (BO-550-1-i) and
         # side-effect-mandated user-surface-smoker (BP-1100f-5) via all_protected,
@@ -1103,6 +1367,15 @@ def _build_agents_map(
                 agents[phase_agent] = "not_needed"
             elif phase_agent in all_needed:
                 agents[phase_agent] = "needed"
+            else:
+                # TKT-600b-1-ii: every phase the drive knows about (the
+                # canonical phase order) gets an explicit entry. A phase
+                # that is neither needed, protected, nor overridden is
+                # recorded as excluded rather than left out of the map —
+                # this is what makes a deferred phase (TKT-600b-1) and any
+                # other not-needed phase readable on their own, without
+                # consulting the drive or the file's location.
+                agents[phase_agent] = "not_needed"
 
         # Add any overrides for agents not already in the map
         for agent, status in overrides.items():
@@ -2181,6 +2454,46 @@ def _build_signoffs_section(agents: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
+def reject_phantom_signoff(agents: dict[str, str], comment_log: list) -> None:
+    """Reject an agents map that claims a sign-off no comment-log entry backs.
+
+    TKT-600b-2: a phase recorded 'signed_off' with no testimony behind it is
+    the phantom sign-off this project exists to prevent — a phase that never
+    ran, recorded as having passed, inside the very record the completion
+    gate trusts. It clears the completion halt exactly as effectively as the
+    correct 'not_needed' exclusion, so it must be rejected outright rather
+    than accepted as an alternative way to satisfy "the phase is no longer
+    outstanding".
+
+    Args:
+        agents: Agents map (agent name -> status).
+        comment_log: Entries already logged for this ticket. Each entry may
+            be a dict carrying an 'agent' key, or a raw string (e.g. a
+            '### ... — <agent> (status: ok)' comment heading) that mentions
+            the agent's name.
+
+    Raises:
+        ValueError: When any agent's status is 'signed_off' and no entry in
+            *comment_log* is attributable to that agent.
+    """
+    entries = comment_log or []
+    phantom = [
+        agent_name
+        for agent_name, status in agents.items()
+        if status == "signed_off"
+        and not any(
+            (isinstance(entry, dict) and entry.get("agent") == agent_name)
+            or (not isinstance(entry, dict) and agent_name in str(entry))
+            for entry in entries
+        )
+    ]
+    if phantom:
+        raise ValueError(  # noqa: TRY003
+            "phantom sign-off detected — agent(s) marked 'signed_off' with no "
+            f"backing comment-log entry: {sorted(phantom)}"
+        )
+
+
 def _load_valid_component_ids() -> frozenset[str]:
     """Load the set of valid component graph IDs from docs/components.json.
 
@@ -3215,7 +3528,112 @@ def _build_parser() -> argparse.ArgumentParser:
             "test-writer to test. Implies --dry-run. Exits non-zero on any FAIL."
         ),
     )
+    parser.add_argument(
+        "--resolved-destination",
+        dest="resolved_destination",
+        default=None,
+        help=(
+            "The ticket's FINAL repo-relative location (e.g. "
+            "tickets/00_inbox/epics/EPIC-Foo/01_bar.md), distinct from "
+            "--tickets-root which may be a staging root a later step moves "
+            "the file out of. Required whenever the phase-deferral "
+            "declaration (config/phase_deferral.yaml) is location-dependent "
+            "(TKT-600b-1-i); --tickets-root is never accepted as a "
+            "substitute. Not required for --dry-run / --verify previews, "
+            "which write no file."
+        ),
+    )
+    parser.add_argument(
+        "--location-kind",
+        dest="location_kind",
+        default=None,
+        choices=["standalone", "epic_member"],
+        help=(
+            "DECLARE which kind of location this ticket is being built for, "
+            "when you know the kind but not yet the path — /build-ac "
+            "generating a loose ticket knows it is 'standalone' without "
+            "knowing a folder. Satisfies the same requirement as "
+            "--resolved-destination without inventing a path. This is a "
+            "declaration, never a default: if neither this nor "
+            "--resolved-destination is given and the declaration is "
+            "location-dependent, generation still REFUSES (TKT-600b-1-i). "
+            "Defaulting to 'standalone' on silence would classify every epic "
+            "member as standalone and silently restore the "
+            "'pull-request: needed' defect this mechanism removes. Supplying "
+            "both is allowed only when they agree; a contradiction refuses."
+        ),
+    )
+    parser.add_argument(
+        "--phase-deferral-path",
+        dest="phase_deferral_path",
+        default=None,
+        help=(
+            "Path to the location-keyed phase-deferral declaration "
+            f"(default: {_DEFAULT_PHASE_DEFERRAL} relative to worktree)."
+        ),
+    )
     return parser
+
+
+def _build_agents_map_for_write_path(
+    assigned_agent: str,
+    *,
+    change_targets: list[str] | None,
+    risk_surface: str | None,
+    files_touched: list[str],
+    declares_side_effect: bool,
+    has_authored_test_spec: bool,
+    resolved_destination: str | None,
+    phase_deferral_path: str | None,
+    worktree: Path,
+    location_kind: str | None = None,
+) -> "tuple[dict[str, str] | None, str | None]":
+    """Build the agents map for main()'s ticket-writing path, or a refusal.
+
+    TKT-600b-1-i: unlike the --dry-run/--verify preview path (which never
+    passes a destination or declaration and so never refuses), the path that
+    actually persists a ticket always resolves the phase-deferral
+    declaration — even when ``--phase-deferral-path`` is omitted, which
+    resolves to the real default declaration rather than skipping the check.
+
+    Args:
+        assigned_agent: The agent name from the AC's assigned_agent field.
+        change_targets: Normalised change_target list from the AC.
+        risk_surface: risk_surface field from the AC.
+        files_touched: Computed files_touched list.
+        declares_side_effect: declares_side_effect field from the AC.
+        has_authored_test_spec: Whether the AC carries an authored test_spec.
+        resolved_destination: ``--resolved-destination`` CLI value, or None.
+        phase_deferral_path: ``--phase-deferral-path`` CLI value, or None.
+        worktree: Resolved worktree root, used to default phase_deferral_path.
+
+    Returns:
+        ``(agents_map, None)`` on success, or ``(None, error_message)`` when
+        generation must refuse — *error_message* is ready to print to stderr.
+    """
+    resolved_phase_deferral_path = (
+        Path(phase_deferral_path) if phase_deferral_path else worktree / _DEFAULT_PHASE_DEFERRAL
+    )
+    try:
+        agents = _build_agents_map(
+            assigned_agent,
+            change_targets=change_targets,
+            risk_surface=risk_surface,
+            files_touched=files_touched,
+            declares_side_effect=declares_side_effect,
+            has_authored_test_spec=has_authored_test_spec,
+            resolved_destination=resolved_destination,
+            phase_deferral_path=resolved_phase_deferral_path,
+            location_kind=location_kind,
+        )
+    except PhaseDeferralDeclarationError as exc:
+        return None, (
+            f"ERROR: generation refused — phase deferral declaration could not "
+            f"be loaded: {exc}"
+        )
+    except UnresolvedDestinationError as exc:
+        return None, f"ERROR: generation refused — {exc}"
+    return agents, None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -3265,6 +3683,13 @@ def main(argv: list[str] | None = None) -> int:
         change_targets = _normalize_change_target(ac)
         risk_surface = ac.get("risk_surface") or None
         declares_side_effect = bool(ac.get("declares_side_effect", False))
+        # Pass the deferral inputs through, exactly as the write path does. A
+        # preview that omits them reports `pull-request: needed` for a ticket
+        # that would be written with `not_needed` — a preview that misstates the
+        # very field this mechanism exists to get right, and misstates it in the
+        # direction of the original defect. --verify's readiness report is read
+        # by people deciding whether a ticket is sound, so the two paths must
+        # agree on their inputs.
         agents = _build_agents_map(
             assigned_agent,
             change_targets=change_targets,
@@ -3272,6 +3697,9 @@ def main(argv: list[str] | None = None) -> int:
             files_touched=files_touched,
             declares_side_effect=declares_side_effect,
             has_authored_test_spec=_has_authored_test_spec(ac),
+            resolved_destination=args.resolved_destination,
+            phase_deferral_path=args.phase_deferral_path,
+            location_kind=args.location_kind,
         )
         frontmatter = _build_frontmatter(
             ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
@@ -3305,14 +3733,37 @@ def main(argv: list[str] | None = None) -> int:
     change_targets = _normalize_change_target(ac)
     risk_surface = ac.get("risk_surface") or None
     declares_side_effect = bool(ac.get("declares_side_effect", False))
-    agents = _build_agents_map(
+    built_agents, refusal = _build_agents_map_for_write_path(
         assigned_agent,
         change_targets=change_targets,
         risk_surface=risk_surface,
         files_touched=files_touched,
         declares_side_effect=declares_side_effect,
         has_authored_test_spec=_has_authored_test_spec(ac),
+        resolved_destination=args.resolved_destination,
+        phase_deferral_path=args.phase_deferral_path,
+        location_kind=args.location_kind,
+        worktree=worktree,
     )
+    if refusal is not None:
+        print(refusal, file=sys.stderr)
+        return 1
+    if built_agents is None:
+        # The contract is (map, None) or (None, refusal); (None, None) is a bug
+        # in the builder, not a caller error. Naming it here costs one branch and
+        # turns an obscure TypeError several frames downstream into a stated
+        # cause.
+        print(
+            "ERROR: internal: the agents-map builder returned neither a map nor "
+            "a refusal. This is a defect in _build_agents_map_for_write_path.",
+            file=sys.stderr,
+        )
+        return 1
+    # Bound to a distinct name above, then narrowed here: the dry-run branch
+    # earlier in this function already binds `agents` to a plain dict, so
+    # assigning an Optional straight onto that name is a type error even though
+    # the two branches never both run.
+    agents = built_agents
     frontmatter = _build_frontmatter(
         ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
     )
@@ -3480,5 +3931,30 @@ DECISION HISTORY
   entire documentation-expert subsection when genre resolution yields an
   empty list, instead of emitting a phantom '(unspecified genre)' contract
   line. (#BO-2200c-5)
+- 2026-09-01 [python-coder]: Added location-keyed phase deferral (TKT-600b-1
+  family). _build_agents_map gained resolved_destination / phase_deferral_path
+  / deferred_phases parameters; a phase the new config/phase_deferral.yaml
+  declaration defers for a location (e.g. pull-request for an epic-member
+  ticket) is now recorded as an explicit "not_needed" entry rather than left
+  "needed" or silently omitted (TKT-600b-1-ii's catch-all: every canonical
+  phase agent now gets an explicit entry). Added PhaseDeferralDeclarationError
+  and UnresolvedDestinationError so a missing declaration or an unresolved
+  final location REFUSES generation instead of defaulting (TKT-600b-1-i);
+  main()'s ticket-writing path (never --dry-run/--verify) always resolves the
+  declaration and requires --resolved-destination whenever it is
+  location-dependent. Added --resolved-destination and --phase-deferral-path
+  CLI flags. Added reject_phantom_signoff() so an agent recorded "signed_off"
+  with no backing comment-log entry is rejected rather than accepted as an
+  alternative to "not_needed" (TKT-600b-2). A standalone ticket's own
+  pull-request phase is unaffected (TKT-600b-3). KNOWN FOLLOW-UP: this makes
+  main()'s write path refuse for any caller that omits --resolved-destination,
+  including scripts/goal_to_epic.py (named as a co-requisite file in
+  TKT-600b-1-i's doc_links but out of this batch's authored test scope) and a
+  handful of pre-existing non-dry-run generator tests
+  (unit_tests/test_generate_ticket_from_ac.py::TestEndToEndGeneratorComputedMap
+  and three cases in unit_tests/ac_store/test_generator_frontmatter_gaps.py)
+  that call main() without the new flag — each needs a one-line
+  --resolved-destination addition. (#TKT-600b-1) (#TKT-600b-1-i) (#TKT-600b-1-ii)
+  (#TKT-600b-2) (#TKT-600b-3)
 ====================================================================
 """
