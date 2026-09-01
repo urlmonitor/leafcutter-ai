@@ -24,10 +24,23 @@ ARCHITECTURE: Invoked as `python check_package_surface_declaration.py
     it is a `commit-msg`-stage hook. Staged files come from a real
     `git diff --cached --name-only --diff-filter=AM`; the staged and HEAD
     revisions of each watched registry are read with `git show`, and a NEW entry
-    is a key present in the staged document and absent from HEAD. Citations are
-    parsed from the commit-message file and from any staged ticket body in the
-    same commit. The watched-registry enumeration and every pure helper live in
-    _package_surface_registry.py, deployed alongside this file.
+    is a key present in the staged document and absent from EVERY parent of the
+    commit being written. Citations are parsed from the commit-message file and
+    from any staged ticket body in the same commit. The watched-registry
+    enumeration and every pure helper live in _package_surface_registry.py,
+    deployed alongside this file.
+
+    MERGE COMMITS (KI-BP-20260901-0812): at the commit-msg stage the index
+    already holds the merged tree, but HEAD still names only the FIRST parent —
+    the commit being merged INTO. `git diff --cached` against HEAD alone
+    therefore reports every entry the SECOND parent (`MERGE_HEAD`) already
+    declared as "new", because it is new relative to HEAD even though it is not
+    new to the repository. A merge is detected via `git rev-parse -q --verify
+    MERGE_HEAD` (the same probe `check_contract_shrinking.py` and
+    `check_ac_limits.py` use); when it succeeds, `MERGE_HEAD` is added to the
+    set of parent revisions an entry must be absent from before it counts as
+    "new". An ordinary, single-parent commit is unaffected — its parent set is
+    just `["HEAD"]`, identical to the pre-fix behaviour.
 
     Exit 0 = allowed; exit 1 = refused. A change touching no watched registry, or
     touching one without adding an entry, exits 0 and says it had NOTHING TO
@@ -44,6 +57,9 @@ DECISION HISTORY:
   - 2026-08-19 [python-coder/ACS-100i-8]: Created alongside the ACS-100i-6
     trigger narrowing. Registration-versus-declaration reconciliation, with
     omission and denial reported as the different acts they are (ACS-100i-8-i).
+  - 2026-09-01 [python-coder/KI-BP-20260901-0812]: "New" is now scoped to every
+    parent of the commit, not just HEAD, so a merge that carries an
+    already-declared upstream registration no longer demands a fresh citation.
 """
 
 from __future__ import annotations
@@ -136,26 +152,71 @@ def _blob(repo: Path, revision_spec: str) -> str | None:
     return out if code == 0 else None
 
 
-def _new_entries(repo: Path, rel_path: str) -> list[str]:
-    """Return the entry keys ``rel_path`` gains between HEAD and the index.
+def _is_merge_in_progress(repo: Path) -> bool:
+    """Return whether the commit being written has a second parent.
+
+    Args:
+        repo: Repository root.
+
+    Returns:
+        True when ``MERGE_HEAD`` resolves (a merge commit is being written),
+        False otherwise — including when the probe itself fails, which treats
+        an undeterminable state as an ordinary commit rather than silently
+        widening the parent set.
+    """
+    code, _ = _git(repo, "rev-parse", "-q", "--verify", "MERGE_HEAD")
+    return code == 0
+
+
+def _parent_revisions(repo: Path) -> list[str]:
+    """Return the revision specs naming every parent of the commit in progress.
+
+    Args:
+        repo: Repository root.
+
+    Returns:
+        ``["HEAD"]`` for an ordinary commit; ``["HEAD", "MERGE_HEAD"]`` while a
+        merge is in progress. `MERGE_HEAD` is the second parent — the branch
+        being merged in — and is what lets a merge-carried entry be recognised
+        as already existing rather than newly registered by this commit. This
+        mirrors the ``check_contract_shrinking.py`` / ``check_ac_limits.py``
+        merge probe rather than reading `.git/MERGE_HEAD` directly, so an
+        octopus merge's additional parents are not enumerated — the same scope
+        those sibling hooks accept.
+    """
+    revisions = ["HEAD"]
+    if _is_merge_in_progress(repo):
+        revisions.append("MERGE_HEAD")
+    return revisions
+
+
+def _new_entries(repo: Path, rel_path: str, parent_revisions: list[str]) -> list[str]:
+    """Return the entry keys ``rel_path`` gains that no parent already has.
 
     Args:
         repo: Repository root.
         rel_path: Repo-relative path of a watched registry.
+        parent_revisions: Revision specs for every parent of the commit being
+            written (see ``_parent_revisions``). An entry present in ANY named
+            parent is not "new" — this is what stops a merge that carries an
+            already-declared upstream registration from being treated as a
+            fresh one just because it is new relative to HEAD alone.
 
     Returns:
-        Sorted keys present in the staged document and absent from HEAD. An
-        edited or removed entry produces none — the obligation attaches to
-        bringing a surface into existence, not to maintaining one.
+        Sorted keys present in the staged document and absent from every
+        parent. An edited or removed entry produces none — the obligation
+        attaches to bringing a surface into existence, not to maintaining one.
     """
     containers = WATCHED_REGISTRIES[rel_path]
     staged = registry_entry_keys(
         parse_registry_document(_blob(repo, f":{rel_path}")), containers
     )
-    head = registry_entry_keys(
-        parse_registry_document(_blob(repo, f"HEAD:{rel_path}")), containers
-    )
-    return sorted(staged - head)
+    known: set[str] = set()
+    for revision in parent_revisions:
+        known |= registry_entry_keys(
+            parse_registry_document(_blob(repo, f"{revision}:{rel_path}")), containers
+        )
+    return sorted(staged - known)
 
 
 def _citations(repo: Path, commit_msg_file: Path, staged: list[str]) -> list[str]:
@@ -364,7 +425,8 @@ def main(argv: list[str] | None = None) -> int:
     staged = _staged_paths(repo)
     touched = [p for p in staged if p in WATCHED_REGISTRIES]
 
-    additions = {p: keys for p in touched if (keys := _new_entries(repo, p))}
+    parents = _parent_revisions(repo)
+    additions = {p: keys for p in touched if (keys := _new_entries(repo, p, parents))}
     if not additions:
         return _nothing_to_evaluate(touched)
 

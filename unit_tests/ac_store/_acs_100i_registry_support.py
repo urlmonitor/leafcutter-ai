@@ -226,6 +226,76 @@ def stage_unrelated_edit(repo: Path) -> None:
     _git(repo, "add", "docs/notes.md")
 
 
+def current_branch(repo: Path) -> str:
+    """Return the name of the branch ``repo``'s HEAD currently points at."""
+    return _git(repo, "symbolic-ref", "--short", "HEAD").stdout.strip()
+
+
+def stage_merge_carrying_new_agent(repo: Path, agent_id: str) -> None:
+    """Leave ``repo`` mid-merge, carrying an entry the OTHER parent already has.
+
+    Reproduces KI-BP-20260901-0812: a real, diverged two-parent merge where the
+    only "new relative to HEAD" registry entry was registered by an earlier,
+    already-landed commit on the branch being merged in (``MERGE_HEAD``) — not
+    by this merge. Uses ``git merge --no-commit`` so the merge is left staged
+    with ``MERGE_HEAD`` present and uncommitted, exactly the state a
+    ``commit-msg`` hook observes for a real merge commit before it is written.
+
+    Args:
+        repo: Repo produced by :func:`make_repo`, on its base branch.
+        agent_id: Id of the agent entry to register on the base branch and then
+            merge in.
+    """
+    base_branch = current_branch(repo)
+
+    _git(repo, "checkout", "-b", "feature-branch")
+    notes = repo / "docs" / "feature-notes.md"
+    notes.parent.mkdir(parents=True, exist_ok=True)
+    notes.write_text("Unrelated feature-branch work.\n", encoding="utf-8")
+    _git(repo, "add", "docs/feature-notes.md")
+    _git(repo, "commit", "-q", "-m", "chore: unrelated feature-branch change")
+
+    _git(repo, "checkout", base_branch)
+    stage_new_agent(repo, agent_id)
+    _git(repo, "commit", "-q", "-m", f"feat(agents): add {agent_id} directly to base")
+
+    _git(repo, "checkout", "feature-branch")
+    merge = subprocess.run(
+        ["git", "-C", str(repo), "merge", "--no-commit", "--no-ff", base_branch],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert merge.returncode == 0, (
+        f"expected a clean, conflict-free merge; got {merge.returncode}: "
+        f"{merge.stdout}{merge.stderr}"
+    )
+
+
+def stage_merge_with_genuinely_new_agent(
+    repo: Path, carried_agent_id: str, new_agent_id: str
+) -> None:
+    """Leave ``repo`` mid-merge, carrying one entry AND introducing a fresh one.
+
+    Builds on :func:`stage_merge_carrying_new_agent` (``carried_agent_id`` is
+    already on the base branch being merged in, so it must NOT need a
+    citation), then additionally stages ``new_agent_id`` — an entry absent from
+    BOTH parents, added only while the merge is in progress. This is the
+    negative control: the merge-scoping fix must still refuse on
+    ``new_agent_id``, because nothing carried it in from either side.
+
+    Args:
+        repo: Repo produced by :func:`make_repo`, on its base branch.
+        carried_agent_id: Id already registered on the base branch (must be
+            waved through with no citation).
+        new_agent_id: Id that exists in neither parent (must still be refused
+            without a declaring citation).
+    """
+    stage_merge_carrying_new_agent(repo, carried_agent_id)
+    stage_new_agent(repo, new_agent_id)
+
+
 def run_check(repo: Path, commit_message: str) -> HookRun:
     """Run the declaration check against ``repo``'s staged state.
 
