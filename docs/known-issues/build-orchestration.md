@@ -2340,6 +2340,15 @@ already red, and returned three high-confidence findings about the diff — good
 three real — while never mentioning that the branch did not build. Had those findings been
 clean, the lane would have committed and opened a PR with 19 failing tests.
 
+**The 19 tests were not the whole of it, and that is the part worth reading.** Repairing them
+took four more rounds and surfaced three further defects the lane's report said nothing about,
+including a regression against `BO-300a-5` — an ALREADY-COMPLETED criterion — and an unbounded
+loop with no cap and no operator-visible error. Six defects in total on a build the lane
+reported as `status: ok, gates green`. So the scoped gate does not merely miss "some other
+tests": it misses whether the change is correct at all, while its report reads as a verdict
+that it is. Treat the number 19 in this entry as the count that was VISIBLE at the time, not
+the count that existed.
+
 **Not undetected forever — detected late, behind a green.** `Test suite (pytest)` is a required
 CI check and runs the full suite, so the PR would have gone red. The damage is ordering and
 trust: the lane declares its own work sound before anything has checked that claim, and an
