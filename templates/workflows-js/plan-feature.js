@@ -1547,9 +1547,12 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
     }
     // Shape valid: consult the durable record via agent dispatch (body has no fs access per ADR-024).
+    // Repository-anchored (ACD-2100a-4): resolves the script AND passes an
+    // explicit --store-dir in the SAME dispatched command, never the raw
+    // `{{config.output_root}}`-relative placeholder (see buildPauseStoreCommand()).
     const _readPrompt =
       "Read the durable pause record for this run. Run exactly:\n" +
-      "  python {{config.output_root}}/scripts/pause_store.py read --run-id " + runId + "\n" +
+      "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
     const _rawRec = await agent(_readPrompt, { agentType: "status-checker", label: "read-pause-record" });
     let recCheck;
@@ -1619,11 +1622,16 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
     question: question, context: context,
     status: "paused_awaiting_input",
   };
+  // Repository-anchored (ACD-2100a-4): resolves the script AND passes an
+  // explicit --store-dir in the SAME dispatched command, never the raw
+  // `{{config.output_root}}`-relative placeholder (see buildPauseStoreCommand()),
+  // so a write issued from inside a linked git worktree lands in the
+  // project's own store rather than nowhere reachable / under the worktree.
   const _persistPrompt =
     "Interactive gate '" + gateId + "' has no reachable human answerer. " +
     "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
-    "  python {{config.output_root}}/scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
-    "That writes .leafcutter/paused_runs/" + runId + ".json. Return the command's JSON stdout.";
+    "  " + buildPauseStoreCommand("write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'") + "\n" +
+    "That writes to the repository's own paused_runs store. Return the command's JSON stdout.";
   await agent(_persistPrompt, { agentType: "status-checker", label: "pause-persist" });
 
   // VERIFY THE PERSIST — do not take the write on trust.
@@ -1637,9 +1645,13 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
   // proves the record is retrievable rather than merely that a command exited.
   let _persistVerified = false;
   try {
+    // Repository-anchored (ACD-2100a-4): same buildPauseStoreCommand() the
+    // write above and resolveGate()'s resume-check read use, so the
+    // read-back verify can never disagree with where the write actually
+    // landed.
     const _verifyRaw = await agent(
       "Confirm a pause record was persisted. Run exactly:\n" +
-      "  python {{config.output_root}}/scripts/pause_store.py read --run-id " + runId + "\n" +
+      "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.",
       { agentType: "status-checker", label: "pause-persist-verify" }
     );
@@ -1768,9 +1780,12 @@ function _buildRepoRootResolutionSnippet(targetDescription) {
  * buildRepoAnchoredReadCommand() below, for sites that need the file's
  * contents rather than its path) — this file's worktree-setup step consumes
  * it directly below, and the Pre-Stage-0 registry-permission read
- * (ACD-2100a-3) consumes buildRepoAnchoredReadCommand(); ACD-2100a-4's
- * pause-store reads/writes are the remaining sibling call site named in this
- * AC's contract and are expected to consume it too.
+ * (ACD-2100a-3) consumes buildRepoAnchoredReadCommand(). ACD-2100a-4's
+ * pause-store reads/writes reuse this SAME _buildRepoRootResolutionSnippet()
+ * fragment via the sibling buildPauseStoreCommand() below, rather than this
+ * function directly, because each pause-store dispatch must resolve the
+ * script's location AND run it (plus an explicit --store-dir) in one
+ * combined shell invocation.
  *
  * @param {string} relPath - Path under the repo's `.leafcutter/` support
  *                            directory, e.g. "scripts/setup_ticket_worktree.py".
@@ -1818,6 +1833,52 @@ function buildRepoAnchoredReadCommand(relPath) {
     "exit 1; " +
     "fi; " +
     "cat \"$SCRIPT\""
+  );
+}
+
+/**
+ * Build the single-line POSIX-sh command that resolves BOTH the
+ * `pause_store.py` script's repository-anchored location AND the
+ * repository-anchored `paused_runs` store directory it must read/write, then
+ * invokes `python "$SCRIPT" <subcommandArgs> --store-dir "$STORE_DIR"` --
+ * all within the SAME shell invocation the dispatched agent runs, so a
+ * single `agent()` call both resolves and executes and the resolution can
+ * never silently drift from the invocation it protects (ACD-2100a-4,
+ * extending ACD-2100a-1 / ACD-2100a-3's shared
+ * _buildRepoRootResolutionSnippet() to the pause-store's three sites: the
+ * resume-check read in resolveGate(), the write in pauseAtGate(), and the
+ * read-back verification in pauseAtGate()).
+ *
+ * Passing an explicit `--store-dir` (rather than relying on pause_store.py's
+ * own `git rev-parse --show-toplevel`-derived default) matters even once the
+ * script itself is found: `--show-toplevel` reports the WORKTREE's own
+ * directory when run from inside a linked git worktree, not the repository
+ * root every worktree shares (see _buildRepoRootResolutionSnippet's own
+ * rationale for `--git-common-dir` vs `--show-toplevel`, KI-ACD-009 cause 1)
+ * -- so a writer started in a worktree and a reader started at the project
+ * root must both be handed the SAME repository-anchored store directory
+ * rather than each deriving their own from their own cwd.
+ *
+ * @param {string} subcommandArgs - The pause_store.py subcommand and its own
+ *                                   arguments, e.g. "read --run-id foo" or
+ *                                   "write --run-id foo --record '...'".
+ * @returns {string} A single-line POSIX shell command.
+ */
+function buildPauseStoreCommand(subcommandArgs) {
+  const target = ".leafcutter/scripts/pause_store.py";
+  return (
+    _buildRepoRootResolutionSnippet(target) +
+    "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
+    "if [ ! -f \"$SCRIPT\" ]; then " +
+    "echo \"Could not resolve a repository-anchored " + target + " (looked for: $SCRIPT)\" >&2; " +
+    "exit 1; " +
+    "fi; " +
+    "STORE_DIR=\"$REPO_ROOT/.leafcutter/paused_runs\"; " +
+    // `--store-dir` is defined on pause_store.py's TOP-LEVEL parser, not on
+    // the write/read subparsers, so argparse requires it to precede the
+    // subcommand name -- placing it after (e.g. "write ... --store-dir DIR")
+    // is rejected as an unrecognized argument.
+    "python \"$SCRIPT\" --store-dir \"$STORE_DIR\" " + subcommandArgs
   );
 }
 
