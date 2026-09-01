@@ -1,0 +1,141 @@
+id: BO-3700
+title: "Work that becomes necessary while a ticket is being driven is still done, instead of being decided against before it was known about"
+component: build-orchestration
+components:
+  - build_orchestration
+status: active
+level: L2
+readiness: approved
+priority: high
+work_status: todo
+origin_agent: BrainCandy
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given driveTicketPhases() in templates/workflows-js/build-feature.js computes
+    its phase list once, before any phase runs, and then iterates that captured
+    array
+  And a running phase can promote another agent to `needed` in the ticket's
+    frontmatter — which is precisely what architect-review does when it concludes
+    an ADR or a diagram is required
+  When a phase promotes an agent to `needed` after the drive has started
+  Then the driver MUST dispatch that agent before it concludes the ticket
+  And the ticket MUST NOT be reported incomplete on the ground that an agent "is
+    still needed and was never dispatched" when the driver itself was told it had
+    become needed
+
+  Given the post-dispatch record read-back already returns `needed_phases` and
+    the driver already receives it after every phase
+  When a phase completes
+  Then the pending set MUST be re-derived from that reply rather than from the
+    opening snapshot
+  And an agent that is already signed off or already dispatched in this drive
+    MUST NOT be dispatched again as a result of appearing in that reply
+
+  Given a newly-promoted agent whose canonical priority is EARLIER than the phase
+    that promoted it (adr-author is priority 2; architect-review, which promotes
+    it, is priority 4)
+  When the pending set is re-derived
+  Then the newly-promoted agent MUST be dispatched next, ahead of later-priority
+    phases still outstanding, so a decision taken at priority 4 is not defeated by
+    its subject sitting at priority 2
+
+  Given no phase promotes anything during a drive
+  When the ticket completes
+  Then the dispatch sequence MUST be identical to the sequence produced before
+    this criterion existed, so the ordinary path is unchanged
+
+  Given a phase promotes an agent that is NOT a known phase agent
+  When the pending set is re-derived
+  Then that name MUST be ignored rather than dispatched, and the drive MUST NOT
+    fail on its account
+
+  Given the JS workflow driver harness at
+    unit_tests/prompt_assembly/_driver_harness.py
+  When BO-3700 is verified
+  Then the covering test MUST execute build-feature.js's own top-level body
+    through the harness, with a stubbed phase that really promotes an agent in the
+    real on-disk record, and assert on the observed dispatch sequence
+  And a grep-only / structural assertion over the JS source MUST NOT be accepted
+    as coverage for this AC
+test_required: true
+test_spec:
+  - name: test_agent_promoted_mid_drive_is_dispatched_before_the_ticket_concludes
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The defect itself — an agent promoted to needed after the drive started must actually run."
+  - name: test_promoted_agent_with_earlier_priority_runs_next_not_never
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "adr-author at priority 2 promoted by architect-review at priority 4 is the live case; a forward-only walk is already past that slot."
+  - name: test_drive_with_no_promotion_dispatches_the_identical_sequence
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The ordinary path is unchanged — the guard against this fix widening dispatch generally."
+  - name: test_already_signed_off_agent_named_as_needed_is_not_redispatched
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Re-deriving the pending set from the record each phase must not loop or re-run completed work."
+  - name: test_unknown_agent_name_in_needed_phases_is_ignored_not_dispatched
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The record is agent-written text; an unrecognised name must not become a dispatch."
+  - name: test_mid_drive_promotion_is_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "The re-derivation is exercised by executing build-feature.js's own top-level body, not an extracted helper."
+covered_by: []
+implemented_by: []
+notes: |
+  FIELD EVIDENCE — observed 2026-09-01, EPIC-TheNumberingGuaranteeHoldsAtEveryStage.
+  Two of four tickets in batch 1 (GE-122d-3, BP-900h-6) died on this. In both,
+  architect-review ran, concluded an ADR was required, set
+  `agents.adr-author: needed`, and adr-author was never dispatched. python-coder
+  then correctly refused to write code against an unrecorded contract, and the
+  drive concluded:
+
+    adr-author ('adr-author' is still needed and was never dispatched, so the
+    record carries no sign-off entry for it)
+
+  — a complaint about a state the driver itself created and then declined to act on.
+
+  THE SIGNAL WAS ALREADY THERE. From the same run's journal, a read-back reply the
+  driver received and parsed AFTER architect-review signed off:
+
+    "needed_phases":["ac-fulfillment-gate","ac-validator","adr-author","commit",
+                     "documentation-expert","documentation-verifier","pr-reviewer",
+                     "pull-request","python-coder","test-runner","test-writer"]
+
+  adr-author is named. Nothing consumes it: the read-back feeds the COMPLETION
+  decision, not the DISPATCH decision, and no code path joins the two. This is
+  therefore a wiring fix, not new machinery — the reply, the parse and the schema
+  field all exist already.
+
+  TWO DEFECTS, ONE SYMPTOM. Freezing the list is one. The other is that phaseOrder
+  places adr-author at 2 and architecture-diagram-author at 3 while
+  architect-review — the phase that DECIDES whether either is needed — sits at 4.
+  Even with a live pending set, a forward-only walk is past both slots by the time
+  the decision exists. The third criterion above binds the ordering half; fixing
+  only the freeze would leave the ticket still stuck.
+
+  DISTINCT FROM KI-BO-025 / BO-3100. KI-BO-025 records the EPIC-level analogue —
+  the driver asks its planner for one set of ready tickets and never asks again.
+  This record is the TICKET-level case: one ticket's phase list, frozen within a
+  single driveTicketPhases() call. Same shape, different loop, different fix site;
+  neither closes the other.
+
+  SCOPE. templates/workflows-js/build-feature.js only. build-ticket.js is the
+  declared TWIN of this loop and will need the same change, but it has no red
+  baseline in this pass. Recorded as follow-up rather than silently widened.

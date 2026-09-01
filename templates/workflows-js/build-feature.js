@@ -187,6 +187,14 @@ const RECORD_READBACK_SCHEMA = {
     // predates this field simply never populates it, and every existing
     // caller of readTicketRecordBack already tolerates an absent key.
     depends_on: { type: "array", items: { type: "string" } },
+    // implementation_task_agents (BO-3000a): the `### <agent>` subsection
+    // headings under the record's `## Implementation Tasks` section — the
+    // channel templates/agents/python-coder.md §"Test Delegation" tells a coder
+    // to name a handoff target through. Optional, exactly like depends_on: a
+    // reader that predates this field never populates it and every existing
+    // caller tolerates its absence, so the handoff path simply falls back to
+    // refusing as it did before.
+    implementation_task_agents: { type: "array", items: { type: "string" } },
     error: { type: "string" },
   },
   required: ["readable"],
@@ -436,6 +444,118 @@ function selectDispatchPhases(orderedPhases, isEpicMember) {
     return phases;
   }
   return phases.filter((p) => p.agent !== "pull-request");
+}
+
+/**
+ * Absorb phases the ticket's record says became `needed` AFTER the drive began.
+ *
+ * BO-3700. driveTicketPhases() used to compute its phase list once, before any
+ * phase ran, and then iterate that captured array. A phase promoted to `needed`
+ * mid-drive was therefore never dispatched — the list it would have joined had
+ * already been fixed. `architect-review` promotes `adr-author` exactly this way
+ * whenever it concludes an ADR is required, so the driver routinely created a
+ * blocker it then refused to clear, and reported the ticket incomplete because
+ * "adr-author is still needed and was never dispatched".
+ *
+ * The signal was never missing. The post-dispatch read-back already returns
+ * `needed_phases`, and the driver already receives and parses it after every
+ * phase — it simply fed the COMPLETION decision and never the DISPATCH
+ * decision. This function is the wire between the two; it adds no new dispatch,
+ * no new schema field and no new agent call.
+ *
+ * Mutates `pending` in place and re-sorts it, because a promoted phase usually
+ * has an EARLIER canonical priority than the phase that promoted it
+ * (adr-author is 2; architect-review, its decider, is 4). Appending without
+ * re-sorting would run it after the coder that depends on it, which is the same
+ * failure wearing a different hat.
+ *
+ * Four things are deliberately NOT absorbed:
+ *   - a name that is not a known phase agent (records are agent-written text);
+ *   - a phase already attempted in this drive (no loops, no re-runs);
+ *   - a phase already planned or pending (no duplicates);
+ *   - a deferred phase — `pull-request` is dropped for epic members by
+ *     selectDispatchPhases (BO-2700, one PR per epic), and re-absorbing it from
+ *     the record would silently undo that.
+ *
+ * @param {object} record — the read-back reply; ignored unless readable === true
+ * @param {Array<{agent: string, status: string}>} pending — mutated in place
+ * @param {Set<string>} known — every phase already planned, pending or attempted
+ * @param {Set<string>} attempted — phases dispatched in this drive
+ * @param {Array<string>} deferred — phases this drive must not dispatch
+ * @returns {Array<string>} the names newly absorbed, for logging
+ */
+function absorbPromotedPhases(record, pending, known, attempted, deferred) {
+  if (!record || record.readable !== true) return [];
+  const reported = Array.isArray(record.needed_phases) ? record.needed_phases : [];
+  const deferredSet = new Set(deferred || []);
+  const added = [];
+
+  for (const raw of reported) {
+    if (typeof raw !== "string") continue;
+    const agentName = raw.trim();
+    if (agentName === "") continue;
+    if (!phaseOrder.includes(agentName)) continue;
+    if (deferredSet.has(agentName)) continue;
+    if (attempted.has(agentName)) continue;
+    if (known.has(agentName)) continue;
+    known.add(agentName);
+    pending.push({ agent: agentName, status: "needed" });
+    added.push(agentName);
+  }
+
+  if (added.length > 0) {
+    const resorted = sortByCanonicalPriority(pending);
+    pending.length = 0;
+    pending.push(...resorted);
+  }
+  return added;
+}
+
+/**
+ * Resolve a handoff target from the ticket's own record.
+ *
+ * BO-3000a. `templates/agents/python-coder.md` §"Test Delegation" tells a coder
+ * to signal a handoff by writing a `### <agent>` block under the ticket's
+ * `## Implementation Tasks` section and returning `(status: handoff)`. It never
+ * mentions a `handoff_target` field in the JSON result. The driver read only
+ * that field, so an agent that followed its template exactly was refused for
+ * omitting something it was never told to send — and the one ticket in the
+ * observed run that produced working production code was dropped for it.
+ *
+ * Scoping to `## Implementation Tasks` is load-bearing, not tidiness. Real
+ * tickets also carry `## Agent Contracts` with its own `### <agent>`
+ * subsections (`### documentation-expert` is routine), and those declare
+ * documentation obligations rather than work handed to another phase. A scan
+ * over every `### <agent>` heading resolves the WRONG agent on an ordinary
+ * ticket. The record reader is what applies that scoping; this function
+ * consumes the already-scoped list.
+ *
+ * Returns exactly one name or null. Two candidates is ambiguous and yields
+ * null, because BO-3000's requirement that an unresolvable handoff fail closed
+ * is correct and is not relaxed here — guessing a re-dispatch target is worse
+ * than refusing. This narrows what "unresolvable" means; it does not widen what
+ * the driver is willing to guess.
+ *
+ * @param {object} record — the read-back reply
+ * @returns {{target: string|null, candidates: Array<string>}}
+ */
+function handoffTargetFromRecord(record) {
+  if (!record || record.readable !== true) return { target: null, candidates: [] };
+  const named = Array.isArray(record.implementation_task_agents)
+    ? record.implementation_task_agents
+    : [];
+  const candidates = [];
+  for (const raw of named) {
+    if (typeof raw !== "string") continue;
+    const agentName = raw.trim();
+    if (agentName === "") continue;
+    if (!phaseOrder.includes(agentName)) continue;
+    if (!candidates.includes(agentName)) candidates.push(agentName);
+  }
+  return {
+    target: candidates.length === 1 ? candidates[0] : null,
+    candidates,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -873,8 +993,10 @@ async function readTicketRecordBack(recordPath) {
     `"depends_on" (the frontmatter depends_on: list, as an array of ticket paths verbatim, or [] if the key is absent — do not resolve or interpret the paths), ` +
     `and "signoffs": one entry per sign-off heading in the ## Comments section, in the order they appear, as {"agent": "<name>", "status": "<status>"} ` +
     `(heading form: "### YYYY-MM-DD HH:MM — <agent> (status: <status>)"). List EVERY matching heading, including repeats — do not de-duplicate them. ` +
+    `Also report "implementation_task_agents": the "### <agent>" subsection headings that appear under the "## Implementation Tasks" section, as an array of the agent names verbatim, in the order they appear, or [] if that section is absent or has no such subsections. ` +
+    `Scope this STRICTLY to the "## Implementation Tasks" section: stop at the next "## " heading. Do NOT include "### <agent>" headings from "## Agent Contracts" or any other section — those declare documentation obligations, not work handed to another phase, and reporting one here makes the driver re-dispatch the wrong agent. ` +
     `If the record cannot be opened for any reason, return {"readable": false, "error": "<what went wrong>"} — an unreadable record is a real answer and will be treated as a failure, so never guess its contents. ` +
-    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "depends_on": [...], "signoffs": [...], "signed_off_agents": [...]}. ` +
+    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "depends_on": [...], "implementation_task_agents": [...], "signoffs": [...], "signed_off_agents": [...]}. ` +
     `Return ONLY the JSON object, no prose.`,
     {
       agentType: "status-checker",
@@ -1460,8 +1582,25 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
   const dispatchedAgents = [];
   let lastRecord = null;
 
-  for (const currentPhase of neededPhases) {
+  // BO-3700 — the pending set is a WORK-LIST, not a snapshot.
+  //
+  // This used to be `for (const currentPhase of neededPhases)`, iterating an
+  // array fixed before the first phase ran. A phase promoted to `needed` by a
+  // phase that was itself still running could therefore never be dispatched.
+  // `pendingPhases` is re-derived after every dispatch from the record
+  // read-back the driver already performs — see absorbPromotedPhases().
+  //
+  // `neededPhases` is left intact and still names the OPENING set: the
+  // completion decision reports against `plannedPhaseNames`, which starts as
+  // that set and grows only as promotions are genuinely absorbed.
+  const pendingPhases = [...neededPhases];
+  const plannedPhaseNames = new Set(neededPhases.map((p) => p.agent));
+  const attemptedPhases = new Set();
+
+  while (pendingPhases.length > 0) {
+    const currentPhase = pendingPhases.shift();
     const phaseName = currentPhase.agent;
+    attemptedPhases.add(phaseName);
     retryCounts[phaseName] = retryCounts[phaseName] || 0;
 
     // Test Requirements guard (BO-2000e-2): refuse to dispatch a coder phase
@@ -1575,6 +1714,27 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
       } else {
         lastRecord = null;
       }
+
+      // BO-3700 — the one line that makes the read-back's `needed_phases` mean
+      // something for dispatch. It has always been reported here; until now it
+      // fed only the completion decision, so a phase promoted mid-drive was
+      // named as outstanding in the final report and never actually run.
+      const promoted = absorbPromotedPhases(
+        phaseRecord,
+        pendingPhases,
+        plannedPhaseNames,
+        attemptedPhases,
+        deferredPhases
+      );
+      if (promoted.length > 0) {
+        log(
+          `'${phaseName}' promoted ${JSON.stringify(promoted)} to needed in ` +
+          `${worktreeTicketPath}. Added to this drive's pending set and ordered ` +
+          `by canonical priority, so a phase whose priority precedes its own ` +
+          `promoter still runs before the phases that depend on it (BO-3700).`
+        );
+      }
+
       const verdict = adjudicatePhaseAgainstRecord(phaseRecord, phaseName);
 
       // ------------------------------------------------------------------
@@ -1626,26 +1786,70 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
       // agent was never re-dispatched (see BO-3000 for the live incident).
       if (resultStatus === "handoff") {
         const handoffTarget = phaseResult.handoff_target;
-        const normalizedTarget =
+        let normalizedTarget =
           typeof handoffTarget === "string" ? handoffTarget.trim() : "";
-        const isKnownAgent =
+        let isKnownAgent =
           normalizedTarget !== "" && phaseOrder.includes(normalizedTarget);
 
+        // BO-3000a — fall back to the channel the AGENT TEMPLATE prescribes.
+        //
+        // templates/agents/python-coder.md §"Test Delegation" tells a coder to
+        // name its handoff target by writing a `### <agent>` block under the
+        // ticket's `## Implementation Tasks` section, and says nothing about a
+        // `handoff_target` field. Reading only the field meant an agent that
+        // followed its own template was refused for omitting something it was
+        // never asked to send. The record is consulted only when the explicit
+        // field did not resolve, so this changes no path that already worked.
+        let resolvedFromRecord = false;
+        let recordCandidates = [];
         if (!isKnownAgent) {
+          const fromRecord = handoffTargetFromRecord(phaseRecord);
+          recordCandidates = fromRecord.candidates;
+          if (fromRecord.target) {
+            normalizedTarget = fromRecord.target;
+            isKnownAgent = true;
+            resolvedFromRecord = true;
+            log(
+              `Phase '${phaseName}' returned 'status: handoff' with no usable ` +
+              `handoff_target field; resolved '${normalizedTarget}' from the ` +
+              `ticket's own '## Implementation Tasks' section, which is the ` +
+              `channel the agent template prescribes (BO-3000a).`
+            );
+          }
+        }
+
+        if (!isKnownAgent) {
+          // Still fail closed. BO-3000's requirement is unchanged: an
+          // unresolvable handoff halts rather than guessing. What changed is
+          // only what counts as resolvable.
+          const ambiguity =
+            recordCandidates.length > 1
+              ? ` The ticket's '## Implementation Tasks' section names more ` +
+                `than one known agent (${JSON.stringify(recordCandidates)}), ` +
+                `which is ambiguous — refusing to choose between them.`
+              : ` The ticket's '## Implementation Tasks' section named no ` +
+                `known phase agent either.`;
           return {
             status: "blocked",
             message:
               `Phase '${phaseName}' returned 'status: handoff' but named no ` +
-              `recognizable handoff_target ('${handoffTarget}'). Refusing to ` +
-              `guess a re-dispatch target and refusing to advance to the ` +
-              `next phase in phaseOrder. Inspect '${phaseName}'’s message ` +
-              `and the ticket's ## Comments for the intended target agent, ` +
-              `then re-run /build-feature.`,
+              `recognizable handoff_target ('${handoffTarget}').${ambiguity} ` +
+              `Refusing to guess a re-dispatch target and refusing to advance ` +
+              `to the next phase in phaseOrder. Inspect '${phaseName}'’s ` +
+              `message and the ticket's ## Comments for the intended target ` +
+              `agent, then re-run /build-feature.`,
             ticket_path: worktreeTicketPath,
             failing_phase: phaseName,
             blocker_detail: phaseResult,
+            handoff_candidates: recordCandidates,
             classification: "halt",
           };
+        }
+
+        // A target resolved from the record is a phase this drive will now run;
+        // the completion decision must expect it like any other (BO-3700).
+        if (resolvedFromRecord) {
+          plannedPhaseNames.add(normalizedTarget);
         }
 
         log(
@@ -1818,7 +2022,11 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
     recordPath: worktreeTicketPath,
     title,
     record: lastRecord,
-    basePhases: neededPhases.map((p) => p.agent),
+    // BO-3700: the opening set PLUS anything genuinely promoted mid-drive. A
+    // phase that became needed and was dispatched must be accounted for by the
+    // completion decision like any other; reporting only the opening set would
+    // let a promoted phase pass unexamined.
+    basePhases: [...plannedPhaseNames],
     deferredPhases,
     completedPhases,
     skippedPhases,
