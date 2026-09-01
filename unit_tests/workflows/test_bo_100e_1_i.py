@@ -316,8 +316,6 @@ class TestPrerequisiteFinishedBeforeThisRun(_PairCase):
                 "depends_on": [a_path],
             },
         )
-        paths = {A_NAME: a_path, B_NAME: b_path}
-
         reads = [
             {
                 # A is present and DONE; only B is offered for building.
