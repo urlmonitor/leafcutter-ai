@@ -39,7 +39,30 @@ breaking: false
 
 Plus an in-place correction to `KI-CG-024`.
 
+### Also in this PR (2026-09-01)
+
+Three more acceptance criteria landed after the entry above was written:
+
+- **`GE-120c-1`** — an out-of-process harness that runs the *deployed* checks from a real
+  second working copy, asserting only on observable subprocess output. Its self-demonstration
+  clause is covered: pointed at a source-tree-only check, the harness fails.
+- **`GE-120e-1`** — one shared authored-change derivation (`_authored_change.py`) that both
+  self-deriving checks consume, so "what did the author change" has a single answer. A git
+  failure reports could-not-check rather than re-widening to the whole staged tree. ADR-038.
+- **`GE-120e-2`** — the manifest now declares `change_set_source` on all 59 entries; absent is
+  a failure naming the entry, never a default. ADR-038 Amendment 2.
+
+Four `pr-reviewer` findings were closed along the way, three of them the same defect shape: a
+sibling test file authored against a speculative API the implementing ticket named differently.
+Also fixed an unreachable `except json.JSONDecodeError` branch shadowed by a preceding
+`except (OSError, ValueError)`, and a DECISION HISTORY entry that claimed a refactor the diff
+did not contain.
+
 ### Still open
 
-36 of 37 tickets; ticket 02's documentation target is a directory from an unrelated AC family;
-six tickets name source files as documentation targets.
+34 of 37 tickets. Three red-baseline test files are deferred out of this PR and recorded in the
+epic's Master_Plan with restore instructions — they cover ACs that are not built, and CI's
+`AC_ENFORCE_STRICT=1` correctly refuses to merge a red baseline (`KI-TQ-011`). Ticket 36's file
+additionally carries its own fixture bug (no `mkdir` before `git init`). Ticket 02's
+documentation target is a directory from an unrelated AC family; six tickets name source files
+as documentation targets.
