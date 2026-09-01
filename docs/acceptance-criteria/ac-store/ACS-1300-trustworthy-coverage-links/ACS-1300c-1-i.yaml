@@ -1,0 +1,113 @@
+id: ACS-1300c-1-i
+components:
+  - ac_store
+title: "Reusing an existing backfill that promotes finished state does not satisfy the refusal"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given an existing store tool whose apply step writes both a traceability link and the
+    finished-state value for every record it matches,
+  And a store on disk holding records that need a coverage entry restored,
+  When a build of the repair that reaches its write path by calling that apply step is
+    run out of process against that store,
+  Then the finished-state check fails, naming each record whose finished state changed
+    and the value it changed to,
+  And when a build of the repair that writes the coverage entry without calling that
+    apply step is run out of process against a copy of the same store from the same
+    starting bytes, the finished-state check passes,
+  And both runs restored the same coverage entries, so the difference in verdict is
+    attributable to the write path and not to a difference in what was repaired or in
+    what the two runs were given.
+depends_on:
+  - ACS-1300c-1
+doc_links:
+  - path: scripts/ac_store/cross_reference_audit.py
+    relationship: relates-to
+    status: exists
+    relevance: "THE CONCRETE TRAP, MEASURED 2026-09-01. _apply_backfill sets work_status to done for every high-confidence match it applies and logs the promotion as it goes. This tool is a named anti-duplication candidate for this tree, so an implementer told to reuse it will find a working apply path that does the right thing and one forbidden thing alongside it. Reuse its enumeration helpers — _detect_worktree_root, _load_ac_yamls, _write_report; never its apply."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-800c.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The criterion that tool's apply path implements — 'implemented_by receives the ticket path, work_status becomes done' — stated as a requirement. It is correct for its own tree and incompatible with this one, which is why ACD-800 was rejected as a parent. Reusing the code inherits the criterion."
+  - path: scripts/ac_store/backfill_components.py
+    relationship: relates-to
+    status: exists
+    relevance: "THE REUSE THAT IS SAFE, offered so this AC is not read as forbidding reuse generally. It writes one field by targeted line insertion, touches no finished state, and skips files already satisfying the condition — the shape the repair's write path should follow."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE VIOLATION USED AS THE FIXTURE IS REAL AND IS IN THIS REPOSITORY. Verified 2026-09-01: `scripts/ac_store/cross_reference_audit.py::_apply_backfill` sets `ac_data[\"work_status\"] = \"done\"` at line 457, logs the promotion, and re-serialises the record — violating the finished-state refusal and byte stability in one call. Do not substitute a hand-written stub that merely sets the field; the point of this record is that the violation is a WORKING apply path an implementer is actively advised to reuse."
+  - "THE FINISHED-STATE CHECK MUST BE AN INDEPENDENT ARTEFACT, NOT AN ASSERTION INSIDE ONE TEST. It has to be runnable against an arbitrary build of the repair, because this AC's whole content is running it twice against two builds. A check that exists only as a line in a test function cannot be pointed at a second build."
+  - "TWO BUILDS, ONE STARTING STATE. Both runs begin from byte-identical copies of the same store, and both must restore the SAME coverage entries. Asserting only that the forbidden build fails leaves open a check that fails on everything; asserting only that the permitted build passes leaves open a check that fires on nothing. The equal-repairs clause is what isolates the write path as the only difference."
+  - "THE FORBIDDEN BUILD IS A TEST FIXTURE AND MUST NOT BE SHIPPED OR IMPORTABLE FROM PRODUCTION CODE. It is the repair's write step pointed at the other apply function, constructed for the duration of the test and no longer. Nothing in `scripts/` may retain a reachable path to `_apply_backfill`."
+  - "THE FAILURE MESSAGE MUST NAME EACH RECORD WHOSE FINISHED STATE CHANGED AND THE VALUE IT CHANGED TO. A check that reports only 'finished state was written' leaves the implementer to find which of ~3,700 records, and an unactionable failure gets suppressed rather than fixed."
+  - "THIS AC ITSELF WRITES NO `work_status` OUTSIDE THE DELIBERATE FIXTURE. The forbidden build writes it by construction, inside a temporary store, so the test asserts the check catches it. No production path may."
+  - "Must handle errors gracefully per the project error handling policy. The check must fail closed: if it cannot read a record's finished state before or after, that is a failure of the check, never a pass — a check that cannot detect a violation is indistinguishable from a check confronted with none, which is the exact weakness this record exists to close."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300c-1
+  contract: "The finished-state refusal this AC proves is enforced against a real, available way of violating it."
+test_spec:
+  - name: test_acs_1300c_1_i_a_build_routed_through_the_promoting_apply_step_fails_the_check
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Construct the repair with its write path pointed at `cross_reference_audit._apply_backfill`, run it out of process against the fixture store, and assert the finished-state check FAILS, naming each record whose finished state changed and the value it changed to. Uses the real function, not a stub: the whole premise is that the violation is a working, recommended reuse."
+  - name: test_acs_1300c_1_i_the_shipped_build_passes_the_same_check_from_the_same_starting_bytes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run the real repair against a copy of the same store made from byte-identical starting content and assert the same check passes. Without this half, the check could be one that fails on everything."
+  - name: test_acs_1300c_1_i_both_builds_restored_the_same_coverage_entries
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE ISOLATION CLAUSE, AND IT BELONGS WITH THE TWO RUNS ABOVE. Compare the coverage entries restored by each build entry to entry and assert they are equal. This is what attributes the difference in verdict to the write path rather than to a difference in what was repaired or in what the two runs were given."
+  - name: test_acs_1300c_1_i_no_production_module_reaches_the_promoting_apply_step
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Assert nothing under `scripts/` that the repair's shipped entry point can reach imports or calls `cross_reference_audit._apply_backfill`. Guards the regression where the forbidden build stops being a fixture and becomes the implementation, which is the realistic way this refusal breaks."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  A NEGATIVE CONTROL FOR A NEGATIVE CONTROL, and it exists because ACS-1300c-1 has one
+  weakness the pairing does not cover: a check that is correct but never confronted with
+  a real violation is indistinguishable from a check that cannot detect one. This AC
+  confronts it, using a violation that is not hypothetical — it is sitting in the same
+  directory, it is named as a reuse candidate by this tree's own L0 and L1, and it works.
+
+  THE TWO-BUILD COMPARISON IS THE DESIGN. Asserting only that the forbidden build fails
+  leaves open that the check fails on everything; asserting only that the permitted build
+  passes leaves open that the check fires on nothing. Running both from the same starting
+  bytes, and requiring the same coverage entries restored in each, isolates the write
+  path as the only difference.
+
+  THIS IS ALSO THE MOST LIKELY WAY THE REFUSAL GETS BROKEN IN PRACTICE. Nobody sets out
+  to auto-promote finished state. Somebody reuses a working backfill because the L0 told
+  them to reuse rather than rewrite, and the promotion arrives as a side effect of good
+  advice followed carefully. The anti-duplication instruction and the refusal point in
+  opposite directions at exactly one function, and this record is where that collision is
+  written down and made to fail loudly.
+
+  IMPLEMENTATION NOTE FOR WHOEVER TESTS THIS: the forbidden build need not be shipped. It
+  is a fixture — the repair's write step pointed at the other apply function — and it
+  exists only for the duration of the test that proves the check catches it.

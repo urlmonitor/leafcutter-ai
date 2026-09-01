@@ -1,0 +1,122 @@
+id: ACS-1300a
+components:
+  - ac_store
+title: "Requirements get credit for the tests that already prove them"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Clear the backlog of proof the record forgot, in one deliberate pass.
+
+  Where a test that names a requirement is present and passing, the requirement's
+  record says so. Where the record names a test that is no longer there, the claim
+  goes away — so what remains on the record is exactly what the test tree can back
+  up, and every check reading it inherits a true premise instead of a stale one.
+depends_on:
+  - ACS-1300
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-202.yaml
+    relationship: related
+    status: exists
+    relevance: "A live instance of this L1's target population and a ready-made regression fixture: its fix shipped 2026-08-26 and its record still reads work_status: todo on this branch. NOTE THE BOUNDARY IT ILLUSTRATES — this L1 restores BO-202's coverage link. It does NOT flip that field. See ACS-1300c."
+  - path: scripts/ac_store/ac_coverage_resolver.py
+    relationship: related
+    status: exists
+    relevance: "ANTI-DUPLICATION — read before specifying a traversal. Named by filename; the PO did not read it. If the requirement-to-test join already lives here, reuse it. A second reader of the same evidence drifts from the first."
+  - path: scripts/ac_store/cross_reference_audit.py
+    relationship: related
+    status: exists
+    relevance: "ANTI-DUPLICATION, second candidate. Per ACS-900e's notes it already backfills the requirement-to-source link; reuse its traceability resolution for the requirement-to-test direction rather than writing a parallel walk."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: related
+    status: exists
+    relevance: "INHERITED, NOT DUPLICATED. This L1's run report is an answer about the store, so it must state the total it was measured against and what it excluded. Do not invent a second vocabulary for that — reuse ACS-1100's."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Defines the coverage field and the `# covers: <id>` tag format that is this repair's only join key."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+amended_by:
+  - reason: figure-and-framing-correction
+    by: business-analyst
+    at: 2026-09-01
+    note: >-
+      criteria UNTOUCHED; notes only. Added the corrected framing established by
+      independent re-measurement: this L1 is a traceability and reporting fix that
+      unblocks nothing, because verify_done_eligible resolves from the direct tag
+      first and reads the coverage list only on the composite path, so 527 of 549
+      rotted records are already eligible. Stated that no child may imply the
+      repair unblocks work, that the eligibility teeth live one level up in
+      ACS-1300a-3's parent case, and that the 276 eligible-but-unmarked records are
+      a separate sweep. Corrected forward rot 552 to 549 and named the file-level
+      versus function-level rule (585) the figure depends on; corrected empty
+      coverage lists 377 to 376. The L1's own criteria needed no change — "every
+      check reading it inherits a true premise instead of a stale one" is a
+      traceability claim and remains exactly true under the corrected model.
+created: 2026-09-01
+superseded_by: null
+covered_by:
+  - ACS-1300a-1
+  - ACS-1300a-2
+  - ACS-1300a-3
+  - ACS-1300a-4
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+notes: |
+  THE ONE-OFF REPAIR OF THE HISTORICAL BACKLOG. Deliberately run, whole-store, both
+  directions of rot in a single pass. Keeping the record accurate for work that
+  never reaches the ticket pipeline is ACS-1300b, not this. The guarantees that
+  make this repair safe to run are ACS-1300c — decompose them there, and do not
+  duplicate them here.
+
+  THE JOIN IS EXACT AND MECHANICAL. Match on the `# covers: <id>` tag, id to id.
+  No text similarity, no keyword heuristics, no ticket-body matching. This is the
+  specific line that made ACD-800 the wrong parent, so it must not drift back
+  toward heuristics at L2 — an inexact join writes false evidence, which is worse
+  than the missing evidence it replaces.
+
+  WHAT THIS L1 MOVES, CORRECTED 2026-09-01 — IT IS TRACEABILITY AND REPORTING, AND
+  IT UNBLOCKS NOTHING. Restoring a coverage link does not change mark-done
+  eligibility and never did: verify_done_eligible resolves a record's proof from
+  its direct `# covers:` tag first and reads the coverage list only on the
+  composite path, and every rotted record has a direct tag by construction.
+  Measured: 527 of 549 rotted records are already eligible. No L2 or L3 under this
+  L1 may imply that the repair unblocks work. The value is that the store's record
+  of what proves what becomes true — for every downstream gate and every human who
+  reads the field — not that anything becomes buildable. The narrow case with
+  downstream teeth is a PARENT with a stale child list, where the composite path
+  does read the field; that is ACS-1300a-3. The 276 records that are eligible today
+  and not marked done are a SEPARATE sweep and are not this L1's job.
+
+  BOTH DIRECTIONS BELONG IN THIS ONE L1, and the BA should not re-cut them into
+  siblings. They are one traversal of one store producing two kinds of correction,
+  and they share a report. Figures re-measured 2026-09-01 (see the L0 notes for
+  method, denominator and the correction history): forward rot is the dominant case
+  at 549 of 856 tagged records under the FILE-LEVEL rule — 585 under the stricter
+  function-level rule, so always say which rule a figure uses — of which 376 have
+  an entirely empty list; inverse rot is 9 of 521 path-shaped entries, concentrated
+  in two missing files.
+
+  PROVISIONAL, AND THE POINT GENERALISES: an independent re-measurement was in
+  flight when this was authored. No count may be written into a criteria block, at
+  any level. A criterion pinned to a number is falsified by the next commit that
+  changes the number, and this repo has the hand-typed "244 of 607" in the artifact
+  map as a live example of exactly that rot (see ACS-1100's notes).
+
+  DOCUMENTATION: `[how-to]`. This is a repair a person runs deliberately against
+  the whole store; the how-to is what makes it runnable by someone who did not
+  build it. No sequence-diagram — it is one pass over one store, not a multi-actor
+  flow. No component-diagram — it is a repair script, not a new architectural
+  layer.

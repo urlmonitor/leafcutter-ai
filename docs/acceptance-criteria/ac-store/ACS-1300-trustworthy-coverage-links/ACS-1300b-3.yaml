@@ -1,0 +1,131 @@
+id: ACS-1300b-3
+components:
+  - ac_store
+  - build_orchestration
+title: "A newly added delivery path cannot quietly join the bypassing set"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a repository in which every delivery path either reaches the link-recording step
+    or carries a stated exemption,
+  When the check over the enumeration runs,
+  Then it reports nothing,
+  Given the same repository with one delivery path added that neither reaches the
+    link-recording step nor carries a stated exemption,
+  When the check runs again,
+  Then it reports that path by name, together with the classification it lacks and what
+    would resolve it,
+  And the gate that runs the check acts on its result, so deleting the single line that
+    consumes the result turns that same reported case green,
+  And in the same run in which the added path is reported, the paths that do reach the
+    step are not reported, so the check discriminates rather than firing on everything,
+  And a path that reached the step and then had that hand-off removed is reported by the
+    same check, so the guard covers regression of an existing path and not only addition
+    of a new one.
+depends_on:
+  - ACS-1300b
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300b-1.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Produces the classification this check reads. The check must consume that enumeration rather than re-deriving the classification, or the two disagree and the guard reports on a picture the enumeration does not share."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The neighbouring rule this check must not violate: a check that could not RUN must not report success. Relevant because an enumeration that fails to read the repository yields an empty bypassing set, which looks exactly like a clean result."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The reachability angle. The consumed-result clause is that angle stated as a single-line deletion mutation, which is the form this repository already uses to distinguish a wired gate from a computed value nobody reads."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE CHECK CONSUMES ACS-1300b-1's PUBLISHED CLASSIFICATION AND DOES NOT RE-DERIVE IT. If the check computes its own view of which paths are bypassing, the guard and the enumeration report on two different pictures and the disagreement is invisible because both are plausible. One producer, one classification, many readers."
+  - "THE RESULT MUST BE CONSUMED IN CONTROL FLOW, AND THAT MUST BE PROVABLE BY DELETION. A computed verdict nobody reads is the phantom-done shape one level up and this repository has shipped it: `fast-lane-build.js` passed its structural tests while never executing the gates it computed, and `fast_lane.py`'s `select_batch` call was a silent no-op. Deleting the single line that consumes the verdict must turn a reported case green — that mutation is the requirement, not a test-design suggestion."
+  - "IF IMPLEMENTED AS A COMMIT-GUARDIAN HOOK: register it in `templates/scripts/commit_guardian/commit_guardian.json` AND add its module and every module it imports to the build deploy manifest (`deploy_map` in `scripts/build_phases.py`) in the same change. The hook runs from the DEPLOYED layout, so an undeployed import raises ModuleNotFoundError at hook runtime — and once the gate is a required check that crash blocks every merge. `done_proof.py` hit exactly this. Unit tests import from the source tree and mask the gap; verify by running the deployed hook after `build.py`."
+  - "IF IMPLEMENTED AS A COMMIT-GUARDIAN HOOK: BE AWARE SEVERAL AC HOOKS IN THIS FAMILY IGNORE `argv` AND READ THE GIT INDEX OR `HOOK_TEST_FILES`. A check whose exit code is verified by passing a path on the command line may never have seen that path; its silence is not a pass. Whatever input channel is chosen must be the one the verification exercises."
+  - "A GENUINELY CLEAN REPOSITORY MUST PRODUCE NO REPORT. A guard that fires on everything carries no signal and the reasonable response is to switch it off — the same reasoning `done_proof` already applies to an empty permitted-angle set. The clean-run clause and the reported-path clause belong to one check, not to two modes."
+  - "A CHECK THAT COULD NOT RUN MUST NOT REPORT SUCCESS (GE-120, and this check is the textbook case). An enumeration that failed to read the repository yields an empty bypassing set, which is byte-identical in effect to a fully-wired repository. Distinguish could-not-check from checked-and-clean in the outcome, not only in a log line."
+  - "THE BLOCK-ON-REAL-VIOLATION POSTURE AND THE FAIL-OPEN-ON-INTERNAL-ERROR CONVENTION ARE ORTHOGONAL AND MUST NOT BE COLLAPSED. A hook crash may exit 0 with a stderr warning; a genuine unwired path must not be downgraded to a warning because the crash path exists. This distinction is recorded in the ac-store PROJECT_CONTEXT and has been collapsed before."
+  - "THE CHECK WRITES NOTHING TO THE AC STORE AND NEVER ASSIGNS `work_status`. The tree-wide refusal applies."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md rules 1-4)."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300b-1
+  contract: "The classified enumeration and its examined total. This check turns that classification into a verdict something acts on."
+test_spec:
+  - name: test_acs_1300b_3_a_fully_wired_repository_produces_no_report
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Over a repository copy in which every delivery path either reaches the link-recording step or carries a stated exemption, the check reports nothing. Asserted first because a guard that fires on everything gets switched off."
+  - name: test_acs_1300b_3_an_added_unwired_path_is_reported_while_wired_paths_are_not
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the check's real entry point (hook or CI gate), invoked as a subprocess against a mutated repository copy"
+    description: "PAIRING INSIDE ONE RUN. Add one path that neither reaches the step nor carries an exemption, re-run the check, and assert in that single run BOTH that the new path is reported by name with the classification it lacks and what would resolve it, AND that the paths which do reach the step are not reported. Discrimination and detection together — either alone is satisfied by a check that fires on everything or on nothing."
+  - name: test_acs_1300b_3_deleting_the_line_that_consumes_the_verdict_turns_the_reported_case_green
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "THE WIRED-GATE MUTATION. Remove the single line in the gate that acts on the check's result, re-run the same unwired-path scenario, and assert the outcome flips to passing. A grep-only assertion that the call string is present passes on dead code and cannot distinguish a wired gate from a computed value nobody reads."
+  - name: test_acs_1300b_3_a_path_that_lost_its_hand_off_is_reported_by_the_same_check
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "REGRESSION, NOT ONLY ADDITION. Take a path currently classified as reaching, remove its hand-off, and assert the same check reports it. A guard keyed only on newly added paths misses the likelier event — a refactor dropping an existing hand-off."
+  - name: test_acs_1300b_3_an_enumeration_that_could_not_read_the_repository_does_not_pass
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "GE-120. Make the enumeration unable to read the repository and assert the check's outcome is distinguishable from the clean-repository outcome in the first test. An empty bypassing set produced by failure must not be reported as a clean result."
+  - name: test_acs_1300b_3_the_check_runs_from_the_deployed_layout
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "CONDITIONAL ON THE HOOK MECHANISM — required if the check ships as a commit-guardian hook, omit if it ships as a pytest-only gate. Run `build.py` and then invoke the DEPLOYED check, asserting it executes without an import error and that it actually received the files it claims to have checked. Source-tree imports mask the missing-deploy-manifest gap that took `done_proof.py` down."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WITHOUT THIS AC THE TREE FIXES A SNAPSHOT. ACS-1300a clears the backlog once and
+  ACS-1300b-2 wires the paths bypassing today; neither prevents the next delivery path
+  from being added unwired, and the backlog refills at whatever rate paths get added.
+  This is the ratchet, and it is what makes "the backlog cleared once stays cleared" in
+  the parent L1 a property rather than an aspiration.
+
+  THE CLEAN-RUN CLAUSE COMES FIRST DELIBERATELY. A guard that fires on everything
+  carries no signal and the reasonable response to it is to switch it off — the same
+  reasoning done_proof already applies to an empty permitted-angle set. Requiring a
+  genuinely clean repository to produce no report, in the same criterion that requires
+  the unwired path to be reported, is what keeps the guard worth leaving on.
+
+  THE CONSUMED-RESULT CLAUSE IS NOT OPTIONAL POLISH. A computed verdict nobody reads is
+  the phantom-done shape one level up, and this repository has shipped it before: a
+  fast-lane runner passed its structural tests while never executing the gates it
+  computed. The single-line deletion mutation is the cheapest available proof that the
+  wiring exists.
+
+  THE LAST CLAUSE COVERS REGRESSION, NOT JUST ADDITION. A guard keyed only on new paths
+  misses the more likely event — someone refactoring an existing path and dropping the
+  hand-off — which is the same event ACS-1300b-2's third clause uses as its mutation.
