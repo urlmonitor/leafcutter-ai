@@ -127,3 +127,11 @@ ENTROPY_HIGH:tests/fixtures/harvest_learnings/unroutable_corpus_28.json:*
 # Duplicated to the workspace root per the dual-update rule.
 ENTROPY_HIGH:docs/known-issues/testing-quality.md:*
 ENTROPY_HIGH:changelogs/2026-08-31-1810-a-missing-seam-answer-is-now-reported-by-name-and-the-hook-that-reports-it-actually-runs.md:*
+
+# unit_tests/README.md cites a date-and-slug known-issue id (mutation probe landing
+# in the wrong copy) as a worked example in its falsifiability rules. A long
+# hyphenated token, reads as high-entropy. Prose, not a credential. Not reproduced
+# here: quoting it makes this allowlist trip the scanner it suppresses. Glob, not
+# per-line: the surrounding prose can still shift.
+# Duplicated to the workspace root per the dual-update rule.
+ENTROPY_HIGH:unit_tests/README.md:*
