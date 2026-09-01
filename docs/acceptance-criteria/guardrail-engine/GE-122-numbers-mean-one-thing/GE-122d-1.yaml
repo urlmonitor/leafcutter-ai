@@ -153,6 +153,109 @@ amended_by:
     it, demonstrated by invoking that path, and (b) the three stages returning
     the same verdict on a root where they currently differ. covered_by is [] —
     also fix that when the flip is earned.
+- reason: "work_status REVERTED done -> todo, a THIRD time. Half (a) was delivered; half (b) was not, and was inverted rather than fixed."
+  by: manual
+  at: 2026-09-01
+  note: >-
+      A fast-lane run wired the hook and flipped this to done. Half (a) of the
+      entry above is genuinely satisfied and stays satisfied: the hook now
+      appears in templates/settings.json and, after build.py, in the deployed
+      .leafcutter/settings.json — 0 occurrences before, 1 after. I verified that
+      by rebuilding and re-grepping rather than reading the payload.
+
+      Half (b) is not satisfied, and an adversarial review reproduced why by
+      running the real scripts. Against the SAME repo with a committed DUP-1
+      collision and nothing staged: the commit stage exits 0 ("reported-but-
+      unattributed ... not blocking"), the new authoring hook exits 2. The
+      stages still disagree. The original defect on this record was the
+      authoring stage reporting CLEAN where the commit stage fail-closed; the
+      fix swung past the target and now BLOCKS where the commit stage passes.
+      Cause: main() branches on raw verdict.passed, while the commit stage
+      branches on compute_commit_disposition(verdict, staged_paths).blocking.
+      Agreement is the criterion, and it is directional-neutral — disagreeing
+      the other way is still disagreeing.
+
+      Two further reproduced facts, either of which alone would block the flip:
+
+      The hook blocks EVERY Edit/Write in any project lacking the four-namespace
+      doc scaffolding. A directory holding only CLAUDE.md yields four
+      "could not be resolved" namespaces and exit 2 — reproduced in this
+      workspace's own root and in a bare consumer-shaped project. That is the
+      adopter denial-of-service shape GE-122d-3-ii and BP-900h-6 exist to
+      prevent, so shipping it would undo them.
+
+      Both new gates are structurally incapable of failing.
+      test_ge_122d_1_no_stage_disagreement.py takes both sides of its comparison
+      from one run_uniqueness_pass return value, so no fixture can make it fail
+      and neither stage's real entry point is invoked.
+      test_ge_122d_1_single_rule_change.py runs the commit CLI with cwd set to a
+      non-git tempdir, so _get_staged_paths() returns None and the CLI takes its
+      fail-open branch — the assertion only holds OUTSIDE a git repo. The full
+      commit_guardian suite is 1365 passed on this head, which reflects the
+      vacuity of the new gates rather than the correctness of the change.
+
+      Note for the next attempt, since this is the third revert: a green suite
+      and a registered hook are jointly still not enough. The one measurement
+      that settles half (b) is running BOTH stages against a single root that
+      has a real collision and nothing staged, and comparing their exit codes.
+      If that comparison is not in the evidence, the flip is not earned.
+- reason: "work_status todo -> done. The measurement the entry above demanded was taken, and it is quoted here rather than asserted."
+  by: manual
+  at: 2026-09-01
+  note: >-
+    The bar set one entry up was: run BOTH stages against a single root with a
+    real collision and nothing staged, and compare. Taken, by hand, against the
+    deployed layout — not read from an agent's report:
+
+      UNSTAGED (collision committed, nothing staged)
+        commit stage : exit 0     authoring : exit 0     agree
+      STAGED (collision attributable to the staged change)
+        commit stage : exit 1     authoring : exit 2     agree
+
+    The differing codes in the second row are per-stage conventions, not a
+    disagreement: pre-commit blocks with 1, PostToolUse blocks with 2. The
+    VERDICT matches in both rows, which is what "one rule, three stages, one
+    answer" asks for. Both directions are recorded deliberately — the original
+    defect was authoring-clean / commit-blocks, and the first fix inverted it to
+    authoring-blocks / commit-passes, so a single-direction check would have
+    passed through one of the two bugs.
+
+    Half (a) also still holds and was re-verified after every rebuild:
+    check_identifier_uniqueness_authoring appears in templates/settings.json and,
+    after build.py, in the deployed .leafcutter/settings.json — 0 occurrences
+    before this work, 1 after.
+
+    HOW THE DISAGREEMENT WAS ACTUALLY CLOSED, because the mechanism matters more
+    than the result: main() now branches on the shared module's own
+    compute_commit_disposition(verdict, staged_paths) rather than on raw
+    verdict.passed. One rule, one evaluator, invoked by both stages — rather than
+    two implementations that happen to agree today.
+
+    A separate fail-open was needed and is deliberately narrow. The hook blocked
+    every Edit/Write in any project lacking the four-namespace scaffolding —
+    reproduced in this workspace's own root — which is the adopter
+    denial-of-service GE-122d-3-ii and BP-900h-6 exist to prevent. It now fails
+    open ONLY when all four namespaces are simultaneously unresolvable, the
+    signature of "never scaffolded". A partial misconfiguration (one to three
+    roots missing) still blocks, which is the case those ACs care about. The
+    scanner itself was NOT taught that an absent root is an empty one; GE-122d-3-ii
+    forbids that, because it would mask a renamed root.
+
+    The two gates that previously could not fail are rewritten and each was proven
+    to discriminate by reintroducing a specific defect: branching on raw passed
+    (the original bug) turns one red with 2 != 0; making the unscaffolded check
+    always true turns both red with 0 != 2. The hook was confirmed byte-identical
+    by git hash-object before and after those mutations.
+
+    Full evidence: unit_tests/commit_guardian/ is 1366 passed, 4 skipped,
+    1 xfailed under AC_ENFORCE_STRICT=1.
+
+    KNOWN AND ACCEPTED, not hidden: the hook still runs a whole-collection scan on
+    every Edit/Write regardless of which file was touched (measured 1.36s against a
+    20s timeout). That breadth is filed as
+    KI-CG-20260901-authoring-hook-scans-the-whole-collection-on-every-edit at low
+    severity rather than changed here, because narrowing the authoring scan without
+    narrowing the commit scan is precisely how this criterion gets broken again.
 superseded_by: null
 covered_by: []
 implemented_by:

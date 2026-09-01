@@ -155,6 +155,81 @@ DECISION HISTORY:
         (``sys.modules[spec.name] = module``, never ``setdefault``) so the
         registered object and the returned object are always identical on
         success, and nothing is registered at all on failure.
+  - 2026-09-01 [python-coder/GE-122d-1, adversarial-review bug-fix]: Four
+    fixes, each reproduced by executing the real scripts against real
+    fixtures before being fixed (see the sign-off comment for the exact
+    before/after exit codes):
+      - [Blocker 1, agreement in both directions] ``main()`` branched on
+        ``evaluate_identifier_uniqueness``'s raw ``verdict.passed``, while
+        the commit-time stage (``check_identifier_uniqueness.py``'s own
+        ``main()``) branches on
+        ``compute_commit_disposition(verdict, staged_paths).blocking`` -- a
+        diff-scoped attribution decision, not the raw whole-collection
+        pass/fail. Reproduced: a repo with a COMMITTED collision and
+        NOTHING staged made the commit-time stage exit 0 (unattributed, not
+        blocking) while this hook exited 2 -- the same "three stages
+        disagree" shape GE-122d-1 forbids, now swung the OPPOSITE direction
+        from this AC's original defect (the authoring stage reporting clean
+        where the commit-time stage failed closed). Fixed by having
+        ``evaluate_identifier_uniqueness`` call the SAME
+        ``compute_commit_disposition`` the commit-time stage calls, over
+        the SAME staged-path lookup (the commit-time module's own
+        ``_get_staged_paths``, reused via the already-loaded shared module
+        rather than reimplemented) -- added a ``"blocking"`` field to the
+        returned JSON, which ``main()`` now branches on instead of
+        ``"passed"``. When the staged set itself cannot be determined (no
+        git repository -- one of this module's own pre-existing fixture
+        shapes), falls back to the commit-time stage's own literal fallback
+        (``not verdict.passed``) rather than a disposition computed against
+        an unknowable diff, mirroring the commit-time ``main()`` exactly.
+        ``"passed"`` keeps its exact prior meaning (the raw whole-collection
+        verdict) for any caller that still reads only that field.
+      - [Blocker 2, unscaffolded-project denial-of-service] A directory
+        containing only CLAUDE.md -- reproduced at this session's own
+        workspace root and in a bare consumer-shaped fixture -- makes every
+        one of the four namespaces report "unresolvable" (per GE-122e-3's
+        own binding contract, restated by GE-122d-3-ii's "THE BINDING
+        DESIGN DECISION": an absent root is NOT an empty collection), which
+        previously blocked (exit 2) EVERY Edit/Write in ANY unscaffolded
+        project -- exactly the adoption-blocking shape GE-122d-3-ii and
+        BP-900h-6 exist to prevent. GE-122d-3-ii's sanctioned fix is
+        scaffolding the four roots at install time (``scripts/build.py``),
+        never teaching the SCANNER that absence means empty -- that AC
+        governs namespace-scanning semantics and stays untouched here (the
+        scanners in ``_uniqueness_scanners.py`` / ``_work_items_scanner.py``
+        are not modified). This hook instead adds a narrower,
+        authoring-time-only heuristic: when EVERY namespace in the verdict
+        is unresolvable SIMULTANEOUSLY (a new ``"unscaffolded"`` JSON
+        field), that is diagnostic of "this project has no GE-122 tracking
+        set up at all" rather than a genuine misconfiguration of one
+        specific root -- a partially-scaffolded project (one root
+        renamed/deleted, the other three intact) still reports only 1-3
+        unresolvable namespaces, not every one of them, and still blocks
+        exactly as before. ``main()`` checks ``"unscaffolded"`` before
+        ``"blocking"`` and fails open (exit 0) when set, so an ordinary
+        Edit/Write in a fresh project is never blocked by a rule the
+        project was never scaffolded to participate in.
+      - [Fix 3, invisible block message] The block message was printed to
+        stdout while exiting 2; PostToolUse feeds stderr back to Claude, so
+        a blocked edit surfaced with no visible explanation at all. Fixed
+        by printing to ``sys.stderr``.
+      - [Fix 4, discarded stdin / docstring overstated parity] ``main()``
+        called ``sys.stdin.read()`` and discarded the result, relying
+        entirely on ``Path.cwd()`` -- while the docstring claimed it "reads
+        the same shape every other Edit|Write hook in this directory
+        reads," citing check_exception_handling_hook.py and
+        ticket_frontmatter_guard.py, both of which genuinely parse the
+        payload and extract a field from it. Fixed by actually parsing the
+        JSON payload and extracting ``tool_input.file_path`` /
+        ``tool_input.path`` (new ``_resolve_root_start_path``), mirroring
+        ticket_frontmatter_guard.py's own ``_resolve_ticket_path`` exactly
+        -- the edited file's own path is the authoritative signal a
+        PostToolUse hook is designed to use, where ``Path.cwd()`` is only
+        ever an approximation of it. Falls back to ``Path.cwd()`` when the
+        payload carries no usable file path (empty stdin, or a payload
+        shape this hook does not recognise), preserving the prior behavior
+        for that case exactly. The docstring below now describes what the
+        code actually does rather than a parity claim that was never true.
 """
 
 from __future__ import annotations
@@ -174,6 +249,8 @@ _SHARED_MODULE_RELATIVE_PATH = Path("scripts") / "commit_guardian" / "check_iden
 #: ticket_frontmatter_guard.py's MARKER_FILES list so both hooks agree on
 #: what "the project root" means.
 _ROOT_MARKER_FILES = [".git", "CLAUDE.md", "pyproject.toml", "requirements-dev.txt"]
+
+_HOOK_PREFIX = "[check_identifier_uniqueness_authoring]"
 
 
 def _find_shared_module_path() -> Path | None:
@@ -262,8 +339,8 @@ def evaluate_identifier_uniqueness(root_path: str) -> str:
 
     Returns:
         A JSON string of the form
-        ``{"contested_numbers": [...], "passed": bool,
-        "unresolvable_namespaces": [...]}``.
+        ``{"contested_numbers": [...], "passed": bool, "blocking": bool,
+        "unresolvable_namespaces": [...], "unscaffolded": bool}``.
 
         ``contested_numbers`` names every number claimed by two or more
         artifacts across every namespace the shared module is responsible
@@ -271,9 +348,22 @@ def evaluate_identifier_uniqueness(root_path: str) -> str:
 
         ``passed`` is ``verdict.passed`` verbatim: True iff EVERY namespace
         both resolved (its root/config could be read at all) AND found no
-        collision. A caller that branches on this single field can never
-        disagree with the commit-time stage's own whole-collection
-        pass/fail outcome.
+        collision. Kept for any existing caller that reads only this field;
+        ``main()`` no longer branches on it directly (see ``"blocking"``).
+
+        ``blocking`` is computed by calling the SAME
+        ``compute_commit_disposition`` the commit-time stage's own
+        ``main()`` calls, over the SAME staged-path lookup (the commit-time
+        module's own ``_get_staged_paths``) — never a second,
+        independently-maintained attribution rule. This is what fixes
+        GE-122d-1's own "one rule, one answer" requirement in the direction
+        this hook previously got wrong: a contested number with no claimant
+        in the current change set is reported-but-unattributed by the
+        commit-time stage (does not block) and must not block here either.
+        When the staged set itself cannot be determined (e.g. no git
+        repository present), falls back to ``not verdict.passed`` — the
+        commit-time stage's own literal fallback for that same condition —
+        rather than a disposition computed against an unknowable diff.
 
         ``unresolvable_namespaces`` names every namespace whose own
         NamespaceVerdict reported ``passed=False`` with an EMPTY
@@ -284,6 +374,14 @@ def evaluate_identifier_uniqueness(root_path: str) -> str:
         which is exactly how this function previously reported a clean
         result on a root the commit-time stage refuses (see the
         2026-08-31 bug-fix DECISION HISTORY entry above).
+
+        ``unscaffolded`` is True iff EVERY namespace in the verdict is
+        unresolvable simultaneously — the signature of a project that has
+        no GE-122 namespace scaffolding at all (see the 2026-09-01 bug-fix
+        DECISION HISTORY entry above), as opposed to a genuine
+        misconfiguration of one specific root, which leaves at least one
+        other namespace resolved. ``main()`` checks this before
+        ``"blocking"`` and fails open when set.
     """
     shared = _load_shared_uniqueness_module()
     verdict = shared.run_uniqueness_pass(root_path)
@@ -299,11 +397,23 @@ def evaluate_identifier_uniqueness(root_path: str) -> str:
         for namespace, namespace_verdict in verdict.namespaces.items()
         if namespace_verdict.passed is False and not namespace_verdict.findings
     )
+    total_namespaces = len(verdict.namespaces)
+    unscaffolded = total_namespaces > 0 and len(unresolvable_namespaces) == total_namespaces
+
+    staged_paths = shared._get_staged_paths()  # noqa: SLF001 -- reuse, never reimplement
+    if staged_paths is None:
+        blocking = not verdict.passed
+    else:
+        disposition = shared.compute_commit_disposition(verdict, staged_paths)
+        blocking = disposition.blocking
+
     return json.dumps(
         {
             "contested_numbers": contested,
             "passed": verdict.passed,
+            "blocking": blocking,
             "unresolvable_namespaces": unresolvable_namespaces,
+            "unscaffolded": unscaffolded,
         }
     )
 
@@ -340,11 +450,44 @@ def _find_project_root(start: Path) -> Path | None:
     return None
 
 
-def _build_block_message(payload: dict) -> str:
+def _resolve_root_start_path(hook_payload: dict) -> Path:
+    """Resolve the ancestor-walk start path from a PostToolUse payload.
+
+    Prefers the edited file's own path (``tool_input.file_path`` /
+    ``tool_input.path``), mirroring ticket_frontmatter_guard.py's
+    ``_resolve_ticket_path`` and check_exception_handling_hook.py's own
+    ``tool_input`` read exactly — the payload names the file Claude Code
+    actually touched, which is the authoritative signal a PostToolUse hook
+    is designed to use. ``Path.cwd()`` is only ever an approximation of it
+    (the agent process's current directory, not necessarily the location of
+    the edited file), so it is used only as a fallback, never as the
+    primary source (see the 2026-09-01 bug-fix DECISION HISTORY entry above
+    — this function is what makes that fix real rather than cosmetic).
+
+    Args:
+        hook_payload: The parsed PostToolUse JSON payload (may be ``{}``
+            when stdin was empty or unparsable).
+
+    Returns:
+        The path to start ``_find_project_root``'s ancestor walk from:
+        the edited file's own (resolved) path when the payload names one,
+        else ``Path.cwd()``.
+    """
+    tool_input = hook_payload.get("tool_input") or {}
+    raw = tool_input.get("file_path") or tool_input.get("path") or ""
+    if not raw:
+        return Path.cwd()
+    try:
+        return Path(raw).resolve()
+    except (ValueError, OSError):
+        return Path.cwd()
+
+
+def _build_block_message(evaluation: dict) -> str:
     """Build the human-readable blocking message for a contested collection.
 
     Args:
-        payload: The parsed JSON payload returned by
+        evaluation: The parsed JSON payload returned by
             ``evaluate_identifier_uniqueness``.
 
     Returns:
@@ -354,9 +497,9 @@ def _build_block_message(payload: dict) -> str:
         "NUMBERING GUARANTEE VIOLATION (GE-122) — a number claims more than one thing:",
         "",
     ]
-    for number in payload.get("contested_numbers", []):
+    for number in evaluation.get("contested_numbers", []):
         lines.append(f"  {number} is claimed by more than one artifact.")
-    for namespace in payload.get("unresolvable_namespaces", []):
+    for namespace in evaluation.get("unresolvable_namespaces", []):
         lines.append(f"  namespace '{namespace}' could not be resolved at all (root/config missing or unreadable).")
     lines.append("")
     lines.append(
@@ -369,46 +512,59 @@ def _build_block_message(payload: dict) -> str:
 def main() -> None:
     """Entry point. Evaluates the numbering rule and emits a PostToolUse decision.
 
-    Reads the PostToolUse payload from stdin (the same shape every other
-    Edit|Write hook in this directory reads — see
-    check_exception_handling_hook.py / ticket_frontmatter_guard.py), then
-    evaluates GE-122's whole-collection rule against the current project
-    root via ``evaluate_identifier_uniqueness``. This is the ONLY authoring
-    stage entry point that Claude Code's PostToolUse mechanism can actually
-    reach (see this AC's amended_by history: a correctly-behaving module
-    that nothing calls is not a working stage).
+    Reads and parses the PostToolUse JSON payload from stdin (the same
+    shape check_exception_handling_hook.py and ticket_frontmatter_guard.py
+    read) and extracts ``tool_input.file_path`` / ``tool_input.path`` via
+    ``_resolve_root_start_path`` to seed project-root discovery, falling
+    back to ``Path.cwd()`` only when the payload carries no usable file
+    path. Evaluates GE-122's whole-collection rule against that root via
+    ``evaluate_identifier_uniqueness``. This is the ONLY authoring stage
+    entry point that Claude Code's PostToolUse mechanism can actually reach
+    (see this AC's amended_by history: a correctly-behaving module that
+    nothing calls is not a working stage).
 
     Fails open (exits 0, never blocks) on any condition that prevents
-    evaluation itself: malformed stdin, no resolvable project root, or the
-    shared module being unavailable — per CLAUDE.md's hook fail-open
-    carve-out, a hook crash must never block an unrelated Edit/Write. A
-    *contested* collection is not fail-open: it is the exact condition this
-    hook exists to surface, so it blocks (exit 2) with a message naming
-    every contested number and every unresolvable namespace.
+    evaluation itself: malformed/empty stdin, no resolvable project root,
+    the shared module being unavailable, or the project being unscaffolded
+    for GE-122 entirely (every namespace unresolvable at once — see the
+    ``"unscaffolded"`` field and the 2026-09-01 bug-fix DECISION HISTORY
+    entry above) — per CLAUDE.md's hook fail-open carve-out, a hook crash
+    (or an adopter's fresh, not-yet-scaffolded project) must never block an
+    unrelated Edit/Write. An *attributed* contested collection is not
+    fail-open: it is the exact condition this hook exists to surface, so it
+    blocks (exit 2, message on stderr since PostToolUse feeds stderr back
+    to Claude) with a message naming every contested number and every
+    unresolvable namespace. The block/no-block decision itself
+    (``"blocking"``) is computed by the SAME ``compute_commit_disposition``
+    the commit-time stage calls — see ``evaluate_identifier_uniqueness``'s
+    own docstring — never a second, independently-maintained rule.
     """
     try:
-        sys.stdin.read()
+        hook_payload = json.loads(sys.stdin.read() or "{}")
     except (OSError, ValueError):
         sys.exit(0)
 
-    project_root = _find_project_root(Path.cwd())
+    start_path = _resolve_root_start_path(hook_payload)
+    project_root = _find_project_root(start_path)
     if project_root is None:
         sys.exit(0)
 
     try:
-        payload = json.loads(evaluate_identifier_uniqueness(str(project_root)))
+        evaluation = json.loads(evaluate_identifier_uniqueness(str(project_root)))
     except (ModuleNotFoundError, OSError, ValueError) as exc:
         print(
-            f"[check_identifier_uniqueness_authoring] could not evaluate the numbering "
-            f"rule: {exc}",
+            f"{_HOOK_PREFIX} could not evaluate the numbering rule: {exc}",
             file=sys.stderr,
         )
         sys.exit(0)
 
-    if payload.get("passed", True):
+    if evaluation.get("unscaffolded", False):
         sys.exit(0)
 
-    print(_build_block_message(payload))
+    if not evaluation.get("blocking", False):
+        sys.exit(0)
+
+    print(_build_block_message(evaluation), file=sys.stderr)
     sys.exit(2)
 
 
