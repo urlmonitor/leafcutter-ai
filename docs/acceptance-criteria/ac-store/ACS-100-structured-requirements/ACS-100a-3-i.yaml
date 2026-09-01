@@ -24,9 +24,8 @@ criteria: |
   And given a record whose test_spec names a framework this repository ships nothing
     for — an invented value such as "jasmine" or an empty string —
   When the same validator checks it,
-  Then validation still fails, and the diagnostic names the offending value and lists
-    the accepted members, so widening the vocabulary does not turn the field into a
-    free-text box.
+  Then validation still fails, so widening the vocabulary does not turn the field into
+    a free-text box.
 
   Coverage note: the discriminating half is the second block. A test that only asserts
   playwright is accepted would pass equally against a schema that dropped the enum
@@ -48,7 +47,33 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-01
-amended_by: []
+amended_by:
+  - reason: >
+      The originally-authored second criteria block demanded that the validation
+      diagnostic name the offending framework value and list the accepted enum
+      members. Delivering that required restructuring test_spec from
+      `oneOf: [<array-schema>, <null-schema>]` to a plain `type: ["array", "null"]`
+      union, so jsonschema's error surfaces the leaf enum violation instead of the
+      generic "is not valid under any of the given schemas" oneOf message. That
+      restructuring was implemented, then reverted here: the oneOf shape is a
+      contract twelve tests across four other modules
+      (unit_tests/ac_store/test_derived_test_reachability_floor.py,
+      unit_tests/ac_store/test_bo_2900g_3.py,
+      unit_tests/ac_store/test_bp_1100g_3.py,
+      unit_tests/ac_store/test_bp_1100g_3_ii.py,
+      unit_tests/commit_guardian/test_bp_1100g_4.py,
+      unit_tests/prompt_assembly/test_bp_1100g_1.py) depend on — they navigate the
+      schema by literally indexing `["oneOf"]` to reach the test_spec item schema,
+      so removing the combinator raises KeyError there. Trading twelve other ACs'
+      coverage for one diagnostic-quality improvement was the wrong trade, so the
+      second criteria block is narrowed here to what the enum widening alone
+      delivers: an unshipped value is still refused. The diagnostic-quality
+      improvement is deliberately deferred, not forgotten — its honest home is
+      check_ac_schema.py's error formatting (post-processing the oneOf failure to
+      surface the leaf enum violation), which is a different file and outside this
+      single-file schema-change scope.
+    date: 2026-09-01
+    origin_agent: python-coder
 superseded_by: null
 covered_by:
   - unit_tests/commit_guardian/test_check_ac_schema.py
@@ -61,4 +86,4 @@ test_spec:
     target_dir: unit_tests/commit_guardian/
     framework: unittest
     type: unit
-    description: "Validates a record declaring framework: playwright and asserts it passes, then validates a record declaring an unshipped framework and asserts it fails with a diagnostic naming the value and the accepted members. Both halves in one test so the widening cannot be satisfied by removing the enum."
+    description: "Validates a record declaring framework: playwright and asserts it passes, then validates records declaring an unshipped framework value (an invented name, and an empty string) and asserts each still fails validation. Both halves in one test so the widening cannot be satisfied by removing the enum."

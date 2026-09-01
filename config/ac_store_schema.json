@@ -388,62 +388,69 @@
         },
         "test_spec": {
             "description": "Source-of-truth test contract for this AC. The AC — not the ticket — owns what must be tested. A list of test-stub descriptors that test-writer authors as failing tests, and that generate_ticket_from_ac.py derives the ticket's ## Test Requirements section from (parallel to it_requirements -> ## Implementation Notes). Set by it-po during technical enrichment on L2/L3 code ACs. Null/absent means 'no test contract authored yet'; an empty list is not permitted (use test_required: false for genuinely test-free ACs).",
-            "type": ["array", "null"],
-            "minItems": 1,
-            "items": {
-                "type": "object",
-                "required": ["name", "target_dir"],
-                "additionalProperties": false,
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "Test function or class name (e.g. test_merged_output_sorted_by_priority). Should be descriptive enough to read as an assertion."
-                    },
-                    "target_dir": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "Repo-relative directory the test file lives in (e.g. unit_tests/ac_store/)."
-                    },
-                    "framework": {
-                        "type": "string",
-                        "enum": ["unittest", "pytest", "playwright"],
-                        "description": "Test framework. Accepted values are the frameworks this project actually ships a runner or skill for: unittest and pytest (the project's Python test conventions) and playwright (the Playwright-driven webapp-testing skill, for headless browser/route-render checks). Defaults to the project convention (unittest) when omitted."
-                    },
-                    "type": {
-                        "type": "string",
-                        "enum": ["unit", "integration", "e2e", "behavioral"],
-                        "description": "Test level. Guides where the test runs and how heavy its fixtures are."
-                    },
-                    "angle": {
-                        "type": "string",
-                        "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure"],
-                        "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus two conditional ones (boundary, failure). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec that already carries one 'reachability'-angle entry keeps it unaltered and gains no second one (BO-2900g-1-i). Omit when the angle has not been classified."
-                    },
-                    "surface_invoked": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "BO-2900g-3: the entry-point field, carried under the name the (now-retired) ticket-facing definition already used. Names the CLI, hook script, slash command, or agent entrypoint a reachability-kind test must actually invoke, or holds the single 'entry point is not declared' sentinel when nothing upstream named one. Optional here — the generator's own reachability descriptor states the same fact via its 'asserts' field (BO-2900g-1-i) when this is omitted."
-                    },
-                    "description": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "One sentence: what this test asserts. Maps to a Gherkin Then clause in criteria."
-                    },
-                    "covers": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "minLength": 1
-                        },
-                        "description": "AC IDs this test covers. Defaults to [this AC's id] when omitted."
-                    },
-                    "requires_db": {
-                        "type": "boolean",
-                        "description": "Whether the test needs a live database (drives slow-test marking)."
+            "oneOf": [
+                {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "object",
+                        "required": ["name", "target_dir"],
+                        "additionalProperties": false,
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "Test function or class name (e.g. test_merged_output_sorted_by_priority). Should be descriptive enough to read as an assertion."
+                            },
+                            "target_dir": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "Repo-relative directory the test file lives in (e.g. unit_tests/ac_store/)."
+                            },
+                            "framework": {
+                                "type": "string",
+                                "enum": ["unittest", "pytest", "playwright"],
+                                "description": "Test framework. Accepted values are the frameworks this project actually ships a runner or skill for: unittest and pytest (the project's Python test conventions) and playwright (the Playwright-driven webapp-testing skill, for headless browser/route-render checks). Defaults to the project convention (unittest) when omitted."
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": ["unit", "integration", "e2e", "behavioral"],
+                                "description": "Test level. Guides where the test runs and how heavy its fixtures are."
+                            },
+                            "angle": {
+                                "type": "string",
+                                "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure"],
+                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus two conditional ones (boundary, failure). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec that already carries one 'reachability'-angle entry keeps it unaltered and gains no second one (BO-2900g-1-i). Omit when the angle has not been classified."
+                            },
+                            "surface_invoked": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "BO-2900g-3: the entry-point field, carried under the name the (now-retired) ticket-facing definition already used. Names the CLI, hook script, slash command, or agent entrypoint a reachability-kind test must actually invoke, or holds the single 'entry point is not declared' sentinel when nothing upstream named one. Optional here — the generator's own reachability descriptor states the same fact via its 'asserts' field (BO-2900g-1-i) when this is omitted."
+                            },
+                            "description": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "One sentence: what this test asserts. Maps to a Gherkin Then clause in criteria."
+                            },
+                            "covers": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "description": "AC IDs this test covers. Defaults to [this AC's id] when omitted."
+                            },
+                            "requires_db": {
+                                "type": "boolean",
+                                "description": "Whether the test needs a live database (drives slow-test marking)."
+                            }
+                        }
                     }
+                },
+                {
+                    "type": "null"
                 }
-            }
+            ]
         },
         "test_required": {
             "description": "Whether test-writer must produce failing tests for this AC. Distinguishes 'intentionally no tests' (false — e.g. change_target prompt/docs) from 'test contract not yet authored' (null/absent). Defaults to true for code/schema ACs. When false, test-writer skips with an accurate, non-hardcoded reason instead of misclassifying the AC as docs-only.",
