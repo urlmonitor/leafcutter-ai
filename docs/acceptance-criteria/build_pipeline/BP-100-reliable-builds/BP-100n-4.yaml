@@ -1,0 +1,504 @@
+id: BP-100n-4
+components:
+  - build_pipeline
+title: "The population of commit gates the reachability check walks is taken from the gate scripts present on disk, so a script the registry never mentions is reported as invoked by nothing — a guard whose input is the registry cannot see what the registry omits"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the repository keeps its commit-gate scripts together in one place, and
+    at the time of writing that place holds 66 of them,
+  And the gate registry from which the commit-time gate configuration is
+    generated holds 59 entries, of which 5 are marked not to be emitted,
+  And 19 of the scripts present on disk are named by no registry entry at all —
+    including one that the gate family's own reference documentation describes as
+    a live gate running with enforcement,
+  When the reachability check runs,
+  Then the population it examines is obtained by listing the gate scripts
+    actually present in that place, and the invoking population is obtained by
+    reading the registry actually in effect at commit time, so neither side of the
+    comparison is a set written into the check itself,
+  And every script present on disk that no registry entry names is reported by
+    name, together with the statement that nothing invokes it, and the run fails,
+  And a script that a registry entry names but that the generated commit-time
+    configuration invokes on no entry line is reported the same way — the question
+    the check answers is whether the script is reached at commit time, not whether
+    it is mentioned somewhere,
+  And a script named by a registry entry that is marked not to be emitted is
+    reported as deliberately switched off and does not fail the run — registered
+    and switched off is a third state, distinct both from being invoked and from
+    being absent from the registry,
+  And a script named by a registry entry that is emitted is not reported at all,
+  And given one new gate script is added to that place and nothing else in the
+    repository changes,
+  When the check runs again,
+  Then the newly added script is among those reported as invoked by nothing, and
+    the number of scripts the check states it compared is one greater than the
+    number it stated before — establishing that the population was enumerated
+    from the tree rather than recited from a list.
+depends_on:
+  - BP-100n
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/known-issues/commit-guardian.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      Entry KI-CG-20260831-hook-scripts-never-invoked is the source finding, including
+      the Method section that explains why the census must be taken from the entry
+      lines the configuration actually executes and not from kebab-cased script names
+      (check_ac_limits.py is registered under the id check-ac-tree-limits, so a
+      name-to-id comparison over-reports), and the control that makes the finding
+      trustworthy (two registered scripts observed running, three unregistered ones
+      observed not running).
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE GUARD THIS AC EXTENDS, AND THE BOUNDARY BETWEEN THEM. BP-100k-4 asks, of each
+      REGISTERED gate, whether its activation condition can ever match; its scope limit
+      is the first word of its own title. This AC asks the prior question — which gates
+      are in the set at all. Extend that check's enumeration; do not build a second
+      reachability guard beside it, or the two will disagree about how many gates exist.
+  - path: "templates/scripts/commit_guardian/check_hook_trigger_reachability.py"
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The incumbent guard. Its main() resolves the registry, then walks
+      hooks_manifest.hooks and evaluates each entry — the disk side of the comparison
+      does not exist. It already carries the three-way reachable / exempt / unreachable
+      verdict vocabulary and the INDETERMINATE fail-closed contract that this AC's
+      children reuse rather than reinvent.
+  - path: "templates/scripts/commit_guardian/_hook_trigger_reachability_helpers.py"
+    relationship: describes
+    status: exists
+    relevance: >-
+      Holds validate_exemptions and evaluate_gate, split out of the guard to stay under
+      the 400-line file-size cap. The guard is already close to that cap, so the disk-side
+      enumeration most likely belongs here or in a new sibling module rather than inline.
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The authoritative registration surface — hooks_manifest.hooks (59 entries, 5 with
+      enabled false) plus the nine-entry hook_trigger_reachability_exemption_registry.
+      It is a package surface, so a NEW top-level key trips check-package-surface-declaration
+      and requires the structured spec. Note the decoy: templates/commit-guardian/commit_guardian.json
+      is a different, much smaller file and is NOT the registration surface.
+  - path: "scripts/build_precommit.py"
+    relationship: describes
+    status: exists
+    relevance: >-
+      build_precommit_config reads hooks_manifest.hooks and filters on
+      h.get("enabled", True) before emitting entry lines — this is the mechanism that
+      makes registered-and-disabled a real third state rather than a shortfall, and it
+      is also where _check_hook_script_integrity already checks the OPPOSITE direction
+      (a registered entry whose script is missing from disk). This AC is the missing
+      converse of that existing check.
+  - path: "templates/scripts/commit_guardian/README.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      Documents check-ticket-signoff-parity as a live hook id "with --enforce". That
+      claim is false today and is the reason a documented-but-unreachable gate is worse
+      than an absent one — the documentation is what people and agents reason from.
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500b-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      COMPLEMENTARY, NOT DUPLICATE — READ BEFORE BUILDING EITHER. TQ-500b-1 makes
+      registering ONE hook (check-ticket-signoff-parity, the host its reader and
+      BP-1100g-5-i's both pin) a precondition of its own work, and asserts that
+      registration through its reachability descriptor. This AC covers the CLASS: every
+      script on disk that no registry entry names. The overlap is exactly one manifest
+      entry. Whichever is scheduled first adds that entry; the other must find it already
+      present and assert rather than re-add it. Neither may build a second census.
+  - path: "templates/scripts/commit_guardian/_package_surface_registry.py"
+    relationship: describes
+    status: exists
+    relevance: >-
+      WATCHED_REGISTRIES is why this AC declares package_surface. It watches
+      commit_guardian.json on TWO containers — hooks_manifest.hooks by id, and the
+      document's own top level by mapping key (metadata exclusions are only "$schema"
+      and "_comment"). Registering any of the 19 adds a watched id, so
+      check-package-surface-declaration refuses the commit unless a cited AC declares
+      package_surface: true. That is a measured consequence of the day-one triage, not a
+      formality.
+  - path: "docs/testing/test-angles.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      The set-cover taxonomy the test_spec angles are drawn from, and the source of the
+      distinction this AC's descriptors turn on: `type` is the test LEVEL, `angle` is the
+      KIND OF PROOF. The added-script descriptor is a real_artifact proof (the gate-script
+      tree itself is the artifact); the deployed descriptor is what catches a helper module
+      placed outside the commit_guardian directory without a deploy-map entry.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: true
+declares_side_effect: false
+it_requirements:
+  config_schema_fragment:
+    hooks_manifest:
+      type: object
+      description: >-
+        hooks_manifest.hooks gains one entry per script that day-one triage classifies as
+        a real gate, beginning with check-ticket-signoff-parity under the id
+        templates/scripts/commit_guardian/README.md already documents — so no new id is
+        minted. Each added entry carries the same fields its siblings carry (id, name,
+        entry, language, pass_filenames, and either always_run or a files trigger). This
+        is the surface the build reads to decide which gates a consumer project receives,
+        so every addition here is a package-surface registration.
+  reference_file_path: "templates/scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - >-
+      HOST AND LAYERING — MEASURED IN THIS WORKTREE, NOT GUESSED. Under check_file_size's
+      own counting rule (docstrings stripped, "#" DECISION HISTORY lines counted),
+      check_hook_trigger_reachability.py stands at 354 of its 400 permitted lines and
+      _hook_trigger_reachability_helpers.py at 145. The guard has roughly 46 lines of
+      headroom and this change's own DECISION HISTORY entry will consume much of it. Put
+      the disk-side enumeration, the register resolution and the assembly of the summary
+      counts in the helpers module; leave the guard only the call sites and the printed
+      summary. If the guard still exceeds the cap, split a further sibling INSIDE
+      templates/scripts/commit_guardian/ — never outside it.
+    - >-
+      DEPLOY-MANIFEST BOUNDARY. build_commit_guardian copies EVERY file in
+      templates/scripts/commit_guardian/ verbatim, so a new sibling inside that directory
+      needs no deploy entry. A module imported from OUTSIDE that directory — anything
+      under scripts/ac_store/, scripts/build_helpers.py, or elsewhere — MUST be added to
+      the deploy map in scripts/build_phases.py in the same change, or the deployed hook
+      raises ModuleNotFoundError at commit time while the unit tests, which import from
+      the source tree, stay green. The deployed-layout test descriptor exists to make that
+      failure visible rather than latent.
+    - >-
+      CANONICAL VERSUS BUILD OUTPUT. templates/scripts/commit_guardian/ is canonical;
+      scripts/commit_guardian/ is a build output that build.py overwrites. Edit the
+      template and re-run build.py. A fix applied only to the build output disappears on
+      the next build; a fix applied only to the template leaves the running hook unchanged
+      and the work unverified.
+    - >-
+      EXTEND THE ENUMERATION, DO NOT FORK THE GUARD. The gap is in the enumeration, not
+      the predicate: BP-100k-4's per-gate predicate is sound and is not being changed. Its
+      input is hooks_manifest.hooks, so a script that was never registered is not in the
+      set it walks. Widen that population; do not build a second reachability guard beside
+      it, or the two will disagree about how many gates exist.
+    - >-
+      BOTH SIDES ENUMERATED AT RUN TIME. The disk side by listing the gate-script
+      directory; the invoking side by reading the entry lines of the registry actually in
+      effect at commit time. Neither side may be a set written into the check. An
+      implementation that compares one literal list against another reproduces this exact
+      defect one level up, which is how the incumbent guard fails.
+    - >-
+      THE INVOKING SIDE IS THE ENTRY LINE, NEVER THE ID. check_ac_limits.py is registered
+      and runs under the id check-ac-tree-limits, so a kebab-cased-filename-to-id
+      comparison falsely reports it as unregistered. Take the script filename from the
+      last .py token of each entry field — exactly the extraction
+      build_precommit._check_hook_script_integrity already performs for the opposite
+      direction. That function is the existing half of this check; this AC is its missing
+      converse, and the two should read the registry the same way.
+    - >-
+      THREE STATES, NEVER TWO. Registered-and-enabled is silent; registered with
+      enabled:false is reported as deliberately switched off and does not fail;
+      absent from the registry is reported and fails. Re-measured in this worktree at
+      authoring time: 66 check_*.py on disk, 59 hooks_manifest entries, 5 of them
+      enabled:false (check-mermaid-drift, check-diagram-naming, check-duplicate-code,
+      check-diff-coverage, check-surface-components-e2), 60 distinct .py filenames named
+      across all entry lines, 19 scripts named by no entry line.
+    - >-
+      DAY-ONE TRIAGE OF ALL 19 IS IN SCOPE, NOT A FOLLOW-UP. The check fails on the very
+      commit that lands it. Each of the 19 must be registered, deleted, or given a
+      grounded record in the declared-non-gate register (BP-100n-4-i) in that same change.
+      Landing the check green by pre-suppressing its findings proves nothing. A register
+      ground that says only that triage or registration is deferred is a suppression under
+      another name, not a ground.
+    - >-
+      TEN OF THE 19 ALREADY CARRY A CONFIGURATION SECTION, WHICH IS EVIDENCE OF INTENT.
+      Verified in this worktree: commit_guardian.json holds a dedicated top-level config
+      section for check_complexity, check_debug_scripts, check_doc_coverage,
+      check_doc_links, check_docstrings, check_documentation, check_file_size,
+      check_folder_density, check_root_files and check_sql_complexity. A script the
+      registry configures but never invokes is a gate someone wired half-way; "declared
+      non-gate" is an implausible disposition for these ten and, if chosen, needs a ground
+      that explains the configuration section rather than ignoring it.
+    - >-
+      REGISTER check-ticket-signoff-parity UNDER ITS DOCUMENTED ID. README.md documents
+      hook id check-ticket-signoff-parity as live "with --enforce"; that claim is false
+      today. Restore that id rather than minting a new one — minting is the expensive path
+      per the known issue, and this one registration unblocks BP-1100g-5-i and four TQ-500
+      criteria that pin their reader onto this host.
+    - >-
+      A NEWLY REGISTERED GATE GOES LIVE ON THE SAME COMMIT AND BP-100k-4 IMMEDIATELY
+      JUDGES IT. Every entry added to hooks_manifest.hooks starts running at commit time
+      and is simultaneously evaluated by the existing reachability predicate: an added
+      gate whose files trigger matches no tracked path is reported UNREACHABLE and blocks.
+      Those findings are real and must be resolved, not silenced by setting enabled:false
+      — that flag records a deliberate, documented decision, never a gate that turned out
+      to be inconvenient on its first run.
+    - >-
+      PACKAGE SURFACE — DECIDED, AND HERE IS THE CONSEQUENCE. WATCHED_REGISTRIES watches
+      commit_guardian.json on hooks_manifest.hooks (by id) AND on the document's own top
+      level (by mapping key). Registering any of the 19 adds a watched id, so
+      check-package-surface-declaration refuses the commit unless a cited AC declares
+      package_surface: true. This AC declares it, which is why the structured five-field
+      spec is present. The paired consequence for the register in BP-100n-4-i: a NEW
+      top-level key would trip the same hook on the mapping-key container, which is why
+      that register reuses the existing hook_trigger_reachability_exemption_registry key
+      instead of introducing one.
+    - >-
+      Must follow the repo error-handling policy: specific-exception try/except around
+      directory listing, file and JSON I/O; log at WARNING or higher or re-raise; no bare
+      or blind excepts. A swallowed listing error must never become an empty population —
+      that is the precise fail-open shape BP-100n-4-ii exists to make impossible.
+test_spec:
+  - name: test_bp_100n_4_added_gate_script_is_reported_and_the_compared_count_rises_by_one
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      THE DECISIVE ANTI-GREP DESCRIPTOR — WRITE THIS ONE FIRST. Over a fixture copy of the
+      real gate-script directory and the real registry, execute the check as a process and
+      capture two things from its own output: the stated compared count and the set of
+      script names reported as invoked by nothing. Then write ONE new check_<novel>.py file
+      into that directory, change nothing else in the repository, and execute the check
+      again. The new script's filename must appear in the reported set, and the stated
+      compared count must be exactly one greater than the first run's. Both numbers are
+      read from the check's output, never from a literal expected value. No implementation
+      carrying a list of script names — however that list is spelled — can pass this.
+  - name: test_bp_100n_4_every_script_named_by_no_entry_line_is_reported_and_the_run_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Over the repository's real gate-script directory and real registry, the executed
+      check reports by name every script that no entry line names, states of each that
+      nothing invokes it, and exits non-zero. The assertion is count-and-membership based
+      over the check's own reported set — never a comparison against a hard-coded list of
+      today's 19 names, which would pass while a twentieth escaped.
+  - name: test_bp_100n_4_a_script_on_an_emitted_entry_line_is_not_reported_at_all
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      A script named on an emitted entry line appears in NO reported class — not as
+      invoked by nothing, not as switched off, not as a declared non-gate. NAMED MUTATION
+      (mandatory, run it, do not merely describe it): build the invoking set by
+      kebab-casing each script's filename and matching it against registry ids instead of
+      reading the entry lines. Under that injection this descriptor must go RED, naming at
+      minimum check_ac_limits.py, which is registered and runs under the id
+      check-ac-tree-limits. Revert the injection and the descriptor must return to green.
+      This is the precise over-report the known issue's Method section controls for, and
+      the clause is green on arrival today only because nothing is reported at all.
+  - name: test_bp_100n_4_a_disabled_entry_is_reported_switched_off_and_does_not_fail_the_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A script named by a registry entry carrying enabled:false is reported as
+      deliberately switched off, is not counted among the scripts nothing invokes, and
+      does not by itself drive a non-zero exit. NAMED MUTATION (mandatory, run it): build
+      the registered set from the generated commit-time configuration alone — the emitted
+      entry lines — rather than from the whole registry. The five enabled:false scripts
+      then appear as invoked by nothing and the run fails on them; this descriptor must go
+      RED with exactly check_mermaid_drift.py, check_diagram_naming.py,
+      check_duplicate_code.py, check_diff_coverage.py and check_surface_components_e2.py
+      named, and return to green on revert. This is the five-false-alarms-on-day-one
+      scenario, and a false alarm has exactly one natural remedy — weakening the check
+      until it stops — so the mutation must be executed, not described.
+  - name: test_bp_100n_4_a_registered_script_invoked_on_no_entry_line_is_reported_the_same_way
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      A script that a registry entry mentions but that the generated commit-time
+      configuration invokes on no entry line — the entry is enabled, yet its entry line
+      executes a different script — is reported as invoked by nothing, identically to a
+      script the registry never mentions. Establishes that the question answered is
+      whether the script is REACHED at commit time, not whether its name appears somewhere
+      in the registry. Build the generated configuration through the real
+      build_precommit_config path rather than hand-writing the expected entry lines.
+  - name: test_bp_100n_4_census_is_emitted_through_the_registered_hook_entry_point
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_hook_trigger_reachability.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the check as a subprocess through the registered hook
+      path and assert that the per-script verdicts and the summary counts appear in the
+      hook's own output stream, and that the exit status is the commit outcome rather than
+      an advisory note — non-zero when any script is reported invoked by nothing, zero
+      when none is. A census computed by a function nothing at commit time calls is inert.
+  - name: test_bp_100n_4_deployed_copy_runs_the_census_and_the_real_registry_comes_back_clean
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy of the check and every module it imports load and
+      run in a cold process — a helper placed outside templates/scripts/commit_guardian/
+      without a scripts/build_phases.py deploy-map entry surfaces here as
+      ModuleNotFoundError rather than passing. Over the repository's real registry and
+      real gate-script directory, following the day-one triage, the deployed run reports
+      zero scripts invoked by nothing, states a compared count greater than zero, exits
+      zero, and reports check_ticket_signoff_parity.py as INVOKED under the documented id
+      check-ticket-signoff-parity. That last assertion is red today and is this AC's own
+      red baseline for the registration.
+test_rationale: |
+  Every clause of this AC is green on arrival on the incumbent implementation, for the
+  single trivial reason that nothing is reported at all — which is KI-TQ-010's shape
+  exactly, and the reason each absence-asserting clause here carries an executable
+  injection rather than a note asking someone to check that the test is meaningful.
+
+  The added-script descriptor is written first because it is the only one that cannot pass
+  on an implementation holding a literal list, however that list is spelled: it adds a file
+  the list cannot know about and requires the stated compared count to move. The
+  kebab-case injection defends the not-reported-at-all clause, whose red baseline is
+  otherwise unobtainable, and it names the one script (check_ac_limits.py, running as
+  check-ac-tree-limits) that distinguishes an entry-line census from a name-to-id one. The
+  emitted-configuration injection defends the switched-off clause and reproduces the
+  five-false-alarms day, because a check that raises five false alarms on the day it lands
+  gets weakened rather than fixed.
+
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", no descriptor
+  here may be satisfied by reading the guard's source or the registry as text; a text
+  assertion stays green on precisely the dead enumeration being replaced. Every descriptor
+  executes the check as a process and asserts on its emitted output and exit status, and
+  the deployed descriptor runs the built copy so a missing deploy-map entry cannot hide
+  behind source-tree imports.
+delivers_to:
+  - agent: python-coder
+    ac_id: BP-100n-4-i
+    contract: >-
+      The per-script verdict set and the run summary, into which BP-100n-4-i inserts the
+      declared-non-gate verdict and its count, and whose invoked-by-nothing class a
+      groundless register record must fall back into.
+  - agent: python-coder
+    ac_id: BP-100n-4-ii
+    contract: >-
+      The two enumerated populations — gate scripts listed from disk, and scripts invoked
+      by the commit-time configuration read from the registry in effect — whose sizes
+      BP-100n-4-ii requires to be stated and whose unavailability or emptiness it converts
+      from a silent clean exit into a named, non-zero failure.
+  - agent: python-coder
+    ac_id: TQ-500b-1
+    contract: >-
+      The hooks_manifest.hooks entry for check-ticket-signoff-parity under its documented
+      id, registered here as part of day-one triage. TQ-500b-1's reachability descriptor
+      asserts that entry rather than adding it a second time; whichever AC is scheduled
+      first owns the addition.
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-31
+  note: 'criteria untouched. HOST DECIDED, MEASURED: check_hook_trigger_reachability.py
+    is at 354/400 lines under check_file_size''s counting rule and _hook_trigger_reachability_helpers.py
+    at 145/400, so the disk-side enumeration goes in the helpers module — inside templates/scripts/commit_guardian/,
+    which build_commit_guardian copies whole, so no scripts/build_phases.py deploy
+    entry is needed; anything imported from outside that directory does need one.
+    package_surface set TRUE, and not as a formality: _package_surface_registry .WATCHED_REGISTRIES
+    watches commit_guardian.json on hooks_manifest.hooks by id and on the document
+    top level by mapping key, so the day-one registration of check-ticket-signoff-parity
+    (and any other of the 19 triaged as a real gate) adds a watched id and check-package-surface-declaration
+    refuses the commit unless a cited AC declares it. The declared-non-gate register
+    therefore reuses the existing hook_trigger_reachability_exemption_registry key
+    rather than adding a new top-level one (see BP-100n-4-i). All four populations
+    re-measured independently at enrichment: 66 / 59 / 5 disabled / 60 named filenames
+    / 19 unreferenced — reproduced exactly. NEW FINDING recorded in it_requirements:
+    ten of the 19 already carry a dedicated top-level configuration section in commit_guardian.json
+    (complexity, debug_scripts, doc_coverage, doc_links, docstrings, documentation,
+    file_size, folder_density, root_files, sql_complexity), which is evidence of intent
+    to be a gate and makes "declared non-gate" an implausible triage disposition for
+    them. declares_side_effect false: every Then clause here reports to a stream and
+    sets an exit status; commit-time output to a stream is the transient case the
+    derivation excludes. test_spec: seven executing descriptors, two of which carry
+    the named mutations the BA specified.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
+superseded_by: null
+covered_by:
+  - BP-100n-4-i
+  - BP-100n-4-ii
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  VERIFIED DEFECT, 2026-08-31, sourced from KI-CG-20260831-hook-scripts-never-invoked and
+  re-measured against this worktree before authoring: 66 check_*.py scripts on disk, 59
+  hooks_manifest entries, 5 of them enabled:false (check-mermaid-drift, check-diagram-naming,
+  check-duplicate-code, check-diff-coverage, check-surface-components-e2), 60 distinct .py
+  filenames named across all entry lines, and 19 scripts on disk named by no entry at all.
+  The 19 reconcile exactly with the finding's 24-unreferenced count once the 5 disabled are
+  set aside, which is the arithmetic that makes constraint "registered-but-disabled is a
+  third state" load-bearing rather than decorative.
+
+
+  THE GAP IS IN THE ENUMERATION, NOT THE PREDICATE. BP-100k-4's predicate is sound and is
+  not being changed. Its input is hooks_manifest.hooks, so a script that was never registered
+  is not in the set it walks, and the guard built to find gates that cannot fire is
+  structurally blind to the gate nobody wired up. A completeness guard whose input is the
+  registry it is meant to be checking cannot detect incompleteness in that registry.
+
+
+  DAY-ONE BLAST RADIUS IS 19 REPORTS, AND THAT IS THE CORRECT OUTCOME. The check fails on the
+  commit that lands it until each of the 19 is registered, deleted, or given a grounded record
+  in the non-gate register (BP-100n-4-i). Triaging them is part of the work, not a follow-up:
+  a check that lands green because its findings were pre-suppressed has proved nothing. The
+  named instance is the ticket sign-off parity script — deployed, documented as live with
+  enforcement, invoked by nothing, and load-bearing for BP-1100g-5-i and four TQ-500 criteria
+  that pin their reader onto it.
+
+
+  MUTATIONS FOR THE ABSENCE-ASSERTING CLAUSES. Two clauses here assert that something is NOT
+  reported, and both are green on arrival by construction — there is no red baseline for
+  either, because today nothing is reported at all. Each needs an injected mutation to have
+  any evidential value:
+
+  (1) "a script named by an emitted registry entry is not reported at all" — MUTATION: build
+  the invoking set by kebab-casing each script's filename and matching it against registry
+  ids, instead of reading the entry lines. This is the precise over-report the finding's
+  Method section controls for: check_ac_limits.py runs under the id check-ac-tree-limits and
+  would be falsely reported. Under this mutation the clause must fail, naming at least
+  check-ac-tree-limits' script.
+
+  (2) "a script named by a registry entry marked not to be emitted is reported as switched
+  off and does not fail the run" — MUTATION: build the registered set from the generated
+  commit-time configuration alone (the emitted entry lines) rather than from the whole
+  registry. The 5 enabled:false scripts then appear as invoked by nothing and the run fails
+  on them. Under this mutation the clause must fail with exactly those 5 named. This is the
+  five-false-alarms-on-day-one scenario, and false alarms have exactly one natural remedy —
+  weakening the check until they stop — so the mutation must be run, not merely described.
+
+
+  ANTI-GREP, AND HERE IT IS THE WHOLE POINT. Per CLAUDE.md "Gate / Workflow ACs — Verify
+  Behaviorally, Not by Grep", and more sharply: an implementation that compares one hardcoded
+  list against another reproduces this exact defect one level up, which is how the incumbent
+  guard fails. Both sides must be enumerated at run time — the disk side by listing the tree,
+  the registry side by parsing the file the commit would actually consume. The added-script
+  clause is the decisive discriminator: it cannot pass on any implementation carrying a
+  literal list, and it is the clause to write first.

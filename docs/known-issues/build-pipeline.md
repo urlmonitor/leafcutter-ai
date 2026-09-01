@@ -2965,3 +2965,168 @@ rest and a judgement rather than a mechanical conversion. Worth its own decision
 **Pattern:** a scope boundary drawn on a property the governing criterion explicitly says is not
 the observable — and, in this entry's first draft, a boundary audited for principle without being
 audited for coverage.
+
+---
+
+### KI-BP-20260831-1333 — `check-output-drift` blocks a commit on a gitignored cache file, so the gate fails on something no commit could ever contain
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** the `check-output-drift` pre-commit hook (leafcutter Direction B), its
+  `gaps` classification
+
+**Symptom.** A commit touching only `scripts/knowledge/`, `tests/knowledge/`,
+`docs/acceptance-criteria/` and `changelogs/` was refused:
+
+```
+Check Output Drift (leafcutter Direction B).....Failed
+- hook id: check-output-drift
+- exit code: 2
+UNCOMPARABLE: GAP .claude/.cache/readme_markers/fallback-125345.json
+              action=run build.py to register it
+RESULT verified=476 uncomparable=6 exempt=5 gaps=1 drifted=0 missing=0 unreadable=0
+```
+
+Note `drifted=0`. Nothing had drifted. The single `gap` is the whole failure.
+
+**The file is gitignored.**
+
+```
+$ git check-ignore -v .claude/.cache/readme_markers/fallback-125345.json
+.gitignore:15:.claude/.cache/    .claude/.cache/readme_markers/fallback-125345.json
+```
+
+So it can never appear in any commit, cannot be staged, and is unrelated to the diff being
+refused. Its contents point at a *different* file again — `scripts/changelog/README.md` —
+which the commit did not touch.
+
+**The prescribed fix does not work.** `action=run build.py to register it` was followed:
+a scoped `build.py --target-dir <worktree> --force` ran to completion, and the hook failed
+identically afterwards. The marker was created during worktree bootstrap (timestamp 12:49,
+before any of the work) and a sibling worktree from an earlier run does not have the
+directory at all. Unblocked only by moving the file out of the tree by hand.
+
+**Why this is worse than a nuisance.** A gate that fails on untracked, gitignored, machine-
+local state makes its verdict a function of the developer's filesystem rather than of the
+change. Two people with identical diffs get different answers, CI and local disagree, and
+the documented remedy is a no-op — so the natural next move is `--no-verify`, which disables
+every *other* hook in the same run. A gate that cannot be satisfied honestly teaches people
+to skip the gate.
+
+**Fix direction.** Exclude gitignored paths from the drift comparison entirely — if git will
+not track it, the hook has no business gating on it. If cache markers genuinely need
+verifying, that belongs in `build.py`'s own self-check, not in a commit gate. Failing that,
+`gaps` on an ignored path should be reported as INFO and not affect exit status: `drifted=0`
+should mean the hook passes.
+
+**Related.** `KI-BP-20260826-1331` (shared deployed `.leafcutter/` as a per-worktree collage
+— same root theme: build-output state that varies per checkout being treated as
+commit-worthy truth).
+
+---
+
+### KI-BP-20260831-1334 — Every fast-lane worktree bootstrap regenerates ten agent cards as drift, and the lane stages with `git add -A`
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 3 (three separate worktrees in one afternoon, identical ten files)
+- **Where:** worktree bootstrap's `build.py` run; `templates/workflows-js/fast-lane-ship.js`
+  Step 2 staging
+
+**Symptom.** Immediately after `create-fastlane-worktree` completes — before any agent has
+done any work — `git status` in the new worktree shows exactly ten modified files:
+
+```
+docs/agents/cards/{architecture-diagram-author, business-analyst, documentation-expert,
+documentation-verifier, it-po, knowledge-harvester, llm-expert, product-owner,
+python-coder, reference-author}.card.md
+```
+
+Reproduced in three independent worktrees created hours apart, same ten files each time. So
+the committed cards and the cards `build.py` generates from the current templates do not
+agree, and every bootstrap surfaces it afresh.
+
+**The reason it matters is the staging rule.** The fast lane's commit step stages with
+`git add -A` (`KI-BO-029`). Any lane that reaches commit therefore sweeps ten unrelated
+regenerated cards into its PR, attributed to whatever AC it was building. In three runs this
+was caught and reverted by hand each time; a run that is not watched will ship them.
+
+**Two defects, and the second is the durable one.** The card/template disagreement is a
+content bug someone can fix by regenerating and committing. The `git add -A` is a
+*mechanism* bug: it guarantees that any pre-existing drift, from any source, is silently
+adopted by the next PR to pass through the lane. Fixing the cards without fixing the staging
+just waits for the next drift.
+
+**Fix direction.** Stage explicitly — the lane knows which files its build set touches, and
+`files_touched` already exists for exactly this. Separately, regenerate and commit the ten
+cards so a fresh bootstrap is clean, and add a bootstrap assertion that a newly created
+worktree has an empty `git status`: a provisioning step that leaves the tree dirty has not
+finished.
+
+**Related.** `KI-BO-029` (the `git add -A` itself). `KI-BP-20260831-1333` (the other
+build-output-state defect found the same day — that one blocks a commit, this one silently
+enlarges it; opposite failure directions, same underlying confusion about which files the
+build owns).
+
+---
+
+### KI-BP-20260901-0812 — A hook was registered on `main` without the surface declaration its own gate requires, and the gate now refuses the next person to touch it
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `templates/scripts/commit_guardian/commit_guardian.json` (entry
+  `check-ticket-signoff-parity`), `docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml`,
+  and the `check-package-surface-declaration` hook (ACS-100i-8)
+
+**Two defects, and it matters which is which.**
+
+**One — a real registration is on `main` with no declaration behind it.** Commit `406375c88`
+added the `check-ticket-signoff-parity` entry to `commit_guardian.json`, citing `BP-1100g-5-i`.
+That AC has no `package_surface` field at all. ACS-100i-8 exists precisely to refuse
+"registering a surface without declaring it" — its own config comment says the declaration
+"is under the author's control and can simply be omitted, but the registration cannot be." The
+registration happened and the declaration did not, so that commit should have been refused and
+was not. How it got through is unestablished; the likeliest candidates are the hook not being
+installed in that worktree (`KI-BP-004`, deployed hooks frozen at build time) or an
+unrecorded bypass.
+
+**Two — the hook cannot tell a merge from a registration.** Any later branch that merges
+`origin/main` inherits the entry and is refused, because the hook sees a new entry in the diff
+and asks for a citation. The entry is not new to the repository, only to that branch. This is
+the defect that makes the first one everyone else's problem: the debt does not sit with whoever
+created it, it blocks the next person to merge.
+
+**Why it could not be fixed in passing.** Adding `package_surface: true` to `BP-1100g-5-i`
+triggers ACS-100i-6, which requires `it_requirements` to be a five-field structured object.
+That AC's `it_requirements` is a list of eight prose constraints, so declaring the surface
+would fail schema validation. The correct fix is to restructure that AC — which belongs to
+whoever owns `BP-1100g-5-i`, not to an unrelated merge that happens to trip over it. Recorded
+rather than bodged.
+
+**Observed.** Merging `origin/main` into `fix/bp900g9-remaining-sites` on 2026-09-01:
+
+```
+[check-package-surface-declaration] REFUSED: this change adds a package-registry entry, but
+none of the acceptance criteria it cites declares a package surface.
+  templates/scripts/commit_guardian/commit_guardian.json: new entry 'check-ticket-signoff-parity'
+  cited: ... BP-1100g-5-i
+  Set `package_surface: true` on the criterion that registers this surface, then re-commit.
+```
+
+Citing `BP-1100g-5-i` explicitly did not satisfy it, because the citation is checked against the
+AC's declaration rather than merely being present — which is the hook working correctly on a
+premise that is already false upstream.
+
+**Fix direction.** Two separate pieces. For the debt: set `package_surface: true` on
+`BP-1100g-5-i` and restructure its `it_requirements` to the object form ACS-100i-6 then
+requires. For the hook: it should evaluate entries the *commit itself* introduces relative to
+its merge base, not every entry new to the branch, so a merge carrying an already-declared
+registration passes without a citation. Until both land, every branch that merges `main` will
+hit this and will either bypass it or stall.
+
+**Pattern:** a gate that failed to fire where the defect was introduced, and fires instead on
+everyone who arrives afterwards.

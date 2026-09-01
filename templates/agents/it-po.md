@@ -805,8 +805,12 @@ best-effort handling (log a warning and proceed if any step fails):
    Execute the write using the route classification from step 1.
    If the skill is unavailable, log: "S9: capture-learning skill not found — capture skipped." and stop.
 
-3. Emit a `knowledge_captured` telemetry event. Append to
-   `debugging/logs/agent_telemetry.jsonl` (create the file if absent; skip
+3. Emit a `knowledge_captured` telemetry event. This shape is normatively
+   defined in `templates/skills/signoff/SKILL.md` §7 step 4 (deployed:
+   `.claude/skills/signoff/SKILL.md` §7 step 4) — the required field set below
+   must match that definition exactly; this agent has no `ticket_path` in
+   hand, so the optional `ticket` field defined there is omitted here. Append
+   to `debugging/logs/agent_telemetry.jsonl` (create the file if absent; skip
    gracefully if the directory is not writable):
    ```json
    {"event": "knowledge_captured", "timestamp": "<ISO-8601>", "agent": "it-po", "component": "<component-id>", "destination": "<routed_file_path>", "entry_kind": "<entry_kind from route-learning>"}

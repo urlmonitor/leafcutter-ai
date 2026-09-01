@@ -135,6 +135,7 @@ flowchart TD
 - BO-1900c-3: Reference doc defines the charter-vs-task-verb matching rules
 - BO-1900d-3: Reference doc specifies the allowlisted dispatch-payload contract
 - BO-2900g-5: Reference documentation states the one set of words for a required proof and what is always asked for
+- BO-300d-5: A reference entry states the unbuilt-work causes, what establishes each, and which distinctions the run cannot make
 - BO-3100a-4: Reference documentation tells an author how to grant, revoke and repair hand-off authority
 - BO-3100d-3: Reference documentation states the real constraint on delegation and what it forbids
 - BO-3200a-3: Reference documentation tells a workflow author which questions a specialist may be asked
