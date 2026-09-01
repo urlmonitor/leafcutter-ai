@@ -415,6 +415,12 @@ class TestTheUnbuiltSetIsDeterminedByIdentityAndNotByArithmetic(_UnbuiltCountCas
         epic_path, paths = self.build_epic(worktree, planned + ["03_new.md"])
         reads = [
             {"present": self.present(paths, planned)},
+            # The terminating look. The drive re-asks what is ready as work
+            # completes, and each look consumes one read; without an entry that
+            # offers nothing, this look eats the completion re-read's entry and
+            # the re-read is starved. Explicitly empty `batches` rather than a
+            # derived one so the loop ends for a stated reason.
+            {"present": self.present(paths, planned, done=set(planned)), "batches": []},
             # 02_b.md removed, 03_new.md added — the total count is unchanged (2).
             {"present": self.present(paths, ["01_a.md", "03_new.md"])},
         ]
