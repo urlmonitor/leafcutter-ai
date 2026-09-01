@@ -1,0 +1,131 @@
+id: BO-3000a
+title: "A handoff that names its target the way the agent template prescribes is honoured, not refused for omitting a field the template never mentions"
+component: build-orchestration
+components:
+  - build_orchestration
+status: active
+level: L3
+readiness: approved
+priority: high
+work_status: todo
+origin_agent: BrainCandy
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given templates/agents/python-coder.md §"Test Delegation" instructs a coder to
+    signal a handoff by (a) adding task items under the `### <agent>` subsection
+    of the ticket's `## Implementation Tasks` section and (b) returning
+    `(status: handoff)`
+  And that template nowhere instructs the agent to return a `handoff_target`
+    field in its JSON result
+  When a phase agent returns `{ "status": "handoff" }` with no `handoff_target`
+    key, having written a `### <agent>` subsection under `## Implementation
+    Tasks` in the ticket record
+  Then driveTicketPhases() MUST resolve the handoff target from the ticket's own
+    record before refusing
+  And it MUST re-dispatch the agent named by that subsection
+  And the drive MUST NOT return `blocked` on the ground that no target was named
+
+  Given the ticket record's `## Implementation Tasks` section names exactly one
+    `### <agent>` subsection whose name is a known phase agent
+  When the target is resolved from the record
+  Then that agent MUST be the re-dispatch target
+
+  Given the record's `## Agent Contracts` section also contains `### <agent>`
+    subsections (documentation-expert and others appear there routinely)
+  When the target is resolved from the record
+  Then subsections under `## Agent Contracts` MUST NOT be treated as handoff
+    targets, because that section declares documentation obligations rather than
+    outstanding work handed to another phase
+  And a record whose only `### <agent>` heading sits under `## Agent Contracts`
+    MUST be treated as naming no handoff target at all
+
+  Given the record names two or more distinct known phase agents under
+    `## Implementation Tasks`
+  When the target is resolved from the record
+  Then the driver MUST NOT guess between them and MUST return `blocked`, naming
+    the candidates it found
+  And the existing BO-3000 refusal behaviour MUST remain intact for every case
+    where neither the result field nor the record yields exactly one known agent
+
+  Given an explicit `handoff_target` field IS present and names a known agent
+  When the handoff is routed
+  Then that field MUST take precedence over the record, so this criterion adds a
+    fallback and changes no currently-working path
+
+  Given the JS workflow driver harness at
+    unit_tests/prompt_assembly/_driver_harness.py
+  When BO-3000a is verified
+  Then the covering test MUST execute build-feature.js's own top-level body
+    through the harness and assert on the observed dispatch sequence
+  And a grep-only / structural assertion over the JS source MUST NOT be accepted
+    as coverage for this AC
+test_required: true
+test_spec:
+  - name: test_handoff_without_target_field_resolves_target_from_implementation_tasks
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The defect itself — a conformant handoff, named only through the template's own channel, is routed rather than refused."
+  - name: test_agent_contracts_subsection_is_not_read_as_a_handoff_target
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Real tickets carry ### documentation-expert under ## Agent Contracts; a heading scan not scoped to ## Implementation Tasks picks the wrong agent."
+  - name: test_two_candidate_agents_in_implementation_tasks_still_refuses
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The fallback must not become a guess — BO-3000's fail-closed promise survives an ambiguous record."
+  - name: test_explicit_handoff_target_field_takes_precedence_over_the_record
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The already-working path is unchanged by the fallback."
+  - name: test_handoff_fallback_is_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "The fallback is exercised by executing build-feature.js's own top-level body, not by calling an extracted helper."
+covered_by: []
+implemented_by: []
+notes: |
+  FIELD EVIDENCE — observed 2026-09-01, EPIC-TheNumberingGuaranteeHoldsAtEveryStage,
+  ticket 01 (GE-122d-1). python-coder completed a verified 77-line fix to
+  scripts/build_phases.py, diagnosed that 4 of 6 red-baseline tests failed on a
+  test-fixture path bug (the fixture assumed a bare `<target>/hooks/`,
+  contradicting ADR-004's shim design), correctly classified that as test_drift,
+  correctly declined to fix tests itself (its template forbids it), wrote the
+  `### test-writer` section, and returned `status: handoff`. The driver replied:
+
+    Phase 'python-coder' returned 'status: handoff' but named no recognizable
+    handoff_target ('undefined').
+
+  The ticket was dropped. It was the only one of four in that batch that produced
+  working production code. The fix survives only because it was left staged.
+
+  WHY THIS IS A CHILD OF BO-3000 AND NOT A REVISION OF IT. BO-3000 requires that
+  an unparseable handoff target fail closed, and that requirement is correct and
+  must not be relaxed — guessing a re-dispatch target is worse than refusing.
+  This record narrows what "unparseable" means: a target named through the
+  channel the agent template actually prescribes is parseable, and the driver was
+  simply looking in a different place. BO-3000's five existing tests pass today
+  and must continue to pass.
+
+  NOTE ON BO-3000's OWN STATE. BO-3000 reads `work_status: todo` with an empty
+  `implemented_by` while unit_tests/workflows/test_bo_3000_handoff_routing.py
+  exists and is GREEN (5 passed, 2026-09-01). That is a store-reconciliation gap
+  of the same kind recorded for GE-122e-2 on the same day. It is NOT corrected
+  here — reconciling an unrelated record's status from inside a fix commit is how
+  the store's history stops being auditable. Recorded as an observation only.
+
+  SCOPE. templates/workflows-js/build-feature.js only. build-ticket.js carries the
+  twin handoff handler (BO-3000 required both) and the same fallback should follow
+  there, but the frozen-list defect this fix ships alongside (BO-3700) is
+  build-feature-specific, and widening this pass to a second driver without its own
+  red baseline is how a fix becomes a rewrite. Recorded as follow-up, not done here.
