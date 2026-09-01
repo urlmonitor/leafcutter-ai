@@ -917,6 +917,36 @@ def select_batch(*, ac_root: Path, limit: int) -> list[str]:
     Returns:
         Ordered list of at most *limit* ready AC ids.  Returns ``[]`` when no
         ready ACs exist or *ac_root* does not exist.
+
+    NO PRODUCTION CALLER TODAY — READ THIS BEFORE DELETING OR BUILDING ON IT.
+    Nothing in the shipping lane invokes this function or its ``select_batch``
+    CLI subcommand.  Its only former caller was ``fast-lane-build.js``, an
+    orphaned second runner deleted under BO-2400c-1-v.  The live lane
+    (``fast-lane-ship.js``) calls ``select_connected`` instead, which is a
+    DIFFERENT operation: it resolves one AC's connected build set, whereas this
+    picks up to N ready ACs from the whole store.  ``select_connected`` is not a
+    superset and does not replace this.  The lane stopped calling it because
+    BO-2400f moved the lane from batch-mode to single-AC-mode, not because
+    anything superseded it.
+
+    It is therefore DORMANT, not dead, and deliberately retained:
+
+    * Its behaviour is covered by tests that EXECUTE it, including
+      ``TestSelectBatchCli`` in unit_tests/build_orchestration/test_fast_lane_cli.py,
+      which runs the CLI as a real subprocess.
+    * ACD-2000b-4 (status: active, work_status: todo) names this function as
+      "the requirement-grain selection this rule constrains" and requires the
+      determinism guarantee above be preserved.
+
+    Two consequences, and both have bitten this repository before:
+
+    * Do NOT delete it as dead code.  It has no caller but it does have a
+      tested capability and live planned work — the exact shape KI-BO-006 was
+      written about.
+    * Do NOT build ACD-2000b-4's overlap rule onto it without first deciding
+      that batch-mode selection is what that rule should govern.  Implemented
+      here as things stand, the rule would never fire in production, because
+      nothing calls this.  That choice is unmade.
     """
     if not ac_root.exists():
         return []

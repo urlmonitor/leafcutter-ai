@@ -41,7 +41,7 @@ doc_links:
   - path: scripts/build_orchestration/fast_lane.py
     relationship: describes
     status: exists
-    relevance: "select_batch (~line 439) is the requirement-grain selection this rule constrains, and _build_ac_id_to_path_index (~line 71) is the single-pass indexing precedent the pairwise comparison must follow."
+    relevance: "select_batch is the requirement-grain selection this rule was written against, and _build_ac_id_to_path_index is the single-pass indexing precedent the pairwise comparison must follow. WHICH SURFACE THIS RULE CONSTRAINS IS AN OPEN CHOICE, not settled by this link (recorded 2026-09-01). select_batch has NO production caller: its only one was the orphaned fast-lane-build.js, deleted under BO-2400c-1-v, and the live lane calls select_connected — a different operation (one AC's connected set, not N ready ACs from the store), so it is not a replacement. Implement the overlap rule on select_batch as things stand and it will never fire in production. Decide first whether this rule governs batch-mode selection (select_batch, currently dormant), the lane's connected-set resolution (select_connected), or build-feature.js's ticket batching, which is where parallel dispatch actually happens today."
 assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:

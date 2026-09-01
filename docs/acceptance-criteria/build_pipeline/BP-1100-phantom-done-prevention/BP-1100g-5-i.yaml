@@ -52,16 +52,80 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 declares_side_effect: false
+package_surface: true
 it_requirements:
-  - "THE READER IS NEW. completion_manifest has ZERO code readers today — grep over scripts/ returns no occurrences; it is parsed only by the supervisor LLM. scripts/commit_guardian/_signoff_parity_checks.py already parses a ticket's ## Sign-offs section and is the natural host, but it does not parse the ## Comments block. Extend it rather than adding a second ticket parser."
-  - "THE ANTI-GREP CLAUSE IS BINDING. Cardinality must be established from the records the run ACTUALLY EMITTED. A test asserting that the writing side was told to answer, or that a call to record the answer is present in the source, passes on an implementation that never records anything. Assert over emitted records, never over source presence."
-  - "CARRY BO-1000b-1-i's TRAP FORWARD: its double-recording defect survived because a count-guard regex matched only quoted-string first arguments and was blind to template-literal calls. Do not implement or test the answered-twice case by pattern-matching call sites."
-  - "The three shortfall kinds must be distinguishable BY NAME in the output — reasonless, absent, answered-more-than-once. Detecting all three needs three different mechanisms: presence for absent, a required (not merely permitted) reason for reasonless, and cardinality for answered-twice. An implementation commonly gets one or two."
-  - "A reasoned negative must never be reported. False shortfalls have exactly one natural remedy — weakening the check until they stop — so the valid case is as load-bearing as the invalid ones."
-  - "NO RECORD AND A BAD RECORD ARE DIFFERENT STATES. A run that stopped before a piece of work was handed on produced no record for it and must not be reported as reasonless or contradictory. Same carve-out discipline as BO-2900f-2-i."
-  - "LEGACY COMPATIBILITY: pre-epoch sign-offs carry no completion_manifest at all, and the signoff SKILL explicitly accepts that absence. Those must fall in the no-record state, not the absent-answer shortfall, or the check false-fails every historical ticket on its first run."
-  - "Must be reachable through the deployed hook path (python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py) and registered in scripts/commit_guardian/commit_guardian.json. Any new module it imports must be in the build deploy manifest."
-  - "The report is a record-shape observation, not a verdict about any test. It must not consult a test file, a test result, or a coverage record."
+  config_schema_fragment:
+    type: object
+    description: >-
+      The hooks-manifest entry this AC adds to
+      templates/scripts/commit_guardian/commit_guardian.json — a watched
+      package-surface registry (WATCHED_REGISTRIES maps that path to
+      ("hooks_manifest.hooks", "list_ids") and ("", "mapping_keys")). The hook
+      id check-ticket-signoff-parity was already deployed and already
+      documented in the commit-guardian README, but was named by no entry, so
+      the reader this AC builds was reachable from nothing until the entry
+      existed. Registration under the DOCUMENTED id is part of the work: a new
+      id would be a second package surface.
+    required:
+      - id
+      - entry
+      - files
+      - stages
+      - _comment
+    properties:
+      id:
+        type: string
+        const: "check-ticket-signoff-parity"
+        description: "The documented hook id, referenced by SKIP= and by the generated pre-commit config."
+      entry:
+        type: string
+        description: "The deployed hook path — python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ticket_signoff_parity.py. A reader not reachable from this entry is inert."
+      files:
+        type: string
+        description: "Staged-path filter. This reader observes ticket records only: ^tickets/.*\\.md$."
+      stages:
+        type: array
+        items:
+          type: string
+        description: "pre-commit."
+      _comment:
+        type: string
+      shortfall_record:
+        type: object
+        description: "The reader's output shape — zero or one per work item. A conforming answer and a work item with no record at all both produce nothing."
+        required:
+          - work_item_id
+          - kind
+          - detail
+        properties:
+          work_item_id:
+            type: string
+          kind:
+            type: string
+            enum:
+              - reasonless
+              - absent
+              - answered_more_than_once
+            description: "The three shortfall kinds, named in the output. Detecting all three needs three different mechanisms — see the constraint below; an implementation commonly gets one or two."
+          detail:
+            type: string
+  reference_file_path: "templates/scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "1 — a single entry in hooks_manifest.hooks of the reference file, under the already-documented id check-ticket-signoff-parity. The reader itself extends the existing scripts/commit_guardian/_signoff_parity_checks.py behind that same entry point, so there is no second registration; without this one entry the whole reader is inert."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/commit_guardian/ -q"
+  constraints:
+    - "THE READER IS NEW. completion_manifest has ZERO code readers today — grep over scripts/ returns no occurrences; it is parsed only by the supervisor LLM. scripts/commit_guardian/_signoff_parity_checks.py already parses a ticket's ## Sign-offs section and is the natural host, but it does not parse the ## Comments block. Extend it rather than adding a second ticket parser."
+    - "THE ANTI-GREP CLAUSE IS BINDING. Cardinality must be established from the records the run ACTUALLY EMITTED. A test asserting that the writing side was told to answer, or that a call to record the answer is present in the source, passes on an implementation that never records anything. Assert over emitted records, never over source presence."
+    - "CARRY BO-1000b-1-i's TRAP FORWARD: its double-recording defect survived because a count-guard regex matched only quoted-string first arguments and was blind to template-literal calls. Do not implement or test the answered-twice case by pattern-matching call sites."
+    - "The three shortfall kinds must be distinguishable BY NAME in the output — reasonless, absent, answered-more-than-once. Detecting all three needs three different mechanisms: presence for absent, a required (not merely permitted) reason for reasonless, and cardinality for answered-twice. An implementation commonly gets one or two."
+    - "A reasoned negative must never be reported. False shortfalls have exactly one natural remedy — weakening the check until they stop — so the valid case is as load-bearing as the invalid ones."
+    - "NO RECORD AND A BAD RECORD ARE DIFFERENT STATES. A run that stopped before a piece of work was handed on produced no record for it and must not be reported as reasonless or contradictory. Same carve-out discipline as BO-2900f-2-i."
+    - "LEGACY COMPATIBILITY: pre-epoch sign-offs carry no completion_manifest at all, and the signoff SKILL explicitly accepts that absence. Those must fall in the no-record state, not the absent-answer shortfall, or the check false-fails every historical ticket on its first run."
+    - "Must be reachable through the deployed hook path (python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py) and registered in scripts/commit_guardian/commit_guardian.json. Any new module it imports must be in the build deploy manifest."
+    - "The report is a record-shape observation, not a verdict about any test. It must not consult a test file, a test result, or a coverage record."
 delivers_to:
   - agent: pr-reviewer
     contract: "Per work item, zero or one shortfall record: {work_item_id, kind: 'reasonless' | 'absent' | 'answered_more_than_once', detail}. A conforming answer and a work item with no record at all both produce nothing."
@@ -153,6 +217,30 @@ amended_by:
     control as state `unverified` rather than an omitted block, so "we never fed it bad
     input" is visible in the artifact instead of silent. Align with that vocabulary
     rather than inventing a parallel one.'
+- reason: declaration-correction
+  by: business-analyst
+  at: '2026-09-01'
+  note: 'package_surface set to true, and it_requirements restructured from a nine-item
+    prose list into the object form the ACS-100i-6 conditional then demands (all five
+    required fields; the nine constraints preserved verbatim under `constraints`,
+    matching the sibling BP-1100g-4). No constraint was dropped, reworded or added.
+
+    WHY: commit 406375c88 registered hook id check-ticket-signoff-parity in
+    templates/scripts/commit_guardian/commit_guardian.json citing this AC. That path is
+    a WATCHED_REGISTRIES entry, so the registration IS a package surface, while this
+    record declared none. check-package-surface-declaration (ACS-100i-8) refuses exactly
+    that pairing, and the consequence landed on third parties: every branch that merges
+    origin/main inherits the new entry, the hook sees an undeclared addition, and the
+    merge is refused. Observed on PR #661, which needed an authorised SKIP. Filed as
+    KI-BP-20260901-0812. How the registering commit itself got past the hook is
+    unestablished and is NOT addressed here.
+
+    reference_file_path names templates/scripts/... rather than scripts/..., because the
+    templates copy is the source that is edited and the path WATCHED_REGISTRIES actually
+    keys on; scripts/ is the build output. The pre-existing constraint that says
+    "registered in scripts/commit_guardian/commit_guardian.json" is left verbatim.
+
+    criteria, work_status, readiness and every other lifecycle field untouched.'
 superseded_by: null
 covered_by: []
 implemented_by: []

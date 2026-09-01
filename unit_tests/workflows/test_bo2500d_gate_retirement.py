@@ -3,23 +3,36 @@ MODULE: unit_tests/workflows/test_bo2500d_gate_retirement.py
 GOAL: Structural GUARD tests for the BO-2500d batch.
 
 These are regression/guard tests — they assert structural properties that are
-expected to hold by construction on the ac-authoring/fast-lane branch. They
-are NOT red-first TDD stubs; the properties they guard already exist in the
-on-disk JS files (fast-lane-build.js was built fresh without the opinion-only
-gates; the heavy pipeline files retain them). Their purpose is to catch
-regressions: if a future edit inadvertently re-adds an opinion-only gate to
-the fast lane, or removes a mechanical gate, these tests will turn red.
+expected to hold by construction against the live fast lane. They are NOT
+red-first TDD stubs; the properties they guard already exist in the on-disk
+JS files. Their purpose is to catch regressions: if a future edit
+inadvertently re-adds a forbidden opinion-only gate, introduces a second
+delivery-bearing LLM verdict, lets a verdict reach the mark-done control
+flow, or removes a mechanical gate, these tests will turn red.
 
-ACs covered:
-  BO-2500d-1   — Opinion-only gate agents are absent from the fast-lane phase order
+BO-2400c-1-v migration note: templates/workflows-js/fast-lane-build.js was an
+orphaned second fast-lane runner nothing invoked; it has been DELETED. Every
+test below reads templates/workflows-js/fast-lane-ship.js — the lane that
+actually runs — via the single _FAST_LANE_PATH constant.
+
+ACs covered (all amended 2026-08-18/19 — see each AC's amended_by history in
+docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/):
+  BO-2500d-1   — The fast lane carries at most one delivery-bearing LLM
+                  verdict (today: pr-reviewer), which may only withhold
+                  delivery and can never confer done. No LLM validator agent
+                  and no LLM fulfillment-gate agent are dispatched.
   BO-2500d-2   — The opinion-only gate agents remain present in the heavy pipeline
-  BO-2500d-3   — Mechanical proof-of-done gates stand in for the removed agents
-  BO-2500d-1-i — Guard: mechanical replacement must exist before opinion-only gate
-                  removal is allowed; encoded as structural presence assertions on
-                  fast-lane-build.js (per user directive 2026-07-21)
+  BO-2500d-3   — The mechanical proof-of-done gates are the fast lane's
+                  completion arbiters
+  BO-2500d-1-i — Guard: dropping a mechanical gate, or letting an LLM verdict
+                  substitute for one, is rejected; a veto-only reviewer with
+                  all gates intact is explicitly accepted (encoded here as
+                  structural presence/absence assertions per user directive
+                  2026-07-21, amended 2026-08-18 to stop rejecting the
+                  veto-only reviewer BO-2400f-11 shipped)
 
 Files under test (REAL on-disk, not hand-typed):
-  templates/workflows-js/fast-lane-build.js
+  templates/workflows-js/fast-lane-ship.js
   templates/workflows-js/build-feature.js
   templates/workflows-js/build-ticket.js
 
@@ -43,21 +56,15 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_FAST_LANE_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-build.js"
+_FAST_LANE_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 _BUILD_FEATURE_PATH = _REPO_ROOT / "templates" / "workflows-js" / "build-feature.js"
 _BUILD_TICKET_PATH = _REPO_ROOT / "templates" / "workflows-js" / "build-ticket.js"
 
-# BO-2400c-1-v migration: fast-lane-build.js (_FAST_LANE_PATH above) is an
-# orphaned second fast-lane runner nothing invokes; fast-lane-ship.js is the
-# lane that actually runs. Only test_ac_d2_fast_lane_has_no_phase_order_array
-# below (BO-2500d-2, work_status: done) is re-pointed at the live lane, via
-# this SEPARATE constant — _FAST_LANE_PATH itself is deliberately left
-# unchanged because every OTHER _FAST_LANE_PATH user in this file covers
-# BO-2500d-1 / -1-i / -3 (work_status: in_progress, not done), and BO-2500d-1
-# in particular asserts an invariant (no LLM review agent in the fast lane)
-# that the live lane deliberately violates on purpose (pr-reviewer at Phase
-# 4.5, PR #485). Re-pointing those would fail them on an intentional design
-# decision, not a regression — see the docstring on the one migrated test.
+# fast-lane-build.js (the orphan _FAST_LANE_PATH used to point at) has been
+# deleted (BO-2400c-1-v). _FAST_LANE_PATH above now points at the live lane
+# for every test in this module. This second constant is kept only so
+# test_ac_d2_fast_lane_has_no_phase_order_array's own historical migration
+# docstring (which names it explicitly) still resolves to the same file.
 _FAST_LANE_SHIP_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 
 
@@ -127,6 +134,35 @@ def _extract_agenttype_values(content: str) -> list[str]:
     return values
 
 
+def _strip_comment_lines(content: str) -> str:
+    """Return content with pure comment lines removed, preserving line order.
+
+    Ported from unit_tests/workflows/test_bo2400a_runner_structure.py's helper
+    of the same name (BO-2500d migration to the live fast-lane-ship.js runner).
+    Raw `.find()` / regex positions computed on the RESULT reflect the actual
+    code sequence, rather than being skewed by a header/JSDoc comment that
+    mentions an implementation detail (e.g. 'python-coder' in the file's own
+    architecture summary) out of real execution order.
+
+    Args:
+        content: Raw JS file content.
+
+    Returns:
+        The content with comment-only lines removed, newline-joined.
+    """
+    kept = []
+    for line in content.split("\n"):
+        stripped = line.strip()
+        if (
+            stripped.startswith("//")
+            or stripped.startswith("*")
+            or stripped.startswith("/*")
+        ):
+            continue
+        kept.append(line)
+    return "\n".join(kept)
+
+
 # ---------------------------------------------------------------------------
 # Base class
 # ---------------------------------------------------------------------------
@@ -166,40 +202,114 @@ class _JsFileTestBase(unittest.TestCase):
 
 
 class TestFastLaneExcludesOpinionOnlyGates(_JsFileTestBase):
-    """BO-2500d-1: fast-lane-build.js contains no opinion-only gate agent dispatches.
+    """BO-2500d-1: the fast lane carries at most one delivery-bearing LLM verdict.
 
-    The fast-lane phase order must contain no LLM review agent, no LLM validator
-    agent, and no LLM fulfillment gate agent.  The only completion arbiters it lists
-    are the mechanical proof-of-done gates (verified in BO-2500d-3 tests).
+    AMENDMENT (2026-08-18/19, see BO-2500d-1.yaml amended_by): the original rule
+    tested here ("no LLM review agent at all") was retired because BO-2400f-11
+    (PR #485, confirmed intended by BrainCandy) deliberately put pr-reviewer into
+    the fast lane at Phase 4.5. The amended criteria forbid an LLM VALIDATOR agent
+    and an LLM FULFILLMENT-GATE agent, and permit AT MOST ONE LLM agent whose
+    verdict bears on whether the change is delivered — today that is pr-reviewer,
+    and its verdict may only withhold delivery, never confer done. The only
+    completion arbiters are the mechanical proof-of-done gates (verified in
+    BO-2500d-3 tests).
 
-    These are regression guards — the property holds by construction.  If they fail,
-    an opinion-only gate was accidentally re-added to the fast lane.
+    These are regression guards — the property holds by construction.  If they
+    fail, either a forbidden opinion-only agent (validator / fulfillment-gate /
+    change-scope-reviewer) was re-added, a second delivery-bearing verdict was
+    introduced, or the reviewer's verdict became reachable from the mark-done
+    control flow.
     """
 
-    OPINION_ONLY_AGENTS = (
-        "pr-reviewer",
+    # The two agent kinds BO-2500d-1 explicitly forbids outright (LLM validator,
+    # LLM fulfillment-gate), plus change-scope-reviewer, a third opinion-only gate
+    # historically excluded and still absent (see the individual
+    # test_ac_d1_fast_lane_excludes_* tests below, which remain green and
+    # untouched by this amendment).
+    NON_REVIEWER_OPINION_AGENTS = (
         "ac-validator",
         "ac-fulfillment-gate",
         "change-scope-reviewer",
     )
+    # The one LLM agent BO-2500d-1 permits to carry a delivery-bearing verdict —
+    # confirmed intended: pr-reviewer at Phase 4.5 of fast-lane-ship.js (PR #485).
+    DELIVERY_VERDICT_AGENT = "pr-reviewer"
 
-    def test_ac_d1_fast_lane_excludes_pr_reviewer(self) -> None:
+    def test_ac_d1_pr_reviewer_is_the_sole_delivery_verdict_and_cannot_confer_done(
+        self,
+    ) -> None:
         # covers: BO-2500d-1
-        """fast-lane-build.js must not reference 'pr-reviewer'.
+        # angle: criterion
+        """RENAMED from test_ac_d1_fast_lane_excludes_pr_reviewer.
 
-        The PR reviewer is an LLM opinion gate.  It must be absent from the
-        fast-lane phase order — the fast lane uses only mechanical gates.
+        The retired assertion ("fast-lane-ship.js must not reference
+        'pr-reviewer'") tested the pre-amendment rule. BO-2500d-1 was amended
+        2026-08-18 to permit AT MOST ONE LLM agent whose verdict bears on
+        delivery, and the live lane confirmed-intentionally dispatches exactly
+        that one — pr-reviewer, at Phase 4.5 (PR #485). This test asserts the
+        amended property directly, in two parts:
 
-        If this test FAILS, a 'pr-reviewer' string was added to fast-lane-build.js
-        (directly or via an agentType dispatch).  Remove it; keep the file's two
-        flat dispatches (test-writer + python-coder) as the only agent calls.
+        1. Exactly one agent from the opinion/verdict family (pr-reviewer,
+           ac-validator, ac-fulfillment-gate, change-scope-reviewer) is
+           dispatched, and it is pr-reviewer — proving "at most one" as an
+           equality against the confirmed-intended live shape.
+        2. The LOAD-BEARING HALF: no identifier derived from that verdict
+           (reviewResult / reviewVerdictUsable / reviewHighFindings /
+           reviewMediumFindings / reviewLowSuppressedCount) is referenced
+           anywhere in the Commit-phase code block that constructs and issues
+           the mark-done dispatch. This is the structural proof that the
+           verdict can only withhold delivery (by returning early, before
+           Phase 5) and can never be read to CONFER done.
         """
-        content = self._require_file(_FAST_LANE_PATH, "fast-lane-build.js")
-        self.assertNotIn(
-            "pr-reviewer",
-            content,
-            "fast-lane-build.js must NOT reference 'pr-reviewer' — "
-            "it is an opinion-only LLM gate excluded from the fast lane (BO-2500d-1).",
+        content = self._require_file(_FAST_LANE_PATH, "fast-lane-ship.js")
+        code_only = _strip_comment_lines(content)
+
+        opinion_family = self.NON_REVIEWER_OPINION_AGENTS + (
+            self.DELIVERY_VERDICT_AGENT,
+        )
+        agent_types = _extract_agenttype_values(code_only)
+        opinion_dispatches = [at for at in agent_types if at in opinion_family]
+        self.assertEqual(
+            opinion_dispatches,
+            [self.DELIVERY_VERDICT_AGENT],
+            "fast-lane-ship.js must dispatch EXACTLY ONE agent from the "
+            f"opinion/verdict family {opinion_family}, and it must be "
+            f"'{self.DELIVERY_VERDICT_AGENT}'. Found: {opinion_dispatches} "
+            "(BO-2500d-1: at most one LLM verdict bears on delivery).",
+        )
+
+        commit_phase_match = re.search(
+            r'phase\("Commit"\);(.*?)phase\("Pull Request"\)',
+            code_only,
+            re.DOTALL,
+        )
+        if commit_phase_match is None:
+            self.fail(
+                "Could not locate the Commit-phase block (between "
+                'phase("Commit") and phase("Pull Request")) in fast-lane-ship.js '
+                "— verify the phase markers still exist (BO-2500d-1)."
+            )
+        commit_phase_block = commit_phase_match.group(1)
+        verdict_identifiers = (
+            "reviewResult",
+            "reviewVerdictUsable",
+            "reviewHighFindings",
+            "reviewMediumFindings",
+            "reviewLowSuppressedCount",
+        )
+        leaked = [
+            ident
+            for ident in verdict_identifiers
+            if re.search(rf"\b{ident}\b", commit_phase_block)
+        ]
+        self.assertEqual(
+            leaked,
+            [],
+            f"The Commit-phase block (mark-done + commit dispatch) must NEVER "
+            f"reference a review-verdict-derived identifier. Found: {leaked}. "
+            "An LLM verdict may withhold delivery (by halting BEFORE this "
+            "block, in the Review phase guards) but must never be read here "
+            "to confer done (BO-2500d-1).",
         )
 
     def test_ac_d1_fast_lane_excludes_ac_validator(self) -> None:
@@ -235,77 +345,95 @@ class TestFastLaneExcludesOpinionOnlyGates(_JsFileTestBase):
             "it is an opinion-only gate excluded from the fast lane (BO-2500d-1).",
         )
 
-    def test_ac_d1_no_opinion_only_agent_by_name(self) -> None:
+    def test_ac_d1_no_non_reviewer_opinion_agent_by_name(self) -> None:
         # covers: BO-2500d-1
-        """No opinion-only agent name may appear anywhere in fast-lane-build.js.
+        # angle: criterion
+        """RENAMED from test_ac_d1_no_opinion_only_agent_by_name.
 
-        Combines the individual exclusion checks into one omnibus assertion.
-        Catches any agent from the opinion-only set that might be added in a
-        comment, string, or agentType dispatch.
+        The retired version combined all four opinion-only agents — including
+        pr-reviewer — into one omnibus "must be absent" check. Under the
+        amendment pr-reviewer is the one permitted delivery-bearing verdict,
+        so it is deliberately excluded from this omnibus; its own presence and
+        load-bearing constraints are covered by
+        test_ac_d1_pr_reviewer_is_the_sole_delivery_verdict_and_cannot_confer_done
+        above. This omnibus now covers exactly the three agents the amended
+        criteria still forbid outright: no LLM validator agent, no LLM
+        fulfillment-gate agent, and (retained) no change-scope-reviewer.
         """
-        content = self._require_file(_FAST_LANE_PATH, "fast-lane-build.js")
-        present = [ag for ag in self.OPINION_ONLY_AGENTS if ag in content]
+        content = self._require_file(_FAST_LANE_PATH, "fast-lane-ship.js")
+        present = [ag for ag in self.NON_REVIEWER_OPINION_AGENTS if ag in content]
         self.assertEqual(
             present,
             [],
-            f"fast-lane-build.js must contain NONE of the opinion-only gate "
-            f"agents. Found: {present} (BO-2500d-1). "
-            "Remove them — only mechanical gates are permitted as fast-lane "
-            "completion arbiters.",
+            f"fast-lane-ship.js must contain NONE of the still-forbidden "
+            f"opinion-only agents. Found: {present} (BO-2500d-1). "
+            "Remove them — only the mechanical gates and the single "
+            "pr-reviewer verdict are permitted in the fast lane.",
         )
 
-    def test_ac_d1_no_generic_review_or_validator_agenttype(self) -> None:
+    def test_ac_d1_no_validator_agenttype_and_at_most_one_review_agenttype(
+        self,
+    ) -> None:
         # covers: BO-2500d-1
-        """No agentType dispatched by fast-lane-build.js may contain 'review' or 'validator'.
+        # angle: criterion
+        """RENAMED from test_ac_d1_no_generic_review_or_validator_agenttype.
 
-        The AC requires exclusion by role/kind, not just by hard-coded name.
-        Any agent dispatched with an agentType string that contains 'review'
-        or 'validator' is an opinion-only gate and must be absent from the
-        fast lane — even if it has a novel name not in the hard-coded list.
+        The retired assertion forbade ANY agentType containing 'review' or
+        'validator'. Under the amendment, 'validator' is still forbidden by
+        role/kind (the AC's own wording: excluded by role, not hard-coded
+        name), but 'review' can no longer be a blanket exclusion — pr-reviewer
+        IS a 'review'-kind agentType and is now the one permitted verdict.
+        The property worth proving instead: no 'validator'-kind agentType
+        exists at all, and at most one 'review'-kind agentType is dispatched
+        (catching a second reviewer/opinion agent added under a novel name,
+        even one this file's hard-coded name lists do not enumerate).
         """
-        content = self._require_file(_FAST_LANE_PATH, "fast-lane-build.js")
+        content = self._require_file(_FAST_LANE_PATH, "fast-lane-ship.js")
         agent_types = _extract_agenttype_values(content)
-        opinion_dispatches = [
-            at
-            for at in agent_types
-            if "review" in at.lower() or "validator" in at.lower()
-        ]
+        validator_dispatches = [at for at in agent_types if "validator" in at.lower()]
         self.assertEqual(
-            opinion_dispatches,
+            validator_dispatches,
             [],
-            f"fast-lane-build.js must NOT dispatch any agent whose agentType "
-            f"contains 'review' or 'validator'. Found: {opinion_dispatches}. "
-            "All agentType values must be non-opinion (mechanical or coder) "
-            "(BO-2500d-1).",
+            f"fast-lane-ship.js must NOT dispatch any agent whose agentType "
+            f"contains 'validator'. Found: {validator_dispatches} (BO-2500d-1).",
+        )
+        review_dispatches = [at for at in agent_types if "review" in at.lower()]
+        self.assertEqual(
+            review_dispatches,
+            [self.DELIVERY_VERDICT_AGENT],
+            "fast-lane-ship.js must dispatch AT MOST ONE agentType containing "
+            f"'review', and it must be '{self.DELIVERY_VERDICT_AGENT}'. Found: "
+            f"{review_dispatches}. A second review-kind agentType (even under "
+            "a novel name) would violate BO-2500d-1's 'at most one delivery-"
+            "bearing verdict' rule.",
         )
 
-    def test_ac_d1_only_non_opinion_agenttypes_dispatched(self) -> None:
+    def test_ac_d1_only_non_reviewer_opinion_agenttypes_are_absent(self) -> None:
         # covers: BO-2500d-1
-        """The agentType values dispatched by fast-lane-build.js are whitelisted non-opinion types.
+        # angle: criterion
+        """RENAMED from test_ac_d1_only_non_opinion_agenttypes_dispatched.
 
-        Checks that every agentType present in the file is one of the
-        expected non-opinion agent categories (test-writer, coder variants).
+        The retired version treated pr-reviewer as forbidden alongside the
+        other three opinion-only agents, so it failed once pr-reviewer's
+        dispatch was (correctly) present. Under the amendment, pr-reviewer is
+        the one permitted delivery-bearing verdict — see
+        test_ac_d1_pr_reviewer_is_the_sole_delivery_verdict_and_cannot_confer_done
+        for its own dedicated coverage (presence AND the load-bearing
+        never-confers-done half). This test now asserts only that none of the
+        three STILL-forbidden opinion-only agentTypes (ac-validator,
+        ac-fulfillment-gate, change-scope-reviewer) is dispatched.
         """
-        content = self._require_file(_FAST_LANE_PATH, "fast-lane-build.js")
+        content = self._require_file(_FAST_LANE_PATH, "fast-lane-ship.js")
         agent_types = _extract_agenttype_values(content)
-        # Expected non-opinion agentTypes for the fast lane
-        allowed_prefixes = (
-            "test-writer",
-            "python-coder",
-            "sql-coder",
-            "frontend-coder",
-            "llm-expert",
-            "status-checker",  # utility, not opinion
-        )
-        forbidden_set = set(self.OPINION_ONLY_AGENTS)
+        forbidden_set = set(self.NON_REVIEWER_OPINION_AGENTS)
         violations = [at for at in agent_types if at in forbidden_set]
         self.assertEqual(
             violations,
             [],
-            f"fast-lane-build.js agentType dispatches include opinion-only agents: "
-            f"{violations}. Only non-opinion agentTypes are permitted in the fast "
-            f"lane (BO-2500d-1). Allowed non-opinion types include: "
-            f"{', '.join(allowed_prefixes)}.",
+            f"fast-lane-ship.js agentType dispatches include still-forbidden "
+            f"opinion-only agents: {violations}. Only mechanical gates, coder "
+            f"agentTypes, and the single pr-reviewer verdict are permitted in "
+            f"the fast lane (BO-2500d-1).",
         )
 
 
@@ -543,31 +671,57 @@ class TestFastLaneMechanicalGatesPresent(_JsFileTestBase):
 
     def test_ac_d3_red_baseline_gate_appears_before_coder(self) -> None:
         # covers: BO-2500d-3
-        """verify_red_baseline must appear before the coder dispatch in fast-lane-build.js.
+        # angle: criterion
+        """verify_red_baseline must appear before the coder dispatch in fast-lane-ship.js.
 
-        The sequencing contract: test-writer dispatch → red-baseline gate →
-        coder dispatch → green+coverage gate.  The coder must NOT be dispatched
+        The sequencing contract: test-writer dispatch -> red-baseline gate ->
+        coder dispatch -> green+coverage gate.  The coder must NOT be dispatched
         before the red-baseline check has been defined/referenced.
+
+        FIX (was comparing RAW string positions, which false-failed on
+        fast-lane-ship.js for two independent decoy reasons):
+
+        1. `python-coder` appears in real, non-comment code BEFORE the
+           red-baseline gate at least twice for reasons unrelated to the
+           actual Phase 4 coder dispatch: the `RELEASE_EXECUTOR_AGENT_TYPE =
+           "python-coder"` constant, and the earlier Resolve-phase
+           context-bundle dispatch (`agentType: "python-coder"` at the
+           context-bundle call site). A bare substring search for
+           "python-coder" finds one of these decoys, not the real dispatch.
+        2. The file's header JSDoc also mentions both 'python-coder' and
+           'verify_red_baseline' in its architecture summary, in an order
+           that need not match real control flow.
+
+        Fixed the same way test_bo2400a_runner_structure.py's sibling test
+        fixes it: strip comment-only lines via `_strip_comment_lines()` so
+        JSDoc/header mentions cannot participate, and anchor the coder
+        position on `label: "coder-connected"` — the unique `label:` field on
+        the ONE agent() call that is the real Phase 4 coder dispatch (see
+        `agentType: "python-coder"` / `label: "coder-connected"` together at
+        that call site) — rather than a bare 'python-coder' substring that
+        also matches the release-executor constant and the context-bundle
+        dispatch.
         """
-        content = self._require_file(_FAST_LANE_PATH, "fast-lane-build.js")
+        content = self._require_file(_FAST_LANE_PATH, "fast-lane-ship.js")
+        code_only = _strip_comment_lines(content)
         red_positions = [
-            content.find(p) for p in self.RED_BASELINE_PATTERNS if content.find(p) != -1
+            code_only.find(p)
+            for p in self.RED_BASELINE_PATTERNS
+            if code_only.find(p) != -1
         ]
-        coder_types = ("python-coder", "sql-coder", "frontend-coder", "llm-expert")
-        coder_positions = [
-            content.find(c) for c in coder_types if content.find(c) != -1
-        ]
-        if not red_positions or not coder_positions:
+        coder_dispatch_anchor = 'label: "coder-connected"'
+        coder_pos = code_only.find(coder_dispatch_anchor)
+        if not red_positions or coder_pos == -1:
             # Missing presence tests above already catch this.
             return
         first_red_pos = min(red_positions)
-        first_coder_pos = min(coder_positions)
         self.assertLess(
             first_red_pos,
-            first_coder_pos,
-            "The red-baseline gate reference must appear BEFORE the coder agent "
-            "dispatch in fast-lane-build.js — the coder must not run before the "
-            "red baseline is enforced (BO-2500d-3).",
+            coder_pos,
+            "The red-baseline gate reference must appear (in real, non-comment "
+            "control flow) BEFORE the coder agent dispatch "
+            f"({coder_dispatch_anchor!r}) in fast-lane-ship.js — the coder "
+            "must not run before the red baseline is enforced (BO-2500d-3).",
         )
 
     def test_ac_d3_green_coverage_gate_appears_after_coder(self) -> None:
@@ -621,35 +775,64 @@ class TestFastLaneMechanicalGatesPresent(_JsFileTestBase):
             "the coder runs (BO-2500d-3).",
         )
 
-    def test_ac_d3_gates_passed_summary_names_both_mechanical_gates(self) -> None:
+    def test_ac_d3_pr_body_names_both_mechanical_gates_as_delivery_arbiters(
+        self,
+    ) -> None:
         # covers: BO-2500d-3
-        """The gates_passed return field must name both mechanical gates.
+        # angle: criterion
+        """RENAMED from test_ac_d3_gates_passed_summary_names_both_mechanical_gates.
 
-        The return value of fast-lane-build.js includes a gates_passed array.
-        Both verify_red_baseline and verify_green_and_coverage must appear in
-        it, confirming they are active arbiters rather than dead code.
+        DECISION (recorded honestly rather than inventing a passing target):
+        fast-lane-ship.js has NO `gates_passed` array return field —
+        grep-confirmed absent from the whole file. Each gate FAILURE path
+        instead returns a singular `gate: "<name>"` field naming only the one
+        gate that did NOT pass (e.g. `gate: "verify_red_baseline"` at the
+        red-baseline halt, `gate: "verify_green_and_coverage"` at the
+        coverage halt) — there is no success-path summary array naming both
+        gates together as a machine-readable list. Re-aiming the old
+        assertion at a `gates_passed` string that does not exist would be
+        exactly the prohibited "relax the assertion / assert a shape the code
+        doesn't have" move.
+
+        The real, observable place both mechanical gate names ARE surfaced
+        together — as the substance of what gated a delivered change — is the
+        `prBody` string fast-lane-ship.js assembles in the Pull Request phase
+        (the artifact that ships to the human reviewing the change):
+        "Gates: verify_red_baseline + verify_green_and_coverage + pr-reviewer
+        (all green)". This test pins that real string instead.
         """
-        content = self._require_file(_FAST_LANE_PATH, "fast-lane-build.js")
-        self.assertIn(
+        content = self._require_file(_FAST_LANE_PATH, "fast-lane-ship.js")
+        code_only = _strip_comment_lines(content)
+        self.assertNotIn(
             "gates_passed",
-            content,
-            "fast-lane-build.js must return a 'gates_passed' field listing the "
-            "mechanical gates that were enforced (BO-2500d-3).",
+            code_only,
+            "fast-lane-ship.js unexpectedly now defines a 'gates_passed' "
+            "field — if a structured array now exists, assert against IT "
+            "instead of prBody; this failure means the DECISION recorded in "
+            "this test's docstring is stale and the test needs updating.",
         )
-        match = re.search(r"gates_passed\s*:\s*\[([^\]]*)\]", content)
-        if match:
-            gates_text = match.group(1)
-            self.assertIn(
-                "verify_red_baseline",
-                gates_text,
-                "gates_passed array must include 'verify_red_baseline' (BO-2500d-3).",
+        pr_body_match = re.search(
+            r"const prBody\s*=(.*?)const prResult", code_only, re.DOTALL
+        )
+        if pr_body_match is None:
+            self.fail(
+                "Could not locate the 'const prBody = ... const prResult' "
+                "assignment in fast-lane-ship.js — verify the Pull Request phase "
+                "still builds this string (BO-2500d-3)."
             )
-            self.assertIn(
-                "verify_green_and_coverage",
-                gates_text,
-                "gates_passed array must include 'verify_green_and_coverage' "
-                "(BO-2500d-3).",
-            )
+        pr_body_text = pr_body_match.group(1)
+        self.assertIn(
+            "verify_red_baseline",
+            pr_body_text,
+            "prBody must name 'verify_red_baseline' as one of the gates that "
+            "gated this delivered change (BO-2500d-3).",
+        )
+        self.assertIn(
+            "verify_green_and_coverage",
+            pr_body_text,
+            "prBody must name 'verify_green_and_coverage' as one of the "
+            "gates that gated this delivered change (BO-2500d-3).",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -749,36 +932,45 @@ class TestFastLaneMechanicalGateRetentionGuard(_JsFileTestBase):
             "was established — this is exactly what BO-2500d-1-i prohibits.",
         )
 
-    def test_ac_d1i_guard_opinion_gates_not_reintroduced(self) -> None:
+    def test_ac_d1i_guard_non_reviewer_opinion_gates_not_reintroduced(self) -> None:
         # covers: BO-2500d-1-i
-        """Guard: opinion-only gates must not be re-added to fast-lane-build.js.
+        # angle: criterion
+        """RENAMED from test_ac_d1i_guard_opinion_gates_not_reintroduced.
 
-        The inverse of the mechanical-gate retention guard.  If a future edit
-        re-adds an opinion-only gate to the fast lane (e.g. re-introducing
-        pr-reviewer), this test catches it.
+        The retired version included pr-reviewer in the forbidden set, which
+        made this guard fail on the live lane's own intentional design (PR
+        #485). BO-2500d-1-i was amended 2026-08-18 to explicitly state that
+        rejecting the veto-only reviewer as such is over-broad: "what is
+        rejected is substitution, not review." The guard this test encodes
+        must therefore only watch for the two agent kinds the amended AC
+        forbids outright (LLM validator, LLM fulfillment-gate) plus the third
+        opinion-only gate historically excluded (change-scope-reviewer) — NOT
+        pr-reviewer, whose presence and non-substitution behaviour is guarded
+        separately (see TestFastLaneExcludesOpinionOnlyGates above and the
+        commit-phase leak check in particular).
 
         Together with the 'both mechanical gates present' guard, these two
         tests enforce the BO-2500d-1-i invariant bidirectionally:
-          - opinion-only gates are absent from the fast lane
+          - the still-forbidden opinion-only gates are absent from the fast lane
           - mechanical replacement gates are present in the fast lane
         """
-        content = self._require_file(_FAST_LANE_PATH, "fast-lane-build.js")
-        opinion_agents = (
-            "pr-reviewer",
+        content = self._require_file(_FAST_LANE_PATH, "fast-lane-ship.js")
+        non_reviewer_opinion_agents = (
             "ac-validator",
             "ac-fulfillment-gate",
             "change-scope-reviewer",
         )
-        reintroduced = [ag for ag in opinion_agents if ag in content]
+        reintroduced = [ag for ag in non_reviewer_opinion_agents if ag in content]
         self.assertEqual(
             reintroduced,
             [],
-            f"GUARD (BO-2500d-1-i): the following opinion-only gates were "
-            f"re-introduced into fast-lane-build.js: {reintroduced}. "
+            f"GUARD (BO-2500d-1-i): the following still-forbidden opinion-only "
+            f"gates were re-introduced into fast-lane-ship.js: {reintroduced}. "
             "They must remain absent — the fast lane's mechanical gates "
-            "('verify_red_baseline', 'verify_green_and_coverage') are the "
-            "designated replacements.  Removing an opinion-only gate while "
-            "its mechanical replacement is absent would violate BO-2500d-1-i.",
+            "('verify_red_baseline', 'verify_green_and_coverage') plus the "
+            "single veto-only pr-reviewer verdict are the whole of what is "
+            "permitted. Removing a mechanical gate, or letting any verdict "
+            "substitute for one, would violate BO-2500d-1-i.",
         )
 
 
