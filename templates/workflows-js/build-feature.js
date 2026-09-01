@@ -84,6 +84,33 @@ const PLANNER_SCHEMA = {
         },
       },
     },
+    // Tickets the planner OMITTED from every batch because their own
+    // frontmatter already reads `status: done` — work finished before this
+    // run began, typically by an earlier session.
+    //
+    // The planner already computes this set (that is what "omitted from all
+    // batches (resume)" means); it simply never reported it, so the run had
+    // no way to tell "finished earlier" apart from "not in this run at all".
+    // BO-100e-1-i's eligibility gate needs exactly that distinction, and
+    // asking for a field the planner already derived costs no extra dispatch.
+    already_done: {
+      type: "array",
+      items: { type: "string" },
+    },
+    // EVERY sub-ticket the folder contained at this look, whatever its status
+    // and whether or not it is eligible yet.
+    //
+    // This is what fixes the run set. A ticket that is a later LAYER of the
+    // work this run started with is present here at look 1 even though it is
+    // not eligible until its prerequisite finishes; a ticket ADDED to the
+    // folder mid-drive is not. That distinction cannot be drawn from the
+    // batches alone — both are absent from look 1's batches — and it is the
+    // only thing separating work the run should carry from work BO-300a-5
+    // requires it to leave outstanding.
+    enumerated: {
+      type: "array",
+      items: { type: "string" },
+    },
   },
 };
 
@@ -155,6 +182,11 @@ const RECORD_READBACK_SCHEMA = {
       },
     },
     signed_off_agents: { type: "array", items: { type: "string" } },
+    // depends_on (BO-100e-1-i): the ticket's own depends_on: frontmatter list,
+    // as an array of ticket paths, or [] when absent. Optional — a reader that
+    // predates this field simply never populates it, and every existing
+    // caller of readTicketRecordBack already tolerates an absent key.
+    depends_on: { type: "array", items: { type: "string" } },
     error: { type: "string" },
   },
   required: ["readable"],
@@ -838,10 +870,11 @@ async function readTicketRecordBack(recordPath) {
     `Read the ticket record at "${recordPath}" back off disk RIGHT NOW and report what it actually contains. ` +
     `Do not infer, do not remember, do not trust any earlier report about this ticket — open the file. ` +
     `Report: "lifecycle_status" (the frontmatter status: value), "needed_phases" (every agent in the frontmatter agents: map whose value is "needed"), ` +
+    `"depends_on" (the frontmatter depends_on: list, as an array of ticket paths verbatim, or [] if the key is absent — do not resolve or interpret the paths), ` +
     `and "signoffs": one entry per sign-off heading in the ## Comments section, in the order they appear, as {"agent": "<name>", "status": "<status>"} ` +
     `(heading form: "### YYYY-MM-DD HH:MM — <agent> (status: <status>)"). List EVERY matching heading, including repeats — do not de-duplicate them. ` +
     `If the record cannot be opened for any reason, return {"readable": false, "error": "<what went wrong>"} — an unreadable record is a real answer and will be treated as a failure, so never guess its contents. ` +
-    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "signoffs": [...], "signed_off_agents": [...]}. ` +
+    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "depends_on": [...], "signoffs": [...], "signed_off_agents": [...]}. ` +
     `Return ONLY the JSON object, no prose.`,
     {
       agentType: "status-checker",
@@ -2113,6 +2146,30 @@ function epicOutcomeStatus(report) {
   return "ok";
 }
 
+/**
+ * Classify a prerequisite's own drive outcome for BO-100e-1-i's
+ * `prerequisite_states` record.
+ *
+ * Pure. Reads the SAME `ticket_completed` verdict the halted filter and
+ * buildTicketOutcome already produce (~line 2338) — never a second,
+ * independently-invented notion of "finished". `true` is the only affirmative
+ * value; a missing outcome (the prerequisite never reached a completion
+ * decision — e.g. a classified halt) and an explicit `false` (a phase ran but
+ * left no confirmable sign-off) are both real, distinct, non-affirmative
+ * states, and neither is ever read as success.
+ *
+ * @param {{ticket_path: string, status: string, result: object|null}|undefined} outcome
+ * @returns {string} one of the PREREQUISITE_STATE_VALUES below
+ */
+function prerequisiteStateFromOutcome(outcome) {
+  if (!outcome) return "not_in_run_set";
+  if (outcome.status === "withheld") return "unrecognised_outcome";
+  if (!outcome.result) return "no_outcome_recorded";
+  if (outcome.result.ticket_completed === true) return "succeeded";
+  if (outcome.result.ticket_completed === false) return "failed";
+  return "no_outcome_recorded";
+}
+
 // ---------------------------------------------------------------------------
 // Phase 1 — Build: route to epic or single-ticket flow
 // ---------------------------------------------------------------------------
@@ -2129,273 +2186,757 @@ if (target_type === "epic") {
   //
   // Per-ticket phases are dispatched via driveTicketPhases() which inlines
   // the build-ticket.js sequential phase loop (agentType: phaseName per phase).
+  //
+  // BO-100e-1 — REPEATED-LOOK WIDENING (KI-BO-025). The epic-planner used to
+  // be asked exactly once, before anything in the epic had been built, so
+  // only prerequisite-free work could ever appear in that one reply — a
+  // four-deep chain A<-B<-C<-D built only A, however long the run was left to
+  // keep going. The planner call now sits INSIDE the while loop below: one
+  // "look" per iteration, each asked against what THIS DRIVE has actually
+  // recorded complete by that moment (never against what had finished when
+  // the run began), until a look releases no new work. The planner's own
+  // eligibility rule is unchanged — it already computes "all depends_on met"
+  // correctly for whatever moment it is asked; the fix is asking again.
+  //
+  // A flat, no-prerequisite set is unaffected in substance: it is still
+  // built in one work-releasing look. It still pays for exactly one more
+  // "epic-planner" dispatch — the terminating look that finds nothing left —
+  // which is the fixed, one-time cost of ever being able to find a later
+  // layer at all (BO-100e-1's own cost-control constraint: never one look
+  // per ticket).
   // -----------------------------------------------------------------------
   const worktreeEpicPath = toWorktreePath(epic_path || target, realWorktreePath);
-
-  const plannerResult = await agent(
-    `Read Master_Plan.md at the epic folder: "${worktreeEpicPath}". Then read the frontmatter of every NN_*.md sub-ticket. ` +
-    `Compute dependency-ordered batches: (1) Build a dependency graph using depends_on (logical) and files_touched overlap (physical). ` +
-    `(2) Compute the maximal antichain of ready tickets (all depends_on met). ` +
-    `(3) Split the antichain into batches so no two tickets share any files_touched entry. ` +
-    `(4) Tickets with status 'done' are OMITTED from all batches (resume). ` +
-    `Return a JSON object with: epic_path, title, batches. Return ONLY the JSON object.`,
-    {
-      agentType: "status-checker",
-      schema: PLANNER_SCHEMA,
-      label: "epic-planner",
-      phase: "Build",
-    }
-  );
-
-  const plan = plannerResult || {};
-  const batches = plan.batches || [];
-  const epicTitle = plan.title || worktreeEpicPath;
-
-  // The set of work the plan was built from — the baseline the completion-time
-  // re-read is compared against, by identity (BO-300a-5).
-  const plannedTicketPaths = [];
-  for (const plannedBatch of batches) {
-    for (const plannedTicket of plannedBatch.tickets || []) {
-      const normalized = toWorktreePath(plannedTicket.path, realWorktreePath);
-      if (normalized && plannedTicketPaths.indexOf(normalized) === -1) {
-        plannedTicketPaths.push(normalized);
-      }
-    }
-  }
-
-  if (batches.length === 0) {
-    // BO-300a-5-iii — the completed set is passed at ALL FOUR call sites, not
-    // only the two that can exhibit the bug today. This return ran no batches,
-    // so its record of completed work is empty BY CONSTRUCTION and it reports no
-    // `completed_batches` at all. Passing the literal empty set (rather than
-    // reaching for a `completedBatches` that is not yet in scope here) states
-    // that emptiness explicitly and keeps the partition's one input the same
-    // shape at every site.
-    const emptyRecheck = epicRecheckReport(
-      compareEpicTicketSets(
-        plannedTicketPaths,
-        await recheckEpicTicketSet(worktreeEpicPath),
-        realWorktreePath
-      ),
-      []
-    );
-    return Object.assign(
-      {
-        // BO-300a-5-ii — derived, never hardcoded. This is the return a
-        // degraded run is most likely to reach, and the one a fix applied only
-        // to the final return leaves behind.
-        status: epicOutcomeStatus(emptyRecheck),
-        message:
-          (emptyRecheck.withhold
-            ? `Epic "${epicTitle}" is NOT complete — ${emptyRecheck.headline}.`
-            : `Epic "${epicTitle}" complete (or no tickets to run). All tickets are done or the epic is empty.`) +
-          emptyRecheck.suffix,
-        epic_path: worktreeEpicPath,
-        title: epicTitle,
-        worktree_path: realWorktreePath,
-        resolved_target: resolvedTarget,
-        batches_run: 0,
-      },
-      emptyRecheck.fields
-    );
-  }
 
   const BATCH_SIZE = 12;
   const completedBatches = [];
 
-  for (const batch of batches) {
-    const batchNumber = batch.batch_number;
-    const tickets = batch.tickets || [];
+  // This run's OWN record of each ticket's verdict, keyed by worktree path.
+  // `true` only for an affirmative `ticket_completed` (BO-100e-1-i reuses
+  // this exact verdict, never a second one); every other outcome — failure,
+  // no outcome recorded, an unrecognised value, or never having reached a
+  // completion decision at all — is simply absent here, and absence is never
+  // read as success anywhere this map is consulted.
+  const completedTicketOutcomes = {};
 
-    if (tickets.length === 0) {
-      completedBatches.push({ batch_number: batchNumber, tickets_completed: 0 });
-      continue;
+  // Work whose OWN frontmatter already read `status: done` when a look ran —
+  // finished before this drive began, usually by an earlier session.
+  //
+  // This exists because the eligibility gate below and the planner must not
+  // disagree about what "prerequisite met" means. The planner already treats
+  // a done-on-disk prerequisite as satisfied AND omits it from every batch
+  // (that is what resume is), so such a prerequisite can never appear in
+  // completedTicketOutcomes — this run never drove it. Without this set the
+  // gate reads it as `not_in_run_set` and withholds the dependant, turning a
+  // correctly resumed drive into a spurious `blocked`, which is the exact
+  // inverse of the error BO-100e-1-i exists to prevent.
+  //
+  // Kept separate from completedTicketOutcomes rather than folded into it:
+  // that map is this run's own first-hand verdict, and the withheld report
+  // should be able to say which kind of evidence a prerequisite had.
+  const priorCompletedPaths = new Set();
+
+  // The set of work THIS RUN has ADMITTED — the run_set BO-100e's
+  // config_schema_fragment names. Union across looks, not just the first
+  // look's batches, so a later layer a chain releases (once its own
+  // prerequisite finishes) is still part of what the completion-time re-read
+  // below is compared against.
+  //
+  // BO-100e-1's own scope boundary against BO-300a-5 (done), restated because
+  // it is easy to blur with the paragraph above: a path is folded in here
+  // ONLY after passing the FIRST-LOOK RUN-SET LOCK below, which is what makes
+  // this an admitted set rather than simply "everything any look ever said".
+  // Look 1's own offer is admitted unconditionally — it defines the set this
+  // run started with. A later look's offer is admitted only when it links
+  // back into what THIS variable already holds (see the lock's own comment).
+  // A path the lock rejects is never folded in here, which is exactly what
+  // keeps it visible to `discovered_after_planning` at the completion-time
+  // re-read below instead of being silently absorbed.
+  const plannedTicketPaths = [];
+
+  // The epic's full contents as look 1 found them — the run set, frozen.
+  //
+  // Every later layer of the work this drive started with is already in here
+  // at look 1, sitting behind a prerequisite; work added to the folder after
+  // the drive began is not. That is the whole discriminator, and it is why
+  // this is taken from the ENUMERATION rather than from look 1's batches: a
+  // next layer is absent from look 1's batches too, so a batch-derived set
+  // cannot tell the two apart and would reject the chains this loop exists to
+  // carry.
+  //
+  // Empty means look 1 reported no enumeration. That is a planner that did not
+  // answer the question, not an empty epic, so it must NOT be read as "nothing
+  // belongs to this run" — see the lock below for what happens instead.
+  const runSetPaths = new Set();
+  let runSetFrozen = false;
+
+  // Looks that ran while the run set was still unknown, i.e. under the unsound
+  // fallback. Reported on the payload so a degraded drive says so instead of
+  // looking identical to a sound one — absence of evidence must not read as
+  // success, and that applies to the guard's own confidence too.
+  const runSetUnknownLooks = [];
+
+  const lookRecords = [];
+  let epicTitle = worktreeEpicPath;
+  let lookNumber = 0;
+
+  while (true) {
+    lookNumber += 1;
+
+    // What THIS look re-decides against: not what had finished when the run
+    // began, but what has finished by now (BO-100e-1's own distinguishing
+    // requirement — a re-decision, not a resend of the look-1 prompt).
+    const completedBeforeThisLook = plannedTicketPaths.filter(
+      (p) => completedTicketOutcomes[p] === true
+    );
+
+    const plannerResult = await agent(
+      `Read Master_Plan.md at the epic folder: "${worktreeEpicPath}". Then read the frontmatter of every NN_*.md sub-ticket, RIGHT NOW — a fresh read for THIS look, not an earlier snapshot. ` +
+      `This drive has, as of this moment, recorded the following ticket path(s) successfully complete: ${JSON.stringify(completedBeforeThisLook)}. ` +
+      `Compute dependency-ordered batches: (1) Build a dependency graph using depends_on (logical) and files_touched overlap (physical). ` +
+      `(2) Compute the maximal antichain of ready tickets: a ticket is ready when every depends_on entry names a ticket in the completed set above, or a ticket whose own frontmatter already reads status: done. ` +
+      `(3) Split the antichain into batches so no two tickets share any files_touched entry. ` +
+      `(4) Tickets with status 'done', or already recorded complete above, are OMITTED from all batches (resume). ` +
+      `(5) If nothing further is eligible right now, return an empty batches list — that is a valid, expected answer, and it ends this drive's search for more work. ` +
+      `(6) Also return already_done: the absolute paths of every sub-ticket you OMITTED at step (4) because its own frontmatter already reads status: done. This is the set you just computed in order to omit it — report it rather than discarding it. Return [] if none. ` +
+      `(7) Also return enumerated: the absolute path of EVERY NN_*.md sub-ticket the folder contains right now, whatever its status and whether or not it is eligible yet — including the ones you omitted at step (4) and the ones not yet ready at step (2). This is the folder's full contents, not a selection. ` +
+      `Return a JSON object with: epic_path, title, batches, already_done, enumerated. Return ONLY the JSON object.`,
+      {
+        agentType: "status-checker",
+        schema: PLANNER_SCHEMA,
+        label: "epic-planner",
+        phase: "Build",
+      }
+    );
+
+    const plan = plannerResult || {};
+    let batches = plan.batches || [];
+    if (plan.title) {
+      epicTitle = plan.title;
     }
 
-    const batchResults = [];
+    // Work that was already finished before this run began. Kept SEPARATE
+    // from completedTicketOutcomes on purpose: that map is this run's own
+    // first-hand verdict, and folding a frontmatter reading into it would
+    // erase the difference between "this drive watched it succeed" and "the
+    // record says it succeeded". The eligibility gate below needs both to
+    // count as satisfied, and the withheld report needs to be able to say
+    // which kind of evidence it had.
+    for (const donePath of plan.already_done || []) {
+      const normalized = toWorktreePath(donePath, realWorktreePath);
+      if (normalized) {
+        priorCompletedPaths.add(normalized);
+      }
+    }
 
-    for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
-      const chunk = tickets.slice(i, i + BATCH_SIZE);
+    // Freeze the run set from the FIRST look only. Later looks re-enumerate a
+    // folder that may have grown; taking their word for it would defeat the
+    // point of fixing the set at all.
+    if (!runSetFrozen) {
+      for (const seenPath of plan.enumerated || []) {
+        const normalized = toWorktreePath(seenPath, realWorktreePath);
+        if (normalized) {
+          runSetPaths.add(normalized);
+        }
+      }
+      // Freeze only once something was actually enumerated. `enumerated` is
+      // not in PLANNER_SCHEMA's `required` list, so a minimally-compliant
+      // reply can omit it — and latching on that would drop the REST of the
+      // drive into the fallback this file's own comment calls unsound, even
+      // if look 2 would have answered correctly. Staying unfrozen lets a
+      // later look supply it. The window is still degraded, and
+      // `run_set_unknown_looks` below is what stops that being invisible.
+      if (runSetPaths.size > 0) {
+        runSetFrozen = true;
+      } else {
+        runSetUnknownLooks.push(lookNumber);
+      }
+    }
 
-      const chunkResults = await parallel(
-        chunk.map((ticket) => async () => {
-          const worktreeTicketPath = toWorktreePath(ticket.path, realWorktreePath);
-          // Drive each ticket through its needed phases using the flattened
-          // per-phase driver (driveTicketPhases) so each phase runs under its
-          // own agent template. No ticket-supervisor is dispatched here.
-          // isEpicMember=true → the per-ticket pull-request phase is deferred;
-          // finalize-feature opens the single epic-level PR.
-          const result = await driveTicketPhases(worktreeTicketPath, true);
-          return {
-            ticket_path: ticket.path,
-            // Fail CLOSED. This previously defaulted to "ok", which converted a
-            // ticket drive that returned nothing usable into a completed
-            // ticket — the halt filter below then had nothing to catch and the
-            // epic reported tickets_completed with no work done.
-            status: result && result.status ? result.status : "undetermined",
-            result,
-          };
-        })
-      );
+    // FAIL-OPEN DUPLICATE-OFFER GUARD, now also the FIRST-LOOK RUN-SET LOCK.
+    // This look's own prompt above instructs the planner to OMIT every
+    // ticket path in `completedBeforeThisLook`, but nothing here verified it
+    // obeyed — a degraded or truncated reply that re-offers an
+    // already-completed ticket was driven a SECOND time, inflating
+    // `tickets_completed` and duplicating `completed_batches` entries
+    // (observed live: two identical looks, `tickets_completed: 4` for a
+    // two-ticket epic). Mirrors the BO-100e-1-i eligibility gate's own
+    // principle one level up: re-check rather than trust the planner got it
+    // right.
+    //
+    // FIRST-LOOK RUN-SET LOCK (the second condition below) is the fix for the
+    // separate regression this ticket exists to close: a later look's own
+    // enumeration re-reads the epic folder fresh, so it may legitimately
+    // contain a path no EARLIER look ever offered, for either of two reasons
+    // that are NOT distinguishable by path alone:
+    //
+    //   * a genuine next LAYER of the set this run started with — a chain
+    //     member whose own depends_on names something this run has already
+    //     admitted (`plannedTicketPaths`) or that was already done before
+    //     this run began (`priorCompletedPaths`), unlocked now that its
+    //     prerequisite finished. This is the ENTIRE reason the loop keeps
+    //     looking (BO-100e-1's own criterion) and must still be driven.
+    //   * work ADDED to the epic folder after this run began — no such link.
+    //     Absorbing this is BO-300a-5's (done) job to prevent: that work must
+    //     be reported via `discovered_after_planning` at the completion-time
+    //     re-read, never silently driven by a later look.
+    //
+    // `readTicketRecordBack` is the SAME helper the (unchanged) eligibility
+    // gate below already dispatches per driven ticket to read depends_on —
+    // reused here, before this ticket ever reaches that gate, so a path that
+    // fails the link check is dropped BEFORE it is ever driven, not merely
+    // withheld after being dispatched.
+    //
+    // `lookNumber > 1` guards it because look 1's own offer is unconditional:
+    // it IS the set this run started with, by definition, with nothing yet
+    // in `plannedTicketPaths` to link back into.
+    //
+    // Deliberately checked against `plannedTicketPaths`, not against a value
+    // reset or widened by anything THIS look contributes — the lookup below
+    // reads it before this look's own survivors are folded in further down,
+    // so it only ever reflects what EARLIER looks admitted. Constraining
+    // against a set that included this look's own offer would make the check
+    // trivially satisfiable by a ticket linking to a SIBLING in the same
+    // batch, which is not what "admitted by an earlier look" means; reusing
+    // `plannedTicketPaths` any other way (e.g. testing raw membership of the
+    // offered path itself, rather than its depends_on) would reject every
+    // legitimate next layer outright, since a next layer is by definition
+    // something no earlier look named yet — that is the no-op-in-the-other-
+    // direction this comment's sibling warns about.
+    //
+    // Filter every batch's own ticket list — using the SAME toWorktreePath
+    // normalisation the surrounding code uses — before it is folded into
+    // `releasedThisLook`/`plannedTicketPaths` or driven below.
+    let anyRawTicketOffered = false;
+    let anyTicketRemainsAfterDedup = false;
+    for (const plannedBatch of batches) {
+      const rawTickets = plannedBatch.tickets || [];
+      if (rawTickets.length > 0) {
+        anyRawTicketOffered = true;
+      }
+      const dedupedTickets = [];
+      for (const t of rawTickets) {
+        const normalized = toWorktreePath(t.path, realWorktreePath);
+        if (normalized && completedTicketOutcomes[normalized] === true) {
+          continue;
+        }
+        if (lookNumber > 1 && normalized && plannedTicketPaths.indexOf(normalized) === -1) {
+          if (runSetPaths.size > 0) {
+            // The run set is known. Membership in it settles the question
+            // outright: present at look 1 means this is a later layer of the
+            // work the drive started with; absent means it arrived after, and
+            // BO-300a-5 requires it be left outstanding and reported at the
+            // completion re-read rather than driven here.
+            if (!runSetPaths.has(normalized)) {
+              continue;
+            }
+          } else {
+            // DEGRADED. Look 1 reported no enumeration, so there is no run set
+            // to test against. Fall back to the weaker check: admit only a
+            // path whose own depends_on links into work this run has already
+            // admitted or that was done before it began.
+            //
+            // This is weaker on purpose and it is not sound — a ticket ADDED
+            // mid-drive that happens to declare such a dependency passes it.
+            // It is kept only because the alternative when the run set is
+            // unknown is worse in both directions: reject everything and the
+            // chains this loop exists to carry stop dead; accept everything
+            // and the drive absorbs new work silently. A partial guard beats
+            // both. When the planner answers question (7) this branch is dead.
+            const dependencyRecord = await readTicketRecordBack(normalized);
+            const dependsOn = Array.isArray(dependencyRecord && dependencyRecord.depends_on)
+              ? dependencyRecord.depends_on.map((p) => toWorktreePath(p, realWorktreePath))
+              : [];
+            const linksIntoRunSet = dependsOn.some(
+              (p) => p && (plannedTicketPaths.indexOf(p) !== -1 || priorCompletedPaths.has(p))
+            );
+            if (!linksIntoRunSet) {
+              continue;
+            }
+          }
+        }
+        dedupedTickets.push(t);
+      }
+      // Marks a batch that was NOT already empty from the planner but was
+      // emptied entirely by this filter — it must not be driven and must
+      // not add a spurious zero-count `completed_batches` entry below,
+      // unlike a batch the planner itself returned with no tickets (which
+      // keeps its existing zero-count record).
+      plannedBatch._dedupEmptiedByFilter = rawTickets.length > 0 && dedupedTickets.length === 0;
+      plannedBatch.tickets = dedupedTickets;
+      if (dedupedTickets.length > 0) {
+        anyTicketRemainsAfterDedup = true;
+      }
+    }
+    if (anyRawTicketOffered && !anyTicketRemainsAfterDedup) {
+      // Every ticket this look offered was already recorded complete by
+      // this run — nothing new was actually released, even though the
+      // planner did not itself return an empty `batches` list. Treat this
+      // exactly like an empty planner reply so the existing termination
+      // logic below ends the run instead of spinning on stale offers.
+      batches = [];
+    }
 
-      for (let idx = 0; idx < chunkResults.length; idx += 1) {
-        const r = chunkResults[idx];
-        if (r) {
-          batchResults.push(r);
-        } else {
-          // parallel() resolves a thunk that threw to null. Silently dropping it
-          // would remove the ticket from the batch record altogether — the run
-          // would report a smaller batch rather than a failure. Record it as
-          // undetermined so the halt filter below sees it.
-          batchResults.push({
-            ticket_path: chunk[idx] && chunk[idx].path,
-            status: "undetermined",
-            result: null,
-          });
+    const releasedThisLook = [];
+    for (const plannedBatch of batches) {
+      for (const plannedTicket of plannedBatch.tickets || []) {
+        const normalized = toWorktreePath(plannedTicket.path, realWorktreePath);
+        if (!normalized) continue;
+        if (plannedTicketPaths.indexOf(normalized) === -1) {
+          plannedTicketPaths.push(normalized);
+        }
+        if (releasedThisLook.indexOf(normalized) === -1) {
+          releasedThisLook.push(normalized);
         }
       }
     }
 
-    const haltedTickets = batchResults.filter(
-      (r) =>
-        r.status === "failed" ||
-        r.status === "blocked" ||
-        r.status === "halt" ||
-        r.status === "error" ||
-        // A ticket whose drive returned nothing usable has NOT completed.
-        r.status === "undetermined"
-    );
-
-    if (haltedTickets.length > 0) {
-      // outstanding_phases / unverified_phases are carried through, not just the
-      // prose message. A ticket the drive ran but could not confirm now reports
-      // a failure status (see buildTicketOutcome), so it arrives here rather
-      // than in the incomplete-member branch below — and BO-400a-2-iii's
-      // requirement is that the operator be told WHICH phase to fix, which the
-      // message alone leaves them to parse out of a sentence.
-      const haltSummary = haltedTickets.map((r) => ({
-        ticket_path: r.ticket_path,
-        status: r.status,
-        error: r.error || (r.result && r.result.message) || "unknown error",
-        outstanding_phases: (r.result && r.result.outstanding_phases) || [],
-        unverified_phases: (r.result && r.result.unverified_phases) || [],
-      }));
-
-      // BO-300a-5-iii — THIS is the return that can actually exhibit both kinds
-      // of removal at once. At the two epic COMPLETION returns the planned and
-      // completed sets are necessarily equal (or both empty), so an uncompleted
-      // removal is unreachable there; here, earlier batches are already in
-      // `completedBatches` while this batch's members are not. It carries the
-      // same `no_longer_present` field and used to carry the same "were not
-      // built" sentence, so a partition applied only to the completion returns
-      // would leave the defect live at the one site that can show it.
-      const haltRecheck = epicRecheckReport(
-        compareEpicTicketSets(
-          plannedTicketPaths,
-          await recheckEpicTicketSet(worktreeEpicPath),
-          realWorktreePath
-        ),
-        completedWorkPaths(completedBatches, realWorktreePath)
-      );
-
-      return Object.assign(
-        {
-          status: "blocked",
-          message:
-            `Epic "${epicTitle}" halted at batch ${batchNumber} — ` +
-            `${haltedTickets.length} ticket(s) failed or blocked.` +
-            (haltRecheck.headline ? ` Also: ${haltRecheck.headline}.` : "") +
-            haltRecheck.suffix,
-          epic_path: worktreeEpicPath,
-          title: epicTitle,
-          worktree_path: realWorktreePath,
-          resolved_target: resolvedTarget,
-          halted_at_batch: batchNumber,
-          halted_tickets: haltSummary,
-          completed_batches: completedBatches,
-          suggested_action:
-            "Review the ## Comments section of each halted ticket for the blocker details. " +
-            "Resolve the blocker(s) and re-run /build-feature to resume.",
-        },
-        haltRecheck.fields,
-        { epic_complete: false }
-      );
-    }
-
-    // A ticket that ran every phase but could NOT be confirmed complete against
-    // its own record (BO-400a-2-iii) is not completed work, even though its
-    // phase loop did not halt. It must not be counted into completed_batches —
-    // that count is what the operator and the archive check read.
-    //
-    // BACKSTOP, deliberately kept. Every per-ticket exit now reports a failure
-    // status when it could not confirm the ticket, so an unconfirmed member is
-    // normally caught by the halted filter above and this branch is not
-    // reached. It stays because `ticket_completed === true` is the actual
-    // machine-readable verdict, and the failure this guards against is exactly
-    // a future exit that returns `ok` without ever setting it — which is the
-    // defect the no-phases-to-run path shipped with.
-    const incompleteTickets = batchResults.filter(
-      (r) => !(r.result && r.result.ticket_completed === true)
-    );
-
-    if (incompleteTickets.length > 0) {
-      const incompleteSummary = incompleteTickets.map((r) => ({
-        ticket_path: r.ticket_path,
-        outstanding_phases: (r.result && r.result.outstanding_phases) || [],
-        unverified_phases: (r.result && r.result.unverified_phases) || [],
-        detail: (r.result && r.result.message) || "no detail reported",
-      }));
-
-      // BO-300a-5-iii — the fourth consumer of the same report. It is a
-      // backstop that is not normally reached (see the note above), which is
-      // exactly why it must be passed the completed set too: a site that is
-      // inert today is the site a future change makes load-bearing, and this
-      // whole record exists because the last three defects were each an inert
-      // path a remedy activated without extending the guard to it.
-      const incompleteRecheck = epicRecheckReport(
-        compareEpicTicketSets(
-          plannedTicketPaths,
-          await recheckEpicTicketSet(worktreeEpicPath),
-          realWorktreePath
-        ),
-        completedWorkPaths(completedBatches, realWorktreePath)
-      );
-
-      return Object.assign(
-        {
-          status: "blocked",
-          message:
-            `Epic "${epicTitle}" is NOT complete — ${incompleteTickets.length} ` +
-            `ticket(s) in batch ${batchNumber} ran their phases without being ` +
-            `recorded complete in their own records.` +
-            (incompleteRecheck.headline ? ` Also: ${incompleteRecheck.headline}.` : "") +
-            incompleteRecheck.suffix,
-          epic_path: worktreeEpicPath,
-          title: epicTitle,
-          worktree_path: realWorktreePath,
-          resolved_target: resolvedTarget,
-          halted_at_batch: batchNumber,
-          incomplete_tickets: incompleteSummary,
-          completed_batches: completedBatches,
-          suggested_action:
-            "For each ticket above, a needed phase is outstanding in the ticket's " +
-            "own record — most often a gate that ran, returned success and left no " +
-            "sign-off. Re-run that phase (or add the sign-off it owes) and re-run " +
-            "/build-feature; the ticket stays out of the completed set until its " +
-            "record can prove every needed phase passed.",
-        },
-        incompleteRecheck.fields,
-        { epic_complete: false }
-      );
-    }
-
-    completedBatches.push({
-      batch_number: batchNumber,
-      tickets_completed: batchResults.length,
-      tickets: batchResults.map((r) => r.ticket_path),
+    lookRecords.push({
+      look_number: lookNumber,
+      released: releasedThisLook,
+      released_count: releasedThisLook.length,
     });
+
+    // TERMINATE ON WHAT WAS RELEASED, NOT ON THE SHAPE OF THE CONTAINER.
+    //
+    // This was `batches.length === 0`, which asks whether the planner sent any
+    // batch OBJECTS — not whether any of them offered work. A reply of
+    // `batches: [{batch_number: 1, tickets: []}]` is valid under
+    // PLANNER_SCHEMA (`tickets` has no minItems) and is a plausible compliance
+    // slip against step (5), which asks for an empty LIST. It offers nothing,
+    // so `anyRawTicketOffered` stays false and the reset above never fires;
+    // it has length 1, so the old test never fired either. The look released
+    // nothing, changed nothing, and went back to the top to ask an unchanged
+    // question — an unbounded spin with no cap and no operator-visible error.
+    // Harmless before this loop existed, because the planner ran exactly once.
+    //
+    // `releasedThisLook` is the direct answer and is already computed above.
+    // It is empty in every case the old test caught (no batches at all; every
+    // batch emptied by the dedup or run-set filter) and also in the case it
+    // missed, so this subsumes the old condition rather than sitting beside it.
+    // A look that released nothing cannot be made to release something by
+    // asking again with the same inputs — that is the loop's own premise.
+    if (releasedThisLook.length === 0) {
+      if (lookNumber === 1) {
+        // The EXISTING empty-plan return, unchanged in substance: nothing was
+        // ever eligible, or the epic is genuinely empty / already done.
+        // BO-300a-5-iii — the completed set is passed at ALL FOUR call sites, not
+        // only the two that can exhibit the bug today. This return ran no batches,
+        // so its record of completed work is empty BY CONSTRUCTION and it reports no
+        // `completed_batches` at all. Passing the literal empty set (rather than
+        // reaching for a `completedBatches` that is not yet in scope here) states
+        // that emptiness explicitly and keeps the partition's one input the same
+        // shape at every site.
+        const emptyRecheck = epicRecheckReport(
+          compareEpicTicketSets(
+            plannedTicketPaths,
+            await recheckEpicTicketSet(worktreeEpicPath),
+            realWorktreePath
+          ),
+          []
+        );
+        return Object.assign(
+          {
+            // BO-300a-5-ii — derived, never hardcoded. This is the return a
+            // degraded run is most likely to reach, and the one a fix applied only
+            // to the final return leaves behind.
+            status: epicOutcomeStatus(emptyRecheck),
+            message:
+              (emptyRecheck.withhold
+                ? `Epic "${epicTitle}" is NOT complete — ${emptyRecheck.headline}.`
+                : `Epic "${epicTitle}" complete (or no tickets to run). All tickets are done or the epic is empty.`) +
+              emptyRecheck.suffix,
+            epic_path: worktreeEpicPath,
+            title: epicTitle,
+            worktree_path: realWorktreePath,
+            resolved_target: resolvedTarget,
+            batches_run: 0,
+            looks: lookNumber,
+            look_records: lookRecords,
+            run_set: plannedTicketPaths.slice(),
+            ended_because: "no_further_work_eligible",
+            unbuilt: [],
+          },
+          emptyRecheck.fields
+        );
+      }
+      // TERMINATING LOOK (BO-100e-1): this look released nothing new — the
+      // search for further work ends here. Fall through to the same
+      // completion-time re-read and final return every successful drive
+      // already reaches.
+      break;
+    }
+
+    // --- run THIS LOOK's batches -------------------------------------------
+    for (const batch of batches) {
+      const batchNumber = batch.batch_number;
+      const tickets = batch.tickets || [];
+
+      if (tickets.length === 0) {
+        // A batch the duplicate-offer guard above emptied entirely was
+        // never actually released this look — it must not add a
+        // zero-count `completed_batches` entry, unlike a batch the
+        // planner itself returned empty (still recorded, unchanged).
+        if (!batch._dedupEmptiedByFilter) {
+          completedBatches.push({ batch_number: batchNumber, tickets_completed: 0 });
+        }
+        continue;
+      }
+
+      const batchResults = [];
+
+      for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
+        const chunk = tickets.slice(i, i + BATCH_SIZE);
+
+        // BO-100e-1-i — FAIL-CLOSED ELIGIBILITY GATE, keyed on EACH TICKET'S
+        // OWN DECLARED depends_on — never on its position in the batch. A
+        // batch is meant to name only mutually-independent, ready tickets
+        // (that is the planner's own job), but this drive does not simply
+        // trust that a batch got it right: a ticket is dispatched only once
+        // EVERY prerequisite ITS OWN RECORD NAMES has itself recorded an
+        // AFFIRMATIVE `ticket_completed === true` — the SAME machine-readable
+        // verdict buildTicketOutcome already produces and the halted filter
+        // below already reads. A prerequisite that merely ATTEMPTED, that
+        // left no outcome at all, or that recorded some other non-affirmative
+        // value, never satisfies this: absence of evidence is never read as
+        // success. A ticket that names NO depends_on (the ordinary case —
+        // most batch members are genuinely independent) is never WITHHELD:
+        // every chunk still starts every one of its thunks via parallel()
+        // together, and an independent ticket proceeds straight to its
+        // phases. A dependant's own thunk is what awaits its named
+        // prerequisite's settled outcome — whether that prerequisite is
+        // another member of THIS SAME chunk, an earlier CHUNK of this same
+        // batch, an earlier batch or look of this drive, or work that was
+        // already done before this drive began — before doing any real work.
+        //
+        // WHAT THIS GATE COSTS, stated plainly because an earlier draft of
+        // this comment claimed it was free and that was false: every ticket
+        // pays ONE readTicketRecordBack dispatch, independent ones included,
+        // because depends_on cannot be consulted without first reading the
+        // record that names it. Only the WITHHOLDING is conditional, not the
+        // read. That is a real per-ticket cost on the common case and it is
+        // the honest price of not trusting the planner blindly; if it needs
+        // to come down, the fix is to carry depends_on in the enumeration the
+        // run already performs, not to pretend the dispatch is not happening.
+        const chunkOutcomesByPath = {};
+        const chunkThunks = chunk.map((ticket) => {
+          const worktreeTicketPath = toWorktreePath(ticket.path, realWorktreePath);
+
+          const outcomePromise = (async () => {
+            const dependencyRecord = await readTicketRecordBack(worktreeTicketPath);
+            const dependsOn = Array.isArray(dependencyRecord && dependencyRecord.depends_on)
+              ? dependencyRecord.depends_on
+                  .map((p) => toWorktreePath(p, realWorktreePath))
+                  .filter((p) => p && p !== worktreeTicketPath)
+              : [];
+
+            const withheldBy = [];
+            const prerequisiteStates = {};
+            for (const depPath of dependsOn) {
+              let depOutcome;
+              let depState;
+              if (Object.prototype.hasOwnProperty.call(chunkOutcomesByPath, depPath)) {
+                depOutcome = await chunkOutcomesByPath[depPath];
+                depState = prerequisiteStateFromOutcome(depOutcome);
+              } else if (completedTicketOutcomes[depPath] === true) {
+                depState = "succeeded";
+              } else if (Object.prototype.hasOwnProperty.call(completedTicketOutcomes, depPath)) {
+                depState = "failed";
+              } else {
+                // THIS RUN HOLDS NO VERDICT FOR THIS PREREQUISITE.
+                //
+                // Either it finished before the drive began — the planner
+                // omits done work from every batch, so this run never drove it
+                // and never will — or it genuinely is not part of this run.
+                // Demanding a verdict this run cannot hold would make every
+                // resumed drive with a cross-session dependency unbuildable;
+                // assuming success would release a dependant onto work that
+                // may not exist. So go and look.
+                //
+                // READ THE PREREQUISITE'S OWN RECORD, rather than consulting
+                // the planner's `already_done` list. That list is the
+                // planner's claim, and this gate exists precisely because the
+                // planner's claims are not evidence — accepting it here would
+                // have left one unverified input in a guard whose whole point
+                // is that there are none. It is also the more robust of the
+                // two: believing the list requires it to be COMPLETE as well
+                // as correct, and a planner that merely omits an entry would
+                // silently withhold a dependant that was ready.
+                //
+                // One dispatch, and only for a prerequisite this run did not
+                // itself drive.
+                const priorRecord = await readTicketRecordBack(depPath);
+                if (priorRecord && priorRecord.lifecycle_status === "done") {
+                  // Reported under its own name, not as `succeeded`, so the
+                  // difference between watched-to-succeed and read-as-done
+                  // stays visible in prerequisite_states.
+                  depState = "succeeded_before_this_run";
+                } else {
+                  depState = "not_in_run_set";
+                }
+              }
+              prerequisiteStates[depPath] = depState;
+              if (depState !== "succeeded" && depState !== "succeeded_before_this_run") {
+                withheldBy.push(depPath);
+              }
+            }
+
+            if (withheldBy.length > 0) {
+              // WITHHELD. Never reaches driveTicketPhases — no phase agent
+              // for this ticket is ever dispatched.
+              return {
+                ticket_path: ticket.path,
+                status: "withheld",
+                withheld_by: withheldBy,
+                prerequisite_states: prerequisiteStates,
+                result: null,
+              };
+            }
+
+            // Drive each ticket through its needed phases using the flattened
+            // per-phase driver (driveTicketPhases) so each phase runs under its
+            // own agent template. No ticket-supervisor is dispatched here.
+            // isEpicMember=true → the per-ticket pull-request phase is deferred;
+            // finalize-feature opens the single epic-level PR.
+            const result = await driveTicketPhases(worktreeTicketPath, true);
+            return {
+              ticket_path: ticket.path,
+              // Fail CLOSED. This previously defaulted to "ok", which converted a
+              // ticket drive that returned nothing usable into a completed
+              // ticket — the halt filter below then had nothing to catch and the
+              // epic reported tickets_completed with no work done.
+              status: result && result.status ? result.status : "undetermined",
+              result,
+            };
+          })();
+
+          chunkOutcomesByPath[worktreeTicketPath] = outcomePromise;
+          return () => outcomePromise;
+        });
+
+        const chunkResults = await parallel(chunkThunks);
+
+        for (let idx = 0; idx < chunkResults.length; idx += 1) {
+          const r = chunkResults[idx];
+          if (r) {
+            batchResults.push(r);
+          } else {
+            // parallel() resolves a thunk that threw to null. Silently dropping it
+            // would remove the ticket from the batch record altogether — the run
+            // would report a smaller batch rather than a failure. Record it as
+            // undetermined so the halt filter below sees it.
+            batchResults.push({
+              ticket_path: chunk[idx] && chunk[idx].path,
+              status: "undetermined",
+              result: null,
+            });
+          }
+        }
+
+        // Fold THIS chunk's verdicts in before the next chunk starts.
+        //
+        // chunkOutcomesByPath is rebuilt per chunk, so it can only answer for
+        // members of the chunk being built. A batch larger than BATCH_SIZE is
+        // split across several chunks, and a dependant in chunk 2 whose
+        // prerequisite sat in chunk 1 would find it in neither map if this
+        // update waited until every chunk had finished — the prerequisite
+        // would read `not_in_run_set` and the dependant would be withheld
+        // even though it had just succeeded. Recording per chunk closes that
+        // window; the batch-level pass below is what the NEXT look reads.
+        for (const r of chunkResults) {
+          if (!r) continue;
+          const settled = toWorktreePath(r.ticket_path, realWorktreePath);
+          if (settled) {
+            completedTicketOutcomes[settled] = !!(
+              r.result && r.result.ticket_completed === true
+            );
+          }
+        }
+      }
+
+      // Record THIS look's own verdict for every ticket it touched — the
+      // input the NEXT look's prompt above reads back as
+      // `completedBeforeThisLook`.
+      for (const r of batchResults) {
+        const normalized = toWorktreePath(r.ticket_path, realWorktreePath);
+        if (normalized) {
+          completedTicketOutcomes[normalized] = !!(
+            r.result && r.result.ticket_completed === true
+          );
+        }
+      }
+
+      // BO-100e-1-i — tickets the eligibility gate withheld before they ever
+      // reached driveTicketPhases. Distinct from haltedTickets below: a
+      // withheld ticket never attempted anything of its own.
+      const withheldResults = batchResults.filter((r) => r.status === "withheld");
+
+      const haltedTickets = batchResults.filter(
+        (r) =>
+          r.status === "failed" ||
+          r.status === "blocked" ||
+          r.status === "halt" ||
+          r.status === "error" ||
+          // A ticket whose drive returned nothing usable has NOT completed.
+          r.status === "undetermined"
+      );
+
+      if (haltedTickets.length > 0 || withheldResults.length > 0) {
+        // outstanding_phases / unverified_phases are carried through, not just the
+        // prose message. A ticket the drive ran but could not confirm now reports
+        // a failure status (see buildTicketOutcome), so it arrives here rather
+        // than in the incomplete-member branch below — and BO-400a-2-iii's
+        // requirement is that the operator be told WHICH phase to fix, which the
+        // message alone leaves them to parse out of a sentence.
+        const haltSummary = haltedTickets.map((r) => ({
+          ticket_path: r.ticket_path,
+          status: r.status,
+          error: r.error || (r.result && r.result.message) || "unknown error",
+          outstanding_phases: (r.result && r.result.outstanding_phases) || [],
+          unverified_phases: (r.result && r.result.unverified_phases) || [],
+        }));
+
+        // BO-100e-1-i — every withheld piece, named with the prerequisite
+        // that withheld it. This is the `unbuilt` field BO-100e's
+        // config_schema_fragment defines for the whole family.
+        const unbuiltSummary = withheldResults.map((r) => ({
+          ticket_path: r.ticket_path,
+          eligible: false,
+          withheld_by: r.withheld_by || [],
+          prerequisite_states: r.prerequisite_states || {},
+        }));
+
+        // BO-300a-5-iii — THIS is the return that can actually exhibit both kinds
+        // of removal at once. At the two epic COMPLETION returns the planned and
+        // completed sets are necessarily equal (or both empty), so an uncompleted
+        // removal is unreachable there; here, earlier batches are already in
+        // `completedBatches` while this batch's members are not. It carries the
+        // same `no_longer_present` field and used to carry the same "were not
+        // built" sentence, so a partition applied only to the completion returns
+        // would leave the defect live at the one site that can show it.
+        const haltRecheck = epicRecheckReport(
+          compareEpicTicketSets(
+            plannedTicketPaths,
+            await recheckEpicTicketSet(worktreeEpicPath),
+            realWorktreePath
+          ),
+          completedWorkPaths(completedBatches, realWorktreePath)
+        );
+
+        return Object.assign(
+          {
+            status: "blocked",
+            message:
+              `Epic "${epicTitle}" halted at batch ${batchNumber} — ` +
+              `${haltedTickets.length} ticket(s) failed or blocked` +
+              (withheldResults.length > 0
+                ? `, ${withheldResults.length} withheld pending an unsatisfied prerequisite`
+                : "") +
+              `.` +
+              (haltRecheck.headline ? ` Also: ${haltRecheck.headline}.` : "") +
+              haltRecheck.suffix,
+            epic_path: worktreeEpicPath,
+            title: epicTitle,
+            worktree_path: realWorktreePath,
+            resolved_target: resolvedTarget,
+            halted_at_batch: batchNumber,
+            halted_tickets: haltSummary,
+            unbuilt: unbuiltSummary,
+            completed_batches: completedBatches,
+            looks: lookNumber,
+            look_records: lookRecords,
+            run_set: plannedTicketPaths.slice(),
+            ended_because: "halted",
+            suggested_action:
+              "Review the ## Comments section of each halted ticket for the blocker details. " +
+              "Resolve the blocker(s) and re-run /build-feature to resume.",
+          },
+          haltRecheck.fields,
+          { epic_complete: false }
+        );
+      }
+
+      // A ticket that ran every phase but could NOT be confirmed complete against
+      // its own record (BO-400a-2-iii) is not completed work, even though its
+      // phase loop did not halt. It must not be counted into completed_batches —
+      // that count is what the operator and the archive check read.
+      //
+      // BACKSTOP, deliberately kept. Every per-ticket exit now reports a failure
+      // status when it could not confirm the ticket, so an unconfirmed member is
+      // normally caught by the halted filter above and this branch is not
+      // reached. It stays because `ticket_completed === true` is the actual
+      // machine-readable verdict, and the failure this guards against is exactly
+      // a future exit that returns `ok` without ever setting it — which is the
+      // defect the no-phases-to-run path shipped with.
+      const incompleteTickets = batchResults.filter(
+        (r) => !(r.result && r.result.ticket_completed === true)
+      );
+
+      if (incompleteTickets.length > 0) {
+        const incompleteSummary = incompleteTickets.map((r) => ({
+          ticket_path: r.ticket_path,
+          outstanding_phases: (r.result && r.result.outstanding_phases) || [],
+          unverified_phases: (r.result && r.result.unverified_phases) || [],
+          detail: (r.result && r.result.message) || "no detail reported",
+        }));
+
+        // BO-300a-5-iii — the fourth consumer of the same report. It is a
+        // backstop that is not normally reached (see the note above), which is
+        // exactly why it must be passed the completed set too: a site that is
+        // inert today is the site a future change makes load-bearing, and this
+        // whole record exists because the last three defects were each an inert
+        // path a remedy activated without extending the guard to it.
+        const incompleteRecheck = epicRecheckReport(
+          compareEpicTicketSets(
+            plannedTicketPaths,
+            await recheckEpicTicketSet(worktreeEpicPath),
+            realWorktreePath
+          ),
+          completedWorkPaths(completedBatches, realWorktreePath)
+        );
+
+        return Object.assign(
+          {
+            status: "blocked",
+            message:
+              `Epic "${epicTitle}" is NOT complete — ${incompleteTickets.length} ` +
+              `ticket(s) in batch ${batchNumber} ran their phases without being ` +
+              `recorded complete in their own records.` +
+              (incompleteRecheck.headline ? ` Also: ${incompleteRecheck.headline}.` : "") +
+              incompleteRecheck.suffix,
+            epic_path: worktreeEpicPath,
+            title: epicTitle,
+            worktree_path: realWorktreePath,
+            resolved_target: resolvedTarget,
+            halted_at_batch: batchNumber,
+            incomplete_tickets: incompleteSummary,
+            unbuilt: [],
+            completed_batches: completedBatches,
+            looks: lookNumber,
+            look_records: lookRecords,
+            run_set: plannedTicketPaths.slice(),
+            ended_because: "halted",
+            suggested_action:
+              "For each ticket above, a needed phase is outstanding in the ticket's " +
+              "own record — most often a gate that ran, returned success and left no " +
+              "sign-off. Re-run that phase (or add the sign-off it owes) and re-run " +
+              "/build-feature; the ticket stays out of the completed set until its " +
+              "record can prove every needed phase passed.",
+          },
+          incompleteRecheck.fields,
+          { epic_complete: false }
+        );
+      }
+
+      completedBatches.push({
+        batch_number: batchNumber,
+        tickets_completed: batchResults.length,
+        tickets: batchResults.map((r) => r.ticket_path),
+      });
+    }
   }
 
+  // Reached only when a look — never the first — released nothing new: the
+  // search for further work has genuinely ended.
   const totalTickets = completedBatches.reduce(
     (sum, b) => sum + (b.tickets_completed || 0),
     0
@@ -2432,6 +2973,11 @@ if (target_type === "epic") {
       batches_run: completedBatches.length,
       tickets_completed: totalTickets,
       completed_batches: completedBatches,
+      looks: lookNumber,
+      look_records: lookRecords,
+      run_set: plannedTicketPaths.slice(),
+      ended_because: "no_further_work_eligible",
+      unbuilt: [],
       message:
         (finalRecheck.withhold
           ? `Epic "${epicTitle}" is NOT complete — ${finalRecheck.headline}. ` +

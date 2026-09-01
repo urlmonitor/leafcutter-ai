@@ -253,6 +253,32 @@ function parseRecord(path) {
     }
   }
 
+  // depends_on: list (BO-100e-1-i) — a PyYAML block list under a top-level
+  // key serializes with its dash bullets at COLUMN 0, not indented (the same
+  // real-artifact shape documented for files_touched elsewhere in this repo).
+  // The agentsBlock lookahead above (`(?=^\S|\Z)`) relies on its own list
+  // items being INDENTED so a column-0 line only ever means "the next key" —
+  // that assumption is false here, so a dedicated pattern is used instead:
+  // capture only the run of column-0 "-" bullet lines immediately following
+  // "depends_on:", however many there are, however this key is ordered
+  // relative to any other frontmatter key.
+  const dependsOn = [];
+  const dependsOnBlock = frontmatter.match(/^depends_on:\n((?:^-[^\n]*\n?)*)/m);
+  if (dependsOnBlock) {
+    for (const line of dependsOnBlock[1].split("\n")) {
+      const m = line.match(/^-\s*(.+?)\s*$/);
+      if (!m) continue;
+      let value = m[1];
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      dependsOn.push(value);
+    }
+  }
+
   const signoffs = [];
   for (const line of text.split("\n")) {
     const m = line.match(SIGNOFF_RE);
@@ -265,6 +291,7 @@ function parseRecord(path) {
     lifecycle_status: lifecycleStatus,
     agents,
     needed_phases: Object.keys(agents).filter((a) => agents[a] === "needed"),
+    depends_on: dependsOn,
     signoffs,
     signed_off_agents: signoffs.map((s) => s.agent),
   };
@@ -369,6 +396,17 @@ function epicEnumerationReply(label) {
       ? []
       : [{ batch_number: 1, tickets: buildable.map((t) => ({ path: t.path, status: "todo" })) }];
 
+  // What the real planner OMITS from every batch because the ticket's own
+  // frontmatter already reads `status: done` — the resume set. DERIVED from
+  // `present` by default rather than opt-in, because that is exactly what the
+  // real planner does with the same input, and a fixture that marks a ticket
+  // done should not also have to remember to restate it here. An explicit
+  // `already_done` array overrides, for scenarios that need to model a planner
+  // reply which omits or misreports the set.
+  const alreadyDone = Array.isArray(read.already_done)
+    ? read.already_done
+    : present.filter((t) => t.status === "done").map((t) => t.path);
+
   const omitReadable = read.omit_readable === true;
 
   enumerations.push({
@@ -390,6 +428,15 @@ function epicEnumerationReply(label) {
     epic_path: epic.path,
     title: epic.title || epic.path,
     batches,
+    already_done: alreadyDone,
+    // The folder's FULL contents at this look — every sub-ticket, whatever its
+    // status and whether or not it is eligible yet. Derived from `present`
+    // because that is exactly what a real planner reports for question (7),
+    // and an explicit `enumerated` overrides for scenarios that need to model
+    // a planner reply which omits or misstates it.
+    enumerated: Array.isArray(read.enumerated)
+      ? read.enumerated
+      : present.map((t) => t.path),
     tickets: present,
     ticket_paths: present.map((t) => t.path),
   };
