@@ -28,7 +28,10 @@ criteria: |
     path (prose with no file reference),
   When a ticket is generated from that AC,
   Then no phantom source path is invented in files_touched, and files_touched
-    still contains the AC's doc_links paths.
+    still contains the AC's edit-surface doc_links paths — those whose
+    relationship is one of constrains, creates, implements, modifies or
+    specifies. A describes or related link is informational and is correctly
+    absent.
 depends_on: [TKT-500f-8]
 doc_links:
   - path: scripts/ac_store/generate_ticket_from_ac.py
@@ -45,7 +48,48 @@ doc_links:
     status: exists
 origin_agent: business-analyst-v3
 created: 2026-07-15
-amended_by: []
+amended_by:
+  - reason: criteria-narrowed-to-edit-surface-doc-links
+    date: '2026-09-01'
+    by: safety-security-expert
+    entry: >-
+      CRITERIA CHANGED, second scenario only. "files_touched still contains the
+      AC's doc_links paths" now reads "the AC's EDIT-SURFACE doc_links paths",
+      naming the five relationships and saying that describes and related are
+      correctly absent. The first scenario, title, level, depends_on, test_spec,
+      work_status and readiness are unchanged.
+
+      WHY. The unqualified wording predates _EDIT_SURFACE_RELATIONSHIPS. Read
+      strictly it requires informational links to be written into files_touched,
+      which the shipped generator has contradicted since the relationship filter
+      landed — so this approved, work_status: done record has been literally
+      false in that clause for as long as the filter has existed.
+
+      It is demonstrable on this record itself. TKT-500f-8-i declares four
+      doc_links; measured 2026-09-01 against the shipped _build_files_touched:
+
+        files_touched -> [docs/reference/ac-schema.md,
+                          scripts/ac_store/generate_ticket_from_ac.py]
+
+      Present: the constrains and specifies links. Absent: the two describes
+      links (ADR-010, ticket-lifecycle.md). The code is right and the sentence
+      was wrong.
+
+      This is a wording correction, not a requirement change. Nothing about the
+      generator's behaviour is being asked to change, no test moves, and the
+      record's covering tests were green before and after. work_status stays
+      done because the behaviour this record actually governs — extracting a
+      source path named in a list-form prose bullet — is implemented and
+      covered.
+
+      FOUND VIA. Surfaced while authoring TKT-600a-2, which adds the rule that a
+      path a record declares as non-edit-surface is not harvested from that same
+      record's prose. An implementer reading this clause strictly would conclude
+      the two ACs disagree; they do not, and this removes the appearance of
+      conflict rather than resolving a real one. See also TKT-600a-1's amended_by
+      of the same date, which records dropping prose harvesting entirely as a
+      rejected approach precisely because it would have falsified THIS record's
+      first scenario.
 superseded_by: null
 covered_by:
 - unit_tests/ac_store/test_tkt_500f_8_i.py

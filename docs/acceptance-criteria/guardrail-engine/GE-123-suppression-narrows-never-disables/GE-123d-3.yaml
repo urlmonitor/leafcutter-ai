@@ -76,7 +76,7 @@ it_requirements:
   - "No rule other than the generic-credential rule may be narrowed anywhere by this feature. The private-key, cloud-access-key, exchange-API-key and high-entropy rules must keep full strength inside every prose location."
   - "The exemption must never be granted at file level. A staged file holding one exempt finding and one reported finding must still block, and the reported count must be exactly one — a count of zero and a count of two are both failures, and both are reachable from plausible implementations."
   - "Every scenario must be red before the implementation lands. In particular, each must fail against an implementation that grants the exemption per file and against one built on a naive contains-whitespace test — those are the two cheapest wrong implementations, and a test suite that cannot distinguish them does not discharge this AC."
-  - "The pre-existing file-level high-entropy exemption (KI-CG-004 in docs/known-issues/commit-guardian.md) is explicitly out of scope. Do not close it, do not extend it, and do not cite it as precedent for a file-level generic-credential exemption. The two must remain separately tracked."
+  - "The pre-existing file-level high-entropy exemption (KI-CG-004, recorded in the commit-guardian known-issues register) is explicitly out of scope. Do not close it, do not extend it, and do not cite it as precedent for a file-level generic-credential exemption. The two must remain separately tracked. The register is a live document, not an edit surface for this work — it is linked from this record's doc_links at relationship related for exactly that reason."
   - "The exemption must be unreachable for any value the shape vocabulary cannot classify: unclassifiable defaults to reported, and that default must be exercised, not merely intended."
   - "ADR-001 parity: any code this AC causes to change lives in the canonical copies under templates/; verify through the build.py round-trip."
 delivers_to: null
@@ -146,6 +146,27 @@ amended_by:
     weight is in the test contract, as its own enrichment records. The surface is declared
     because it is where any change for it lands, and because an empty files_touched is
     what blocked the epic.'
+- reason: fenced-register-named-not-pathed
+  date: '2026-09-01'
+  by: business-analyst
+  entry: 'CRITERIA UNTOUCHED. title, req_status, depends_on, doc_links, test_spec and
+    notes are all unchanged. One it_requirements bullet was reworded: the sixth bullet
+    now refers to "the commit-guardian known-issues register" by name and keeps the
+    KI-CG-004 id, where it previously spelled out that register''s repository path.
+
+    WHY: the path was being harvested into the generated ticket''s files_touched as an
+    edit surface, so this record — whose whole point is that KI-CG-004 is OUT of scope —
+    presented that live document to a coder as a file to modify. Measured against the
+    shipped _build_files_touched on 2026-09-01: before, ["docs/known-issues/commit-guardian.md",
+    "templates/scripts/commit_guardian/check_secrets.py"]; after, only the check_secrets.py
+    surface. The doc_link stays at relationship related, which is correct and is what keeps
+    the fence discoverable — the harvest came from the prose mention, not from the link.
+    The record is no less clear to a human reader: the register is still named, and the
+    KI id, which is the part a reader actually needs, is retained.
+
+    This is a working-around of a generator defect, not a fix for it. The durable fix is
+    specified in TKT-600a-2: a path a record declares at a non-edit-surface relationship
+    must not be harvested out of that same record''s prose.'
 superseded_by: null
 covered_by: []
 implemented_by:
