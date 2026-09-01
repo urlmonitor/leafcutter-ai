@@ -1447,3 +1447,61 @@ cause).
 **Pattern:** `docs/reference/false-green-mechanisms.md`, inverted — a gate that fails closed,
 correctly, while naming a cause that is not the cause. The verdict is safe and the diagnosis
 sends you to the wrong place, which costs more than a silent pass would in reader-hours.
+
+---
+
+### KI-ACS-20260901-1810 — Generating a ticket into a throwaway `--tickets-root` permanently stamps the SOURCE AC with a path that will never exist, and mangles it into one that looks repo-relative
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-09-01
+- **Where:** `scripts/ac_store/generate_ticket_from_ac.py:3769` (`_write_implemented_by` call)
+  and the tickets-segment canonicalisation fallback it uses
+
+**Symptom.** Running the generator twice against `/tmp` roots, purely to observe behaviour,
+left this permanently committed-ready in a real store record:
+
+```diff
+ covered_by: []
+-implemented_by: []
++implemented_by:
++- tmp/probe_tickets2/TICKET-20260901-ACS-200h.md
++- tmp/probe_tickets3/TICKET-20260901-ACS-200h.md
+```
+
+Two defects stacked, and the second is the nastier one:
+
+1. **Probing the generator writes to the store.** The `implemented_by` back-reference (AC-3)
+   is intentional and correct for a real generation. But it fires for ANY `--tickets-root`,
+   including a scratch directory, so anyone exercising the tool corrupts the record they
+   exercised it on. There is no `--no-stamp`, and the only safe probe is `--dry-run`, which
+   is exempt (the call sits after the `Written:` line) — but nothing says so at the point of
+   use.
+
+2. **The recorded path is mangled into a plausible lie.** The absolute `/tmp/probe_tickets2/…`
+   was written as `tmp/probe_tickets2/…` — leading slash stripped by the "tickets-segment
+   canonicalisation" fallback that runs when `git rev-parse --show-toplevel` fails. The result
+   is not an absolute path (so it does not obviously point outside the repo) and not a valid
+   repo-relative one (nothing is at `tmp/…`). It reads as a repo path that someone deleted.
+
+**Why this matters more than a stray edit.** `implemented_by` is evidence: it is what a reader
+consults to find the ticket that delivered an AC, and what `ACS-200h`'s whole-store backstop
+would eventually check. A record carrying two dead paths looks like an AC that WAS implemented
+and whose tickets were lost, which is a far more alarming and time-consuming shape than an
+empty list. The record hit here was `ACS-200h` itself — the next AC anyone picks up from the
+CI-scope-gap work.
+
+**Caught only by reading `git status` before staging.** Nothing warned; the generator printed
+its usual `Written:` line and a benign-looking `git rev-parse … failed — falling back to
+tickets-segment canonicalisation` notice, which reads as routine.
+
+**Fix direction.** Refuse to stamp — or warn loudly — when the resolved ticket path is not
+inside the worktree, rather than normalising it into something that resembles a repo path. An
+absolute path that cannot be made repo-relative is a signal the caller is not doing a real
+generation, and guessing is what turns it into false evidence. A `--no-stamp` flag for
+deliberate probing would remove the incentive to reach for a scratch root in the first place.
+
+**Related.** `KI-ACS-20260901-1730` (the sibling `done_proof` timeout) and
+`feedback_spotcheck_real_data_format` — probing real tools against real records is the right
+instinct, and this is the cost of doing it without an escape hatch.
