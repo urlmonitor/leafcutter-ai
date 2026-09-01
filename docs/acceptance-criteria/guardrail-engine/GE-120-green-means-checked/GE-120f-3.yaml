@@ -1,0 +1,170 @@
+id: GE-120f-3
+title: "The liveness run states how many checks it actually put an input through, that figure moves when the population moves, and a run that put an input through none fails as unresolved"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the population of protective checks the run examines is the population established
+    by whichever record owns the enumeration of that family, read at the moment the run
+    executes rather than written into the run,
+  When the run finishes,
+  Then it states how many checks it examined, and that figure counts the checks whose
+    declared input it actually put through an entry point, not the checks it set out to
+    examine,
+  And given one further check joins that population and nothing else in the repository
+    changes,
+  When the run repeats,
+  Then the stated figure is greater than the figure stated before, and the newly joined
+    check appears in one of the run's reported classes,
+  And given a check leaves that population and nothing else changes,
+  When the run repeats,
+  Then the stated figure is smaller than the figure stated before, and that check appears
+    in none of the run's reported classes,
+  And a run that put an input through no check at all fails as a run that reached no
+    verdict, states that it examined none, and does not report that no check was found
+    wanting,
+  And the figure the run states never exceeds the number of checks it put an input through
+    plus the number it reports as unresolved.
+depends_on:
+  - GE-120f
+  - GE-120f-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      BOUNDARY — ENUMERATION, AND THE SHAPE THIS RECORD DELIBERATELY COPIES. BP-100n-4
+      (approved) owns which guards are in the set at all, taken from what is present on disk
+      rather than from the registry, and it is where the population comes from. This record
+      does not re-derive that population and must not grow a second census beside it — two
+      independently-derived populations will disagree about how many guards exist. What is
+      taken from it deliberately is the discriminator: state the figure, then require it to
+      MOVE under a varied population, because a stated figure alone is satisfied by a
+      literal. The two records should read alike.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING, AND THE AXIS IT DOES NOT COVER. GE-126b-5 requires the per-value
+      figures to sum to a stated total and requires them to move when one check's RECORD
+      changes value. That holds the population fixed. This record varies the POPULATION and
+      requires the total itself to move — the only form no implementation carrying a literal
+      can satisfy. Neither closes the other: a hardcoded total satisfies GE-126b-5's summing
+      clause exactly.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126e-2.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      BOUNDARY — A DIFFERENT CENSUS OF A DIFFERENT PROPERTY, approved and not to be merged
+      with this. GE-126e-2 counts checks that reach a clean answer without inspecting
+      anything, comparing two working directories. This run counts checks whose declared
+      refusal has been demonstrated. Its empty-run clause is the precedent this record's
+      examined-none clause follows deliberately, and its wording should not diverge; the
+      measurement is a different one.
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The vocabulary the figures are counted in — the four state values, including the
+      honest placeholder for an attempt never made. The schema already models a derived
+      rollup of checks by state and says to regenerate it rather than hand-edit it, which is
+      this criterion's requirement stated one artifact earlier and with no reader.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-6.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      BOUNDARY — A DEPLOYED GUARD THAT NOTHING INVOKES. That sweep asks whether a built check
+      is wired at all; this run asks whether a check that IS wired can refuse. Its standing
+      instruction applies here unchanged and is the reason the varying-population clauses are
+      written as fixtures rather than as an expected list: an assertion that today's
+      population is fully demonstrated passes forever and catches nothing on the day the next
+      check is added, which is the day this run exists for.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: GE-120f-1
+    contract: >-
+      One record per check, written from an observation actually performed. The stated figure
+      counts those observations and may count nothing else.
+  - ac_id: BP-100n-4
+    contract: >-
+      The population of protective checks, enumerated at run time from what is present rather
+      than from a list inside the check that walks it. This record consumes that population
+      and does not re-derive it.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE MOVING FIGURE IS THE WHOLE POINT AND THE STATED FIGURE ALONE IS NOT. A requirement
+  to state how many checks were examined is satisfied by printing a number, and a number
+  written into the run is a legal answer that proves nothing — it stays correct-looking on a
+  run that examined nothing. Requiring the figure to MOVE when the population moves is the
+  only form of the requirement a literal cannot satisfy, and it is required in both
+  directions: an implementation that adds newly-found checks to a base constant grows
+  correctly and never shrinks.
+
+  WHY THE EXAMINED-NONE CLAUSE IS THE MOST LIKELY WAY THIS SHIPS BROKEN. A run that put an
+  input through nothing has an empty findings list, and an empty findings list is the
+  greenest possible result. That is this regime committing, at the top level, exactly the
+  defect it was built to detect — and it is the shape the neighbouring census already
+  identifies as its own most likely failure. Reporting nothing wrong is not the same
+  statement as finding nothing wrong, and the run must never make the first sound like the
+  second.
+
+  NO COUNT OF INSTANCES IS STATED IN THIS RECORD, DELIBERATELY, AND THAT IS WHY THE
+  POPULATION FIGURES ARE ABSENT FROM THE GIVEN. Records authored the same day disagree about
+  how many instances of this shape exist, and the parent records the figure as disputed and
+  forbids one below it. Neighbouring records in this family state their measured populations
+  in the Given as house style; that is deliberately not done here, because the population is
+  precisely what this run measures and a criterion asserting it would be the thing it is
+  meant to establish. Any figure encoded in an implementation of this record is a defect.
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "A run that put an input through no check
+  does not report that no check was found wanting." ARRIVAL COLOUR: GREEN, vacuously — no
+  run exists, so none currently misreports an empty examination. INJECTION: derive the run's
+  verdict from the findings list alone, so an empty findings list reads as a clean result.
+  Under that injection a run over a population naming no checks reports that nothing is
+  wrong and hands back acceptance; this clause must go RED, and must return to green on
+  revert. This is the one injection that must be executed rather than described, because the
+  natural implementation is the defective one.
+
+  SECOND NAMED MUTATION, FOR THE LEAVING-THE-POPULATION CLAUSE. "A check that leaves the
+  population appears in none of the reported classes" is absence-asserting and GREEN on
+  arrival, vacuously. INJECTION: carry findings forward from the previous run instead of
+  rebuilding them from this run's observations. Under that injection a removed check keeps
+  appearing and the stated figure does not fall; the clause must go RED. A finding that
+  survives its subject is how a stale figure gets quoted as current.
+
+  ARRIVAL COLOURS FOR THE REMAINING CLAUSES. The stated-figure clause, both movement clauses
+  and the upper-bound clause are all RED on arrival — no figure is stated today because no
+  run exists. The two absence-asserting clauses above are the only greens, and both are
+  vacuous greens.
+
+  DAY ONE. On the commit that lands this, the stated figure will be large and almost all of
+  it will fall in the never-demonstrated class. That is the correct outcome and must not be
+  reduced by narrowing the population — shrinking the denominator is how a figure improves
+  without anything improving, which is why the leaving-the-population clause requires the
+  fall to be visible in the stated figure rather than silent.
