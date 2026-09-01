@@ -473,6 +473,7 @@ class TestReachableFromEntryPoint(unittest.TestCase):
 
     def test_ge_120a_1_reachable_from_entry_point(self) -> None:
         # covers: GE-120a-1
+        # angle: reachability
         """Reachability + error-handling policy: run the real entry point
         against a genuinely corrupted prerequisite (ac_parent_id.py exists
         as a directory, raising a real IsADirectoryError/OSError today) and
