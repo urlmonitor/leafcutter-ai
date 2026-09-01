@@ -1,0 +1,178 @@
+id: BP-900h-6-i
+components:
+  - build_pipeline
+  - commit_guardian
+title: "The use-the-install step mutates only a target it is entitled to destroy, and refuses anything else untouched"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-6.yaml"
+criteria: |
+  Given the use-the-install step's first actions against its target are destructive and
+    irreversible in place — it initialises a git repository in the target, rewrites the
+    target's skills_config.json, removes hook entries from the target's pre-commit
+    registry, and creates a commit,
+  And a target directory that is NOT a disposable install fixture — a developer's real
+    working tree, the shared install tree the workspace's worktrees resolve their
+    configuration through, or any directory that is already inside a git working tree
+    holding commits the step did not create,
+
+  When the step is invoked against such a target,
+  Then it makes NO mutation of any kind before refusing: no git repository is created, no
+    configuration file is rewritten, no hook entry is removed, no commit exists that did
+    not exist before, and every path present in the target beforehand is still present
+    afterwards with byte-identical content,
+  And it exits non-zero, naming the target path and which entitlement condition the target
+    failed,
+  And its report does not carry the completed-adopter-commit result — a refusal is not
+    reported in the same shape as a successful adopter experience,
+
+  And given an entitled target whose pre-commit registry is a symbolic link resolving
+    outside the target root — into a shared build artifact several installs read,
+  When the step narrows or otherwise rewrites that registry,
+  Then the shared artifact the link resolves to is byte-identical after the run: the step
+    writes only paths that resolve inside the target root, either by replacing the link
+    with a private regular file in the target or by refusing with the message above,
+
+  And given a target the step IS entitled to destroy — a directory it created, or one
+    handed to it empty and holding only a built install,
+  When the step is invoked against it,
+  Then the step runs to completion and produces the same result BP-900h-6 requires, so the
+    entitlement test does not turn the step off for the case it exists to serve.
+
+  REACHABILITY. Every clause above is asserted against the step as the job reaches it —
+  the consumer-install entry point invoked as a subprocess with the use-the-install flag,
+  in a real built install, using the command the runner parses out of the workflow file.
+  An entitlement check that lives in the module but that the workflow's invocation never
+  routes through is not covered by this criterion: at the time this AC was written the
+  workflow's consumer-simulation step invoked that entry point WITHOUT the use-the-install
+  flag, so the whole step was unreachable in CI while its module was present and green.
+  Presence in a copy of the code, or in a helper called directly by a test, is not
+  coverage.
+
+  Coverage note: behavioral only. A test that greps the step's source for a guard name, a
+  path-resolution call or a refusal string passes on dead code, and dead code is the exact
+  state this step was in when the requirement was found. The only honest coverage runs the
+  step against a target it must refuse and inspects the target afterwards — a census of
+  paths and bytes taken before and after the invocation, plus the absence of a repository
+  and of a commit — and separately runs it against a target it must accept and observes it
+  complete.
+depends_on:
+  - BP-900h-6
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-6.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/ci/_use_install_step.py
+    relationship: modifies
+    status: exists
+    relevance: "The live instance. It runs git init in the target, rewrites skills_config.json, rewrites .pre-commit-config.yaml in place (following the link if the deployed config is one) and commits — with no test that the target is one it may destroy."
+  - path: scripts/ci/check_consumer_install.py
+    relationship: modifies
+    status: exists
+    relevance: "The entry point the workflow step invokes and the only surface through which the refusal is reachable. The --use-install flag is parsed here."
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: "The consumer-simulation job. Its target is the workspace root, which holds only the package checkout and the built install — an entitled target. The entitlement rule must keep that case passing while refusing a developer tree."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Defines which trees are package-development trees and which are consumer installs — the classification the entitlement test turns on."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BP-900h-6
+  contract: "The stage-and-commit-and-record behaviour, reached through the single entry point the workflow step invokes, which this AC gates behind an entitlement test."
+test_spec:
+  - name: test_bp900h6i_step_refuses_an_unentitled_target_and_leaves_it_byte_identical
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Build a target that models a developer's real working tree — an existing git repository with a pre-existing commit, a skills_config.json with the developer's own content, and a pre-commit registry. Take a full census of paths and file bytes. Invoke the consumer-install entry point as a subprocess with the use-the-install flag against it. Assert the exit status is non-zero, the message names the target path and the failed entitlement condition, and the post-run census is identical to the pre-run one: same path set, same bytes, no new commit in the repository, and the registry still lists every hook it listed before. The census is the load-bearing assertion — an implementation that refuses only AFTER git init and the registry rewrite satisfies any assertion that merely checks the exit status."
+  - name: test_bp900h6i_shared_artifact_behind_a_symlinked_registry_is_never_written_through
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "In an ENTITLED target, make .pre-commit-config.yaml a symbolic link to a file outside the target root that a second install also reads. Record the link target's bytes. Run the step through the same subprocess entry point. Assert the outside file is byte-identical afterwards, whichever branch the step took, and that whatever the step then commits inside the target did not come at the cost of the shared file. Kills the current shape directly: today the rewrite opens the config path and writes, so it edits the shared artifact and every other install that reads it."
+  - name: test_bp900h6i_an_entitled_disposable_target_still_completes
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "The did-not-turn-the-step-off control. Against a directory that started empty and holds only a freshly built install, the same subprocess invocation runs to completion and yields BP-900h-6's result. Without this entry the cheapest passing fix is to refuse everything, which is green on both entries above and is indistinguishable from deleting the step."
+  - name: test_bp900h6i_the_refusal_is_reached_by_the_command_the_workflow_actually_runs
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Read the consumer-simulation step's command out of the real on-disk .github/workflows/ci.yml, and run that exact command — arguments and all — against an unentitled target, as a subprocess. Assert it fails and the target is unmutated. Goes red today for a reason worth keeping visible: the workflow's command carries no use-the-install flag, so the entire step, guard included, is unreachable from CI. A test that imports the guard helper and calls it directly is green in that state and proves nothing."
+test_rationale: |
+  The defect is that a destructive routine has no idea what it is pointed at, so every
+  entry here is written to survive the plausible cheap fixes rather than to restate the
+  criterion.
+
+  Refusing after the fact is the likeliest first implementation: a check placed anywhere
+  below the git-init call passes an exit-status assertion while the target is already
+  damaged. Only the before-and-after census kills it, which is why the census, not the
+  exit status, is the primary assertion of entry 1.
+
+  Refusing everything is the second cheap fix, green on entries 1, 2 and 4, and killed
+  only by entry 3.
+
+  Entry 2 exists separately from entry 1 because the symlink case is not an entitlement
+  failure — the target is entitled, and the damage escapes it anyway through a path that
+  resolves elsewhere. An entitlement test alone leaves it open.
+
+  Entry 4 is not redundant with the others. The step's own AC already has an entry-point
+  descriptor, but that one asserts the step and the test share a script; this one asserts
+  the guarded behaviour is reached by the command in the file the runner parses, which is
+  the property that is false on this branch right now. None of these entries may be
+  written as a unit test over a resolution or classification helper: a helper called with
+  the arguments the test author already believes are right answers the same way in a
+  guarded and an unguarded step.
+
+  Angles: criterion, failure, deployed, reachability — at the cap of four, with the
+  must-refuse case riding entry 1.
+origin_agent: BrainCandy
+created: 2026-08-31
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Found by an empirical read of scripts/ci/_use_install_step.py on this branch, not by a
+  failing test. Pointed at a directory, run_use_install_step unconditionally performs
+  git init, rewrites skills_config.json, deletes 53 of the 55 hooks from the deployed
+  .pre-commit-config.yaml, and commits. There is no test of what the directory is. The
+  registry rewrite is the sharpest edge: it opens the config path and writes, so when the
+  deployed config is a symbolic link into the shared install tree — the arrangement this
+  workspace's worktrees actually use — the deletion lands in the shared artifact and every
+  install reading it loses 53 hooks silently.
+
+  WRONG FIXES TO EXPECT.
+  1. Move the entitlement test lower, after git init "so the repository state can be
+     inspected". That is not a guard; the target is already modified when it fires.
+  2. Refuse unless the directory is empty. The CI job's target is the workspace root,
+     which holds the package checkout and the built install, so an emptiness rule turns
+     the real job red and will be reverted or weakened within a day. The condition must be
+     about entitlement, not emptiness.
+  3. Copy the symlinked registry's content into a regular file and keep writing the
+     original path. Byte-identity of the shared artifact is the assertion precisely so the
+     rewrite has to land inside the target.
+
+  SCOPE BOUNDARY. This AC is about what the step is allowed to touch. It says nothing
+  about which hooks the step may narrow away or how the narrowing is reported — that is
+  BP-900h-6-ii, deliberately kept separate so a fix to one is not accepted as a fix to
+  the other.

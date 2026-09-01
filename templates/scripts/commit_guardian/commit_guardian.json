@@ -541,6 +541,20 @@
                 "_comment": "GE-122a-1: Registers check_adr_collision.py, which was deployed but wired into no manifest (verified 2026-08-17 -- see ADR-029 Amendment 1). Adopts its staged-vs-origin/main-vs-inflight-branch comparison for the decision-number namespace of the whole-collection uniqueness effort, extended with same-commit self-collision detection (_find_self_collisions). Fail-closed on inability to read the sequence (git unavailable, ADR directory absent, remote-branch scan failing); fail-open only for a bug in its own reporting after a completed read (ADR-029 Amendment 1)."
             },
             {
+                "id": "check-identifier-uniqueness",
+                "tier": "judgment",
+                "name": "Check Identifier Uniqueness (GE-122 whole-collection numbering pass)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_identifier_uniqueness.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "always_run": true,
+                "verbose": true,
+                "_comment": "GE-122d-6: registers check_identifier_uniqueness.py (GE-122a-1) into the LIVE commit-time registry -- verified 2026-08-25/2026-08-31 that this check was deployed, tested to a green suite, and registered nowhere. always_run: true because the pass inspects the WHOLE collection across all four namespaces regardless of the staged diff (compute_commit_disposition then scopes the exit/report decision to the current change set, per that module's own DECISION HISTORY). verbose: true so the passing-path per-namespace inspected-count line (GE-122d-6-i) is visible on an ordinary successful commit rather than swallowed by pre-commit's default success-output suppression. Depends on GE-122d-3-ii (every namespace root scaffolded on the base install path) and GE-122e-3 (the collection itself already passes with nothing excused) having landed first -- registering this ahead of either would block every commit in every fresh install."
+            },
+            {
                 "id": "check-infra-docs",
                 "tier": "judgment",
                 "name": "Check Infrastructure Documentation",

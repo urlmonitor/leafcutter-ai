@@ -386,4 +386,4 @@ jobs:
         # AC BP-900h-6 for merge-gate tooling). --target-dir . is
         # github.workspace itself, which holds only the leafcutter-ai/
         # checkout at this point.
-        run: python leafcutter-ai/scripts/ci/check_consumer_install.py --package-dir leafcutter-ai --target-dir .
+        run: python leafcutter-ai/scripts/ci/check_consumer_install.py --package-dir leafcutter-ai --target-dir . --use-install
