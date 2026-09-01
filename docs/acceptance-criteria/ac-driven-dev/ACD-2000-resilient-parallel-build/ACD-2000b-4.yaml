@@ -41,7 +41,7 @@ doc_links:
   - path: scripts/build_orchestration/fast_lane.py
     relationship: describes
     status: exists
-    relevance: "select_batch is the requirement-grain selection this rule was written against, and _build_ac_id_to_path_index is the single-pass indexing precedent the pairwise comparison must follow. WHICH SURFACE THIS RULE CONSTRAINS IS AN OPEN CHOICE, not settled by this link (recorded 2026-09-01). select_batch has NO production caller: its only one was the orphaned fast-lane-build.js, deleted under BO-2400c-1-v, and the live lane calls select_connected — a different operation (one AC's connected set, not N ready ACs from the store), so it is not a replacement. Implement the overlap rule on select_batch as things stand and it will never fire in production. Decide first whether this rule governs batch-mode selection (select_batch, currently dormant), the lane's connected-set resolution (select_connected), or build-feature.js's ticket batching, which is where parallel dispatch actually happens today."
+    relevance: "SURFACE DECIDED 2026-09-01 (it was an open choice until then; it_requirements now carries the answer and this note is kept consistent with it). The take-time half of the rule attaches to the CLAIM PATH: the `claim` subcommand handler (line 1939) calling filter_already_claimed (line 490) then claim_build_set (line 347), invoked by templates/workflows-js/fast-lane-ship.js line 818 on every fast-lane run. That path decides today on work_status alone and never compares footprints. _build_ac_id_to_path_index (LINE 123 — an earlier note here said ~line 71, which was wrong) is the single-pass indexing precedent the comparison must follow, and it is what the claim-side functions already use. select_batch (line 897) is EXPLICITLY NOT the host: it has no production caller — its only one was the orphaned fast-lane-build.js, deleted under BO-2400c-1-v — and the live lane calls select_connected, a different operation (one AC's connected set, not N ready ACs from the store). Its docstring documents a determinism guarantee worth preserving wherever the rule lands, but the rule wired there would never fire in production. Batch selection at requirement grain has no live surface at all; the only real parallel dispatch is build-feature.js's ticket-grain BATCH_SIZE = 12, which this record does not govern."
 assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:
@@ -49,14 +49,16 @@ it_requirements:
   - "EMPTY MEANS CONFLICTS WITH EVERYTHING, AND IT MUST BE AN EXPLICIT BRANCH EVALUATED BEFORE ANY INTERSECTION. A naive set intersection inverts the rule -- the empty set intersects nothing, so 'unknown footprint' reads as 'safe to parallelise'. This is ACD-2000b's single most likely defect and it is invisible in code review because the wrong implementation is the shorter one."
   - "DERIVED-EMPTY IS NOT THE SAME AS NO-FILES, AND BOTH ARE CONSERVATIVE. _build_files_touched reads it_requirements path tokens and doc_links whose relationship is an edit surface; doc_links marked describes or related are excluded. So docs-only requirements, prose requirements and EVERY requirement not yet enriched by the IT PO derive an empty footprint. 'The derivation ran and produced nothing' must never be treated as 'this requirement touches nothing'."
   - "NO EXEMPTION BY IDENTITY. If any requirement is ever excused from the empty-footprint rule, the exemption must derive from a property of the record, never from a hard-coded id or path list -- otherwise new cases silently inherit the unsafe default."
-  - "THE FOURTH CLAUSE IS NOT SATISFIABLE BY A PLANNER. Two independent choosers can only avoid overlap through shared state, so the footprint test must be applied against the footprints of the requirements CURRENTLY CLAIMED by other efforts, read at take time -- not merely across the members of one planner's own batch. A planner-local antichain satisfies clauses one to three and fails this one, and that partial pass is the likely outcome if this constraint is not stated."
-  - "RE-VERIFY AT TAKE TIME, mirroring the pre-dispatch re-check the ticket-grain rule already performs (templates/skills/building-epics/SKILL.md ~lines 150-153). The set of claimed requirements changes between planning and dispatch; a check performed only during planning is stale by the time it matters."
+  - "THE FOURTH CLAUSE IS NOT SATISFIABLE BY A PLANNER. Two independent choosers can only avoid overlap through shared state, so the footprint test must be applied against the footprints of the requirements CURRENTLY CLAIMED by other efforts, read at take time -- not merely across the members of one planner's own batch. A planner-local antichain satisfies clauses one to three and fails this one, and that partial pass is the likely outcome if this constraint is not stated. The shared state this needs already exists and is already read: filter_already_claimed (scripts/build_orchestration/fast_lane.py line 490) walks the store and inspects every candidate's work_status. It is a footprint comparison that is missing there, not a place to put one."
+  - "RE-VERIFY AT TAKE TIME, mirroring the pre-dispatch re-check the ticket-grain rule already performs (templates/skills/building-epics/SKILL.md ~lines 150-153). The set of claimed requirements changes between planning and dispatch; a check performed only during planning is stale by the time it matters. TAKE TIME IS A NAMED MOMENT, NOT AN ABSTRACTION (verified 2026-09-01): it is the `claim` subcommand handler at fast_lane.py lines 1939-1974, between the filter_already_claimed call (1942) and the claim_build_set write (1954). That is the last read before the store is written, and both happen inside one process invocation, so the footprint check and the take are not separated by an agent round-trip. Put the re-verification there."
   - "DO NOT REWRITE THE TICKET-GRAIN RULE IN THIS CHANGE. templates/skills/building-epics/SKILL.md stays authoritative for tickets until ACD-1800c lands; the two rules run side by side during the migration and must not disagree. Reconciling them is that AC's scope, and the prose surface belongs to a different craft."
-  - "PERFORMANCE AND DETERMINISM. The comparison runs over the ready set on every selection: index the store once (the _build_ac_id_to_path_index precedent, ~line 71) rather than re-walking per pair, and preserve select_batch's documented guarantee that the same store state always yields the identical ordered result."
+  - "PERFORMANCE AND DETERMINISM, STATED AS A PROPERTY OF THE RULE AND NOT OF ANY ONE FUNCTION. The comparison runs over every candidate on every selection or take, so index the store ONCE per call rather than re-walking it per pair. The precedent is _build_ac_id_to_path_index at scripts/build_orchestration/fast_lane.py LINE 123 -- re-verified 2026-09-01; the '~line 71' this bullet used to cite was wrong. It survives as a precedent because it is what the claim-side functions already do: claim_build_set (379), release_claim (467), filter_already_claimed (519), mark_done_built_acs (579) and check_no_stale_todo (630) each take one index and reuse it. Notably select_batch does NOT use it, so the precedent points at the claim path rather than at batch selection. WHEREVER THE RULE LANDS it must stay deterministic: the same store state must always yield the identical ordered result, and adding the footprint test must not make the outcome depend on dict iteration order or on which effort happened to ask first. That guarantee is also documented on select_batch, but it is required here as a property of the rule -- this bullet is NOT an instruction to implement on select_batch, which has no production caller (see the fast_lane.py doc_links relevance note and the 2026-09-01 amendment below)."
+  - "THE TAKE-TIME HALF HAS A LIVE HOST; THE BATCH-SELECTION HALF HAS NONE (verified 2026-09-01, and this is the surface decision this record was previously missing). Clause four -- two efforts never concurrently hold requirements whose footprints overlap -- is buildable TODAY against a path every fast-lane run already executes: templates/workflows-js/fast-lane-ship.js line 818 invokes `python3 fast_lane.py claim`, whose handler calls filter_already_claimed then claim_build_set. That path admits or refuses a requirement on ITS OWN work_status alone and never compares footprints, which is exactly the gap ACD-2000b names. Clauses one to three describe choosing N requirements to run at the same time, and NO live surface does that at requirement grain: select_batch is dormant, the live lane resolves ONE connected set and builds it sequentially (fast-lane-ship.js contains zero parallel( calls), and the only real parallel dispatch in the system -- build-feature.js, BATCH_SIZE = 12, await parallel(chunkThunks) -- is TICKET grain and outside this record. So: build clause four on the claim path, where it fires on the next run. Do NOT attach clauses one to three to a dormant surface in order to close the record; if they are built before a requirement-grain dispatcher exists, the intersection helper must be pure and separately tested, and the record must not be marked done on the strength of a rule nothing invokes."
+  - "THE PERMISSIVE DEFAULT IS ALREADY PRESENT IN THE LIKELY HOST, so bullet two changes behaviour there rather than adding to a blank surface. filter_already_claimed (fast_lane.py lines 525-536) currently routes a candidate to `to_build` both when its id is absent from the store index and when its YAML cannot be read -- 'unknown' resolves to 'free to build' at the very call site this rule attaches to. An implementer must decide EXPLICITLY, and cover with a test, that footprint-unknown conflicts with everything at this site, and must not let the neighbouring id-unknown default silently supply the opposite answer by proximity. Whether the id-unknown and read-error defaults should also change is a separate question this record does not settle."
   - "Follow the project error handling policy (Ruff E722/BLE001/TRY): typed except around store reads, log-or-reraise, no bare except. A footprint that cannot be derived because of a read error is UNKNOWN, and unknown conflicts with everything -- it must never degrade to empty-and-safe."
 delivers_to:
   agent: python-coder
-  contract: "The requirement-grain contention test: conflicts(a, b) -> bool, true when the derived footprints intersect AND true whenever either footprint is empty or underivable, plus the take-time check of a candidate against the footprints of currently claimed requirements. Consumed by the selection path and by ACD-2000b-5's operator documentation."
+  contract: "Two things, with different maturity. (1) A pure requirement-grain contention test, conflicts(a, b) -> bool: true when the derived footprints intersect, AND true whenever either footprint is empty or underivable. Surface-independent and testable on its own. (2) Its application at take time: a candidate checked against the footprints of the requirements other efforts CURRENTLY hold, wired into the claim path (fast_lane.py's `claim` handler, between filter_already_claimed and claim_build_set) -- the one live surface where the check fires in production today. Consumed by whatever chooses what to build concurrently and by ACD-2000b-5's operator documentation. NOT delivered against select_batch: no production caller invokes it, so a contention test wired only there is delivered to nobody."
 expects_from:
   - ac_id: ACD-2000b-1
     contract: "The claim record, which is how a chooser learns which requirements another effort currently holds and therefore whose footprints it must avoid."
@@ -67,27 +69,27 @@ test_spec:
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
-    description: "Builds a real four-requirement store and runs the real selection; asserts the first and second are never returned in the same batch."
+    description: "Builds a real four-requirement store and drives the real contention path -- the claim path where the rule is hosted, not a batch helper -- asserting the first and second are never concurrently held. If a requirement-grain batch selector exists by implementation time, assert it there too; if it does not, this test must still run against the live path rather than against a dormant one."
   - name: test_disjoint_requirements_may_be_offered_together
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
-    description: "Asserts the first and third ARE offered together, so the rule above is about overlap and not a blanket serialisation."
+    description: "Asserts the first and third ARE allowed to be held at the same time, so the rule above is about overlap and not a blanket serialisation. Runs against the same live path as the test above; a serialise-everything implementation must fail this."
   - name: test_requirement_with_no_derivable_footprint_is_never_offered_alongside_another
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
-    description: "The fourth requirement, whose footprint derivation yields nothing, is never returned in a batch with any other requirement -- including the disjoint third."
+    description: "The fourth requirement, whose footprint derivation yields nothing, is never held at the same time as any other requirement -- including the disjoint third. Exercised through the live contention path, so a correct-looking intersection helper that is never consulted cannot pass this."
   - name: test_unenriched_requirement_is_treated_as_unknown_not_as_touching_nothing
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
-    description: "A requirement with no it_requirements and only describes-relationship doc_links -- the shape every un-enriched record has -- is treated as conflicting, proving derived-empty is not read as safe."
+    description: "A requirement with no it_requirements and only describes-relationship doc_links -- the shape every un-enriched record has -- is treated as conflicting, proving derived-empty is not read as safe. Note the host's existing default runs the other way (filter_already_claimed sends unknown candidates to to_build), so this test must be red before the change."
   - name: test_two_concurrent_choosers_never_take_an_overlapping_pair
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
-    description: "Two real processes select and take from the same store simultaneously, repeated; asserts no round ever ends with both holding requirements whose footprints intersect."
+    description: "Two real processes take from the same store simultaneously via the real claim path, repeated; asserts no round ever ends with both holding requirements whose footprints intersect. This is the test that proves the rule fires in production, because the claim path is the one surface the shipping lane actually invokes -- treat it as the primary, not the last, of these five."
 test_rationale: "Asserting that an intersection helper returns the right answer proves nothing about the clause most likely to be wrong: the empty case, where the mathematically correct intersection gives the operationally wrong verdict. So the empty-footprint case is driven through the real selection path twice -- once with a deliberately footprint-less requirement, once with the shape an un-enriched record actually has on disk -- and the disjoint pair is asserted alongside, so a serialise-everything implementation cannot pass. The fourth criterion is only observable with two real concurrent choosers: a single-planner test passes on a design that computes a perfect antichain and then fails the moment a second drive runs, which is precisely the state of the system today."
 origin_agent: business-analyst
 created: 2026-08-17
@@ -159,6 +161,103 @@ amended_by:
       record a sequencing nuance. If the claim-side clause is wanted sooner, build
       it within this record against the claim mechanism and leave clauses one to
       three unsatisfied until a requirement-grain dispatcher exists.
+  - action: surface-decision
+    agent: it-po
+    date: "2026-09-01"
+    reason: |
+      RESOLVES A CONTRADICTION BETWEEN THIS RECORD'S OWN TECHNICAL FIELDS, and
+      answers the surface question the sequencing entry above says MUST be
+      answered before promotion. criteria UNCHANGED — the behaviour was never in
+      doubt, only where it attaches. depends_on, work_status, readiness and
+      covered_by untouched.
+
+      THE CONTRADICTION. it_requirements bullet 8 told an implementer to
+      "preserve select_batch's documented guarantee", naming select_batch as the
+      target. The doc_links relevance note on fast_lane.py, updated the same day,
+      said the opposite: the surface is unchosen, select_batch has no production
+      caller, and the rule implemented there will never fire. Two fields, one
+      function, opposite instructions — and the one an implementer actually obeys
+      was the one pointing at the dormant surface.
+
+      THE DECISION, AND IT IS A DECISION RATHER THAN A HEDGE: this rule has two
+      halves with genuinely different surface facts, and they should be resolved
+      differently.
+
+      HALF ONE — CLAUSE FOUR HAS A LIVE HOST TODAY. This is the fact the previous
+      framing missed. templates/workflows-js/fast-lane-ship.js line 818 invokes
+      `python3 fast_lane.py claim --ac-ids ... --ac-root ...` on EVERY fast-lane
+      run. That subcommand's handler (fast_lane.py line 1939) calls
+      filter_already_claimed (line 490) and then claim_build_set (line 347).
+      filter_already_claimed already walks the whole store, already reads every
+      candidate record, and already decides admit-or-refuse — on work_status
+      alone. It is a footprint comparison that is absent there, not a place to
+      put one. The sequencing entry above reached the same conclusion from the
+      other direction ("claim_build_set / filter_already_claimed / release_claim
+      claim by AC id and not by footprint, so two concurrent efforts can hold
+      disjoint AC sets whose files collide ... that gap is genuine and needs no
+      capability that does not exist"). This amendment does the remaining work:
+      it moves that finding out of prose and into the fields an implementer
+      reads. Clause four is buildable now and fires on the next run.
+
+      HALF TWO — CLAUSES ONE TO THREE STILL HAVE NO HOST, AND SAYING SO IS THE
+      POINT. Nothing at requirement grain chooses N things to run at once:
+      select_batch is dormant, fast-lane-ship.js builds one connected set with
+      zero parallel( calls, and build-feature.js's BATCH_SIZE = 12 /
+      await parallel(chunkThunks) is ticket grain, which this record does not
+      govern. So these clauses are recorded as not-yet-attachable rather than
+      quietly aimed at a dormant function. If they are built early, the
+      intersection test must be pure and separately tested, and the record must
+      not be closed on the strength of a rule nothing invokes.
+
+      WHAT CHANGED, FIELD BY FIELD.
+      * Bullet 8 no longer names select_batch as the target. Determinism is now
+        stated as a property of the RULE — same store state, identical ordered
+        result, no dependence on iteration order or on which effort asked first —
+        so it survives wherever the rule lands. select_batch is mentioned only as
+        where that guarantee is currently written down, with an explicit "this is
+        not an instruction to implement there".
+      * The _build_ac_id_to_path_index citation SURVIVES and got stronger, but
+        its line number was WRONG: it is line 123, not ~line 71. Re-verified
+        2026-09-01. It is still the right precedent, and for a better reason than
+        before — claim_build_set (379), release_claim (467),
+        filter_already_claimed (519), mark_done_built_acs (579) and
+        check_no_stale_todo (630) all take one index and reuse it, while
+        select_batch does not use it at all. The indexing precedent points at the
+        claim path, not at batch selection.
+      * Two bullets added: one naming the live host and the absent one (so the
+        asymmetry is in it_requirements, not only in a doc link), and one
+        recording that the host's EXISTING default is the very inversion bullet 2
+        forbids — filter_already_claimed lines 525-536 route an unknown or
+        unreadable candidate to to_build. Bullet 2 therefore changes behaviour at
+        that call site rather than adding to a blank one, which changes how the
+        test must be written (red before the change) and is easy to miss.
+      * Bullets 5 and 6 kept their content and gained the missing referent. They
+        did NOT carry the select_batch defect — they never named a function, they
+        said "at take time" — but that abstraction is exactly what let the record
+        look implementable while its only concrete pointer aimed at dormant code.
+        Take time is now named: fast_lane.py lines 1942-1954, the last read before
+        the store is written, inside one process invocation, so the check and the
+        take are not separated by an agent round-trip.
+      * delivers_to split into the pure test and its take-time application, with
+        an explicit "NOT delivered against select_batch — a contention test wired
+        only there is delivered to nobody".
+      * expects_from was already correct and is unchanged. Its two dependencies
+        (ACD-2000b-1's claim record, ACD-2000b-2's atomic take) are precisely the
+        claim mechanism this amendment picks as the host, so the decision makes
+        those edges more load-bearing, not less.
+      * test_spec: the first four descriptions presupposed a batch-returning
+        function ("returned in the same batch", "offered together") and were
+        re-worded to assert concurrent HOLDING through the live path. The fifth,
+        two concurrent choosers, needed no such repair and is promoted to primary
+        — it is the only one that can prove the rule fires in production.
+
+      HONEST RESIDUAL, RECORDED RATHER THAN SMOOTHED. Clauses one to three remain
+      unsatisfiable against any live surface, so this record cannot be fully
+      closed until a requirement-grain dispatcher exists. That is not a reason to
+      hold clause four back; it is a reason not to let clause four's completion be
+      read as the whole record's. readiness stays draft. Whoever promotes this
+      should promote it knowing it is roughly one quarter buildable today and
+      three quarters waiting on a mechanism nobody has committed to building.
 superseded_by: null
 covered_by: []
 implemented_by: []
