@@ -20,6 +20,7 @@ related_code:
   - templates/scripts/commit_guardian/check_identifier_uniqueness.py
   - templates/scripts/commit_guardian/check_adr_collision.py
   - templates/scripts/commit_guardian/_authored_change.py
+  - templates/scripts/commit_guardian/change_set_source.py
   - templates/scripts/commit_guardian/check_contract_shrinking.py
   - templates/scripts/commit_guardian/check_doc_frontmatter.py
 ---
@@ -129,6 +130,68 @@ pattern set by `_resolve_root.py` (one small leaf module in the package,
 imported by name), but solves a different problem: `_resolve_root.py`
 resolves a *prerequisite* (the project root); `_authored_change.py`
 derives the *change set* itself.
+
+### Recorded Change-Set Source Per Entry: `change_set_source` (`GE-120e-2`)
+
+`_authored_change.py` gives self-deriving checks a shared source to consume, but
+before `GE-120e-2` nothing recorded *which* registered checks were actually
+self-deriving in the first place — that answer lived only in the memory of
+whoever last found the two misattributing checks (`check_contract_shrinking.py`
+and `check_doc_frontmatter.py`) by hand. A hand-written list cannot notice a
+third check added tomorrow that also derives its own diff without routing
+through the shared source.
+
+Every entry in `hooks_manifest.hooks[]` (in
+`templates/scripts/commit_guardian/commit_guardian.json`, deployed to both
+`scripts/commit_guardian/commit_guardian.json` and
+`config/commit_guardian/commit_guardian.json`) now carries a required
+`change_set_source` field:
+
+| Value | Meaning |
+|---|---|
+| `handed_by_commit_path` | The check inspects only the files the commit path hands it (via `pass_filenames` or an equivalent argument list); it does not compute its own diff. |
+| `self_derived` | The check works out its own change set and MUST do so via the shared `_authored_change.get_authored_change()` source, never a private `git diff --cached` call. |
+
+**`pass_filenames` is explicitly not the discriminator.** The large majority of
+registered entries carry `pass_filenames: false` while only a handful actually
+derive a diff at all — a predicate built on that flag would misclassify almost
+every entry. `change_set_source` is a declared value, checked mechanically,
+never inferred from an unrelated flag.
+
+**Absent is not a default.** An entry with no recorded `change_set_source`, or
+an unrecognised value, is a determination *failure* naming that entry — not a
+silently-assumed default — so a hook added later without the field is caught
+the moment it is added rather than joining a stale hand-written list.
+
+`templates/scripts/commit_guardian/change_set_source.py`'s
+`determine_change_set_sources(manifest_path) -> DeterminationResult` performs
+this check: it reads `hooks_manifest.hooks[]` from the given manifest path at
+call time (never a fallback to the installed manifest) and partitions every
+entry into exactly one of:
+
+- `.handed_its_files` — recorded `handed_by_commit_path`.
+- `.self_deriving` — recorded `self_derived` **and** verified: the entry's own
+  script text (resolved from the last whitespace-delimited token of its
+  `entry` field, the same idiom `build_precommit.py`'s
+  `_check_hook_script_integrity` uses) references `get_authored_change` or
+  `_authored_change`. A declared `self_derived` value alone is not enough —
+  this static text scan is what catches a check that claims to use the shared
+  source but actually still computes a private diff.
+- `.failures` — missing field, unrecognised value, or a `self_derived` entry
+  whose script does not reference the shared source.
+
+The scan is a static text read, never a subprocess execution, to stay inside
+the commit-time latency budget (a full manifest pass must complete in well
+under 200ms with no subprocess spawned per entry). A CLI entry point
+(`python3 change_set_source.py <manifest_path>`) prints every failing id to
+stderr and exits non-zero when any entry fails, so this determination could be
+registered as an ordinary commit-guardian check in a future manifest entry
+without a shape change. See
+[ADR-038](../adrs/ADR-038-commit-guardian-shared-change-set-derivation.md) for
+the shared-source contract this field's `self_derived` value is verified
+against, and AC `GE-120e-2` under
+`docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/` for the
+full Gherkin spec and its fixture-manifest coverage note.
 
 ## Machine-Readable Outcome Vocabulary
 

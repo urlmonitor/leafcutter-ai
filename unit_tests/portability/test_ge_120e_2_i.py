@@ -116,11 +116,20 @@ _REAL_MANIFEST_PATH = (
 )
 
 # ---------------------------------------------------------------------------
-# GE-120c-1's expected out-of-process harness (unit_tests/portability/harness.py).
-# Does not exist yet — see module docstring, dependency (1).
+# GE-120c-1's out-of-process harness.
+#
+# This file was authored against a speculative name — `unit_tests/portability/
+# harness.py`, imported as `unit_tests.portability.harness`. GE-120c-1 shipped it
+# as `_deployed_check_harness.py`, and that is the established name: eleven files
+# reference it (four test files, the module, four tickets and GE-120c-1.yaml)
+# against this file's one. Reconciled here in favour of the delivered name rather
+# than renaming the module, and matching the sys.path import form its two sibling
+# consumers already use (test_ge_120b_2_i.py, test_ge120c1i_setup_failure_reporting.py).
 # ---------------------------------------------------------------------------
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 try:
-    from unit_tests.portability import harness as _harness  # type: ignore[import]
+    import _deployed_check_harness as _harness  # type: ignore[import]  # noqa: E402
     _HARNESS_OK = True
 except (ImportError, ModuleNotFoundError):
     _harness = None  # type: ignore[assignment]

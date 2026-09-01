@@ -49,6 +49,46 @@ Consequences sections below are updated in place to describe the current
 (post-rename) names and shape; no decision recorded here was reversed by
 the rename.
 
+**Amendment 2 (2026-09-01, `GE-120e-2`) — the manifest declares which checks
+derive their own change set.** This ADR establishes *one shared derivation*;
+`GE-120e-2` establishes *who is required to use it*, and records that as data
+rather than as a list of names in code.
+
+A new key, `change_set_source`, is **required on every entry** of
+`hooks_manifest.hooks[]` in
+`templates/scripts/commit_guardian/commit_guardian.json`. Its vocabulary is
+closed:
+
+| Value | Meaning |
+|---|---|
+| `handed_by_commit_path` | The commit path hands this check its file list; it derives nothing. |
+| `self_derived` | This check works out its own change set, and must obtain it from `_authored_change.get_authored_change()`. |
+
+Three properties make this a contract rather than a comment:
+
+- **Absent is not a default.** An entry with no `change_set_source` makes the
+  determination report a *failure* naming that entry, so the next hook added
+  without one is blocked rather than silently assumed harmless.
+- **Membership is decided from the declared value only** — never from
+  `pass_filenames` (57 of 59 entries carry `pass_filenames: false` while only
+  two derive a diff, so it is not the discriminator), and never from a
+  hand-written list of the two checks that were caught misattributing.
+- **A declared `self_derived` check that obtains its change set by any other
+  means is named and fails the determination**, so the declaration cannot
+  drift away from the behaviour it claims.
+
+`templates/scripts/commit_guardian/change_set_source.py` implements the
+determination (`determine_change_set_sources(manifest_path)`), reading the
+manifest at call time. As of this amendment: 59 entries, all carrying the
+field, of which exactly two — `check-doc-frontmatter` and
+`check-contract-shrinking` — are `self_derived`, and both verifiably consume
+`get_authored_change()`.
+
+This amendment records a field contract that was previously pinned only by a
+test file's docstring (`GE-120e-2-i`, committed before the implementation) —
+the same undocumented-decision drift this ADR was opened to close for the
+`_authored_change.py` contract itself.
+
 ## Context
 
 `check_contract_shrinking.py` (line ~180) and `check_doc_frontmatter.py` (line ~287,

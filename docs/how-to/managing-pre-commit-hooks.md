@@ -4,11 +4,12 @@ description: "Step-by-step guide for enabling, disabling, configuring, and opt-i
 type: how_to
 status: active
 created: 2026-05-28
-last_updated: 2026-06-18
+last_updated: 2026-08-31
 components:
   - build_pipeline
 related_docs:
   - docs/how-to/creating-a-claude-code-hook.md
+  - docs/architecture/components/commit-guardian.md
   - templates/scripts/commit_guardian/commit_guardian.json
 ---
 
@@ -135,7 +136,8 @@ Open `leafcutter/templates/scripts/commit_guardian/commit_guardian.json` and:
        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_my_policy.py",
        "language": "system",
        "stages": ["pre-commit"],
-       "pass_filenames": false
+       "pass_filenames": false,
+       "change_set_source": "handed_by_commit_path"
    }
    ```
 
@@ -143,6 +145,18 @@ Open `leafcutter/templates/scripts/commit_guardian/commit_guardian.json` and:
    - `"files"` — a regex pattern limiting which staged files trigger the hook.
    - `"types"` — e.g. `["markdown"]` or `["python"]` to filter by file type.
    - `"enabled": false` — to ship the hook disabled by default.
+   - `"change_set_source"` — **required on every entry** (`GE-120e-2`). Set
+     `"handed_by_commit_path"` if your hook only inspects the files the commit
+     path hands it (this is almost every hook — do NOT infer this from
+     `pass_filenames`, which is not the discriminator). Set `"self_derived"`
+     only if your hook computes its own diff, and only once it genuinely
+     consumes the shared `_authored_change.get_authored_change()` source
+     rather than calling `git diff --cached` privately — an entry recorded
+     `"self_derived"` that does not is named and reported as a failure. An
+     entry with no `"change_set_source"` at all is also a reported failure;
+     there is no default. See
+     [commit-guardian.md](../architecture/components/commit-guardian.md#recorded-change-set-source-per-entry-change_set_source-ge-120e-2)
+     for the full field reference.
 
 ### Step 3 — Run build.py
 
@@ -304,7 +318,16 @@ grep -c "id:" .pre-commit-config.yaml
 
 # Run the full pre-commit suite against all staged files
 pre-commit run --all-files
+
+# Confirm every manifest entry carries a valid, verified change_set_source
+python3 templates/scripts/commit_guardian/change_set_source.py \
+    templates/scripts/commit_guardian/commit_guardian.json
 ```
+
+The last command exits non-zero and names any entry whose `change_set_source`
+is missing, unrecognised, or (for `"self_derived"` entries) not actually
+backed by the shared `_authored_change` source — see
+[commit-guardian.md](../architecture/components/commit-guardian.md#recorded-change-set-source-per-entry-change_set_source-ge-120e-2).
 
 ---
 
