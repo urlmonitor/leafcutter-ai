@@ -91,7 +91,74 @@ test_spec:
 test_rationale: "Asserting that an intersection helper returns the right answer proves nothing about the clause most likely to be wrong: the empty case, where the mathematically correct intersection gives the operationally wrong verdict. So the empty-footprint case is driven through the real selection path twice -- once with a deliberately footprint-less requirement, once with the shape an un-enriched record actually has on disk -- and the disjoint pair is asserted alongside, so a serialise-everything implementation cannot pass. The fourth criterion is only observable with two real concurrent choosers: a single-planner test passes on a design that computes a perfect antichain and then fails the moment a second drive runs, which is precisely the state of the system today."
 origin_agent: business-analyst
 created: 2026-08-17
-amended_by: []
+amended_by:
+  - action: sequencing-decision
+    agent: product-owner
+    date: "2026-09-01"
+    reason: |
+      CONSIDERED AND REJECTED: adding ACD-1800c to depends_on. No field changed;
+      this entry exists so the question is not re-derived. The answer is no, on
+      three grounds, and the hazard that prompted it is real but guarded elsewhere.
+
+      1. IT WOULD INVERT THE MIGRATION ORDER THE PARENT ALREADY FIXED. ACD-2000b's
+         ORDERING note (ADR-026 "read-side before write-side") states that this L1
+         is a PREREQUISITE OF ACD-1800c -- AC-grain claiming must work BEFORE
+         ticket-grain batching stops being meaningful, or the cutover window has no
+         contention control at all -- and says in terms that "adding ACD-1800c would
+         invert the safe migration order". A child cannot depend on something its
+         own parent must precede. ACD-2000b-5 depends on this record, so the edge
+         would park the whole ACD-2000b subtree behind the very AC that subtree is
+         meant to unblock. The roadmap agrees: this record is
+         phase_acbuild_2a_unit_of_work, ACD-1800c is
+         phase_acbuild_2b_ticket_demotion -- the edge points backwards across the
+         phase boundary.
+
+      2. ACD-1800c IS NOT THE SUBJECT OF THIS RULE. It demotes the ticket to a
+         grouping container. Its five children are ticket enumeration (-1),
+         done-when-members-done (-2), a reference doc (-3), a sequence diagram (-4),
+         and sign-off parity (-5). NONE of them builds requirement-grain parallel
+         DISPATCH. So waiting on ACD-1800c would not make this rule fire; it would
+         relocate the "the rule never runs" hazard to a later date while making it
+         look handled, which is worse than leaving it visible. (ACD-1300b, the only
+         other parallelism L1 in the store, is feature-grain, isolated-workspace,
+         phase_1, and childless -- not the missing prerequisite either.)
+
+      3. depends_on IS THE WRONG FIELD FOR "THE SUBJECT DOES NOT EXIST YET".
+         depends_on means "build B after A". "There is no live surface this rule can
+         attach to" is a readiness fact, and this record is readiness: draft, which
+         is precisely the machine-readable gate that keeps the scanner off it.
+         Overloading depends_on to carry a readiness fact repeats hazard 4 in
+         ACD-2000b's own notes -- one field doing two jobs, where every other writer
+         of that field can silently drop one of them.
+
+      THE HAZARD IS REAL; ITS GUARD IS THE PROMOTION GATE, NOT AN EDGE. The risk
+      raised was that an implementer attaches this rule to select_batch, marks it
+      done, and it never executes. Re-verified 2026-09-01: select_batch
+      (scripts/build_orchestration/fast_lane.py ~line 897) has no workflow caller --
+      its only non-CLI one was the orphaned fast-lane-build.js, deleted under
+      BO-2400c-1-v, and the function's own docstring (~line 922) already says
+      "Nothing in the shipping lane invokes this function". It remains reachable as
+      a CLI subcommand (~line 1895), so it is an exposed entrypoint rather than dead
+      code -- which is exactly why the trap is easy to fall into. The live lane calls
+      select_connected, and templates/workflows-js/fast-lane-ship.js contains ZERO
+      parallel( calls, so the connected set builds sequentially and clause one to
+      three are vacuous there. The only real concurrency in the system is
+      BATCH_SIZE = 12 / await parallel(chunkThunks) in
+      templates/workflows-js/build-feature.js -- at TICKET grain, which this
+      requirement-grain record does not govern. That surface question is recorded in
+      this record's doc_links relevance note on fast_lane.py and MUST be answered
+      before this record is promoted out of draft. Promoting it to approved with the
+      surface still unchosen is the failure mode; a missing dependency edge is not.
+
+      NOT SPLIT, EITHER. The fourth Then clause is buildable today: claim_build_set
+      / filter_already_claimed / release_claim claim by AC id and not by footprint,
+      so two concurrent efforts can hold disjoint AC sets whose files collide. That
+      gap is genuine and needs no capability that does not exist. Splitting it into
+      its own L2 was rejected because ACD-2000b's L2 cap is 5 and ACD-2000b-1..-5
+      fill it exactly, so the split would force a tree restructure in order to
+      record a sequencing nuance. If the claim-side clause is wanted sooner, build
+      it within this record against the claim mechanism and leave clauses one to
+      three unsatisfied until a requirement-grain dispatcher exists.
 superseded_by: null
 covered_by: []
 implemented_by: []
