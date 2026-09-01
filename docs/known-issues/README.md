@@ -53,12 +53,12 @@ a one-off; a table maintained by hand beside files appended by many agents will 
 
 | Component | File | Open entries |
 |---|---|---|
-| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 44 |
-| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 37 |
-| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 30 |
-| `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 24 |
-| `ac_store` | [ac-store.md](ac-store.md) | 16 |
-| `testing_quality` | [testing-quality.md](testing-quality.md) | 13 |
+| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 48 |
+| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 40 |
+| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 35 |
+| `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 25 |
+| `ac_store` | [ac-store.md](ac-store.md) | 17 |
+| `testing_quality` | [testing-quality.md](testing-quality.md) | 14 |
 | `knowledge_management` | [knowledge-management.md](knowledge-management.md) | 12 |
 | `supervisor_system` | [supervisor-system.md](supervisor-system.md) | 6 |
 | `agent_registry` | [agent-registry.md](agent-registry.md) | 3 |
@@ -66,7 +66,7 @@ a one-off; a table maintained by hand beside files appended by many agents will 
 | `feedback_collector` | [feedback-collector.md](feedback-collector.md) | 3 |
 | `changelog` | [changelog.md](changelog.md) | 2 |
 | `security_scanner` | [security-scanner.md](security-scanner.md) | 1 |
-| | **total** | **194** |
+| | **total** | **209** |
 
 Two id conventions are in use — `KI-CG-035` and `KI-CG-20260826-1612`. A count that
 matches only the first undercounts; the date form is the newer of the two and is the

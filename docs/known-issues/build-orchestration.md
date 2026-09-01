@@ -2348,7 +2348,15 @@ that reported clean because it was invoked in a way that checked nothing).
 ### KI-BO-20260831-1330 — The fast lane invokes `assemble-bundle` with two flags that were deliberately deleted, so its context-bundle gate can never be satisfied
 
 - **Severity:** blocker
-- **Status:** open — no AC
+- **Status:** **RESOLVED 2026-09-01** — the two flags are gone from the lane. Verified:
+  `grep -c "conventions\|--acs" templates/workflows-js/fast-lane-ship.js` returns **0**, and a
+  live run reached its coder phase with a 20,645-byte bundle. Fixed as part of the `BO-2400c-1-vi`
+  bundle shrink (the layer set was reduced, which removed the two invocations along with the
+  layers they passed), so it was closed incidentally rather than deliberately — which is why it
+  sat here reading `blocker / open` after it had stopped being true.
+  **Left as a warning:** a stale blocker is not harmless. This entry was the top of the severity
+  list when the register was consulted on 2026-09-01 to decide what to build next, and it
+  displaced two real ones. Re-verify a blocker before planning against it.
 - **Occurrences:** 1
 - **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
 - **Where:** `templates/workflows-js/fast-lane-ship.js`, the `context-bundle` phase's Step 2
@@ -2871,3 +2879,84 @@ pipeline over. The fast lane was built after that instruction and did not inheri
 
 **Related.** `KI-BO-007` (a phase reported complete against the agent returning cleanly rather
 than against an observable side effect — the same substitution of a proxy for the thing).
+
+---
+
+### KI-BO-20260901-1450 — UNDER INVESTIGATION: the fast lane isolates its worktree but not the process-level state around it, and three shared surfaces already misfired with only ONE lane running
+
+- **Severity:** unknown — under investigation, see "What we are asking for" below
+- **Status:** **UNDER INVESTIGATION** — filed before the confirming experiment, deliberately.
+  Contributions wanted; this entry is a request for evidence as much as a record.
+- **Occurrences:** 3 distinct surfaces, each observed at least once on 2026-09-01, **all with a
+  single lane running**
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `$GIT_COMMON_DIR/config`; `<root>/.build_manifest.json`; the shared `.leafcutter`
+  install tree reached through each worktree's symlink
+
+**Why this is filed now, before the experiment.** The intended next step is to run two fast
+lanes concurrently on independent acceptance criteria and observe what actually breaks. That
+experiment has not been run. Filing first means the predictions are on record *before* the
+result, so they can be scored honestly rather than reconstructed afterwards to match whatever
+happened. If the experiment contradicts the entry, the entry is wrong and should say so.
+
+**The shape of the concern.** `/fast-lane-build` isolates the thing everyone thinks about — it
+opens a fresh worktree per run (`fast-lane/<slug>` off `origin/main`) and claims its ACs before
+building, so two lanes cannot take the same criterion. What it does **not** isolate is the
+process-level state that every worktree of the repository shares. Three such surfaces bit a
+single lane on 2026-09-01:
+
+| surface | what happened with ONE lane |
+|---|---|
+| `.git/config` | A test fixture set `user.name` / `user.email` inside a worktree it created. Worktrees share `$GIT_COMMON_DIR/config`, so the identity leaked to the whole repository family and **four** commits landed misattributed across three different worktrees. `KI-TQ-012`. |
+| `.build_manifest.json` | A build targeted at a worktree wrote a manifest with no usable `output_mappings`; a later commit **in a different tree** was then blocked by `check-build-drift` reporting 170 false gaps. `KI-BP-011`, `KI-CG-20260831-manifest-shadowing`. |
+| shared `.leafcutter` | Worktrees symlink to one install tree, so `build.py --target-dir <worktree>` deploys *through* the link and replaces the shared deployed package for every other tree. `KI-BP-016`. |
+
+**Why the existing coverage does not reach this.** `ACD-2000b-4` governs parallel safety at
+requirement grain, and its unit is the **acceptance criterion's file footprint** — which two
+criteria touch which repository files. That is a real and separate gap (its host was decided on
+2026-09-01: the claim path, `filter_already_claimed`). None of the three surfaces above is an AC
+footprint. They are process-level singletons that no criterion in the store currently mentions,
+so building `ACD-2000b-4` in full would leave all three untouched.
+
+**The hypothesis, stated so it can be falsified.** Each of these degrades with N lanes rather
+than improving, because each is a single shared resource written by every run:
+
+1. Concurrent commits misattributed, or attributed inconsistently within one lane's own history,
+   whenever any run executes a suite that writes git config.
+2. `check-build-drift` / `check-output-drift` blocking commits in lane B because lane A wrote the
+   manifest last — a cross-lane failure whose message names neither lane.
+3. A build in lane A changing the deployed package that lane B's hooks and agents are executing
+   from, mid-run.
+
+**What we are asking for.** This is filed deliberately incomplete. If you have seen any of the
+following, adding it here is more valuable than a fix right now:
+
+- **A parallel-lane run that went wrong**, especially one where the failure surfaced in a
+  different worktree from the one that caused it. Cross-tree symptoms are the hard part; the
+  message never names the culprit.
+- **A fourth shared surface** we have not listed. Candidates nobody has checked: the pre-commit
+  cache under `~/.cache/pre-commit`, `.security-allowlist` resolution through the symlink
+  (`KI-BP-017` touches this), the feedback sink `debugging/logs/feedback.jsonl`, and the AC
+  store's own claim records under concurrent writers.
+- **Evidence that a surface here is actually safe** under concurrency. A negative result is
+  worth as much as a positive one and will shorten the list.
+- **A severity judgement.** We have deliberately not assigned one. Whether this is a blocker on
+  running lanes in parallel, or an annoyance that a convention avoids, depends on how the three
+  behave together — which nobody has measured.
+
+**Explicitly NOT claimed.** That parallel lanes are unsafe. They may well be fine in practice;
+several of the observations above have known one-line mitigations (do not run `build.py` against
+a worktree; reset the git identity after any suite that writes it). The claim is narrower: the
+lane's isolation story stops at the worktree boundary, three surfaces past that boundary have
+already misfired at N=1, and nobody has checked what they do at N>1.
+
+**Related.** `KI-TQ-012` (the git-identity leak, and the only one of the three with a named
+root cause). `KI-BP-011` (the manifest is written to the package that ran the build rather than
+the install it describes). `KI-CG-20260831-manifest-shadowing` (the reader side of the same
+defect). `KI-BP-016` (`build.py --target-dir` against a worktree deploys over the shared tree).
+`KI-BO-020` (the release-on-failure path is dead, so an aborted lane strands its claims — the
+one lane-level defect that is unambiguously worse with more lanes).
+
+**Pattern (provisional):** isolation designed around the artifact people can see — the working
+tree — while the machinery underneath it stays global, so the blast radius of a single run is
+larger than the directory it was given.
