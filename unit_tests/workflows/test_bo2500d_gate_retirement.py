@@ -47,6 +47,19 @@ _FAST_LANE_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-build.j
 _BUILD_FEATURE_PATH = _REPO_ROOT / "templates" / "workflows-js" / "build-feature.js"
 _BUILD_TICKET_PATH = _REPO_ROOT / "templates" / "workflows-js" / "build-ticket.js"
 
+# BO-2400c-1-v migration: fast-lane-build.js (_FAST_LANE_PATH above) is an
+# orphaned second fast-lane runner nothing invokes; fast-lane-ship.js is the
+# lane that actually runs. Only test_ac_d2_fast_lane_has_no_phase_order_array
+# below (BO-2500d-2, work_status: done) is re-pointed at the live lane, via
+# this SEPARATE constant — _FAST_LANE_PATH itself is deliberately left
+# unchanged because every OTHER _FAST_LANE_PATH user in this file covers
+# BO-2500d-1 / -1-i / -3 (work_status: in_progress, not done), and BO-2500d-1
+# in particular asserts an invariant (no LLM review agent in the fast lane)
+# that the live lane deliberately violates on purpose (pr-reviewer at Phase
+# 4.5, PR #485). Re-pointing those would fail them on an intentional design
+# decision, not a regression — see the docstring on the one migrated test.
+_FAST_LANE_SHIP_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
+
 
 # ---------------------------------------------------------------------------
 # Helpers (pure — no I/O side-effects, safe to call from multiple tests)
@@ -383,22 +396,39 @@ class TestHeavyPipelineRetainsGates(_JsFileTestBase):
 
     def test_ac_d2_fast_lane_has_no_phase_order_array(self) -> None:
         # covers: BO-2500d-2
-        """fast-lane-build.js must NOT define a phaseOrder array.
+        """fast-lane-ship.js must NOT define a phaseOrder array.
+
+        Migration note (BO-2400c-1-v): this is the ONE method in this class
+        re-pointed at the live lane (templates/workflows-js/fast-lane-ship.js).
+        Every OTHER `_FAST_LANE_PATH` user in this file covers BO-2500d-1,
+        -1-i, or -3, which are `work_status: in_progress` (self-corrected
+        2026-08-19) — not `done`. BO-2500d-1 in particular asserts the fast
+        lane contains NO LLM review agent, but fast-lane-ship.js deliberately
+        dispatches `pr-reviewer` at Phase 4.5 (shipped in PR #485 on the
+        user's explicit instruction, see its own "Review" phase and
+        `agentType: "pr-reviewer"`). Re-pointing those other methods would
+        make them fail on a deliberate, intentional design decision — so they
+        are left untouched, still pointed at the orphan, and are expected to
+        go on being red/broken once the orphan is deleted (tracked
+        separately; not this ticket's scope). Only `work_status: done`
+        BO-2500d-2 is migrated here, and confirmed by direct grep during
+        migration that fast-lane-ship.js contains no `phaseOrder` substring
+        at all.
 
         The two phase-order sets (fast lane vs. heavy pipeline) must be
         independently defined so that a change to one cannot silently mutate the
         other (BO-2500d-2).  The fast lane does not define a phaseOrder array —
-        its two dispatches are inlined directly.  If a phaseOrder were added to
-        fast-lane-build.js it could be accidentally shared with or confused for
+        its dispatches are inlined directly.  If a phaseOrder were added to
+        fast-lane-ship.js it could be accidentally shared with or confused for
         the heavy pipeline's set.
         """
-        content = self._require_file(_FAST_LANE_PATH, "fast-lane-build.js")
+        content = self._require_file(_FAST_LANE_SHIP_PATH, "fast-lane-ship.js")
         phase_order_text = _extract_phase_order_text(content)
         self.assertEqual(
             phase_order_text,
             "",
-            "fast-lane-build.js must NOT define a 'const phaseOrder = [...]' "
-            "array — its phase sequence is inlined (two flat dispatches), "
+            "fast-lane-ship.js must NOT define a 'const phaseOrder = [...]' "
+            "array — its phase sequence is inlined (flat dispatches), "
             "independently of the heavy pipeline's phaseOrder.  A shared "
             "phaseOrder would couple the two pipelines (BO-2500d-2).",
         )
