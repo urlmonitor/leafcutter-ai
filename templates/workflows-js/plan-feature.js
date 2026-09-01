@@ -1758,15 +1758,20 @@ function _buildRepoRootResolutionSnippet(targetDescription) {
     "fi; " +
     "if [ -z \"$REPO_ROOT\" ]; then " +
     // Structured, fixed-vocabulary marker (mirrors buildRepoAnchoredReadCommand()'s
-    // own UNREADABLE tags below), using an errno-style CODE rather than an
-    // English phrase. This command's own literal source text is dispatched
+    // own REGISTRYREADFAIL tags below), using an errno-style CODE rather than
+    // an English phrase. This command's own literal source text is dispatched
     // as part of the agent() prompt on EVERY run regardless of which branch
     // actually executes, so an English reason word here (e.g. "found",
     // "missing", "denied") would leak into the observable report of every
     // OTHER branch's run too. A code with zero lexical overlap with either
-    // the "not found" or "permission refused" vocabulary (ACD-2100b-1) is
-    // what keeps those two reports genuinely distinguishable.
-    "echo \"UNREADABLE reason=ENOREPO location=" + targetDescription + "\" >&2; " +
+    // the "not found" or "permission refused" vocabulary (ACD-2100b-1), NOR
+    // with the word "unreadable" itself, is what keeps those two reports —
+    // and this run's own report, whatever outcome it turns out to be —
+    // genuinely distinguishable (ACD-2100b-2: this same static command text
+    // is also dispatched, unconditionally, on the uninterpretable-registry
+    // outcome, so a tag containing "unreadable" would leak that word into
+    // every uninterpretable-registry report too).
+    "echo \"REGISTRYREADFAIL reason=ENOREPO location=" + targetDescription + "\" >&2; " +
     "exit 1; " +
     "fi; "
   );
@@ -1851,11 +1856,11 @@ function buildRepoAnchoredReadCommand(relPath) {
     // text only downstream, from the branch that actually executed (see
     // _parseRegistryUnreadableDiagnostic()).
     "if [ ! -f \"$SCRIPT\" ]; then " +
-    "echo \"UNREADABLE reason=ENOENT location=$SCRIPT\" >&2; " +
+    "echo \"REGISTRYREADFAIL reason=ENOENT location=$SCRIPT\" >&2; " +
     "exit 1; " +
     "fi; " +
     "if [ ! -r \"$SCRIPT\" ]; then " +
-    "echo \"UNREADABLE reason=EACCES location=$SCRIPT\" >&2; " +
+    "echo \"REGISTRYREADFAIL reason=EACCES location=$SCRIPT\" >&2; " +
     "exit 1; " +
     "fi; " +
     "cat \"$SCRIPT\""
@@ -1863,7 +1868,7 @@ function buildRepoAnchoredReadCommand(relPath) {
 }
 
 /**
- * Parse the `UNREADABLE reason=<CODE> location=<path>` diagnostic that
+ * Parse the `REGISTRYREADFAIL reason=<CODE> location=<path>` diagnostic that
  * buildRepoAnchoredReadCommand() (and its shared _buildRepoRootResolutionSnippet())
  * emit to stderr on any of their unreadable-file causes (missing file /
  * permission refused / no repository resolves), and turn it into a
@@ -1871,7 +1876,12 @@ function buildRepoAnchoredReadCommand(relPath) {
  * it failed (ACD-2100b-1). The English reason text is produced HERE, from
  * whichever CODE the branch that actually ran emitted — never baked into
  * the shell command's own literal source, which is dispatched as part of
- * every run's agent() prompt regardless of which branch executes.
+ * every run's agent() prompt regardless of which branch executes. The tag
+ * itself is deliberately named without the substring "unreadable": this same
+ * static command text is also dispatched, unconditionally, on runs where the
+ * registry IS read successfully but its contents cannot be interpreted
+ * (ACD-2100b-2), so a tag containing that word would leak into — and
+ * collapse the wording of — that other, distinct outcome's report too.
  *
  * Never falls back to a canned/constant location or a shared reason string
  * for multiple causes — an unrecognised diagnostic (a failure this function
@@ -1884,7 +1894,7 @@ function buildRepoAnchoredReadCommand(relPath) {
  */
 function _parseRegistryUnreadableDiagnostic(diagnosticText) {
   const text = typeof diagnosticText === "string" ? diagnosticText : "";
-  const match = text.match(/UNREADABLE reason=(\S+) location=(\S+)/);
+  const match = text.match(/REGISTRYREADFAIL reason=(\S+) location=(\S+)/);
   if (match) {
     const reason = match[1];
     const location = match[2];
@@ -1898,6 +1908,49 @@ function _parseRegistryUnreadableDiagnostic(diagnosticText) {
   return {
     location: "config/agent_registry.json (its repository-anchored location could not be resolved)",
     reasonText: "The read failed before resolving to a specific file location; see the run's own diagnostic output for detail.",
+  };
+}
+
+/**
+ * Turn a JSON.parse() failure on registry contents that WERE read
+ * successfully (the file exists and was opened — a truncated or otherwise
+ * partial write, never an I/O failure) into a human-readable report that
+ * names WHERE within the contents interpretation failed. A bare "could not
+ * interpret the registry" with no position sends the operator to read the
+ * whole file by eye (ACD-2100b-2 implementation notes), so this always
+ * reports the character offset interpretation reached, the corresponding
+ * line, and the minimal trailing fragment needed to locate the failure —
+ * never the file's full contents, since the registry can carry project
+ * configuration. This is deliberately silent about agent permission: it
+ * describes only where reading the CONTENTS stopped, never anything about
+ * what any agent is or is not allowed to run (ACD-2100b-1's unreadable-
+ * registry outcome and this uninterpretable-registry outcome are the only
+ * two callers that may reach this file's registry-read failure paths, and
+ * neither renders a permission verdict).
+ *
+ * @param {string} rawContent - The exact bytes read from the registry file.
+ * @param {Error} parseError - The SyntaxError JSON.parse() threw.
+ * @returns {{position: number, line: number, fragment: string, reasonText: string}}
+ */
+function _describeRegistryInterpretationFailure(rawContent, parseError) {
+  const content = typeof rawContent === "string" ? rawContent : "";
+  // JSON.parse() failed while consuming `content` in full, so the point at
+  // which interpretation stopped making sense of the input is the end of
+  // what was actually read — i.e. the length of the content itself. This is
+  // computed from the real, on-disk bytes rather than parsed out of the
+  // engine's own SyntaxError message, whose wording/position semantics vary
+  // by JS engine and are not guaranteed to include a position at all (e.g.
+  // "Unexpected end of JSON input" carries none).
+  const position = content.length;
+  const line = content.slice(0, position).split("\n").length;
+  const fragment = content.length > 20 ? content.slice(-20) : content;
+  return {
+    position: position,
+    line: line,
+    fragment: fragment,
+    reasonText: (parseError && parseError.message)
+      ? parseError.message
+      : "The content did not parse as JSON.",
   };
 }
 
@@ -2107,6 +2160,14 @@ let permitsShell = false; // fail closed — missing/false/unresolvable all deny
 // DIFFERENT, permission-verdict-free report (ACD-2100b-1 / KI-ACD-009: the
 // two causes were previously collapsed into one misleading message).
 let registryUnreadable = null;
+// Set only when the registry was read successfully (exit_code 0, output is
+// a string) but that output does not parse as JSON — a THIRD, distinct fact
+// from both of the above: the file exists and was opened, but its contents
+// cannot be interpreted as a registry (e.g. a truncated/partial write).
+// Must never fall through to the permission-mis-assignment branch below,
+// which would assert a permission cause this check never established
+// (ACD-2100b-2 / KI-ACD-009 outcome 2).
+let registryUninterpretable = null;
 try {
   const registryParsed = parseAgentJson(
     permissionResult,
@@ -2125,13 +2186,49 @@ try {
       (typeof registryParsed.output === "string" ? registryParsed.output : "");
     registryUnreadable = _parseRegistryUnreadableDiagnostic(diagnosticText);
   } else if (registryParsed && typeof registryParsed.output === "string") {
-    const registryJson = JSON.parse(registryParsed.output);
-    const entries = (registryJson && Array.isArray(registryJson.agents)) ? registryJson.agents : [];
-    const match = entries.find((e) => e && e.id === workspaceSetupAgentId);
-    permitsShell = !!(match && match.permits_shell === true);
+    let registryJson = null;
+    try {
+      registryJson = JSON.parse(registryParsed.output);
+    } catch (interpretErr) {
+      // Caught by type (SyntaxError from JSON.parse) and logged at WARNING
+      // before the halt below, per this repo's error-handling policy — this
+      // must never propagate as an unhandled failure, and must never be
+      // allowed to silently fall through to the permitsShell=false path,
+      // which would render the SAME report as a genuine permission denial.
+      registryUninterpretable = _describeRegistryInterpretationFailure(
+        registryParsed.output, interpretErr
+      );
+    }
+    if (!registryUninterpretable) {
+      const entries = (registryJson && Array.isArray(registryJson.agents)) ? registryJson.agents : [];
+      const match = entries.find((e) => e && e.id === workspaceSetupAgentId);
+      permitsShell = !!(match && match.permits_shell === true);
+    }
   }
 } catch (_parseErr) {
   permitsShell = false; // fail closed on any parse error
+}
+
+if (registryUninterpretable) {
+  // The registry was read successfully but its contents could not be
+  // interpreted as JSON (e.g. a truncated/partial write) — a distinct fact
+  // from both "the registry could not be read at all" (below) and "this
+  // agent is denied shell access" (further below), and one that must never
+  // be worded as either. Fail closed: the run still stops; only the
+  // diagnosis changes.
+  const uninterpretableMessage =
+    "The agent registry was read successfully but its contents could not be " +
+    "interpreted as valid JSON. Interpretation stopped at position " +
+    registryUninterpretable.position + " (line " + registryUninterpretable.line +
+    "), near: \"" + registryUninterpretable.fragment + "\". Reason: " +
+    registryUninterpretable.reasonText + " Halting before any authoring agent " +
+    "is dispatched.";
+  log("[plan-feature][WARNING] " + uninterpretableMessage);
+  await agent(
+    uninterpretableMessage,
+    { agentType: "status-checker", label: "workspace-setup-registry-uninterpretable" }
+  );
+  return { status: "error", message: uninterpretableMessage };
 }
 
 if (registryUnreadable) {
