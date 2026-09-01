@@ -22,10 +22,17 @@ additional property constraints.
 
 Exits non-zero if any file fails validation; exits zero if all pass.
 
-Exits non-zero ALSO when the run examined no records at all — a directory
-argument, or arguments that are not .yaml/.yml files. This validator takes FILE
-paths and does no globbing, so a bare directory resolves to nothing; reporting
-that as success would be a pass the run did not earn (ACS-100i-7-i).
+Exits non-zero ALSO when one or more targets were NAMED on the command line but
+none of them resolved to a file — a directory argument that contains no AC
+YAML, a nonexistent path, or an argument that is not a .yaml/.yml file.
+Reporting that as success would be a pass the run did not earn (ACS-100i-7-i).
+
+Exits ZERO when NO targets were named at all (an empty scope — e.g. a
+commit-time run where no matching file is staged): the zero-files rule fires
+on targets that were named but unresolved, never on an empty invocation
+(GE-120a-4). An invocation with no arguments still prints the usage message to
+stderr for a human running it directly, but that is informational, not a
+failure signal.
 
 AC-1: Schema requires readiness field with enum [draft, reviewed, approved].
 AC-2: Schema requires priority field with enum [critical, high, medium, low].
@@ -336,13 +343,23 @@ def main(argv: list[str] | None = None) -> int:
         argv: Argument list; defaults to ``sys.argv[1:]``.
 
     Returns:
-        0 when at least one record was examined and all passed; 1 when a record
-        failed OR when the run examined no records at all (a directory argument
-        or non-YAML arguments — see ACS-100i-7-i / KI-ACS-001); 2 on usage error.
+        0 when at least one record was examined and all passed, OR when no
+        targets were named at all (an empty scope — e.g. a commit-time run
+        where no matching file is staged — is an ordinary pass, never a
+        failure: see GE-120a-4); 1 when a record failed OR when one or more
+        targets WERE named but none of them resolved to a file (a directory
+        argument, or non-YAML/nonexistent arguments — see ACS-100i-7-i /
+        KI-ACS-001 / GE-120a-4).
     """
     args = argv if argv is not None else sys.argv[1:]
 
     if not args:
+        # GE-120a-4 AC-4: no targets were named at all — an empty scope, as a
+        # commit-time invocation sees when no matching file is staged. The
+        # zero-files-checked rule below fires on targets that were NAMED but
+        # UNRESOLVED; it must never fire on an empty scope, or every ordinary
+        # empty-scope pre-commit run would start failing. Print the usage
+        # message for a human running this bare, but report an ordinary pass.
         print(
             "Usage: validate_ac_schema.py <path> [<path> ...]\n"
             "\n"
@@ -354,12 +371,13 @@ def main(argv: list[str] | None = None) -> int:
             "  readiness: [draft | reviewed | approved]\n"
             "  priority:  [critical | high | medium | low]\n"
             "\n"
-            "Exits non-zero if any validation error is found, AND if the\n"
-            "arguments resolve to zero files — a run that checked nothing is\n"
-            "not a pass.",
+            "No targets were named — this is an empty scope (e.g. a commit-time\n"
+            "run where nothing matching is staged), not a failure, so this exits\n"
+            "0. Exits non-zero if a validation error is found, or if targets\n"
+            "WERE named but none of them resolved to a file.",
             file=sys.stderr,
         )
-        return 2
+        return 0
 
     all_errors: list[str] = []
     files_checked = 0
@@ -446,3 +464,12 @@ if __name__ == "__main__":
 #   stderr naming the reason and falls back to the existing hand-rolled checks
 #   only — it never silently reports success as if the schema check had run.
 #   (#TICKETLESS reason=quick-fix-ACS-200e-schema-validator-parity)
+# - 2026-08-25 [python-coder]: GE-120a-4 — main([]) (no targets named at all)
+#   previously returned exit code 2 alongside the usage message, which is
+#   indistinguishable from a real failure to any caller checking the exit
+#   code. Empty scope (nothing named) is not the same condition as
+#   named-but-unresolved (KI-ACS-001's zero-files check, which still returns
+#   1); a commit-time invocation with no matching staged file must report an
+#   ordinary pass. Changed the empty-argv branch to return 0 while still
+#   printing the usage text to stderr for a human running it bare.
+#   (#GE-120a-4)

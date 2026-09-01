@@ -40,7 +40,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: failed
   commit: signed_off
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 04: Green test coverage for FIN-100 (pre-merge-safety-gate)
@@ -141,7 +141,6 @@ tests:
 - [x] test-runner — 2026-07-15 10:10
 - [ ] pr-reviewer — failed 2026-07-15 10:35
 - [x] commit — 2026-07-15 10:22
-- [ ] pull-request
 
 ## Comments
 

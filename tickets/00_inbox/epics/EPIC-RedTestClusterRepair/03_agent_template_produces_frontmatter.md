@@ -21,7 +21,7 @@ agents:
   test-runner: needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 03: Add produces: frontmatter to agent templates

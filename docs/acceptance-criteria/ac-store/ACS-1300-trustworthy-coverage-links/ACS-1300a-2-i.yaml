@@ -1,0 +1,151 @@
+id: ACS-1300a-2-i
+components:
+  - ac_store
+title: "Dropping a claim is per-entry and reported, and an entry the rule cannot judge is never dropped"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a store in which one record's coverage list holds three entries: a path-shaped
+    entry naming a file that is not on disk, a path-shaped entry naming a file that is
+    on disk, and an entry that is not path-shaped at all,
+  When the repair tool is invoked out of process with the apply request,
+  Then only the entry naming the absent file is removed,
+  And that removal is reported on its own line naming the record and the exact entry
+    text removed, so the run's output alone is enough to put it back by hand,
+  And the entry naming the file that is on disk is still present afterwards,
+  And the entry that is not path-shaped is still present afterwards and is reported as
+    not judged by this rule, rather than passed over without mention,
+  And in that same invocation a different record gained a missing link, so the run that
+    left two of the three entries alone was demonstrably live,
+  And a record whose every coverage entry names an absent file is left with an empty
+    coverage list and reported, rather than being skipped to avoid emptying it.
+depends_on:
+  - ACS-1300a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The coverage field holds EITHER test paths OR child requirement ids, so 'not path-shaped' is a legitimate and common entry rather than corruption. This is the same dual-purpose fact ACS-1300a-3 is built on; here it appears as the reason a removal rule must never run on an entry it cannot classify."
+  - path: scripts/ac_store/done_proof.py
+    relationship: relates-to
+    status: exists
+    relevance: "_has_resolvable_child documents the third case this criterion protects: legacy records predating the child-id convention hold test-file paths where child ids would go, so entry shape alone does not settle what an entry means. A removal rule that guesses will delete real evidence."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "REMOVAL IS PER ENTRY, NEVER PER RECORD. The unit of the removal operation is a single coverage-list entry. A rule that rewrites a record's whole coverage list — even to a value it computed correctly — destroys the ordering, quoting and any entry the classifier did not understand, and turns an asymmetric destructive operation into a bulk one."
+  - "AN ENTRY THE CLASSIFIER CANNOT PLACE IS NEVER REMOVED, AND IS NEVER PASSED OVER IN SILENCE. `docs/reference/ac-schema.md` states the coverage field holds EITHER test paths OR child requirement ids, and `done_proof._has_resolvable_child` documents a third live case: legacy records holding test-file paths where child ids would go. Entry shape therefore does not settle entry meaning. Anything the rule cannot classify stays on the record and is reported as not judged by this rule (ACS-1300c-3's abstention channel, not a second one)."
+  - "EACH REMOVAL IS REPORTED ON ITS OWN LINE, NAMING THE RECORD AND THE EXACT ENTRY TEXT REMOVED. The report alone must be sufficient to restore any removal by hand without consulting git. Removal is the asymmetric half of this repair — appending a wrong link leaves the previous evidence beside it, while removing an entry destroys the only pointer that existed — and the measured population is small enough that there is no volume argument against reporting every one."
+  - "NO MOVED-FILE OR RENAME INFERENCE, EVER. The tool cannot distinguish a moved file from a deleted one, and a rename heuristic writes a link on a guess. That is the drift toward heuristics that made ACD-800 the wrong parent for this tree, and it manufactures false evidence — worse than the missing evidence it replaces. Report the removal and stop."
+  - "EMPTYING A COVERAGE LIST IS A PERMITTED OUTCOME AND MUST BE REPORTED, NOT AVOIDED. A guard that declines to empty a list feels protective and is not: it leaves the record claiming proof that is wholly gone, which is precisely the false premise every downstream honesty gate then reads."
+  - "NEVER WRITES THE FINISHED-STATE FIELD. Emptying a coverage list is exactly the moment an implementer is tempted to reconcile `work_status` with the now-absent evidence. Refused, not deferred: the record's finished state is left byte-identical and the reconciliation is reported for `mark_ac_done.py`, never performed here."
+  - "REMOVAL USES THE SAME TARGETED-LINE WRITE TECHNIQUE AS THE APPEND HALF (ACS-1300a-2), so a record with one entry removed keeps the formatting of every line the removal did not touch, and a record with nothing removed is never opened."
+  - "Must handle errors gracefully per the project error handling policy and must fail toward NOT REMOVING: if an entry's classification is uncertain for any reason, it stays."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300a-2
+  contract: "The apply step whose removal half this AC constrains."
+test_spec:
+  - name: test_acs_1300a_2_i_only_the_absent_file_entry_is_removed_from_a_three_entry_list
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "THE DISCRIMINATION TEST, WITH ITS PAIRING INSIDE IT. One out-of-process apply run over a record whose coverage list holds an absent path-shaped entry, a present path-shaped entry, and a non-path-shaped entry. Assert in that single invocation: only the absent-file entry is gone; the present-file entry survives; the non-path-shaped entry survives; AND a different record in the same store gained a missing link. The last clause is what stops a tool that removes nothing from passing three of the four assertions."
+  - name: test_acs_1300a_2_i_each_removal_is_reported_on_its_own_line_with_the_exact_entry_text
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The removal is reported individually, naming the record id and the exact entry string removed — assert the reported string is character-identical to what was in the file, so the report is sufficient to restore the entry by hand."
+  - name: test_acs_1300a_2_i_a_non_path_shaped_entry_is_reported_as_not_judged_rather_than_omitted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Assert the non-path-shaped entry is PRESENT in the report with a not-judged-by-this-rule classification. Absence from the report is the failure: an entry passed over without mention is indistinguishable from an entry the run never reached."
+  - name: test_acs_1300a_2_i_a_record_whose_every_entry_is_absent_is_emptied_and_reported
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A record all of whose coverage entries name absent files ends the run with an empty coverage list and a report line saying so — not skipped to avoid emptying it. In the same invocation assert its finished-state line is character-for-character unchanged, because an emptied evidence list is the sharpest temptation to reconcile the badge."
+  - name: test_acs_1300a_2_i_no_rename_or_moved_file_inference_occurs
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Given a coverage entry naming `unit_tests/x/test_old.py` which is absent while `unit_tests/x/test_new.py` exists on disk and carries a tag naming the same record, assert the run REMOVES the absent entry and adds the link only because the new file's tag names the record — never because the two paths look similar. Assert no entry is rewritten in place, which is what a rename heuristic would produce."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+- reason: measured-trap-recorded
+  by: business-analyst
+  at: 2026-09-01
+  note: >-
+    NOTES ONLY; criteria, it_requirements and test_spec UNCHANGED, so the approval
+    above still covers what it was granted against. Recorded two findings from the
+    2026-09-01 re-measurement that bear directly on this removal rule. (1) GE-107
+    writes `path.py:Class::test` with a single colon; a parser splitting on `::`
+    fragments it into names that match no file, and THIS rule would then delete
+    four live links from a correct record. Detection is guarded by a new dialect
+    clause on ACS-1300a-1, but the destructive consequence lands here, so GE-107
+    is named as a mandatory fixture for the removal path. Field dialects measured:
+    3,586 child ids, 162 double-colon, 365 bare paths. (2) BP-1100e-3 names an
+    architecture .md and UXP-530 an eval.jsonl — path-shaped, present on disk, and
+    never proof of done, so this rule correctly ignores them; recorded as a third
+    rot direction the L0 leaves undecided, with an explicit instruction not to
+    widen this rule to cover it. ACD-300f's nonexistent child ACD-300f-5 noted as
+    the same shape on the child-id dialect.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  REMOVAL IS THE ASYMMETRIC HALF AND DESERVES ITS OWN RECORD. Appending a link that
+  turns out to be wrong leaves the previous evidence intact beside it; removing an entry
+  destroys the only pointer that existed. The measured inverse-rot population is small
+  — the L0 notes carry the provisional figure with its denominator — so there is no
+  volume argument for a fast, loose removal rule, and every argument for a cautious one
+  that reports each deletion individually.
+
+  THE LAST CLAUSE IS THERE BECAUSE THE SAFE-LOOKING BEHAVIOUR IS THE WRONG ONE. A rule
+  that declines to empty a coverage list entirely feels protective and is not: it leaves
+  the record claiming proof that is wholly gone, which is precisely the false premise
+  downstream gates read. Emptying it and saying so is the honest outcome.
+
+  THE NAMED MISPARSE THIS RULE MUST NEVER ACT ON — measured 2026-09-01. GE-107 writes its
+  coverage entry as `path.py:Class::test`, with a SINGLE colon before the class. A parser
+  that splits on `::` turns that one entry into fragments that name no file on disk, and
+  this removal rule would then delete four live links from a record whose coverage was
+  perfectly correct. Detection is where that must be stopped — ACS-1300a-1 now carries a
+  dialect clause requiring every form to be classified correctly — but the consequence
+  lands HERE, because this is the AC that deletes. Treat GE-107 as a mandatory fixture for
+  the removal path, not only for the detection path. The field's three legitimate dialects
+  measured the same day: child record ids (3,586 entries), `path::Class::test` (162), and
+  bare file paths (365).
+
+  TWO ENTRIES THAT ARE PATH-SHAPED, PRESENT ON DISK, AND STILL NOT PROOF — recorded here
+  because this rule will correctly leave them alone and someone will later ask why nothing
+  flagged them. BP-1100e-3 names an architecture .md and UXP-530 names an eval.jsonl. Both
+  files exist, so the absent-file rule does not fire and no validator anywhere objects, yet
+  neither can ever be proof that work is done. That is a THIRD rot direction — an entry
+  that resolves but is not a test — and it is deliberately NOT owned by this AC. The L0
+  records it as undecided; do not widen this removal rule to cover it, because deleting an
+  entry on a judgement about what counts as a test is a much larger claim than deleting one
+  because the file is gone. Separately, ACD-300f names a child ACD-300f-5 that does not
+  exist, which is the same shape on the child-id dialect.
+
+  DO NOT EXTEND THIS INTO MOVED-FILE DETECTION. The tool cannot know a file moved rather
+  than vanished, and a rename heuristic would write a link on a guess — worse than the
+  missing evidence it replaces, and the exact drift toward heuristics ACS-1300a's notes
+  forbid. Report the removal; a human or a later pass re-links.
