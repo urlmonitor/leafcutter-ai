@@ -186,26 +186,42 @@ class TestNonTriggeringAcSetsNeitherFlagNorVerifier(unittest.TestCase):
         (change_target NOT in documentation_gates.change_target_triggers AND
         risk_surface NOT in risk_surface_triggers) must:
 
-        a) NOT include documentation-verifier in the agents map (at all), AND
+        a) NOT WIRE documentation-verifier — its status must never be
+           "needed" for a non-triggering AC, AND
         b) NOT include documentation_required: true in the frontmatter.
 
         This ensures the injection is strictly gated on the BO-2200a-1 trigger
         decision: tickets that don't require documentation carry no noise.
 
-        Implementation required: the same guards added for the positive case
-        must naturally absent when the trigger condition is false.
-        Until implementation lands this test fails with AssertionError only
-        when the positive test also fails (because the feature doesn't exist yet);
-        if the feature is partially added and incorrectly fires unconditionally
-        this test independently catches it.
+        AMENDED 2026-09-01 (TKT-600b-1-ii). Part (a) previously required the
+        key to be ABSENT from the map entirely. TKT-600b-1-ii now requires the
+        generator to emit an explicit entry for every phase the drive knows
+        about, so that "a reader holding only the ticket can say, for every
+        phase, whether it was required of this ticket or deliberately excluded
+        from it". A non-triggering AC therefore yields
+        `documentation-verifier: not_needed` rather than silence.
+
+        Nothing about the gating changed, which is why this amendment is safe
+        rather than a weakening:
+
+        - `not_needed` and absent are identical for dispatch — ticket-supervisor
+          dispatches on `== "needed"`.
+        - `documentation_required` is set by `agents.get(...) == "needed"`
+          (generate_ticket_from_ac.py), so it stays correctly absent either way.
+          Part (b) below is unchanged and still asserts that.
+
+        What is still forbidden — and what this test still catches — is the
+        verifier being WIRED for an AC that does not trigger documentation.
         """
-        # --- Part (a): agents map must NOT contain documentation-verifier ---
-        self.assertNotIn(
-            "documentation-verifier",
-            self.agents_map,
-            "Expected 'documentation-verifier' to be ABSENT from agents map for a "
-            "non-triggering AC, but found it with status: "
-            f"{self.agents_map.get('documentation-verifier')!r}",
+        # --- Part (a): documentation-verifier must not be WIRED ---
+        # Absent or explicitly excluded both satisfy this; "needed" does not.
+        verifier_status = self.agents_map.get("documentation-verifier")
+        self.assertIn(
+            verifier_status,
+            (None, "not_needed"),
+            "Expected 'documentation-verifier' to be unwired (absent, or an "
+            "explicit 'not_needed' per TKT-600b-1-ii) for a non-triggering AC, "
+            f"but found status: {verifier_status!r}",
         )
         # For completeness: also confirm documentation-expert is absent
         self.assertNotIn(

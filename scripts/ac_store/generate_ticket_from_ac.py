@@ -844,6 +844,7 @@ def _location_kind_for_destination(resolved_destination: str) -> str:
 def _resolve_deferred_phases(
     resolved_destination: "str | None",
     phase_deferral_path: "Path | str | None",
+    location_kind: "str | None" = None,
 ) -> set[str]:
     """Resolve the set of phase agents deferred for one generation call.
 
@@ -880,9 +881,35 @@ def _resolve_deferred_phases(
     declaration = _load_phase_deferral(path)
     location_sets = [frozenset(v or []) for v in declaration.values()]
 
-    if resolved_destination is not None:
-        location_kind = _location_kind_for_destination(resolved_destination)
+    # An explicitly DECLARED kind. This is the path a caller takes when it
+    # knows what it is building but not where the file will finally sit —
+    # /build-ac generating a loose ticket knows it is standalone without
+    # knowing a folder. It is deliberately a declaration and NOT a default:
+    # defaulting to "standalone" when nobody says would classify every epic
+    # member as standalone (no caller passes a destination today), silently
+    # restoring the exact `pull-request: needed` defect TKT-600b exists to
+    # remove. A caller must state its case; silence still refuses.
+    if location_kind is not None:
+        if location_kind not in declaration:
+            raise UnresolvedDestinationError(
+                f"unknown location kind {location_kind!r}; the declaration at "
+                f"{path} names {sorted(declaration)}"
+            )
+        if resolved_destination is not None:
+            derived = _location_kind_for_destination(resolved_destination)
+            if derived != location_kind:
+                # Both were supplied and they disagree. The generator can see
+                # the contradiction, so it must not silently pick a winner.
+                raise UnresolvedDestinationError(
+                    f"contradictory location: --location-kind says "
+                    f"{location_kind!r} but --resolved-destination "
+                    f"{resolved_destination!r} classifies as {derived!r}"
+                )
         return set(declaration.get(location_kind, []) or [])
+
+    if resolved_destination is not None:
+        derived_kind = _location_kind_for_destination(resolved_destination)
+        return set(declaration.get(derived_kind, []) or [])
 
     if len(set(location_sets)) > 1:
         affected = sorted(set().union(*location_sets))
@@ -910,6 +937,7 @@ def _build_agents_map(
     resolved_destination: str | None = None,
     phase_deferral_path: Path | str | None = None,
     deferred_phases: list[str] | None = None,
+    location_kind: str | None = None,
 ) -> dict[str, str]:
     """Build the agents map for the ticket frontmatter.
 
@@ -997,9 +1025,13 @@ def _build_agents_map(
         # declaration lookup it never asked for.
         if deferred_phases is not None:
             effective_deferred: set[str] = set(deferred_phases)
-        elif resolved_destination is not None or phase_deferral_path is not None:
+        elif (
+            resolved_destination is not None
+            or phase_deferral_path is not None
+            or location_kind is not None
+        ):
             effective_deferred = _resolve_deferred_phases(
-                resolved_destination, phase_deferral_path
+                resolved_destination, phase_deferral_path, location_kind
             )
         else:
             effective_deferred = set()
@@ -3494,6 +3526,26 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--location-kind",
+        dest="location_kind",
+        default=None,
+        choices=["standalone", "epic_member"],
+        help=(
+            "DECLARE which kind of location this ticket is being built for, "
+            "when you know the kind but not yet the path — /build-ac "
+            "generating a loose ticket knows it is 'standalone' without "
+            "knowing a folder. Satisfies the same requirement as "
+            "--resolved-destination without inventing a path. This is a "
+            "declaration, never a default: if neither this nor "
+            "--resolved-destination is given and the declaration is "
+            "location-dependent, generation still REFUSES (TKT-600b-1-i). "
+            "Defaulting to 'standalone' on silence would classify every epic "
+            "member as standalone and silently restore the "
+            "'pull-request: needed' defect this mechanism removes. Supplying "
+            "both is allowed only when they agree; a contradiction refuses."
+        ),
+    )
+    parser.add_argument(
         "--phase-deferral-path",
         dest="phase_deferral_path",
         default=None,
@@ -3516,6 +3568,7 @@ def _build_agents_map_for_write_path(
     resolved_destination: str | None,
     phase_deferral_path: str | None,
     worktree: Path,
+    location_kind: str | None = None,
 ) -> "tuple[dict[str, str] | None, str | None]":
     """Build the agents map for main()'s ticket-writing path, or a refusal.
 
@@ -3553,6 +3606,7 @@ def _build_agents_map_for_write_path(
             has_authored_test_spec=has_authored_test_spec,
             resolved_destination=resolved_destination,
             phase_deferral_path=resolved_phase_deferral_path,
+            location_kind=location_kind,
         )
     except PhaseDeferralDeclarationError as exc:
         return None, (
@@ -3627,6 +3681,7 @@ def main(argv: list[str] | None = None) -> int:
             has_authored_test_spec=_has_authored_test_spec(ac),
             resolved_destination=args.resolved_destination,
             phase_deferral_path=args.phase_deferral_path,
+            location_kind=args.location_kind,
         )
         frontmatter = _build_frontmatter(
             ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
@@ -3669,6 +3724,7 @@ def main(argv: list[str] | None = None) -> int:
         has_authored_test_spec=_has_authored_test_spec(ac),
         resolved_destination=args.resolved_destination,
         phase_deferral_path=args.phase_deferral_path,
+        location_kind=args.location_kind,
         worktree=worktree,
     )
     if refusal is not None:

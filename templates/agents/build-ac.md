@@ -365,11 +365,30 @@ connected set. Do NOT proceed to Step 2b.2. Route instead to Step 2b.3.
 
 #### Step 2b.2 — Generate Single Ticket (single-member set only)
 
-Call `generate_ticket_from_ac.py` with the selected AC id:
+Call `generate_ticket_from_ac.py` with the selected AC id, declaring which
+kind of location the ticket is for:
 
 ```bash
-python3 {{config.output_root}}/scripts/ac_store/generate_ticket_from_ac.py --ac <TOP_AC.id> 2>/tmp/build_ac_generate_err.txt
+python3 {{config.output_root}}/scripts/ac_store/generate_ticket_from_ac.py --ac <TOP_AC.id> --location-kind standalone 2>/tmp/build_ac_generate_err.txt
 ```
+
+**`--location-kind` is required and you must choose it deliberately.** The
+generator refuses rather than guess (TKT-600b-1-i), because which phases the
+drive will dispatch depends on where the ticket ends up:
+
+| You are building | Pass | Effect |
+|---|---|---|
+| a loose ticket you will drive on its own | `--location-kind standalone` | the `pull-request` phase stays `needed` — this ticket opens its own PR |
+| a ticket that will be assembled into an epic folder | `--location-kind epic_member` | `pull-request` is recorded `not_needed` — the epic's own PR covers it |
+
+Use `standalone` in this step: Step 2b.2 handles the **single-member** set,
+which by definition is not being assembled into an epic. If you already know
+the final path, `--resolved-destination <path>` does the same job; passing both
+is allowed only when they agree.
+
+Do **not** reach for `--tickets-root` to satisfy this — it is a staging root a
+later step may move the file out of, and the generator rejects it as a
+substitute on purpose.
 
 Capture stdout — the generated ticket file path is printed on the last
 line of stdout.
