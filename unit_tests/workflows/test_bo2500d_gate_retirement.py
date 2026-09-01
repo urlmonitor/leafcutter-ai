@@ -283,12 +283,12 @@ class TestFastLaneExcludesOpinionOnlyGates(_JsFileTestBase):
             code_only,
             re.DOTALL,
         )
-        self.assertIsNotNone(
-            commit_phase_match,
-            "Could not locate the Commit-phase block (between "
-            'phase("Commit") and phase("Pull Request")) in fast-lane-ship.js '
-            "— verify the phase markers still exist (BO-2500d-1).",
-        )
+        if commit_phase_match is None:
+            self.fail(
+                "Could not locate the Commit-phase block (between "
+                'phase("Commit") and phase("Pull Request")) in fast-lane-ship.js '
+                "— verify the phase markers still exist (BO-2500d-1)."
+            )
         commit_phase_block = commit_phase_match.group(1)
         verdict_identifiers = (
             "reviewResult",
@@ -814,12 +814,12 @@ class TestFastLaneMechanicalGatesPresent(_JsFileTestBase):
         pr_body_match = re.search(
             r"const prBody\s*=(.*?)const prResult", code_only, re.DOTALL
         )
-        self.assertIsNotNone(
-            pr_body_match,
-            "Could not locate the 'const prBody = ... const prResult' "
-            "assignment in fast-lane-ship.js — verify the Pull Request phase "
-            "still builds this string (BO-2500d-3).",
-        )
+        if pr_body_match is None:
+            self.fail(
+                "Could not locate the 'const prBody = ... const prResult' "
+                "assignment in fast-lane-ship.js — verify the Pull Request phase "
+                "still builds this string (BO-2500d-3)."
+            )
         pr_body_text = pr_body_match.group(1)
         self.assertIn(
             "verify_red_baseline",
