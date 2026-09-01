@@ -1474,7 +1474,7 @@ the source tree, because in the source tree the import resolves.
 > `generate_doc_index.py` reproduced the numbers exactly: repo root → 221 lines / 0 stubs,
 > workspace root → 57 lines / 9 stubs.
 >
-> Root cause confirmed at `build.py:1028-1030` — `output_path` is built from
+> Root cause confirmed in `build_doc_index` — `output_path` is built from
 > `target_root / config["docs_root"]` while `content` comes from `generate_index(target_root)`.
 > Write honours `docs_root`; read ignores it.
 >
@@ -1485,14 +1485,24 @@ the source tree, because in the source tree the import resolves.
 >
 > **The build does not merely fail to reveal this — it reports it as a green success**, on a
 > tracked file that CLAUDE.md points agents at, in a form trivially committed by accident.
+>
+> **Occurrence 2 — 2026-09-01, still live at `931b4beb4`.** Hit again during a routine
+> pre-drive `build.py` sync, which is the context this defect will keep appearing in: the
+> standing instruction is to rebuild before every drive, so every drive re-arms it. Numbers
+> this time: 178 table rows deleted, 0 added, all nine sections `No docs found.`, sole
+> working-tree modification on an otherwise clean tree, build exit 0.
+>
+> The line citations above had drifted by ~350 lines and would have sent a fixer to the
+> wrong function; they are replaced with symbol names, which do not rot. The phase function
+> is `build_doc_index`, registered in the phase list as `("Doc index", build_doc_index)`.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `scripts/build.py` — the doc-index build phase (`~:1026-1051`);
-  `scripts/generate_doc_index.py` (`generate_index`, and the `No docs found.` emitter at
-  `:259`, `:284`, `:294`)
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-09-01
+- **Where:** `scripts/build.py` — `build_doc_index` (the `("Doc index", build_doc_index)`
+  phase entry); `scripts/generate_doc_index.py` (`generate_index`, and its `No docs found.`
+  emitter)
 
 **Symptom.** Running the documented self-hosting build
 
