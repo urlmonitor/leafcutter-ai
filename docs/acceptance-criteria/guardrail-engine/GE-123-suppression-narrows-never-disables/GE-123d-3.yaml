@@ -54,6 +54,10 @@ criteria: |
 depends_on:
   - GE-123d
 doc_links:
+  - path: templates/scripts/commit_guardian/check_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. Every scenario here is asserted through the exit status of this module, and the two constraints that can force a code change — the whitespace shape being a run-of-ordinary-words test rather than a contains-a-space test, and the exemption never being granted at file level — both bear on the prose post-filter that lives here. The expected production diff may be small or empty (this criterion's weight is its test contract), but this module is where any change for it lands. Canonical copy per ADR-001."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -127,6 +131,21 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added one doc_link,
+    templates/scripts/commit_guardian/check_secrets.py with relationship modifies. Nothing
+    else changed; all pre-existing doc_links kept at their original relationships,
+    including the known-issues link at related — KI-CG-004 is fenced as out of scope by
+    this record''s own requirements and must never be treated as a file this work edits.
+    WHY: this record declared no edit surface, leaving the ticket generator to harvest
+    paths out of prose (KI-ACD-023). check_secrets.py is the surface — every scenario here
+    is asserted through that module''s exit status, and the two constraints that can force
+    a code change (the whitespace shape being a run-of-ordinary-words test rather than a
+    contains-a-space test, and the exemption never being granted at file level) both bear
+    on the prose post-filter living there. STATED PLAINLY: the expected production diff
+    may be small or empty. This is the negative arm for the whole GE-123d widening and its
+    weight is in the test contract, as its own enrichment records. The surface is declared
+    because it is where any change for it lands, and because an empty files_touched is
+    what blocked the epic.'
 superseded_by: null
 covered_by: []
 implemented_by:

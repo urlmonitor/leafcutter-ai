@@ -529,6 +529,27 @@ def validate_ticket_file(filepath: str, valid_components: set[str],
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-31 [python-coder/GE-120e-1]: Removed merge_scoped_md_paths and its
+  _name_only helper. That implementation duplicated
+  check_contract_shrinking.py's _merge_scoped_paths idiom byte-for-byte
+  (both landed independently under GE-120e-1-i / GE-120e-3-ii) -- exactly
+  the duplication AC GE-120e-1's last clause forbids ("every check ...
+  takes it from one shared source rather than computing a private one").
+  check_doc_frontmatter.py's get_staged_md_files() now calls the shared
+  templates/scripts/commit_guardian/_authored_change.get_authored_change()
+  directly instead. (#EPIC-TrustThatAGreenCheckActuallyChecked/28, renamed
+  from _resolve_change_set.get_change_set() in the same-day pr-reviewer
+  remediation pass.)
+- 2026-08-25 [python-coder/GE-120e-3-ii]: Added merge_scoped_md_paths and
+  its _name_only helper (mirroring check_contract_shrinking.py's
+  _merge_scoped_paths idiom). check_doc_frontmatter.py's
+  get_staged_md_files() now calls merge_scoped_md_paths() to narrow staged
+  .md files to those differing from BOTH merge parents during a merge, so
+  the check no longer names carried-in content the merge author never
+  touched, and no longer blocks a merge whose fault content arrived
+  verbatim with no author resolution. Landed here rather than in
+  check_doc_frontmatter.py to keep that file under the 400-line limit
+  (same reason this module already exists per its own module docstring).
 - 2026-08-18 [business-analyst/GE-118c]: IDENTIFIER CLARIFICATION ONLY -- no
   behaviour change, no code touched. The requirement tracked in the entry below
   as ``GE-120`` was renumbered to ``GE-118c`` (``docs/acceptance-criteria/

@@ -105,6 +105,25 @@ class HarvestResult:
     it is the record's content that is short a required key. Such a record
     is never hashed, routed, or added to the idempotency state, so it is
     retried on a later run once the producer is fixed.
+
+    ``outstanding`` (INF-700c-2 / INF-700c-2-ii) is the "still waiting to be
+    written" count: the number of records carrying non-empty ``text`` that
+    have not yet been durably written to their destination. It is derived,
+    never stored — a record contributes to it only for the run(s) in which
+    the record is neither eligibility-excluded (``no_learning_text``) nor
+    already watermarked as processed (``previously_processed``) nor
+    successfully written by *this* run. This includes a record that is
+    *also* counted in ``missing_required_field_count``: such a record can
+    never be hashed, so it can never be watermarked, and it never reaches
+    the write step — so a text-bearing one always contributes here too.
+    ``outstanding`` is not one of the six partitioning buckets; it overlaps
+    them by design, and reading it as a seventh bucket is the mistake that
+    let a text-bearing record with a missing digest field report
+    ``outstanding: 0``. It is deliberately NOT derived from
+    ``skipped_unknown`` / ``unroutable_by_kind``: those describe records the
+    routing table cannot place, which is a different condition from a
+    record waiting to be written, and a text-bearing record can be both at
+    once (INF-700c-2-ii it_requirements).
     """
 
     routed: int = 0
@@ -121,6 +140,7 @@ class HarvestResult:
     malformed_line_numbers: list[int] = dataclasses.field(default_factory=list)
     missing_required_field_count: int = 0
     missing_required_field_lines: list[int] = dataclasses.field(default_factory=list)
+    outstanding: int = 0
 
     def summary(self) -> str:
         """Return the human-readable one-line summary.
@@ -147,10 +167,17 @@ class HarvestResult:
         content — only counts and, for malformed lines, 1-based line
         numbers — so a corrupt or content-free record cannot leak its bytes
         into the run's own output.
+
+        The ``outstanding`` count (INF-700c-2) is always printed, including
+        when it is zero: "visible is not the same as outstanding"
+        (INF-700c-2 it_requirements #5) — a reader must be able to see that
+        the honoured 28 are known about without them being reported as
+        still waiting to be written.
         """
         parts = [f"{count} {kind}" for kind, count in sorted(self.by_kind.items())]
         breakdown = ", ".join(parts) if parts else "none"
         base = f"{self.routed} learnings routed: {breakdown}"
+        base += f"; {self.outstanding} outstanding"
         if self.previously_processed:
             base += f" ({self.previously_processed} previously processed)"
         if self.skipped_unknown:
@@ -384,7 +411,8 @@ def harvest(
     -------
     HarvestResult
         Counts of routed, previously processed, and skipped-unknown events,
-        plus a per-kind breakdown.
+        plus a per-kind breakdown and the derived ``outstanding`` count
+        (INF-700c-2) of text-bearing records not yet durably written.
 
     Raises
     ------
@@ -482,6 +510,16 @@ def harvest(
             )
             result.missing_required_field_count += 1
             result.missing_required_field_lines.append(line_no)
+            # A record that carries a REAL learning and was not written is
+            # outstanding, whatever the reason it could not be written.
+            # INF-700c-2-ii states the figure admits "no floor, no cap, no
+            # exclusion by age, agent, kind or destination" -- and a missing
+            # digest field is exactly such an exclusion if we let this
+            # `continue` skip the count. Without this the one number the
+            # feature exists to make truthful reads 0 while a genuine
+            # unwritten learning sits in the sink.
+            if not _is_no_learning_text(event):
+                result.outstanding += 1
             continue
 
         # Already processed?
@@ -544,6 +582,14 @@ def harvest(
             result.unroutable_by_kind[entry_kind] = (
                 result.unroutable_by_kind.get(entry_kind, 0) + 1
             )
+            # Outstanding per INF-700c-2-ii: this record carries real text
+            # and has not been written anywhere, regardless of whether the
+            # routing table can currently place its entry_kind. Counting it
+            # here (rather than deriving "outstanding" from
+            # skipped_unknown/unroutable_by_kind after the fact) is what
+            # keeps a text-bearing-but-unroutable record from being able to
+            # hide in either bucket alone.
+            result.outstanding += 1
             # Intentionally NOT added to new_hashes / seen: per INF-400c-2-ii
             # an unroutable event must remain retryable, not be silently
             # discarded via the idempotency record.
@@ -577,11 +623,24 @@ def harvest(
                 result.failed_by_kind[entry_kind] = (
                     result.failed_by_kind.get(entry_kind, 0) + 1
                 )
+                # Outstanding per INF-700c-2-ii: the count follows the
+                # write, not the attempt. A write that raised was not
+                # persisted, so the record remains unwritten and must stay
+                # outstanding on this and every subsequent run until a
+                # write actually succeeds.
+                result.outstanding += 1
                 continue
 
         result.routed += 1
         result.by_kind[entry_kind] = result.by_kind.get(entry_kind, 0) + 1
         new_hashes.add(h)
+        if dry_run:
+            # A dry run never calls capture_fn and never persists state (see
+            # the persistence step below), so this record is still
+            # genuinely unwritten. Only a real (non-dry-run) write that
+            # reaches this line has actually captured the learning, so only
+            # the dry-run case counts toward `outstanding` here.
+            result.outstanding += 1
 
     # 3. Persist updated state
     #
@@ -729,3 +788,23 @@ if __name__ == "__main__":
 #   `_make_bare_event`) to include `agent`/`component`. The fast-lane gate
 #   scoped to INF-400b-2-i's own `# covers:` tags is unaffected (verified
 #   green + coverage_ok). (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400b-2-i)
+# - 2026-09-01 [python-coder]: Added `HarvestResult.outstanding` -- the "still
+#   waiting to be written" count INF-700c-2 / INF-700c-2-ii require -- and
+#   always print it in `summary()` (including when zero), since "visible is
+#   not the same as outstanding" (INF-700c-2 it_requirements #5). The count is
+#   derived per-record inside the existing loop, never stored: a record
+#   contributes 1 unless it is eligibility-excluded (`no_learning_text`, per
+#   INF-700c-1), already watermarked (`previously_processed`), or actually
+#   written by this exact (non-dry-run) invocation. Deliberately NOT derived
+#   from `skipped_unknown`/`unroutable_by_kind`, so a text-bearing record with
+#   an unrecognised `entry_kind` still counts as outstanding -- the
+#   anti-cheat boundary INF-700c-2-ii exists to pin. A write that raises
+#   OSError leaves the record outstanding (the count follows the write, not
+#   the attempt); a dry-run "route" never persists, so it also leaves the
+#   record outstanding. No new exit code: `main()`'s 0/3/4 vocabulary is
+#   still derived solely from `skipped_unknown` / `write_failures` /
+#   `state_persist_failed`. Introduces no corpus identifier, no new runtime
+#   state file, and mutates neither the sink nor any destination -- the 28
+#   real records reach `outstanding == 0` because the definition of
+#   outstanding is corrected, not because they were disposed of.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-700c-2)

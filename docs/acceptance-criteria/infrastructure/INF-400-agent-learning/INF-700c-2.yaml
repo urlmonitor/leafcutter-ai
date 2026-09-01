@@ -7,7 +7,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c.yaml"
@@ -126,7 +126,8 @@ superseded_by: null
 covered_by:
   - INF-700c-2-i
   - INF-700c-2-ii
-implemented_by: []
+implemented_by:
+  - "scripts/knowledge/harvest_learnings.py"
 notes: |
   Mechanism is deliberately not chosen here — marking the records terminally
   honoured, archiving the file they live in, or excluding them by a declared
