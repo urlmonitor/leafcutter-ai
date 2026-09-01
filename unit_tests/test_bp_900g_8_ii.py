@@ -160,7 +160,7 @@ _COPY_IGNORE = shutil.ignore_patterns(
 # once in _get_source_paths_for_guard) that declares a "core config" file
 # through the SAME ordinary mechanism config/doc_types.json etc. already use.
 # Used by test 4's round-trip half to declare a brand-new marker file.
-_CORE_CONFIG_TUPLE_ANCHOR = '        "paths.json",\n    ):'
+_CORE_CONFIG_TUPLE_ANCHOR = '        "phase_deferral.yaml",\n    ):'
 
 # The exact line (byte-for-byte) that declares config/diagram_types.json in
 # each of the THREE core-config tuples this AC's fix added it to: TWO in
@@ -778,7 +778,7 @@ def test_bp_900g_8_ii_a_non_code_read_added_after_the_guard_exists_fails_the_bui
     anchor_count = original_build.count(_CORE_CONFIG_TUPLE_ANCHOR)
     assert anchor_count == 2, (
         "Fixture assumption broken: expected the core-config tuple anchor "
-        "(the block ending '\"paths.json\",\\n    ):') to appear exactly "
+        "(the block ending '\"phase_deferral.yaml\",\\n    ):') to appear exactly "
         "twice in scripts/build.py (once in _get_source_deployable_scripts, "
         f"once in _get_source_paths_for_guard); found {anchor_count}. "
         "build.py's core-config declaration shape may have changed -- "
@@ -786,7 +786,7 @@ def test_bp_900g_8_ii_a_non_code_read_added_after_the_guard_exists_fails_the_bui
     )
     declared = original_build.replace(
         _CORE_CONFIG_TUPLE_ANCHOR,
-        f'        "paths.json",\n        "{marker_name}",\n    ):',
+        f'        "phase_deferral.yaml",\n        "{marker_name}",\n    ):',
     )
     build_py.write_text(declared, encoding="utf-8")
 

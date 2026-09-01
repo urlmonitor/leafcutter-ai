@@ -748,6 +748,12 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         "skill_registry.json",
         "guardrail_gates.yaml",
         "paths.json",
+        # Deployed by build_ac_store's own block (added with TKT-600b), but
+        # never DECLARED here -- so Set B did not contain it and the widened
+        # closure correctly aborted the build once ac_coverage_resolver.py and
+        # generate_ticket_from_ac.py were seen to read it. Shipping a file and
+        # declaring it are two different acts; this guard checks the second.
+        "phase_deferral.yaml",
     ):
         if (package_root / "config" / core_config_name).is_file():
             manifest.add(f"config/{core_config_name}")
@@ -951,6 +957,12 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
         "skill_registry.json",
         "guardrail_gates.yaml",
         "paths.json",
+        # Deployed by build_ac_store's own block (added with TKT-600b), but
+        # never DECLARED here -- so Set B did not contain it and the widened
+        # closure correctly aborted the build once ac_coverage_resolver.py and
+        # generate_ticket_from_ac.py were seen to read it. Shipping a file and
+        # declaring it are two different acts; this guard checks the second.
+        "phase_deferral.yaml",
     ):
         if (package_root / "config" / core_config_name).is_file():
             source_paths.add(f"config/{core_config_name}")
@@ -1244,6 +1256,7 @@ _CONFIG_FILE_PHASE_BY_NAME: dict[str, str] = {
     "skill_registry.json": "build_ac_store",
     "guardrail_gates.yaml": "build_ac_store",
     "paths.json": "build_ac_store",
+    "phase_deferral.yaml": "build_ac_store",
     "feedback_categories.yaml": "build_feedback",
 }
 _DOCS_FILE_PHASE_BY_NAME: dict[str, str] = {
