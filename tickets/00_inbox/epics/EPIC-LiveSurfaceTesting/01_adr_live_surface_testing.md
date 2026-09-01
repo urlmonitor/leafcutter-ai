@@ -24,7 +24,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
@@ -85,7 +85,6 @@ Then the hook passes with no errors
 - [ ] adr-author
 - [ ] pr-reviewer
 - [ ] commit
-- [ ] pull-request
 
 ## Comments
 

@@ -572,14 +572,33 @@ def validate_produces_field(
 
     try:
         from template_compiler import parse_frontmatter
-    except ImportError:
-        # If template_compiler is unavailable, skip frontmatter check.
-        # This is an optional dependency — emit a warning to stderr rather than
-        # treating the absence as a hard validation error.
+    except ModuleNotFoundError as exc:
         import sys
+
+        if exc.name != "template_compiler":
+            # template_compiler IS importable, but its own import failed
+            # because one of ITS hard dependencies (e.g. pyyaml) is missing.
+            # This is the KI-BP-019 defect wearing a different hat: a
+            # fail-open skip here would silently drop the produces-frontmatter
+            # check in exactly the environment the original fix exists to
+            # guard, and report a clean validation run. That must be loud —
+            # surfaced as a real validation error, not a warning-and-skip.
+            errors.append(
+                "Cannot validate template 'produces' frontmatter: "
+                f"template_compiler failed to import because its own "
+                f"dependency '{exc.name}' is missing ({exc}). Install the "
+                "missing dependency (see requirements-dev.txt) — do not "
+                "ignore this error."
+            )
+            return errors
+        # template_compiler itself genuinely is not on the Python path (e.g.
+        # this module invoked standalone outside the scripts/ package
+        # layout). Distinct from the branch above: no third-party dependency
+        # is named, because none was reached. A skip is legitimate here —
+        # emit a warning so the gap is visible rather than swallowed.
         print(
-            "WARNING: Could not import template_compiler.parse_frontmatter — "
-            "template 'produces' frontmatter check skipped.",
+            "WARNING: template_compiler module not found on the Python "
+            "path — template 'produces' frontmatter check skipped.",
             file=sys.stderr,
         )
         return errors

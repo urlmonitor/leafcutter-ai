@@ -51,6 +51,7 @@ superseded_by: null
 covered_by:
   - ACS-200f-1
   - "unit_tests/ac_store/test_acs200f_done_gate_strict_verification.py"
+  - "unit_tests/ac_store/test_find_nodeid_for_test.py"
 implemented_by:
   - scripts/ac_store/done_proof.py
 change_target: code

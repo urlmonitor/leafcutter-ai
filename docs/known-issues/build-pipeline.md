@@ -233,7 +233,9 @@ is also easy to mistake for another author's work. Restore with
 > occurrence of the same shape; see KI-BP-018. Unblock adopters that way if you must, but
 > the entry closes with BP-900g-8.
 
-- **Severity:** blocker
+- **Severity:** was blocker — **RESOLVED**, retained for its evidence. Re-verified 2026-09-01:
+  `_find_doc_types_json()` performs a `__file__`-relative ancestor walk checking both the
+  self-hosted and consumer-deployed layouts, so no fixed deploy location is required.
 - **Status:** **RESOLVED — verified 2026-08-31.** `doc_type_validators.py` no longer needs
   the file deployed to a fixed location: `_find_doc_types_json()` walks ancestor
   directories checking both `config/doc_types.json` (dev layout) and
@@ -569,7 +571,9 @@ source no longer has.
 > polices. This is the fourth round of "add the missing module"; see KI-BP-018 and build
 > BP-900g-8/-9 instead.
 
-- **Severity:** blocker
+- **Severity:** was blocker — **RESOLVED**, retained for its evidence. Re-verified 2026-09-01:
+  `_ac_components.py` appears six times in `build_phases.py`, including in the AC-store deploy
+  map.
 - **Status:** **RESOLVED — verified 2026-08-31.** `validate_ac_schema.py` and
   `_ac_components.py` are both in the AC-store deploy map (`build_phases.py:1249`,
   `:1258`), the latter carrying an explicit comment naming the import that needs it.
@@ -1470,7 +1474,7 @@ the source tree, because in the source tree the import resolves.
 > `generate_doc_index.py` reproduced the numbers exactly: repo root → 221 lines / 0 stubs,
 > workspace root → 57 lines / 9 stubs.
 >
-> Root cause confirmed at `build.py:1028-1030` — `output_path` is built from
+> Root cause confirmed in `build_doc_index` — `output_path` is built from
 > `target_root / config["docs_root"]` while `content` comes from `generate_index(target_root)`.
 > Write honours `docs_root`; read ignores it.
 >
@@ -1481,14 +1485,24 @@ the source tree, because in the source tree the import resolves.
 >
 > **The build does not merely fail to reveal this — it reports it as a green success**, on a
 > tracked file that CLAUDE.md points agents at, in a form trivially committed by accident.
+>
+> **Occurrence 2 — 2026-09-01, still live at `931b4beb4`.** Hit again during a routine
+> pre-drive `build.py` sync, which is the context this defect will keep appearing in: the
+> standing instruction is to rebuild before every drive, so every drive re-arms it. Numbers
+> this time: 178 table rows deleted, 0 added, all nine sections `No docs found.`, sole
+> working-tree modification on an otherwise clean tree, build exit 0.
+>
+> The line citations above had drifted by ~350 lines and would have sent a fixer to the
+> wrong function; they are replaced with symbol names, which do not rot. The phase function
+> is `build_doc_index`, registered in the phase list as `("Doc index", build_doc_index)`.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `scripts/build.py` — the doc-index build phase (`~:1026-1051`);
-  `scripts/generate_doc_index.py` (`generate_index`, and the `No docs found.` emitter at
-  `:259`, `:284`, `:294`)
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-09-01
+- **Where:** `scripts/build.py` — `build_doc_index` (the `("Doc index", build_doc_index)`
+  phase entry); `scripts/generate_doc_index.py` (`generate_index`, and its `No docs found.`
+  emitter)
 
 **Symptom.** Running the documented self-hosting build
 
@@ -1699,8 +1713,43 @@ through a path that only resolves at the project root.
 
 ### KI-BP-018 — No build phase can fail the build, the deploy set is hand-listed in ~26 places, and nothing verifies the deployed tree is complete
 
-- **Severity:** blocker
-- **Status:** open — ACs exist and are approved but unbuilt: BP-900g-8 (derive the closure) and BP-900g-9 (fail closed)
+- **Severity:** medium — **DOWNGRADED from blocker 2026-09-01**; see "What has changed" below.
+  Two of this entry's three findings are fixed and shipped. The third, the hand-listed deploy
+  set, is real but no longer blocking: an incomplete deploy now fails the build loudly instead
+  of shipping silently, so the remaining defect costs maintenance rather than correctness.
+- **Status:** open in part — BP-900g-8 (derive the closure) and BP-900g-9 (fail closed) are
+  both **built and merged**. Finding 2 remains, with no AC.
+
+**WHAT HAS CHANGED, 2026-09-01.** This entry was written as three findings. Verified against
+`origin/main` today:
+
+1. **"No build phase can fail the build" — FIXED.** BP-900g-9 shipped
+   `DeployDeclarationError` with a module-level accumulator; nine declared-deploy sites now
+   record every unresolvable entry and `raise_if_deploy_failures()` raises once, which `main()`
+   catches and returns 1 on. Verified: nine `record_deploy_failure(` call sites in
+   `build_phases.py`, and both `raise_if_deploy_failures()` and
+   `_check_intra_package_closure_guard` wired into `build.py`.
+2. **"The deploy set is hand-listed in ~26 places" — STILL OPEN, and this is what the entry now
+   tracks.** BP-900g-8 derived the *closure* (what a deployed script imports) and the
+   *manifest* side; it did not derive the *deploy declaration*. `AC_STORE_DEPLOY_MAP`,
+   `AGENT_SUPPORT_SCRIPT_DIRS`/`_FILES`, the per-phase `deploy_scripts` lists and their mirrors
+   in `build.py` are all still hand-maintained.
+3. **"Nothing verifies the deployed tree is complete" — SUBSTANTIALLY FIXED.** BP-900g-8's
+   intra-package closure guard runs as a preflight and can fail the build.
+
+**Why medium and not closed.** The remaining hand-lists are exactly what produced this entry's
+recurrence history — four rounds of "add the missing module" before anyone treated the list
+itself as the defect. That risk has not gone away. What has gone away is the silence: a
+declaration that names a source which is not there now stops the build and names the phase,
+the entry and the path. A stale hand-list is discovered at build time rather than discovered
+by an adopter whose install was quietly incomplete. That is the difference between a blocker
+and maintenance debt.
+
+**The honest residual.** Nine sites fail closed on a *declared* entry whose source is missing.
+Nothing yet catches the opposite: a file that *should* be declared and is not. That is the
+half the hand-lists still own, and the reason this entry stays open rather than being deleted.
+See also `KI-BP-20260831-1014` for seven further declared sources that skip silently with no
+log at all.
 - **Occurrences:** 1 (structural; it is the mechanism behind KI-BP-003, 005, 006, 008, 009, 012, 016 and 017)
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/build.py` `_run_phases` (~:1097-1184), `main` return at ~:1714, `_manifest_ac_store_scripts` (~:331-349); `scripts/build_referential_integrity.py:270`
@@ -3154,9 +3203,35 @@ build owns).
 
 ### KI-BP-20260901-0812 — A hook was registered on `main` without the surface declaration its own gate requires, and the gate now refuses the next person to touch it
 
-- **Severity:** high
-- **Status:** open — no AC
-- **Occurrences:** 1
+> **PARTIAL DUPLICATE — corrected 2026-09-01, in the wrong register.** The second of the two
+> defects below (the hook refusing merges) was **already filed on 2026-08-26** as
+> `KI-CG-20260826-package-surface-refuses-merge-commits` in `commit-guardian.md`, with the
+> same mechanism, the same fix direction, and two observed occurrences (PRs #601 and #577)
+> against this entry's one. That entry is the canonical record for the hook defect; read it
+> first. It is also more complete than this one was: it names the octopus-merge caveat, and
+> the independent sibling defect `KI-CG-20260826-1612` (all six AC guardians filter the index
+> on `--diff-filter=AM`, so a *renamed* record is invisible to every one of them — which a
+> tree split requires and which the merge-scope fix does **not** address).
+>
+> Filed here in error because the search went to `build-pipeline.md`, where the *consequence*
+> was felt, rather than `commit-guardian.md`, where the hook lives. That is the same
+> component-misfiling this register keeps producing, and the datetime-id convention does not
+> prevent it — a unique id stops two entries colliding, it does not stop the same defect being
+> written twice in two files. Worth noting as the residual the id change did not solve.
+>
+> **What is NOT duplicated, and why this entry stays:** the first defect below — that
+> `BP-1100g-5-i` registered a hook while carrying no `package_surface` field, so ACS-100i-8
+> should have refused that registration when it landed and did not. The 2026-08-26 entry does
+> not cover that; it is about the hook's behaviour, not about the undeclared registration that
+> reached `main`. That half is corrected by the declaration fix on `BP-1100g-5-i`.
+
+- **Severity:** medium — downgraded from high on 2026-09-01. The merge-refusal half is
+  the pre-existing `KI-CG-20260826-package-surface-refuses-merge-commits`; what remains
+  unique here is the undeclared registration, which is real but narrower.
+- **Status:** open in part — the merge-refusal half is fixed by `ACS-100i-8-ii`; the
+  undeclared-registration half is fixed by the `BP-1100g-5-i` declaration correction. The
+  question of *how* ACS-100i-8 failed to fire on `406375c88` remains unanswered.
+- **Occurrences:** 1 here; see the canonical entry for 2 more
 - **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
 - **Where:** `templates/scripts/commit_guardian/commit_guardian.json` (entry
   `check-ticket-signoff-parity`), `docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml`,
@@ -3210,3 +3285,197 @@ hit this and will either bypass it or stall.
 
 **Pattern:** a gate that failed to fire where the defect was introduced, and fires instead on
 everyone who arrives afterwards.
+
+---
+
+### KI-BP-20260901-0914 — `ac-store-valid`'s per-PR diff scope means a schema-invalid AC record can sit on `main` indefinitely, invisible to CI, while the documented whole-component pre-flight that would catch it is optional, manual, and never wired in
+
+- **Severity:** high
+- **Status:** OPEN — no AC. The two-record *instance* was fixed 2026-09-01 (the enum was
+  widened; see `KI-ACS-010` → Resolution), but **the scope gap this entry is actually about
+  is untouched**: ACS-200h is still unbuilt, so the store can still go red on `main` with
+  every required check green. Do not read the instance fix as closing this. If anything the
+  gap is now less visible, because the one component that happened to be demonstrably red
+  is no longer red.
+- **Occurrences:** 1 (the two records below); the scope gap itself applies to every AC ever
+  merged before 2026-08-17 or untouched since
+- **First seen:** 2026-09-01
+- **Where:** `.github/workflows/ci.yml:223-292` (the `ac-store-valid` job, `name: "AC store
+  valid"`) and `docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/BP-1400c-1.yaml`
+  + `BP-1400c-1-i.yaml`
+
+**Symptom.** `AC store valid` is a required PR check and has been green on every PR that
+touched this repo for two weeks. `scripts/ac_store/validate_ac_schema.py
+docs/acceptance-criteria/build_pipeline` — the whole-component bulk pre-flight `CLAUDE.md`
+"AC-store hygiene" tells you to run before a finalization drive, and the same
+`config/ac_store_schema.json` + `jsonschema.Draft7Validator` mechanism the CI job itself uses
+— dies before printing `OK: all N ... valid` for that same component, on `main`, today.
+
+**First correction: the surface symptom was misdiagnosed, twice.** This entry was opened to
+fix a reported "missing `angle` field" in `BP-1400c-1.yaml` and `BP-1400c-1-i.yaml`'s
+`test_spec` entries. `angle` is optional in `config/ac_store_schema.json` (only `name` and
+`target_dir` are `required` on a `test_spec` item), so its absence cannot have been the
+validator's real complaint — jsonschema's `oneOf` failure message
+(`... is not valid under any of the given schemas`) just doesn't say which sub-schema actually
+failed, so the missing-optional-field theory was plausible enough to act on. Re-running with
+`Draft7Validator.iter_errors(...).context` inspected directly (the CLI wrapper prints only the
+top-level message) isolates the real cause on the **original, unmodified** files:
+
+```
+CONTEXT: 'playwright' is not one of ['unittest', 'pytest'] ['test_spec', 0, 'framework']
+```
+
+Both records' Playwright e2e `test_spec` entries (`test_about_route_smoke`,
+`test_route_smoke_harness_iterates_all_routes`) declare `framework: playwright`, and
+`config/ac_store_schema.json`'s `test_spec[].framework` enum is `["unittest", "pytest"]` —
+it has never included an e2e/browser framework. `grep -rl "framework: playwright"
+docs/acceptance-criteria/` returns exactly these two files store-wide, so this looks like the
+first AC ever authored against a Playwright test, and it tripped a real gap in the vocabulary
+rather than a typo. Adding the requested `angle: reachability` / `angle: real_artifact` values
+to both files (done, in the same commit as this entry — see the diff) is correct on its own
+merits but, being scoped away from `framework` and from `config/ac_store_schema.json`, does
+**not** and cannot make `validate_ac_schema.py` print `OK` for this component. That fix needs
+either the schema's `framework` enum widened, or a decision about what `framework` should say
+for a browser-driven e2e test if not `playwright` — a call for whoever owns the AC-store
+schema, not something to guess at while holding a two-file write scope.
+
+**Second, and the actual question this entry answers: why did the required CI check never
+catch it?** `ac-store-valid` (`ci.yml:223`) runs `if: github.event_name == 'pull_request'`,
+resets `HEAD` back to the PR's base ref via `git reset --soft "origin/${{ github.base_ref
+}}"`, and then runs the `check-ac-schema` pre-commit hook — which reads its file set from
+`git diff --cached --name-only --diff-filter=AM` (`_get_staged_ac_paths` in
+`templates/scripts/commit_guardian/check_ac_schema.py`). That is **exactly** the set of AC
+files the current PR adds or modifies. It is not the whole store, not the whole component, and
+not even every file the PR's branch has ever touched — only the diff against the PR's base.
+The job's own comment names the reason: *"the store currently has 57 orphaned children, so a
+whole-store gate applied per-PR would fail every contributor on day one and get switched
+off"* — and separately documents that the whole-store backstop is *"NOT YET IMPLEMENTED —
+ACS-200h (whole-store run on push to main as a merge-vector backstop) ... deliberately omitted
+rather than added informationally: it would be red from the first run."*
+
+**The timeline closes the gap completely, it isn't even a near miss.**
+
+```
+2026-07-21   PR #367 (f73896fa6) merges BP-1400c-1.yaml and BP-1400c-1-i.yaml — both invalid
+             on `framework` from the moment they were authored.
+2026-08-17   PR #444 (0a22e9e93) adds the ac-store-valid job to ci.yml. First time ANY CI
+             mechanism validates AC schema on a pull request.
+2026-09-01   validate_ac_schema.py, run by hand against the whole build_pipeline component,
+             is the first thing to notice — 27+ days and an unknown number of merged PRs
+             after the gate that would eventually exist was itself created.
+```
+
+`git log -1 --format=%ad 0a22e9e93` confirms the gate's creation date; `git log --format=%ad
+--follow -- docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/BP-1400c-1.yaml`
+confirms the record's. Before 2026-08-17 there was no CI gate of any kind for AC schema
+validity — only the local, commit-time `check-ac-schema` pre-commit hook, which requires
+`.pre-commit-config.yaml` / `.leafcutter` to be established in the committing worktree, a
+prerequisite this same repo's own `CLAUDE.md` documents as frequently missing ("Worktree
+pre-commit config" — six historical drives ran with zero hooks active). Since 2026-08-17, the
+diff-scoped design means the gate can only ever validate a record the moment it is added or
+next modified — and these two records have been modified by no PR since. They are not an edge
+case the gate almost caught; they predate the gate's existence and have never once been in a
+diff it inspected.
+
+**The consequence, stated plainly.** A `build_pipeline` component can be schema-invalid on
+`main` for an unbounded period — this instance is 42 days and counting — while the one
+required, always-green CI check named for exactly this purpose (`AC store valid`) has nothing
+to say about it, because its scope and the invalid record's location in time never intersect.
+The one thing that *would* say something — the whole-component `validate_ac_schema.py` sweep
+— is a manual, unscheduled, un-gated step: nobody runs it unless they remember to, per
+`CLAUDE.md`'s own framing ("before a finalization drive"), and per this ticket's cover note,
+"if anyone runs it, dies before it can report" was true right up until this session ran it.
+
+**Is the CI job wrong, or is the pre-flight's documentation overselling it?** Neither is
+simply broken — the CI job's diff-scoping is a deliberate, reasoned trade-off against 57
+known pre-existing orphans, documented in its own source as a stopgap pending ACS-200h. But
+`CLAUDE.md`'s "AC-store hygiene" section presents the bulk `validate_ac_schema.py` sweep as
+the reader's own responsibility with no cross-reference to the fact that CI's required check
+covers a categorically narrower scope and cannot be treated as a substitute — a reader who
+sees `AC store valid` green on every recent PR has no signal telling them the store itself may
+already be red. That asymmetry, not a bug in either script, is the actual gap.
+
+**Fix direction.** Land ACS-200h (the whole-store push-to-main backstop `ci.yml` already
+names as the intended remedy) as an informational (non-blocking) job first, specifically so it
+can report the current backlog without failing every contributor's PR on day one — the same
+graduated-rollout shape `ci.yml`'s own comment anticipates for the diff-scoped job's origin.
+Separately, `CLAUDE.md`'s "AC-store hygiene" section should say explicitly that
+`validate_ac_schema.py` and the required `AC store valid` CI check cover different scopes and
+neither substitutes for the other, so a green required check is never read as store-wide
+reassurance.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M3 ("AC-store hooks see the git
+index, not the store"), the CI/per-PR-diff variant: M3 is about a single commit's staged set
+missing a parent that was not re-staged; this is the same shape one layer up — a required
+CI gate's diff-against-base-ref scope missing every record that existed before the gate did
+and has not been touched since. Both are "the gate's notion of 'what to check' is narrower
+than 'the store', and the store is what people believe was checked."
+
+**Related.** `KI-ACS-001` (a validator invocation resolving to zero files reported success for
+eight days) is the sibling failure at the tooling layer — this entry's whole-component sweep
+is the fix KI-ACS-001 made trustworthy again, which is exactly why it was the tool that caught
+this. `KI-ACS-010` is the vocabulary gap that produced the instance; its Resolution section
+records the fix.
+
+**Instance closed 2026-09-01, gap not.** `validate_ac_schema.py docs/acceptance-criteria`
+now reports the full 3,256-record store valid — zero refusals, down from 28. So the
+concrete demonstration in this entry can no longer be reproduced, and that is precisely the
+hazard: the argument above never depended on those two records being red. It depended on
+`ac-store-valid` being *structurally incapable* of seeing a record that predates it and has
+not since been touched, which is still true of every one of the ~3,200 records no recent PR
+has modified. The next such record will be just as invisible, and now there is no red
+component sitting on `main` to make the point. Land ACS-200h.
+
+---
+
+### KI-BP-20260901-1345 — A tempdir-cleanup race in the portability suite fails the REQUIRED pytest check at random, on a PR that touched nothing near it
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1 (confirmed flaky, not deterministic)
+- **First seen:** 2026-09-01
+- **Where:** `unit_tests/portability/test_bp_900h6i.py::TestBp900h6iEntitlement::test_bp900h6i_step_refuses_an_unentitled_target_and_leaves_it_byte_identical`
+
+**Symptom.** The required `Test suite (pytest)` check failed on PR #683 — a schema-and-docs
+change touching no portability code — with a teardown error, not an assertion:
+
+```
+FAILED unit_tests/portability/test_bp_900h6i.py::...::test_bp900h6i_step_refuses_an_unentitled_target_and_leaves_it_byte_identical
+  OSError: [Errno 39] Directory not empty: '/tmp/tmp1eqh3ix5/developer_tree/.git'
+1 failed, 5463 passed, 11 skipped, 6 xfailed, 16 warnings, 577 subtests passed in 770.68s
+```
+
+**Confirmed flaky rather than assumed flaky.** Re-run of the same job at the same commit, no
+code change: **pass**, 10/10 checks green, and #683 merged at `b3d3c95e5`. It also passes
+locally (4 passed). So the failure is not a function of the branch's content, and re-running
+is currently the whole remediation.
+
+**Why it is worth an entry despite being "just a flake".** It is in a **required** status
+check, so it does not degrade anything — it blocks. The failure mode is also the maximally
+confusing one: it fails during directory teardown inside a `.git` directory the test itself
+created, which means the error text names neither the test's subject nor anything the PR
+author changed. A contributor hitting this on their own PR has no way to tell it apart from a
+real regression they caused, and the honest response — "read the failure, it says my change
+broke portability" — leads directly away from the answer.
+
+An unregistered flake in a required gate also erodes the gate. The learned response to a
+required check failing becomes "re-run it", which is exactly the habit that lets a real
+failure through on the second attempt.
+
+**Likely cause, stated as a hypothesis and not a finding.** `Errno 39` on a `.git` directory
+during cleanup is the signature of something still writing into the tree as
+`TemporaryDirectory.__exit__` walks it — a git subprocess (gc, index-pack, or a background
+maintenance task) outliving the code that spawned it. This has NOT been confirmed; nobody has
+instrumented the teardown. Anyone fixing it should establish that before changing anything,
+because the alternative causes (a filesystem-level race on the CI runner's `/tmp`, or a
+handle held by a fixture) call for different fixes.
+
+**Fix direction.** Wait for spawned git processes before leaving the context manager, or give
+the fixture an `ignore_cleanup_errors=True` teardown (Python 3.10+) — but only after the cause
+is established. Reaching for `ignore_cleanup_errors` first would silence the symptom at the
+cost of losing the evidence, and if the cause is a leaked subprocess then the leak is a real
+defect in the code under test, not in the fixture.
+
+**Related.** User-memory `feedback_test_isolation_pitfalls` and `KI-TQ-012` (a fixture that
+sandboxes the filesystem while leaking into shared state) are the same family: tests here
+treat the runner's environment as private scratch space with weaker guarantees than assumed.

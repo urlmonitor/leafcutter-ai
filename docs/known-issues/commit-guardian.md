@@ -2546,9 +2546,20 @@ nothing and reports success).
 > The sequential `KI-CG-NNN` entries above keep their ids.
 
 - **Severity:** high
-- **Status:** open — no AC
-- **Occurrences:** 2 observed (2026-08-26, PRs #601 and #577); reproducible on demand
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Status:** **being fixed 2026-09-01** — AC: `ACS-100i-8-ii` ("An entry a merge carries from
+  a parent is not an entry the merge registers"), an L3 technical constraint on ACS-100i-8.
+  The fix scopes the added-entry computation to what the commit introduces relative to its own
+  parents: an entry counts as added only when absent from EVERY parent. Single-parent
+  behaviour is unchanged. The negative control is preserved — an entry present in no parent
+  and cited by no declaring AC is still refused, including mid-merge alongside a legitimately
+  carried one, so this is not a merge exemption.
+  **Not addressed by that fix:** the `--diff-filter=AM` rename blindness in
+  `KI-CG-20260826-1612` below, which is independent and still open.
+- **Occurrences:** 4 observed — 2026-08-26 PRs #601 and #577; 2026-09-01 PR #661 (bypassed
+  with an authorised `SKIP`, and misfiled at the time as
+  `KI-BP-20260901-0812` in `build-pipeline.md` before this entry was found — see the
+  correction there); reproducible on demand
+- **First seen:** 2026-08-26 · **Last seen:** 2026-09-01
 - **Where:** `templates/scripts/commit_guardian/check_package_surface_declaration.py`
   → `_new_entries()` (~:139-158)
 
@@ -3492,3 +3503,58 @@ answer; any scoping change must not break that agreement). `KI-CG-012`, `KI-CG-0
 
 **Pattern:** a hook that is correct and cheap today, whose cost is a function of a
 monotonically growing store, with no recorded decision about whether the breadth was chosen.
+
+---
+
+### KI-CG-20260901-covers-regex-truncates-suffixed-ids — `check_ac_coverage`'s tag pattern collapses every suffixed AC id to its L0 root and cannot see `//` tags at all
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-01
+- **Where:** `templates/scripts/commit_guardian/check_ac_coverage.py:41`
+
+**Symptom.** The hook credits coverage to the wrong record. A test tagged
+`# covers: BP-100k-6` is recorded as covering `BP-100`, so the leaf reads as uncovered while
+its L0 reads as covered by a test that exercises a great-grandchild's behaviour. Both halves
+are wrong, and the wrong half that *adds* coverage is the dangerous one — a missing link is
+visibly missing, whereas a link on the wrong record looks like evidence.
+
+**Evidence.** The pattern is `_COVERS_REGEX = re.compile(r"#\s*covers:\s*([A-Z]{2,6}-[0-9]{3,})")`.
+`[0-9]{3,}` stops at the first non-digit, so every alpha/numeric suffix is discarded. Run
+against real tag shapes on 2026-09-01:
+
+```
+'# covers: ACS-1300a-1'  -> ACS-1300
+'# covers: BP-100k-6'    -> BP-100
+'# covers: ACS-1300'     -> ACS-1300
+'// covers: ACS-1300a-1' -> None
+```
+
+The `#` anchor also makes it blind to every `// covers:` tag, which the canonical rule accepts.
+Measured scope on the same day: 3,631 tag occurrences across 396 `.py` and 8 `.ts` files, 937
+distinct ids — the overwhelming majority carry a suffix this pattern truncates.
+
+**Why it has not bitten harder.** The hook is detect-only and always exits 0
+(`check_ac_coverage.py:167`), so it cannot block a merge. That bounds the blast radius to a
+wrong advisory — but an advisory that names the wrong record is the failure this register
+exists to catch, not a lesser form of it.
+
+**Not a new problem — it is the fourth reader.** `TQ-100b-5` (readiness `approved`, priority
+high) already owns the parity problem and enumerates the closed set of four covers-tag
+recognition rules: `scripts/ac_store/test_enforcement.py:57` — `r"(?:#|//)\s*covers:\s*(\S+)"`,
+the canonical one; a byte-equal duplicate in `check_done_proof.py:92-95`'s `ImportError`
+fallback; `check_test_ac_tags.py:38` (detect-only, exactly three digits); and this one. Do not
+fix this in isolation and do not author a fifth rule — consolidate onto the canonical pattern
+under `TQ-100b-5`.
+
+**Fix direction.** Replace the pattern with the canonical `r"(?:#|//)\s*covers:\s*(\S+)"` and
+resolve the captured id against the store rather than constraining its shape in the regex. An
+id's grammar is the store's business; a tag scanner's job is to capture the token and ask.
+
+**Related.** `KI-CG-034` and `KI-CG-20260831-manifest-shadowing` are the same class one layer
+out — a checker keying on a namespace that does not match the one its input actually uses.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a validator whose *input parser* is
+narrower than the data it validates, so it reports confidently about records that were never
+the ones in front of it.

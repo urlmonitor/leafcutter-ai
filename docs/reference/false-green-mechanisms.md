@@ -4,7 +4,7 @@ description: "Catalogue of the recurring mechanisms by which a green test, hook,
 type: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-26
+last_updated: 2026-09-01
 components:
   - ac_store
   - build_orchestration
@@ -30,7 +30,7 @@ related_docs:
 
 Recurring, cross-component patterns by which a passing check in this repo carries no
 information about whether the certified work actually happened. Each entry has a stable
-id (`M1`..`M8`) for citing in commit messages, review comments, and other docs.
+id (`M1`..`M9`) for citing in commit messages, review comments, and other docs.
 
 ---
 
@@ -47,7 +47,7 @@ Three neighbouring surfaces exist. Route to the right one:
 
 Specific-defect registers this catalogue draws examples from:
 [`ac-store`](../known-issues/ac-store.md) (M5, M8), [`build-orchestration`](../known-issues/build-orchestration.md) (M7),
-[`commit-guardian`](../known-issues/commit-guardian.md) (M3), [`testing-quality`](../known-issues/testing-quality.md) (M6),
+[`commit-guardian`](../known-issues/commit-guardian.md) (M3, M9 related family), [`testing-quality`](../known-issues/testing-quality.md) (M6, M9b),
 [`documentation-system`](../known-issues/documentation-system.md) (adjacent, no mechanism here).
 
 ---
@@ -64,6 +64,7 @@ Specific-defect registers this catalogue draws examples from:
 | [M6](#m6--a-scorer-that-treats-no-answer-as-an-answer) | An eval's score floor is not zero — an empty prediction still matches every all-negative gold row. | Compute the all-negative baseline and require the threshold above it; treat parse errors as unscored. |
 | [M7](#m7--a-module-invoked-as-a-cli-that-has-no-cli) | The path resolves, the subprocess exits 0, nothing happens. | A test that executes the command and asserts an observable effect. |
 | [M8](#m8--a-check-that-measures-a-proxy-and-reports-it-as-a-verdict) | The check's name describes a property; its assertion measures a count. | Compare against an independent source; a check that cannot assess correctness reports `INFO`, not `PASS`. |
+| [M9](#m9--a-guard-whose-refusal-path-has-never-been-exercised) | The check has never in its life produced its blocking outcome. | Declare one known-bad input per guard, feed it through the real entry point, and record `unverified` — never silence — when the attempt has not been made. |
 
 ---
 
@@ -222,6 +223,11 @@ against store rot was a no-op for over a week. Open defect:
 directory or a fixed-depth glob; confirm the tool reports a non-zero file count before
 believing a pass.
 
+**Cross-reference.** `config/verification_flow.schema.json`'s `negative_control` field states
+this whole family's defeat as schema: *"The known-bad input that MUST be rejected. A check
+without one can pass on dead code."* No code reads this schema today — it has zero code
+readers — so it is a statement of intent, not an enforced rule.
+
 ---
 
 ## M6 — A scorer that treats "no answer" as an answer
@@ -281,6 +287,16 @@ reports as a 22.22% quality score rather than an infrastructure failure).
 
 ## M7 — A module invoked as a CLI that has no CLI
 
+> **Status, 2026-09-01:** the mechanism is real and this worked example still
+> teaches it, but both specifics below have since been resolved.
+> `injection_builders.py` gained an `assemble-bundle` CLI subcommand
+> (BO-2400c-1-ii), so KI-BO-005 is **closed**; and the caller quoted here,
+> `fast-lane-build.js`, was an orphaned second runner nothing ever dispatched
+> and has been **deleted** (BO-2400c-1-v, absorbing KI-BO-005 into KI-BO-006).
+> The text below is left as written — it is the record of what was verified on
+> the day, and rewriting it would erase the evidence that the mechanism fires
+> in practice.
+
 The path resolves, the subprocess exits 0, and nothing happens. Verified today:
 `templates/workflows-js/fast-lane-build.js:121` calls
 
@@ -334,12 +350,105 @@ cannot assess correctness should report `INFO`, not `PASS`.
 
 ---
 
+## M9 — A guard whose refusal path has never been exercised
+
+Distinct in kind from [M1](#m1--structural-grep-only-tests-pass-on-dead-code),
+[M5](#m5--a-validator-that-silently-validates-nothing-on-the-wrong-argument-shape), and
+[M8](#m8--a-check-that-measures-a-proxy-and-reports-it-as-a-verdict): those three reach a
+WRONG or EMPTY verdict. Here the check reaches a CORRECT verdict on every input it is ever
+given — its refusal branch is simply never taken. It is right every time and useless every
+time; nothing distinguishes it from a check that refuses correctly, because neither has ever
+refused.
+
+**Tell:** the check runs, reports, and has never in its life produced its blocking outcome.
+
+**Defeats it:** declare one known-bad input per guard, feed it through the real entry point,
+and record `unverified` — never silence — when the attempt has not been made.
+
+**M9a — the constant that reads correctly and never matches.**
+`templates/hooks/readme_read_guard.py` blocks Edit/Write until the folder README has been
+read. It is registered in `.claude/settings.json`, wired to fire on every Edit and Write, and
+its `GATED_PREFIXES` constant is greppable and reads correct:
+
+```python
+GATED_PREFIXES = (
+    ".claude/agents/",
+    ".claude/skills/",
+    ".claude/hooks/",
+    "alembic/versions/",
+)
+```
+
+Measured through the guard's own `_is_gated` (`file_path.relative_to(repo_root)` against each
+prefix):
+
+```text
+.claude/hooks/x.py        gated=False   resolves to <root>/.leafcutter/hooks/x.py
+.claude/agents/x.md       gated=False
+.claude/skills/x/SKILL.md gated=False
+alembic/versions/x.py     gated=True    <- alembic/ does not exist in this repo
+```
+
+Three prefixes resolve out from under themselves through symlinks — `.claude/` paths land in
+`.leafcutter/` before `_is_gated` ever compares them — and the fourth names a directory that
+is not present in this repository at all. A grep-based review confirms the guard is
+configured; only execution shows it cannot fire on any of its four stated targets.
+
+The mechanism is layout-dependent, so a fix aimed at one instance misses the others: in a
+worktree the resolved path stays inside `repo_root` and the prefix comparison simply fails to
+match; in other layouts the resolved path escapes `repo_root` entirely and `relative_to`
+raises, which `_is_gated` already catches and treats identically as `gated=False`. Same
+inertness, two different branches produce it.
+
+**M9b — the falsification proof applied to a copy the verifier does not load.** A mutation
+injected into `templates/` while the test imports the build output under `scripts/` (a
+symlink to `.leafcutter/`) does not land — and the run reports green.
+[`KI-TQ-20260831-mutation-probe-lands-in-the-wrong-copy`](../known-issues/testing-quality.md)
+measured this directly: mutating
+`templates/scripts/commit_guardian/_cross_layer_seam_checks.py` produced 4 passed; mutating
+the deployed copy at `scripts/commit_guardian/_cross_layer_seam_checks.py` produced 3 failed,
+1 passed against the identical injection.
+
+Not [M2](#m2--a-hooks-dependency-missing-from-the-build-deploy-manifest): M2's symptom is a
+`ModuleNotFoundError` crash, and M2's stated defeat — "run the deployed hook" — was already
+satisfied by the very run that produced this false positive. The failure here is that a
+falsification proof does not confirm which copy it reached, not that the deployed copy is
+unreachable.
+
+A sharper sub-case defeats the obvious fix. A mutation applied to BOTH copies still reported
+green three times running: the probe mutated a record key named `angle`, but the records
+actually carry `angles` — plural, a list — so the probe was present in the imported module and
+still a no-op. Landing in the right copy is necessary and not sufficient: confirming a
+mutation is *present* is not confirming it *discriminates*. The only reliable check is that
+the mutation changes the value the assertion reads.
+
+**Related family, one axis over.**
+[`KI-CG-20260831-hook-scripts-never-invoked`](../known-issues/commit-guardian.md) and
+[`KI-CG-034`](../known-issues/commit-guardian.md) are checks that report exit 0 having checked
+nothing — but because the script is never registered, not because a registered, running gate's
+branch never matches. [`KI-TQ-010`](../known-issues/testing-quality.md) is the obligation
+M9b's defeat states in full: a negative control must be falsified by injecting the leak it
+forbids and confirming the test goes red.
+[`KI-CG-20260831-fictional-config-schema-fragment`](../known-issues/commit-guardian.md) is the
+same declaration-versus-reality gap one layer up — a schema validated for shape, never for
+whether the key it names exists.
+
+**Scheduled work.** `BP-100n-4` enumerates this failure class mechanically across the
+commit-guardian surface. `GE-126b-5`, `GE-126c-5`, and `BP-100n-5` are the acceptance criteria
+authored against this catalogue entry; a `GE-120f` AC extending the same coverage is
+forthcoming.
+
+---
+
 ## See Also
 
 - [Known issues — build-orchestration](../known-issues/build-orchestration.md) — KI-BO-005 (M7).
 - [Known issues — ac-store](../known-issues/ac-store.md) — KI-ACS-001 (M5), KI-ACS-002 (M8).
-- [Known issues — testing-quality](../known-issues/testing-quality.md) — KI-TQ-001, KI-TQ-002 (M6).
-- [Known issues — commit-guardian](../known-issues/commit-guardian.md) — KI-CG-001 (M3).
+- [Known issues — testing-quality](../known-issues/testing-quality.md) — KI-TQ-001, KI-TQ-002
+  (M6), KI-TQ-010, KI-TQ-20260831-mutation-probe-lands-in-the-wrong-copy (M9b).
+- [Known issues — commit-guardian](../known-issues/commit-guardian.md) — KI-CG-001 (M3),
+  KI-CG-034, KI-CG-20260831-hook-scripts-never-invoked,
+  KI-CG-20260831-fictional-config-schema-fragment (M9, related family).
 - [Known issues — documentation-system](../known-issues/documentation-system.md) — adjacent, no mechanism here.
 - [How to prove an AC is done with a passing covers-linked test](../how-to/prove-ac-done.md) —
   the inverse task guide: how to earn a green that means something.
@@ -350,9 +459,15 @@ cannot assess correctness should report `INFO`, not `PASS`.
 - `CLAUDE.md` → "Implementation Conventions" — normative rules and war stories for M1-M4.
 - `scripts/ac_store/validate_ac_schema.py` (M5), `scripts/evals/run_agent_eval.py` (M6),
   `templates/workflows-js/fast-lane-build.js` + `scripts/injection_builders.py` (M7),
-  `scripts/ac_store/generate_ticket_from_ac.py` (M8) — implementations referenced above.
+  `scripts/ac_store/generate_ticket_from_ac.py` (M8), `templates/hooks/readme_read_guard.py`
+  (M9a) — implementations referenced above.
+- `config/verification_flow.schema.json` — the `negative_control` field's schema-level
+  statement of M5's and M9's shared defeat; zero code readers today (cross-referenced from M5).
 - [`BP-900g-8`](../acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml) —
   the AC that closed the statically-resolvable half of M2 mechanically;
   `scripts/build_referential_integrity.py` (`compute_intra_package_closure`,
   `find_uncovered_closure_dependencies`) and `scripts/build.py`
   (`_check_intra_package_closure_guard`) are the implementation.
+- `BP-100n-4` — mechanical enumeration of the M9 failure class across commit-guardian;
+  `GE-126b-5`, `GE-126c-5`, `BP-100n-5` — acceptance criteria authored against this entry
+  (a `GE-120f` AC is forthcoming).

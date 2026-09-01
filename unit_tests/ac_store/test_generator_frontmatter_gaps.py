@@ -171,6 +171,14 @@ def _run_generator(
         str(ac_root),
         "--tickets-root",
         str(tickets_root),
+        # TKT-600b-1-i: the generator refuses rather than guess when the
+        # phase-deferral declaration is location-dependent. These fixtures are
+        # standalone tickets, so the kind is declared explicitly. Note this is
+        # NOT boilerplate to copy blindly into a new test — a test covering an
+        # epic member must pass "epic_member", or it will assert against the
+        # wrong phase record and pass for the wrong reason.
+        "--location-kind",
+        "standalone",
     ]
     return subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 

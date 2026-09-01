@@ -288,6 +288,22 @@ Three rules were applied and all three are reusable:
    are four point patches in this area. That is the argument for building
    GE-120, not against filing the fourth one where it belongs.
 
+> **Correction (2026-09-01, PO): rule 2 above is STALE and must not be relied on.**
+> The byte-identity freeze over `GE-120-green-means-checked/` no longer exists.
+> `unit_tests/commit_guardian/test_ge_122e_1.py` was amended **2026-08-18** — eight
+> days before GE-126's L0 notes repeated the freeze as current fact — from
+> `git diff origin/main -- <folder>` must be EMPTY to a one-directional **id-stability**
+> set difference: every id the folder claimed at the baseline must still be claimed, and
+> every record under the folder must declare a `GE-120*` id. Its own docstring states that
+> adding a record is "ordinary growth ... and must not fail." Verified empirically on
+> 2026-09-01: adding `GE-120f.yaml` and appending to `GE-120.yaml`'s `covered_by` leaves
+> all six tests in that module green. GE-120 is an available parent again; what is NOT
+> available is a sixth L2 under any of GE-120a/b/d/e or any GE-126a..e (all at the 5 cap,
+> GE-120c already at 6 on a live `child_limit_override`). The room in this family is the
+> two free L1 slots under each of the two L0s — GE-120f took one of GE-120's.
+> The general rule this makes concrete: **the freeze note and the guard test drift apart,
+> and only the guard test is binding.** Read the test.
+
 **Also settled here: a test module IS a citation.** The GE-119 repair left
 `test_ge_119_contract_shrinking_rename_aware.py` under its old name. That was
 tolerable because `GE-119` is RETIRED — the stale name resolves to nothing. It
