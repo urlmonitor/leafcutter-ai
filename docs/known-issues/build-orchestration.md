@@ -2502,10 +2502,13 @@ the phase is never dispatched, no sign-off is ever written, and the completion w
 reads the ticket rather than the driver's phase list — correctly refuses to mark done with a
 `needed` phase outstanding.
 
-**Why blocker.** It is not one ticket, it is every ticket in every epic. All 25 tickets in
-the observed epic carried it. The drive halts on whichever ticket finishes first, so fixing
-that one ticket by hand just moves the halt to the next, which is exactly what three
-consecutive drives did before the pattern was visible.
+**Why blocker.** It is not one ticket, it is every ticket in every epic. Measured on the
+current tree, `grep -rl "pull-request: needed" tickets/00_inbox/epics/` returns **333**
+tickets spanning **23** epic folders, **316** of which are not yet done. The observed epic
+contributed 25 of those 333 — it was the first to hit the halt, not the size of the problem.
+The drive halts on whichever ticket finishes first, so fixing that one ticket by hand just
+moves the halt to the next, which is exactly what three consecutive drives did before the
+pattern was visible.
 
 **It also cannot be diagnosed from the halt message.** The message names the ticket and the
 phase, so the natural reading is "this ticket is missing a sign-off" — and the natural
@@ -2519,10 +2522,28 @@ alternative — having the driver reconcile the frontmatter when it defers a pha
 it means an agent rewriting the record to match its own behaviour, which is the shape that
 makes a record stop being independent evidence.
 
-**Workaround in use.** All 25 tickets were set to `pull-request: not_needed` by hand
-(`9682d6adf`). This is a correction, not a suppression: `not_needed` means "explicitly
+**Workaround in use — on one unmerged branch, and nowhere else.** The 25 tickets of
+EPIC-StartingNewWorkTheProperWayAlways were set to `pull-request: not_needed` by hand
+(`9682d6adf`). That commit is reachable from exactly one branch:
+`git branch --contains 9682d6adf -a` returns `EPIC-StartingNewWorkTheProperWayAlways` and its
+remote, and nothing else. On `main` not one of those 25 is corrected and the other 308 were
+never touched, so anyone reading from `main` has the defect live in full. Do not read
+"workaround in use" as "the pain is handled" — it is handled on a branch that has not landed.
+
+The reasoning behind that hand-correction is worth preserving, and holds for the branch it was
+made on: it is a correction, not a suppression, because `not_needed` means "explicitly
 excluded from this ticket", which is precisely what the driver does. They were NOT set
 `signed_off` — no per-ticket PR phase ran, and saying one did would be false.
+
+**Sequencing warning — the 316 must be repaired BEFORE the completion guard is unified.** A
+fix is being specified that makes the completion guard consistent (`KI-BO-20260831-1932`).
+Today that guard has two doors and only one of them reads the ticket, so roughly two in three
+of these tickets slip past it into a phantom `done` instead of halting. That leniency is the
+only reason a population of 316 is survivable at all. Once the guard is consistent **all 316
+halt reliably** — which is the correct behaviour, and a large immediate operational cost that
+has to be paid deliberately rather than discovered. The mechanical repair of the 316 (fix the
+generator, then sweep the tickets that already exist) has to land first. Unify the guard first
+and the next drive halts on ticket one of 316, with 315 behind it.
 
 **Related.** `KI-BO-20260831-1931` (the sibling record-vs-driver disagreement, on comment
 status rather than phase membership).
@@ -2613,6 +2634,29 @@ state a different gate had to catch.
 **Fix direction.** Make the completion write take its phase list from the ticket, not from
 the caller's request. Both observed paths had the same 8-item request; only one of them
 went and read the ticket for a ninth.
+
+**Why that direction, spelled out — it has already been read backwards.** Two agents read the
+paragraph above on the same day and drew opposite conclusions from it, so the reasoning
+belongs in the entry rather than in the reader.
+
+Taken literally and on its own, the direction unifies both paths onto the refusal. While the
+tickets still say `pull-request: needed`, that converts an intermittent blocker into a
+permanent and universal one — 316 tickets, per `KI-BO-20260831-1930`. An implementer can
+reasonably conclude from that alone that the direction is wrong. It is not wrong; it is
+mis-ordered if taken alone. See the sequencing warning on that entry for the order.
+
+The tempting alternative — have the completion writer trust the exclusion list its caller
+hands it — must be rejected, and rejected explicitly, because it is what the obvious fix looks
+like. The guard's refusal is worth something only while the record is authored by someone
+other than the party being checked. A writer that accepts the drive's word about which phases
+do not count has stopped checking the drive, which is the only thing it was ever for. It would
+fix today's symptom by removing the guard.
+
+The direction completes the fix only when paired with making the RECORD true — the generator
+emitting `pull-request: not_needed` for epic members, per `KI-BO-20260831-1930` — so that a
+writer reading the ticket gets the right answer. The two halves are a pair. Reading the ticket
+without correcting the ticket halts everything; correcting the ticket without reading it
+leaves a guard that trusts its caller. Neither works alone.
 
 **Related.** `KI-BO-20260831-1930` — the `pull-request: needed` entry that put all three
 tickets in this state.
