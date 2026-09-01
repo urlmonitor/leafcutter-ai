@@ -137,3 +137,4 @@ ENTROPY_HIGH:changelogs/2026-08-31-1810-a-missing-seam-answer-is-now-reported-by
 # suppressing whatever moved into that slot.
 ENTROPY_HIGH:unit_tests/README.md:*
 ENTROPY_HIGH:tests/README.md:*
+ENTROPY_HIGH:changelogs/2026-09-01-1016-testing-readmes-corrected-the-commit-guardian-mutation-target-rule-was-wrong-for-31-of-106-test-files.md:*
