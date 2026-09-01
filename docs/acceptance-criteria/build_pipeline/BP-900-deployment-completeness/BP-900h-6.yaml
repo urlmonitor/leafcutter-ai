@@ -9,7 +9,7 @@ status: active
 req_status: draft
 readiness: reviewed
 priority: critical
-work_status: not_started
+work_status: done
 criteria: |
   Given the consumer-simulation project from BP-900h-1 — built into a directory that started
     empty and held only a minimal skills_config.json, never a copy of this repository,
@@ -159,8 +159,90 @@ amended_by:
     agent: it-po
     date: '2026-08-25'
     changed: "readiness draft->reviewed; five constraints added to the structured package-surface it_requirements (one entry point shared by the ci.yml step and its tests, captured-not-derived executed-guard record, three visibly distinct outcome reports, idempotency against BP-900h-2's comparison, and the post-registration re-run obligation); doc_links gained a context edge to GE-122d-6 recording the scaffold/register/re-run order; test_spec and test_rationale authored as seven descriptors, five behavioural real-commit and two against the real on-disk ci.yml. The five machine-checked package-surface keys are unchanged and reference_file_path still resolves. criteria unchanged."
+  - reason: "work_status REVERTED done -> todo. The step exists, is tested, and CI never invokes it."
+    by: manual
+    at: 2026-08-31
+    note: >-
+      I flipped this to done earlier today via mark_ac_done.py --test-root,
+      which exits 3 when no passing covers-tagged test exists for the AC. It
+      exited 0. Recording that the gate was satisfied and the conclusion was
+      still wrong, because the gate is not at fault and the next person needs
+      to know why it did not help.
+
+      Measured directly: .github/workflows/ci.yml line 389 runs
+      `python leafcutter-ai/scripts/ci/check_consumer_install.py
+      --package-dir leafcutter-ai --target-dir .` with NO --use-install flag.
+      The use-the-install step is therefore unreachable from CI. Its module
+      exists, its tests pass, and nothing in the pipeline calls it — so the
+      criterion's whole point, that an adopter's first commit is observed from
+      OUTSIDE this repository, is not delivered. An adversarial review found
+      this independently and the AC-authoring pass confirmed it a third time.
+
+      A covers-tagged passing test establishes the copy tier: the artifact is
+      present and behaves when called. This criterion is a reachability-tier
+      claim, and those two tiers came apart here exactly as the ticket-authoring
+      guidance warns for deployment artifacts. The test contract was not wrong;
+      it was answering a different question than the criterion asks.
+
+      Two L3 children now carry the requirements a review found uncovered:
+      BP-900h-6-i (the step mutates only a target it is entitled to destroy,
+      and never writes through a symlink into the shared build artifact — today
+      it git-inits, rewrites skills_config.json and deletes 53 of 55 hooks
+      before checking anything) and BP-900h-6-ii (the executed-guard record
+      accounts for the guard population the adopter would really face; today
+      the registry is narrowed to 2 hooks before the record is captured, so the
+      broken-guard case this job exists to catch is structurally unobservable).
+
+      Do not flip this back until ci.yml actually passes --use-install and that
+      is demonstrated by reading the command out of the on-disk workflow, not
+      by a green unit test.
+  - reason: "work_status todo -> done. The condition the entry above set has been met, and this records the evidence rather than asserting it."
+    by: manual
+    at: 2026-08-31
+    note: >-
+      The preceding entry set one bar: ci.yml must actually pass --use-install,
+      demonstrated by reading the command out of the ON-DISK workflow rather
+      than by a green unit test. That bar is now cleared, and the way it is
+      cleared is the point.
+
+      `.github/workflows/ci.yml` now runs check_consumer_install.py with
+      --use-install. Two tests demonstrate it the way the bar demands: they
+      PARSE the command out of the on-disk ci.yml and EXECUTE the parsed
+      command, so they cannot pass by construction against a workflow that
+      omits the flag — which is exactly how they failed before it was added
+      (`AssertionError: 0 == 0`, quoting the flagless command they had parsed).
+      test_bp900h6i_the_refusal_is_reached_by_the_command_the_workflow_actually_runs
+      and test_bp900h6ii_the_verdict_is_read_from_the_output_of_the_command_the_workflow_runs,
+      both green under AC_ENFORCE_STRICT=1.
+
+      This is a composite, so its done-ness also rests on its children rather
+      than on its own tests alone: BP-900h-6-i (entitlement — the step refuses
+      a target it is not entitled to destroy, and never writes through a
+      symlink into the shared build artifact) and BP-900h-6-ii (the executed-
+      guard record accounts for the guard population the adopter would face,
+      and a narrowed run cannot report an unqualified pass) are both done on
+      their own passing covers-tagged tests. Both were authored specifically
+      because an adversarial review found those requirements uncovered by this
+      record, so the parent closing over them is the intended shape, not a
+      shortcut around them.
+
+      Full evidence at the flip: unit_tests/portability/ is 28 passed under
+      AC_ENFORCE_STRICT=1, ruff clean across scripts/ci, unit_tests/portability
+      and templates/hooks, and validate_ac_schema reports 64 files valid in
+      this feature folder. Each of the three flips went through
+      mark_ac_done.py --test-root, which exits 3 when no passing covers-tagged
+      test exists.
+
+      Honest limit on this claim, since the earlier flip failed for lack of
+      one: the reachability tests prove the workflow's command reaches this
+      step and that the step behaves as specified. They do not prove the step
+      is green in a live GitHub Actions run, which can only be observed after
+      this branch's CI executes. If that run fails, this status is wrong again
+      and should be reverted rather than explained.
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-900h-6-i
+  - BP-900h-6-ii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/10_TICKET-20260825-BP-900h-6.md
 change_target: pipeline

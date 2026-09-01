@@ -67,6 +67,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -86,6 +87,74 @@ _CHECK_OUTPUT_DRIFT_SRC = _CG_TEMPLATES_SRC / "check_output_drift.py"
 _SUBPROCESS_TIMEOUT_SECONDS = 20
 _UNIQUE_COUNTER = [0]
 
+# Top-level source directories _build_synthetic_full_package() already copies
+# wholesale. A PACKAGE_ROOT / "<seg>" / ... reference whose first segment is
+# one of these is already present in the synthetic copy and must not be
+# derived again as an "extra" directory.
+_ALREADY_COPIED_TOP_LEVEL = frozenset({"templates", "scripts", "config"})
+
+# Matches a literal two-segment PACKAGE_ROOT chain, e.g.
+# `PACKAGE_ROOT / "docs" / "product-truth"`. Deliberately narrow (exactly two
+# quoted segments) — see _derive_extra_package_dirs() docstring for why a
+# narrow regex here is the safe failure direction.
+_PACKAGE_ROOT_CHAIN_RE = re.compile(r'PACKAGE_ROOT\s*/\s*"([^"]+)"\s*/\s*"([^"]+)"')
+
+
+def _derive_extra_package_dirs(build_phases_src: Path, repo_root: Path) -> list[str]:
+    """Derive extra top-level source directories the synthetic package must copy.
+
+    ``_build_synthetic_full_package()`` copies ``templates/``, ``scripts/``,
+    and ``config/`` wholesale, but ``build_phases.py`` also declares deploy
+    sources OUTSIDE those three trees (e.g. ``build_product_truth`` reads
+    from ``PACKAGE_ROOT / "docs" / "product-truth"``). Hardcoding
+    ``docs/product-truth`` into this fixture is what let it go stale before:
+    the deploy phase was free to point at any directory and nothing forced
+    this test fixture to notice. Deriving it FROM the real source instead
+    means a new such reference is picked up automatically the next time this
+    fixture builds.
+
+    Scans ``build_phases_src`` for literal ``PACKAGE_ROOT / "seg1" / "seg2"``
+    chains, skips any whose first segment is already copied wholesale, and
+    keeps only those that resolve to a real on-disk directory under
+    ``repo_root`` (a two-segment chain can also be a FILE path, e.g.
+    ``PACKAGE_ROOT / "config" / "ac_store_schema.json"`` before the
+    already-copied-segment filter even applies — the is_dir() check is a
+    second, independent guard against copying a false positive).
+
+    Verified against this repo (2026-08-31): yields exactly
+    ``["docs/product-truth"]``, with no false positives.
+
+    This derivation is itself a regex over source text and could miss a
+    future PACKAGE_ROOT reference expressed some other way (an intermediate
+    variable, an f-string, a three-segment chain). That is an accepted
+    risk in the safe direction: a miss here makes the affected fixture-based
+    test FAIL LOUDLY (the real phase raises ``DeployDeclarationError``
+    against the synthetic copy because the source directory it declares is
+    absent) rather than silently pass on a package tree missing a real
+    directory — the same fail-loud-over-pass-false posture BP-900g-9 itself
+    enforces on the production deploy loops. Never widen this back into a
+    hardcoded directory list; that is exactly what went stale before.
+
+    Args:
+        build_phases_src: Absolute path to the real ``build_phases.py`` to
+            scan (the source of truth, never a copy).
+        repo_root: Absolute path to the repo root the derived directories
+            are resolved and copied from.
+
+    Returns:
+        Repo-relative ``"seg1/seg2"`` directory strings, in first-seen order,
+        deduplicated.
+    """
+    text = build_phases_src.read_text(encoding="utf-8")
+    derived: dict[str, None] = {}
+    for first, second in _PACKAGE_ROOT_CHAIN_RE.findall(text):
+        if first in _ALREADY_COPIED_TOP_LEVEL:
+            continue
+        if not (repo_root / first / second).is_dir():
+            continue
+        derived[f"{first}/{second}"] = None
+    return list(derived)
+
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -93,14 +162,25 @@ _UNIQUE_COUNTER = [0]
 
 
 def _build_synthetic_full_package(workspace: Path) -> Path:
-    """Copy the REAL templates/, scripts/, and config/ trees into a
-    synthetic package root under ``workspace``.
+    """Copy the REAL templates/, scripts/, config/ trees, plus any extra
+    declared source directories, into a synthetic package root under
+    ``workspace``.
 
     Mirrors the self-hosting production layout
     (``package_root.parent == target_root passed to build.py``) so
     ``_compute_output_mappings()``'s relative-path arithmetic behaves
     exactly as it does for a real ``python scripts/build.py --target-dir .``
     run, without mutating this worktree's own real ``.build_manifest.json``.
+
+    Beyond the three named trees, this ALSO copies every extra directory
+    ``_derive_extra_package_dirs()`` finds declared in the real
+    ``build_phases.py`` (currently ``docs/product-truth``) — see that
+    function's docstring for why those are derived rather than hardcoded.
+    Without this, a build phase whose declared source lives outside
+    ``templates/``/``scripts/``/``config/`` (e.g. ``build_product_truth``)
+    raises ``DeployDeclarationError`` against every synthetic package this
+    helper produces, once that phase's warn-and-continue branch is made
+    fail-closed (BP-900g-9) — this fixture is what was wrong, not the guard.
 
     Args:
         workspace: Temp directory to build the synthetic layout inside.
@@ -113,6 +193,10 @@ def _build_synthetic_full_package(workspace: Path) -> Path:
     shutil.copytree(_TEMPLATES_DIR, pkg_root / "templates", ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copytree(_SCRIPTS_DIR, pkg_root / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copytree(_CONFIG_DIR, pkg_root / "config", ignore=shutil.ignore_patterns("__pycache__"))
+    for rel in _derive_extra_package_dirs(_SCRIPTS_DIR / "build_phases.py", _REPO_ROOT):
+        shutil.copytree(
+            _REPO_ROOT / rel, pkg_root / rel, ignore=shutil.ignore_patterns("__pycache__")
+        )
     return pkg_root
 
 

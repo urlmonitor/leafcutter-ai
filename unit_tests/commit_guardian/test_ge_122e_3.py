@@ -148,6 +148,35 @@ DECISION HISTORY
   repo-global version fired falsely three times against unrelated
   concurrent writes; the guard itself is unchanged in kind, only its
   blast radius is narrowed.
+- 2026-09-01 [python-coder/PR #635 CI fix]: A prior commit added
+  ``docs/architecture/diagrams/README.md`` -- the folder-INDEX artifact
+  ``build_architecture_namespace_scaffolds`` writes (KI-BO-030 /
+  GE-122d-3-ii) -- which pushed
+  TestUnnumberedArtifactsUnchangedByNameAndLocation's hardcoded sanity
+  count from 11 to 12. Fixed by excluding ``README.md`` by name from that
+  test's unnumbered-diagrams population rather than bumping the count:
+  README.md is a folder index, not a diagram, so counting it as an
+  "unnumbered diagram" was a category error that would recur every time
+  the scaffold lands (it seeds an equivalent
+  ``docs/architecture/adrs/README.md`` too). The count itself remains a
+  secondary sanity check, not a load-bearing assertion -- the by-name/
+  by-location assertions below it are untouched and still fail on a real
+  rename or move. Checked whether ``docs/architecture/adrs/`` carries the
+  same exposure: as of this fix, no test in this suite hardcodes an
+  "unnumbered ADRs" count the way AC-4 does for diagrams (AC-4 is scoped
+  to diagrams only -- ADRs have no analogous "legitimately unnumbered"
+  concept, since every real ADR must be numbered), and the ADR-specific
+  production hooks (check_adr_cross_reference.py's ADR_PATTERN,
+  check_adr_coverage.py) already glob only ``ADR-*.md``, never a bare
+  ``*.md``, so a README.md landing in ``docs/architecture/adrs/`` (which
+  the same scaffold step will create there once that namespace's
+  currently-absent destination file is written) poses no equivalent
+  landmine today. TestInspectedCountsEqualActualArtifactCounts's
+  ``inspected_count`` comparison for both namespaces is unaffected either
+  way: its own independent oracle (``_count_md_files_flat``) is an
+  unfiltered ``*.md`` glob, matching production's own
+  ``_scan_filename_numbered``, which deliberately counts README.md toward
+  ``inspected_count`` -- that contract is intentional and untouched.
 """
 
 from __future__ import annotations
@@ -816,21 +845,39 @@ class TestUnnumberedArtifactsUnchangedByNameAndLocation(_RealCollectionCopyTestC
         location after the pass runs -- asserted per-file by name/path/
         content-hash, never by count (a count is preserved by renaming one
         of them, which is exactly the tidy-up this clause exists to fail).
+
+        ``README.md`` is excluded from this AC's population on purpose: it is
+        the folder-INDEX artifact ``build_architecture_namespace_scaffolds``
+        writes to ``docs/architecture/diagrams/`` (KI-BO-030 / GE-122d-3-ii),
+        not a diagram. Counting a folder index as an "unnumbered diagram"
+        would be a category error that recurs every time the scaffold lands
+        (it also seeds an equivalent ``docs/architecture/adrs/README.md``,
+        confirmed absent from that namespace as of this writing, so the
+        decisions namespace has no equivalent hardcoded-count assertion to
+        carry the same defect today -- see this test's own DECISION HISTORY
+        entry below). Production's own scanner
+        (``_uniqueness_scanners._scan_filename_numbered``) deliberately keeps
+        counting README.md toward ``inspected_count`` -- that contract is
+        unchanged and still covered by
+        ``TestInspectedCountsEqualActualArtifactCounts`` above, which computes
+        its own expected count via an unfiltered ``*.md`` glob. Only THIS
+        test's unnumbered-diagrams population, which is specifically about
+        diagram identity, narrows.
         """
         diagrams_dir = self.root / "docs" / "architecture" / "diagrams"
         unnumbered_before = {
             path.name: (path, hashlib.sha256(path.read_bytes()).hexdigest())
             for path in sorted(diagrams_dir.glob("*.md"))
-            if not _DIAGRAM_FILENAME_RE.match(path.name)
+            if not _DIAGRAM_FILENAME_RE.match(path.name) and path.name != "README.md"
         }
         self.assertEqual(
             len(unnumbered_before),
             11,
             msg=(
-                f"fixture sanity check: expected 11 unnumbered diagrams in the current repaired "
-                f"collection, found {len(unnumbered_before)}: {sorted(unnumbered_before)}. This is a "
-                "secondary sanity check on today's known repo state -- the load-bearing assertions "
-                "below are by name and location, not this count."
+                f"fixture sanity check: expected 11 unnumbered diagrams (excluding the folder-index "
+                f"README.md) in the current repaired collection, found {len(unnumbered_before)}: "
+                f"{sorted(unnumbered_before)}. This is a secondary sanity check on today's known repo "
+                "state -- the load-bearing assertions below are by name and location, not this count."
             ),
         )
 

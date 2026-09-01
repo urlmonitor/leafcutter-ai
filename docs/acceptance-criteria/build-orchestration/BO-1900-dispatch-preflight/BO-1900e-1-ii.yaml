@@ -1,0 +1,58 @@
+id: BO-1900e-1-ii
+components:
+  - build_orchestration
+  - skills_system
+title: "A run that proceeds without a required capability names it rather than staying silent"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run has been allowed to continue after its fit-to-dispatch comparison found one
+    capability required by a craft's own instructions to be out of that craft's reach,
+  When the run reports its outcome,
+  Then the outcome names the capability that was out of reach and the craft that required
+    it,
+    And the outcome of a run in which every required capability was within reach carries
+      no such entry,
+    And a reader of the outcome can tell those two runs apart without inspecting how the
+      run was configured,
+  So the presence of an entry and the absence of one carry different meanings.
+depends_on:
+  - BO-1900e-1
+doc_links:
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: "The family this AC guards against: an outcome in which silence and success are the same observation, so a degraded run is indistinguishable from a clean one."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE ASYMMETRY IS THE POINT. In the observed incident the only reason anyone learned the
+  capabilities were unreachable is that the craft volunteered it. Nothing in the run would
+  otherwise have differed from a clean run — and an outcome in which a degraded run and a
+  healthy run look identical is this repository's central failure mode, not an edge case.
+
+  BOTH HALVES ARE LOAD-BEARING. The second Then clause is as important as the first: an
+  implementation that always emits a caveat satisfies the first clause and destroys the
+  signal, because a warning present on every run is read as boilerplate. The clean-run case
+  must be asserted in the same breath as the degraded one.
+
+  THIS AC DOES NOT DECIDE WHETHER THE RUN SHOULD CONTINUE. BO-1900e-1 holds the dispatch
+  back. This AC governs the case where continuing was nonetheless chosen — a deliberate
+  override, or a capability judged advisory. Whether such an override should exist at all is
+  not settled here; if it does, it may not be silent.
+
+  PROOF OBLIGATION. Compare the outcomes of two executed runs — one with a capability
+  withheld, one with all present — and assert they differ in the stated way. A test that
+  inspects only the degraded run cannot detect an implementation that caveats unconditionally.
