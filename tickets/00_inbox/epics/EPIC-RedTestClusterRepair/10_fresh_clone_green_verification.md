@@ -30,7 +30,7 @@ agents:
   test-runner: needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 10: Fresh-clone green verification + BP-1200b handoff

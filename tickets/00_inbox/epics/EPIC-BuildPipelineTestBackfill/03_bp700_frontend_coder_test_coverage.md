@@ -45,7 +45,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 03: Green test coverage for BP-700 (unified-frontend)
@@ -151,6 +151,5 @@ tests:
 - [ ] test-runner
 - [ ] pr-reviewer
 - [ ] commit
-- [ ] pull-request
 
 ## Comments
