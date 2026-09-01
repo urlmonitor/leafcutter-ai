@@ -28,7 +28,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
@@ -163,7 +163,6 @@ Then it contains a step 5.5 block that calls live_surface_startup.py stop
 - [ ] test-runner
 - [ ] pr-reviewer
 - [ ] commit
-- [ ] pull-request
 
 ## Comments
 

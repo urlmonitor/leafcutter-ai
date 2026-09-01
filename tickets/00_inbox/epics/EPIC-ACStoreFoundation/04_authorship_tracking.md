@@ -21,7 +21,7 @@ agents:
   test-runner: needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 ac_coverage: 0/4
 ---
 

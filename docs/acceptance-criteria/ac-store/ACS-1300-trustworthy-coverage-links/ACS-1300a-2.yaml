@@ -1,0 +1,136 @@
+id: ACS-1300a-2
+components:
+  - ac_store
+title: "Repair happens only when it is asked for, and the run that changes nothing still says everything"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a store on disk holding one record with a missing link, one record whose
+    coverage list names a file that is absent, and one record whose coverage list is
+    already correct,
+  When the repair tool is invoked out of process with no apply request,
+  Then no file under the store differs by a single byte from its content before the run,
+  And the report names the same missing link and the same absent-file claim it names
+    when the apply request is given, so a run that changed nothing cannot be mistaken
+    for a run that found nothing,
+  When the same tool is then invoked out of process with the apply request,
+  Then the record with the missing link holds the naming test's path afterwards, written
+    in the same entry form the store's existing coverage entries use,
+  And the record whose claim named an absent file no longer carries that entry,
+  And in that same invocation the already-correct record's file is byte-for-byte
+    identical to its content before the run, so the run that left it alone is the same
+    run that demonstrably changed the other two,
+  And invoking the tool with the apply request again against the resulting store changes
+    no file at all, adds no duplicate entry, and reports the two repaired records as
+    already correct rather than as still broken.
+depends_on:
+  - ACS-1300a
+doc_links:
+  - path: scripts/ac_store/cross_reference_audit.py
+    relationship: relates-to
+    status: exists
+    relevance: "ANTI-DUPLICATION, READ SIDE ONLY — READ BEFORE WRITING A TRAVERSAL. Measured 2026-09-01: _detect_worktree_root, _load_ac_yamls and _write_report are reusable enumeration and reporting helpers, and its read-only-by-default posture is the precedent this AC's preview clause follows. Its APPLY path is disqualified for this tree: _apply_backfill sets work_status to done. Reuse the enumeration; never reuse the apply. See ACS-1300c-1-i."
+  - path: scripts/ac_store/backfill_components.py
+    relationship: relates-to
+    status: exists
+    relevance: "THE WRITE TECHNIQUE THAT SATISFIES BYTE STABILITY, already proven in this store. It edits by targeted line insertion into the file's existing text rather than by a YAML load-and-dump, precisely so untouched formatting survives, and it skips a file that already satisfies the condition instead of rewriting it. Follow this shape; see ACS-1300c-2 for why the alternative cannot be retrofitted."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Owns the byte-stability rule this AC's third-record clause exercises in passing. The full guarantee is ACS-1300c-2's, not this AC's — here it appears only as the anti-no-op pairing that stops a dead run satisfying the preview clause."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the coverage field's entry forms — a bare test path or a path with a ::test_function suffix — which is what 'the same entry form the store's existing entries use' resolves against."
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+    relevance: "The store is the authoritative backlog and this is the only AC in the tree that writes to it. Establishes the staged-commit / partial-run-recovery posture a whole-store write pass has to respect."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "THE WRITE TECHNIQUE IS DECIDED HERE AND CANNOT BE RETROFITTED. Edit each changed record by targeted line insertion or removal within the file's existing text — the shape already proven in this store by `scripts/ac_store/backfill_components.py` (`_insert_after_id_line`, and `_backfill_file`'s early return for a file already satisfying the condition). A design that loads the store, mutates in memory and dumps it back cannot satisfy ACS-1300c-2 and cannot be made to satisfy it later, because a YAML round trip preserves every value while rewriting every byte."
+  - "A FILE NOT IN THE FINDING SET IS NEVER OPENED FOR WRITING. Byte stability inherited verbatim from TQ-400e-1 means DO NOT WRITE, not write-the-same. Combined with the previous requirement this fixes the file-open set to exactly the records the detection pass classified as needing a change."
+  - "NEVER WRITES THE FINISHED-STATE FIELD, ON ANY PATH. No code reachable from the apply step may assign `work_status`. Refused, not deferred; not licensed by any strength of evidence. Promotion stays with `scripts/ac_store/mark_ac_done.py` behind its own gate, and ACS-1300c-1-i is the negative control that proves the refusal is enforced rather than merely intended."
+  - "`scripts/ac_store/cross_reference_audit.py::_apply_backfill` IS DISQUALIFIED AS A WRITE PATH AND MUST NOT BE CALLED, WRAPPED, OR COPIED. Verified 2026-09-01: it sets `ac_data[\"work_status\"] = \"done\"` at line 457 and then re-serialises the record, breaking the finished-state refusal and byte stability in one call. The anti-duplication advice in this tree's L0 and L1 names that file as a reuse candidate; the ceiling on that advice is READ SIDE ONLY — `_detect_worktree_root`, `_load_ac_yamls`, `_write_report` are safe, the apply layer is not."
+  - "THE WRITE STEP CONSUMES ACS-1300a-1's FINDING SET AND DOES NOT RECOMPUTE THE JOIN. A record absent from the findings must be structurally unreachable from the write path, not merely skipped by a condition. Recomputing the join here would create a second reader of the same evidence, which is the drift this tree's anti-duplication rule exists to prevent."
+  - "PREVIEW IS THE DEFAULT AND APPLY IS OPT-IN, AND THE PREVIEW REPORT MUST BE THE APPLY REPORT. The two runs must name the same findings; a preview that reports less than the apply run turns 'nothing changed' into 'nothing found', which is how an operator concludes a rotten store is clean. Read-only-by-default is the posture `cross_reference_audit.py` already establishes for this store."
+  - "IDEMPOTENCE IS ASSERTED ON FILE BYTES, NOT ON LIST CONTENTS. A second apply run must change no file at all. 'No duplicate entry added' is necessary and not sufficient: a re-write that reorders or re-quotes the same entries has changed the store while adding no duplicate, and at this store's size that churn makes the diff unreadable."
+  - "ENTRY FORM FOLLOWS THE RECORD, NOT A NEW RULE. `docs/reference/ac-schema.md` permits both a bare test path and a `path::test_function` form; the appended entry must match the form the record already uses. Pinning one form globally would silently reformat every record using the other, and would put two spellings of the same fact into the store for downstream readers to disagree about."
+  - "A RUN THAT COULD NOT DO ITS WORK MUST NOT LOOK LIKE A CLEAN RUN (GE-120), and a partially-completed apply must be recoverable: the report must be sufficient, on its own, to identify every record already written and every record not yet reached."
+  - "Must have a real out-of-process entry point — every clause of this criterion is written as 'invoked out of process'. Must handle errors gracefully per the project error handling policy (CLAUDE.md rules 1-4) and must fail toward NOT WRITING: an undetermined verdict leaves the record untouched and reported as an abstention (ACS-1300c-3)."
+  - "EVERY FIGURE IN THE REPORT CARRIES ITS DENOMINATOR AND EXCLUSIONS, in ACS-1100's existing vocabulary. No expected count may be hard-coded in the tool or in its tests."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300a-1
+  contract: "The finding set for the run. The write step acts on that set and must not recompute the join, so a record absent from the findings can never be written to."
+test_spec:
+  - name: test_acs_1300a_2_apply_repairs_two_records_while_the_correct_one_stays_byte_identical
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "THE CENTRAL TEST, AND THE PAIRING MUST STAY INSIDE IT. One out-of-process apply invocation over a real on-disk three-record store built with the project's real serializer. In that single run assert ALL THREE facts together: the missing-link record now holds the naming test's path in the entry form it already used; the absent-file claim is gone from the second record; and the already-correct record's file is byte-for-byte identical (sha256 of raw bytes) to its pre-run content. DO NOT SPLIT THESE INTO SEPARATE SCENARIOS — a crashed run, a disabled write path, a run nobody passed the flag to, and a run the test never invoked each satisfy the byte-identity clause alone. The two demonstrable changes in the same invocation are the only thing that excludes all four."
+  - name: test_acs_1300a_2_preview_writes_nothing_and_names_the_same_findings_as_apply
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run the tool twice over identical copies of the same starting bytes — once with no apply request, once with it. Assert (a) after the preview run no file under the store differs by a single byte, and (b) the preview report names the same missing link and the same absent-file claim the apply report names. Both halves in one test: the comparison against a demonstrably live apply run is what stops a preview that reports nothing from passing as a preview that changed nothing."
+  - name: test_acs_1300a_2_second_apply_run_changes_no_file_and_reports_the_repaired_records_as_correct
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "IDEMPOTENCE ASSERTED ON FILES, NOT ON LIST CONTENTS. Re-invoke apply against the store the first apply produced. Assert no file's bytes change at all, no duplicate entry appears, and the two previously repaired records are reported as already correct rather than as still broken. Hash every file, not just the two: a re-run that reorders or re-quotes entries adds no duplicate and has still churned the store."
+  - name: test_acs_1300a_2_appended_entry_follows_each_record_s_existing_entry_form
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "One apply run over a store holding one record whose coverage entries are bare test paths and one whose entries carry a ::test_function suffix, each missing a link. Assert each gains an entry in the form it already used, and — in the same invocation — that a third, already-correct record is byte-identical. Pins 'consistent with what the record holds' rather than a globally pinned form, which would silently reformat half the store."
+  - name: test_acs_1300a_2_the_apply_request_is_a_real_cli_switch_the_write_path_reads
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the coverage-link repair CLI under scripts/ac_store/, invoked as a subprocess with and without the apply request"
+    description: "Invoke the production command-line entry point as a subprocess twice against identical store copies, differing only in the apply request. Assert the filesystem outcomes differ. A preview/apply distinction that exists only as a keyword argument no CLI path reads is the computed-verdict-nobody-consumes shape this repository has already shipped once in fast-lane-build.js."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+superseded_by: null
+covered_by:
+  - ACS-1300a-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  FOUR THINGS SATISFY "THE UNTOUCHED FILE IS BYTE-IDENTICAL" ON ITS OWN: a crashed run,
+  a disabled write path, a preview-default run nobody passed the flag to, and a run the
+  test never invoked. Every one of them is excluded here by requiring, in the SAME
+  invocation, that two other records demonstrably changed. Any future amendment that
+  splits those clauses into separate scenarios reopens all four.
+
+  THE PREVIEW CLAUSE IS THE OTHER HALF OF THE SAME TRAP, RUNNING THE OTHER WAY. A
+  preview that reports less than the apply run turns "nothing changed" into "nothing was
+  found", which is how an operator concludes the store is clean. Requiring the two
+  reports to name the same findings is what makes the preview usable as a decision.
+
+  IDEMPOTENCE IS ASSERTED ON THE FILES, NOT ON THE LIST. "No duplicate entry" is
+  necessary but not sufficient: a second run that rewrites the file with the same
+  entries in a different order or with different quoting has changed the store while
+  adding no duplicate. The clause therefore requires that no file changes at all.
+
+  ENTRY FORM IS DELIBERATELY UNDER-SPECIFIED HERE. Whether an entry carries a
+  ::test_function suffix is a store convention the schema already allows both ways; this
+  AC requires consistency with what the record already holds, not a new rule. Pinning
+  one form would silently reformat every record that uses the other.

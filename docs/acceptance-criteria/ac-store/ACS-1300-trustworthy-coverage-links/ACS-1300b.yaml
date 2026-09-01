@@ -1,0 +1,85 @@
+id: ACS-1300b
+components:
+  - ac_store
+title: "Work that skips the usual route still records its proof"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Accuracy that does not depend on which path the work took to get here.
+
+  When something is delivered outside the normal ticket route, the link between the
+  requirement and the test that proves it is still recorded. The backlog cleared
+  once stays cleared, instead of quietly refilling from every delivery path that
+  nobody wired up.
+depends_on:
+  - ACS-1300
+doc_links:
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: related
+    status: exists
+    relevance: "THE SURFACE THIS L1 IS DEFINED AGAINST, AND THE ONE IT MUST NOT RE-FIX. Verified on this branch 2026-09-01: §3c already searches `tests/ unit_tests/` and §2f already declines to skip the auto-fix check for L3 (fix dated 2026-08-26 in the agent's changelog). The gap is not what it searches — it is WHEN it runs. It is a ticket-phase agent conditional on `ac_traceability` frontmatter, so a delivery path that never produces that frontmatter never invokes it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-202.yaml
+    relationship: related
+    status: exists
+    relevance: "The criterion that governs the in-drive auto-fix. Its `notes` describe the defect AS FILED on 2026-08-25 and are STALE — do not decompose against them. Read the agent template on the current branch instead."
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300a.yaml
+    relationship: related
+    status: exists
+    relevance: "The one-off repair this L1 protects. Without ACS-1300b the backlog refills; without ACS-1300a this L1 leaves the accumulated backlog untouched. Neither substitutes for the other."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1300b-1
+  - ACS-1300b-2
+  - ACS-1300b-3
+  - ACS-1300b-4
+implemented_by: []
+change_target:
+  - code
+  - prompt
+risk_surface: contract_boundary
+documentation_triggers:
+  - sequence-diagram
+notes: |
+  THE RESIDUAL, NOT THE LEAK. The leak is largely CLOSED for work that flows
+  through the ticket pipeline — see the L0 notes and the ac-fulfillment-gate
+  doc_link above for the verification, dated 2026-09-01 on this branch. Do NOT
+  author an L2 premised on widening the tag search or on un-skipping L3; both
+  landed on 2026-08-26. An AC that re-fixes a shipped fix goes green against work
+  it did not do, which is the phantom-done shape this whole neighbourhood exists to
+  prevent.
+
+  WHAT IS ACTUALLY LEFT: the fulfillment gate is a ticket-phase agent conditional
+  on `ac_traceability` frontmatter. Records created or satisfied outside that path
+  — the fast lane, direct commits — never reach it, so no link is written for them
+  no matter how good the gate's search has become.
+
+  FIRST L2 SHOULD BE ENUMERATION, NOT IMPLEMENTATION. The delivery paths that
+  bypass the gate need to be listed before any of them is wired, and the list needs
+  to be derived from the repository rather than from this note. One unenumerated
+  path is a permanent slow refill that the next measurement will read as the repair
+  having failed.
+
+  RECOGNITION, NOT A SECOND GATE. Prefer routing the bypassing paths to the
+  existing link-writing behaviour over building a parallel writer. Two writers of
+  the same field drift, and the drift is invisible precisely because both of them
+  write something plausible.
+
+  THIS L1 IS BOUND BY THE SAME REFUSAL AS THE REST OF THE TREE: it records the
+  link. It does not write work_status. See ACS-1300c and the L0 scope boundary.
+
+  DOCUMENTATION: `[sequence-diagram]`. The subject is where in a multi-actor
+  delivery flow the link gets written and which paths currently miss that point —
+  a question only an interaction diagram answers legibly. No how-to: this is
+  behaviour that happens on its own, not a command anyone invokes.

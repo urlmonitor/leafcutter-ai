@@ -118,6 +118,15 @@ ENTROPY_HIGH:memory/feedback_po_ba_itpo_bo3100_3200_delegation_boundary.md:*
 # re-capture.
 ENTROPY_HIGH:tests/fixtures/harvest_learnings/unroutable_corpus_28.json:*
 
+# GE-120c-1's out-of-process harness declares the build system's own output-root
+# substitution marker as a module constant (_OUTPUT_ROOT_TOKEN) so it can detect an
+# unsubstituted placeholder left in a deployed file. It is a literal template
+# marker, not a credential. The marker text is deliberately NOT reproduced in this
+# comment: quoting it here makes the allowlist trip the very scanner it is
+# suppressing. Glob rather than per-line — the harness gains cases as the checks it
+# exercises grow, and a pinned line number would void itself on the first insertion.
+GENERIC_SECRET:unit_tests/portability/_deployed_check_harness.py:*
+
 # A date-and-slug known-issue id in the testing-quality register is a long hyphenated
 # token and reads as high-entropy to the scanner. Prose and a register heading, not a
 # credential. The id itself is deliberately NOT reproduced here: quoting it makes this
@@ -127,3 +136,14 @@ ENTROPY_HIGH:tests/fixtures/harvest_learnings/unroutable_corpus_28.json:*
 # Duplicated to the workspace root per the dual-update rule.
 ENTROPY_HIGH:docs/known-issues/testing-quality.md:*
 ENTROPY_HIGH:changelogs/2026-08-31-1810-a-missing-seam-answer-is-now-reported-by-name-and-the-hook-that-reports-it-actually-runs.md:*
+
+# The testing READMEs cite known-issue ids in the date-and-slug form, which read
+# as high-entropy strings to the scanner. No example is quoted here on purpose:
+# writing one out makes this very file trip the same check, which is how the
+# first attempt at this entry was blocked.
+# Glob rather than per-line: these files are prose that grows, so a pinned line
+# number would silently stop suppressing the finding it was added for and start
+# suppressing whatever moved into that slot.
+ENTROPY_HIGH:unit_tests/README.md:*
+ENTROPY_HIGH:tests/README.md:*
+ENTROPY_HIGH:changelogs/2026-09-01-1016-testing-readmes-corrected-the-commit-guardian-mutation-target-rule-was-wrong-for-31-of-106-test-files.md:*

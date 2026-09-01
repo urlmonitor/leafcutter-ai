@@ -26,8 +26,10 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-04
+child_limit_override: 6
 amended_by:
   - "split: ACS-100a -> ACS-100a + ACS-100i, 2026-06-05"
+  - "2026-09-01 [manual]: added child_limit_override: 6. This RECORDS A STATE THAT ALREADY EXISTED rather than authorising growth — ACS-100a has carried 6 active L2 children (-1 through -6) against the default cap of 5 for some time, with no waiver, and check_ac_limits never reported it because it validates the staged set rather than the store: a parent nobody stages is a parent nobody counts. It surfaced only when an unrelated change staged ACS-100a-3 for a covered_by back-link, which pulled this parent into the check for the first time and blocked that commit. 6 is the exact current child count, not headroom — a 7th child must re-justify, exactly as ACS-100i's own waiver note requires of a 9th. No L2 was added by the change that surfaced this; it added an L3 (ACS-100a-3-i), which is uncapped and does not count against this limit. The honest fix is a Pattern C split into sibling L1s, deliberately not attempted from inside a single-file quick-fix; this waiver makes the debt visible instead of latent, and should die with that split or with ACS-800e, which retires child_limit_override entirely."
 superseded_by: null
 covered_by:
   - ACS-100a-1

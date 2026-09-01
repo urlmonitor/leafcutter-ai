@@ -2044,13 +2044,20 @@ The same population-vs-change mismatch as `KI-CG-001`.
 ### KI-CG-024 — `check_ticket_signoff_parity.py` silently skips check #6 because its default registry path does not exist in this layout
 
 - **Severity:** medium
-- **Status:** open — code is on `main` and live
+- **Status:** open — code is on `main`, but see the correction below: it is **not** live
 - **Occurrences:** 1
 - **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
 - **Where:** `templates/scripts/commit_guardian/config.py:224-226`
   (`AGENT_REGISTRY_PATH` default) consumed by
   `templates/scripts/commit_guardian/_signoff_parity_checks.py:96-103`
   (`load_agent_registry`)
+
+> **Correction, 2026-08-31.** This entry's title says the hook "silently skips check #6". It skips
+> **all six** — `check_ticket_signoff_parity.py` is named by no `entry:` line, so it never runs on
+> any commit. The registry-path defect below is real, but repairing it alone would change nothing
+> observable. `templates/scripts/precommit-autofix.json` also carries autofix routing for this
+> hook: remediation wired to a gate that cannot fire. See
+> `KI-CG-20260831-hook-scripts-never-invoked`.
 
 **Symptom.** The hook resolves the agent registry at
 `<worktree_root>/leafcutter/config/agent_registry.json`. That path is wrong for this layout
@@ -2539,9 +2546,20 @@ nothing and reports success).
 > The sequential `KI-CG-NNN` entries above keep their ids.
 
 - **Severity:** high
-- **Status:** open — no AC
-- **Occurrences:** 2 observed (2026-08-26, PRs #601 and #577); reproducible on demand
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Status:** **being fixed 2026-09-01** — AC: `ACS-100i-8-ii` ("An entry a merge carries from
+  a parent is not an entry the merge registers"), an L3 technical constraint on ACS-100i-8.
+  The fix scopes the added-entry computation to what the commit introduces relative to its own
+  parents: an entry counts as added only when absent from EVERY parent. Single-parent
+  behaviour is unchanged. The negative control is preserved — an entry present in no parent
+  and cited by no declaring AC is still refused, including mid-merge alongside a legitimately
+  carried one, so this is not a merge exemption.
+  **Not addressed by that fix:** the `--diff-filter=AM` rename blindness in
+  `KI-CG-20260826-1612` below, which is independent and still open.
+- **Occurrences:** 4 observed — 2026-08-26 PRs #601 and #577; 2026-09-01 PR #661 (bypassed
+  with an authorised `SKIP`, and misfiled at the time as
+  `KI-BP-20260901-0812` in `build-pipeline.md` before this entry was found — see the
+  correction there); reproducible on demand
+- **First seen:** 2026-08-26 · **Last seen:** 2026-09-01
 - **Where:** `templates/scripts/commit_guardian/check_package_surface_declaration.py`
   → `_new_entries()` (~:139-158)
 
@@ -2939,72 +2957,18 @@ predicate. Consistently, `check-ticket-signoff-parity` is *not* in the nine-entr
    Building it as specified would produce a reader reachable from nothing — the exact failure
    its own `it_requirements` warn about: *"A reader that is not reachable from a registered
    hook is inert."* Four `TQ-500` acceptance criteria now depend on the same host.
-3. **19 of the 24 are unaudited.** Each is currently indistinguishable from a guard everyone
-   believes is running. Until triaged, the commit-guardian surface's real coverage is unknown,
-   and it is smaller than 66.
-
-**AMENDED 2026-08-31 — the 24 are two different populations, and only one is a defect.** The
-entry above was written before the registry itself was read. `commit_guardian.json` →
-`hooks_manifest.hooks` holds **59** entries, of which **5** carry `enabled: false` and are
-filtered out by `scripts/build_precommit.py`, leaving the 54 emitted. So:
-
-| population | count | status |
-|---|---|---|
-| registered and enabled | 54 | fine |
-| registered, `enabled: false` | 5 | **deliberate.** `check-mermaid-drift`, `check-diagram-naming`, `check-duplicate-code`, `check-diff-coverage`, `check-surface-components-e2` |
-| absent from the registry entirely | 19 | the defect |
-
-The 19: `check_ac_coverage`, `check_complexity`, `check_debug_scripts`, `check_doc_coverage`,
-`check_doc_links`, `check_docstrings`, `check_documentation`, `check_file_size`,
-`check_folder_density`, `check_identifier_uniqueness`, `check_pytest_style`, `check_root_files`,
-`check_sql_complexity`, `check_sql_dependencies`, `check_test_ac_tags`,
-`check_test_fixture_bloat`, `check_ticket_signoff_parity`, `check_ticket_test_requirements`,
-`check_v2_ac_store_alignment`.
-
-This distinction is load-bearing for any fix: a check that reports the 5 deliberate ones
-produces five false alarms on the day it lands, and a false alarm has exactly one natural
-remedy — weakening the check until it stops. Three states, not two:
-registered-and-enabled, registered-and-disabled (valid, silent), absent (reported).
-
-**ONE HALF OF THIS CHECK ALREADY EXISTS.** `scripts/build_precommit.py` calls
-`_check_hook_script_integrity(hooks, cg_dir)`, which iterates the registry and warns for every
-**registered hook whose script is missing from disk**. The converse — a script on disk that no
-registry entry names — was simply never written. The asymmetry is the whole defect in one
-function: the build already knows to ask whether the registry points at real files, and has
-never asked whether real files are in the registry.
+3. **The 24 are unaudited.** Only three were probed individually. The other 21 may include
+   scripts that are deliberately library-only, superseded, or CI-invoked — but each is
+   currently indistinguishable from a guard everyone believes is running. Until triaged, the
+   commit-guardian surface's real coverage is unknown, and it is smaller than 66.
 
 **Remediation.** Register `check-ticket-signoff-parity` (restoring the documented id rather
 than minting a new one — `commit_guardian.json` is a package-surface registry, so a *new* id
 trips `check-package-surface-declaration` and requires the structured five-field spec). Then
-triage the remaining 18: register, delete, or record as a declared non-gate with a stated
-ground. Finally, close the enumeration gap — the guard should walk the scripts on disk and
-report any that no registry entry names, rather than walking the registry and trusting it to
-be complete.
-
-**SCHEDULED WORK — acceptance criteria already exist. Do not re-derive them.**
-
-| AC | level | covers |
-|---|---|---|
-| `BP-100n-4` | L2 | the enumeration itself: scripts on disk vs registry in effect, with registered-but-disabled as a valid silent third state |
-| `BP-100n-4-i` | L3 | the declared-non-gate register — an honest exemption path, keyed so an unregistered script (which has no hook id) can be named at all |
-| `BP-100n-4-ii` | L3 | the no-op floor: the check must state how many scripts it compared, so "compared nothing" is unrepresentable rather than merely guarded |
-
-Placed under `BP-100n` ("no guard infers from an empty result that there was nothing to
-verify") rather than as a sibling to `BP-100k-4`, for two reasons. `BP-100k` is at its cap of
-5 L2 children and its `child_limit_override: 9` was **discharged, not raised**, in the
-2026-08-26 split — adding a sixth child would re-instate a waiver deliberately retired. And
-`BP-100n`'s cluster rule is this defect verbatim: *"an absence must be reported as an absence
-and never inferred to mean there is nothing to check."*
-
-`BP-100k-4` remains the direct counterpart and is cross-linked: its title carries the scope
-limit in its first word — *"A **registered** commit gate whose activation condition can never
-match…"*. **Extend that check's enumeration; do not build a second reachability guard beside
-it.**
-
-Each absence-asserting clause in the three ACs carries a named mutation in its `notes` — the
-concrete injection that must turn it red — because those clauses are green on arrival today
-for the trivial reason that nothing is reported at all. That is `KI-TQ-010`'s shape, and
-writing them without a stated mutation would reproduce it.
+triage the remaining 23: register, delete, or add to the exemption registry with a stated
+ground. Finally, close the enumeration gap — the reachability guard should walk the scripts on
+disk and report any that no `entry:` names, rather than walking the registry and trusting it
+to be complete.
 
 **How it was found.** An `it-po` agent enriching the `TQ-500` tree checked whether the host
 its ACs pin was actually registered, instead of accepting the README's claim that it was. The
@@ -3012,12 +2976,249 @@ brief it was given asserted the hook was registered; it was the brief that was w
 
 **Related.** `KI-CG-034`, `KI-CG-019`, `KI-CG-012` (sibling exit-0-having-checked-nothing
 routes). `BP-1100g-5-i` and `TQ-500b-1` / `TQ-500c-2` / `TQ-500c-3` / `TQ-500e-2` (the
-scheduled work that depends on this host). `TQ-500b-1` overlaps deliberately and is
-complementary, not duplicate: it makes registering *that one* hook a precondition of its own
-reader, while `BP-100n-4` covers the class.
+scheduled work that depends on this host).
 
 **Pattern:** a completeness guard whose input is the registry it is meant to be checking —
 so anything missing from the registry is invisible to the check for missing things.
+
+> **Second observation, 2026-08-31 — independent, and it executes three of the 24.** Found again
+> while auditing the hook fleet during the GE-120 drive, from the other registry surface: the
+> `hooks_manifest` in `templates/scripts/commit_guardian/commit_guardian.json` (57 entries, 5
+> `enabled: false`, 52 deployed ids) names 20 of the `check_*.py` on disk not at all. The count
+> differs from the 24 above because the surfaces differ — `.pre-commit-config.yaml` `entry:`
+> lines there, `hooks_manifest` here — and both are entry-path comparisons, not name matches.
+> Treat 24 as the figure; this is corroboration, not a competing measurement.
+>
+> Three of the orphans were run directly, which the entry above did not do:
+>
+> - `check_ac_coverage.py` — **exit 0** after printing **178** `WARNING: AC <id> has no test
+>   coverage` lines. It reads the whole AC store to produce findings nobody receives.
+> - `check_doc_coverage.py` — **exit 1, unhandled traceback.** It is broken, and because nothing
+>   invokes it, nothing has noticed.
+> - `check_ticket_test_requirements.py` — **hung past a 45-second timeout** with two files staged.
+>
+> **The config-block trap, which the remediation above should cover.** Ten of the orphans carry
+> live-looking blocks in `commit_guardian.json` — `file_size`, `complexity`, `sql_complexity`,
+> `docstrings`, `documentation`, `root_files`, `folder_density`, `debug_scripts`, `doc_coverage`,
+> `doc_links` — with thresholds and `enabled` flags. To anyone tuning a threshold there they read
+> as active gates; changing one has no effect and produces no signal saying so. When triaging the
+> 24, delete the config block of anything retired in the same change.
+>
+> **And a fifth registration leg.** `templates/scripts/precommit-autofix.json` carries autofix
+> routing for `check_ticket_signoff_parity` — remediation wired to a gate that cannot fire. That
+> is one beyond `KI-CG-020`'s fourth leg. `KI-CG-024`, which describes this same hook as live and
+> skipping only check #6, is corrected in place above.
+
+---
+
+### KI-CG-20260831-hook-parity-legs-alias-and-fail-open — `check_hook_parity`'s two parity legs alias to one directory in a worktree, it compares another branch's build against your templates, and it fail-opens when its roots do not resolve
+
+> Authored as `KI-CG-035` and renamed here: `KI-CG-20260831-hook-scripts-never-invoked` above was
+> *also* authored as `KI-CG-035` on another branch the same afternoon. Three concurrent additions,
+> one number — exactly the collision `KI-BO-024` describes. Inbound references in commits
+> `3846de046` and `1d4ab5e28` use the old id.
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/check_hook_parity.py` — `main()`'s
+  `project_root = Path.cwd()` and the `runtime_dir` / `deployed_dir` assignments that follow;
+  the `hook_parity` block of `templates/scripts/commit_guardian/commit_guardian.json`
+
+**Three defects, one root.** The hook resolves four directories from `Path.cwd()` and runs two
+parity legs: **A** runtime-vs-canonical, **B** canonical-vs-deployed. Its config names them
+distinctly:
+
+```
+"runtime_dir":            "scripts/commit_guardian",
+"canonical_template_dir": "templates/scripts/commit_guardian",
+"deployed_output_dir":    ".leafcutter/scripts/commit_guardian",
+```
+
+**A — the two legs are the same comparison.** In any worktree `build.py` has provisioned,
+`scripts/commit_guardian` is a **symlink** to `../.leafcutter/scripts/commit_guardian`:
+
+```
+$ readlink -f scripts/commit_guardian .leafcutter/scripts/commit_guardian
+.../.leafcutter/scripts/commit_guardian
+.../.leafcutter/scripts/commit_guardian
+```
+
+`runtime_dir` and `deployed_output_dir` are the *same directory*. Leg A re-runs leg B under
+another name, and the question leg A exists to ask — *is the live runtime copy in sync with
+canonical?* — is never asked. A passing run prints **nothing**, so there is no per-leg accounting
+that would reveal it.
+
+**B — in the recommended layout it fails on files that are not yours.** `CLAUDE.md`'s pre-drive
+checklist says to point a worktree's `.leafcutter` at the **main tree's** install. Then
+`deployed_dir` — and via A, `runtime_dir` — resolve into a tree built from whatever branch the
+main checkout last built. Observed while committing GE-120 work:
+
+```
+[check-hook-parity] BLOCKED — hook parity violations detected:
+  Script 'check_identifier_uniqueness.py' exists in runtime dir (…/scripts/commit_guardian)
+  but is absent from canonical template dir (…/templates/scripts/commit_guardian).
+  … (2 more of the same shape, then 4 content divergences)
+```
+
+`check_identifier_uniqueness.py` is from **PR #495, not merged into that branch**. The hook
+reported another branch's file as a defect in this one. Under this layout it cannot pass on any
+branch whose templates differ from the main checkout's last build — every feature branch.
+
+**Its remediation advice is actively harmful here.** Every violation line ends
+`Fix: run build.py to regenerate the deployed output.` From a worktree whose `.leafcutter` is the
+shared symlink, that deploys **unmerged templates over the install tree every other worktree and
+session reads** — the `KI-BP-016` / `KI-BP-017` failure mode. The hook names the one action its
+operating context makes unsafe, and names it as the fix.
+
+**C — it fail-opens to a silent 0 when the roots do not resolve.** Run from any subdirectory both
+legs are skipped and it still reports success:
+
+```
+$ env --chdir=<worktree>/docs python templates/scripts/commit_guardian/check_hook_parity.py
+check-hook-parity: WARNING — cannot read canonical manifest … Skipping manifest parity check.
+check-hook-parity: INFO — deployed output dir not found or not a directory (…)
+exit: 0
+```
+
+The contrast is the point: `check_build_drift` resolved correctly from that same directory
+(`verified=161`) and `check_hook_trigger_reachability` fail-**closed** with exit 1. Only this hook
+treats "I could not find the things I compare" as a pass — the `GE-120a-1` rule violated by a
+member of the family adopting it.
+
+**Cause.** `project_root = Path.cwd()` with plain `/` joins and no resolution or comparison of the
+results. It never asks whether two of its four configured directories are the same inode, whether
+the tree it calls "runtime" belongs to the working copy being committed, or whether it found them
+at all. Same cwd-derived-root shortcut as `KI-CG-027`, with a worktree-specific consequence.
+
+**Workaround.** `SKIP=check-hook-parity`. Every other guardrail hook passed on the same commits.
+Do **not** run `build.py` to clear it unless the worktree's `.leafcutter` is a real directory
+rather than a symlink to the shared tree.
+
+**Fix direction.** Resolve all four paths and detect aliasing: if `runtime_dir` and
+`deployed_output_dir` are one path, report leg A as *not run* rather than silently passing it
+twice — an unrunnable leg is a gap, not a pass. Establish whether the deployed tree belongs to
+this working copy before comparing against it; when it does not, the honest result is
+`unverified`, not `BLOCKED`. Make the remediation string conditional on that answer.
+
+**Related.** `KI-CG-027` (same root derivation). `KI-CG-009` (a hook resolving to the main
+checkout instead of the worktree). `KI-BP-016` / `KI-BP-017` (what `build.py` against a shared
+`.leafcutter` does). `KI-CG-034`, `KI-CG-20260831-hook-scripts-never-invoked` (siblings).
+
+**Pattern:** two configured paths that are one path, and a fix instruction that is safe in the
+layout the author imagined and destructive in the layout the project recommends.
+
+---
+
+### KI-CG-20260831-glossary-coverage-detector-path-unreachable — `check-glossary-coverage` has never run in this repo: it loads its detector from a path no leafcutter layout has, and its own "detector not found" message is dead code
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/check_glossary_coverage.py` — `_load_detector()`'s
+  `spec_from_file_location(... find_project_root() / "scripts" / "glossary_detector.py")` branch,
+  its `if spec is None or spec.loader is None` guard, and the blanket `except Exception` in
+  `check_glossary_coverage()`
+
+**Symptom.** The hook is registered live on `.*\.(md|py|sql)$` — it fires on nearly every commit —
+and every one of those runs has been a no-op:
+
+```
+$ python .leafcutter/scripts/commit_guardian/run_hook.py .../check_glossary_coverage.py
+check-glossary-coverage: WARNING — unexpected error: [Errno 2] No such file or directory:
+  '.../EPIC-TrustThatAGreenCheckActuallyChecked/scripts/glossary_detector.py'.
+  Glossary coverage check skipped (fail-open).
+exit: 0
+```
+
+**Three compounding layers.**
+
+1. **The path cannot exist.** `glossary_detector.py` is present at `templates/scripts/` and
+   `.leafcutter/scripts/`, never at `scripts/` — confirmed absent from the worktree *and* the main
+   checkout. `scripts/` holds only whole-directory symlinks (`commit_guardian`, `doc_compliance`,
+   `feedback`), so a loose file is structurally unreachable there. Permanent state of the layout,
+   not a local accident.
+2. **The dedicated diagnostic is unreachable.** Its specific message — *"glossary_detector.py not
+   found. Skipping glossary coverage check."* — is guarded by
+   `if spec is None or spec.loader is None`. But `spec_from_file_location` on a **nonexistent**
+   path returns a populated spec:
+   ```
+   $ python -c "import importlib.util; print(importlib.util.spec_from_file_location('g','/nope/g.py'))"
+   ModuleSpec(name='g', loader=<SourceFileLoader ...>, origin='/nope/g.py')
+   ```
+   So the guard is false, control reaches `exec_module`, that raises `FileNotFoundError`, and the
+   blanket handler relabels it a generic *"unexpected error"*. The one message written for this
+   exact condition can never print, and the one that does misattributes the cause.
+3. **The project documents it as working.** `CLAUDE.md`: *"the `check-glossary-coverage`
+   pre-commit hook detects novel terms in staged files and dispatches the `glossary-triage` agent
+   automatically."* It has dispatched nothing, ever.
+
+**Fix direction.** Resolve the detector the way the rest of the family resolves shared modules
+(`_resolve_root.py`) and try the deployed location, not a `scripts/` path that exists only in an
+imagined layout. Replace the `spec is None` guard with an explicit `path.is_file()` check before
+`spec_from_file_location` — the only form that can detect absence. Narrow the blanket
+`except Exception`. Then decide deliberately whether a missing detector should fail open at all: a
+gate `CLAUDE.md` presents as enforcing is a poor candidate for silent fail-open.
+
+**Related.** `KI-CG-019` (same shape — fail-opening on an import it can never satisfy — different
+hook and prerequisite). `KI-CG-034`, `KI-CG-012` (sibling exit-0-having-checked-nothing routes).
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5, aggravated by the absence being
+documented as presence.
+
+---
+
+### KI-CG-20260831-test-ac-tags-dead-three-ways — the test-to-AC traceability gate is registered nowhere, defaults to warn-only, and the config key that would escalate it is absent from the shipped config
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/check_test_ac_tags.py` —
+  `_DEFAULT_ENFORCEMENT_MODE = "warn"`, `_CONFIG_KEY = "test_ac_tag_enforcement"`, `main()`'s exit
+  contract
+
+**Symptom.** Pointed at one arbitrary existing test file it finds 20 real violations and reports
+success:
+
+```
+$ python templates/scripts/commit_guardian/check_test_ac_tags.py \
+    unit_tests/commit_guardian/test_check_duplicate_code_strict.py
+WARNING: ... is missing a # covers: XX-NNN tag.        (x20)
+check_test_ac_tags: 20 warning(s) — add '# covers: XX-NNN' tags to suppress these warnings.
+exit: 0
+```
+
+**Three independent reasons it can never block.**
+
+1. **Not registered.** Absent from `hooks_manifest`, from the deployed `.pre-commit-config.yaml`,
+   and from every CI workflow. (It is one of the orphans in
+   `KI-CG-20260831-hook-scripts-never-invoked`; recorded separately because the other two reasons
+   would survive registration.)
+2. **Warn-only by default** — `_DEFAULT_ENFORCEMENT_MODE = "warn"`, which the module docstring
+   frames as a *"grace period"* ending when *"a follow-up ticket flips the default to error
+   mode."*
+3. **The escalation switch does not exist.** The config key it reads to leave warn mode —
+   `test_ac_tag_enforcement` — is **not present** in `commit_guardian.json`. `grep` returns
+   nothing. The documented flip is unreachable through config; only `CHECK_TEST_AC_TAGS_MODE` in
+   the environment can do it, and nothing sets that.
+
+**Why it matters beyond one dead hook.** `# covers:` tags are how `check_done_proof` and the AC
+store connect an AC to the test proving it. A gate meant to keep that mapping honest, which has
+never run, means the backfill it waits on has no deadline and no measurement — and 20 violations
+is a sample from one file, not the total.
+
+**Fix direction.** Decide whether this gate is wanted. If yes: register it, add
+`test_ac_tag_enforcement` to `commit_guardian.json`, measure the real violation count, and set a
+date for the warn→error flip. If no: delete it rather than leave a plausible gate a reader will
+assume is enforcing.
+
+**Related.** `KI-CG-20260831-hook-scripts-never-invoked` (this is one of the 24).
+`KI-CG-021`, `KI-CG-022` (the same defect recorded per-hook).
+
+**Pattern:** a gate that is three separate kinds of off, each of which alone would suffice.
 
 ---
 
@@ -3245,3 +3446,58 @@ key-namespace class of defect in the sibling hook.
 specific wrong value, in a resolver that had already picked the wrong input — so two
 independently-reasonable graceful degradations compose into a confident, precise, entirely
 false report.
+
+---
+
+### KI-CG-20260901-covers-regex-truncates-suffixed-ids — `check_ac_coverage`'s tag pattern collapses every suffixed AC id to its L0 root and cannot see `//` tags at all
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-01
+- **Where:** `templates/scripts/commit_guardian/check_ac_coverage.py:41`
+
+**Symptom.** The hook credits coverage to the wrong record. A test tagged
+`# covers: BP-100k-6` is recorded as covering `BP-100`, so the leaf reads as uncovered while
+its L0 reads as covered by a test that exercises a great-grandchild's behaviour. Both halves
+are wrong, and the wrong half that *adds* coverage is the dangerous one — a missing link is
+visibly missing, whereas a link on the wrong record looks like evidence.
+
+**Evidence.** The pattern is `_COVERS_REGEX = re.compile(r"#\s*covers:\s*([A-Z]{2,6}-[0-9]{3,})")`.
+`[0-9]{3,}` stops at the first non-digit, so every alpha/numeric suffix is discarded. Run
+against real tag shapes on 2026-09-01:
+
+```
+'# covers: ACS-1300a-1'  -> ACS-1300
+'# covers: BP-100k-6'    -> BP-100
+'# covers: ACS-1300'     -> ACS-1300
+'// covers: ACS-1300a-1' -> None
+```
+
+The `#` anchor also makes it blind to every `// covers:` tag, which the canonical rule accepts.
+Measured scope on the same day: 3,631 tag occurrences across 396 `.py` and 8 `.ts` files, 937
+distinct ids — the overwhelming majority carry a suffix this pattern truncates.
+
+**Why it has not bitten harder.** The hook is detect-only and always exits 0
+(`check_ac_coverage.py:167`), so it cannot block a merge. That bounds the blast radius to a
+wrong advisory — but an advisory that names the wrong record is the failure this register
+exists to catch, not a lesser form of it.
+
+**Not a new problem — it is the fourth reader.** `TQ-100b-5` (readiness `approved`, priority
+high) already owns the parity problem and enumerates the closed set of four covers-tag
+recognition rules: `scripts/ac_store/test_enforcement.py:57` — `r"(?:#|//)\s*covers:\s*(\S+)"`,
+the canonical one; a byte-equal duplicate in `check_done_proof.py:92-95`'s `ImportError`
+fallback; `check_test_ac_tags.py:38` (detect-only, exactly three digits); and this one. Do not
+fix this in isolation and do not author a fifth rule — consolidate onto the canonical pattern
+under `TQ-100b-5`.
+
+**Fix direction.** Replace the pattern with the canonical `r"(?:#|//)\s*covers:\s*(\S+)"` and
+resolve the captured id against the store rather than constraining its shape in the regex. An
+id's grammar is the store's business; a tag scanner's job is to capture the token and ask.
+
+**Related.** `KI-CG-034` and `KI-CG-20260831-manifest-shadowing` are the same class one layer
+out — a checker keying on a namespace that does not match the one its input actually uses.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a validator whose *input parser* is
+narrower than the data it validates, so it reports confidently about records that were never
+the ones in front of it.

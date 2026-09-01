@@ -30,11 +30,15 @@ import re
 from pathlib import Path
 from typing import Any
 
-try:
-    import yaml
-    _YAML_AVAILABLE = True
-except ImportError:
-    _YAML_AVAILABLE = False
+# pyyaml is a hard runtime requirement of this module (declared in
+# requirements-dev.txt), not an optional one. A prior try/except ImportError
+# here silently set a module flag with no output on any stream, which made
+# every consumer below fall through to a degraded no-yaml path — parsing every
+# template's frontmatter as `{}` and stripping name/description/model/tools
+# from every deployed agent, with the build still printing "Total files
+# written: N" and exiting 0. See KI-BP-019. Let the ImportError propagate with
+# Python's own clear message naming the missing dependency rather than mask it.
+import yaml
 
 from injection_builders import (  # noqa: E402
     _load_registry,  # noqa: F401  # re-exported; consumed by build_phases / build_helpers
@@ -115,12 +119,9 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     fm_text = text[3:end].strip()
     body = text[end + 4:].lstrip("\n")
 
-    if _YAML_AVAILABLE:
-        try:
-            fm = yaml.safe_load(fm_text) or {}
-        except yaml.YAMLError:
-            fm = {}
-    else:
+    try:
+        fm = yaml.safe_load(fm_text) or {}
+    except yaml.YAMLError:
         fm = {}
 
     return fm, body
@@ -345,17 +346,8 @@ def _build_output_header(fm: dict[str, Any]) -> str:
     output_fm = {k: v for k, v in fm.items() if k in output_fm_keys}
     if not output_fm:
         return ""
-    if _YAML_AVAILABLE:
-        fm_str = yaml.dump(output_fm, default_flow_style=False, allow_unicode=True).rstrip()
-        return f"---\n{fm_str}\n---\n\n"
-    lines_fm = []
-    for k, v in output_fm.items():
-        if isinstance(v, str) and "\n" in v:
-            indented = "\n".join("  " + line for line in v.split("\n"))
-            lines_fm.append(f"{k}: |\n{indented}")
-        else:
-            lines_fm.append(f"{k}: {v}")
-    return "---\n" + "\n".join(lines_fm) + "\n---\n\n"
+    fm_str = yaml.dump(output_fm, default_flow_style=False, allow_unicode=True).rstrip()
+    return f"---\n{fm_str}\n---\n\n"
 
 
 def compile_agent_template(
@@ -448,7 +440,7 @@ def compile_skill_template(template_path: Path, config: dict[str, Any]) -> str:
     text = template_path.read_text(encoding="utf-8")
     fm, body = parse_frontmatter(text)
 
-    if fm and _YAML_AVAILABLE:
+    if fm:
         fm_str = yaml.dump(fm, default_flow_style=False, allow_unicode=True).rstrip()
         header = f"---\n{fm_str}\n---\n\n"
     else:

@@ -25,7 +25,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
   architecture-diagram-author: not_needed
   explanation-author: not_needed
   how-to-author: not_needed
@@ -130,7 +130,6 @@ Then live_surface_test is absent from the output JSON
 - [ ] python-coder
 - [ ] pr-reviewer
 - [ ] commit
-- [ ] pull-request
 
 ## Comments
 

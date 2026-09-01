@@ -380,6 +380,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "always_run": true,
                 "_comment": "EPIC-WorktreeQualityGateGuard/05: Re-materializes .pre-commit-config.yaml via .leafcutter symlink or file copy when absent. Registered at index 0 (FIRST) so it runs before all other hooks. Fail-closed: exits 1 when config cannot be established. Idempotent: exits 0 immediately when config already present. See ADR-017."
             },
@@ -393,6 +394,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "always_run": true,
                 "_comment": "BP-100k-4: was gated on files=^leafcutter/templates/, a CONSUMER-install-only prefix that never matches this package's own self-host layout (templates live at templates/ here) — the gate had never fired in this repository. This hook scans the whole tree by hash and never consults the staged file list (pass_filenames: false), so always_run: true (mirrors ensure-precommit-config) is the correct activation, not a files filter."
             },
@@ -405,7 +407,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path"
             },
             {
                 "id": "check-doc-length",
@@ -420,7 +423,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path"
             },
             {
                 "id": "transform-doc-frontmatter",
@@ -436,6 +440,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-PrecommitSafetyNet/02: Pre-stage transformer that fills missing created, last_updated, type, status fields in staged docs/*.md files before check_doc_frontmatter validator runs. Exits 0 always (fail-open)."
             },
             {
@@ -449,6 +454,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "Component-taxonomy guard: pre-stage transformer that rewrites legacy/near-miss `components` LIST values (e.g. build-orchestration -> build_orchestration, guardrail-engine -> commit_guardian) to canonical docs/components.json ids in staged ACs/tickets/docs, so kebab reintroduced by a merge of a pre-migration branch is auto-healed before validators run. Scalar `component` and already-valid ids (e.g. knowledge_management) are untouched. Exits 0 always (fail-open)."
             },
             {
@@ -462,6 +468,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "always_run": false,
                 "_comment": "TICKET-20260715-DocIndexAutoRegen: Regenerates docs/INDEX.md and git-adds it whenever a docs/*.md file (other than INDEX.md itself) is staged. Exits 0 always (fail-open). Ordered before check-doc-frontmatter and check-description-field so generator-emitted frontmatter survives validation."
             },
@@ -479,6 +486,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "self_derived",
                 "_comment": "Validates YAML frontmatter on staged docs/ and tickets/ markdown files. Checks required fields, type/status enums, flight_level values, components registry membership, and cross-reference path existence."
             },
             {
@@ -490,7 +498,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path"
             },
             {
                 "id": "check-components-integrity",
@@ -502,7 +511,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path"
             },
             {
                 "id": "check-adr-coverage",
@@ -513,7 +523,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path"
             },
             {
                 "id": "check-adr-cross-reference",
@@ -525,7 +536,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path"
             },
             {
                 "id": "check-decision-number-uniqueness",
@@ -538,10 +550,12 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "GE-122a-1: Registers check_adr_collision.py, which was deployed but wired into no manifest (verified 2026-08-17 -- see ADR-029 Amendment 1). Adopts its staged-vs-origin/main-vs-inflight-branch comparison for the decision-number namespace of the whole-collection uniqueness effort, extended with same-commit self-collision detection (_find_self_collisions). Fail-closed on inability to read the sequence (git unavailable, ADR directory absent, remote-branch scan failing); fail-open only for a bug in its own reporting after a completed read (ADR-029 Amendment 1)."
             },
             {
                 "id": "check-identifier-uniqueness",
+                "change_set_source": "handed_by_commit_path",
                 "tier": "judgment",
                 "name": "Check Identifier Uniqueness (GE-122 whole-collection numbering pass)",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_identifier_uniqueness.py",
@@ -565,6 +579,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "BP-100k-4 correction: the files filter is CORRECT, not dead — it matches zero tracked paths only because this package repo has no Docker infrastructure by design, which is a different condition from 'cannot ever match' (a consumer project with a real docker-compose.yml would trigger this normally). Restored the filter (an earlier round of this fix wrongly deleted it, which would have made the gate unconditional in every consumer install) and declared it EXEMPT-with-ground in hook_trigger_reachability_exemption_registry below instead."
             },
             {
@@ -576,7 +591,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path"
             },
             {
                 "id": "check-agent-registry",
@@ -587,7 +603,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path"
             },
             {
                 "id": "check-agent-spawn-consistency",
@@ -599,7 +616,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path"
             },
             {
                 "id": "check-agent-verification-consistency",
@@ -612,6 +630,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "GE-116a-1: Blocks commits staging a templates/agents/*.md whose frontmatter declares requires_verification: true but lists no edit-capable tool (Edit or Write). Fail-closed on detection; fail-open on YAML parse errors. Scoped to staged templates/agents/*.md by file identity only (git diff --cached). Block message names every offending path and states both fixes."
             },
             {
@@ -625,6 +644,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "BP-1100e-1 / BP-1100e-2: Advisory by default (files_touched_reconciliation.enabled: true, strict: false) — reports undeclared source files (.py/.sql/.ts/.tsx/.js) without blocking. Set strict:true in the files_touched_reconciliation section to block commits on scope violations, or enabled:false to turn the check off. Fail-open on git errors. See docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml."
             },
             {
@@ -638,6 +658,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "enabled": false,
                 "_comment": "Start disabled until existing data_flow diagrams are seeded with hash markers. Enable after running compute_diagram_hash.py on each."
             },
@@ -651,7 +672,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path"
             },
             {
                 "id": "check-diagram-naming",
@@ -664,6 +686,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "enabled": false,
                 "_comment": "Start disabled until the rename sweep ticket migrates legacy diagram filenames to c{level}-{seq:03d}-{slug}.md convention."
             },
@@ -678,6 +701,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "BP-100k-4: was anchored to ^leafcutter/config/paths\\.json$ — the same consumer-install-only prefix defect as check-build-drift, and the prefix itself was wrong (the documented consumer clone directory is leafcutter-ai/, not leafcutter/ — see CLAUDE.md 'Repository Structure'). This package's own self-host layout tracks config/paths.json with no prefix at all, so the trigger never matched here. Corrected to the real consumer prefix and made it optional. Also declared EXEMPT-with-ground below: in a consumer install where leafcutter-ai/ is untracked/gitignored/a submodule, this path is never part of the consumer's own tracked tree even with the corrected prefix, so exemption is what keeps this from becoming a universal commit-blocker."
             },
             {
@@ -691,6 +715,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "BP-100k-4: was anchored to ^leafcutter/templates/docs/architecture/ — the same consumer-install-only prefix defect as check-build-drift, and the prefix itself was wrong (the documented consumer clone directory is leafcutter-ai/, not leafcutter/ — see CLAUDE.md 'Repository Structure'). This package's own self-host layout tracks templates/docs/architecture/ with no prefix at all, so the trigger never matched here. Corrected to the real consumer prefix and made it optional. Also declared EXEMPT-with-ground below: in a consumer install where leafcutter-ai/ is untracked/gitignored/a submodule, this path is never part of the consumer's own tracked tree even with the corrected prefix, so exemption is what keeps this from becoming a universal commit-blocker."
             },
             {
@@ -703,7 +728,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path"
             },
             {
                 "id": "check-output-drift",
@@ -715,6 +741,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "always_run": true,
                 "_comment": "Direction B drift guard: blocks direct edits to built output files. Companion to check-build-drift (Direction A). BP-100k-4: was gated on a files list of six .claude/*|.agents/rules/ prefixes; all six .claude/* prefixes are gitignored and .agents/rules/ does not exist at repo root, so the gate had never fired. This hook scans the whole tree and never consults the staged file list (pass_filenames: false), so always_run: true is the correct activation."
             },
@@ -729,6 +756,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "fail_open": true,
                 "_comment": "GlossaryAutomation incremental hook: scans staged .md/.py/.sql files for novel jargon, dispatches glossary-triage agent, and re-stages modified glossary files. Always exits 0 (fail-open)."
             },
@@ -743,6 +771,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "AST-based hook: blocks commits when a staged .py file contains both a placeholder function (docstring/return token) AND a tainted-default rebinding to that function, unless a # default-path-smoke: <module_stem> marker exists in unit_tests/ or a # noqa: default-path-smoke line appears at the module top."
             },
             {
@@ -755,6 +784,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "Option (c) hybrid guard: diffs staged files against the active ticket's files_touched frontmatter. Always exits 0 — non-blocking advisory only. Upgrade to blocking (option b) by editing check_commit_scope.py. EPIC-AgentSystemFrictionReduction/01."
             },
             {
@@ -768,6 +798,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "Validates that every writer_agent in doc_types.json resolves to a non-deprecated entry in agent_registry.json."
             },
             {
@@ -781,6 +812,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "Validates docs/roadmap.json against config/roadmap.schema.json on every commit touching that file. Exits non-zero on schema violations. Fail-open on script errors."
             },
             {
@@ -794,6 +826,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-RoadmapStewardship/01: When docs/roadmap.json is staged, regenerates docs/roadmap.md with an AUTO-GENERATED banner and git-adds it so both files land in the same commit. No-op when roadmap.json is not staged. KDD-01: pre-commit stage (not post-commit --amend)."
             },
             {
@@ -807,6 +840,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-MermaidComplexityGuard/01: Counts structural elements (nodes, edges, participants, subgraphs) in mermaid blocks and warns when thresholds are exceeded. Warn-only by default; set mermaid_complexity.strict to true to block commits."
             },
             {
@@ -819,6 +853,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "self_derived",
                 "_comment": "EPIC-TDDWorkflowEnforcement/04: Blocks commits when test-weakening changes (test deletion, pytest.skip, pytest.mark.xfail, @unittest.skip, @unittest.expectedFailure) are staged concurrent with production code changes. Exits 0 when only test changes or only production changes are staged. See docs/how-to/writing-a-tdd-ticket.md."
             },
             {
@@ -831,6 +866,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-BuildPipelinePhantomRemediation/09 (BP-1100b-5): Blocks commits that add a NEW presence-only assertion (substring form or regex-declaration form) over a scanned-source file configured in presence_only_assertion_guard.scanned_source_globs. Reads staged hunks only (git diff --cached) — never a whole-file/whole-tree scan — so pre-existing violations do not block this hook's own introducing commit. A `# presence-only: <reason>` comment with a non-empty reason waives a specific assertion."
             },
             {
@@ -844,6 +880,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": true,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-ErrorHandlingEnforcement/01: AST-based hook that flags bare except: (E722), blind except Exception: without reraise/log (BLE001), and calls to requests.get/open/cursor.execute not enclosed in try/except (IO-001). Runs on every staged .py file. Exit 1 on violations, 0 on clean."
             },
             {
@@ -860,6 +897,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-PrecommitSafetyNet/02: Pre-stage transformer that fills missing description field in staged docs/*.md files by deriving a stub from the title field, before check_description_field validator runs. Exits 0 always (fail-open)."
             },
             {
@@ -876,6 +914,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": true,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-KnowledgeGraphQueryLayer/02b: Blocks commits when any staged docs/*.md file is missing a non-empty description: frontmatter field. Silently skips tickets/, templates/skills/, and templates/agents/ trees. Enforces the invariant established by the 02a backfill migration."
             },
             {
@@ -889,6 +928,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-ACTreeSplit: Enforces ACS-100c-1 hard caps (>7 L1s per L0, >5 L2s per L1) and emits ACS-100c-2 sparse advisory (<3 children). Blocks commits that push a parent over its child limit. Fail-open on subprocess/YAML errors. Load ac-tree-split skill to resolve violations."
             },
             {
@@ -902,6 +942,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "ACS-400: Blocks commits where an implementation agent modifies protected fields (criteria, title, req_status, depends_on) in AC YAML files. Only authorized requirement authors (product-owner-v3, business-analyst-v3, it-po-v3) and human users may write protected fields. Fail-open: exits 0 on any unexpected error."
             },
             {
@@ -915,6 +956,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "ACS-100i-2: Blocks commits where a staged child AC file's parent AC does not include the child ID in its covered_by field. Derives the parent ID using derive_parent_id() from scripts/ac_store/ac_parent_id.py. Fail-open on parse errors or missing parent files."
             },
             {
@@ -928,6 +970,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "ACS-500e-1-i: Blocks commits when a staged AC YAML file's depends_on field would create a circular dependency chain. Builds the full depends_on graph from the AC store (overlaying staged changes), runs DFS cycle detection, and reports the full cycle path (e.g. 'Circular dependency detected: PTN-010 -> PTN-020 -> PTN-010'). Fail-open on unexpected errors."
             },
             {
@@ -941,6 +984,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "ACS-500a-3 / ACS-500d-1-i: (1) Blocks commits where an AC YAML file's implements_pattern field references a non-existent AC ID or an AC without parameterized slots. (2) Blocks deletion of a pattern AC when any surviving AC in the store still references it via implements_pattern, with error 'Cannot delete <id>: still referenced by N consuming ACs'. Fail-open on parse errors. See docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/."
             },
             {
@@ -954,6 +998,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "enabled": false,
                 "_comment": "GE-100a/GE-100b: Scans staged source files for copy-paste clones using jscpd. Disabled by default (duplicate_code.enabled: false). Fails open when jscpd is not installed — emits advisory to stderr with install guidance and exits 0. Fails open on jscpd v4.x (incompatible CLI). Set strict: true to block commits on threshold violations."
             },
@@ -968,6 +1013,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "enabled": false,
                 "_comment": "GE-101a: Verifies changed lines in staged files have adequate test coverage using diff-cover. Disabled by default (diff_coverage.enabled: false). Fails open when diff-cover is not installed or coverage.xml is absent — emits advisory to stderr and exits 0. Set strict: true to block commits below min_coverage_percent threshold."
             },
@@ -982,6 +1028,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-FinalizeFeatureHardening/02: Blocks commits when any templates/workflows-js/*.js file contains a non-literal value (string concatenation, template-literal substitution, spread operator, call expression, or bare identifier) in its `export const meta` block. The Workflow runtime requires pure literals; any deviation causes a silent runtime failure. See docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md addendum (pure-literal meta contract)."
             },
             {
@@ -995,6 +1042,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "ACS-500f-1: (1) Validates every staged AC YAML file against config/ac_store_schema.json (JSON Schema draft-07). (2) Blocks commits where a consuming AC's pattern_bindings is missing at least one slot declared by the referenced pattern AC — error names the missing binding key and the pattern AC id. (3) Blocks commits where implements_pattern was present in HEAD but is absent in the staged modification — error identifies the file and states that implements_pattern was dropped. Fail-open on unexpected errors. Scoped to docs/acceptance-criteria/ staged files."
             },
             {
@@ -1007,6 +1055,7 @@
                     "commit-msg"
                 ],
                 "pass_filenames": true,
+                "change_set_source": "handed_by_commit_path",
                 "always_run": true,
                 "_comment": "ACS-100i-8 / ACS-100i-8-i: refuses a change that adds a NEW entry to a package registry (config/agent_registry.json, config/skill_registry.json, config/paths.json, templates/scripts/commit_guardian/commit_guardian.json) unless at least one acceptance criterion the change cites carries `package_surface: true`. This is what keeps ACS-100i-6's trigger narrowing from being a switch-off: the declaration is under the author's control and can simply be omitted, but the registration cannot be. Editing or removing an existing entry needs no declaration — the obligation attaches to bringing a surface into existence, not to maintaining one. A change touching no watched registry exits 0 reporting NOTHING TO EVALUATE, never a pass. commit-msg stage, because the AC citations are parsed from the commit message; requires `pre-commit install --hook-type commit-msg` (or default_install_hook_types) to fire."
             },
@@ -1021,6 +1070,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "enabled": false,
                 "_comment": "KM-KGS-100e-2: Blocks commits when a staged ticket or doc .md file with YAML frontmatter lacks a non-empty `components` field. Surfaces derived data-driven from config/paths.json (edge_fields containing 'components'). DISABLED until a cross-surface backfill populates components across all tickets and docs — enabling now would block most commits. Registry-membership validation is deferred (vocabulary mismatch between docs/components.json underscore IDs and AC index.yaml kebab IDs). See module docstring for full rationale."
             },
@@ -1035,6 +1085,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "enabled": true,
                 "_comment": "KM-KGS-100e-3: Blocks commits when a staged agent/skill/roadmap registry entry lacks a non-empty `components` field. Glossary surface is automatically exempt (edge_fields: [] in paths.json). ENABLED 2026-07-14 after all registry entries were backfilled (agents 53/53, skills 36/36, roadmap 3/3). Value-style (components.json membership) is enforced separately by the transform-component-vocab pre-commit hook + the component-vocab CI check; this hook enforces PRESENCE on registry entries."
             },
@@ -1049,6 +1100,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-ProductTruthTrust: Runs docs/product-truth/scripts/validate_product_truth.py when any product-truth artifact (flow/mock/mockup/index/schema/eval) OR any AC YAML is staged. jsonschema is a HARD dependency (validator exits 2 if absent — never a silent no-op). Enforces schema conformance, cross-ref integrity, derived-vs-source parity, and the anti-phantom-done truth-evidence gate: a done/in_progress AC referenced by a BUILT flow (realization absent or 'built') must carry non-empty implemented_by or covered_by; mock/spec flows are exempt. Exits non-zero on any error. Wired alongside check-product-truth-generate to stop derived live-status drift and phantom-done from landing."
             },
             {
@@ -1062,6 +1114,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-ProductTruthTrust: Runs the single-writer generator in --check mode (computes all derived data, writes nothing, exits non-zero if ANY flow impl_status/impl_summary, AC product_truth, or index by_* map would change). Fires when a product-truth artifact or AC YAML is staged so an AC work_status flip that would drift the derived live status becomes a hard commit failure until generate_product_truth.py is re-run."
             },
             {
@@ -1075,6 +1128,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "TQ-200b-4: Fast, deterministic local staleness guard. When a staged file falls in an agent-eval's trigger closure, delegates to scripts/evals/eval_selector.py --check --changed-files <staged> (the SSOT selector + freshness gate) and BLOCKS the commit (exit 1) when any affected agent's eval result is missing or stale, naming the offenders and pointing at `python scripts/evals/run_agent_eval.py --agent <agent>`. Invokes NO model. The path filter is the broad union of the three roots that hold every trigger glob in agent_eval_config.json (scripts/evals/, docs/product-truth/, templates/agents/) — deliberately broad so new agents/triggers need no regex change; over-firing is harmless (the selector returns exit 0 for a staged file that matches no agent's triggers). Selector exit 2 or launch failure is fail-open (advisory) so a transient git/config glitch never wedges a local commit; the REQUIRED CI eval check is the non-bypassable hard gate (this pre-commit block is bypassable with --no-verify)."
             },
             {
@@ -1088,6 +1142,7 @@
                 ],
                 "always_run": true,
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "EPIC-WorktreeQualityGateGuard/02: Manual-stage-only canary hook. Emits PRECOMMIT_CANARY_OK to stdout and exits 0. Invoked by verify_precommit_active.py check D to confirm pre-commit hooks can fire in the worktree environment. stages: [manual] means it never runs automatically on git commit."
             },
             {
@@ -1101,6 +1156,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "script": "check_hook_parity.py",
                 "description": "Enforces parity of commit-guardian hook scripts and manifest entries across runtime, canonical template, legacy template, and deployed output dirs",
                 "_comment": "EPIC-Phase1ReadyHardening/04: Blocks commits when hook scripts or manifest entries are missing from any of the three tracked source dirs. Fail-open on I/O errors."
@@ -1115,6 +1171,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "always_run": true,
                 "script": "check_hook_trigger_reachability.py",
                 "description": "Registry-wide reachability verdict: reports and blocks on any hooks_manifest gate whose activation condition cannot match a path this repository tracks, or whose always_run gate also carries a files filter it never consults.",
@@ -1131,6 +1188,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "BO-2500b-1: For each AC YAML staged as work_status:done, requires at least one # covers:<ac_id> (Python) or // covers:<ac_id> (JS/TS) tag anywhere under the test tree. Runs with --test-root . so the scan covers the WHOLE project, not just a Python test directory — the script's built-in default (unit_tests) contains no .ts files, so JS-covered ACs would be reported as unproven (BO-2500e-5); this also makes the hook correct in consumer projects whose tests do not live under unit_tests/. node_modules/, .next/ and dist/ are excluded by the scanner. STATIC only — no pytest run at pre-commit time. CI-mode (check_done_proof.py --mode ci) is the authoritative backstop that runs verify_done_eligible on all done ACs so --no-verify and hook-config-less worktrees are still caught (BO-2500b-1-i). Bypassable via SKIP=check-done-proof or --no-verify."
             },
             {
@@ -1144,10 +1202,12 @@
                     "pre-commit"
                 ],
                 "pass_filenames": true,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "BP-1100g-4: for each staged ticket, extracts the kinds of proof its own ## Test Requirements descriptors promise (the angle value per covers id) and compares them against the kinds already claimed by a test in the tree (BP-1100g-3's collect_test_tag_records — a covers + angle tag on the same test function). A promised kind with no matching claim blocks the commit, naming the ac_id, the stated behaviour, and the missing kind by name. The promise set is the denominator: a kind never promised is never named in a refusal, and a ticket that promises nothing is never refused. Reads only two authored declarations (the Test Requirements angle values and the scanner's per-function records) — never a test's own body (BO-2900a-2). STATIC only — no pytest run at pre-commit time. Bypassable via SKIP=check-proof-promise-claim or --no-verify."
             },
             {
                 "id": "check-ticket-signoff-parity",
+                "change_set_source": "handed_by_commit_path",
                 "tier": "judgment",
                 "name": "Check Ticket Sign-off Parity",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ticket_signoff_parity.py",
@@ -1170,6 +1230,7 @@
                     "pre-commit"
                 ],
                 "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
                 "_comment": "KI-1 (BO-2200 retrospective, 2026-08-10): Blocks commits when a staged ticket has status:done but its source_ac is not yet work_status:done in the AC store. Fail-closed only on the specific mismatch; warn-only when the source_ac file is absent (epics/composites have no source_ac and are silently skipped). Scoped to staged tickets only."
             }
         ]

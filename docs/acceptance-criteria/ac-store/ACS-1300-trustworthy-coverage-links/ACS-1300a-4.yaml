@@ -1,0 +1,108 @@
+id: ACS-1300a-4
+components:
+  - ac_store
+title: "Someone who did not build the repair can preview it, run it, and read what it did"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a reader who has not run the repair before and has only the how-to guide,
+  And a working copy of the real store and the real test tree,
+  When the reader follows the guide from its first step,
+  Then they produce the preview report without having to read the tool's source,
+  And from that report alone they can say which records would gain a coverage entry,
+    which would lose one, which were examined and found already correct, and which the
+    run abstained on and why,
+  And the store is byte-for-byte unchanged after the preview step, as the guide states
+    it will be,
+  And following the guide's next step they run the repair and can confirm, from the
+    resulting report and from the files on disk, exactly which records changed,
+  And the guide states that the repair never changes a record's finished state and names
+    where that decision is made instead,
+  And the guide states what an abstention means and what the reader is expected to do
+    about one, so an abstention is actionable rather than merely visible.
+depends_on:
+  - ACS-1300a
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300a-2.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The preview-versus-apply behaviour the guide documents. The guide must describe the behaviour this AC pins, not a behaviour the writer assumed."
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300c.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The finished-state refusal and the abstention rule the guide must state. Note the standing REFERENCE for the refusal is ACS-1300c-4's deliverable, not this how-to — this guide points at it rather than restating it, so the rule has one home."
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: relates-to
+    status: exists
+    relevance: "The existing task-oriented guide for the store. This how-to belongs beside it in the same voice, and should link rather than re-explain what a coverage entry is."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "WRITTEN AGAINST THE SHIPPED INTERFACE, NOT A PLANNED ONE. Every command, flag and report field the guide names must be copied from the tool as it exists when the guide is written. A guide describing a planned interface becomes a second source of truth for that interface and will be believed over the code."
+  - "THE GUIDE POINTS AT THE REFUSAL; IT DOES NOT RESTATE IT. The authoritative home for 'restoring a coverage entry never promotes finished state' is the reference section ACS-1300c-4 delivers in `docs/reference/ac-schema.md`. This guide states the fact and links there. Three copies of a standing rule drift, and the copy a reader happens to find is the one that governs."
+  - "THE ABSTENTION SECTION MUST BE ACTIONABLE, NOT DESCRIPTIVE. It must say what the reader is expected to DO about each abstention class the tool can emit, enumerated from the tool's real output rather than from this AC. An abstention a reader cannot act on degrades to noise, and a report nobody reads is the mechanism by which the enumeration in ACS-1300b dies."
+  - "THE DELIVERABLE IS THE DOCUMENT AND NOTHING ELSE. No behavioural AC in this tree may be closed by pointing at this guide. A guide describing a preview that does not exist reads exactly like a guide describing one that does."
+  - "PLACED AND FRONT-MATTERED TO THIS REPOSITORY'S DOC CONVENTIONS, beside `docs/how-to/ac-traceability-store.md` and in the same voice, linking to it rather than re-explaining what a coverage entry is. It must be reachable from `docs/INDEX.md` after the doc-index build phase, or the guide exists and is unfindable."
+  - "NO COUNTS, NO MEASUREMENTS. Provisional figures live in the ACS-1300 L0 notes with their method and denominator. A how-to pinned to a number rots on the next commit that changes it; this repository already carries a hand-typed '244 of 607' in the artifact map as the worked example."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300a-2
+  contract: "The tool's real invocation surface and its real report format. The guide documents what shipped; a guide written against a planned interface is a second source of truth for the interface."
+test_required: false
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+- reason: framing-correction-for-the-doc-author
+  by: business-analyst
+  at: 2026-09-01
+  note: >-
+    NOTES ONLY; criteria and it_requirements UNCHANGED, so the approval above still
+    covers what it was granted against. Added the instruction that the guide must
+    state the repair unblocks nothing — restoring a link changes no record's
+    mark-done eligibility (527 of 549 rotted records were already eligible,
+    because verify_done_eligible reads the direct tag first) — and must point at
+    the separate sweep that clears the eligible-but-unmarked population. The
+    existing clause about the finished state never changing covers the MECHANISM;
+    this covers the operator's EXPECTATION, and the two fail in different ways: an
+    operator who expects movement concludes the tool is broken when nothing moves.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  SATISFIES ACS-1300a's documentation_triggers: [how-to]. One guide, for the one command
+  a person deliberately runs.
+
+  THE FIREWALL, STATED SO IT CANNOT BE USED AS A SHORTCUT: this AC's deliverable is the
+  document and nothing else. No behavioural AC in this tree may be closed by pointing at
+  the guide. A guide describing a preview that does not exist reads exactly like a guide
+  describing one that does, which is the prose-presence proxy every other criterion here
+  is written to avoid.
+
+  THE GUIDE MUST SAY WHAT THE REPAIR DOES NOT DO — added 2026-09-01, and this is the
+  single most important thing the doc author can get wrong. Restoring a coverage link does
+  NOT change any record's mark-done eligibility and never did: verify_done_eligible reads
+  the direct tag first and consults the coverage list only on the composite path, so 527 of
+  549 rotted records were already eligible before the repair existed. An operator who runs
+  this expecting work to become unblocked will conclude the tool is broken when nothing
+  moves. The guide must state plainly that the repair fixes the record of what proves what,
+  that this unblocks nothing, and that the separate population of records eligible-but-
+  unmarked is cleared by a different sweep. The existing clause about the finished state
+  never changing covers the mechanism; this covers the expectation, and the two fail
+  differently.
+
+  WHY THE CRITERION IS SHAPED AS A WALKTHROUGH RATHER THAN A CONTENTS LIST. "The guide
+  mentions the preview flag" is satisfied by a sentence; "a reader following the guide
+  produces the preview report and reads the four outcome classes off it" is satisfied
+  only by a guide that is actually usable, and it fails when the tool's real output does
+  not carry one of the four. That makes the doc AC a second, weak check on the report
+  format — deliberately, because a report nobody can read is a report nobody uses.

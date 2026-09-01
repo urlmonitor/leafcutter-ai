@@ -54,7 +54,7 @@ a one-off; a table maintained by hand beside files appended by many agents will 
 | Component | File | Open entries |
 |---|---|---|
 | `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 44 |
-| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 38 |
+| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 40 |
 | `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 30 |
 | `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 24 |
 | `ac_store` | [ac-store.md](ac-store.md) | 16 |

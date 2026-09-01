@@ -917,6 +917,49 @@ def select_batch(*, ac_root: Path, limit: int) -> list[str]:
     Returns:
         Ordered list of at most *limit* ready AC ids.  Returns ``[]`` when no
         ready ACs exist or *ac_root* does not exist.
+
+    NO PRODUCTION CALLER TODAY — READ THIS BEFORE DELETING OR BUILDING ON IT.
+    Nothing in the shipping lane invokes this function or its ``select_batch``
+    CLI subcommand.  Its only former caller was ``fast-lane-build.js``, an
+    orphaned second runner deleted under BO-2400c-1-v.  The live lane
+    (``fast-lane-ship.js``) calls ``select_connected`` instead, which is a
+    DIFFERENT operation: it resolves one AC's connected build set, whereas this
+    picks up to N ready ACs from the whole store.  ``select_connected`` is not a
+    superset and does not replace this.  The lane stopped calling it because
+    BO-2400f moved the lane from batch-mode to single-AC-mode, not because
+    anything superseded it.
+
+    It is therefore DORMANT, not dead, and deliberately retained:
+
+    * Its behaviour is covered by tests that EXECUTE it, including
+      ``TestSelectBatchCli`` in unit_tests/build_orchestration/test_fast_lane_cli.py,
+      which runs the CLI as a real subprocess.
+    * ACD-2000b-4 once named this function as "the requirement-grain selection
+      this rule constrains".  AS OF 2026-09-01 IT EXPLICITLY DOES NOT: an IT-PO
+      surface decision re-pointed that rule at the claim path
+      (``filter_already_claimed``), which the live lane really does invoke, and
+      away from this function, which it does not.  The determinism guarantee
+      below is retained as a general property of the rule wherever it lands,
+      not as a reason to implement it here.
+
+    Two consequences, and both have bitten this repository before:
+
+    * Do NOT delete it as dead code.  This is now the ONLY thing standing
+      against that, since the ACD-2000b-4 claim above has been withdrawn — so
+      read it as the whole of the case rather than half of it.  The function
+      has no caller, but it has a tested capability (see above) and no
+      replacement: ``select_connected`` resolves one AC's connected set and
+      does not select N ready ACs from the store.  Deleting it retires that
+      capability with nobody deciding to — the exact shape KI-BO-006 was
+      written about.
+    * Do NOT build ACD-2000b-4's overlap rule onto it.  THAT CHOICE IS NOW MADE
+      (2026-09-01) and it went the other way: the rule's host is the claim path
+      the live lane invokes on every run — ``fast-lane-ship.js`` calls
+      ``fast_lane.py claim``, whose handler reaches ``filter_already_claimed``,
+      which already walks the store and already decides admit-or-refuse, on
+      ``work_status`` alone.  A footprint comparison is missing there.
+      Implemented here instead, the rule would never fire, because nothing
+      calls this.
     """
     if not ac_root.exists():
         return []

@@ -23,7 +23,7 @@ agents:
   test-runner: needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 09: Make the blocking gate immune to xfail-masking

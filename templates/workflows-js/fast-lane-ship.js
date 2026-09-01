@@ -14,7 +14,7 @@
  *   3. Lean loop     — the two-agent test-writer → python-coder loop, INLINED
  *                      and scoped to the resolved id list, gated by
  *                      verify_red_baseline and verify_green_and_coverage
- *                      (the same deterministic gates as fast-lane-build.js).
+ *                      (deterministic script gates, not agent judgment).
  *   4. Commit + PR   — a commit agent marks the built ACs done and commits on
  *                      the worktree branch; a pull-request agent opens the PR
  *                      against main (gh pr create + EMU REST fallback) — the
