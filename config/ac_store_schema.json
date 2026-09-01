@@ -409,8 +409,8 @@
                             },
                             "framework": {
                                 "type": "string",
-                                "enum": ["unittest", "pytest"],
-                                "description": "Test framework. Defaults to the project convention (unittest) when omitted."
+                                "enum": ["unittest", "pytest", "playwright"],
+                                "description": "Test framework. Accepted values are the frameworks this project actually ships a runner or skill for: unittest and pytest (the project's Python test conventions) and playwright (the Playwright-driven webapp-testing skill, for headless browser/route-render checks). Defaults to the project convention (unittest) when omitted."
                             },
                             "type": {
                                 "type": "string",

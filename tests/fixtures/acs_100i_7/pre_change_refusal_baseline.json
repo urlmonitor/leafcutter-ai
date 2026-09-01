@@ -1,25 +1,20 @@
 {
   "_comment": "Whole-store refusal baseline for ACS-100i-7. Records the refusal messages that are NOT attributable to the top-level package-surface if/then rule. The guard test asserts this set is byte-identical: none added, none removed, no message changed. A shrunken set normally means validation was loosened generally instead of the trigger narrowed. REGENERATED 2026-08-25: the original 37-record baseline was measured at 9b16d013 before PR #518 narrowed the trigger. PR #493 then legitimately FIXED 9 of those 37 records by adding the required components list to nine ux-prototyping ACs, each of whose sole refusal message was \"components is a required property\". Their disappearance is a repair, not a loosening \u2014 every other refusal, including the untouched UXP records failing on test_spec shape, is unchanged. Regenerate ONLY in a commit that can point at the record edit explaining each removal; never to make a red assertion go green.",
-  "measured_at_commit": "969d7bc0",
-  "measured_on": "2026-08-25",
+  "_comment_2026_09_01": "REGENERATED 2026-09-01 for ACS-100a-3-i, which widened the test_spec framework enum from [unittest, pytest] to include playwright. Exactly TWO records leave the set: BP-1400c-1.yaml and BP-1400c-1-i.yaml, both approved and priority high, whose only recorded refusal message was their test_spec array failing validation because it declares framework: playwright for a headless route-render check. The package ships a Playwright-driven webapp-testing skill, so those records were correct and the vocabulary was too narrow; their disappearance is the repair this change exists to make, not a loosening. This regeneration is surgical rather than a re-measure: the other 26 entries are byte-identical to the 969d7bc0 baseline, so nothing unrelated could have been absorbed silently. Note for whoever widens this enum next: several UXP records still refuse for the SAME class of reason with framework: vitest, and are deliberately untouched here.",
+  "measured_at_commit": "00df3e72b",
+  "measured_on": "2026-09-01",
   "supersedes": {
-    "measured_at_commit": "9b16d013",
-    "measured_on": "2026-08-19",
-    "unrelated_refusal_count": 37
+    "measured_at_commit": "969d7bc0",
+    "measured_on": "2026-08-25",
+    "unrelated_refusal_count": 28
   },
   "store_dir": "docs/acceptance-criteria",
   "index_yaml_excluded": true,
   "store_record_count": 3256,
-  "total_refused": 28,
+  "total_refused": 26,
   "refused_on_package_surface_rule": 0,
-  "unrelated_refusal_count": 28,
+  "unrelated_refusal_count": 26,
   "unrelated_refusals": {
-    "docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/BP-1400c-1-i.yaml": [
-      "[{'name': 'test_about_route_smoke', 'target_dir': 'leafcutter-web/tests/', 'framework': 'playwright', 'type': 'e2e', 'description': 'The route-smoke harness loads /about headlessly: a non-200 or any console/render error fails the run (check reports failing); a 200 /about with no console/render error passes.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/BP-1400c-1.yaml": [
-      "[{'name': 'test_route_smoke_job_present_and_blocking', 'target_dir': 'unit_tests/build_pipeline/', 'framework': 'pytest', 'type': 'unit', 'description': 'Parse .github/workflows/ci.yml and assert a web-app route-render job exists, invokes the Playwright route-smoke harness, is path-filtered on leafcutter-web/**, and does NOT set continue-on-error (blocking).'}, {'name': 'test_route_smoke_harness_iterates_all_routes', 'target_dir': 'leafcutter-web/tests/', 'framework': 'playwright', 'type': 'e2e', 'description': \"The route-smoke harness enumerates the app's routes (from leafcutter-web/app/**, including /about) and asserts each loads with HTTP 200 and no console/render error; a route returning non-200 or emitting a console error fails the run (non-zero exit).\"}] is not valid under any of the given schemas"
-    ],
     "docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-602.yaml": [
       "[{'name': 'buildFlowGraph_omits_ac_nodes_by_default', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"buildFlowGraph(flow) with the default showAcNodes produces zero nodes of kind 'ac' and zero 'implements' edges, even when steps/branches reference ACs; only step/branch/decision nodes are present.\"}, {'name': 'flow_explorer_defaults_show_ac_nodes_off', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': 'With no persisted preference, ExplorerInner mounts with showAcNodes false so no AC nodes render initially.'}] is not valid under any of the given schemas"
     ],
