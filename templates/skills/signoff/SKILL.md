@@ -362,6 +362,114 @@ This mirrors the existing `completion_manifest:` legacy-compatibility behavior
 
 ---
 
+## §2b.2 Cross-Layer Seam Answer (test-writer only, BP-1100g-5)
+
+`test-writer`'s Rule 3 (cross-layer seam test — see
+`templates/agents/test-writer.md`) decides, for every piece of work, whether
+a layer-boundary seam exists and, if so, mandates a test proving it. Before
+BP-1100g-5 that decision had nowhere machine-checkable to land: Rule 1 (test
+drift classification) has an exact label in the work record, but Rule 3
+mandated nothing observable at all, so a violation was undetectable by
+construction. This section is the record shape that closes that gap.
+
+### Key
+
+The fixed key token is `cross_layer_seam_answer`. It is declared **once,
+here**, and used **verbatim** — identical spelling, same place in the
+manifest — in `templates/agents/test-writer.md`. Do not introduce a second
+spelling anywhere; the mechanical reader built in BP-1100g-5-i keys off this
+exact string, and a second spelling is precisely the drift this record
+exists to prevent.
+
+### Scope — per work item, never per run
+
+`cross_layer_seam_answer` lives inside the `completion_manifest:` block of a
+single sign-off comment, which is already scoped to one ticket (one piece of
+work). A run that hands off several tickets produces several sign-off
+comments, each with its own `completion_manifest:` — and each one's
+`cross_layer_seam_answer` must be freshly derived from THAT ticket's own
+work. Carrying one ticket's answer forward into a sibling ticket's manifest
+in the same run is exactly the failure this scoping exists to prevent.
+
+### Two conforming shapes
+
+**(a) Covered** — a seam exists and was tested:
+
+```yaml
+completion_manifest:
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: "<the real producer — module, function, or agent>"
+    consuming_side: "<the real consumer — module, function, or agent>"
+```
+
+Both `producing_side` and `consuming_side` are required and must name real
+things, not restate the fact of coverage. `result: covered` alone ("seam
+covered: yes") is not a conforming answer — a reader cannot act on it
+without knowing which two sides were pinned together.
+
+**(b) Not applicable** — no seam exists, with a reason:
+
+```yaml
+completion_manifest:
+  cross_layer_seam_answer:
+    result: not_applicable
+    reason: "<non-empty — why no layer boundary applies to this work>"
+    remediation: "n/a — not_applicable is a first-class outcome, not a defect."
+```
+
+This mirrors the structural shape of the existing `{result: false, reason,
+remediation}` items used elsewhere in this manifest (see the Format Rules
+above) rather than inventing a third parsing convention — a nested object,
+never a bare scalar. It deliberately spells the outcome `not_applicable`,
+not the literal `false`: a `not_applicable` answer is not a failure (the
+Bare-False Rule's automatic supervisor retry exists to correct broken
+checklist items, and treating an honest "no seam here" as broken would be
+wrong), and generic tooling that scans for `result: false` to find failed
+checklist items must not mistake this key for one. What this shape shares
+with the Bare-False Rule's shape is structural, not semantic: both are
+nested objects rather than a bare scalar, and it is that structural fact —
+not the choice of enum string — that keeps a `not_applicable` answer from
+being auto-expanded away by the Bare-False Rule (see "reasonless" below).
+
+A `not_applicable` answer with a genuine reason is not a failure and must
+never be treated as one: "no seam applies, because this work is a pure
+function with no consumer outside its own module" is a complete, honest,
+conforming answer. Do not pressure a fabricated seam claim out of an agent
+to avoid writing `not_applicable` — a fabricated "covered" costs a real
+test's worth of effort and produces a false record, which is worse than an
+honest `not_applicable`.
+
+### Three non-conforming states (the reader reports each by name)
+
+- **absent** — the sign-off's `completion_manifest:` has no
+  `cross_layer_seam_answer` key at all.
+- **reasonless** — `result: not_applicable` is present but `reason` is
+  missing or an empty string. This state MUST remain physically writable:
+  because `cross_layer_seam_answer` is always a nested object (never the
+  bare scalar `false`), a reasonless `not_applicable` does not trip the
+  Bare-False Rule and get auto-expanded away before anyone can see it — it
+  lands on disk exactly as written, so the mechanical reader in
+  BP-1100g-5-i has a genuine reasonless record to detect and report. It is
+  still non-conforming; it must simply not be structurally impossible.
+- **answered-more-than-once** — the same work item's sign-off carries more
+  than one `cross_layer_seam_answer` entry for the same ticket (e.g. one
+  written from a conditional branch and a second left over from an
+  unconditional line after the same if/else). Emit from exactly one branch
+  of the decision, never both — see the BO-1000b-1-i double-recording trap
+  referenced in `templates/agents/test-writer.md`'s Rule 3 hand-off record.
+
+### This is a declaration, not evidence
+
+`cross_layer_seam_answer` is a statement `test-writer` writes about its own
+work. It is not evidence that the seam test is any good, it feeds no
+done/pass/eligibility decision anywhere in the pipeline, and nothing in this
+skill (or elsewhere) inspects the named test to verify the declaration is
+true. Its only job is to make Rule 3 compliance auditable after the fact —
+by the mechanical reader in BP-1100g-5-i, not by this skill.
+
+---
+
 ## §2c AC Coverage Sign-Off (runs AFTER work, BEFORE phase sign-off checkbox)
 
 ### Overview
@@ -686,10 +794,62 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
 1. Ask: "Describe the learning in one to three sentences."
 2. Load `.claude/skills/route-learning/SKILL.md` and apply the decision tree to classify the learning.
 3. Load `.claude/skills/capture-learning/SKILL.md` and execute the write.
-4. Emit a `knowledge_captured` telemetry event to `agent_telemetry.jsonl`:
+4. Emit a `knowledge_captured` telemetry event to `agent_telemetry.jsonl`. **This
+   step is the single normative definition of the `knowledge_captured` emission
+   shape for the whole package.** The S9 knowledge-emission block in each v3
+   agent template (`templates/agents/product-owner.md`,
+   `templates/agents/business-analyst.md`, `templates/agents/it-po.md`)
+   references this step by path instead of restating the field list — if a
+   template's emission block ever appears to disagree with what is written
+   here, this step is correct and the template is stale and must be fixed to
+   match, never the reverse.
+
    ```json
-   {"event": "knowledge_captured", "timestamp": "<ISO>", "ticket": "<ticket_path>", "destination": "<routed_file>", "entry_kind": "<entry_kind>"}
+   {
+     "event": "knowledge_captured",
+     "timestamp": "<ISO-8601>",
+     "agent": "<agent-name>",
+     "component": "<component-id>",
+     "destination": "<routed_file_path>",
+     "entry_kind": "<entry_kind>",
+     "ticket": "<ticket_path>"
+   }
    ```
+
+   **Required of every producer:** `event`, `timestamp`, `agent`, `component`,
+   `destination`, `entry_kind`.
+
+   **Optional — `ticket`:** include it only when the emitting agent has a
+   ticket path in hand. Phase agents invoked with a `ticket_path` — this
+   skill's own call sites — include it. The v3 AC-authoring agents
+   (`product-owner`, `business-analyst`, `it-po`) run outside any ticket and
+   omit the field entirely; its absence is not an error and is not a
+   deviation from this shape.
+
+   **Consumer guard (load-bearing — read this before writing any code that
+   reads this sink):** `ticket` MUST NOT be used by any consumer — script,
+   hook, harvester, report, or dedupe/idempotency key — to key, group, count,
+   or deduplicate `knowledge_captured` records. It is present-when-available
+   metadata only. Conformance to this shape, and any idempotency digest
+   computed over it, are both defined over the **required** field set above
+   only.
+
+   **This guard is currently violated, and saying so is the point.**
+   `scripts/knowledge/harvest_learnings.py` `_event_hash` keys its digest on
+   `(ticket, timestamp, destination, entry_kind)` — and `ticket` is empty in
+   every one of the 28 records on disk, so one of four key components is a
+   constant. `INF-400b-2-i` owns removing it. Until that lands, treat this
+   paragraph as the rule the codebase is being brought into line with, not a
+   property it already has. Do not add a second consumer that keys on
+   `ticket` in the meantime.
+
+   **Scope of "normative": the record's SHAPE, not its destination.** Which
+   file these events are written to is a separate, still-unreconciled
+   question — producers append to `debugging/logs/agent_telemetry.jsonl`
+   while `harvest_learnings.py` reads `debugging/logs/knowledge_emissions.jsonl`,
+   which has never existed. `INF-400c-4` owns that. This step defines what a
+   record looks like; it does not settle where it goes, and a reader should
+   not infer agreement on the sink from agreement on the fields.
 
 This step is **mandatory** — skipping it is a protocol violation. If `route-learning` or `capture-learning` are unavailable, log a warning and proceed (do not block sign-off).
 

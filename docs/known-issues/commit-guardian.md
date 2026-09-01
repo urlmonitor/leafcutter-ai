@@ -831,9 +831,19 @@ whether it moves the other two.
 > work and not a drive-by fix — attempting it as a side effect of unrelated work is how the
 > `016`/`017` collision below was created in the first place.
 >
-> **Next free id is `KI-CG-034`.** The earlier note here said `018`; that was true on
-> 2026-08-25 and has been overtaken three times since. Do not allocate by reading this line —
-> read the file, on a fresh `origin/main`, immediately before you land.
+> **Do not allocate a sequential id at all. New entries use `KI-CG-<YYYYMMDD>-<slug>`.**
+> This line previously read `018`, then `034`, then `035`; each was true when written and
+> overtaken shortly after — `034` was consumed by the very PR that wrote the line claiming
+> it was free, and `035` by a PR that landed while another author was mid-draft against it.
+> That author's entry is now `KI-CG-20260831-hook-scripts-never-invoked`; it was written as
+> `KI-CG-035` and renamed at merge, which is the fourth recorded collision on this counter.
+>
+> The advice that replaced the number — "read the file on a fresh `origin/main` immediately
+> before you land" — does not work either, and it is worth being precise about why: the read
+> and the land are not atomic. Any gap between them is a window, and a parallel session only
+> has to land inside it. The date-and-slug form removes the window rather than narrowing it.
+> See `build-pipeline.md` → "Why not the next free number" and `KI-BO-024`. Existing
+> `KI-CG-NNN` ids stay as they are — renumbering would break inbound references.
 
 - **Severity:** high
 - **Status:** open
@@ -1159,15 +1169,48 @@ is the point of this register. Four records therefore now carry a derived `false
 arguably wrong; when the deriver learns outcome-state phrasing they should flip to `true` with
 no criteria change, and that is the regression test for the fix.
 
+**AMENDED 2026-08-31 — the landmine list is down to seven, and the narrowing in #594 can only
+have made this entry's underlying problem larger.**
+
+Two of the nine listed above are resolved:
+
+- **`BO-2900g-2`** — fixed on sight in #618, exactly as point 3 above instructed. Adding a child
+  (`BO-2900g-2-ii`) required staging the parent, and the forward ratchet then refused the commit
+  until the stale declaration was settled. **A record cannot gain a child while it holds one** —
+  a coupling nobody designed, and the mechanism by which the remaining seven are most likely to
+  surface. Set to `false` for consistency with `BO-2600b-2`, whose Then clause has the identical
+  "what a record *carries*" shape.
+- **`BP-1100g-4`** — reconciled on `main` by other work while a branch was open. Caught by a
+  store-wide allowlist-staleness test rather than by anyone noticing.
+
+Seven remain: `BO-2400g-4`, `BO-2400g-4-i`, `BO-2900g-1`, `BO-2900g-2-i`, `BO-2900g-4`,
+`BP-1100g-4-i`, `BP-1100g-5-i`. They are pinned in
+`unit_tests/ac_store/test_bo_2900g_2_ii_store.py::_KNOWN_PRE_EXISTING_DISAGREEMENTS`, with one
+test asserting no disagreement appears **outside** that set and a second failing when a pinned id
+stops disagreeing — so the set cannot silently rot in either direction, and shrinking it is
+mechanically visible. Of the seven, `BO-2400g-4-i` is the likeliest genuine false negative: it
+requires findings to appear on a pull request, which is durable, externally visible, and asserted
+in its Then.
+
+**The direction of travel is against this entry.** #594 narrowed the matcher from 139 marked
+records to 89 and #618 to 89 after stripping rationale. Narrowing removes false positives and, by
+construction, **cannot remove a false negative — it can only create more**. Fifty-one records
+flipped `true → false`; none was verified to be a genuine non-effect beyond the seven judged
+individually, because the change's own acceptance criterion only required that no *authored*
+value be contradicted. So this entry's population is very likely larger than seven today, and the
+sweep that would size it has not been re-run. Anyone taking this on should re-run the 2026-08-25
+sweep before trusting any count in this entry.
+
 ---
 
 ### KI-CG-014 — `declares_side_effect` derivation is negation-blind, so an AC asserting that nothing is written is forced to declare that something is
 
 - **Severity:** medium → **high** (see "Second and third sightings" below)
 - **Status:** open
-- **Occurrences:** 3
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
-- **Where:** `templates/scripts/commit_guardian/_ac_schema_validators.py` — `_DURABLE_EFFECT_RE` (`:567`) and `derive_declares_side_effect()` (`:581`)
+- **Occurrences:** 4 (a fourth negated instance, `GE-125d-3`, on 2026-08-31)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/_ac_schema_validators.py` — `_DURABLE_EFFECT_RE` and `derive_declares_side_effect()` (line numbers moved in #594/#618)
+- **Narrowed twice, still open:** see the 2026-08-31 measurement at the end of this entry — 50 non-negated false positives removed, **zero** negated ones
 
 **Symptom.** `derive_declares_side_effect()` searches the Gherkin `Then` clause for
 durable-effect phrases with a plain regex. It has no notion of negation, so a criterion
@@ -1273,6 +1316,53 @@ negated clause is a separate defect that the sweep could not detect, because the
 carries no authored value to disagree with. Two entries rather than one merged entry, because the
 fixes are independent: KI-CG-015 argues about who owns the field, this one about whether the
 matcher reads English correctly.
+
+**2026-08-31 — the matcher was narrowed twice and the negation defect is untouched. Re-measure
+before assuming otherwise.**
+
+PR #594 replaced the bare `\bis written\b` / `\bare written\b` alternatives with object-aware
+forms (a durable noun governing the verb, or a write naming a non-transient destination), and
+#618 stripped `Because` rationale from the searched text. Both were measured against the real
+store. Neither addressed negation, and the numbers say so precisely — same 60-character
+tail-anchored window this entry specifies, so the counts are directly comparable:
+
+| | before #594 | today |
+|---|---|---|
+| records marked | 139 | **89** |
+| of those, negated | 33 | **33** |
+| negated share | 24% | **37%** |
+
+**Fifty non-negated false positives were removed and not a single negated one.** The defect
+this entry is filed for is exactly as prevalent in absolute terms and half again as prevalent
+as a proportion of what the matcher now claims. Anyone reading "the derivation was fixed" and
+inferring this entry is closed would be wrong.
+
+Of the three records named above, checked against the shipped derivation today:
+
+- `ACS-1100d-5-i` — now derives `False`. Fixed incidentally: `status is written` no longer
+  matches, because `status` is not a durable object. Not a negation fix.
+- `ACS-1100a-2` — now derives `False`, same incidental reason (`identifier is written`).
+- `ACS-1100b-2` — **still derives `True`**. `no second traversal … is written to produce a
+  total` matches the destination-form alternative, and nothing looks at the `no`.
+- `ACS-1100a-3` — **still derives `True`**, on the identical construction. The correction
+  above still stands in full: a correct negation fix must flip it to `False`, and it is not a
+  negative control.
+
+So two of the four resolved as a side-effect of unrelated narrowing, and the two that are
+squarely negation are unchanged. The remaining population is more concentrated and therefore
+easier to fix than when this was filed: 33 of 89 rather than 33 of 139.
+
+**Four further false-positive mechanisms in the same function, found and fixed in the same
+work, none of them negation.** Recorded here because they bear on how the fixer should think
+about the matcher, not because they are this entry's subject: a write to a **stream** rather
+than to disk (`a notice is written to the error stream`); a **reported** clause whose subject
+is a document and whose write belongs to another AC (`the reference states that a notice … is
+written`); a **relative clause naming a location** (`names the file suppressions are written
+in`); and an ordinary **authoring verb** (`before any test is written`). Five false positives
+across three mechanisms surfaced in a single day's work, which is the strongest available
+argument that a keyword matcher over natural language will keep finding new ways to be wrong —
+and that the fix worth investing in is the one this entry already prescribes: make
+`validate_declares_side_effect` unable to leave an author with no acceptable value.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M8 (a check measuring a proxy and
 reporting it as a verdict) — the proxy is "does the Then clause contain a write phrase", the
@@ -1954,13 +2044,20 @@ The same population-vs-change mismatch as `KI-CG-001`.
 ### KI-CG-024 — `check_ticket_signoff_parity.py` silently skips check #6 because its default registry path does not exist in this layout
 
 - **Severity:** medium
-- **Status:** open — code is on `main` and live
+- **Status:** open — code is on `main`, but see the correction below: it is **not** live
 - **Occurrences:** 1
 - **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
 - **Where:** `templates/scripts/commit_guardian/config.py:224-226`
   (`AGENT_REGISTRY_PATH` default) consumed by
   `templates/scripts/commit_guardian/_signoff_parity_checks.py:96-103`
   (`load_agent_registry`)
+
+> **Correction, 2026-08-31.** This entry's title says the hook "silently skips check #6". It skips
+> **all six** — `check_ticket_signoff_parity.py` is named by no `entry:` line, so it never runs on
+> any commit. The registry-path defect below is real, but repairing it alone would change nothing
+> observable. `templates/scripts/precommit-autofix.json` also carries autofix routing for this
+> hook: remediation wired to a gate that cannot fire. See
+> `KI-CG-20260831-hook-scripts-never-invoked`.
 
 **Symptom.** The hook resolves the agent registry at
 `<worktree_root>/leafcutter/config/agent_registry.json`. That path is wrong for this layout
@@ -2328,15 +2425,51 @@ nothing and reports success).
 ### KI-CG-034 — `check_output_drift` examines every output file and compares none of them: the scanner and the installer key paths in two namespaces that never intersect
 
 - **Severity:** high
-- **Status:** open
+- **Status:** **resolved — and it was already resolved when this entry was filed.** See
+  "Correction" immediately below before reading anything else here.
 - **Occurrences:** 1
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26 (fixed by `ab9e91c41`, PR #593)
 - **Where:** `scripts/commit_guardian/check_output_drift.py` — the directory scan and the
   `not in output_mappings` branch; `scripts/build_helpers.py::write_build_manifest` supplies
   the mapping it is compared against
 
-**Symptom.** The Direction-B drift guard passes on every working copy because it never
-performs a comparison. Run against a freshly built worktree at `18c8e10a`:
+**Correction, 2026-08-26.** This entry was filed against a worktree pinned at `18c8e10a`. PR
+#593 (`ab9e91c41`, "gates that could not check stop reporting passes") had already rewritten
+the scanner by then — and `ab9e91c41` is an **ancestor** of the commit that added this entry.
+So the defect was fixed on `main` before the entry describing it reached `main`. Re-run
+against `d0fa881c`:
+
+```
+$ python scripts/commit_guardian/check_output_drift.py ; echo "exit: $?"
+exit: 0
+check-output-drift: RESULT verified=466 uncomparable=5 exempt=5 gaps=0 drifted=0 missing=0 unreadable=0
+```
+
+466 files hash-compared against the manifest, zero skipped into the fail-open branch, and the
+five uncomparables are declared exemptions that name their ground (`CLAUDE.md`, the glossary
+seeds, `roadmap.json`, `vision.md` — write-if-absent scaffolds whose content is human-owned
+from creation). `_derive_scan_dirs()` now derives the scan set from the manifest's own
+`output_mappings` keys, which is precisely the fix direction recorded below.
+
+**How this happened, since it is the more useful half.** The evidence was gathered in a
+long-lived worktree and never re-checked against current `main` before landing. Everything
+downstream inherited that: the severity argument, the `ACD-2100d-2` framing, the commit
+message. A stale baseline does not announce itself — the run really did print 169 skips and
+zero comparisons, so every check of the *evidence* passed. Only a check of the *baseline*
+would have caught it. Pin the commit you measured, and re-measure on `origin/main`
+immediately before you land.
+
+**The reverse error is the one worth guarding against.** The `ACD-2100d-2` coder read this
+entry, found production already correct, and refused to write a no-op edit to manufacture a
+diff. That was right. An entry like this one — confident, evidenced, wrong — is exactly what
+pressures an agent into "fixing" working code.
+
+The original report follows unchanged, because the mechanism it describes was real at
+`18c8e10a` and is worth keeping as a pattern.
+
+**Symptom (as of `18c8e10a`; no longer reproducible).** The Direction-B drift guard passes on
+every working copy because it never performs a comparison. Run against a freshly built
+worktree at `18c8e10a`:
 
 ```
 $ python scripts/commit_guardian/check_output_drift.py ; echo "exit: $?"
@@ -2366,20 +2499,26 @@ the missing coverage is **shaped like success**:
   **never** worked — there is no regression to point at, which is why nothing noticed.
 - It is the guard that `ACD-2100d-2` is written to strengthen. An acceptance criterion built
   on the assumption that the check works, when it has never run a comparison, would be
-  satisfied by an implementation that leaves it inert.
+  satisfied by an implementation that leaves it inert. *(Superseded: `ab9e91c41` landed the
+  comparison, so `ACD-2100d-2` found its premise already satisfied.)*
 - The registration compounds it: the hook's `files` trigger in
   `scripts/commit_guardian/commit_guardian.json` carries the same stale path prefixes, so a
   deployed file under a differently-configured output root does not match and the hook does
   not fire at all. Repairing the script alone leaves a gate that computes the right answer
   and is never invoked.
 
-**Fix direction.** Derive both the set of files to check and the key each is looked up under
-from the installer's mapping itself, rather than from a hardcoded directory list, so a newly
-deployed directory is covered the day it appears. Make the unmapped case report rather than
-skip — a deployed file with no mapping entry is either a mapping defect or an untracked
-output, and both are findings. Fix the hook's `files` trigger in the same change. Cover it
-with a test that asserts a run examining files while checking none of them **fails**; that is
-today's behaviour, and a test written without that assertion passes against the defect.
+**Fix direction — implemented by `ab9e91c41` before this entry was written.** Derive both the
+set of files to check and the key each is looked up under from the installer's mapping itself,
+rather than from a hardcoded directory list, so a newly deployed directory is covered the day
+it appears. Make the unmapped case report rather than skip — a deployed file with no mapping
+entry is either a mapping defect or an untracked output, and both are findings. Cover it with
+a test that asserts a run examining files while checking none of them **fails**; a test
+written without that assertion passes against the defect.
+
+`ab9e91c41` did all of that: `_derive_scan_dirs()` reads the manifest keys, the unmapped case
+reports `GAP`/`EXEMPT` instead of skipping, and the `verified == 0` floor treats an empty
+`output_mappings` as INDETERMINATE rather than clean. Recorded here as the shape of the fix,
+not as outstanding work.
 
 **Caution for whoever fixes this.** `_compute_output_mappings`'s docstring says it enumerates
 four template directories by hand and therefore cannot see the route file. **That docstring is
@@ -2389,9 +2528,976 @@ correct; the defect is entirely on the scan side. An agent working from the docs
 the `ACD-2100d-2` enrichment pass reached the wrong conclusion and caught it only by running
 the check. Run it; do not read it.
 
-**Related.** `ACD-2100d-2` (the acceptance criterion that will repair this as a side-effect of
-being implemented). `KI-CG-019`, `KI-CG-012` (the sibling exit-0-having-checked-nothing
-routes). `KI-BP-016` (the same output-root confusion in the build's doc-index phase).
+**Related.** `ACD-2100d-2` (written to repair this; found it already repaired). `KI-CG-019`,
+`KI-CG-012` (the sibling exit-0-having-checked-nothing routes — those are still open, and
+unlike this one they have regressed from working states). `KI-BP-016` (the same output-root
+confusion in the build's doc-index phase).
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
 nothing and reports success).
+
+---
+
+### KI-CG-20260826-package-surface-refuses-merge-commits — merging `origin/main` into a branch is refused as if the branch had added every registry entry landed upstream since it forked
+
+> **First entry in this file using the date-and-slug id form.** See `build-pipeline.md` →
+> "Why not the next free number", `KI-BO-024`, and
+> `knowledge-management.md` → `KI-KM-20260826-id-convention-diverged-across-registers`.
+> The sequential `KI-CG-NNN` entries above keep their ids.
+
+- **Severity:** high
+- **Status:** **being fixed 2026-09-01** — AC: `ACS-100i-8-ii` ("An entry a merge carries from
+  a parent is not an entry the merge registers"), an L3 technical constraint on ACS-100i-8.
+  The fix scopes the added-entry computation to what the commit introduces relative to its own
+  parents: an entry counts as added only when absent from EVERY parent. Single-parent
+  behaviour is unchanged. The negative control is preserved — an entry present in no parent
+  and cited by no declaring AC is still refused, including mid-merge alongside a legitimately
+  carried one, so this is not a merge exemption.
+  **Not addressed by that fix:** the `--diff-filter=AM` rename blindness in
+  `KI-CG-20260826-1612` below, which is independent and still open.
+- **Occurrences:** 4 observed — 2026-08-26 PRs #601 and #577; 2026-09-01 PR #661 (bypassed
+  with an authorised `SKIP`, and misfiled at the time as
+  `KI-BP-20260901-0812` in `build-pipeline.md` before this entry was found — see the
+  correction there); reproducible on demand
+- **First seen:** 2026-08-26 · **Last seen:** 2026-09-01
+- **Where:** `templates/scripts/commit_guardian/check_package_surface_declaration.py`
+  → `_new_entries()` (~:139-158)
+
+**Symptom.** A merge commit that changes no registry at all is refused:
+
+```text
+[check-package-surface-declaration] REFUSED: this change adds a package-registry entry,
+but none of the acceptance criteria it cites declares a package surface.
+  templates/scripts/commit_guardian/commit_guardian.json: new entry
+  '__drift_gate_exemption_registry_doc', 'check-hook-trigger-reachability',
+  'check-presence-only-assertions', 'presence_only_assertion_guard', …
+```
+
+None of those entries came from the branch. `git diff origin/main -- <that file>` was **empty**
+on both occasions — the registry in the index was byte-identical to `origin/main`.
+
+**Mechanism — confirmed by reading the code, not inferred from the message.** `_new_entries()`
+computes, per watched registry:
+
+```python
+staged = registry_entry_keys(parse_registry_document(_blob(repo, f":{rel_path}")), containers)
+head   = registry_entry_keys(parse_registry_document(_blob(repo, f"HEAD:{rel_path}")), containers)
+return sorted(staged - head)
+```
+
+During a merge, `HEAD` is still the **pre-merge tip of your own branch** — the merge commit does
+not exist yet — while the index holds the **merged** content. So `staged - head` is not "what
+this change adds"; it is "everything upstream added since this branch forked." The second parent
+is never consulted: `MERGE_HEAD` appears **zero** times in the file.
+
+**Reproduction (deterministic).** Using the hook's own `WATCHED_REGISTRIES`,
+`parse_registry_document` and `registry_entry_keys`, with `OLD` = the branch base and
+`NEW` = `origin/main`:
+
+```text
+config/agent_registry.json                          60 -> 60 keys   0 reported new
+config/skill_registry.json                          42 -> 42 keys   0 reported new
+config/paths.json                                   12 -> 12 keys   0 reported new
+templates/scripts/commit_guardian/commit_guardian.json
+                                                    85 -> 94 keys   9 reported new
+```
+
+Those nine include the exact seven the hook named when it refused the two real merges. The set
+is not fixed — **it grows with every registry entry landed upstream**, so the longer a branch
+lives the more entries it is accused of adding.
+
+**Why it is easy to dismiss and therefore high, not medium.** Three of the four watched
+registries reported zero, so the refusal only fires when upstream happened to touch
+`commit_guardian.json`. That makes it intermittent and reads like a real finding on first
+encounter. And the remedy the hook prints — *"Set `package_surface: true` on the criterion that
+registers this surface"* — is actively wrong here: the branch registers no surface, so following
+the advice means annotating **someone else's** already-merged AC with a claim about work you did
+not do. The only paths through are `SKIP=check-package-surface-declaration` or `--no-verify`,
+both of which disable the gate wholesale. Both merge commits in PRs #601 and #577 were landed
+with `SKIP=`; the hook was verified beforehand to be firing on content identical to
+`origin/main`, but that verification is a manual step nothing enforces, and the habit it trains
+is the one this register exists to discourage.
+
+**Fix direction.**
+
+1. **Consult both parents when a merge is in progress.** When `.git/MERGE_HEAD` exists, a key is
+   new only if it is absent from **both** `HEAD:<path>` and `MERGE_HEAD:<path>`. That is the
+   whole fix, and it preserves the real obligation: an entry genuinely introduced by the branch
+   is absent from both parents and is still caught. Octopus merges have several `MERGE_HEAD`
+   lines — read them all rather than the first.
+2. **Prefer the merge base over the first parent** if a general form is wanted:
+   `staged - keys(merge_base)` restricted to keys not present in any parent. Equivalent for the
+   two-parent case, and it also covers rebase and cherry-pick states.
+3. **Do not fix this by exempting merge commits entirely.** A merge is a legitimate place to
+   introduce a registry entry — conflict resolution can add one — and skipping the check there
+   would open exactly the hole the hook exists to close.
+
+**Related.** `KI-CG-20260826-1612` — **same hook, different and independent defect**, filed the
+same day by another session. That entry reports `check_package_surface_declaration` among the
+hooks whose `--diff-filter=AM` makes a staged *rename* invisible; this entry reports its
+baseline being wrong on a merge. They do not overlap and neither fix addresses the other:
+`--diff-filter` decides *which paths* the hook sees, `HEAD` vs `MERGE_HEAD` decides *what it
+compares them against*. Both are worth fixing in one pass, since both live in the same twenty
+lines of git plumbing. `KI-CG-012`, `KI-CG-019` (sibling checks that reach a verdict from an
+incomplete read of git state). `KI-BP-20260826-1331` (the same class of wrong-baseline
+comparison, there against the deployed tree rather than against `HEAD`).
+
+**Pattern:** a check that treats `HEAD` as "the state before this change" — true for an ordinary
+commit, false for every merge.
+
+---
+
+### KI-CG-20260826-1612 — Every AC guardian filters the index on `--diff-filter=AM`, so a *renamed* AC record is invisible to all six — and renaming is exactly what a tree split requires
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/scripts/commit_guardian/check_ac_parent_covered_by.py:150`,
+  `check_ac_limits.py:354`, `check_ac_schema.py`, `check_ac_governance.py`,
+  `check_ac_circular_deps.py`, `check_ac_pattern_refs.py` — all six read
+  `git diff --cached --name-only --diff-filter=AM`. Nine further guardian hooks
+  (`transform_*`, `check_package_surface_declaration`, `check_surface_components_e2/e3`)
+  use the same filter and are likely affected the same way.
+
+**The mechanism.** `--diff-filter=AM` selects **A**dded and **M**odified paths. A rename is
+status **R**, so a staged rename is silently absent from every one of these hooks' file lists.
+The record is fully staged — `git status` shows it, the commit will contain it — and the gate
+that exists to validate it never receives its path.
+
+**Why this is worse than it sounds.** The `ac-tree-split` skill *mandates* renaming. Pattern C
+step 6a: "Rename the file to reflect the new parent prefix … the old filename must no longer
+exist," because `check_ac_limits.py` attributes a child to its parent by deriving the parent
+from the child's **ID string** (GE-106), so a moved child that kept its prefix still counts
+against the old parent. The skill is right that the rename is unavoidable. The consequence is
+that **the single operation most likely to break parent/child back-links produces a commit in
+which the back-link gate cannot see any of the moved records.**
+
+**Evidence — controlled A/B, same store state, same hook, one variable.** Splitting `BP-100k`
+into `BP-100k` + `BP-100n` moved three L2s (`BP-100k-6/-7/-8` → `BP-100n-1/-2/-3`).
+`BP-100n-1` was then deliberately removed from `BP-100n`'s `covered_by` — a real violation of
+exactly what this hook enforces:
+
+| how the hook was invoked | result |
+|---|---|
+| via the git index, children staged as `R` | **exit 0**, no output |
+| via `HOOK_TEST_FILES`, same broken store | **exit 1**, `BLOCKED — child AC 'BP-100n-1' is staged but parent AC 'BP-100n' does not include 'BP-100n-1' in its covered_by field` |
+
+The hook is not lenient about renames; it is blind to them. Confirmed the filter is the cause:
+`git diff --cached --name-only --diff-filter=AM` listed 4 of the 7 staged AC records, and
+`--diff-filter=R` listed the 3 missing ones.
+
+**Why the split that found it is nonetheless verified.** Rename detection was disabled locally
+(`git config diff.renames false`), which makes git report the moves as Add + Delete so the `AM`
+filter includes them; all six gates were then re-run and passed with the moved children genuinely
+inspected. That is the workaround, and it is also the shape of the fix.
+
+**Blast radius beyond tree splits.** Any AC record that is renamed — a corrected ID, a record
+moved between feature folders, a Pattern A/C split — passes all six required AC gates unexamined.
+`check_ac_limits` partially escapes only by accident: it keys on the *parent* being staged, and in
+a split the parents are `M`/`A`. Change a child's ID without touching either parent and it is blind
+too.
+
+**Suggested fix.** Add `R` to the filter (`--diff-filter=AMR`) in the shared staged-path helpers.
+For a rename, git's `--name-only` reports the destination path, which is the one that should be
+validated. Worth doing in one pass across the family rather than per hook, since all fifteen
+copies of this line drifted from a common ancestor.
+
+**Relationship to `KI-CG-001`.** Adjacent but distinct, and both should stay. `KI-CG-001` is
+"the file was never staged, so the hook never saw it". This is "the file **was** staged and the
+hook still never saw it". The first is fixed by staging discipline — the standing
+"stage the parent alongside the child" rule in `CLAUDE.md`. That rule does **not** help here:
+you can stage every file involved, correctly, and the gate still reports a clean pass.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
+nothing and reports success).
+
+---
+
+### KI-CG-20260831-0713 — `check-hook-trigger-reachability` blocks EVERY commit in a consumer project that tracks no Python
+
+- **Severity:** blocker
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/commit_guardian.json:1082-1093` (the gate's
+  own manifest entry), `templates/scripts/commit_guardian/check_hook_trigger_reachability.py`,
+  and `hook_trigger_reachability_exemption_registry` in the same config
+
+**The defect.** The gate shipped by `BP-100k-4` is `always_run: true`, `pass_filenames: false`,
+and exits non-zero when any registered hook's `files` pattern matches no tracked path. It is
+rendered into every consumer's `.pre-commit-config.yaml` — `_render_hook_yaml` in
+`scripts/build_precommit.py` iterates the whole `hooks_manifest` with no tier filtering and no
+opt-out. Two registered hooks trigger on `files: '\.py$'`: `check-placeholder-defaults` and
+`check-exception-handling`. **A consumer project containing no Python therefore cannot make a
+commit at all.**
+
+**Evidence — reproduced independently, twice, against the real registry.**
+Synthetic consumer repos, gate executed as a process with cwd inside the probe:
+
+| probe | result |
+|---|---|
+| Fresh TypeScript consumer (`src/index.ts`, `README.md`, `.gitignore`) | `exit 1` · `RESULT total=52 unreachable=27 exempt=9` |
+| **Fully-onboarded** consumer — adds `docs/*.md`, `docs/components.json`, `docs/roadmap.json`, `docs/acceptance-criteria/*.yaml`, `tickets/*.md`, `docs/product-truth/*.json` | **still `exit 1`** · `RESULT total=52 unreachable=2 exempt=9` |
+
+The onboarded residue is exactly the two language-shaped triggers:
+
+```
+UNREACHABLE: check-placeholder-defaults reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
+UNREACHABLE: check-exception-handling   reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
+```
+
+So this is not a not-yet-onboarded edge case. There is no amount of correct onboarding that
+clears it short of adding a `.py` file to the consumer's own tracked tree.
+
+**Why the blast-radius sweep missed it.** `BP-100k-4`'s consumer-layout check was done — nine
+grounded exemptions exist and they are good ones — but every exemption reasons about a
+**path-shaped** pattern ("this path only exists inside the vendored package / the gitignored
+deploy mirror"). No one asked the different question a **language-shaped** pattern raises:
+*what if the consumer simply is not a Python project?* The package is self-hosted in Python, so
+`\.py$` always matches here, and the gate is green in the only repo it was exercised in.
+
+Two further gates look like the same omission and have no exemption:
+`check-surface-components-e3` (targets `config/agent_registry.json` — the **same file**
+`check-agent-spawn-consistency` was exempted for) and `check-eval-staleness`.
+
+**Suggested fix (not applied).** Distinguish "this trigger is dead" from "this repository has
+none of that kind of file yet". A pattern that names a language or file family should be
+unreachable only when the repository *could* have such files. Options: extend the exemption
+vocabulary with a language-conditional ground; skip language-shaped triggers when the
+repository tracks zero files of that type; or make the gate advisory in consumer installs and
+blocking only in the package's own checkout. Whichever is chosen, add a consumer-layout probe
+that tracks **no** `.py` to the test suite — the existing consumer fixture has Python in it,
+which is why this passed.
+
+**Found by** an adversarial review of the shipped `ab9e91c41`, then independently reproduced
+before filing.
+
+**Pattern:** the inverse of this register's usual M5 — not a gate that passes without checking,
+but a gate that **fails without a defect**. Same root cause though: the gate cannot tell
+"nothing to check" from "something is wrong".
+
+---
+
+### KI-CG-035 — `check-proof-promise-claim` is a done-time gate that fires at creation time, so no generated epic scaffold can be committed
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1 epic (27 tickets); structurally affects every generated epic
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/check_proof_promise_claim.py` — `main()`; rule is BP-1100g-4
+
+**Symptom.** The hook reads each staged **ticket** file, extracts the proof kinds its AC
+promises via `test_spec`, and refuses the commit unless a test already claims each one with a
+matching `# covers:` / `# angle:` tag. It has no notion of *when* in a ticket's life it is
+being asked.
+
+A freshly generated epic cannot satisfy it, by construction. The tickets were written seconds
+earlier by `goal_to_epic`; their tests are written **later**, during each ticket's own drive,
+by `test-writer`, immediately before its coder runs — which is the TDD order this package
+mandates everywhere else. So the gate demands, as a precondition of *creating* a ticket, the
+very artefact the ticket exists to produce.
+
+The effect is that **every generated epic scaffold is unlandable** until the hook is skipped.
+
+**Evidence.** 2026-08-31, committing `EPIC-SuppressionNarrowsNeverDisables` (27 tickets, all
+ACs `work_status: todo`, no test claiming any of them and none asserted to). The hook produced
+one refusal per promised proof — 13 in the first screenful alone, across `GE-123d-3`,
+`GE-123b-3` and `GE-123d-4-ii` — each instructing the committer to *"write a test tagged
+'# covers: …'"* for work that has not been started. Committed with
+`SKIP=check-proof-promise-claim`, recorded in the commit message.
+
+This is not an argument against the gate. Its purpose — a promised proof that never arrives is
+phantom-done — is exactly right, and it should keep full force at the commit that marks an AC
+`done`. The defect is the trigger, not the rule.
+
+**Detection.** Try to commit any freshly generated epic whose ACs carry a `test_spec`.
+
+**Workaround.** `SKIP=check-proof-promise-claim` on the scaffold commit only, with the reason
+recorded. Safe **only** while every AC in the commit is `work_status: todo` and nothing claims
+coverage — state that explicitly, because a blanket habit of skipping this hook would restore
+precisely the phantom-done hole it closes.
+
+**Fix direction.** Key the check on lifecycle rather than on existence. A promise is due when
+the AC is being marked `done` (or when the ticket has entered a drive), not when the ticket
+file first appears. `work_status` is already on the record and already read by neighbouring
+hooks.
+
+**Related.** `KI-ACS-018` (the generator whose output this gate then refuses). `KI-SUP-1` (the
+opposite failure: a driver that commits *past* its own recorded blockers).
+
+---
+
+### KI-CG-036 — Criteria wrap onto lines beginning with a lowercase Gherkin keyword, making any line-anchored clause matcher ambiguous
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1 confirmed near-miss (`BP-1500d-3`); the wrapping shape is store-wide
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** AC `criteria` block scalars store-wide; consumed by any line-anchored matcher, currently `_BECAUSE_CLAUSE_RE` in `templates/scripts/commit_guardian/_ac_schema_validators.py`
+
+**Symptom.** Gherkin keywords in this store are capitalised at line start — `Given`, `When`,
+`Then`, `Because`. But criteria are long prose wrapped into block scalars, and the wrapping is
+blind to that convention: a sentence containing the ordinary English word *"because"*
+mid-clause can have it land as the **first word of a continuation line**. To a matcher anchored
+with `^`, that line is indistinguishable from the start of a real `Because` clause.
+
+**Evidence — a near-miss, not a theory.** Adding `_BECAUSE_CLAUSE_RE` to strip rationale from
+the durable-effect derivation, the first version was case-insensitive. Measured against the
+real store it flipped **two** records, not the one it was written for. The second was
+`BP-1500d-3`, whose text wraps as:
+
+```
+    and the build's own report is not enough to satisfy this,
+because the build's own report is the last place this failure currently shows up,
+    And the identical build … leaves the record file written to disk in that project,
+```
+
+The stripper matched that line-initial lowercase `because` and consumed everything up to the
+next capitalised keyword — swallowing the `And` clause containing *"leaves the record file
+written to disk"*, a **genuine** durable effect. The record would have silently flipped to
+`declares_side_effect: false`: a true declaration discarded in order to suppress a false one,
+the same error the fix existed to correct, in the other direction.
+
+Caught only because the blast radius was measured record by record before the change landed.
+Reasoning about the pattern would not have found it. Fixed by making the pattern
+case-sensitive, with a regression test using `BP-1500d-3`'s own phrasing.
+
+**Detection.** For any new line-anchored matcher over `criteria`, run it across the whole store
+and diff the result set against the previous one; a matcher that changes more records than the
+case it was written for is reading something it did not intend. Directly:
+`grep -rn "^ *because\b" docs/acceptance-criteria/`.
+
+**Workaround.** Anchor case-sensitively. Gherkin keywords are capitalised here by convention,
+so case sensitivity is not a hack — it is that convention being enforced.
+
+**Fix direction.** Two independent halves, both worth doing.
+
+*The parser half:* treat the capitalisation as load-bearing and say so where it matters. Done
+for `_BECAUSE_CLAUSE_RE`; any future clause matcher must follow, and the reason belongs in a
+comment rather than being rediscovered.
+
+*The store half — the "should not happen" part:* the wrapping should not be able to put a
+lowercase keyword-lookalike at column 0 at all. Whatever re-emits these block scalars should
+either avoid breaking a line immediately before `because`, `given`, `when` or `then`, or indent
+continuation lines so none ever starts at the same column as a clause keyword. The second is
+stronger: it makes the ambiguity unrepresentable rather than merely unlikely.
+
+**Related.** `KI-CG-014` and `KI-CG-015` (the derivation this was found while repairing).
+`KI-ACS-017` (the other defect this week caused by rewriting YAML as text rather than as a
+document).
+
+---
+
+### KI-CG-20260831-hook-scripts-never-invoked — 24 hook scripts are named by no `entry:` line, and the guard that exists to find unreachable hooks iterates only the registered ones
+
+> Authored first as `KI-CG-035` — the next free sequential number — and renamed on merge
+> after hitting the very problem the date-and-slug convention exists to prevent. Picking
+> "the next free number" requires reading the file and appending before anyone else does;
+> this entry collided with two concurrent additions in one afternoon. See
+> `build-pipeline.md` → "Why not the next free number" and `KI-BO-024`.
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `.pre-commit-config.yaml` (built from `templates/pre-commit-config.yaml`) — the
+  set of `entry:` lines; `templates/scripts/commit_guardian/check_*.py` — the set of scripts;
+  `templates/scripts/commit_guardian/check_hook_trigger_reachability.py` and its
+  `hook_trigger_reachability_exemption_registry`; `templates/scripts/commit_guardian/README.md`
+  — documents `check-ticket-signoff-parity` as a live hook id
+
+**Symptom.** `check_ticket_signoff_parity.py` exists, is deployed, is documented in the
+commit-guardian README as hook id `check-ticket-signoff-parity` with *"current config uses
+`--enforce`"*, and **never runs**. It is not registered in `.pre-commit-config.yaml`, and it
+is not exempted. It is simply absent from the only surface that would invoke it.
+
+It is not alone:
+
+```
+registered hook ids in .pre-commit-config.yaml     54
+check_*.py in templates/scripts/commit_guardian/   66
+scripts named by NO entry: line                    24
+```
+
+`grep -c signoff .pre-commit-config.yaml` → `0`.
+
+**Method, and the control that makes it trustworthy.** Comparing script *names* to hook *ids*
+over-reports: `check_ac_limits.py` is registered but runs under the id
+`check-ac-tree-limits`, so a kebab-case name match calls it unregistered when it is not. The
+count above is therefore taken from `entry:` lines — the path pre-commit actually executes —
+not from ids. The control: `check_done_proof.py` and `check_ac_limits.py` both appear on
+`entry:` lines and were observed running in a live commit; `check_ticket_signoff_parity.py`,
+`check_ticket_test_requirements.py` and `check_test_ac_tags.py` appear on none and were
+observed not running.
+
+**Not an alternative-dispatcher artefact.** `run_hook.py` takes the target script as an
+argument and dispatches nothing on its own — its only mention of `check_docstrings` is inside
+a docstring. Nothing in `.github/` invokes the two probed scripts either. So "no `entry:`
+line" means "never runs", not "runs by another route".
+
+**Cause — why the guard cannot see this.** `check_hook_parity` compares the four *directory*
+copies of the hook tree (runtime, canonical template, legacy template, deployed output); it
+answers "is this file present everywhere it should be", not "is this file ever invoked".
+`check_hook_trigger_reachability` does ask a reachability question, but it iterates the
+**registered** hooks and asks whether each one's triggers can fire. An unregistered script is
+not in the set it walks. So the one guard built to find hooks that cannot fire is structurally
+blind to the hook that was never wired up at all — the gap is in the enumeration, not the
+predicate. Consistently, `check-ticket-signoff-parity` is *not* in the nine-entry
+`hook_trigger_reachability_exemption_registry`: nobody exempted it, because nothing looked.
+
+**Why high.** Three compounding reasons.
+
+1. **A documented hook that does not run is worse than an absent one.** The README states it
+   is live and configured with `--enforce`. Anyone reasoning about sign-off integrity —
+   human or agent — will conclude the parity check is covered.
+2. **It is load-bearing for scheduled work.** `BP-1100g-5-i` pins its entire mechanical
+   reader onto `_signoff_parity_checks.py` "reached via `check_ticket_signoff_parity.py`",
+   and its `doc_links` call that "the registered hook entry point". That is false today.
+   Building it as specified would produce a reader reachable from nothing — the exact failure
+   its own `it_requirements` warn about: *"A reader that is not reachable from a registered
+   hook is inert."* Four `TQ-500` acceptance criteria now depend on the same host.
+3. **The 24 are unaudited.** Only three were probed individually. The other 21 may include
+   scripts that are deliberately library-only, superseded, or CI-invoked — but each is
+   currently indistinguishable from a guard everyone believes is running. Until triaged, the
+   commit-guardian surface's real coverage is unknown, and it is smaller than 66.
+
+**Remediation.** Register `check-ticket-signoff-parity` (restoring the documented id rather
+than minting a new one — `commit_guardian.json` is a package-surface registry, so a *new* id
+trips `check-package-surface-declaration` and requires the structured five-field spec). Then
+triage the remaining 23: register, delete, or add to the exemption registry with a stated
+ground. Finally, close the enumeration gap — the reachability guard should walk the scripts on
+disk and report any that no `entry:` names, rather than walking the registry and trusting it
+to be complete.
+
+**How it was found.** An `it-po` agent enriching the `TQ-500` tree checked whether the host
+its ACs pin was actually registered, instead of accepting the README's claim that it was. The
+brief it was given asserted the hook was registered; it was the brief that was wrong.
+
+**Related.** `KI-CG-034`, `KI-CG-019`, `KI-CG-012` (sibling exit-0-having-checked-nothing
+routes). `BP-1100g-5-i` and `TQ-500b-1` / `TQ-500c-2` / `TQ-500c-3` / `TQ-500e-2` (the
+scheduled work that depends on this host).
+
+**Pattern:** a completeness guard whose input is the registry it is meant to be checking —
+so anything missing from the registry is invisible to the check for missing things.
+
+> **Second observation, 2026-08-31 — independent, and it executes three of the 24.** Found again
+> while auditing the hook fleet during the GE-120 drive, from the other registry surface: the
+> `hooks_manifest` in `templates/scripts/commit_guardian/commit_guardian.json` (57 entries, 5
+> `enabled: false`, 52 deployed ids) names 20 of the `check_*.py` on disk not at all. The count
+> differs from the 24 above because the surfaces differ — `.pre-commit-config.yaml` `entry:`
+> lines there, `hooks_manifest` here — and both are entry-path comparisons, not name matches.
+> Treat 24 as the figure; this is corroboration, not a competing measurement.
+>
+> Three of the orphans were run directly, which the entry above did not do:
+>
+> - `check_ac_coverage.py` — **exit 0** after printing **178** `WARNING: AC <id> has no test
+>   coverage` lines. It reads the whole AC store to produce findings nobody receives.
+> - `check_doc_coverage.py` — **exit 1, unhandled traceback.** It is broken, and because nothing
+>   invokes it, nothing has noticed.
+> - `check_ticket_test_requirements.py` — **hung past a 45-second timeout** with two files staged.
+>
+> **The config-block trap, which the remediation above should cover.** Ten of the orphans carry
+> live-looking blocks in `commit_guardian.json` — `file_size`, `complexity`, `sql_complexity`,
+> `docstrings`, `documentation`, `root_files`, `folder_density`, `debug_scripts`, `doc_coverage`,
+> `doc_links` — with thresholds and `enabled` flags. To anyone tuning a threshold there they read
+> as active gates; changing one has no effect and produces no signal saying so. When triaging the
+> 24, delete the config block of anything retired in the same change.
+>
+> **And a fifth registration leg.** `templates/scripts/precommit-autofix.json` carries autofix
+> routing for `check_ticket_signoff_parity` — remediation wired to a gate that cannot fire. That
+> is one beyond `KI-CG-020`'s fourth leg. `KI-CG-024`, which describes this same hook as live and
+> skipping only check #6, is corrected in place above.
+
+---
+
+### KI-CG-20260831-hook-parity-legs-alias-and-fail-open — `check_hook_parity`'s two parity legs alias to one directory in a worktree, it compares another branch's build against your templates, and it fail-opens when its roots do not resolve
+
+> Authored as `KI-CG-035` and renamed here: `KI-CG-20260831-hook-scripts-never-invoked` above was
+> *also* authored as `KI-CG-035` on another branch the same afternoon. Three concurrent additions,
+> one number — exactly the collision `KI-BO-024` describes. Inbound references in commits
+> `3846de046` and `1d4ab5e28` use the old id.
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/check_hook_parity.py` — `main()`'s
+  `project_root = Path.cwd()` and the `runtime_dir` / `deployed_dir` assignments that follow;
+  the `hook_parity` block of `templates/scripts/commit_guardian/commit_guardian.json`
+
+**Three defects, one root.** The hook resolves four directories from `Path.cwd()` and runs two
+parity legs: **A** runtime-vs-canonical, **B** canonical-vs-deployed. Its config names them
+distinctly:
+
+```
+"runtime_dir":            "scripts/commit_guardian",
+"canonical_template_dir": "templates/scripts/commit_guardian",
+"deployed_output_dir":    ".leafcutter/scripts/commit_guardian",
+```
+
+**A — the two legs are the same comparison.** In any worktree `build.py` has provisioned,
+`scripts/commit_guardian` is a **symlink** to `../.leafcutter/scripts/commit_guardian`:
+
+```
+$ readlink -f scripts/commit_guardian .leafcutter/scripts/commit_guardian
+.../.leafcutter/scripts/commit_guardian
+.../.leafcutter/scripts/commit_guardian
+```
+
+`runtime_dir` and `deployed_output_dir` are the *same directory*. Leg A re-runs leg B under
+another name, and the question leg A exists to ask — *is the live runtime copy in sync with
+canonical?* — is never asked. A passing run prints **nothing**, so there is no per-leg accounting
+that would reveal it.
+
+**B — in the recommended layout it fails on files that are not yours.** `CLAUDE.md`'s pre-drive
+checklist says to point a worktree's `.leafcutter` at the **main tree's** install. Then
+`deployed_dir` — and via A, `runtime_dir` — resolve into a tree built from whatever branch the
+main checkout last built. Observed while committing GE-120 work:
+
+```
+[check-hook-parity] BLOCKED — hook parity violations detected:
+  Script 'check_identifier_uniqueness.py' exists in runtime dir (…/scripts/commit_guardian)
+  but is absent from canonical template dir (…/templates/scripts/commit_guardian).
+  … (2 more of the same shape, then 4 content divergences)
+```
+
+`check_identifier_uniqueness.py` is from **PR #495, not merged into that branch**. The hook
+reported another branch's file as a defect in this one. Under this layout it cannot pass on any
+branch whose templates differ from the main checkout's last build — every feature branch.
+
+**Its remediation advice is actively harmful here.** Every violation line ends
+`Fix: run build.py to regenerate the deployed output.` From a worktree whose `.leafcutter` is the
+shared symlink, that deploys **unmerged templates over the install tree every other worktree and
+session reads** — the `KI-BP-016` / `KI-BP-017` failure mode. The hook names the one action its
+operating context makes unsafe, and names it as the fix.
+
+**C — it fail-opens to a silent 0 when the roots do not resolve.** Run from any subdirectory both
+legs are skipped and it still reports success:
+
+```
+$ env --chdir=<worktree>/docs python templates/scripts/commit_guardian/check_hook_parity.py
+check-hook-parity: WARNING — cannot read canonical manifest … Skipping manifest parity check.
+check-hook-parity: INFO — deployed output dir not found or not a directory (…)
+exit: 0
+```
+
+The contrast is the point: `check_build_drift` resolved correctly from that same directory
+(`verified=161`) and `check_hook_trigger_reachability` fail-**closed** with exit 1. Only this hook
+treats "I could not find the things I compare" as a pass — the `GE-120a-1` rule violated by a
+member of the family adopting it.
+
+**Cause.** `project_root = Path.cwd()` with plain `/` joins and no resolution or comparison of the
+results. It never asks whether two of its four configured directories are the same inode, whether
+the tree it calls "runtime" belongs to the working copy being committed, or whether it found them
+at all. Same cwd-derived-root shortcut as `KI-CG-027`, with a worktree-specific consequence.
+
+**Workaround.** `SKIP=check-hook-parity`. Every other guardrail hook passed on the same commits.
+Do **not** run `build.py` to clear it unless the worktree's `.leafcutter` is a real directory
+rather than a symlink to the shared tree.
+
+**Fix direction.** Resolve all four paths and detect aliasing: if `runtime_dir` and
+`deployed_output_dir` are one path, report leg A as *not run* rather than silently passing it
+twice — an unrunnable leg is a gap, not a pass. Establish whether the deployed tree belongs to
+this working copy before comparing against it; when it does not, the honest result is
+`unverified`, not `BLOCKED`. Make the remediation string conditional on that answer.
+
+**Related.** `KI-CG-027` (same root derivation). `KI-CG-009` (a hook resolving to the main
+checkout instead of the worktree). `KI-BP-016` / `KI-BP-017` (what `build.py` against a shared
+`.leafcutter` does). `KI-CG-034`, `KI-CG-20260831-hook-scripts-never-invoked` (siblings).
+
+**Pattern:** two configured paths that are one path, and a fix instruction that is safe in the
+layout the author imagined and destructive in the layout the project recommends.
+
+---
+
+### KI-CG-20260831-glossary-coverage-detector-path-unreachable — `check-glossary-coverage` has never run in this repo: it loads its detector from a path no leafcutter layout has, and its own "detector not found" message is dead code
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/check_glossary_coverage.py` — `_load_detector()`'s
+  `spec_from_file_location(... find_project_root() / "scripts" / "glossary_detector.py")` branch,
+  its `if spec is None or spec.loader is None` guard, and the blanket `except Exception` in
+  `check_glossary_coverage()`
+
+**Symptom.** The hook is registered live on `.*\.(md|py|sql)$` — it fires on nearly every commit —
+and every one of those runs has been a no-op:
+
+```
+$ python .leafcutter/scripts/commit_guardian/run_hook.py .../check_glossary_coverage.py
+check-glossary-coverage: WARNING — unexpected error: [Errno 2] No such file or directory:
+  '.../EPIC-TrustThatAGreenCheckActuallyChecked/scripts/glossary_detector.py'.
+  Glossary coverage check skipped (fail-open).
+exit: 0
+```
+
+**Three compounding layers.**
+
+1. **The path cannot exist.** `glossary_detector.py` is present at `templates/scripts/` and
+   `.leafcutter/scripts/`, never at `scripts/` — confirmed absent from the worktree *and* the main
+   checkout. `scripts/` holds only whole-directory symlinks (`commit_guardian`, `doc_compliance`,
+   `feedback`), so a loose file is structurally unreachable there. Permanent state of the layout,
+   not a local accident.
+2. **The dedicated diagnostic is unreachable.** Its specific message — *"glossary_detector.py not
+   found. Skipping glossary coverage check."* — is guarded by
+   `if spec is None or spec.loader is None`. But `spec_from_file_location` on a **nonexistent**
+   path returns a populated spec:
+   ```
+   $ python -c "import importlib.util; print(importlib.util.spec_from_file_location('g','/nope/g.py'))"
+   ModuleSpec(name='g', loader=<SourceFileLoader ...>, origin='/nope/g.py')
+   ```
+   So the guard is false, control reaches `exec_module`, that raises `FileNotFoundError`, and the
+   blanket handler relabels it a generic *"unexpected error"*. The one message written for this
+   exact condition can never print, and the one that does misattributes the cause.
+3. **The project documents it as working.** `CLAUDE.md`: *"the `check-glossary-coverage`
+   pre-commit hook detects novel terms in staged files and dispatches the `glossary-triage` agent
+   automatically."* It has dispatched nothing, ever.
+
+**Fix direction.** Resolve the detector the way the rest of the family resolves shared modules
+(`_resolve_root.py`) and try the deployed location, not a `scripts/` path that exists only in an
+imagined layout. Replace the `spec is None` guard with an explicit `path.is_file()` check before
+`spec_from_file_location` — the only form that can detect absence. Narrow the blanket
+`except Exception`. Then decide deliberately whether a missing detector should fail open at all: a
+gate `CLAUDE.md` presents as enforcing is a poor candidate for silent fail-open.
+
+**Related.** `KI-CG-019` (same shape — fail-opening on an import it can never satisfy — different
+hook and prerequisite). `KI-CG-034`, `KI-CG-012` (sibling exit-0-having-checked-nothing routes).
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5, aggravated by the absence being
+documented as presence.
+
+---
+
+### KI-CG-20260831-test-ac-tags-dead-three-ways — the test-to-AC traceability gate is registered nowhere, defaults to warn-only, and the config key that would escalate it is absent from the shipped config
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/scripts/commit_guardian/check_test_ac_tags.py` —
+  `_DEFAULT_ENFORCEMENT_MODE = "warn"`, `_CONFIG_KEY = "test_ac_tag_enforcement"`, `main()`'s exit
+  contract
+
+**Symptom.** Pointed at one arbitrary existing test file it finds 20 real violations and reports
+success:
+
+```
+$ python templates/scripts/commit_guardian/check_test_ac_tags.py \
+    unit_tests/commit_guardian/test_check_duplicate_code_strict.py
+WARNING: ... is missing a # covers: XX-NNN tag.        (x20)
+check_test_ac_tags: 20 warning(s) — add '# covers: XX-NNN' tags to suppress these warnings.
+exit: 0
+```
+
+**Three independent reasons it can never block.**
+
+1. **Not registered.** Absent from `hooks_manifest`, from the deployed `.pre-commit-config.yaml`,
+   and from every CI workflow. (It is one of the orphans in
+   `KI-CG-20260831-hook-scripts-never-invoked`; recorded separately because the other two reasons
+   would survive registration.)
+2. **Warn-only by default** — `_DEFAULT_ENFORCEMENT_MODE = "warn"`, which the module docstring
+   frames as a *"grace period"* ending when *"a follow-up ticket flips the default to error
+   mode."*
+3. **The escalation switch does not exist.** The config key it reads to leave warn mode —
+   `test_ac_tag_enforcement` — is **not present** in `commit_guardian.json`. `grep` returns
+   nothing. The documented flip is unreachable through config; only `CHECK_TEST_AC_TAGS_MODE` in
+   the environment can do it, and nothing sets that.
+
+**Why it matters beyond one dead hook.** `# covers:` tags are how `check_done_proof` and the AC
+store connect an AC to the test proving it. A gate meant to keep that mapping honest, which has
+never run, means the backfill it waits on has no deadline and no measurement — and 20 violations
+is a sample from one file, not the total.
+
+**Fix direction.** Decide whether this gate is wanted. If yes: register it, add
+`test_ac_tag_enforcement` to `commit_guardian.json`, measure the real violation count, and set a
+date for the warn→error flip. If no: delete it rather than leave a plausible gate a reader will
+assume is enforcing.
+
+**Related.** `KI-CG-20260831-hook-scripts-never-invoked` (this is one of the 24).
+`KI-CG-021`, `KI-CG-022` (the same defect recorded per-hook).
+
+**Pattern:** a gate that is three separate kinds of off, each of which alone would suffice.
+
+---
+
+### KI-CG-20260831-fictional-config-schema-fragment — two approved acceptance criteria declare a package-surface config key that was never created, and the validator that demanded the declaration cannot tell
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 2 (same defect, two sibling records)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4.yaml`
+  (`it_requirements.config_schema_fragment.hook_trigger_reachability`) and `BP-100k-4-i.yaml`
+  (`…hook_trigger_reachability_indeterminate`); `templates/scripts/commit_guardian/_package_surface_registry.py`;
+  `check_package_surface_declaration`
+
+**Symptom.** Both records carry a structured `config_schema_fragment` naming a top-level key
+of `commit_guardian.json`, complete with `type`, `description` and a `reference_file_path`.
+Neither key exists. Measured in the worktree:
+
+```
+commit_guardian.json top-level keys                 36
+hook_trigger_reachability                       ABSENT
+hook_trigger_reachability_indeterminate         ABSENT
+```
+
+Both ACs are `work_status: done` and `readiness: approved`. The behaviour they describe
+shipped; the configuration surface they declare did not.
+
+**Cause.** `check-package-surface-declaration` requires a record that registers a package
+surface to carry a structured `it_requirements` spec. It checks that the declaration is
+*present and well-formed*. It does not check that the key it names is *real* — there is no
+step that opens `commit_guardian.json` and looks. So the cheapest way to clear the gate is to
+write a plausible fragment, and a plausible fragment is indistinguishable from a true one.
+
+**Why this matters more than a stale field.** The spec is machine-checked, which is exactly
+what makes it dangerous: a reader who knows the validator ran will trust the fragment
+describes the surface. Two records now assert a configuration contract that has never
+existed, and the assertion carries the authority of a passed gate. **A spec that is validated
+for shape but not for existence is worse than no spec** — no spec prompts a reader to go and
+look.
+
+It also propagates. An `it-po` enriching a sibling reached for the same pattern as precedent
+and had to be told not to, which would have made three. That near-miss is how this was found.
+
+**Remediation.** Decide per record whether the key should exist. If yes, create it in
+`commit_guardian.json` and keep the fragment. If no, remove the fragment and re-derive
+whether `package_surface` is truthfully `true` at all. Then close the gap in the validator:
+when a `config_schema_fragment` names a key in a `reference_file_path`, open that file and
+require the key to be present — the same disk-versus-declaration comparison
+`KI-CG-20260831-hook-scripts-never-invoked` asks for one layer down. Both are the same
+omission: a check that reads the declaration and never the thing declared.
+
+**Not fixed here, deliberately.** Found while enriching `BP-100n-4-ii`, which was steered away
+from copying the pattern and carries an `it_requirement` saying why. Repairing two approved,
+done records is a store-integrity change with its own blast radius and belongs in its own
+change rather than riding along with unrelated criteria.
+
+**How it was found.** An `it-po` agent checked whether the precedent it was about to copy
+described a real key, instead of copying it because a validator had passed it.
+
+**Related.** `KI-CG-20260831-hook-scripts-never-invoked` (the same declaration-versus-reality
+gap, one layer down). `BP-100n-4-ii` (the record that declined to repeat it). `BO-2000d` (the
+thin-or-fictional-spec rule this violates).
+
+**Pattern:** a validator that checks a declaration is well-formed and never checks that what
+it declares exists — so the cheapest way to pass it is to invent something plausible.
+
+---
+
+### KI-CG-20260831-1933 — `check-predone-scope` compares the whole branch diff against one ticket's `files_touched`, so it can never pass on a multi-ticket epic branch
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 3 (three commits on one epic branch, each skipped)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/commit_guardian/hooks/check_files_touched_reconciliation.py` —
+  `_BRANCH_BASE_CANDIDATES = ["origin/main", "main"]` at `:67` and the three-dot branch diff
+  at `:114` ("Return files changed in this branch relative to origin/main")
+
+**Symptom.** Committing a ticket transitioning to `status: done` on an epic branch:
+
+```
+[check-predone-scope] ERROR: source files changed but not declared in
+files_touched or out_of_scope
+
+  Ticket : .../02_TICKET-20260826-ACD-2100a-2.md
+  Undeclared source files:
+    - templates/workflows-js/plan-feature.js
+    - unit_tests/ac_driven_dev/test_acd_2100a_2.py
+    - unit_tests/build_guards/test_acd_2100d_2.py
+    - unit_tests/test_workflow_dual_engine.py
+    - unit_tests/workflows/test_acd_2100a_1.py
+```
+
+Every file it names belongs to a **different ticket** on the same branch — 01 and 20. None
+of them has anything to do with ticket 02.
+
+**Cause.** The hook computes its change set as `origin/main...HEAD`, the entire branch, and
+compares that against the `files_touched` of whichever single ticket is transitioning to
+done. That is correct for a one-ticket branch, which is the only shape it appears to assume.
+On an epic branch every ticket after the first inevitably sees every earlier ticket's files
+as undeclared, and the set grows as the epic proceeds.
+
+**Why high rather than medium.** The only ways to make it pass are both wrong. Declaring
+another ticket's files in this ticket's `out_of_scope` is false, and it would have to be
+repeated for all 25 tickets, each with a different and growing list — which would also
+destroy the field's value as a scope signal for `change-scope-reviewer`. The alternative is
+skipping the hook, which is what actually happened three times. A gate whose only passing
+strategies are falsification or bypass provides no protection on the branch type it most
+needs to.
+
+**Fix direction.** Scope the diff to the commits that belong to the ticket rather than to the
+branch. The per-ticket commits are identifiable — they carry the AC id — or the hook could
+compare against the staged set plus the ticket's own prior commits. Failing that, detect an
+epic-member ticket (path under `EPIC-*/`) and compare against the union of all sibling
+`files_touched`, which at least makes the assertion true even if it is weaker.
+
+**Workaround in use.** `SKIP=check-predone-scope`, recorded in each affected commit message
+with the reason, so the skips are auditable rather than silent.
+
+**Pattern:** a gate whose correctness assumption (one ticket per branch) is invisible in its
+output, so its failure reads as a finding about the ticket rather than about itself.
+
+---
+
+### KI-CG-20260831-manifest-shadowing — `check-build-drift` takes the first `.build_manifest.json` it finds, and an obsolete one at a higher-priority root makes it report every template in the repository as unregistered
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/commit_guardian/check_build_drift.py` — `_resolve_manifest_path()`
+  (first-match return, no validation) and the `package_offset` read at
+  `manifest.get("package_root", "") or ""`; same resolution shared by `check_output_drift`
+
+**Symptom.** A commit staging exactly one AC YAML file — no Python, no templates — was
+refused by `check-build-drift` with 170 findings:
+
+```text
+UNCOMPARABLE: GAP templates/agents/README.md action=run build.py to register it
+UNCOMPARABLE: GAP templates/agents/ac-validator.md action=run build.py to register it
+... (168 more)
+check-build-drift: RESULT verified=0 uncomparable=170 exempt=0 gaps=170 drifted=0 missing=0 unreadable=0
+```
+
+`verified=0` is the tell. The hook did not find drift — it compared **nothing at all** and
+then failed on its own inability to compare. `drifted=0` says the same thing from the other
+side: not one template actually differed from its deployed copy.
+
+**Cause — two defects compounding.**
+
+*First, manifest resolution returns the first hit and never asks whether it is the right
+one.* `_resolve_manifest_path()` walks candidate roots in priority order and returns on the
+first `.build_manifest.json` that exists. Root 1 is the git toplevel; root 2 is the workspace
+root. Two manifests were present:
+
+| | path | mtime | templates | `output_mappings` | `package_root` |
+|---|---|---|---|---|---|
+| root 1 (**chosen**) | `leafcutter-ai/.build_manifest.json` | Aug 26 | 61 | 154 | **absent** |
+| root 2 (ignored) | `leafcutter/.build_manifest.json` | Aug 31 | 174 | 464 | `"leafcutter-ai"` |
+
+The obsolete one won on position. There is no mtime comparison, no completeness check, and
+no signal in the output naming which file was used.
+
+*Second, the missing-field fallback degrades toward a known-wrong value.* Both manifests key
+templates as `leafcutter-ai/templates/…`, but only the current one records the offset
+`package_root: "leafcutter-ai"`. The hook reads it as:
+
+```python
+package_offset = manifest.get("package_root", "") or ""
+```
+
+with the comment *"Missing key degrades to `""` for manifests written before this field
+existed."* That assumes a manifest lacking the field was written in a layout whose offset is
+genuinely empty. The Aug 26 manifest simply **predates the field** — its true offset is
+`leafcutter-ai`. So `templates_base` collapsed to the package root, lookup keys were computed
+as `templates/agents/README.md`, and every one was compared against manifest keys spelled
+`leafcutter-ai/templates/agents/README.md`.
+
+Nothing matched. That is why the count is **170 and not 113** — 61 of those templates *are* in
+the stale manifest, under a key spelling the hook never generated. A pure staleness bug would
+have reported only the 113 genuinely-absent ones; reporting all 170 is the signature of a
+total key-namespace miss.
+
+**Why it went unnoticed until now.** Root 1 is the git toplevel of the *current process*. From
+a worktree that is the worktree root, which holds no manifest, so the search falls through to
+the workspace root and finds the good one. Nearly every commit in this repository is made from
+a worktree. The defect only fires in the package's own main checkout — the one place least
+often committed from, and the one place `.build_manifest.json` is gitignored so the stale file
+never shows in `git status`.
+
+**Why this is worse than a false negative.** The comment above the offset read says the
+git-based heuristic it replaced *"failed open for any git-unavailable layout"* and that failing
+open "is the failure mode this whole ticket exists to remove." The replacement does fail
+closed — but at a **100% false-positive rate**, on a commit touching nothing it guards. A gate
+that blocks every commit with a wall of findings about files the author did not touch is not
+safer than one that stays quiet; it is the fastest way to teach everyone to reach for `SKIP=`,
+and once that reflex exists the gate's real findings go with it.
+
+**Remediation.** Three separable changes, in order of value:
+
+1. **Validate the manifest before trusting it, and say which one was used.** A manifest whose
+   key namespace does not intersect the paths about to be looked up is unusable — detect that
+   and either continue the root search or emit a distinct diagnostic. `verified=0` with
+   `gaps=N` should never be reported as a finding about the templates; it is a finding about
+   the run. Print the resolved manifest path on every run.
+2. **Refuse a manifest without `package_root` rather than guessing its offset.** The field is
+   an offset that cannot be inferred; absent it, the honest states are "re-run `build.py`" or
+   "keep searching", not "assume empty". A schema-version marker would make this explicit.
+3. **Prefer the freshest usable manifest** over the first found, or have `build.py` remove a
+   manifest it supersedes at another root so two can never coexist.
+
+**Workaround in use.** Move the stale manifest aside
+(`mv leafcutter-ai/.build_manifest.json /tmp/`) and re-run the canonical
+`python scripts/build.py --target-dir <workspace-root>`. After that `check-build-drift` passed
+with `verified=464`, and `check-output-drift` — which shares the resolution — surfaced 8
+genuine unregistered workspace artifacts instead of 170 phantoms.
+
+**Related.** `KI-BP-011` (the manifest is written to the package that ran the build rather than
+the install it describes) is how two manifests come to exist at two roots in the first place;
+this entry is what the *reader* of those manifests does about it. `KI-CG-034`
+(`check_output_drift` keys paths in two namespaces that never intersect) is the same
+key-namespace class of defect in the sibling hook.
+
+**Pattern:** a backward-compatibility fallback that converts "I do not know this value" into a
+specific wrong value, in a resolver that had already picked the wrong input — so two
+independently-reasonable graceful degradations compose into a confident, precise, entirely
+false report.
+
+---
+
+### KI-CG-20260901-covers-regex-truncates-suffixed-ids — `check_ac_coverage`'s tag pattern collapses every suffixed AC id to its L0 root and cannot see `//` tags at all
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-01
+- **Where:** `templates/scripts/commit_guardian/check_ac_coverage.py:41`
+
+**Symptom.** The hook credits coverage to the wrong record. A test tagged
+`# covers: BP-100k-6` is recorded as covering `BP-100`, so the leaf reads as uncovered while
+its L0 reads as covered by a test that exercises a great-grandchild's behaviour. Both halves
+are wrong, and the wrong half that *adds* coverage is the dangerous one — a missing link is
+visibly missing, whereas a link on the wrong record looks like evidence.
+
+**Evidence.** The pattern is `_COVERS_REGEX = re.compile(r"#\s*covers:\s*([A-Z]{2,6}-[0-9]{3,})")`.
+`[0-9]{3,}` stops at the first non-digit, so every alpha/numeric suffix is discarded. Run
+against real tag shapes on 2026-09-01:
+
+```
+'# covers: ACS-1300a-1'  -> ACS-1300
+'# covers: BP-100k-6'    -> BP-100
+'# covers: ACS-1300'     -> ACS-1300
+'// covers: ACS-1300a-1' -> None
+```
+
+The `#` anchor also makes it blind to every `// covers:` tag, which the canonical rule accepts.
+Measured scope on the same day: 3,631 tag occurrences across 396 `.py` and 8 `.ts` files, 937
+distinct ids — the overwhelming majority carry a suffix this pattern truncates.
+
+**Why it has not bitten harder.** The hook is detect-only and always exits 0
+(`check_ac_coverage.py:167`), so it cannot block a merge. That bounds the blast radius to a
+wrong advisory — but an advisory that names the wrong record is the failure this register
+exists to catch, not a lesser form of it.
+
+**Not a new problem — it is the fourth reader.** `TQ-100b-5` (readiness `approved`, priority
+high) already owns the parity problem and enumerates the closed set of four covers-tag
+recognition rules: `scripts/ac_store/test_enforcement.py:57` — `r"(?:#|//)\s*covers:\s*(\S+)"`,
+the canonical one; a byte-equal duplicate in `check_done_proof.py:92-95`'s `ImportError`
+fallback; `check_test_ac_tags.py:38` (detect-only, exactly three digits); and this one. Do not
+fix this in isolation and do not author a fifth rule — consolidate onto the canonical pattern
+under `TQ-100b-5`.
+
+**Fix direction.** Replace the pattern with the canonical `r"(?:#|//)\s*covers:\s*(\S+)"` and
+resolve the captured id against the store rather than constraining its shape in the regex. An
+id's grammar is the store's business; a tag scanner's job is to capture the token and ask.
+
+**Related.** `KI-CG-034` and `KI-CG-20260831-manifest-shadowing` are the same class one layer
+out — a checker keying on a namespace that does not match the one its input actually uses.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a validator whose *input parser* is
+narrower than the data it validates, so it reports confidently about records that were never
+the ones in front of it.

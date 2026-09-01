@@ -640,7 +640,8 @@ them — an unstaged fix will appear not to work.
 ### KI-ACS-010 — The store's test vocabulary is Python-only, so 29 web-app ACs are unvalidatable landmines
 
 - **Severity:** high
-- **Status:** open — no AC
+- **Status:** RESOLVED 2026-09-01 — both enums widened; see "Resolution" at the end of
+  this entry. Kept rather than deleted because the coupling it documents is permanent.
 - **Occurrences:** 2
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `config/ac_store_schema.json` → `test_spec[].framework` and
@@ -742,9 +743,16 @@ leave them for whoever touches them next.
 
 **Do both schemas in the one change, and add a test asserting the two vocabularies are
 equal.** They are hand-duplicated today with nothing holding them in step, which is how
-they drift apart again the moment one is edited alone. Because
-`config/ac_store_schema.json` is a package surface, the change needs an AC declaring
-`package_surface: true` or `check-package-surface-declaration` will refuse the commit.
+they drift apart again the moment one is edited alone.
+
+~~Because `config/ac_store_schema.json` is a package surface, the change needs an AC
+declaring `package_surface: true` or `check-package-surface-declaration` will refuse the
+commit.~~ **This was wrong, and struck out rather than deleted so the next person does not
+re-derive it.** `scripts/commit_guardian/_package_surface_registry.py:39-47` enumerates the
+four watched files and `config/ac_store_schema.json` is not among them. The claim was
+plausible enough to have deterred the fix for a week: it named a real hook, a real flag and
+a real refusal, and only the membership was false. Check the registry, not the intuition —
+"is a package surface" is a list, not a judgement.
 
 **Where to build it.** Prefer **AR-100** ("Every part of your codebase has a specialist who
 genuinely owns it") over a standalone `ac_store` patch. AR-100's criteria require that
@@ -758,6 +766,41 @@ it does not.
 locally-clean folder run does not clear these). BO-2900g-3 (the MIGRATE-DO-NOT-DEFER
 constraint this violates). `ACS-200h`, named at `ci.yml:215` as the unbuilt whole-store
 backstop, is the check that would have surfaced this on day one.
+
+**Resolution — 2026-09-01, two commits on `fix/bp-1400-test-spec-angle`.**
+
+Both enums widened in one change, as this entry prescribed: `framework` gains `vitest` and
+`playwright`, `type` gains `component`, in `config/ac_store_schema.json` **and**
+`config/test_requirements.schema.json`. The axis question above was settled the way it
+argued for — `component` is a level, so it joined `type` and not `angle`.
+
+`unit_tests/ac_store/test_test_spec_framework_vocabulary.py::test_framework_enums_agree_across_both_schemas`
+is the requested equality assertion. It is green before and after the change by
+construction: it is a drift guard, not a red-baseline test, and saying so is more useful
+than presenting it as evidence the fix worked.
+
+No record was rewritten, because none needed to be — the whole point was that all 28 were
+already telling the truth. Afterwards the entire 3,256-record store validates: the
+ACS-100i-7 whole-store refusal baseline went from 28 entries to zero, with the guard
+reporting `Added: []` and `Messages changed: []`. Removals only, which is the shape that
+distinguishes a vocabulary repair from validation quietly getting weaker.
+
+Two things this resolution deliberately did **not** do:
+
+- It did not build AR-100. "Where to build it" above is still right that three enum values
+  is a patch and the general rule is the durable fix; the patch was taken because 28
+  records were live landmines. AR-100 remains the real answer and is not closed by this.
+- It did not touch `config/skills_config.schema.json:232`, which carries the same
+  two-value enum on an unrelated field (a Python test-directory map read by `test-writer`).
+  Widening it would have been scope nobody asked for.
+
+**And it made a quieter defect louder, so read `KI-ACS-20260901-1520` next.**
+`generate_ticket_from_ac.py` hard-codes `.py` on every derived test filename regardless of
+declared framework, and `done_proof.py` routes the proof oracle **by file extension** — so
+a `framework: playwright` record generates a Python filename and the wrong runner is asked
+for evidence. Until 2026-09-01 the schema failure was the only thing keeping that family
+visible. Widening makes those records validate and look healthy. It was filed *before* the
+widening landed, on purpose.
 
 ---
 
@@ -1182,3 +1225,142 @@ draft number `KI-ACS-014` and should be read as pointing here.
 the same proof set, corrupted from the writing side). `KI-KM-009` (the supersessions that
 surfaced this). The "AC-store commits — stage the parent alongside the child" rule in
 `CLAUDE.md`, which explains why the `INF-400c-2` instance passes.
+
+---
+
+### KI-ACS-017 — `approve_acs.py` corrupts any record whose `amended_by` holds a multi-line entry, and returns success for the files it broke
+
+- **Severity:** blocker
+- **Status:** open
+- **Occurrences:** 1 (5 files corrupted in a single run)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/ac_store/approve_acs.py` — `_promote_leaf()` and `_build_amended_by_block()`
+
+**Symptom.** `_promote_leaf` appends the approval entry by rebuilding the `amended_by`
+block as **text** rather than by round-tripping the parsed document. On a record whose
+existing `amended_by` contains a multi-line entry, it emits YAML that no longer parses:
+
+```
+yaml.parser.ParserError: while parsing a block mapping
+  in "<unicode string>", line 126, column 3:
+    - action: approved
+      ^
+expected <block end>, but found '<scalar>'
+```
+
+**The dangerous part is not the corruption, it is the return code.** The run reported
+`rc=0` for all 31 records **including the five it had just made unparseable**. Nothing in
+the tool's own output distinguished a successful promotion from a destroyed file. It
+surfaced only because the calling script re-read every file from disk afterwards and
+asserted it still parsed — a check nobody is obliged to perform, and which the tool's
+success-shaped output actively discourages.
+
+**Evidence.** 2026-08-31, promoting the 31 records under `GE-123`. Five files were left
+unparseable: `GE-123a-4`, `GE-123b-5`, `GE-123c-4`, `GE-123c-5`, `GE-123d-4-ii` — exactly
+the five carrying the multi-line gating-correction entries added in #554 and #594. All five
+were already committed, so nothing was lost; they were restored with `git checkout` and
+their `readiness` set by hand. Had the promotion been run on uncommitted records, or
+committed without the re-read, five acceptance criteria would have entered the store
+unparseable — and `validate_ac_schema` would then have failed for every subsequent commit
+touching that tree, with a cause several steps removed from the change that produced it.
+
+**Detection.** After any `approve_acs.py` run, re-parse every file it touched. Do not trust
+the exit code or the per-record `promoted …` lines; both are emitted before the write is
+validated. `find <dir> -name '*.yaml' -exec python scripts/ac_store/validate_ac_schema.py {} +`
+is sufficient and takes seconds.
+
+**Workaround.** For a record with a multi-line `amended_by`, set `readiness` by hand — it is
+a one-line edit — rather than letting the tool rewrite the block.
+
+**Fix direction.** Stop rebuilding the block textually. Either round-trip through a YAML
+library that preserves the document, or append the entry without re-emitting the entries
+already there. Whatever the approach, `_promote_leaf` must re-read and parse the file it
+just wrote before returning 0: a writer that cannot tell whether its own output is valid
+has no business reporting success.
+
+**Related.** `KI-ACS-018` (the sibling generator, same "output never validated against the
+gates that will judge it" shape).
+
+---
+
+### KI-ACS-018 — withdrawn as a duplicate; see `ac-driven-dev.md`
+
+Filed 2026-08-31 as "four defects in `goal_to_epic.py`'s generated output" and withdrawn the
+same day. **All four were already filed**, in `ac-driven-dev.md`, which is the correct register
+for the AC-driven generator:
+
+| Defect observed | Already filed as |
+|---|---|
+| `depends_on` written without the numeric filename prefix, so every edge dangles | `KI-ACD-018` |
+| `Master_Plan.md` missing the fields `ticket_frontmatter_guard` requires | `KI-ACD-012` |
+| Absolute `/home/…` paths stamped into `implemented_by` | `KI-ACD-014` |
+| Epic name truncated mid-phrase onto a dangling article | `KI-ACD-011` |
+
+The `EPIC-SuppressionNarrowsNeverDisables` run is recorded as a fresh occurrence on each of
+those four, which is what this register's own rule asks for — *"Hitting an existing issue.
+Increment `Occurrences` and update `Last seen`. Do not add a duplicate entry."*
+
+**Kept as a stub rather than deleted**, because the id was published in a merged commit and a
+dangling reference is worse than a redirect. Do not reuse the number.
+
+**Worth recording, since it is the second time this has happened here.** The duplicate was
+filed after checking that the *id* was free but not that the *defect* was. Those are different
+checks, and only the first is mechanical. Before filing against a component you do not own,
+grep the register for the symptom — `grep -rn "goal_to_epic" docs/known-issues/` would have
+returned all four in one line of output.
+
+---
+
+### KI-ACS-20260901-1520 — The ticket generator hard-codes `.py` on every test filename, so a browser test is declared as a Python file and the done-proof oracle routes on that extension
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1 (28 records affected today; 1 generated ticket already on disk)
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `scripts/ac_store/generate_ticket_from_ac.py:1453-1459`, against
+  `scripts/ac_store/done_proof.py:1332-1334`
+
+**Symptom.** `generate_ticket_from_ac.py` derives a test's `file` from the AC's `target_dir`
+and appends a hard-coded `.py`:
+
+```python
+elif target_dir:
+    file_path = f"{target_dir}/test_{slug}.py"
+```
+
+It does this regardless of what the same `test_spec` entry says its `framework` is. The
+generated ticket for `BP-1400c-1-i` is already on disk and reads:
+
+```yaml
+- name: test_about_route_smoke
+  file: leafcutter-web/tests/test_bp_1400c_1_i.py
+  framework: playwright
+  type: e2e
+```
+
+A Python filename for a headless-browser test — in `leafcutter-web/tests/`, a directory that
+does not exist (the app's convention is `__tests__/`).
+
+**Why it is not cosmetic.** `done_proof.py:1332-1334` routes the proof oracle **by file
+extension**: `.py` goes to pytest, `.ts`/`.tsx` to vitest. So the wrong filename is not an
+unread label — it decides which runner is asked for evidence. A ticket claiming a `.py` file
+for a browser test will have pytest asked to prove it, against a path nothing writes.
+
+**Why it is being filed NOW, ahead of the enum widening.** `framework` is currently constrained
+to `["unittest", "pytest"]`, so the 28 records carrying `vitest` or `playwright` fail schema
+validation — and that failure is presently the only thing drawing attention to this family at
+all. Widening the enum (the correct fix, see KI-ACS-010) makes those records **validate**, and
+a validating record with a wrong filename looks healthy. Filed first so the louder defect does
+not take the quieter one with it when it goes.
+
+**Fix direction.** Derive the extension from the declared framework rather than assuming
+Python, and reject rather than guess when the two disagree — a `playwright` entry naming a
+`.py` file is a contradiction the generator can see at write time. Note the ordering trap: the
+same `test_spec` also names `target_dir`, and `leafcutter-web/tests/` does not exist, so a fix
+that only corrects the extension still emits a path nothing will ever write. Both halves are
+the same guess.
+
+**Related.** `KI-ACS-010` (the enum this rides behind, and the change that will conceal it).
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — a defect kept visible only by an
+unrelated failure, which disappears when that failure is correctly repaired.

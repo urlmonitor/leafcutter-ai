@@ -1,0 +1,43 @@
+id: BP-100n
+components:
+  - build_pipeline
+readiness: reviewed
+priority: high
+title: "Something the build cannot find is reported as missing, never treated as nothing to check"
+component: build-pipeline
+level: L1
+status: active
+criteria: |
+  A guard that finds nothing where something should be says so, instead of passing.
+
+  Absence is the easiest thing for a check to misread. A file the build recorded
+  writing but that has since been deleted, a capability whose output was never
+  produced, a platform the equality guard never exercised — each of these looks,
+  from inside the guard, exactly like "there is nothing here to check". Each has
+  been reported as a pass.
+
+  Every guard states what it could not find and why, counts it as its own reported
+  condition, and fails the run. No guard infers from an empty result that there was
+  nothing to verify, and no skip is indistinguishable in the build's output from a
+  check that ran and passed.
+depends_on:
+  - BP-100
+doc_links: []
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - "split: BP-100k -> BP-100k + BP-100n [Pattern C, 8 L2 children -> 5 + 3], 2026-08-26. BP-100k had accumulated 8 L2 children against a default cap of 5 and was carrying child_limit_override: 9 as an explicit temporary waiver. Three of its children — the former BP-100k-6, BP-100k-7 and BP-100k-8 — turned out to share a rule distinct from the drift-comparison theme the rest of BP-100k covers: an absence must be reported as an absence and never inferred to mean there is nothing to check. They were renamed BP-100n-1..-3 and moved here, and BP-100k's override was removed rather than raised. The rename is required because check_ac_limits.py attributes a child to its parent by deriving the parent from the child's ID string, not from covered_by (GE-106), so a moved child that kept its old prefix would still be counted under BP-100k."
+superseded_by: null
+covered_by:
+  - BP-100n-1
+  - BP-100n-2
+  - BP-100n-3
+  - BP-100n-4
+  - BP-100n-5
+implemented_by:
+  - templates/scripts/commit_guardian/check_output_drift.py
+  - templates/scripts/commit_guardian/check_build_drift.py
+  - scripts/build_phases.py
+  - scripts/build_helpers.py
+change_target: pipeline
+risk_surface: contract_boundary

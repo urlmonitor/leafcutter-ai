@@ -1,0 +1,300 @@
+id: TKT-600b-1
+title: "The generated phase record names exactly the phases the drive will dispatch for that ticket's location"
+component: ticket-creation
+components:
+  - ticket_creation_pipeline
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical   # owner decision at the approval gate, 2026-09-01
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance criterion whose generated ticket will be written into an epic
+    folder,
+  And the drive, for a ticket in that folder, dispatches every phase except the
+    pull-request phase, because one epic-level pull request covers every ticket on the
+    branch,
+  When the ticket is generated,
+  Then the set of phase agents the ticket's own record marks as required is exactly the
+    set of phases the drive will dispatch for that location — no phase the drive will
+    skip is marked required, and no phase the drive will run is marked excluded,
+  And the pull-request agent's entry reads "explicitly excluded from this ticket",
+  And driving the generated ticket to completion requires no edit to its frontmatter by
+    any person or any agent.
+
+  And the same agreement holds under a different deferral rule, which is the point of
+  this criterion rather than an extra case:
+  Given the drive is changed so that, for that same epic location, it defers the
+    changelog phase and dispatches the pull-request phase,
+  When a ticket is generated for that location,
+  Then the record marks the changelog agent excluded and the pull-request agent
+    required,
+  And this is true without any accompanying change that names the changelog phase or
+    the epic-folder shape a second time.
+
+  A record that is correct only because one phase name and one folder shape were
+  written into the generating side does not satisfy this criterion: it reproduces
+  today's answer and will disagree again the next time the drive's deferral set moves.
+  What must hold is that the two sides cannot state different phase sets for the same
+  location.
+depends_on: [TKT-600b]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-20260831-1930 — the observed disagreement and the three drives it consumed."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "Holds the deferral rule the record must agree with (:406 phase filter, :1384 deferredPhases)."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-018 — the generate-then-move seam that makes a path-sniffing implementation of this criterion silently wrong; bounded by TKT-600b-1-i."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The dispatching side of the boundary this criterion makes agree."
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+    relevance: "The record side — what a ticket's phase map means across its lifecycle."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy the test_spec entries below are drawn from."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: >-
+      The shared declaration. One declarative artifact, keyed by ticket-location
+      kind, whose value is the set of phase-agent names the drive will NOT
+      dispatch for a ticket in that location. Proposed home:
+      config/phase_deferral.yaml (see rejected_homes below for why not
+      guardrail_gates.yaml). Both sides read THIS; neither side names a phase.
+    additionalProperties:
+      type: array
+      items:
+        type: string
+    example:
+      epic_member:
+        - pull-request
+      standalone: []
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: >-
+    3 enforcement points, all of which must move together. (1)
+    generate_ticket_from_ac.py:967, the unconditional all_needed.add of the
+    pull-request phase inside _build_agents_map. (2) build-feature.js:406,
+    selectDispatchPhases' literal agent-name filter. (3) build-feature.js:1384,
+    the deferredPhases assignment. Points 2 and 3 are SEPARATE copies of the same
+    rule reached on different paths — 406 governs what is dispatched, 1384
+    governs what the completion decision forgives, and the no-phases-to-run exit
+    at :1396 is reached BY point 2 and then consumes point 3. Changing one and
+    not the other leaves the untouched one load-bearing and the disagreement
+    intact in a different shape.
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - python -m pytest unit_tests/ac_store/ -q
+    - python -m pytest unit_tests/workflows/ -q
+  direction_of_read: >-
+    BOTH SIDES READ A THIRD DECLARATION. The generator reads it directly, through
+    the config-read path _build_agents_map already uses for
+    config/guardrail_gates.yaml (:832) and config/agent_registry.json (:838), and
+    the value must be CONSUMED where all_needed is assembled — not appended
+    afterwards. The drive cannot read a file at all: build-feature.js has no
+    require, no import, no fs, no readFileSync and no JSON.parse anywhere in its
+    ~2400 lines; its only I/O primitive is agent(). It therefore obtains the same
+    declaration through the schema-validated JSON reply of a status-checker it
+    ALREADY dispatches (the resolve step at :1100 or the ticket-planner at :1289),
+    carried as a new required field on that reply's schema, and threaded as data
+    into both selectDispatchPhases and deferredPhases.
+  rejected_directions: >-
+    (a) THE DRIVE PUBLISHES AND THE GENERATOR READS — rejected on two independent
+    grounds. The drive has no filesystem write primitive, so "publishing" would
+    have to be a hand-maintained export of a JS array, which is a second copy that
+    can fall behind and is the exact failure being fixed. And the drive does not
+    exist at generation time: tickets are generated by /build-ac or goal_to_epic.py,
+    potentially days before any drive runs. (b) THE GENERATOR ASKS THE DRIVE —
+    rejected for the same lifecycle reason; there is no drive process to ask, and
+    making generation depend on one inverts the order the system actually runs in.
+  rejected_homes: >-
+    A new top-level section in config/guardrail_gates.yaml was considered and
+    rejected: that file is keyed change_target x risk_surface and this rule is
+    keyed by location, so it would mix two axes in one artifact; and CLAUDE.md
+    records that any new top-level section there must be added to
+    _NON_CHANGE_TARGET_SECTIONS in unit_tests/commit_guardian/test_check_ac_schema.py
+    in the same commit, a coupling with no bearing on this rule. If the implementer
+    nonetheless chooses that home, that exclusion-set update is mandatory in the
+    same commit.
+  constraints:
+    - >-
+      The phase name must appear in the declaration and NOWHERE ELSE. Neither
+      generate_ticket_from_ac.py nor build-feature.js may contain a literal
+      phase-agent name in its deferral logic after this change. This is the
+      criterion's second scenario made mechanical.
+    - >-
+      Deferral must be keyed by a data property of the location, never by a
+      hard-coded folder name or ticket name, so a location kind added later
+      inherits the rule without a code edit.
+    - >-
+      THE DECLARATION MUST BE DEPLOYED, AND A MISSING DECLARATION MUST REFUSE
+      RATHER THAN FALL BACK. Verified gap: config/guardrail_gates.yaml is read by
+      the generator at repo_root/config/guardrail_gates.yaml but is NOT in any
+      build deploy phase — the deployed .leafcutter/config/ contains only
+      ac_store_schema.json, agent_registry.json, commit_guardian/,
+      diagram_types.json, doc_types.json and feedback_categories.yaml. So in a
+      consumer install that read already falls back silently to an empty gate set
+      (the except OSError/yaml.YAMLError branch at :831-834). A new declaration
+      added with the same shape would inherit the same silent fallback, which
+      recreates this exact disagreement in every consumer install while every test
+      run from the package repo stays green. The new artifact must be added to the
+      build deploy manifest alongside config/ac_store_schema.json, and its absence
+      must produce a refusal, not a built-in default set.
+    - >-
+      The drive must not carry a default deferral set for the case where the
+      planner reply omits the field. A default is a second copy of the rule. An
+      absent or unparseable field is a hold-back, in the same shape as the existing
+      unusablePlanReason path at :1308.
+    - >-
+      The completion writer (scripts/set_ticket_status.py's agents-parity check,
+      the source of the observed refusal) must NOT be given a copy of the deferral
+      rule. It reads the ticket's own record, and that is correct — once the record
+      is right it agrees by reading, which is the property that makes it evidence.
+      Adding a fourth copy there would defeat TKT-600b-4.
+    - >-
+      Must not change the phase set generated for any location the declaration
+      does not name — TKT-600b-3 is the standalone half of this and must stay green.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    Two artifacts that together make disagreement unrepresentable: (1) the
+    location-keyed deferral declaration (proposed config/phase_deferral.yaml),
+    read directly by _build_agents_map and deployed alongside
+    config/ac_store_schema.json; and (2) the same set carried as a required,
+    schema-validated field on the status-checker reply build-feature.js already
+    receives, consumed by selectDispatchPhases and deferredPhases in place of
+    their present literals. Downstream consumers — TKT-600b-2, TKT-600b-3 and the
+    completion writer — read the resulting record, never the declaration.
+expects_from: null
+test_spec:
+  - name: test_epic_destination_record_equals_drive_dispatch_set
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      For a resolved epic destination, the needed-agent set in the generated
+      record equals the set selectDispatchPhases returns for that same location,
+      and the deferred phase's entry reads not_needed. Both sides are computed in
+      the test from the SAME declaration file — the assertion is set equality
+      between the two computed sets, not a check that one particular name is
+      absent.
+  - name: test_changed_declaration_moves_both_sides_with_no_source_edit
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Rewrite ONLY the declaration so the epic location defers changelog and not
+      pull-request, then regenerate. The record must mark changelog not_needed and
+      pull-request needed, and the drive's dispatch set must move identically. No
+      source file is edited between the two runs. This is the test that goes red
+      against a fix that hard-codes the string pull-request in any branch.
+  - name: test_deferral_set_is_consumed_by_both_drive_enforcement_points
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Execute the real selectDispatchPhases and the real deferredPhases-consuming
+      completion path through the node harness (the extract-and-run pattern in
+      unit_tests/workflows/test_bo_2700_defer_epic_pr.py), supplying a deferral set
+      that names a non-default phase. Assert BOTH points act on the supplied value
+      — a change applied to only one of :406 and :1384 leaves the other producing
+      the old answer and this goes red. No source string is grepped.
+  - name: test_declaration_resolves_from_the_deployed_layout
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      Resolve the declaration the way a consumer install resolves it — from the
+      deployed config directory, not the package repo's config/ — and assert the
+      generator reads the deployed copy. Guards the verified gap that
+      config/guardrail_gates.yaml is read but never deployed, so its read already
+      falls back silently outside this repo.
+  - name: test_missing_declaration_refuses_instead_of_defaulting
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      With the declaration absent or unreadable, generation must refuse and write
+      no ticket, and the drive must hold back. Assert specifically that no built-in
+      phase set is substituted — a fallback default is a second copy of the rule and
+      reinstates the disagreement silently.
+test_rationale: >-
+  The cheapest wrong fix for this criterion is one string in one branch, and a
+  test suite written against today's phase name cannot tell that fix from a
+  correct one. So the load-bearing test is not the epic-location assertion — it is
+  test_changed_declaration_moves_both_sides_with_no_source_edit, which changes the
+  declaration's value and requires both sides to follow. A hard-coded fix passes
+  every other test in this spec and fails that one. The seam test exists because
+  the drive holds TWO copies of the rule on two different code paths, and a fix
+  applied to the dispatch filter alone would leave the completion-forgiveness copy
+  intact — a disagreement of the same class wearing different clothes. It executes
+  the real functions through the node harness rather than asserting on source text,
+  per CLAUDE.md's gate/workflow rule: this repo has already shipped a runner that
+  passed grep-only structural tests while never executing its gates. The deployed
+  test exists because the analogous config read in the same function is already a
+  silent no-op outside this repo and nothing noticed.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-01
+    note: >-
+      Added assigned_agent confirmation, complexity (M -> L), it_requirements,
+      test_spec, test_rationale, contracts and architecture doc_links. Criteria
+      untouched. Decided the three questions the BA left open — shared declaration
+      read by both sides, caller-supplied resolved destination, single assigned
+      agent confirmed — with the rejected alternatives recorded in it_requirements.
+superseded_by: null
+covered_by:
+  - TKT-600b-1-i
+  - TKT-600b-1-ii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE CRITERION IS AGREEMENT AND NOT A PARTICULAR VALUE. The register's stated fix
+  direction — emit `pull-request: not_needed` when the target path is inside an `EPIC-*/`
+  folder — is one implementation of this, and a reasonable one. It is deliberately NOT
+  the criterion. Written as a value, the criterion is satisfied by one string in one
+  branch, and the next phase the drive decides to defer reopens the identical blocker
+  with a different phase name. The second scenario above exists to make that
+  implementation insufficient on its own: it fails against a changed deferral rule
+  unless the two sides share one account of which phases a location defers.
+
+  THIS IS A TWO-SIDED CONTRACT WITH ONE ASSIGNED AGENT ON PURPOSE. Both the generating
+  side and the drive's deferral rule may have to move for this to hold, but they must
+  move together or the agreement is not established, so splitting them across two ACs
+  with a delivers_to contract would let one half ship and pass. Left as one AC; the
+  IT PO should confirm that judgement when it assigns technical detail.
+
+  UNDER-DETERMINED, LEFT FOR THE IT PO ON PURPOSE — where the shared account of the
+  deferral rule lives, and in which direction it is read (the drive publishing it for
+  the generator, the generator and drive both reading a third declaration, or the
+  generator asking the drive). Any of those satisfies this criterion. Choosing one is a
+  technical decision that depends on what the two sides can already see of each other,
+  which is not visible from the architecture docs.

@@ -131,35 +131,39 @@ from injection_builders import assemble_context_bundle  # noqa: E402
 # ===========================================================================
 
 _STABLE_ARCH = "STABLE_ARCH_FOR_BO2400C1III_STATE_TESTS"
-_STABLE_CONV = "STABLE_CONV_FOR_BO2400C1III_STATE_TESTS"
 _STABLE_HL = "STABLE_HL_FOR_BO2400C1III_STATE_TESTS"
-_VOLATILE_ACS = "VOLATILE_ACS_FOR_BO2400C1III_STATE_TESTS"
 _VOLATILE_PRIOR_TESTS = "VOLATILE_PRIOR_TESTS_FOR_BO2400C1III_STATE_TESTS"
 
 # --- OBTAINED_BUT_INCOMPLETE fixtures — real content via the real pure
 #     function, never a hand-typed re-implementation of its layering rule. ---
+#
+# CALL-SITE NOTE (BO-2400c-1-vi, 2026-08-26): these two fixtures lost their
+# conventions= and acs= arguments when that record removed both layers from
+# assemble_context_bundle(). This file is not in BO-2400c-1-vi.yaml's
+# call-site inventory only because the inventory was written on 2026-08-25,
+# the day before this file existed. It is a call site all the same, and a
+# module-scope one, so leaving it would fail the suite at COLLECTION.
 
 # Missing-marker: assembled with a WRONG breakpoint marker, so the literal
 # "<!-- CACHE_BREAKPOINT -->" the lane checks for is genuinely absent from
 # real, well-formed content (not merely truncated or corrupted).
 _INCOMPLETE_MISSING_MARKER_BUNDLE = assemble_context_bundle(
     architecture=_STABLE_ARCH,
-    conventions=_STABLE_CONV,
     high_level=_STABLE_HL,
-    acs=_VOLATILE_ACS,
     prior_tests=_VOLATILE_PRIOR_TESTS,
     breakpoint_marker="///NOT-THE-REAL-BREAKPOINT-MARKER///",
 )
 
 # Empty-layer: assembled with the REAL default marker present exactly once,
-# but the "acs" layer is an empty string — a real, distinguishable defect
-# distinct from a missing marker.
+# but the volatile layer is an empty string — a real, distinguishable defect
+# distinct from a missing marker. Before BO-2400c-1-vi this emptied the "acs"
+# layer; with acs gone, prior_tests is the volatile layer that carries the
+# same meaning, so the scenario survives the layer removal rather than being
+# dropped along with it.
 _INCOMPLETE_EMPTY_LAYER_BUNDLE = assemble_context_bundle(
     architecture=_STABLE_ARCH,
-    conventions=_STABLE_CONV,
     high_level=_STABLE_HL,
-    acs="",
-    prior_tests=_VOLATILE_PRIOR_TESTS,
+    prior_tests="",
 )
 
 # --- OBTAINED_BUT_A_REFERENCE fixtures — hand-authored, because they

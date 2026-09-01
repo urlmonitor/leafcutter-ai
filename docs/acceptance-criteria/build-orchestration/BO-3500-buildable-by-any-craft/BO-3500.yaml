@@ -1,0 +1,156 @@
+id: BO-3500
+components:
+  - build_orchestration
+  - agent_registry
+title: "Any requirement you point at can actually be built, not only the code ones"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Point at any requirement, not only the code ones, and it gets built.
+
+  Pointing at a single requirement and getting finished, delivered work back is
+  only worth having if it works for the work you actually have. Today it works
+  for one kind: writing code and the tests that prove it. Everything else a
+  requirement can ask for — a page of documentation, a diagram, a screen, a
+  prompt, a piece of configuration — is turned away, and because requirements
+  are built in connected groups rather than one at a time, a single such member
+  turns an entire area of the backlog away with it. This goal closes that gap:
+  the range of work the automation can produce grows to match the range of work
+  the backlog actually contains, so the honest refusal stays available for
+  genuine edge cases instead of being the everyday answer. Refusing well is
+  already handled (BO-2400f-12); this is about needing to refuse far less often.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013 is the documentation-shaped instance of this goal, and names 'give the lane a documentation phase' as its first fix direction — the only one that makes 'point at an id, get a PR' true for a subtree containing docs. That entry is scoped to documentation; this goal is the general case it is one instance of."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: [BO-3500a, BO-3500b, BO-3500c, BO-3500d]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  ORIGIN (2026-08-31, BrainCandy, verbatim): "one of the goals is to get to the
+  point that I can point a command at an AC and the script would let it be built
+  completely."
+
+  WHY A NEW L0 AND NOT A CHILD OF AN EXISTING ONE — the search came first, and
+  it found the goal already half-expressed. Record the finding so it is not
+  re-derived:
+
+    - BO-2400f (L1) already says the user's sentence almost verbatim: "Point at
+      one AC and it builds the whole connected set, hands back a PR" / "One
+      command, one AC id — a PR back, or an up-front reason why not." The arc is
+      specified and largely built. Nothing here restates it.
+    - What BO-2400f deliberately does NOT promise is universality. Its 2026-08-24
+      amendment replaced an unconditional promise of a pull request with two
+      honest endings — a PR, or a refusal before work starts — precisely because
+      the unconditional form was false. That amendment is correct and stands.
+      This L0 is the other half of that trade: the refusal is honest, and the
+      set of work that triggers it should shrink.
+    - BO-2400f-12 (work_status: done) implements the refusal, and its own
+      it_requirements are explicit that it does not presuppose the fix: "Do NOT
+      presuppose a documentation phase... If a documentation phase is added later
+      (KI-BO-013 fix direction 1), doc-only members become producible and the
+      refusal stops firing with no change to this criterion." This L0 is the
+      work that criterion was written to accommodate.
+
+  PLACEMENT — both candidate parents are FULL, which is what forced a sibling L0
+  rather than a child:
+    - BO-2400 is at 7 of 7 L1s. 7 is also the default _MAX_L1_PER_L0 hard cap,
+      and its own child_limit_override comment states an eighth L1 "needs an
+      ac-tree-split, not a further bump".
+    - BO-2400f is at 13 of 13 L2s under child_limit_override: 13, and carries a
+      standing Product Owner flag in its 2026-08-25 amendment: "this should be
+      the LAST override bump — a fourteenth child must force a Pattern C
+      intermediate split rather than child_limit_override: 14."
+    A new sibling L0 in the same component is the ac-tree-split skill's Pattern A
+    destination and avoids restructuring two full, actively-built trees. No
+    existing AC was moved, renamed, or re-parented: this is an addition, not a
+    split, so nothing needed rewiring.
+
+  ID ALLOCATION. BO-3500 was allocated and then deliberately left free by two
+  earlier authoring passes (see the ID ALLOCATION notes on BO-3100e and
+  BO-3100f, both of which chose an existing parent and recorded "BO-3500 is left
+  unused and free"). It is taken here. Highest existing L0 in the component is
+  BO-3600.
+
+  depends_on IS DELIBERATELY EMPTY, and the omission is the point. Semantically
+  this goal sits downstream of BO-2400f. An edge is not added because
+  depends_on is also how the fast lane resolves a connected build set: an edge
+  from here into the BO-2400f family would pull that entire subtree into every
+  set resolved from this tree. BO-2400f's own 2026-08-18 amendment records the
+  identical decision for the same reason ("a dependency edge from this L1 to the
+  BO-2600 family would itself widen every connected set resolved from this
+  tree, which is the very failure being fixed"). Following that precedent.
+
+  MEASURED BLAST RADIUS (2026-08-31, counted over the store in this worktree).
+  The lane's roster is two agents. 660 acceptance criteria that are not yet done
+  declare a producer outside it — llm-expert, documentation-expert,
+  architecture-diagram-author, frontend-coder, workflow-architect,
+  reference-author, test-runner, business-analyst and others. Across the whole
+  store (done and not-done) the figure is ~921 of ~3,130 records carrying an
+  assigned_agent. A record with no assigned_agent is treated as buildable, so
+  the 312 null records are not in that count. This is not a handful of awkward
+  criteria; it is roughly a third of the backlog, and because sets are resolved
+  rather than chosen, the share of *starting points* that refuse is higher than
+  the share of records that do.
+
+  STANDING CONSTRAINT INHERITED FROM KI-BO-013 — applies to every child and must
+  survive decomposition: "Do not simply skip untestable ACs — that reintroduces
+  phantom-done through the front door." Refusing is not skipping, and neither is
+  building. Nothing in this tree may be satisfied by dropping a member from a
+  set, by marking it done without its deliverable, or by loosening the done
+  gate. BO-3500c exists to make that explicit rather than to leave it as an
+  assumption.
+
+  BOUNDARIES — four neighbours this must not absorb or duplicate:
+    - BO-2400f — the ARC (one id in, PR or refusal out). This — the RANGE of
+      work that arc can carry. An implementer who satisfies one has not
+      satisfied the other.
+    - BO-2500 — done is proven mechanically by a passing test. That guarantee is
+      not weakened here. BO-3500c is about work whose deliverable is not code,
+      where a passing test is the wrong instrument rather than an optional one;
+      it must produce a proof obligation at least as strong, never a waiver.
+    - ACD-1800a / ACD-1800b — the requirement DECLARES its deliverables and is
+      done when each is signed off. That is the store side: what is asked for and
+      how completion is counted. This L0 is the build side: whether the
+      automation can make the thing. The roadmap already pairs them at
+      phase_acbuild_2a, whose exit criteria include "The fast lane refuses any
+      requirement whose checklist declares a deliverable it cannot produce" —
+      that is the refusal; this is the production.
+    - BO-2200 — documentation is demanded and enforced on the thorough path.
+      This is not a second documentation gate; documentation is one of several
+      kinds of work that a lean run currently cannot produce at all.
+
+  ROADMAP — flagged for the user, not decided here. Filed under phase_1 to match
+  the rest of the BO-2400 family. An argument exists for
+  phase_acbuild_2a_unit_of_work, since that phase's fourth exit criterion is the
+  refusal this goal is the counterpart to. Left for BrainCandy at the approval
+  gate.
+
+  DELIBERATELY NOT AUTHORED, named so a decomposer does not annex them:
+    - Whether new crafts can be added to the automation without re-engineering
+      it. Real value, but it reads as an extensibility property rather than an
+      outcome, and it is unclear whether it is this component's concern or the
+      agent registry's. Raised for the user.
+    - Which specific crafts are added, and in what order. That is a capability
+      call for BrainCandy and a sequencing question for the BA, not a goal.
+    - BO-2400g's five other skipped phases (ac-validator, ac-fulfillment-gate,
+      user-surface-smoker, live-surface-tester, documentation-verifier). Those
+      are gates the lean lane omits, already recorded as an open question in
+      BO-2400g's notes. Absent gates and absent producers are different problems.

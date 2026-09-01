@@ -72,10 +72,10 @@ retired here rather than reused, so the numbering gap is intentional.
 ### KI-BO-006 — `fast-lane-build.js` is deployed but orphaned
 
 - **Severity:** low
-- **Status:** open · AC **BO-2400c-1-v**
+- **Status:** **RESOLVED 2026-09-01** — the orphan is deleted; decision recorded below · AC **BO-2400c-1-v**
 - **Occurrences:** 1
-- **First seen:** 2026-08-14 · **Last seen:** 2026-08-18
-- **Where:** `templates/workflows-js/fast-lane-build.js`
+- **First seen:** 2026-08-14 · **Last seen:** 2026-08-18 · **Closed:** 2026-09-01
+- **Where:** `templates/workflows-js/fast-lane-build.js` (deleted)
 
 **Symptom.** Nothing invokes it. The only `Workflow("fast-lane...")` call anywhere is
 `fast-lane-ship`, and `/fast-lane-build` routes there. The orphan is still built,
@@ -118,6 +118,51 @@ over: `test_bo2400a_runner_wiring.py:401` asserts the literal string
 re-pointed at the live file — BO-2400c-1's proof now comes from the behavioural suite
 in `test_bo2400c_prompt_cache_wiring.py`, and re-pointing a name-presence grep would
 preserve, at a new address, exactly the test that let a dead reference read as alive.
+
+**RESOLUTION, 2026-09-01 — the decision this entry asked for, and how it was taken.**
+This entry explicitly asked for a *capability* decision: wire the prompt-caching layer
+into the running lane and delete the orphan, or delete both and say plainly that prompt
+caching is gone. **The first was taken.** `BO-2400c-1-iii` wired the layer into
+`fast-lane-ship.js`, and the orphan has now been deleted along with
+`test_bo2400a_runner_wiring.py`. No capability was retired.
+
+**The size estimate above was wrong in both directions, and the correction is the
+useful part.** It was written by reading the two test files. The real figure came from
+*deleting the orphan and running the full covering-test set*, which is a different
+activity and gave a different answer:
+
+- **Overstated.** The two files do not hold the sole proof for eight criteria. Per-id
+  audit: only `BO-2400a-1` and `BO-2400a-5` had sole proof there, both in
+  `test_bo2400a_runner_structure.py`. `test_bo2400a_runner_wiring.py` held **no**
+  criterion's sole proof and was simply deleted, as this entry's own prohibition
+  anticipated.
+- **Understated.** A third file was missed entirely — `test_bo2500d_gate_retirement.py`,
+  whose `_FAST_LANE_PATH` pointed at the orphan and which carried sole proof for
+  `BO-2500d-2` (`done`).
+
+So the true blast radius was **three** ACs, not eight, and it included one this entry
+never named.
+
+**A path swap would not have worked, and that is why the migration was its own change.**
+`fast-lane-ship.js` has ~20 non-comment `agent()` call sites against the orphan's
+exactly 2, so the "exactly two agent dispatches" assertion failed outright; and the
+gate-ordering assertion compared raw string positions, where a JSDoc mention of a coder
+type precedes the real gate call in the live lane (measured: `python-coder` at 832,
+`verify_red_baseline` at 952, while real control flow is 336 before 28512). The
+assertions were rebuilt to count the unique dispatch labels and to compare
+comment-stripped positions. `select_batch` does not exist in the live lane at all — it
+uses `fast_lane.py select_connected`.
+
+**Prohibitions honoured.** Nothing was kept alive by relaxing an assertion, marking it
+skipped or xfailed, or re-aiming it at a file that merely contains the same string. The
+`assemble_context_bundle` name-presence grep at `test_bo2400a_runner_wiring.py:401` was
+**deleted with its file**, not re-pointed. The `BO-2500d-1`/`-1-i`/`-3` tests were
+deliberately left pointing at the orphan's former path rather than re-aimed: they are
+`in_progress`, and `BO-2500d-1` asserts the fast lane has no LLM review agent, which the
+live lane deliberately contradicts by dispatching `pr-reviewer` at Phase 4.5 (PR #485).
+
+**Absorbed and closed with it:** the former `KI-BO-005` (the module had no command-line
+entry point), already noted above as fixed.
 
 ---
 
@@ -1018,9 +1063,10 @@ permission. Not implemented — this entry records the defect and the proposed d
 ### KI-BO-019 — The context bundle is passed through an agent's JSON return value, so a large bundle arrives as a file path and the fail-closed gate halts a run whose bundle was fine
 
 - **Severity:** blocker — the fast lane cannot complete an end-to-end run on a real target
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Status:** open. The mitigation that shipped is the third fix option below, and the
+  second occurrence **disproves** it — see "Second occurrence" at the end of this entry.
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-31
 - **Where:** `templates/workflows-js/fast-lane-ship.js` — the `fastlane-context-bundle`
   dispatch and the `contextBundleUsable` gate that reads it (the `CACHE_BREAKPOINT_MARKER`
   constant and the `contextBundle.includes(...)` check)
@@ -1073,6 +1119,57 @@ its verdict because `obtained` and *usable* are being conflated in the operator-
 - *Keep the verbatim contract and enforce it*, by making the agent's schema reject a value
   that looks like a path and by stating the size expectation in the prompt. Cheapest, and the
   least robust — it fights the model rather than the design.
+
+**Second occurrence, 2026-08-31 — and it disproves the option that shipped.**
+
+The third option above is what landed: `fast-lane-ship.js`'s bundle prompt now states
+`SIZE EXPECTATION: the assembled bundle is roughly twenty kilobytes (~20 KB)` and refuses a
+reply that "names where the text can be found instead of containing the text". Run
+`wf_22fae0b9-291`, target `BP-900g-9-i`, failed anyway — in a **new and worse way**.
+
+The agent did not return a path this time. It returned the content **in-band, and altered**:
+
+```
+&amp;lt;!-- CACHE_BREAKPOINT --&amp;gt;        <-- what arrived
+<!-- CACHE_BREAKPOINT -->              <-- what assemble-bundle emits
+```
+
+The whole payload had been HTML-escaped in transit — every `-->` in the architecture doc's
+mermaid arrived as `--&gt;` — and the marker, which contains `<`, was escaped twice. The
+source doc on disk contains **zero** HTML entities, confirmed by grep, so the escaping is
+introduced by the transport and not present in the input.
+
+Three things follow, and each is worse than the first occurrence.
+
+**The reference-rejection guard cannot see this.** It was added precisely for occurrence 1
+and it is working correctly — the reply *is* content, not a pointer. Mangled content passes
+every check that distinguishes content from a reference, because it is content.
+
+**The size hypothesis is wrong.** Occurrence 1 was 149 KB and this entry concluded "the
+contract is unsound at this size and will fail again on any comparably sized target". The
+agent reported `"bytes": 18190` for occurrence 2 — **18 KB, under the ~20 KB the prompt
+itself names as the expectation**. It failed at the size the design targets. The contract is
+not unsound at 149 KB; it is unsound at any size, because byte-exact reproduction of markup
+is not something a model does reliably however short the text.
+
+**Only the marker check caught it.** Nothing else in the lane compares what arrived against
+what was assembled. Had the bundle contained no marker-shaped token, silently corrupted
+context would have been handed to the test-writer and coder dispatches as though intact, and
+the run would have completed green on a mangled prompt. The gate that saved this run exists
+for cache correctness, not integrity — it caught an integrity failure by luck of shape.
+
+**What this does to the fix calculus.** Option three is no longer "least robust"; it has been
+tried and has failed at its design size, in a way its own new guard cannot detect. Option one
+(let the Python side emit a small verdict and gate on that, keeping the payload off the agent
+boundary) is the only remaining shape that does not require an fs primitive the engine lacks.
+Whatever is chosen, the lane needs an integrity check comparing what arrived against what was
+assembled — a byte count or digest returned by `assemble-bundle` and re-derived on the
+received text — because "it looks like content" is demonstrably not the same as "it is the
+content", and that distinction is currently unmade.
+
+**Operational consequence right now: the fast lane cannot complete a run on any target.**
+Both occurrences halted at the same phase, five to six agents in, after creating a worktree
+and claiming the build set. The worktree is left behind.
 
 Whichever is chosen, the operator-facing message must stop saying "was not obtained" when
 `obtained` was true. Distinguish *not obtained* from *obtained but unusable, because X* —
@@ -1342,7 +1439,8 @@ references, and a missed one silently points a reader at someone else's defect.
 ### KI-BO-025 — `/build-feature` plans only the first ready wave, so an epic with any dependency depth cannot be driven to completion in one run
 
 - **Severity:** high
-- **Status:** open
+- **Status:** open · ACs **BO-100e** (carry the layers) and **BO-300d** (say what was left),
+  both authored 2026-08-26, both `readiness: draft` awaiting the approval gate
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/build-feature.js` — the `epic-planner` `agent()` call
@@ -1385,12 +1483,32 @@ harness — unbuilt after a run that did substantial correct work on the other 1
 **Not a false-complete, at least.** The completion guard does catch the shortfall and withholds
 the "complete" verdict — but it misdescribes the cause; see KI-BO-026.
 
+**Why it misdescribes it, found 2026-08-31 while enriching the ACs.** The run has no record of
+the epic's contents at plan time that is separate from the plan. `plannedTicketPaths`
+(deployed `~:2156`) is built by iterating `batches` — the comment above it calls this "the set
+of work the plan was built from … the baseline the completion-time re-read is compared against,
+by identity (BO-300a-5)", but under this defect the baseline is 17, not 37. The 20 dropped
+tickets are therefore absent from the baseline, and at completion time `compareEpicTicketSets`
+can only see them as *additions*. **KI-BO-025 and KI-BO-026 are one defect observed from two
+ends**, and separating the run's *set* from the run's *schedule* is a precondition for fixing
+either — not an optimisation. It also changes what BO-300a-5 (`done`) reports, so it cannot be
+done quietly.
+
 **Fix direction.** Either loop the planner until it returns an empty batch set (re-reading
 frontmatter each round, which the code comment at `~:2400` already anticipates as the resume
 mechanism), or have it emit the full topological schedule as ordered waves rather than one
 antichain. If the single-wave behaviour is deliberate, the run must state it: report the count
 of unscheduled-but-ready-later tickets and instruct the caller to re-invoke, rather than
 leaving the arithmetic to whoever compares the plan against the folder.
+
+**A test-harness precondition blocks all of it, found 2026-08-31.**
+`unit_tests/_workflow_engine_harness.py::run_workflow_under_e2` takes
+`label_responses: dict[str, Any]` — **one** response object per label, serialised to a flat
+JSON literal and returned on every call to that label. The `epic-planner` label therefore
+cannot express wave 1 followed by a *different* wave 2, and `ticket-planner` is shared across
+every ticket so it cannot differentiate per-ticket replies either. Until the harness supports
+sequenced per-label responses, **not one behavioural test for this fix can be written**, and
+the work collapses to exactly the grep-only proof CLAUDE.md forbids. Extend the harness first.
 
 **Pattern:** a stage that does part of the job correctly and reports no signal that the rest
 exists.
@@ -1400,7 +1518,10 @@ exists.
 ### KI-BO-026 — Work the planner never selected is reported as work "added to the epic after the plan was fixed"
 
 - **Severity:** medium
-- **Status:** open
+- **Status:** open · AC **BO-300d** (authored 2026-08-26, `readiness: draft`), whose criteria
+  were amended on the same day precisely because the first draft demanded an attribution the
+  run cannot make. See the 2026-08-31 note on KI-BO-025 for why: the baseline this compares
+  against is the plan, not the epic.
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/build-feature.js` — `compareEpicTicketSets()`
@@ -2456,3 +2577,687 @@ workflow are versioned together and deployed together, and still disagree.
 **Related.** `KI-BO-20260901-1000` (same run, same driver, also a dispatch decision that
 ignores what the ticket record already says). Both are instances of the driver's dispatch
 logic and the ticket record having drifted apart; the record is right in both cases.
+
+---
+
+### KI-BO-20260826-1900 — The done-proof gate collects parametrized pytest ids and then cannot match one, so a covers-tagged parametrized test reads as "not run" and blocks the merge
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/ac_store/done_proof.py` — `_find_nodeid_for_test` (lines 1000-1006)
+  against the result-line regex at line 103. Surfaces through the **required** CI check
+  `Proof-of-done coverage check (BO-2500b)` and the `check-done-proof` pre-commit hook.
+
+**Symptom.** `BO-2400c-1-vii` was covered by a passing, correctly `# covers:`-tagged test.
+The required CI check failed anyway:
+
+```text
+[check-done-proof] BO-2400c-1-vii: linked test not run:
+  unit_tests/workflows/test_bo2400c1vii_reference_examples.py::
+  test_ac1vii_each_documented_example_executes_against_the_real_function
+```
+
+The test existed, was tagged, ran, and passed. The only thing unusual about it was
+`@pytest.mark.parametrize`.
+
+**Cause, and the reason it is a defect rather than a missing feature.** The two halves of the
+gate disagree about what a nodeid looks like.
+
+- The result parser at line 103 matches
+  `^(\S+::test_\w+(?:\[.*?\])?)\s+(PASSED|FAILED|…)` — the `(?:\[.*?\])?` group means it
+  **deliberately captures** parametrized ids such as `::test_foo[0]` into the results dict.
+- The lookup at lines 1000-1006 builds `suffix = f"::{func_name}"` and accepts a nodeid only
+  when `nodeid.endswith(suffix)`. A parametrized id ends `::test_foo[0]`, never `::test_foo`.
+
+So the scanner goes to the trouble of collecting parametrized results, and the matcher is
+structurally incapable of finding any of them. Both fallback loops at 1001 and 1004 use the
+same `endswith`, so neither rescues it.
+
+**Why this bites hard.** The verdict is `not run`, which is the gate's *fail-closed* wording
+for "the pytest run never reached this test" — a phrase that sends the reader looking for a
+collection error, an import failure, or a skip. None of those is happening. The test ran and
+passed in the very same pytest invocation whose output the gate just parsed.
+
+It also arrives late and asymmetrically. The pre-commit hook and the CI job disagree in
+practice: at commit time the hook passed for this branch, and CI failed. Reproducing the CI
+result locally requires the exact invocation *and* the right working directory —
+
+```bash
+env --chdir=<worktree> python scripts/commit_guardian/check_done_proof.py \
+  --mode ci-changed --base origin/main --test-root .
+```
+
+— because run from outside the repo it exits 0 and reports nothing, which reads as a pass.
+That is the `KI-BP-*` "silence is not a pass" shape again: a gate invoked slightly wrong is
+indistinguishable from a gate satisfied.
+
+**Consequence for authors.** Parametrization is the natural shape for any AC of the form "each
+of N cases must hold" — precisely the ACs most worth testing thoroughly. Today that shape is
+unmergeable when the test carries a `# covers:` tag, and nothing tells the author why. The
+silent workaround is to write N near-duplicate functions; the *quiet* workaround, and the
+dangerous one, is to drop the `# covers:` tag to get the gate to stop complaining, which
+removes the AC's proof entirely while turning the check green.
+
+**Fix.** Match the parametrized form in the lookup — accept a nodeid when it equals
+`::func_name` **or** starts with `::func_name[`. Because parametrization means one tag maps to
+many nodeids, the pass/fail rule needs a decision at the same time, and the safe one is: every
+matching nodeid must pass, so a single red case still fails the gate. A `next()`-style
+first-match would let a green `[0]` mask a red `[1]`, which converts this bug into a
+false-green — strictly worse than the current fail-closed behaviour. Whoever fixes it should
+also reconcile the hook and CI paths, since the two currently disagree on the same commit.
+
+**Workaround in force.** `unit_tests/workflows/test_bo2400c1vii_reference_examples.py` uses
+three named functions over a shared helper rather than one parametrized test. Both the module
+docstring and the helper name this KI and say not to collapse them back until the gate matches
+parametrized ids — the constraint is recorded where someone would otherwise reintroduce it,
+not only here.
+
+**A second, narrower gap found in the same investigation, not yet its own entry.** The gate's
+only exemption from requiring a covers tag is the composite one (`BO-2500a-6`: an AC whose
+`covered_by` is non-empty derives proof from its children). There is no exemption for a **leaf**
+declaring `test_required: false`. Such a record can therefore never be marked `done` — the
+schema permits the declaration and the gate refuses its consequence. That deserves care rather
+than a quick exemption: `test_required: false` is exactly the escape hatch a phantom-done would
+reach for, so the right answer is probably to require the field be justified in
+`test_rationale` and reviewed, not to make it a silent bypass. Recorded here so the next person
+meets both halves at once. (In this instance the correct resolution was not an exemption at
+all: the record's `test_required: false` was simply wrong, and executing the documentation
+page's own examples turned out to be a real behavioural test.)
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — adjacent to, but not an instance of,
+the presence-only family. This one fails *closed*, so it costs merges rather than hiding
+defects; the false-green risk is in the two tempting fixes (drop the tag; first-match wins).
+
+**Related.** `KI-BO-20260826-1332` (the store's `work_status` disagreeing with reality — same
+theme of a gate reading a proxy rather than the thing itself). `KI-ACS-001` (a validation run
+that reported clean because it was invoked in a way that checked nothing).
+
+---
+
+### KI-BO-20260831-1330 — The fast lane invokes `assemble-bundle` with two flags that were deliberately deleted, so its context-bundle gate can never be satisfied
+
+- **Severity:** blocker
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/workflows-js/fast-lane-ship.js`, the `context-bundle` phase's Step 2
+  invocation; `injection_builders.py` `assemble-bundle` argparse surface
+
+**Symptom.** `/fast-lane-build INF-700b-2` halts:
+
+```
+status: blocked
+failing_phase: context-bundle
+context_bundle_state: incomplete
+"The context bundle was obtained but is incomplete: the cache breakpoint marker
+ is absent, or one of its layers is empty."
+```
+
+`obtained: true`, `bytes: 10287`. The content came back — this is **not** the pointer-instead-of-content
+failure in `KI-BO-20260826-1214`. The bundle is genuinely incomplete.
+
+**Cause.** The workflow's Step 2 tells the phase agent to invoke `assemble-bundle` with
+`--conventions` and `--acs`. Those flags **do not exist**. `BO-2400c-1-vi` removed them
+deliberately — not made optional, *removed* — so a caller cannot reintroduce the two largest
+duplicate layers the design retired (`conventions` duplicates the harness-injected
+`CLAUDE.md`; `acs` duplicates AC records the receiving agent can read from its own
+workspace). Passing either makes argparse reject the whole command.
+
+The agent did the sensible thing: ran with the three flags that do exist
+(`--architecture`, `--high-level`, `--prior-tests`) and folded a pointer to the AC store into
+the `high_level` layer. The bundle assembled, exit 0, no stderr — and then failed the
+completeness check, because the layer set no longer matches what the workflow validates.
+
+**So the two halves of one feature disagree about their own interface.** `BO-2400c-1-vi`
+narrowed the CLI; nothing updated the caller or the completeness contract it validates
+against. Every fast-lane run for a `python-coder` AC hits this.
+
+**Why it reads as something else.** The message says "incomplete", which invites you to
+look at the layers' *content* — whether a doc was too big, whether a file was missing. The
+actual fault is one directory away, in an argparse surface the workflow has no test against.
+The phase agent's own report is what surfaced it, in prose, as an aside.
+
+**Fix direction.** Reconcile the caller with the CLI, in one change, and add the test that
+would have caught it: assert the workflow's invocation string only names flags
+`assemble-bundle` actually accepts. Then decide whether the completeness contract should
+still demand the two retired layers — it should not, and that is the substantive half.
+A shared constant for the layer set, read by both the builder and the validator, removes
+the class rather than this instance.
+
+**Related.** `KI-BO-20260826-1214` (same phase, same halt, different cause: content returned
+as a pointer rather than inlined — that one is about the size of the payload, this one about
+the shape of the command). Both make the lane unable to ship; fixing either alone is not
+enough.
+
+---
+
+### KI-BO-20260831-1331 — A half-created fast-lane worktree is invisible to `git worktree`, so it cannot be cleaned up and its symptom reads as store-wide corruption
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `setup_ticket_worktree.py create-fastlane-worktree`, and the resolver's error
+  message in `templates/workflows-js/fast-lane-ship.js`
+
+**Symptom.** A fast-lane run halted at `resolve` with:
+
+```
+resolve_connected_build_set: AC id 'INF-700c-1' not found in the store at
+.../worktrees/inf-700c-1/docs/acceptance-criteria
+... the run also emitted ~3695 lines of "ERROR: <path>.yaml: expected a YAML mapping,
+got NoneType" for effectively every AC file in that store
+```
+
+The message concludes "this looks like a store-wide corruption or wrong ac-root path".
+**It is neither.** Measured:
+
+| Check | Result |
+|---|---|
+| Empty `.yaml` in that worktree's store | **3695** |
+| Empty objects in `.git/objects` | **0** |
+| Empty `.yaml` in the main checkout | **0** |
+| Empty `.yaml` in two sibling fast-lane worktrees | **0** |
+| Disk usage | 3% of 1007G |
+
+So the object store is intact and every other checkout is fine. `create-fastlane-worktree`
+wrote a directory tree of zero-byte files **and a corrupt `.git` gitfile**
+(`fatal: invalid gitfile format`), then failed before registering the worktree.
+
+**The cleanup path is closed.** `git worktree list` does not contain it, so
+`git worktree remove --force` refuses with *"is not a working tree"*, and
+`git worktree prune` finds nothing to prune. The only recourse is to move or delete the
+directory by hand. An operator following the obvious commands gets two refusals that both
+look like *they* are holding it wrong.
+
+**Why the misdiagnosis matters more than the corruption.** The blast radius of the real
+fault is one throwaway worktree. The blast radius of the *message* is the whole AC store:
+it points a reader at `docs/acceptance-criteria/`, which is shared, tracked, and the thing
+this repo is most afraid of losing. The correct first move — check whether the git object
+store is intact — is not suggested anywhere.
+
+**Fix direction.** Make `create-fastlane-worktree` atomic or self-cleaning: if registration
+does not complete, remove the partial directory before returning, and return non-zero. On
+the reading side, when a store scan finds *every* file unparseable, that is evidence about
+the **checkout**, not the store — the resolver should say so and check
+`git -C <worktree> rev-parse --git-dir` before blaming the ac-root. Cheapest immediate
+guard: have the worktree phase verify the new worktree appears in `git worktree list` and
+that a known file is non-empty, before any later phase trusts it.
+
+**Related.** `KI-BP-20260826-1331` (a shared deployed `.leafcutter/` being a collage of
+whatever each worktree last wrote — same family: worktree provisioning that half-succeeds
+and is believed).
+
+---
+
+### KI-BO-20260831-1332 — The fast lane's roster is python-coder + test-writer, so it refuses a third of the ready queue with no upstream signal
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1 (3 ACs affected in one sitting)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/workflows-js/fast-lane-ship.js` roster / build-set refusal;
+  `scripts/ac_store/scan_ac_store.py` ready-queue construction
+
+**Symptom.** `/fast-lane-build INF-400b-2-ii` refuses immediately:
+
+```
+status: refused
+"1 member(s) declare a deliverable or proof obligation no phase in this run's roster produces"
+reason: "no phase in this run's roster produces work assigned to 'llm-expert'
+         (roster: ['python-coder', 'test-writer'])"
+```
+
+**The refusal itself is good and should be kept.** It happens *before any claim or dispatch*,
+names the AC, the missing producer and the actual roster, and leaves no `in_progress` state
+to clean up. That is the correct shape for a gate that cannot proceed.
+
+**The defect is upstream silence.** Nothing between the AC store and the operator says an
+`llm-expert` AC is un-fast-lane-able. `scan_ac_store.py` lists them as `ready` alongside
+`python-coder` ACs; `readiness: approved` says nothing about which builder can take them;
+neither `/build-ac` nor the fast lane's own documentation mentions the roster. In the
+`INF-400b-2-ii` / `INF-700b-1-i` / `INF-700b-1-ii` group, **3 of 9 ready ACs** were in this
+category — discovered only by launching a lane at each and reading the refusal.
+
+There is a second-order cost. `INF-400b-2-ii` is assigned `llm-expert` *and* carries six
+`test_spec` descriptors, so it is not routable to a single agent at all: `llm-expert` cannot
+write `.py`, and `test-writer` does not own template prose. It needs two agents in sequence,
+which the fast lane has no shape for. Driven by hand, this inverted TDD order — the
+implementation necessarily landed before its tests, and a red baseline had to be recovered
+afterwards by stashing the production diff.
+
+**Fix direction.** Cheapest useful step: have `scan_ac_store.py` report the assigned agent
+per ready AC (it already reads the field) and let the operator filter, or add a
+`--fast-lane-eligible` flag that applies the roster. Better: publish the roster as data the
+store can read, so eligibility is derived rather than discovered by refusal. Separately,
+decide whether an AC whose implementation surface is prose but whose proof surface is Python
+should be *split* at authoring time — that is a question for IT-PO's enrichment pass, not for
+the lane.
+
+**Trap.** The refusal reads as a per-AC problem ("this AC is wrong"), so the natural response
+is to re-author the AC. The AC is fine. The mismatch is between the store's notion of ready
+and the lane's notion of buildable, and re-authoring one record does not touch it.
+
+---
+
+### KI-BO-20260831-1930 — The driver deliberately drops the `pull-request` phase for an epic member, the generator emits it as `needed`, and nothing reconciles them — so every epic ticket halts the drive at completion
+
+- **Severity:** blocker
+- **Status:** open — no AC
+- **Occurrences:** 3 (three consecutive drives of EPIC-StartingNewWorkTheProperWayAlways,
+  each halting on a different ticket as it became the first to finish)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/workflows-js/build-feature.js:406`
+  (`phases.filter((p) => p.agent !== "pull-request")`) and `:1384`
+  (`deferredPhases = isEpicMember ? ["pull-request"] : []`), against
+  `scripts/ac_store/generate_ticket_from_ac.py`, which emits `pull-request: needed` on every
+  generated ticket
+
+**Symptom.** An epic ticket completes every phase, then the drive halts:
+
+```
+Ticket "..." was NOT recorded complete.
+0 needed phase(s) are outstanding in the ticket's own record: .
+The completion write failed: Refusing to set status: done. The ticket's own
+frontmatter still lists `pull-request: needed` (not among the 8 agents the
+request asked me to check)...
+```
+
+Note the shape: **zero outstanding phases, and a refusal anyway.** The driver's own list is
+complete; the ticket's list has one more entry.
+
+**Cause.** Both halves are individually correct and they were never introduced to each other.
+
+The driver *deliberately* removes `pull-request` from an epic member's phase list, because a
+single epic-level PR covers every ticket on the branch. That is intentional, documented in
+the source, and right. The generator, which does not know or care whether its output will
+land in an `EPIC-*/` folder, writes `pull-request: needed` into every ticket it produces. So
+the phase is never dispatched, no sign-off is ever written, and the completion writer — which
+reads the ticket rather than the driver's phase list — correctly refuses to mark done with a
+`needed` phase outstanding.
+
+**Why blocker.** It is not one ticket, it is every ticket in every epic. Measured on the
+current tree, `grep -rl "pull-request: needed" tickets/00_inbox/epics/` returns **333**
+tickets spanning **23** epic folders, **316** of which are not yet done. The observed epic
+contributed 25 of those 333 — it was the first to hit the halt, not the size of the problem.
+The drive halts on whichever ticket finishes first, so fixing that one ticket by hand just
+moves the halt to the next, which is exactly what three consecutive drives did before the
+pattern was visible.
+
+**It also cannot be diagnosed from the halt message.** The message names the ticket and the
+phase, so the natural reading is "this ticket is missing a sign-off" — and the natural
+response, re-running the drive, reproduces it identically because the phase the ticket wants
+is the one the driver has decided not to run.
+
+**Fix direction.** Make the generator emit `pull-request: not_needed` when the target path is
+inside an `EPIC-*/` folder — the ticket then states what the system actually does, and the
+Sign-offs row is omitted with it (a `not_needed` agent must not appear there). The runtime
+alternative — having the driver reconcile the frontmatter when it defers a phase — is worse:
+it means an agent rewriting the record to match its own behaviour, which is the shape that
+makes a record stop being independent evidence.
+
+**Workaround in use — on one unmerged branch, and nowhere else.** The 25 tickets of
+EPIC-StartingNewWorkTheProperWayAlways were set to `pull-request: not_needed` by hand
+(`9682d6adf`). That commit is reachable from exactly one branch:
+`git branch --contains 9682d6adf -a` returns `EPIC-StartingNewWorkTheProperWayAlways` and its
+remote, and nothing else. On `main` not one of those 25 is corrected and the other 308 were
+never touched, so anyone reading from `main` has the defect live in full. Do not read
+"workaround in use" as "the pain is handled" — it is handled on a branch that has not landed.
+
+The reasoning behind that hand-correction is worth preserving, and holds for the branch it was
+made on: it is a correction, not a suppression, because `not_needed` means "explicitly
+excluded from this ticket", which is precisely what the driver does. They were NOT set
+`signed_off` — no per-ticket PR phase ran, and saying one did would be false.
+
+**Sequencing warning — the 316 must be repaired BEFORE the completion guard is unified.** A
+fix is being specified that makes the completion guard consistent (`KI-BO-20260831-1932`).
+Today that guard has two doors and only one of them reads the ticket, so roughly two in three
+of these tickets slip past it into a phantom `done` instead of halting. That leniency is the
+only reason a population of 316 is survivable at all. Once the guard is consistent **all 316
+halt reliably** — which is the correct behaviour, and a large immediate operational cost that
+has to be paid deliberately rather than discovered. The mechanical repair of the 316 (fix the
+generator, then sweep the tickets that already exist) has to land first. Unify the guard first
+and the next drive halts on ticket one of 316, with 315 behind it.
+
+**Related.** `KI-BO-20260831-1931` (the sibling record-vs-driver disagreement, on comment
+status rather than phase membership).
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse: a gate that blocks
+correctly on a record the rest of the system has already decided to ignore.
+
+---
+
+### KI-BO-20260831-1931 — Ticket completeness is judged from the newest per-agent COMMENT, and the driver halts before dispatching, so a stale comment blocks every future run and the record cannot heal itself
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 2 (tickets ACD-2100a-1 and ACD-2100d-2, two consecutive drives)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** the per-ticket completeness evaluation in
+  `templates/workflows-js/build-feature.js`, against the `## Comments` sign-off entries the
+  `signoff` skill writes
+
+**Symptom.** A ticket whose frontmatter reads `python-coder: signed_off` halts the drive with
+
+```
+python-coder (the latest sign-off entry for 'python-coder' in the record reads
+status 'handoff', not a passing outcome)
+```
+
+The frontmatter and the newest comment disagree, and the comment wins.
+
+**Why it is not self-correcting, which is the actual defect.** The driver evaluates
+completeness *before* dispatching any phase. A run against the affected epic dispatched
+**11 agents, all status-checkers, and not one phase agent** — it read the records, found a
+non-passing newest comment, and stopped. So the only thing that could write a newer comment
+is the phase the driver has already declined to run. A re-run is byte-identical and produces
+the identical halt. The observed epic halted this way twice in a row.
+
+**How the stale comment gets there, and the part worth internalising.** On ACD-2100a-1 the
+phase had genuinely completed. A re-dispatched `python-coder` returned `status: ok` and
+**deliberately wrote no comment**, reasoning that "re-writing it would duplicate/risk
+corrupting a correct history". That caution is defensible in isolation and it is what left
+the earlier `handoff` as the newest entry. An agent doing the careful thing created an
+unrecoverable block.
+
+**Fix direction.** Either resolve completeness from the frontmatter `agents:` map — which the
+sign-off protocol already requires be kept in lockstep with the checklist — or, if the newest
+comment is to remain authoritative, require a phase returning `ok` to write a comment saying
+so, so "no new comment" cannot mean "still blocked". The two sources must not be able to
+disagree while only one is read.
+
+**Detection.** Compare each ticket's frontmatter `agents:` values against the status on the
+newest `### <timestamp> — <agent> (status: ...)` entry for that agent. Any disagreement is
+this defect. `check_ticket_signoff_parity.py` does **not** catch it — it reconciles
+frontmatter against the `## Sign-offs` checklist, not against the comment log.
+
+**Related.** `KI-BO-20260831-1930` (same class: the driver's model of a ticket and the
+ticket's own record disagreeing, with no reconciliation).
+
+---
+
+### KI-BO-20260831-1932 — The completion guard refuses one ticket and passes another on identical conditions
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1 (one drive, three tickets, split outcome)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** the completion-write step of `templates/workflows-js/build-feature.js`, and
+  `scripts/set_ticket_status.py`'s agents-parity check
+
+**Symptom.** In a single drive, with three tickets in exactly the same state — every phase
+signed off except `pull-request: needed`, no sign-off entry for it — the guard **refused**
+ticket 01 and **flipped tickets 03 and 20 to `status: done`**.
+
+The refusal cited the condition explicitly: "the ticket's own frontmatter still lists
+`pull-request: needed` ... Per my closing protocol I only mark a ticket done when every phase
+the ticket names as needed is confirmed signed off". The other two met that description
+equally and were written anyway.
+
+**Why it matters more than the inconsistency itself.** The refusing path is the correct one.
+The lenient path is a phantom-done write: it records `status: done` on a ticket the guard's
+own stated rule says is not done. Whichever way this is unified, it should be unified toward
+the refusal — but a guard that produces both outcomes from one condition gives no signal
+about which it will do next time, so neither result can be trusted as evidence.
+
+**A secondary consequence, observed.** Ticket 20 was flipped to `done` while its
+`source_ac` (`ACD-2100d-2`) was still `work_status: todo`, which
+`check-ticket-ac-status-parity` then blocked at commit time. The lenient write produced a
+state a different gate had to catch.
+
+**Fix direction.** Make the completion write take its phase list from the ticket, not from
+the caller's request. Both observed paths had the same 8-item request; only one of them
+went and read the ticket for a ninth.
+
+**Why that direction, spelled out — it has already been read backwards.** Two agents read the
+paragraph above on the same day and drew opposite conclusions from it, so the reasoning
+belongs in the entry rather than in the reader.
+
+Taken literally and on its own, the direction unifies both paths onto the refusal. While the
+tickets still say `pull-request: needed`, that converts an intermittent blocker into a
+permanent and universal one — 316 tickets, per `KI-BO-20260831-1930`. An implementer can
+reasonably conclude from that alone that the direction is wrong. It is not wrong; it is
+mis-ordered if taken alone. See the sequencing warning on that entry for the order.
+
+The tempting alternative — have the completion writer trust the exclusion list its caller
+hands it — must be rejected, and rejected explicitly, because it is what the obvious fix looks
+like. The guard's refusal is worth something only while the record is authored by someone
+other than the party being checked. A writer that accepts the drive's word about which phases
+do not count has stopped checking the drive, which is the only thing it was ever for. It would
+fix today's symptom by removing the guard.
+
+The direction completes the fix only when paired with making the RECORD true — the generator
+emitting `pull-request: not_needed` for epic members, per `KI-BO-20260831-1930` — so that a
+writer reading the ticket gets the right answer. The two halves are a pair. Reading the ticket
+without correcting the ticket halts everything; correcting the ticket without reading it
+leaves a guard that trusts its caller. Neither works alone.
+
+**Related.** `KI-BO-20260831-1930` — the `pull-request: needed` entry that put all three
+tickets in this state.
+
+---
+
+### KI-BO-032 — `/fast-lane-build` silently builds a different batch when the AC you named is not `readiness: approved`
+
+- **Severity:** high — the failure is a green run against the wrong work, with no signal
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `templates/workflows-js/fast-lane-build.js` (hardcoded `select_batch`
+  invocation) against `fast_lane.py`'s `select_batch`, which filters on `_is_approved`
+
+**Symptom.** An operator says "fast-lane `TKT-600a-1`". `fast-lane-build.js` takes no AC
+argument at all — it hardcodes `select_batch --ac-root <root> --limit <N>`, which returns
+"the next N **approved** unimplemented ACs by priority". The named AC is never consulted.
+If it is not `readiness: approved`, the lane builds five unrelated ACs and reports success.
+
+Measured on the real store at `931b4beb4`:
+
+```
+select_batch    --limit 5        -> ["ACS-500g-6-i", "BP-900b-3", "BP-900g-10-i",
+                                     "BP-900g-10-ii", "BP-900g-8-ii"]
+select_connected --ac TKT-600a-1 -> ["TKT-600a-1"]
+```
+
+Zero overlap. Nothing in the run says the requested AC was dropped, because nothing in the
+run ever received it.
+
+**Why the readiness field cannot be relied on to prevent this.** `TKT-600a-1` has been
+`readiness: draft` for its entire history — including the whole period it was
+`work_status: done`. So "draft" here does not mean "not ready to build"; it means nobody
+ran the approval gate. Any AC that reached done outside `/plan-feature` is in the same
+state, and every one of them is invisible to `select_batch` while looking perfectly
+buildable to an operator reading the store.
+
+**Fix direction.** Two independent halves, both cheap:
+
+1. Give `fast-lane-build.js` the `ac` argument its sibling already has. `fast-lane-ship.js`
+   accepts `args.ac` and resolves via `select_connected` (dependency-ordered,
+   **readiness-agnostic**) — the correct behaviour already exists one file over.
+2. Failing that, make the silence impossible: when the caller names an AC that
+   `select_batch` did not return, refuse rather than substitute. A lane that cannot build
+   what was asked for should say so, not build something else and exit 0.
+
+**Workaround until fixed.** Use `/fast-lane-ship` with `{ac: "<ID>"}` for any targeted
+single-AC build, and confirm the resolution before dispatching:
+
+```
+python3 <root>/.leafcutter/scripts/build_orchestration/fast_lane.py select_connected --ac <ID> --ac-root <store>
+python3 <root>/.leafcutter/scripts/build_orchestration/fast_lane.py check_producibility --ac-ids <ID> --ac-root <store>
+```
+
+An empty `select_connected` result is a clean no-op in the lane, so checking first is the
+difference between a diagnosis and a wasted run.
+
+**Related.** `KI-BP-20260826-1331` — a different fast-lane false-green (install phase), not
+this one. The shared shape is worth naming: the fast lane's failure mode is consistently a
+**successful run against the wrong inputs**, which no gate downstream of input selection can
+detect.
+
+---
+
+### KI-BO-20260901-1045 — Every handoff halts the drive: the driver routes on a `handoff_target` field that no agent template tells any agent to emit
+
+- **Severity:** blocker
+- **Status:** open — no AC
+- **Occurrences:** 2 observed (ACD-2100a-1 on 2026-08-26, ACD-2100a-4 on 2026-09-01),
+  but the mechanism guarantees it for every handoff from every agent
+- **First seen:** 2026-08-26 · **Last seen:** 2026-09-01
+- **Where:** `templates/workflows-js/build-feature.js:1595`
+  (`const handoffTarget = phaseResult.handoff_target;`) and the refusal at `:1606`,
+  against `templates/agents/python-coder.md` — and against every other agent template
+
+**Symptom.** A phase returns `handoff` and the drive stops:
+
+```
+Phase 'python-coder' returned 'status: handoff' but named no recognizable
+handoff_target ('undefined'). Refusing to guess a re-dispatch target and
+refusing to advance to the next phase in phaseOrder.
+```
+
+**Cause, and it is not "the agent forgot".** The driver reads the target from a
+`handoff_target` key on the phase's returned payload. Grep the entire agent template
+directory:
+
+```
+grep -c handoff_target templates/agents/python-coder.md   -> 0
+templates/agents/ files mentioning handoff_target         -> 0
+```
+
+**No agent template anywhere names that field.** What `python-coder.md` actually documents
+is a *ticket-file* convention, in three places:
+
+- `:142` — "Adds tasks to `### test-writer` section and uses `(status: handoff)` instead of
+  `(status: ok)`"
+- `:458` — "When signing off, use `(status: handoff)` instead of `(status: ok)` to signal
+  that test-writer must run next."
+- `:601` — "`(status: handoff)` to test-writer for the assertion-only fix."
+
+So the protocol is specified as *write a section in the ticket and mark the comment*, and it
+is read as *set a key in the return value*. An agent that follows its template **exactly**
+produces a handoff the driver cannot route. This is not intermittent and not agent-dependent:
+it is every handoff, always.
+
+**Why blocker rather than high.** The handoff path is not an edge case — it is the mandated
+route for the Test Delegation rule, where a coder that needs a test changed must hand off
+rather than edit tests itself. So the one protocol the repo requires coders to use is the one
+that halts the drive, and the halt is unrecoverable by re-running: the cached phase result is
+byte-identical, so the same `undefined` comes back. Both observed instances required a human
+to read the prose and act on it.
+
+**The information is always present and always ignored.** In both observed cases the target
+was unambiguous in the record:
+
+- `ACD-2100a-1` — the coder's comment named test-writer and gave a full remediation manifest:
+  file, function, and the exact one-line edit.
+- `ACD-2100a-4` — the coder wrote an entire `## Implementation Tasks` → `### test-writer`
+  section, which is *precisely* what `python-coder.md:142` instructs it to do.
+
+The driver is right to refuse to guess. It is looking in the wrong place: the ticket says who
+the target is, in the structured heading its own template mandates.
+
+**Fix direction.** Resolve the target from the ticket rather than from the return payload —
+the `### <agent>` heading under `## Implementation Tasks` is already structured, already
+mandated, and already populated. If the return-payload contract is the one to keep instead,
+then every agent template that can emit `handoff` must be told to set `handoff_target`, and a
+`handoff` returned without it should be a template-conformance error named as such, not an
+`('undefined')` the reader has to decode. Do not do both halves independently — the two-sided
+contract with only one side documented is the defect.
+
+**Trap for whoever fixes it.** The refusal message reads as a per-ticket problem, so the
+natural response is to fix that ticket's comment by hand. That works, and it hides the
+defect: the drive then runs until the next handoff, which is how this reached two occurrences
+across two weeks before the pattern was visible. Check `grep -c handoff_target
+templates/agents/` before concluding an instance is a one-off.
+
+**Related.** `KI-BO-20260831-1930` (the driver defers a phase the generator marks needed) and
+`KI-BO-20260831-1931` (completeness read from the newest comment while the driver halts before
+dispatching) — the same family: a two-sided contract whose halves were specified separately
+and never reconciled, failing closed in a way that reads as a ticket defect.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse face: a gate that fails
+closed correctly, on a field the other side of its own contract was never told to provide.
+
+---
+
+### KI-BO-20260831-1520 — The fast lane's green gate runs only the AC's own tests, so a build that breaks 19 other tests reaches review reporting "gates green"
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/workflows-js/fast-lane-ship.js` — the `greenCoverageInvocation`
+  string, and the absence of any full-suite step anywhere in the lane
+
+**Symptom.** A fast-lane build of `BO-100e-1` / `BO-100e-1-i` widened `build-feature.js`'s
+single planner dispatch into a multi-look loop. Its own new tests passed. The lane's payload
+reported the build complete with *"gates green (red-baseline, green+coverage, review)"*.
+
+The branch broke **19 pre-existing tests** in `unit_tests/prompt_assembly/` — every
+`build-feature.js` driver test that models an epic. None of them appear in the lane's own
+report.
+
+**Root cause — the gate is AC-scoped by construction, and nothing else is suite-scoped.**
+
+```js
+const greenCoverageInvocation =
+  `python3 ${gateScript} verify_green_and_coverage` +
+  ` --ac-ids ${batchIds} --test-root ${worktreePath} --ac-root ${acStoreRoot}`;
+```
+
+`--ac-ids` narrows the run to tests tagged for the ids being built. That is deliberate and is
+what makes the lane fast; the comment above it says so (*"inlined lean loop — scoped to the
+resolved ids"*). The defect is not the scoping. It is that **the lane runs nothing broader at
+any point**, and then reports the narrow result in language that reads as a verdict on the
+change.
+
+`pr-reviewer` does not close the gap either: it reads the working **diff**. The 19 broken
+tests are not in the diff — they are files the change breaks without touching. A reviewer
+looking only at what changed cannot see them by construction.
+
+**What this cost, concretely.** The review phase spent a full cycle on a branch whose suite was
+already red, and returned three high-confidence findings about the diff — good findings, all
+three real — while never mentioning that the branch did not build. Had those findings been
+clean, the lane would have committed and opened a PR with 19 failing tests.
+
+**The 19 tests were not the whole of it, and that is the part worth reading.** Repairing them
+took four more rounds and surfaced three further defects the lane's report said nothing about,
+including a regression against `BO-300a-5` — an ALREADY-COMPLETED criterion — and an unbounded
+loop with no cap and no operator-visible error. Six defects in total on a build the lane
+reported as `status: ok, gates green`. So the scoped gate does not merely miss "some other
+tests": it misses whether the change is correct at all, while its report reads as a verdict
+that it is. Treat the number 19 in this entry as the count that was VISIBLE at the time, not
+the count that existed.
+
+**Not undetected forever — detected late, behind a green.** `Test suite (pytest)` is a required
+CI check and runs the full suite, so the PR would have gone red. The damage is ordering and
+trust: the lane declares its own work sound before anything has checked that claim, and an
+operator reading `status: ok, gates green` has no signal that the assertion is scoped. This is
+the `docs/reference/false-green-mechanisms.md` shape where a **narrow check is reported in wide
+language** — the check did exactly what it says; the report does not say what it checked.
+
+**Why the AC-scoped gate cannot simply be widened.** Running the full suite per fast-lane build
+costs ~18 minutes locally (measured on this branch: `4538 passed` in 1098s), against a lane
+designed to be lean. Two shapes that keep the speed:
+
+1. **Run the full suite once, after the coder loop settles and before `pr-reviewer`.** One run
+   per build, not per gate iteration. It also stops wasting a review cycle on a branch that
+   does not build.
+2. **Keep the gate scoped but fix the report.** Have `verify_green_and_coverage` state the
+   scope it actually ran (`N tests matching ac-ids X, Y`), and have the lane's payload and PR
+   body carry that qualifier instead of an unqualified "gates green". Cheaper, and honest, but
+   it only stops the wrong belief — it does not stop the broken PR.
+
+These are not alternatives; (2) is the floor and holds whether or not (1) ships.
+
+**The repo already had this rule, for the other pipeline.** `CLAUDE.md` → *"Full test suite +
+ruff at epic-finalize (before merge)"* exists because per-ticket sign-offs run only that
+ticket's own tests and cross-cutting breakage slips through. That is this defect exactly, one
+pipeline over. The fast lane was built after that instruction and did not inherit it.
+
+**Pattern:** a check that is honest about what it did, reported in language that implies more.
+
+**Related.** `KI-BO-007` (a phase reported complete against the agent returning cleanly rather
+than against an observable side effect — the same substitution of a proxy for the thing).

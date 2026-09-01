@@ -1,17 +1,110 @@
-amended_by: []
+amended_by:
+- reason: criteria-narrowed-to-what-is-mechanically-decidable
+  date: '2026-09-01'
+  by: safety-security-expert
+  entry: 'CRITERIA CHANGED. The files_touched clause is restated as a filesystem
+    question ("is this path an existing FILE?") instead of an intent question ("is
+    this path illustrative?"). depends_on clauses, title, level, test_spec and
+    priority are unchanged.
+
+    WHY: as written, this AC contradicted TKT-500f-8-i, which is readiness: approved,
+    work_status: done, priority high, and whose criteria require the opposite —
+    "Then the generated ticket''s files_touched contains scripts/goal_to_epic.py (the
+    source path extracted from the prose bullet)". Both cannot hold unless a real
+    surface named in prose can be told from an illustrative one, and that distinction
+    is only available in the English phrasing.
+
+    Two attempts confirmed it is not available there. A nine-pattern cue blocklist
+    (recorded below) fired on no cue in the real failing bullet and silently dropped
+    real surfaces elsewhere. Dropping prose harvesting altogether made this AC pass
+    and falsified TKT-500f-8-i, turning its covering test red; the proposed remedy at
+    the time was to retire that test, which would have left an approved AC claiming
+    done for behaviour the code no longer had — phantom-done produced by the fix for
+    a phantom-done defect.
+
+    WHAT THE NEW WORDING BUYS, measured 2026-09-01 against the shipped function:
+
+      real GE-123a bullet (three bare directories)  -> [scan_secrets.py]   FIXED
+      "Modify scripts/goal_to_epic.py to ..."       -> [goal_to_epic.py]   TKT-500f-8-i intact
+      "a path like src/foo.py"  (does not exist)    -> []                  excluded
+
+    WHAT IT GIVES UP, stated rather than hidden: an illustrative path that BOTH has a
+    file extension AND happens to exist is still harvested — e.g. a bullet reading
+    "Do not edit templates/skills/security-scanner/SKILL.md here; it is context only."
+    still yields that file. Separating that case needs authorial intent read out of
+    prose. The old criteria demanded it; nothing delivered it in two attempts, and a
+    false exclusion (silently dropping a real edit surface) is the worse of the two
+    errors. If that case is later judged worth solving, it belongs in its own AC with
+    a mechanism that is not phrase-matching — not as an unmet clause here.
+
+    The one test asserting the given-up case is retained and marked xfail(strict)
+    citing this entry, rather than deleted — so the gap stays visible in test output,
+    and so that if some later change does start excluding it, the strict marker turns
+    the run red and forces this note to be revisited.'
+- reason: reopened-phantom-done
+  date: '2026-08-31'
+  by: safety-security-expert
+  entry: 'REOPENED. work_status done -> todo. criteria, title, level, depends_on,
+    it_requirements and test_spec are all UNCHANGED — this record still asks for exactly
+    what it asked for, and it is reopened because that has not been delivered, not because
+    the requirement moved. covered_by gains the four tests that were already tagged
+    "# covers: TKT-600a-1" but never linked.
+
+    HALF OF THIS AC WAS NEVER IMPLEMENTED, AND ITS TEST CANNOT DETECT THAT. The
+    files_touched half is unfixed: _build_files_touched still harvests every slash-bearing
+    token out of prose it_requirements. Measured directly against the shipped function on
+    2026-08-31:
+
+      the test fixture (src/foo.py, deploy/foo.py — do NOT exist on disk)  -> []
+      the same shape with paths that DO exist  -> [docs/acceptance-criteria,
+                                                   docs/retrospectives, templates/skills]
+      "Do not edit templates/skills/security-scanner/SKILL.md here; it is context only."
+                                              -> [templates/skills/security-scanner/SKILL.md]
+
+    The four tagged tests pass. What removes the fixture paths is the ON-DISK EXISTENCE
+    GATE, not the restriction this AC asks for — so the test passes identically on unfixed
+    code and is vacuous. The last line is the sharpest: an it_requirement written to say
+    "this file is context, do not edit it" makes that file the declared edit surface.
+
+    THE CONSEQUENCE WAS OBSERVED, NOT PREDICTED. The unfixed extractor produced the
+    surfaces for EPIC-SuppressionNarrowsNeverDisables: 10 of 27 tickets unusable — 4 empty,
+    3 carrying only bare directories, 1 mixed, and 2 pointed at
+    docs/known-issues/commit-guardian.md, a live document, as the file to modify. The
+    /build-feature drive was stopped mid-run before any coder phase executed.
+
+    THE depends_on HALF IS DIFFERENT AND SHOULD NOT BE RE-DONE BLINDLY. Its two tests are
+    sound and generate_ticket_from_ac is correct in isolation. The dangling references seen
+    in the epic come from goal_to_epic renaming files to their NN_ prefix AFTER depends_on
+    is written — filed as KI-ACD-018, a seam this AC does not own. Whoever picks this up
+    should re-verify rather than assume both halves are broken.
+
+    WHAT CLOSING THIS NOW REQUIRES, beyond the original criteria: the files_touched test
+    must use fixture paths that EXIST, so the existence gate cannot pass it by proxy, and
+    the fix must be mutation-proved — reverting it must turn the test red. Recorded as
+    KI-TQ-010 occurrence 2 and as the second occurrence of KI-ACD-023.'
 assigned_agent: python-coder
 change_target: code
 component: ticket-creation
 components:
 - ticket_creation_pipeline
-covered_by: []
+covered_by:
+- tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_files_touched_excludes_prose_illustration_paths
+- tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_files_touched_keeps_real_reference_file_path
+- tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_depends_on_drops_structural_parent
+- tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_depends_on_is_guard_valid
+- tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_files_touched_excludes_prose_paths_that_exist_on_disk
+- tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_files_touched_rejects_bare_directory_prose_mention
 created: 2026-08-11
 criteria: "Given generate_ticket_from_ac generating a ticket from an AC,\nWhen it\
-  \ builds the ticket frontmatter,\nThen files_touched contains only real edit-surface\
-  \ paths (the it_requirements\n  reference_file_path and edit-surface doc_links)\
-  \ and NOT illustrative file paths\n  that merely appear inside prose it_requirements\
-  \ bullets (e.g. example paths like\n  src/foo.py / deploy/foo.py used to describe\
-  \ a scenario),\nAnd depends_on written to the ticket is guard-valid: an AC dependency\
+  \ builds the ticket frontmatter,\nThen every path written to files_touched names\
+  \ a FILE that exists on disk, so a\n  bare directory named in a prose it_requirements\
+  \ bullet (e.g. a bullet saying a\n  rule applies under docs/acceptance-criteria\
+  \ or templates/skills) is never written\n  as an edit surface, since a directory\
+  \ is not something a coder can edit,\nAnd a path named in a prose bullet that does\
+  \ NOT exist on disk (an illustrative\n  example such as src/foo.py) is likewise\
+  \ excluded,\nAnd a real source file named only inside a prose bullet (e.g. a bullet\
+  \ reading\n  \"Modify scripts/goal_to_epic.py to ...\") IS kept, preserving TKT-500f-8-i,\n\
+  And depends_on written to the ticket is guard-valid: an AC dependency\
   \ that is the\n  AC's structural parent (or any AC id with no corresponding ticket\
   \ in scope) is\n  dropped or translated to a co-located ticket filename, so the\
   \ generated ticket\n  passes ticket_frontmatter_guard without manual fixup,\nAnd\
@@ -67,6 +160,45 @@ it_requirements:
     filenames when in an epic context, else emit [].
 
     Preserve existing behavior for ACs that already produce correct output.
+
+
+    ONE APPROACH HAS ALREADY BEEN TRIED AND REJECTED IN REVIEW (2026-08-31 fast lane).
+    Do not rebuild it. The attempt kept prose harvesting and added a nine-pattern
+    English-phrase blocklist (_PROSE_CONTEXT_ONLY_CUES) that skipped a whole bullet when
+    it matched cues like "do not edit", "context only", "illustrat", "example path". It
+    was blocked, and measurement against the real inputs shows why:
+
+
+    (a) IT DID NOT FIX THE OBSERVED FAILURE. The bullet that actually broke the GE-123
+    epic carries no cue at all — it is a plain instruction: "The reduced scrutiny applies
+    under docs/acceptance-criteria, docs/retrospectives and templates/skills, which is the
+    defect: templates/skills holds executable Python." With the blocklist in place it
+    still yields [docs/acceptance-criteria, docs/retrospectives, templates/skills] — three
+    bare directories, the exact output that made three tickets unusable.
+
+
+    (b) IT INTRODUCED NEW FALSE EXCLUSIONS. "The value is context dependent, see
+    scripts/goal_to_epic.py for details." -> [] (caught in review). And
+    "This illustrates why scripts/build_phases.py must be updated too." -> [] (a second
+    one, not caught in review). Both silently drop a genuine edit surface, which is the
+    same defect this AC fixes, in the opposite direction.
+
+
+    Guessing authorial intent from English phrasing is not a mechanism. Use the structured
+    sources this AC already names: it_requirements.reference_file_path plus doc_links whose
+    relationship is an edit-surface relationship. Additionally REJECT bare directories —
+    a path with no file extension is not an edit surface, and the on-disk existence gate
+    passes them because directories exist.
+
+
+    AND KNOW WHAT THIS FIX DOES NOT ACHIEVE, so it is not mistaken for a full repair.
+    Measured on 2026-08-31: for all ten GE-123 records with a broken surface, the
+    structured sources yield EMPTY, because their doc_links are all related/describes and
+    their it_requirements are list-form prose. The correct behaviour here is an honest
+    empty surface, not an invented one — the missing edit-surface doc_links are an
+    upstream AC-authoring gap tracked separately. Prefer failing loudly (refuse to emit a
+    ticket whose surface is empty) over silently emitting one, so the gap surfaces at
+    generation time rather than at drive time.
 
     '
   post_write_commands: []

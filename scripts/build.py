@@ -28,6 +28,9 @@ from pathlib import Path
 
 from config_loader import load_config, validate_config, _JSONSCHEMA_AVAILABLE  # noqa: F401
 from build_phases import (
+    DeployDeclarationError,
+    raise_if_deploy_failures,
+    reset_deploy_failures,
     build_agents,
     build_workflow_scripts,
     build_ac_store,
@@ -90,10 +93,12 @@ from build_referential_integrity import (
     check_referential_integrity,
     format_integrity_report,
     extract_script_path_refs_with_sources,
+    ClosureAnalysisError,
     compute_intra_package_closure,
 )
 from build_config_scaffolds import build_config_scaffolds
 from build_ac_store_scaffold import build_ac_store_scaffold
+from build_architecture_scaffold import build_architecture_namespace_scaffolds
 from build_halt_guard import (
     check_halt_guard,
     format_migration_notice,
@@ -533,11 +538,88 @@ def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
     return result
 
 
+def _manifest_doc_compliance_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/doc_compliance/<rel>`` entries for the doc-compliance package.
+
+    Mirrors ``build_phases.build_doc_compliance``, which rglobs
+    ``templates/doc-compliance/`` and copies every file to
+    ``<target>/scripts/doc_compliance/`` preserving relative structure.
+
+    KI-BP-023: this phase had no manifest helper, so none of its files entered
+    Set B and the closure loop never called the analyser on any of them --
+    an entire deployed Python package (``cli.py`` alone has five sibling
+    imports) sat outside the guard with no warning and no error.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/doc_compliance/<rel>`` strings, empty when the source
+        directory is absent.
+    """
+    result: set[str] = set()
+    dc_dir = package_root / "templates" / "doc-compliance"
+    if dc_dir.is_dir():
+        for f in dc_dir.rglob("*.py"):
+            if f.is_file():
+                rel = f.relative_to(dc_dir).as_posix()
+                result.add(f"scripts/doc_compliance/{rel}")
+    return result
+
+
+def _manifest_sync_platforms_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/sync_platforms/<rel>`` entries for the sync-platforms package.
+
+    Mirrors ``build_phases.build_sync_platforms``, which rglobs
+    ``templates/scripts/sync_platforms/`` into
+    ``<target>/scripts/sync_platforms/``.
+
+    KI-BP-023 originally proposed fixing this by switching
+    ``_manifest_template_standalone_scripts`` from ``glob`` to ``rglob``. That
+    would have been wrong: ``build_template_standalone_scripts`` is
+    deliberately non-recursive ("excluding subdirectories"), so its manifest's
+    shallow glob correctly mirrors it. Widening the glob would have registered
+    ``scripts/<name>`` deploy paths for files that phase never writes, adding
+    FALSE entries to Set B and generating spurious findings. A manifest helper
+    must mirror its phase, not its directory -- so this is a separate helper.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/sync_platforms/<rel>`` strings, empty when the source
+        directory is absent.
+    """
+    result: set[str] = set()
+    sp_dir = package_root / "templates" / "scripts" / "sync_platforms"
+    if sp_dir.is_dir():
+        for f in sp_dir.rglob("*.py"):
+            if f.is_file():
+                rel = f.relative_to(sp_dir).as_posix()
+                result.add(f"scripts/sync_platforms/{rel}")
+    return result
+
+
 def _get_source_deployable_scripts(package_root: Path) -> set[str]:
     """Compute the set of script paths that build.py will deploy from package source.
 
-    Delegates to per-phase helper functions and unions their results.  Eight
-    deployment locations are covered:
+    Delegates to per-phase helper functions and unions their results.
+
+    THIS SET IS ENUMERATED, NOT DERIVED. Every deploy phase that writes ``.py``
+    files needs a corresponding manifest helper listed below, and nothing
+    detects a phase that has none: its files simply never enter this set, so
+    the closure loop never analyses them and they are outside the guard
+    entirely -- silently. If you add a deploy phase, add its helper here.
+
+    KI-BP-023: this docstring previously read "Eight deployment locations are
+    covered" and promised "all scripts that will be deployed", while
+    ``build_doc_compliance`` and ``build_sync_platforms`` were both missing. A
+    completeness claim in the docstring of the function whose incompleteness it
+    describes is how the next author concludes their phase is already handled.
+    Deriving this set from the ``build_*`` functions is the real fix and is
+    BP-900g-9's job; until then the enumeration is explicit about being one.
+
+    Ten deployment locations are covered:
 
     * ``scripts/ac_store/`` — from ``_manifest_ac_store_scripts``.
     * ``scripts/commit_guardian/`` — from ``_manifest_commit_guardian_scripts``.
@@ -548,6 +630,8 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
     * ``scripts/<name>`` — standalone Python files from ``templates/scripts/``
       (includes ``setup_ticket_worktree.py``).
     * ``scripts/<name>`` — two named AC-pipeline scripts from ``templates/scripts/``.
+    * ``scripts/doc_compliance/`` — from ``_manifest_doc_compliance_scripts``.
+    * ``scripts/sync_platforms/`` — from ``_manifest_sync_platforms_scripts``.
 
     This function is intentionally source-only and never reads the target
     project directory: it is used as a preflight guard BEFORE any output is
@@ -571,6 +655,8 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         | _manifest_build_orchestration_scripts(package_root)
         | _manifest_agent_support_scripts(package_root)
         | _manifest_template_standalone_scripts(package_root)
+        | _manifest_doc_compliance_scripts(package_root)
+        | _manifest_sync_platforms_scripts(package_root)
     )
 
     # goal_to_epic.py and build_ac_mode_detection.py are sourced from the package
@@ -627,6 +713,9 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
     * ``commit_guardian`` scripts: source = ``templates/scripts/commit_guardian/<rel>``
     * ``feedback`` scripts: source = ``templates/scripts/feedback/<name>``
     * template-standalone scripts: source = ``templates/scripts/<name>``
+    * ``doc_compliance`` scripts: source = ``templates/doc-compliance/<rel>``
+      (note the source directory is hyphenated and NOT under ``scripts/``)
+    * ``sync_platforms`` scripts: source = ``templates/scripts/sync_platforms/<rel>``
 
     The guard must check SOURCE paths against the git index (``git ls-files``)
     because deploy paths for template-sourced scripts are never committed — only
@@ -684,6 +773,28 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
             f"'{src_fb}' is absent or contains no .py files. "
             "Restore templates/scripts/feedback/ from git history."
         )
+
+    # doc-compliance: source is templates/doc-compliance/, deployed to
+    # scripts/doc_compliance/. Paired with _manifest_doc_compliance_scripts —
+    # test_guard_source_paths_match_deployable_set asserts equal cardinality, and
+    # it caught this pair being added to only one side (KI-BP-023).
+    src_dc = package_root / "templates" / "doc-compliance"
+    if src_dc.is_dir():
+        for f in src_dc.rglob("*.py"):
+            if f.is_file():
+                source_paths.add(
+                    f"templates/doc-compliance/{f.relative_to(src_dc).as_posix()}"
+                )
+
+    # sync_platforms: source is templates/scripts/sync_platforms/, deployed to
+    # scripts/sync_platforms/. Paired with _manifest_sync_platforms_scripts.
+    src_sp = package_root / "templates" / "scripts" / "sync_platforms"
+    if src_sp.is_dir():
+        for f in src_sp.rglob("*.py"):
+            if f.is_file():
+                source_paths.add(
+                    f"templates/scripts/sync_platforms/{f.relative_to(src_sp).as_posix()}"
+                )
 
     # workflow-tool scripts: source namespace equals deploy namespace.
     scripts_src = package_root / "scripts"
@@ -1038,41 +1149,70 @@ def _phase_for_deploy_path(deploy_path: str) -> str:
     return "build_workflow_tools or build_template_standalone_scripts"
 
 
-def _source_file_for_deploy_path(package_root: Path, deploy_path: str) -> tuple[Path, Path] | None:
-    """Resolve a Set-B deploy path to the (source_file, closure_root) pair to analyse.
+def _source_file_for_deploy_path(
+    package_root: Path, deploy_path: str
+) -> tuple[Path, Path, str] | None:
+    """Resolve a Set-B deploy path to the source file and closure namespace to analyse.
 
     Args:
         package_root: Absolute path to the leafcutter package root.
         deploy_path: A ``scripts/<...>`` entry from ``_get_source_deployable_scripts``.
 
     Returns:
-        A ``(source_file, root)`` pair where *root* is the directory
-        ``compute_intra_package_closure`` should resolve *source_file*'s
-        dependencies against so the returned strings land directly in the
-        SAME deploy namespace as *deploy_path* itself -- or None when no real
-        source file can be located for *deploy_path* (should not happen for a
-        well-formed manifest; the guard skips rather than crashes).
+        A ``(source_file, root, deploy_prefix)`` triple. Closure entries are
+        computed relative to *root* and then prefixed with *deploy_prefix*, so
+        the resulting strings land in the SAME deploy namespace as
+        *deploy_path* itself and can be compared against Set B directly.
+        *deploy_prefix* is ``""`` for every family whose source layout already
+        mirrors its deploy layout. Returns None when no real source file can be
+        located (the guard skips rather than crashes).
     """
     if deploy_path.startswith("scripts/ac_store/"):
         dest_name = deploy_path[len("scripts/ac_store/"):]
         src_rel = _AC_STORE_DEST_TO_SOURCE.get(dest_name)
         if src_rel is not None:
-            return package_root / src_rel, package_root
+            return package_root / src_rel, package_root, ""
 
-    # Template-mirrored categories (commit_guardian, feedback, template-standalone):
-    # source lives under templates/<deploy_path>; stripping the templates/
-    # prefix on the CLOSURE ROOT (not the path itself) makes the returned
-    # dependency strings land directly in deploy namespace.
+    # doc-compliance is the one family whose source directory name differs from
+    # its deploy directory name (``templates/doc-compliance/`` ->
+    # ``scripts/doc_compliance/``, hyphen vs underscore). No choice of closure
+    # root can bridge that, so this family carries an explicit prefix.
+    #
+    # It must be checked BEFORE the `direct` fallback below. In a worktree that
+    # has run install_shims, ``<package_root>/scripts/doc_compliance`` exists as
+    # a SYMLINK into the deployed .leafcutter tree — so the fallback would
+    # resolve it, follow the link, and analyse BUILD OUTPUT as though it were
+    # source, returning dependencies prefixed ``.leafcutter/`` that match
+    # nothing in Set B. That produced 14 phantom "undeployed dependency"
+    # findings on a tree where nothing was actually missing.
+    if deploy_path.startswith("scripts/doc_compliance/"):
+        rel = deploy_path[len("scripts/doc_compliance/"):]
+        dc_source = package_root / "templates" / "doc-compliance" / rel
+        if dc_source.is_file():
+            return (
+                dc_source,
+                package_root / "templates" / "doc-compliance",
+                "scripts/doc_compliance/",
+            )
+
+    # Template-mirrored categories (commit_guardian, feedback, sync_platforms,
+    # template-standalone): source lives under templates/<deploy_path>;
+    # stripping the templates/ prefix on the CLOSURE ROOT (not the path itself)
+    # makes the returned dependency strings land directly in deploy namespace.
     templated = package_root / "templates" / deploy_path
     if templated.is_file():
-        return templated, package_root / "templates"
+        return templated, package_root / "templates", ""
 
     # Everything else (build_orchestration, knowledge, agent-support,
     # workflow-tool scripts): source and deploy namespaces coincide directly
     # under package_root.
+    #
+    # Only reached by families whose source genuinely lives at this path. Any
+    # future family that does NOT must be given an explicit branch above, or a
+    # deployed symlink here will silently stand in for its source.
     direct = package_root / deploy_path
     if direct.is_file():
-        return direct, package_root
+        return direct, package_root, ""
 
     return None
 
@@ -1105,19 +1245,48 @@ def _check_intra_package_closure_guard(package_root: Path) -> int:
     deployable = _get_source_deployable_scripts(package_root)
 
     findings: list[tuple[str, str, str]] = []
+    unanalysable: list[tuple[str, str]] = []
     for deploy_path in sorted(deployable):
         resolved = _source_file_for_deploy_path(package_root, deploy_path)
         if resolved is None:
             continue
-        source_file, root = resolved
+        source_file, root, deploy_prefix = resolved
         if not source_file.is_file():
             continue
-        closure = compute_intra_package_closure(source_file, root)
-        for dep in sorted(closure - deployable):
+        # KI-BP-022: a script that cannot be read or parsed is collected as its
+        # own kind of failure rather than silently contributing an empty
+        # closure. Collect rather than re-raise so one bad file does not hide
+        # the rest — an operator fixing a broken deploy wants the whole list.
+        try:
+            closure = compute_intra_package_closure(source_file, root)
+        except ClosureAnalysisError as exc:
+            unanalysable.append((deploy_path, exc.reason))
+            continue
+        namespaced = {f"{deploy_prefix}{dep}" for dep in closure}
+        for dep in sorted(namespaced - deployable):
             findings.append((deploy_path, dep, _phase_for_deploy_path(dep)))
 
-    if not findings:
+    for deployed_script, reason in unanalysable:
+        print(
+            "[CLOSURE GUARD] UNANALYSABLE SCRIPT: deployed script "
+            f"'{deployed_script}' could not be analysed ({reason}). Its "
+            "intra-package dependencies are UNKNOWN — this is not a report "
+            "that it has none. Note that ruff does not cover templates/ "
+            "(ci.yml:8), so a syntax error there reaches this guard unlinted.",
+            file=sys.stderr,
+        )
+
+    if not findings and not unanalysable:
         return 0
+
+    if unanalysable and not findings:
+        print(
+            "[CLOSURE GUARD] Build aborted: every script this build deploys "
+            "must be analysable, or the completeness claim covers files "
+            "nothing checked (AC BP-900g-8).",
+            file=sys.stderr,
+        )
+        return 1
 
     for deployed_script, missing_dep, phase in findings:
         print(
@@ -1287,7 +1456,7 @@ def _check_command_reachability_guard(output_root: Path, config: dict) -> int:
     against output_root (BP-900g-1). Whether a name-form workflow reference
     is skipped is decided from the declared ``config["workflows"]["enabled"]``
     value, not from whether the workflows output happens to exist on disk
-    (BP-100k-7) — ``config`` must be the SAME configuration object the build
+    (BP-100n-2) — ``config`` must be the SAME configuration object the build
     itself used to decide whether to produce that output.
 
     This is the COMMAND-SIDE analogue of the BP-811 ``.claude/workflows``
@@ -1389,6 +1558,7 @@ def _run_phases(
         ("Config scaffolds", build_config_scaffolds),
         ("AC store scaffold", build_ac_store_scaffold),
         ("AC store docs", build_ac_store_docs),
+        ("Architecture namespace scaffolds", build_architecture_namespace_scaffolds),
         ("Product-truth tooling", build_product_truth),
         ("Agent cards", build_agent_cards),
         ("Doc index", build_doc_index),
@@ -1862,7 +2032,18 @@ def main(argv: list[str] | None = None) -> int:
     if _check_deploy_collision_guard(output_root, config):
         return 1
 
+    # BP-900g-9: clear any accumulated declared-deploy failures before the
+    # phases run, so consecutive in-process invocations do not inherit each
+    # other's findings, then raise ONCE afterwards carrying the whole set.
+    reset_deploy_failures()
+
     total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
+
+    try:
+        raise_if_deploy_failures()
+    except DeployDeclarationError as exc:
+        print(f"[DEPLOY DECLARATION] {exc}", file=sys.stderr)
+        return 1
 
     # Command-reference reachability guard (BP-900g-1 / BP-900g-1-i): after
     # the deploy phases have written real files, scan every deployed

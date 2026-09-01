@@ -1,0 +1,57 @@
+id: TQ-500a
+components:
+  - testing_quality
+  - build_orchestration
+title: "Work that cannot show the usual proof is asked for an equivalent one"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  No free pass when the ordinary before-and-after evidence is impossible.
+
+  Where the usual demonstration — it objected before the work, it accepts after
+  — cannot exist because the test is correct and passing the moment it is
+  written, an equally strong substitute is required instead: break the guarded
+  behaviour on purpose, show the test objects, put it back. Which of the two
+  applies is stated by whoever does the work, so it is never guessed on their
+  behalf and never quietly skipped.
+depends_on:
+  - TQ-500
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500a-1
+  - TQ-500a-2
+  - TQ-500a-3
+implemented_by: []
+change_target:
+  - pipeline
+  - prompt
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+  - reference-doc
+notes: |
+  The obligation is declared, not detected. The source entry rules out inferring
+  the family of work from the text of a requirement — every available signal is
+  suggestive and none is dependable — so the choice between the two forms of
+  proof is an explicit statement made by whoever does the work. A downstream
+  author must not turn this into automatic classification.

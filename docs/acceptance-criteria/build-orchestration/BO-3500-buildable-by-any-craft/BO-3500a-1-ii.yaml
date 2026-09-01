@@ -1,0 +1,89 @@
+id: BO-3500a-1-ii
+components:
+  - build_orchestration
+  - agent_registry
+title: "A member that declares no craft is routed by the default and is visibly marked as such"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a build set containing a member that declares no producing craft at all,
+  When the run decides who produces that member,
+  Then the member is routed by the project's standing default for an undeclared
+    producer, and the run proceeds — an absent declaration is not by itself a reason
+    to stop,
+  And the run's account of what it did records that this member was routed by default
+    rather than by declaration,
+  And a member routed by default is distinguishable, in that account, from a member
+    that declared the same craft explicitly.
+depends_on: [BO-3500a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The producing-craft field is optional on a requirement, so an absent declaration is a legitimate and common state rather than a defect — roughly three hundred records in the store carry none."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Undeclared means `assigned_agent` absent or null on the record. compute_producibility_verdict in scripts/build_orchestration/fast_lane.py already treats absence as producible — preserve that default rather than re-deciding it here; roughly 312 records depend on it."
+  - "DISTINGUISHABILITY MUST BE A FIELD, NOT A WORDING. The dispatch plan entry carries `source: 'declared'|'default'` and the run's outcome record reproduces it, so a caller can branch on it. A prose difference in the log does not satisfy the criterion — same rule as BO-3500a-2's machine-distinguishability clause, and for the same downstream reason: BO-3500d must not count three hundred unstated intentions as declared code work."
+  - "The default producer is read from ONE declared place (the run's roster/default configuration), not restated at each dispatch site. A default duplicated across call sites is a config value with two sources, which is the same defect shape as a duplicated enum."
+  - "Absence is not a refusal: the run proceeds. Do not route an undeclared member into the BO-3500a-2 defective-declaration path — an absent declaration and an unresolvable one have different owners and different remedies."
+  - "NO PRESENCE-ONLY ASSERTIONS. The distinguishability test must read the `source` value out of the run's own output and assert two members that route to the SAME craft still differ in it."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500a-1
+  contract: "The per-member dispatch plan {ac_id, craft, source}. This record fixes the value of `source` for a member carrying no declaration and requires the run's account to reproduce it."
+test_spec:
+  - name: test_undeclared_member_routes_to_the_default_and_run_proceeds
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A member with assigned_agent absent is dispatched to the configured default craft and the run reaches its normal ending; absence alone never stops the run."
+  - name: test_run_account_records_routed_by_default
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The outcome entry for the undeclared member carries source == 'default'."
+  - name: test_declared_and_undeclared_members_routing_to_the_same_craft_remain_distinguishable
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Two members, one declaring python-coder and one declaring nothing, both dispatch to python-coder; assert their `source` values differ and that a consumer branching on the field separates them."
+  - name: test_default_craft_read_from_one_configured_place
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Change the configured default in the run's roster input and assert every undeclared member's routing changes with it — a second hard-coded default at any call site fails."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  MEASURED, NOT ASSUMED. BO-3500's blast-radius note records roughly 312 records in the
+  store carrying no declared producer. Today they are treated as buildable and reach
+  the code craft by default, which is usually right and is not being changed here.
+
+  WHAT THIS RECORD ADDS is the second clause. Once routing is by declaration, an
+  undeclared member and a member that declared the code craft become the same thing to
+  the run and to anyone reading the run afterwards — and they are not the same thing.
+  One is a stated intention; the other is a gap that happens to land on a working
+  default. Keeping them distinguishable is what lets BO-3500d report honestly instead
+  of counting three hundred unstated intentions as declared code work.
+
+  DELIBERATELY NOT DECIDED HERE: whether an undeclared producer should eventually
+  become an error. That is a store-side policy question belonging with ACD-1800a
+  (the requirement declares its own deliverables) and needs the user, not this tree.

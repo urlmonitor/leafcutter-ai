@@ -1,0 +1,52 @@
+id: TQ-500b
+components:
+  - testing_quality
+  - build_orchestration
+title: "A proof that was never taken reads as missing, not as passed"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Silence about the evidence is never read as approval.
+
+  When neither the ordinary demonstration nor its substitute was captured, the
+  work is reported as incomplete and says so in those words. Today the same
+  situation is recorded in a way that reads as "correctly not applicable", which
+  is how a test that can never fail collects a clean bill of health from every
+  stage it passes through.
+depends_on:
+  - TQ-500
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500b-1
+  - TQ-500b-2
+  - TQ-500b-3
+implemented_by: []
+change_target:
+  - pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - state-diagram
+  - reference-doc
+notes: |
+  Three outcomes must stay distinguishable, and today two of them collapse:
+  proof taken and satisfied; proof genuinely not required; proof owed and not
+  taken. The third currently presents itself as the second. The customer harm is
+  that the absence of the only meaningful check is indistinguishable from the
+  check having been passed.

@@ -182,11 +182,15 @@ flowchart TD
 - ACD-2100e-2: A how-to guide takes an operator from a waiting run back to a running one
 - ACS-1200a-3: The written back-link rule matches the enforced one
 - ACS-1200d-4: The how-to tells you how to park an idea and how to take it back out
+- ACS-1300a-4: Someone who did not build the repair can preview it, run it, and read what it did
+- ACS-1300c-4: The refusal is written down beside the field it protects, where the next tool author will find it
 - ACS-500g-2-ii: A how-to guide walks a reader from a noticed repetition to a referenced pattern
 - ACS-900a-3: How-to guide and sequence diagram for the retirement-detection trigger
 - ACS-900b-3: How-to guide and sequence diagram for the retirement-blocks-commit behavior
 - ACS-900c-2: How-to guide documents the block message and how to act on it
 - ACS-900d-3: How-to guide documents the legitimate-pass cases so the check is trusted
+- AGC-100c-2: How to build and verify Codex-native Leafcutter agents
+- AGC-100f-2: Reference for the Codex agent compatibility contract
 - BO-1300a-3: How-to guide: requesting an independent spot-check of a finished feature
 - BO-1500c-4: How-to guide for delivering approved ACs via the reviewed PR path
 - BO-1700a-10: How-to guide: proving pre-commit protection is live in a worktree
@@ -204,6 +208,7 @@ flowchart TD
 - BO-2200c-6: A reference doc explains the documentation-coverage gate, the verifier, and the Agent Contracts brief
 - BO-2400a-6: How-to: run the fast-lane build loop for a cohesive batch
 - BO-2400b-4: How-to: choose the right build path (fast lane vs heavy pipeline)
+- BO-2400c-1-vii: The bundle's reference page describes the function that exists
 - BO-2400c-4: Reference: fast-lane prompt caching (layout, TTL, prefix reuse)
 - BO-2400d-4: Reference: build telemetry record schema and lane tagging
 - BO-2400d-5: How-to: generate and read the fast-lane vs heavy-pipeline comparison report
@@ -260,13 +265,12 @@ flowchart TD
 - GE-120b-5: The manual link-the-layout workaround is deleted, not left standing beside the fix
 - GE-120d-5: The how-to states what a prepared working copy guarantees and how to confirm it
 - GE-120e-5: The attribution rule is written where the next check author decides how to get their diff
+- GE-120f-5: The rule is written where the next check author is already looking, in the vocabulary the machine reads, and the written procedure and the enforced procedure say the same thing
 - GE-122a-3: The numbering rules for all four namespaces are written down in one place
 - GE-122b-3: An author with no prior knowledge can find out how to get a number
 - GE-122b-4: Which locations must carry a number, and which need not, is written down
 - GE-122c-3: A person blocked where nobody can be brought in has a procedure to follow
 - GE-122d-5: Which stage you can skip, and what still catches you, is written down
-- GE-123a-4: The reference says that recognising a file by its name adds to the checking rather than ending it
-- GE-123b-5: The reference says when a suppression is declined, what it is judged against, and what the author will see
 - GE-123c-4: Someone writing their first suppression can find out how to write one instead of copying a neighbouring line
 - GE-124a-4: A how-to shows where the declaration goes in each front-end file shape
 - GE-124b-4: A how-to shows an author how to pin one element to one criterion
@@ -275,7 +279,16 @@ flowchart TD
 - GE-124d-4: A how-to shows how to record an opt-out and how an area gets onto the warn list
 - GE-124e-5: A how-to separates 'nothing claims this' from 'nothing proves this' for the person who hit the gate
 - GE-124g-5: A reference doc states what each kind of evidence is worth, for every future check
+- GE-126a-4: The written procedure for interrogating a check yourself is one you can follow and trust
+- GE-126a-5: The target contract a check owes its caller is written down once
+- GE-126b-4: The three answers a check can give are written down with the evidence that produced them
+- GE-126c-4: Which copy of a check is the one that enforces is written down where an author will read it
+- GE-126d-4: Following the procedure for adding a check leaves nothing to discover later
+- GE-126d-5: What each registration leg buys you is written down beside the list of legs
+- GE-126e-5: The first measured answer is published with the question that produced it
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
+- INF-700b-5: Reference documentation states what the capture step requires of an agent, and names only steps that exist
+- INF-700c-3: Reference documentation states what may be written as knowledge and what the waiting count means
 - KM-KGS-100b-3: How-to guide for tracing a requirement to its code and tests
 - KM-KGS-100c-3: How-to guide for declaring a new knowledge surface
 - KM-KGS-100e-7: How-to guide: declare a component on a knowledge item and query it back
@@ -290,6 +303,8 @@ flowchart TD
 - TQ-400c-5: A reader can change the cadence and find the latest published verdict from the guide alone
 - TQ-400d-5: A first-time triager can work a record from the pile to a recorded decision using the guide alone
 - TQ-400e-6: The exemption reference states when a declaration is honoured, when refused, and which records may carry one
+- TQ-500d-2: A how-to that names the exception and walks through taking the substitute evidence
+- TQ-500e-3: Reference documentation defining the answer's recorded form and every state it can hold
 - UXP-100a-3: How-to guide for assembling prototypes from the component library
 - UXP-100c-5: How-to guide for reviewing and deciding on a prototype
 - UXP-606: How-to: read decision diamonds in the Atlas Flows view

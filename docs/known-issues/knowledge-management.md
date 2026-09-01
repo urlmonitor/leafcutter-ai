@@ -509,7 +509,18 @@ carry the learning text).
 ### KI-KM-011 — A valid-JSON non-object line crashes the harvester with an unhandled `AttributeError`, and the sink already contains junk lines the repo's own checklist puts there
 
 - **Severity:** medium
-- **Status:** open
+- **Status:** **PARTIALLY RESOLVED 2026-08-31.** The crash is fixed — `INF-700c-1-i`
+  (PR #650) added the `isinstance(event, dict)` guard and 1-based malformed-line
+  reporting, so a bare JSON scalar is now counted as malformed instead of killing the
+  run, and a reader can tell a whole-file read from a truncated one. Verified: 53 tests
+  green, including a case built from the real 33-line sink.
+  **The other half is still open, and is why this entry is narrowed rather than deleted:**
+  `CLAUDE.md`'s Pre-Drive Checklist still prescribes
+  `echo '{"probe":"pre-drive-check"}' >> debugging/logs/agent_telemetry.jsonl`, so the
+  documented check keeps writing non-event lines into the stream the harvester reads.
+  The harvester now tolerates them; nothing has stopped producing them. Remaining fix:
+  change the probe to a non-appending writability check (`test -w`) or point it at a
+  scratch path.
 - **Occurrences:** 1
 - **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
 - **Where:** `scripts/knowledge/harvest_learnings.py` — the per-line loop, at
@@ -537,12 +548,91 @@ check is itself a producer of non-event lines in the shared stream the harvester
 a small instance of the same shape as `KI-BP-007`: an instruction that quietly creates the
 condition another component must tolerate.
 
-**Fix direction.** Widen the guard to `isinstance(event, dict)` before `.get()`, and count
-skipped lines with their line numbers rather than dropping them silently — a reader
-currently cannot tell a whole-file read from one truncated at line 19. Do **not** add a
-sixth exit code for it. Separately, change the checklist's probe to a `test -w` style check
-that does not append, or point it at a scratch path.
+**Fix direction.** ~~Widen the guard to `isinstance(event, dict)` before `.get()`, and count
+skipped lines with their line numbers rather than dropping them silently~~ — **done in
+PR #650**, with no sixth exit code added, as prescribed. **Still outstanding:** change the
+checklist's probe to a `test -w` style check that does not append, or point it at a scratch
+path. Until that lands the sink keeps accruing probe lines; they are now counted and
+reported rather than fatal, which is a smaller problem but not the absence of one.
 
 **Related.** `INF-700c-1-i` (owns the resilience-and-reporting behaviour, with test specs
 authored). `INF-400c-4-iii` (owns filtering the harvester's own stream out of the shared
 telemetry file). `KI-BP-007` (documented instruction, silent consequence).
+
+---
+
+### KI-KM-20260826-id-convention-diverged-across-registers — two registers adopted different replacement id forms, eleven still teach the one known not to work
+
+> **First entry in this file using the date-and-slug id form,** for the reason the entry
+> itself describes. The sequential `KI-KM-NNN` entries above keep their ids.
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** ongoing (introduced 2026-08-26)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** the `## How to use this file` → **Adding an issue** block in all thirteen
+  `docs/known-issues/*.md` registers
+
+**Background.** `KI-BO-024` established that *"append the next free number"* cannot work
+under concurrent authors: it requires every author to read the same file at the same moment
+and act before anyone else does. On 2026-08-25 it produced ten collisions in one day, one
+of which reached `main`. The prescribed remedy is a date-plus-slug id, which cannot collide.
+
+**Symptom, measured 2026-08-26 against `origin/main`.** Of the thirteen registers, **two**
+adopted a replacement id form and they do not agree with each other, and **eleven** still
+instruct the author verbatim to do the thing that is known not to work:
+
+```text
+**Adding an issue.** Append a new `### KI-XX-NNN` section using the next free number.
+```
+
+| register | its "Adding an issue" says |
+|---|---|
+| `build-pipeline.md` | `KI-BP-YYYYMMDD-short-slug`, with a full "Why not the next free number" rationale |
+| `build-orchestration.md` | `KI-BO-YYYYMMDD-HHMM`, using UTC `date -u "+%Y%m%d-%H%M"` |
+| the other eleven | "append the next free number" — unchanged |
+
+So a register's declared convention now depends on which register you open, and neither of
+the two that changed mentions the other. An author landing in any of the eleven is told to
+use the sequential form by a file that does not mention `KI-BO-024` at all.
+
+**Three id forms are live, and none of them is wrong.** Filed within hours of each other:
+
+| form | example | status |
+|---|---|---|
+| sequential | `KI-SS-004` | historical, all registers |
+| date + time | `KI-BP-20260826-1421` | in four registers; the declared form in `build-orchestration.md` |
+| date + slug | `KI-BP-20260826-worktree-hooks-only-on-one-path` | the declared form in `build-pipeline.md` |
+
+Both replacements are collision-free, so this is a consistency problem, not a correctness
+one. What makes it worth an entry is *how* it happened: the two forms were adopted
+independently, hours apart, by sessions that could not see each other's work — which is the
+same concurrency `KI-BO-024` exists to survive, reproduced on the fix for `KI-BO-024`.
+
+**Do not renumber to unify them.** Measured, not assumed: the date-and-time ids already
+carry **20 inbound references across four registers**. Renumbering breaks every one, and
+`build-pipeline.md`'s own note says the sequential ids must not be renumbered for exactly
+this reason. Both forms sort and grep identically on the `KI-XX-` prefix, so the cost of
+leaving them is cosmetic and the cost of unifying them is broken cross-references. This
+register already carries renumbering scar tissue (`KI-BP-020`, and the `KI-CG-012`
+collision) from the last attempt.
+
+**Fix direction.**
+
+1. **Pick one of the two replacement forms and propagate it to all thirteen.** Either works;
+   the choice matters less than that it is the same everywhere. Date-and-slug carries more
+   information at the grep line, date-and-time is shorter and mechanically derivable from
+   `date -u` with no naming judgement — that is the whole trade-off.
+2. **Say explicitly that no existing id gets renumbered,** in whichever block is propagated.
+   Both replacement forms are already load-bearing.
+3. **Keep the block in one place.** `docs/known-issues/README.md` exists; hosting the
+   convention there once, with the per-register sections pointing at it, removes the failure
+   mode directly. Thirteen copies of one convention is how they came to disagree, and
+   propagating a fourteenth copy of the *right* text still leaves the next author free to
+   edit one of them.
+
+**Related.** `KI-BO-024` (diagnosed the collision and named the remedy). `KI-BP-020` and the
+`KI-CG-012` collision in `commit-guardian.md` (the scar tissue from renumbering).
+
+**Pattern:** a convention fixed in the copy the author happened to be editing, in a system
+with thirteen copies.

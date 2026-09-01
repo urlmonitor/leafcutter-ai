@@ -121,9 +121,48 @@ _ANGLE_TAG_RE = re.compile(r"(?:#|//)\s*angle:\s*(\S+)")
 # properties.test_spec[].angle enum (the same file
 # unit_tests/prompt_assembly/test_bp_1100g_1.py reads). Never restate the set
 # as a hand-typed literal here; see _load_permitted_angle_kinds().
-_PERMITTED_ANGLES_SCHEMA_PATH = (
-    Path(__file__).resolve().parent.parent.parent / "config" / "ac_store_schema.json"
-)
+_SCHEMA_RELATIVE_PATH = Path("config") / "ac_store_schema.json"
+
+
+def _resolve_permitted_angles_schema_path() -> Path:
+    """Locate config/ac_store_schema.json from either layout this module runs in.
+
+    BP-1100g-3-ii. This module is imported from two places and the distance to
+    the repository root is NOT the same in both:
+
+        <repo>/scripts/ac_store/done_proof.py               root is parents[2]
+        <repo>/.leafcutter/scripts/ac_store/done_proof.py   root is parents[3]
+
+    The original expression hand-counted ``parent.parent.parent``, which is
+    correct from the source tree and lands on ``.leafcutter/config/`` -- a
+    directory that exists but does not contain this file -- from the deployed
+    copy. Because :func:`_load_permitted_angle_kinds` fail-softs to an empty set
+    on a read failure, and an empty permitted set makes EVERY declared kind
+    unrecognised, the deployed copy reported every correctly-tagged test as a
+    violation. Measured 2026-08-26: source tree returned all seven kinds, the
+    deployed copy returned none and flagged a valid ``criterion`` tag.
+
+    The fix is not a different integer -- no fixed count is right in both
+    layouts. It is an upward search for the directory that actually holds the
+    file, which is the same real directory from either starting point: the
+    deployed copy sits under ``<repo>/.leafcutter/``, so walking up from it
+    reaches ``<repo>`` and finds ``config/ac_store_schema.json`` there.
+
+    Returns:
+        The resolved path when found. When no ancestor holds the file, returns
+        the source-tree-relative candidate unchanged, so the caller's existing
+        "cannot read" branch reports a real path rather than this function
+        inventing a plausible-looking one.
+    """
+    here = Path(__file__).resolve()
+    for ancestor in here.parents:
+        candidate = ancestor / _SCHEMA_RELATIVE_PATH
+        if candidate.is_file():
+            return candidate
+    return here.parent.parent.parent / _SCHEMA_RELATIVE_PATH
+
+
+_PERMITTED_ANGLES_SCHEMA_PATH = _resolve_permitted_angles_schema_path()
 
 # Directory names excluded from ALL test-file scanning (.py AND .ts/.tsx).
 # Prevents traversing node_modules and other non-test subtrees.
@@ -749,9 +788,19 @@ def find_unrecognised_angle_tags(records: list[dict]) -> list[dict]:
     A reporting pass over data :func:`collect_test_tag_records` already
     collected -- it never drops, alters, or re-filters the offending record;
     a test carrying an unrecognised kind stays fully present in
-    ``collect_test_tag_records()``'s own output. Never raises: an unreadable
-    permitted-kind source degrades to "nothing recognised" (see
-    :func:`_load_permitted_angle_kinds`), not a crash.
+    ``collect_test_tag_records()``'s own output. Never raises.
+
+    BP-1100g-3-ii: an EMPTY permitted set means the taught set could not be
+    determined, and it is reported as that rather than being treated as "no
+    kind is taught". The distinction matters because the two readings produce
+    opposite output from the same state: treating an unreadable source as an
+    empty set makes every declared kind unrecognised, so a problem reading one
+    file presents as every correctly-tagged test in the repository being
+    wrong. A check that fires on everything carries no signal and the
+    reasonable response to it is to switch it off. This function therefore
+    reports NOTHING when the permitted set is empty, and says loudly why.
+    That is deliberately fail-soft, which is safe here and only here: this
+    output is advisory and feeds no verdict (the BP-1100g-3-i boundary below).
 
     BP-1100g-3-i boundary: this function's output is advisory only. It must
     never be wired into :func:`_classify_outcomes`, :func:`verify_done_eligible`,
@@ -769,6 +818,18 @@ def find_unrecognised_angle_tags(records: list[dict]) -> list[dict]:
         deduplicated upstream).
     """
     permitted = _load_permitted_angle_kinds()
+    if not permitted:
+        # BP-1100g-3-ii: cannot decide. Reporting every declared kind here
+        # would be a 100% false-positive rate caused by a file read, not by
+        # anything wrong with the tests.
+        print(
+            "WARNING: done_proof: the taught angle-kind set is empty, so no tag "
+            f"can be checked against it (source: {_PERMITTED_ANGLES_SCHEMA_PATH}). "
+            "Reporting no unrecognised kinds — this is 'could not check', NOT "
+            "'everything checked out'.",
+            file=sys.stderr,
+        )
+        return []
     unrecognised: list[dict] = []
     for record in records:
         for angle in record.get("angles", []):
@@ -979,6 +1040,33 @@ def _resolve_all_child_ids(
     return leaf_ids
 
 
+def _nodeid_function_name(nodeid: str) -> str:
+    """Return the bare function/method name a pytest nodeid's final segment names.
+
+    A pytest nodeid's last ``::``-delimited segment is the function (or
+    method) name, optionally followed by a ``[params]`` suffix when the test
+    is parametrized (e.g. ``path::TestClass::test_widget[case1]``). The
+    bracket suffix is stripped FIRST, by splitting on the first ``[``, and
+    only then is the last ``::`` segment taken. This repository parametrizes
+    tests over nodeid strings, so a parameter id can itself legitimately
+    contain ``::`` (e.g. ``test_nodeid[path.py::test_x]``); stripping the
+    bracket first guarantees such a ``::`` is never mistaken for the
+    file/function delimiter. Splitting on the last ``::`` first (before
+    stripping brackets) would instead pick a segment from inside the
+    parameter id, which is the realistic failure mode here -- a parameter id
+    containing ``[`` in the file path is the only way this order fails, and
+    that is pathological rather than realistic.
+
+    Args:
+        nodeid: A pytest nodeid, e.g. ``"path::test_widget[case1]"``.
+
+    Returns:
+        The bare function/method name, e.g. ``"test_widget"``.
+    """
+    base = nodeid.split("[", 1)[0]
+    return base.rsplit("::", 1)[-1]
+
+
 def _find_nodeid_for_test(
     func_name: str,
     file_basename: str,
@@ -987,7 +1075,14 @@ def _find_nodeid_for_test(
     """Find the pytest nodeid for a function, preferring a match in the expected file.
 
     Attempts an exact file-basename + function-name match first, then falls back
-    to function-name suffix only.
+    to function-name suffix only. Matching compares *func_name* for exact
+    equality against the nodeid's final ``::``-delimited segment with any
+    trailing ``[params]`` suffix stripped (see :func:`_nodeid_function_name`),
+    so a parametrized nodeid such as ``path::test_widget[case1]`` is found
+    even though it never ends with the literal string ``::test_widget``.
+    Equality (never a substring/prefix/``endswith`` check) also guarantees a
+    lookup for ``test_foo`` cannot match an unrelated sibling such as
+    ``test_foo_bar`` or its parametrized form ``test_foo_bar[X]``.
 
     Args:
         func_name: Python function name (e.g. ``"test_foo"``).
@@ -997,12 +1092,11 @@ def _find_nodeid_for_test(
     Returns:
         A matching nodeid string, or ``None`` if no match is found.
     """
-    suffix = f"::{func_name}"
     for nodeid in pytest_results:
-        if nodeid.endswith(suffix) and file_basename in nodeid:
+        if _nodeid_function_name(nodeid) == func_name and file_basename in nodeid:
             return nodeid
     for nodeid in pytest_results:
-        if nodeid.endswith(suffix):
+        if _nodeid_function_name(nodeid) == func_name:
             return nodeid
     return None
 
@@ -1364,3 +1458,17 @@ def verify_done_eligible(
 #   config/ac_store_schema.json (BP-1100g-1's single source) and is
 #   deliberately wired into nothing that computes eligibility -- it is a
 #   planning declaration, not a verdict. (#TICKET-20260825-BP-1100g-3)
+# - 2026-09-01 00:00 [python-coder]: Fixed _find_nodeid_for_test (ACS-200f /
+#   ACS-200f-1): a parametrized pytest nodeid (e.g. "path::test_widget[case1]")
+#   never satisfied the old `endswith(f"::{func_name}")` check, so a genuinely
+#   passing/failing/skipped parametrized covering test was reported as "linked
+#   test not run" -- a false refusal on 5 real records. Added
+#   _nodeid_function_name(), a pure helper that strips a trailing "[params]"
+#   suffix FIRST (split on the first "[") and only then takes the final
+#   "::"-delimited segment, then compares that segment to func_name by exact
+#   equality (never substring/endswith) so a lookup for "test_foo" still
+#   cannot match "test_foo_bar" or "test_foo_bar[X]". Bracket-first ordering
+#   (rather than "::"-first) is required because this repo parametrizes tests
+#   over nodeid strings, so a parameter id can itself legitimately contain
+#   "::". scripts/build_orchestration/fast_lane.py:1322 shares this function
+#   and inherits the fix with no call-site change. (#TICKET-20260901-CoverageBackfill)

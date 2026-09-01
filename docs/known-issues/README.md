@@ -41,13 +41,42 @@ issue *used to* exist explains present code.
 
 ## Index
 
+Counts recounted 2026-08-31. This table had listed five of the thirteen files and was stale
+by roughly an order of magnitude on the two largest — an index nobody can trust is worse than
+no index, since it reads as "there are five commit-guardian issues" when there are 35.
+
+Recounted again later the same day and already 20 low across six rows, because several
+same-day PRs each appended entries without touching this table. Every count here is
+`grep -c '^### KI-'` over the file, so it is reproducible in one command — if you are reading
+this table and it matters, re-run the count rather than trusting the number. The drift is not
+a one-off; a table maintained by hand beside files appended by many agents will always lag.
+
 | Component | File | Open entries |
 |---|---|---|
-| `supervisor_system` | [supervisor-system.md](supervisor-system.md) | 3 |
-| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 5 |
-| `testing_quality` | [testing-quality.md](testing-quality.md) | 3 |
-| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 2 |
-| `feedback_collector` | [feedback-collector.md](feedback-collector.md) | 1 |
+| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 44 |
+| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 40 |
+| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 30 |
+| `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 24 |
+| `ac_store` | [ac-store.md](ac-store.md) | 16 |
+| `testing_quality` | [testing-quality.md](testing-quality.md) | 13 |
+| `knowledge_management` | [knowledge-management.md](knowledge-management.md) | 12 |
+| `supervisor_system` | [supervisor-system.md](supervisor-system.md) | 6 |
+| `agent_registry` | [agent-registry.md](agent-registry.md) | 3 |
+| `documentation_system` | [documentation-system.md](documentation-system.md) | 3 |
+| `feedback_collector` | [feedback-collector.md](feedback-collector.md) | 3 |
+| `changelog` | [changelog.md](changelog.md) | 2 |
+| `security_scanner` | [security-scanner.md](security-scanner.md) | 1 |
+| | **total** | **194** |
+
+Two id conventions are in use — `KI-CG-035` and `KI-CG-20260826-1612`. A count that
+matches only the first undercounts; the date form is the newer of the two and is the
+one that cannot collide.
+
+**Known id collision, unrepaired:** `commit-guardian.md` carries **two** distinct entries
+numbered `KI-CG-012` — one on hook test seams, one on `check-ac-schema` failing open on an
+empty staged set. Both are cited elsewhere by that id, so neither can be silently renumbered
+without breaking references; repairing it means choosing which keeps the number and updating
+every citation to the other.
 
 ## Highest severity first
 

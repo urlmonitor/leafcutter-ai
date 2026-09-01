@@ -43,6 +43,7 @@ test_spec:
     target_dir: leafcutter-web/tests/
     framework: playwright
     type: e2e
+    angle: reachability
     description: "The route-smoke harness loads /about headlessly: a non-200 or any console/render error fails the run (check reports failing); a 200 /about with no console/render error passes."
 delivers_to: null
 expects_from:

@@ -550,7 +550,7 @@ def _resolve_worktree_root_or_none() -> "Path | None":
 
 
 def _is_real_prose_path(token: str, worktree_root: "Path | None") -> bool:
-    """Return True when *token* names a file that actually exists on disk.
+    """Return True when *token* names a real **file** that exists on disk.
 
     TKT-600a-1: a narrative it_requirements bullet may quote example paths
     purely to illustrate a scenario (e.g. ``"src/foo.py"`` in a sentence
@@ -560,6 +560,23 @@ def _is_real_prose_path(token: str, worktree_root: "Path | None") -> bool:
     (per the AC's own remediation note: "gate on file existence") distinguishes
     illustrative examples from real paths without narrowing the token-detection
     regex, which would risk dropping genuine paths that happen to look unusual.
+
+    ``is_file()``, not ``exists()`` — a **directory is never an edit surface**,
+    and this is the distinction the existence gate alone got wrong. A bullet
+    naming ``docs/acceptance-criteria`` or ``templates/skills`` to describe
+    *where* a rule applies passes ``exists()`` precisely because those
+    directories do exist, so three bare directories were written into a
+    generated ticket's ``files_touched`` and blocked an epic drive. Requiring a
+    file keeps the discrimination mechanical: it asks a property of the
+    filesystem, never of the sentence's intent.
+
+    This deliberately leaves one case in ``TKT-600a-1``'s criteria unmet: an
+    illustrative path that both has an extension and happens to exist is still
+    harvested. Separating that from a genuine surface needs authorial intent
+    read out of English prose, which the AC's ``it_requirements`` note records
+    as a rejected approach — it fires on no cue in the real failing bullet and
+    silently drops real surfaces elsewhere. A false exclusion is the worse
+    error of the two, so the mechanical rule stops here.
 
     When *worktree_root* is ``None`` (root could not be resolved), the gate is
     skipped and the token is treated as real — this preserves prior behaviour
@@ -571,12 +588,13 @@ def _is_real_prose_path(token: str, worktree_root: "Path | None") -> bool:
         worktree_root: Resolved worktree root, or ``None``.
 
     Returns:
-        True when the file exists (or the root could not be resolved), False
-        when the root resolved but the file does not exist there.
+        True when the token names an existing file (or the root could not be
+        resolved), False when the root resolved and the token names a
+        directory or nothing at all.
     """
     if worktree_root is None:
         return True
-    return (worktree_root / token).exists()
+    return (worktree_root / token).is_file()
 
 
 def _build_files_touched(ac: dict[str, Any]) -> list[str]:

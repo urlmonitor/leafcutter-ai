@@ -1,0 +1,223 @@
+id: TKT-600b
+title: "A generated ticket tells you which build steps it will actually run"
+component: ticket-creation
+components:
+  - ticket_creation_pipeline
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical   # owner decision at the approval gate, 2026-09-01
+roadmap_phase: phase_1
+criteria: |
+  As someone who turns an acceptance criterion into a ticket and then builds it, I want
+  to read that ticket and know which steps its build will actually run — and to trust
+  that account, because nothing rewrites it afterwards to agree with itself — so a
+  ticket inside an epic finishes without anyone hand-editing it first, and when the
+  build does refuse to finish one, the refusal still means something.
+depends_on: [TKT-600]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-20260831-1930 — the blocker this L1 answers. KI-BO-20260831-1932 is its runtime half and KI-BO-20260831-1931 its class-sibling; both are deliberately out of scope here and both belong to build-orchestration."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "Line ~965-967 adds `pull-request` to every generated ticket's agent map unconditionally. That is the write side this L1 constrains."
+  - path: templates/workflows-js/build-feature.js
+    relationship: related
+    status: exists
+    relevance: "Holds the deferral rule the generated record must agree with (`:406`, `:1384`) and the completion step that trips over the disagreement (`:1040-1057`). Not modified by this L1."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Already defines the phase status enum and the rule that an excluded agent carries no Sign-offs row. The generator does not yet obey it; this L1 is about obedience, not a new rule."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - TKT-600b-1
+  - TKT-600b-2
+  - TKT-600b-3
+  - TKT-600b-4
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+documentation_triggers: []
+documentation_rationale: |
+  No new command, surface, state machine or component. The rule this L1 enforces — an
+  excluded phase is recorded `not_needed` and carries no Sign-offs row — is already
+  written down in templates/skills/signoff/SKILL.md; the change makes the generator
+  obey a documented rule rather than introduce one.
+notes: |
+  RATIFIED AND REFRAMED 2026-09-01 by product-owner. Structural scaffolding was drafted
+  2026-08-31/09-01 by business-analyst out of role, correctly flagged as such, and handed
+  up. The scope, the parent and the four children are ratified; the title and criteria are
+  rewritten into owner register. No child record was touched — the four L2s and their
+  three technical-constraint grandchildren re-parent unchanged, and TKT-600 already lists
+  TKT-600b in `covered_by`, so no parent edit was needed either.
+
+  THE DEFECT. KI-BO-20260831-1930, severity blocker, 3 occurrences in one day, all 25
+  tickets of EPIC-StartingNewWorkTheProperWayAlways affected. Manual workaround applied:
+  9682d6adf. Both halves verified at source: the driver deliberately drops `pull-request`
+  for an epic member (build-feature.js:406, :1384) because one epic-level PR covers the
+  branch; the generator writes `pull-request: needed` into every ticket it produces
+  (generate_ticket_from_ac.py:965-967) because it cannot know where the ticket will land.
+  Neither is wrong on its own. Nobody introduced them to each other.
+
+  LEVEL AND PARENT — re-derived independently, same answer, partly different reasoning.
+
+  L1 is the right altitude. This is a feature-level capability with four testable
+  behaviours beneath it, not a generic customer-value goal (it is scoped to one artifact)
+  and not a single behaviour (it is four).
+
+  TKT-600 is the right L0, and the reason is stronger than the one the BA gave. Its
+  criteria closes on "so a generated ticket needs no manual fixup before it can be built".
+  That is the literal sentence this defect falsifies — 25 tickets were hand-edited before
+  the drive could complete them. The L0's parenthetical fields (files_touched, depends_on)
+  are the incident that surfaced it, not an enumeration of what it governs. 2 of 7 L1
+  slots used.
+
+  TKT-600a REJECTED — confirmed, on scope. It has 1 of 5 L2 slots free, so the rejection
+  is genuinely not about capacity. Its title names two fields and its criteria names one
+  consuming guard (ticket_frontmatter_guard); this is a third field and a different
+  consumer (the completion write). Four L2s about the phase map under an L1 that says
+  "files_touched and depends_on" would make that L1 untrue about its own children — the
+  same two-records-disagree pathology being fixed here, one level up. It is also
+  mid-remediation (TKT-600a-1 reopened 2026-08-31 as phantom-done).
+
+  BO-2700a REJECTED — confirmed on both grounds. `covered_by: [BO-2700a-1, -2, -3, -4]`,
+  so 4 of 5 L2 slots are used and this needs four. And its subject is what the DRIVER does
+  with its dispatch list, not what the GENERATOR writes into the record.
+
+  BO-2700 AS THE L0 — this, not BO-2700a, was the live alternative, and the BA's note
+  understated it: BO-2700 carries only `covered_by: [BO-2700a]`, so 6 of 7 L1 slots are
+  free. There was no capacity argument against it and the decision had to be made on
+  merit. Decided for TKT-600, but NOT on the ground the BA gave.
+
+  WHERE I DEPART FROM THE BA'S REASONING. It rejected build-orchestration on "that
+  component's own rule: a concern belongs to BO when the thing in question FIRES during a
+  drive." Read at source, the rule is narrower than that. PROJECT_CONTEXT.md lines 117-124
+  is a contrast rule about hook and gate EXECUTION, drawn against build-pipeline (build.py
+  / parity) and infrastructure (hook content), and it says nothing about generators. There
+  is a live counter-example: BO-2600a-5 is an L2 in build-orchestration about
+  `goal_to_epic.py` writing ticket `depends_on` and `implemented_by` — a generator writing
+  ticket frontmatter, filed under BO. Placement of generator concerns in this repo is
+  genuinely inconsistent, and "generation is never BO" is not an established rule. A
+  rejection resting on it would not have survived challenge.
+
+  THE ARGUMENT THAT DOES DECIDE IT — one generator, one namespace. The frontmatter
+  accuracy of `generate_ticket_from_ac.py` is already governed by TKT-600 and TKT-600a in
+  ticket-creation. Putting a second frontmatter-accuracy L1 for the same file under BO
+  would split one file's contract across two component namespaces, which is exactly why
+  `ac-store` was rejected on its `directory_patterns` claim. That argument is independent
+  of the BO scope rule and holds regardless of how the rule is read.
+
+  Cost of the alternative, stated so the choice is reviewable: moving to BO-2700 costs no
+  structural capacity (6 free L1 slots) — it costs the namespace split above, divergence
+  from TKT-600a on the same file, and a second place to look when the generator's output
+  is wrong. Not worth it. BO-2700 nonetheless has a real claim that is recorded and routed
+  below rather than dismissed.
+
+  TKT-500f REJECTED — confirmed. TKT-500 is full at 7 of 7 L1s and TKT-500f already
+  carries 18 L2 children against a cap of 5. An already-overflowing parent is not a home.
+
+  BO-3600 REJECTED — confirmed. Its pair is the known-issue register against the AC store
+  and all five of its L1s are about that pair. Ours is the ticket record against the
+  drive's dispatch list. Cite the shape; do not fold into it.
+
+  ac-store REJECTED — confirmed, and see "one generator, one namespace" above.
+
+  SCOPE DECISION — GENERATOR-ONLY, GOING FORWARD. RATIFIED, on partly different grounds,
+  and with a different first remedy for what it excludes.
+
+  Every criterion below constrains what a NEWLY generated ticket says. The ~25 tickets
+  already on disk carrying `pull-request: needed` are NOT repaired by this L1.
+
+  The BA justified that by arguing a bulk sweep is the same move TKT-600b-4 forbids. That
+  is overstated — a one-off, human-authorised migration is not a drive rewriting records
+  about itself mid-flight, and the distinction matters. The exclusion is ratified on two
+  other grounds. (1) A sweep is a data migration, not a capability: nothing in it can be
+  regression-tested, and it is stale the moment the next pre-fix ticket appears. (2) It
+  would place a one-shot corrective action among four standing constraints on a generator,
+  making this L1 untrue about its own children — the precise defect TKT-600a was rejected
+  for.
+
+  WHAT THE EXISTING POPULATION ACTUALLY NEEDS — owner ruling, not inherited. The BA
+  recommended pre-dispatch DETECTION under BO-1900. I read the driver before accepting
+  that and it is not the first answer. `requiredPhasesForCompletion`
+  (build-feature.js:668-677) ALREADY subtracts the deferred phase, and `concludeTicket`
+  (:1040-1057) passes only that reduced list to `writeTicketCompletion`. The driver's own
+  verdict is correct — the observed halt message says so ("0 needed phase(s) are
+  outstanding"). The refusal comes from the completion WRITE second-guessing the caller by
+  re-reading the ticket and finding a ninth phase. So:
+
+  1. FIRST remedy, and the one that rescues the existing 25 with no sweep and no new
+     surface: make the completion write honour the exclusion list it was handed. That is
+     already the stated fix direction of KI-BO-20260831-1932, and its natural home is a
+     new L1 under BO-2700 — whose L0 text already contemplates the record side ("the
+     pre-ADR-006 ticket-supervisor close-out, which signed off the pull-request phase for
+     epic members without running it"). BO-2700's goal is today delivered on the dispatch
+     side only. Recommended to the owner; not authored here, because BO-2700 is
+     build-orchestration's tree.
+  2. SECOND, complementary, not a substitute: BO-1900 pre-dispatch detection — refuse to
+     start on a ticket set whose records disagree with the phases the drive will run,
+     naming every affected ticket in one report rather than halting on whichever finishes
+     first. Good for the general class; 5 of 7 L1 slots used, 2 free. Worth having, but it
+     reports the problem where (1) removes it.
+
+  SAID OUT LOUD, as the BA asked and I endorse: until (1) or (2) ships, the next drive
+  over a pre-fix epic folder still halts. Fixing the generator prevents the next epic's
+  tickets; it repairs none of the current ones.
+
+  ALSO OUT OF SCOPE — THE HALT MESSAGE IS ITSELF A DEFECT. "0 needed phase(s) are
+  outstanding in the ticket's own record: ." followed by a refusal naming a needed phase
+  is self-contradictory, and it is why three drives were burned re-running the same input.
+  That is a diagnosability property of the drive's output, not of the generated record.
+  Recommended home: a sibling L1 under BO-300 (4 of 7 L1s used) — noting BO-300's current
+  title is scoped to SUCCESSFUL drives, so it likely needs re-framing to cover a refusal.
+  It must NOT be folded in here: fixing the generator makes the message stop appearing for
+  this cause while leaving it free to lie about the next.
+
+  KI-BO-20260831-1931 IS A SEPARATE RECORD — CONFIRMED, all four grounds checked
+  independently. (a) Different pair: -1930 is frontmatter phase MEMBERSHIP against the
+  driver's dispatch list; -1931 is the frontmatter `agents:` map against the newest
+  per-agent COMMENT, two accounts of one phase's outcome inside a single file. (b)
+  Different failure mode: -1930 halts AFTER every phase ran, at the completion write;
+  -1931 halts BEFORE any phase is dispatched (a run dispatched 11 status-checkers and zero
+  phase agents), which is what makes -1931 unrecoverable by re-running while -1930 is
+  merely repetitive. (c) Different remedy: -1930 by making the generator's output agree
+  with the drive; -1931 by deciding which of two in-file sources is authoritative for
+  completeness and forbidding the other from disagreeing silently. (d) Different owner:
+  -1931's fix site is the drive's completeness evaluation — build-orchestration. Folding
+  them would produce one AC that cannot be made false by a single test.
+
+  A REFINEMENT THE BA DID NOT DRAW, and it matters for routing. KI-BO-20260831-1932 is
+  closer to this defect than -1931 is: it is the same `pull-request: needed` condition at
+  the same completion-write step, producing a non-deterministic outcome (one ticket
+  refused, two flipped to `done`). It is not a class-sibling, it is the RUNTIME HALF of
+  this same defect — and per the scope ruling above it is the record that carries the
+  rescue for the existing population. Keep it separate from this L1 (different owner,
+  different fix site, and its lenient branch is a phantom-done write that must be
+  unified toward the refusal), but route it together with this one, not after it.
+
+  PRIORITY RECOMMENDATION — `high`, not `critical`. The field below is validator-forced at
+  `medium` and the owner sets it at the approval gate. Severity is blocker and the blast
+  radius is every ticket in every epic, which argues for critical; against that, a correct
+  human-verified workaround is already applied (9682d6adf set the 25 tickets to
+  `not_needed`, a correction rather than a suppression), so no one is blocked today — they
+  are taxed roughly 25 hand edits per epic. Critical should stay reserved for "no path
+  forward". The stronger reason for `high` rather than `critical`: the true unblock for
+  work already on disk lives in the build-orchestration record, not here, and pricing this
+  one critical would misroute urgency onto the generator fix, which prevents the NEXT
+  epic's tickets while repairing none of the current ones. Recommend raising this and the
+  BO-2700 completion-write L1 together at the same priority — that pair is what actually
+  clears the blocker.

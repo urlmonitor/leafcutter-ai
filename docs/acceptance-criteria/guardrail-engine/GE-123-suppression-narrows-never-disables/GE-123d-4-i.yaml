@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -34,6 +34,10 @@ criteria: |
 depends_on:
   - GE-123d-4
 doc_links:
+  - path: templates/scripts/commit_guardian/check_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. The kind gate this criterion exists to protect is applied in this module, alongside the pre-existing _PROSE_FILE_PREFIXES location list that the new exemption copies in spirit — so the forbidden reuse (sharing the location list without sharing the kind gate) would be a one-line change here, and the guard against it has to be here too. Canonical copy per ADR-001."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -86,11 +90,38 @@ test_rationale: "Both criteria are about which of two gates wins for a file the 
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18)"
-    detail: "Criteria untouched. Complexity held at S. Authored six policy-level it_requirements, three of which turn on a fact measured after the BA wrote this AC and recorded as KI-CG-004 in docs/known-issues/commit-guardian.md: the existing high-entropy exemption is file-level over a prefix list that includes the skill-prompt area, so a high-entropy token is already unreported in the scanner's own source. The requirements name the known-issue id explicitly, fence it as out of scope, and forbid the specific reuse that would widen it — sharing the location list without sharing the kind gate. Added a known-issues doc_link carrying the measured evidence. Authored a four-entry test_spec plus test_rationale, the fourth entry being a standing fence that the two exemptions reach different verdicts for the same path. readiness draft->reviewed; work_status and priority untouched."
+- reason: it-po-v3 technical enrichment (2026-08-18)
+  detail: 'Criteria untouched. Complexity held at S. Authored six policy-level it_requirements,
+    three of which turn on a fact measured after the BA wrote this AC and recorded
+    as KI-CG-004 in docs/known-issues/commit-guardian.md: the existing high-entropy
+    exemption is file-level over a prefix list that includes the skill-prompt area,
+    so a high-entropy token is already unreported in the scanner''s own source. The
+    requirements name the known-issue id explicitly, fence it as out of scope, and
+    forbid the specific reuse that would widen it — sharing the location list without
+    sharing the kind gate. Added a known-issues doc_link carrying the measured evidence.
+    Authored a four-entry test_spec plus test_rationale, the fourth entry being a
+    standing fence that the two exemptions reach different verdicts for the same path.
+    readiness draft->reviewed; work_status and priority untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added one doc_link,
+    templates/scripts/commit_guardian/check_secrets.py with relationship modifies. Nothing
+    else changed; all pre-existing doc_links kept at their original relationships. The
+    known-issues link stays at related and that matters here more than anywhere: this
+    record''s requirements fence KI-CG-004 as explicitly out of scope, so
+    docs/known-issues/commit-guardian.md must never be presented to a coder as a file to
+    modify — and a prose harvest did exactly that to records in this tree, which is the
+    defect being repaired (KI-ACD-023). WHY THIS SURFACE: the kind gate this record exists
+    to protect is applied in check_secrets.py, alongside the pre-existing
+    _PROSE_FILE_PREFIXES list the new exemption copies in spirit. The forbidden reuse the
+    requirements describe — sharing the location list without sharing the kind gate —
+    would be a one-line change in that module, so the guard against it has to live there
+    too.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/25_TICKET-20260831-GE-123d-4-i.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -135,3 +166,4 @@ notes: |
   defect in an existing rule and is separate work; this AC is the guarantee that
   the NEW exemption does not acquire the same shape, and it must not be closed
   by anything done to KI-CG-004.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

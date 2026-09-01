@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -100,10 +100,14 @@ expects_from:
   contract: "The single unmatchable-entry warning path, whose trigger must be the shape of an entry as read and never the count of findings it happened to suppress during a run."
 origin_agent: business-analyst
 created: 2026-08-18
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/18_TICKET-20260831-GE-123c-3-ii.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -136,3 +140,4 @@ notes: |
   state, the rejected signal is not merely undelivered — it is unavailable, and a
   later change cannot add it by accident. That is the strongest form of this fence
   and is recorded as an it_requirement.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

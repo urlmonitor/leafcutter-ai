@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -43,6 +43,10 @@ criteria: |
 depends_on:
   - GE-123d
 doc_links:
+  - path: templates/scripts/commit_guardian/check_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. This is the check that emits the notice — the ADR-001 doc_link below already says so in words. The exemption decisions the notice announces are taken in _filter_prose_findings in this module, so the count, the per-finding lines and the stream discipline are all authored here. Canonical copy per ADR-001."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -114,11 +118,39 @@ test_rationale: "The claim this AC makes is that an author is told something, an
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18)"
-    detail: "Criteria untouched. Complexity held at S. Authored nine policy-level it_requirements. The deliberate departure from the GE-113c-3-v warning contract is restated as an explicit instruction NOT to harmonise the matched value back into the notice, so a later reviewer aligning the two contracts cannot undo it. Two requirements come from the code rather than the criteria: allowlist suppressions are removed before the post-filter ever sees a finding, and the pre-existing file-level high-entropy prose exemption (KI-CG-004) is a third, separate removal mechanism — pooling any of them into the count makes it unreviewable. Added commit-guardian and ADR-001 doc_links. Authored a six-entry test_spec plus test_rationale; both streams are captured separately in every entry, and the withheld-value arm is asserted by the absence of an embedded marker rather than by matching expected notice text. readiness draft->reviewed; work_status and priority untouched."
+- reason: it-po-v3 technical enrichment (2026-08-18)
+  detail: 'Criteria untouched. Complexity held at S. Authored nine policy-level it_requirements.
+    The deliberate departure from the GE-113c-3-v warning contract is restated as
+    an explicit instruction NOT to harmonise the matched value back into the notice,
+    so a later reviewer aligning the two contracts cannot undo it. Two requirements
+    come from the code rather than the criteria: allowlist suppressions are removed
+    before the post-filter ever sees a finding, and the pre-existing file-level high-entropy
+    prose exemption (KI-CG-004) is a third, separate removal mechanism — pooling any
+    of them into the count makes it unreviewable. Added commit-guardian and ADR-001
+    doc_links. Authored a six-entry test_spec plus test_rationale; both streams are
+    captured separately in every entry, and the withheld-value arm is asserted by
+    the absence of an embedded marker rather than by matching expected notice text.
+    readiness draft->reviewed; work_status and priority untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added one doc_link,
+    templates/scripts/commit_guardian/check_secrets.py with relationship modifies. Nothing
+    else changed; all pre-existing doc_links kept at their original relationships,
+    including the GE-113c-3-v and ADR-001 entries. WHY: this record declared no edit
+    surface, leaving the ticket generator to harvest paths out of prose (KI-ACD-023). As
+    with GE-123d-4 the surface was already named in words only — the ADR-001 doc_link''s
+    relevance note says "the check that emits the notice is the canonical copy under
+    templates/", which is check_secrets.py. The exemption decisions the notice announces
+    are taken in _filter_prose_findings in that module, so the count, the one-line-per-
+    finding form and the stderr/stdout split are all authored there. This record carries
+    a load-bearing anti-precedent — a guard in this component that is documented as
+    dispatching a specialist and never does — so leaving its surface to a prose harvest
+    that pointed at directories would have been the same failure one level up.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/27_TICKET-20260831-GE-123d-5.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -165,3 +197,4 @@ notes: |
   an observation — a reviewer aligning the two announcement contracts would
   otherwise reasonably add the verbatim text back, which is the one change this
   AC exists to prevent.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

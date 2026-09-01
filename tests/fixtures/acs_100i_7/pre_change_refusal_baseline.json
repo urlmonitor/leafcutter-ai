@@ -1,102 +1,26 @@
 {
-  "_comment": "Whole-store refusal baseline for ACS-100i-7. Records the refusal messages that are NOT attributable to the top-level package-surface if/then rule. The guard test asserts this set is byte-identical: none added, none removed, no message changed. A shrunken set normally means validation was loosened generally instead of the trigger narrowed. REGENERATED 2026-08-25: the original 37-record baseline was measured at 9b16d013 before PR #518 narrowed the trigger. PR #493 then legitimately FIXED 9 of those 37 records by adding the required components list to nine ux-prototyping ACs, each of whose sole refusal message was \"components is a required property\". Their disappearance is a repair, not a loosening \u2014 every other refusal, including the untouched UXP records failing on test_spec shape, is unchanged. Regenerate ONLY in a commit that can point at the record edit explaining each removal; never to make a red assertion go green.",
-  "measured_at_commit": "969d7bc0",
-  "measured_on": "2026-08-25",
-  "supersedes": {
-    "measured_at_commit": "9b16d013",
-    "measured_on": "2026-08-19",
-    "unrelated_refusal_count": 37
-  },
+  "_comment": "Whole-store refusal baseline for ACS-100i-7. Records the refusal messages that are NOT attributable to the top-level package-surface if/then rule. The guard test asserts this set is byte-identical: none added, none removed, no message changed. A shrunken set normally means validation was loosened generally instead of the trigger narrowed. RE-MEASURED 2026-09-01 at merge commit 1695b0ec, against the merged tree rather than either side's pre-merge number. Two baselines converged here. This branch widened test_spec's framework enum to name vitest AND playwright, and type to name component, in BOTH config/ac_store_schema.json and config/test_requirements.schema.json — taking the refusal set from 28 to 0. Concurrently and independently, origin/main widened framework to name playwright only, in ac_store_schema.json only, taking its own baseline from 28 to 26 — the 26 remaining being the records that declare vitest. The merge takes the superset, which is why the count here is 0 and not 26. The disappearance is a vocabulary repair, not a loosening: the pre-merge guard run reported Added: [] and Messages changed: [] — removals only. See KI-ACS-010. NOTE FOR WHOEVER READS THIS NEXT: with an empty set the 'Removed' direction of the guard is now vacuous; the 'Added' direction still bites, and that is the direction that matters. Regenerate ONLY in a commit that can point at the record or schema edit explaining each removal; never to make a red assertion go green.",
+  "measured_at_commit": "1695b0ec",
+  "measured_on": "2026-09-01",
+  "supersedes": [
+    {
+      "measured_at_commit": "969d7bc0",
+      "measured_on": "2026-08-25",
+      "unrelated_refusal_count": 28,
+      "reason": "The common ancestor of both fixes. All 28 entries were test_spec framework/type enum refusals: 26 records declaring framework vitest, 2 declaring playwright, 9 of them also declaring type component."
+    },
+    {
+      "measured_at_commit": "00df3e72b",
+      "measured_on": "2026-09-01",
+      "unrelated_refusal_count": 26,
+      "reason": "origin/main's independent, narrower fix — playwright added to ac_store_schema.json alone. It resolved its 2 playwright records, left the 26 vitest ones refused, and left config/test_requirements.schema.json at [unittest, pytest], so a playwright AC would validate while generating a ticket that violates its own unenforced schema. Superseded by this branch's superset widening of both schemas."
+    }
+  ],
   "store_dir": "docs/acceptance-criteria",
   "index_yaml_excluded": true,
   "store_record_count": 3256,
-  "total_refused": 28,
+  "total_refused": 0,
   "refused_on_package_surface_rule": 0,
-  "unrelated_refusal_count": 28,
-  "unrelated_refusals": {
-    "docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/BP-1400c-1-i.yaml": [
-      "[{'name': 'test_about_route_smoke', 'target_dir': 'leafcutter-web/tests/', 'framework': 'playwright', 'type': 'e2e', 'description': 'The route-smoke harness loads /about headlessly: a non-200 or any console/render error fails the run (check reports failing); a 200 /about with no console/render error passes.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/BP-1400c-1.yaml": [
-      "[{'name': 'test_route_smoke_job_present_and_blocking', 'target_dir': 'unit_tests/build_pipeline/', 'framework': 'pytest', 'type': 'unit', 'description': 'Parse .github/workflows/ci.yml and assert a web-app route-render job exists, invokes the Playwright route-smoke harness, is path-filtered on leafcutter-web/**, and does NOT set continue-on-error (blocking).'}, {'name': 'test_route_smoke_harness_iterates_all_routes', 'target_dir': 'leafcutter-web/tests/', 'framework': 'playwright', 'type': 'e2e', 'description': \"The route-smoke harness enumerates the app's routes (from leafcutter-web/app/**, including /about) and asserts each loads with HTTP 200 and no console/render error; a route returning non-200 or emitting a console error fails the run (non-zero exit).\"}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-602.yaml": [
-      "[{'name': 'buildFlowGraph_omits_ac_nodes_by_default', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"buildFlowGraph(flow) with the default showAcNodes produces zero nodes of kind 'ac' and zero 'implements' edges, even when steps/branches reference ACs; only step/branch/decision nodes are present.\"}, {'name': 'flow_explorer_defaults_show_ac_nodes_off', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': 'With no persisted preference, ExplorerInner mounts with showAcNodes false so no AC nodes render initially.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-603.yaml": [
-      "[{'name': 'flow_step_node_renders_done_total_ac_pill', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': \"A node with 3 ACs, 2 done, renders a '2/3 ACs' pill.\"}, {'name': 'ac_pill_tints_by_aggregate_status', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': 'Pill tone is green when all ACs done, amber when some done, grey when none done \u2014 following the derived rollup status.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-603a.yaml": [
-      "[{'name': 'flow_step_node_omits_pill_when_zero_acs', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': \"A node with acCount 0 renders no progress pill element and never shows '0/0'.\"}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-604.yaml": [
-      "[{'name': 'derive_impl_summary_counts_distinct_acs', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'deriveImplSummary returns acTotal = number of distinct ACs across steps+branches and acDone = distinct ACs with work_status done, independent of the step-count implSummary.done.'}, {'name': 'flow_explorer_renders_feature_ac_rollup', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': \"The legend shows an 'N/M ACs done' feature rollup sourced from implSummary.acDone/acTotal when acTotal > 0.\"}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-604a.yaml": [
-      "[{'name': 'derive_impl_summary_dedupes_ac_across_nodes', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'An AC id referenced by two steps is counted once in acTotal and once (if done) in acDone; acTotal equals the distinct-AC count, not the summed per-node counts.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-605.yaml": [
-      "[{'name': 'show_acs_toggle_defaults_off', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': 'With no persisted preference the toggle is off and no AC nodes render.'}, {'name': 'show_acs_toggle_on_renders_wired_ac_nodes', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': \"Turning the toggle on renders AC nodes wired to their steps/branches by 'implements' edges, with no role/identity check.\"}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-605a.yaml": [
-      "[{'name': 'show_acs_preference_restored_from_localstorage', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': \"With localStorage 'flows:showAcNodes' set to '1', a fresh mount of ExplorerInner initializes showAcNodes true (preference restored across reload); with '0' or absent it initializes false.\"}, {'name': 'show_acs_init_is_ssr_safe', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'The initializer returns false when window is undefined and does not throw when localStorage access fails.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-607-1.yaml": [
-      "[{'name': 'mock_default_override_to_live_shows_live_badge', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"With LEAFCUTTER_MOCK defaulting to mock, a request carrying ?mock=0 resolves to live, the badge reads 'live'/real, and views are served from the real repo.\"}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-607-2.yaml": [
-      "[{'name': 'live_default_override_to_mock_shows_mock_badge', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"With LEAFCUTTER_MOCK defaulting to live and overrides allowed (unlocked), a request carrying ?mock=1 resolves to mock, the badge reads 'mock', and views are served from bundled fixtures.\"}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-607.yaml": [
-      "[{'name': 'badge_reflects_resolved_mock_decision', 'target_dir': 'leafcutter-web/components/shell/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"When the seam resolves the decision to 'mock', the sidebar badge renders 'mock' and views are served from fixtures.\"}, {'name': 'badge_reflects_resolved_live_decision', 'target_dir': 'leafcutter-web/components/shell/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"When the seam resolves the decision to 'live', the sidebar badge renders 'live'/real and views are served from the real repo.\"}, {'name': 'badge_ignores_build_time_next_public_flag', 'target_dir': 'leafcutter-web/components/shell/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'With the NEXT_PUBLIC_ build-time flag set opposite to the resolved runtime decision, the badge follows the resolved decision, not the build flag.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-608-1.yaml": [
-      "[{'name': 'production_opt_in_honors_mock_override', 'target_dir': 'leafcutter-web/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'In production with the explicit override opt-in set and no production lock, ?mock=1 is honored and the deployment resolves to mock with the mock badge.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-608-2.yaml": [
-      "[{'name': 'production_lock_beats_opt_in_and_override', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'With LEAFCUTTER_MOCK_LOCK=real, the explicit override opt-in set, and ?mock=1 present, the seam resolves to live with the live badge \u2014 lock wins over allow and override.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-608-3.yaml": [
-      "[{'name': 'dev_preview_honors_override_without_opt_in', 'target_dir': 'leafcutter-web/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'In an unlocked non-production (dev/preview) deployment with no opt-in, ?mock=1 is honored and the deployment resolves to mock with the mock badge.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-608.yaml": [
-      "[{'name': 'production_default_deny_ignores_mock_query_param', 'target_dir': 'leafcutter-web/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'In production with no explicit opt-in, a request carrying ?mock=1 is ignored and the deployment resolves to live with the live badge.'}, {'name': 'production_default_deny_ignores_mock_cookie', 'target_dir': 'leafcutter-web/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'In production with no explicit opt-in, a leftover mock cookie is ignored and the deployment resolves to live.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-609-1.yaml": [
-      "[{'name': 'mis_set_env_fails_with_named_reason', 'target_dir': 'leafcutter-web/app/api/drift-guard/__tests__/', 'framework': 'vitest', 'type': 'integration', 'description': \"With mock mode not active (isMockActive() false), the drift-guard exits with a failure naming 'mock mode not active' and never reports clean.\"}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-609-2.yaml": [
-      "[{'name': 'zero_fixture_records_fails_not_clean', 'target_dir': 'leafcutter-web/app/api/drift-guard/__tests__/', 'framework': 'vitest', 'type': 'integration', 'description': 'With mock mode active but loaders returning zero fixture records, the drift-guard exits with a failure naming the empty/absent fixtures instead of reporting clean.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-609.yaml": [
-      "[{'name': 'drift_guard_asserts_mock_active_before_drift', 'target_dir': 'leafcutter-web/app/api/drift-guard/__tests__/', 'framework': 'vitest', 'type': 'integration', 'description': 'The drift-guard checks isMockActive() is true before evaluating drift and reports clean only when the assertion holds AND no drift is found.'}, {'name': 'drift_guard_fails_when_mock_not_active', 'target_dir': 'leafcutter-web/app/api/drift-guard/__tests__/', 'framework': 'vitest', 'type': 'integration', 'description': 'When isMockActive() is false, the drift-guard exits with a failure naming the reason instead of reporting clean.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-610-1.yaml": [
-      "[{'name': 'prod_probe_returns_clean_not_found', 'target_dir': 'leafcutter-web/__tests__/', 'framework': 'vitest', 'type': 'integration', 'description': 'Probing /api/drift-guard or /api/mock-toggle-check on a production deployment returns a plain not-found disclosing no filesystem paths, stack traces, or internal detail.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-610-2.yaml": [
-      "[{'name': 'ci_build_includes_ci_endpoints', 'target_dir': 'leafcutter-web/__tests__/', 'framework': 'vitest', 'type': 'integration', 'description': 'In a CI / non-production build, /api/drift-guard and /api/mock-toggle-check are present and respond so the mock-mode CI checks can run.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-610.yaml": [
-      "[{'name': 'prod_build_excludes_ci_endpoints', 'target_dir': 'leafcutter-web/__tests__/', 'framework': 'vitest', 'type': 'integration', 'description': 'In a production build, /api/drift-guard and /api/mock-toggle-check are not compiled in and requests to either path return not-found.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-596-decision-diamonds/UXP-597.yaml": [
-      "[{'name': 'buildFlowGraph_emits_decision_variant_node_for_a_branch', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"A flow step carrying a branch produces a graph node with meta.variant === 'decision' and meta.condition equal to the branch condition.\"}, {'name': 'flow_decision_node_renders_diamond_distinct_from_step_card', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': 'FlowDecisionNode renders the rotated diamond containing the condition text; FlowStepNode renders the rounded card \u2014 the two are structurally distinguishable in the DOM.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-596-decision-diamonds/UXP-598.yaml": [
-      "[{'name': 'buildFlowGraph_labels_every_decision_edge_with_handle', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"Every edge leaving a synthesized decision node has a non-empty label and a sourceHandle of 'yes' or 'no'; the branch-outcome edge carries the branch label on sourceHandle 'yes' and the fall-through edge carries 'else'/'continue' on sourceHandle 'no'.\"}, {'name': 'flow_explorer_maps_edge_label_and_source_handle', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': 'The edge mapper in flow-explorer.tsx passes GraphEdge.label to the React Flow edge label and GraphEdge.sourceHandle to the edge sourceHandle.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-596-decision-diamonds/UXP-599.yaml": [
-      "[{'name': 'buildFlowGraph_chains_n_branches_into_n_diamonds', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"A step with N=3 branches yields 3 decision nodes chained via 'no' handles (step->D0, D0->D1, D1->D2), each diamond's 'yes' edge to its branch outcome, and the last diamond's 'no' edge to the next ordered step; no single node has N outgoing branch edges.\"}, {'name': 'buildFlowGraph_diamond_chain_is_count_agnostic', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'The chain length equals the branch count for N=2 and N=4 with no hard-coded cap.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-596-decision-diamonds/UXP-599a.yaml": [
-      "[{'name': 'buildFlowGraph_omits_diamond_for_branch_off_last_step', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"A flow whose only branch forks off the last ordered step produces no meta.variant === 'decision' node; the branch renders as a plain branch card (pins the known limitation, not the desired future behavior).\"}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-596-decision-diamonds/UXP-600.yaml": [
-      "[{'name': 'buildFlowGraph_derives_diamonds_from_branch_data_only', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'A flow whose forks are modelled purely with branches[] (from/condition/label/target) and NO decisions[] array still produces decision nodes and labelled edges; the flow JSON shape is unchanged.'}, {'name': 'buildFlowGraph_derivation_is_pure', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'buildFlowGraph does not mutate its input Flow and returns a deterministic node/edge set for identical input (safe for client-side use).'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-596-decision-diamonds/UXP-601.yaml": [
-      "[{'name': 'outcome_node_tints_by_derived_impl_status', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': \"A branch (outcome) node whose ACs are all done tints with the 'done' tone; a mix tints 'in_progress' \u2014 driven by the derived implStatus from flows.ts, not a hand-set field.\"}, {'name': 'decision_diamond_tints_by_derived_impl_status', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': 'A decision diamond tints by the derived impl_status of the fork it represents rather than a fixed amber.'}] is not valid under any of the given schemas"
-    ]
-  }
+  "unrelated_refusal_count": 0,
+  "unrelated_refusals": {}
 }

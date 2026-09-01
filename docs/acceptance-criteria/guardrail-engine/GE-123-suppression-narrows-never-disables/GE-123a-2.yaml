@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -44,6 +44,10 @@ depends_on:
   - GE-123a
   - GE-123a-1
 doc_links:
+  - path: templates/skills/security-scanner/scripts/scan_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. _load_allowlist, _is_suppressed and scan_files all live in this module, so the behaviour this criterion pins — a filename-rule suppression removing only the filename finding and leaving every content finding standing — is decided here. Canonical copy per ADR-001; the deployed copies are build.py outputs."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -105,10 +109,32 @@ test_rationale: "This criterion IS the measured defect stated as post-fix behavi
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder and complexity S (no new code surface beyond GE-123a-1; the cost is the five-file plus allowlist fixture); authored it_requirements pinning the literal-wildcard suppression form as the only repository-wide one that parses, the exactly-one-entry constraint, by-rule-id rather than by-count observation, the innocuous-text constraints for the third arm, and the shared scan_files/CLI-subprocess/fixture/loader/allowlist rules; added a test-angles doc_link; authored a 4-entry test_spec plus test_rationale flagging the paired-positive and legitimate-use arms as green on arrival, the former vacuously so. Criteria, depends_on, expects_from and notes unchanged."
+- reason: 'it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder
+    and complexity S (no new code surface beyond GE-123a-1; the cost is the five-file
+    plus allowlist fixture); authored it_requirements pinning the literal-wildcard
+    suppression form as the only repository-wide one that parses, the exactly-one-entry
+    constraint, by-rule-id rather than by-count observation, the innocuous-text constraints
+    for the third arm, and the shared scan_files/CLI-subprocess/fixture/loader/allowlist
+    rules; added a test-angles doc_link; authored a 4-entry test_spec plus test_rationale
+    flagging the paired-positive and legitimate-use arms as green on arrival, the
+    former vacuously so. Criteria, depends_on, expects_from and notes unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added one doc_link,
+    templates/skills/security-scanner/scripts/scan_secrets.py with relationship modifies.
+    Nothing else changed; all pre-existing doc_links kept at their original relationships.
+    WHY: this record declared no edit surface, leaving the ticket generator to harvest
+    paths out of prose (KI-ACD-023). scan_secrets.py is the real surface — _load_allowlist,
+    _is_suppressed and scan_files are all in that module, so the whole behaviour this
+    criterion pins (a filename-rule suppression removing the filename finding and nothing
+    else) is decided there. This is the criterion that IS the measured defect, so getting
+    its surface right matters more than most: the measured collapse was five files
+    reporting zero findings and a clean exit, and the fix is in that module.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/03_TICKET-20260831-GE-123a-2.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -132,3 +158,4 @@ notes: |
   Env filenames are the subject of this criterion, as in GE-123a-1 — not a
   casual example. Depends on GE-123a-1 because there is nothing to observe until
   the content scan actually runs on these files.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

@@ -1,0 +1,199 @@
+id: TQ-500d-1-i
+components:
+  - testing_quality
+  - build_orchestration
+title: "A green-on-arrival record with no answer reads as incomplete, never as not applicable"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three pieces of work handed on in one run:
+      piece H, whose tests passed on arrival and whose record carries no
+        falsifiability answer,
+      piece J, whose tests passed on arrival and whose record carries a reasoned
+        negative,
+      and piece K, for which no test-writing phase ran,
+  When those records are read,
+  Then piece H is reported as owed an answer that was not taken, in words stating
+    that the work is incomplete,
+    And no output of the run describes piece H's missing answer as expected, as
+      correct, or as not applicable,
+    And piece J is not reported,
+    And piece K produces no report,
+    And piece H's report is unchanged whether or not the run was told in advance that
+      H's tests were expected to pass on arrival, so an immediate pass never stands in
+      for an answer however it was anticipated.
+depends_on:
+  - TQ-500d-1
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-010 Fix direction item 2 — the recorded value for these cases "currently
+      means 'correctly not applicable' and should mean 'and here is what replaced
+      it'". The second clause here is that sentence written as a requirement.
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500b-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Supplies the three states this AC asserts over. Piece H must land in answer owed
+      and absent, piece J in answer taken, piece K in no record.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE ASSERTION IS OVER THE EMITTED WORDING, NOT ONLY THE STATE VALUE. The
+    recorded defect was not a wrong state — it was a right state described in
+    words that read as approval, and every reader downstream believed the words.
+    An implementation can place piece H in answer_owed_absent correctly and still
+    print "not applicable" beside it. Assert over the output string.
+  - >-
+    THE FORBIDDEN VOCABULARY MUST BE CHECKED AS AN ABSENCE IN THE WHOLE RUN'S
+    OUTPUT, not just in H's own line. "Expected", "correct", "not applicable" and
+    "correctly not applicable" appearing anywhere the run describes H's missing
+    answer reopens the collapse.
+  - >-
+    NO ADVANCE EXPECTATION MAY EXCUSE AN ANSWER. H's report must be
+    byte-identical whether or not the run was told beforehand that H's tests were
+    expected to pass on arrival. This is the regression most likely to be
+    introduced in good faith: once the guidance says an immediate pass is
+    expected for this family, letting a declared expectation suppress the finding
+    looks like the fix.
+  - >-
+    Adds no behaviour. This is a regression test over TQ-500b-1's reading and
+    TQ-500d-1's record shape, and must not be closed by a change that
+    special-cases the three fixture records.
+delivers_to: null
+expects_from:
+  ac_id: TQ-500b-1
+  contract: >-
+    Per-piece-of-work state entries and the wording attached to each. This AC asserts
+    both the state and the words: the state alone is satisfiable by an implementation
+    that still prints "not applicable" beside it.
+test_spec:
+  - name: test_tq500d_1_i_green_on_arrival_with_no_answer_is_reported_incomplete
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Piece H — tests passed on arrival, record carries no falsifiability answer
+      — is reported as owed an answer that was not taken, in words stating the
+      work is incomplete.
+  - name: test_tq500d_1_i_no_output_describes_the_missing_answer_as_expected_or_not_applicable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      THE CLAUSE THAT CAN ACTUALLY FAIL, and it asserts an absence. No output of
+      the run describes H's missing answer as expected, as correct, or as not
+      applicable — checked over the whole run's output, not only H's line. NAMED
+      MUTATION: restore the recorded defect by emitting "not applicable" (or
+      "green on arrival, as expected") alongside the correct answer_owed_absent
+      state for H. The state assignment stays right and THIS TEST MUST GO RED;
+      remove the wording and it returns to green. This is the alteration this
+      AC's own falsifiability answer must name — it reproduces KI-TQ-010's exact
+      shape, a right state described in words that read as approval.
+  - name: test_tq500d_1_i_a_reasoned_negative_on_green_on_arrival_work_is_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Piece J — tests passed on arrival, record carries a reasoned negative — is
+      not reported. NAMED MUTATION (this descriptor asserts an absence): make the
+      green-on-arrival case demand the substitute shape specifically, rejecting a
+      reasoned negative. Under that injection J is reported and THIS TEST MUST GO
+      RED; revert and it returns to green.
+  - name: test_tq500d_1_i_a_work_item_with_no_test_writing_phase_produces_no_report
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Piece K — no test-writing phase ran — produces no report at all. NAMED
+      MUTATION (this descriptor asserts an absence): treat the absence of a
+      test-writing phase as an unanswered obligation. Under that injection K is
+      reported and THIS TEST MUST GO RED.
+  - name: test_tq500d_1_i_an_advance_expectation_of_an_immediate_pass_does_not_change_the_report
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Two runs over the identical three records, the second told in advance that
+      H's tests were expected to pass on arrival: H's report is byte-identical.
+      NAMED MUTATION (this descriptor asserts an invariance): let a declared
+      expectation of an immediate pass suppress H's finding. Under that injection
+      the two runs diverge and THIS TEST MUST GO RED; revert and it returns to
+      green. This is the good-faith regression that restores the inversion in a
+      form that looks like the fix.
+  - name: test_tq500d_1_i_the_three_records_are_built_by_the_projects_own_writer
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py
+    description: >-
+      Build H, J and K on disk via yaml.safe_dump into the ## Comments
+      completion_manifest block per the signoff §2b recipe and read them through
+      the registered hook as a subprocess, asserting the emitted wording in the
+      hook's real output rather than in a helper's return value. The wording
+      assertion is only meaningful against the string a reader actually sees.
+test_rationale: |
+  Four of the six descriptors assert an absence — J not reported, K not
+  reported, no approval-shaped vocabulary anywhere, and the report unchanged
+  under an advance expectation — and all four are green on arrival on any
+  implementation that reports nothing. Each therefore names a concrete injection
+  and requires RED-under-injection with green on revert.
+
+  The load-bearing one is the wording injection: emit "not applicable" beside a
+  correctly-assigned answer_owed_absent state. Every state assertion in the tree
+  stays green under it, TQ-500b-1-i stays green under it, and only this
+  descriptor objects — which is exactly the failure KI-TQ-010 records, so this
+  AC's falsifiability answer must be of the substitute kind naming that
+  alteration. Assert against the hook's real output string; the wording claim is
+  meaningless against an internal enum.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      change_target VERIFIED as code, not normalised to the [prompt, docs] parent
+      — the Then clauses assert over a reader's emitted output. Six descriptors;
+      four assert an absence or an invariance and each names its injection. The
+      load-bearing injection reproduces KI-TQ-010's exact shape: emit "not
+      applicable" beside a correctly-assigned state, so every other assertion in
+      the tree stays green and only the wording descriptor objects. criteria
+      untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE SECOND CLAUSE IS THE ONE THAT CAN ACTUALLY FAIL. The state assignment is checked
+  by TQ-500b-1-i; what is specific here is the wording, because the recorded defect was
+  not a wrong state but a right state described in words that read as approval. An
+  implementation can place piece H correctly and still print "not applicable" beside
+  it, and every reader downstream will believe the second thing.
+
+  THE LAST CLAUSE FORECLOSES THE REGRESSION MOST LIKELY TO BE INTRODUCED IN GOOD FAITH.
+  Once the guidance says an immediate pass is expected for this family, the natural
+  next step is to let a declared expectation of an immediate pass excuse the answer —
+  which restores the inversion in a form that looks like the fix.
+
+  BOUNDARY. Adds no behaviour. It is satisfied only by a regression test over
+  TQ-500b-1's reading and TQ-500d-1's record shape, and must not be closed by a change
+  that special-cases the three fixture records.

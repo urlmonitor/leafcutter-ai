@@ -77,7 +77,36 @@ test_spec:
     description: "Removing a value from the documentation_gates change_target_triggers policy makes that change_target no longer require documentation-expert, proving the trigger is config-driven."
 origin_agent: business-analyst
 created: 2026-07-15
-amended_by: []
+amended_by:
+  - reason: |
+      NARROWED BY BO-2200c-5-iii (recorded 2026-08-31 by business-analyst). A triggering
+      `change_target` is now NECESSARY BUT NO LONGER SUFFICIENT for a documentation demand.
+
+      This record states that each of `ui`, `schema`, `pipeline`, `docs` "on its own, causes
+      `documentation-expert` to be required". Under BO-2200c-5-iii the record must ALSO own a
+      document -- a `doc_links` entry whose relationship is `creates` or `modifies` -- before
+      `documentation-expert` is required. A triggering classification on a record that owns no
+      document raises no demand at all: neither `documentation-expert` nor
+      `documentation-verifier` is placed in the agents map, `documentation_required: true` is
+      not set, and the demand is withheld at phase selection rather than emitted and then
+      suppressed at rendering.
+
+      Nothing specified here is retracted. The declarative trigger policy, its data-driven
+      sourcing, and the four triggering values all still govern; BO-2200c-5-iii adds a second
+      condition ANDed with this one. Read the two records together as: triggering
+      classification AND document ownership. `criteria` is therefore deliberately not
+      rewritten -- it remains true as a statement of the trigger dimension, and it is
+      write-locked by the AC-store governance gate in any case.
+
+      IMPLEMENTER NOTE -- belongs to whoever builds BO-2200c-5-iii, NOT to this record. The
+      three behaviours covering this AC each assert that `documentation-expert` IS present for
+      a fixture AC: `test_change_target_ui_triggers_documentation_expert`,
+      `test_each_triggering_change_target_requires_doc_expert`, and the positive half of
+      `test_documentation_gates_is_data_driven_not_hardcoded`. If those fixtures own no
+      document they will fail the moment BO-2200c-5-iii lands. Give each positive fixture an
+      owning `doc_links` entry with relationship `creates` (or `modifies`) as part of that
+      build. The fixture change is an implementation change and was deliberately NOT made
+      when this amendment was written.
 superseded_by: null
 covered_by: []
 implemented_by:

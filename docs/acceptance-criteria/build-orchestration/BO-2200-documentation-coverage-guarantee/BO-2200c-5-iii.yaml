@@ -1,0 +1,84 @@
+id: BO-2200c-5-iii
+components:
+  - build_orchestration
+  - documentation_system
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "A record that owns no document is never dispatched a documentation demand -- phase selection, not just rendering"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given two leaf ACs identical in every field including `change_target: pipeline` -- a value that
+    triggers a documentation demand under the documentation-gates policy -- except that
+    the first owns `docs/how-to/thing.md` (relationship `creates`) and the second owns no
+    document at all,
+  When a ticket is generated from each,
+  Then the first ticket's agents map contains `documentation-expert` and
+    `documentation-verifier`, its frontmatter sets `documentation_required: true`, and its
+    contract line names `docs/how-to/thing.md`.
+  And the second ticket's agents map contains NEITHER `documentation-expert` NOR
+    `documentation-verifier`, its frontmatter does not set `documentation_required: true`, and its
+    body carries no `### documentation-expert` subsection.
+  And so a triggering `change_target` remains necessary for a documentation demand but is no
+    longer sufficient: the record must also own a document. This narrows the existing policy
+    behaviour, which decides the demand from the classification alone.
+
+  And given the second ticket ALSO carries a `## Agent Contracts` section for its `delivers_to`
+    and `expects_from` contracts -- the ordinary case, since those contracts share that section --
+  When the documentation-verifier's own detection and parse steps are executed against that
+    generated ticket file,
+  Then no blocker is produced. Suppressing only the subsection is not sufficient and must be
+    shown not to be: a ticket whose `## Agent Contracts` section is present but whose
+    `### documentation-expert` subsection is absent is rejected outright by the verifier, as is a
+    subsection carrying zero parseable contract lines. The demand must be removed at phase
+    selection so the verifier is never dispatched, not removed at rendering and left to the
+    verifier to tolerate.
+
+  And given the second ticket is run through its full phase sequence,
+  Then it reaches commit with no documentation phase recorded, no documentation blocker, and no
+    documentation sign-off -- rather than reaching commit with a documentation blocker that was
+    classified cross_agent and skipped while the build still reported success.
+depends_on: [BO-2200c-5, BO-2200c-5-ii]
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the behaviour the EPIC-StartingNewWorkTheProperWayAlways drive died on. 22 tickets with
+  `change_target: pipeline` and 3 with `change_target: docs` all received a documentation demand;
+  one of the 25 owned the document it was told to produce. 22 of the remainder were pointed at the
+  same page, which a later ticket in the same epic legitimately creates. Reordering cannot fix it:
+  that ticket documents behaviour the others deliver, so it depends on them, and the reverse edge
+  closes a cycle.
+
+  NARROWS AN APPROVED SIBLING -- must be reconciled before implementation. BO-2200a-1 (approved,
+  work_status done) states that each of `ui`, `schema`, `pipeline`, `docs` "on its own, causes
+  documentation-expert to be required", and is covered by a test asserting exactly that on a
+  fixture AC. If that fixture owns no document, this AC makes it fail. BO-2200a-1 needs an
+  amendment recording that its trigger is necessary but no longer sufficient, and its fixture needs
+  an owning doc_link. That amendment is out of this AC's scope -- see the handoff.
+
+  ON THE FRAMING: the cited fail-closed shape (a subsection with zero parseable contract lines) is
+  real but is NOT the shape this change would hit. A partial suppression already exists -- a
+  parent L1 with `documentation_triggers: []` suppresses the whole documentation-expert
+  subsection while leaving documentation-expert and documentation-verifier in the agents map. On
+  that path the `## Agent Contracts` heading is still emitted whenever `delivers_to` or
+  `expects_from` is present, so the verifier hits its "section present, subsection absent"
+  rejection instead. There are three fail-closed shapes, not two:
+    - no `## Agent Contracts` at all            -> verifier no-ops (the only safe rendering)
+    - section present, subsection absent        -> blocker  <-- the live one
+    - subsection present, no parseable lines    -> blocker
+  Because `delivers_to`/`expects_from` share the section, the safe rendering is unreachable for
+  most tickets. That is the concrete proof that rendering alone can never be made sufficient, and
+  it is why the second Given above specifies the delivers_to case rather than the bare one.
+
+  Worth knowing while implementing: on that same existing suppression path documentation-expert is
+  still dispatched, sees no contract block, and falls through to its v1 free-text Diataxis
+  dispatch -- so today the half-fix does not merely fail to suppress the demand, it produces an
+  unconstrained one.
