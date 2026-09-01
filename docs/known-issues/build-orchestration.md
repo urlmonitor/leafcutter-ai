@@ -2744,3 +2744,85 @@ and never reconciled, failing closed in a way that reads as a ticket defect.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse face: a gate that fails
 closed correctly, on a field the other side of its own contract was never told to provide.
+
+---
+
+### KI-BO-20260831-1520 — The fast lane's green gate runs only the AC's own tests, so a build that breaks 19 other tests reaches review reporting "gates green"
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/workflows-js/fast-lane-ship.js` — the `greenCoverageInvocation`
+  string, and the absence of any full-suite step anywhere in the lane
+
+**Symptom.** A fast-lane build of `BO-100e-1` / `BO-100e-1-i` widened `build-feature.js`'s
+single planner dispatch into a multi-look loop. Its own new tests passed. The lane's payload
+reported the build complete with *"gates green (red-baseline, green+coverage, review)"*.
+
+The branch broke **19 pre-existing tests** in `unit_tests/prompt_assembly/` — every
+`build-feature.js` driver test that models an epic. None of them appear in the lane's own
+report.
+
+**Root cause — the gate is AC-scoped by construction, and nothing else is suite-scoped.**
+
+```js
+const greenCoverageInvocation =
+  `python3 ${gateScript} verify_green_and_coverage` +
+  ` --ac-ids ${batchIds} --test-root ${worktreePath} --ac-root ${acStoreRoot}`;
+```
+
+`--ac-ids` narrows the run to tests tagged for the ids being built. That is deliberate and is
+what makes the lane fast; the comment above it says so (*"inlined lean loop — scoped to the
+resolved ids"*). The defect is not the scoping. It is that **the lane runs nothing broader at
+any point**, and then reports the narrow result in language that reads as a verdict on the
+change.
+
+`pr-reviewer` does not close the gap either: it reads the working **diff**. The 19 broken
+tests are not in the diff — they are files the change breaks without touching. A reviewer
+looking only at what changed cannot see them by construction.
+
+**What this cost, concretely.** The review phase spent a full cycle on a branch whose suite was
+already red, and returned three high-confidence findings about the diff — good findings, all
+three real — while never mentioning that the branch did not build. Had those findings been
+clean, the lane would have committed and opened a PR with 19 failing tests.
+
+**The 19 tests were not the whole of it, and that is the part worth reading.** Repairing them
+took four more rounds and surfaced three further defects the lane's report said nothing about,
+including a regression against `BO-300a-5` — an ALREADY-COMPLETED criterion — and an unbounded
+loop with no cap and no operator-visible error. Six defects in total on a build the lane
+reported as `status: ok, gates green`. So the scoped gate does not merely miss "some other
+tests": it misses whether the change is correct at all, while its report reads as a verdict
+that it is. Treat the number 19 in this entry as the count that was VISIBLE at the time, not
+the count that existed.
+
+**Not undetected forever — detected late, behind a green.** `Test suite (pytest)` is a required
+CI check and runs the full suite, so the PR would have gone red. The damage is ordering and
+trust: the lane declares its own work sound before anything has checked that claim, and an
+operator reading `status: ok, gates green` has no signal that the assertion is scoped. This is
+the `docs/reference/false-green-mechanisms.md` shape where a **narrow check is reported in wide
+language** — the check did exactly what it says; the report does not say what it checked.
+
+**Why the AC-scoped gate cannot simply be widened.** Running the full suite per fast-lane build
+costs ~18 minutes locally (measured on this branch: `4538 passed` in 1098s), against a lane
+designed to be lean. Two shapes that keep the speed:
+
+1. **Run the full suite once, after the coder loop settles and before `pr-reviewer`.** One run
+   per build, not per gate iteration. It also stops wasting a review cycle on a branch that
+   does not build.
+2. **Keep the gate scoped but fix the report.** Have `verify_green_and_coverage` state the
+   scope it actually ran (`N tests matching ac-ids X, Y`), and have the lane's payload and PR
+   body carry that qualifier instead of an unqualified "gates green". Cheaper, and honest, but
+   it only stops the wrong belief — it does not stop the broken PR.
+
+These are not alternatives; (2) is the floor and holds whether or not (1) ships.
+
+**The repo already had this rule, for the other pipeline.** `CLAUDE.md` → *"Full test suite +
+ruff at epic-finalize (before merge)"* exists because per-ticket sign-offs run only that
+ticket's own tests and cross-cutting breakage slips through. That is this defect exactly, one
+pipeline over. The fast lane was built after that instruction and did not inherit it.
+
+**Pattern:** a check that is honest about what it did, reported in language that implies more.
+
+**Related.** `KI-BO-007` (a phase reported complete against the agent returning cleanly rather
+than against an observable side effect — the same substitution of a proxy for the thing).
