@@ -136,3 +136,14 @@ GENERIC_SECRET:unit_tests/portability/_deployed_check_harness.py:*
 # Duplicated to the workspace root per the dual-update rule.
 ENTROPY_HIGH:docs/known-issues/testing-quality.md:*
 ENTROPY_HIGH:changelogs/2026-08-31-1810-a-missing-seam-answer-is-now-reported-by-name-and-the-hook-that-reports-it-actually-runs.md:*
+
+# The testing READMEs cite known-issue ids in the date-and-slug form, which read
+# as high-entropy strings to the scanner. No example is quoted here on purpose:
+# writing one out makes this very file trip the same check, which is how the
+# first attempt at this entry was blocked.
+# Glob rather than per-line: these files are prose that grows, so a pinned line
+# number would silently stop suppressing the finding it was added for and start
+# suppressing whatever moved into that slot.
+ENTROPY_HIGH:unit_tests/README.md:*
+ENTROPY_HIGH:tests/README.md:*
+ENTROPY_HIGH:changelogs/2026-09-01-1016-testing-readmes-corrected-the-commit-guardian-mutation-target-rule-was-wrong-for-31-of-106-test-files.md:*
