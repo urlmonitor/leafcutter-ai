@@ -39,7 +39,7 @@ This epic implements AC GE-122d: The numbering guarantee holds at every stage an
 | 07 | [07_TICKET-20260825-GE-122d-5.md](./07_TICKET-20260825-GE-122d-5.md) | Which stage you can skip, and what still catches you, is written down | GE-122d-5 | 02, 03 |
 | 08 | [08_TICKET-20260825-GE-122e-2.md](./08_TICKET-20260825-GE-122e-2.md) | Each work item that exists twice is reduced to the one copy that is right | GE-122e-2 | — |
 | 09 | [09_TICKET-20260825-GE-122e-3.md](./09_TICKET-20260825-GE-122e-3.md) | The repaired collection passes the guard itself, with nothing excused | GE-122e-3 | 08, `../../../99_done/TICKET-20260817-GE-122e-1.md` (done) |
-| 10 | [10_TICKET-20260825-BP-900h-6.md](./10_TICKET-20260825-BP-900h-6.md) | The simulation uses the install, not just builds it — a first commit is attempted | BP-900h-6 | `../EPIC-DeploymentCompleteness/12_TICKET-20260817-BP-900h-1.md` (**not built**) |
+| 10 | [10_TICKET-20260825-BP-900h-6.md](./10_TICKET-20260825-BP-900h-6.md) | The simulation uses the install, not just builds it — a first commit is attempted | BP-900h-6 | `../EPIC-DeploymentCompleteness/12_TICKET-20260817-BP-900h-1.md` (**done**) |
 | 11 | [11_TICKET-20260825-GE-122d-6.md](./11_TICKET-20260825-GE-122d-6.md) | The commit-time numbering check is wired into the live registry and fires on a real commit | GE-122d-6 | 01, 05, 09, 10 |
 | 12 | [12_TICKET-20260825-GE-122d-6-i.md](./12_TICKET-20260825-GE-122d-6-i.md) | A pass states what it inspected, so a pass is distinguishable from a hook that never ran | GE-122d-6-i | 11 |
 
@@ -57,11 +57,16 @@ They were generated individually with `generate_ticket_from_ac.py` and inserted 
 - **10 `BP-900h-6`** (under `BP-900h`) — the consumer-install commit job, the only surface
   that can observe a fresh-install regression caused by the registration.
 
-**Ticket 10 has an unmet external prerequisite.** `BP-900h-6` adds a step *inside* the
-consumer-simulation job that `BP-900h-1` creates, and that job does not exist yet — there is
-no consumer-simulation job in `.github/workflows/ci.yml` today. `BP-900h-1`'s ticket is
-`status: todo` in `EPIC-DeploymentCompleteness`, an epic with 1 of 15 tickets done. Tickets
-01–09 and 12 are unaffected; only 10, and 11 behind it, are gated on that.
+**Ticket 10's external prerequisite is now met.** `BP-900h-6` adds a step *inside* the
+consumer-simulation job that `BP-900h-1` creates. That job did not exist when this epic was
+generated; it does now — `consumer-install-sim` in `.github/workflows/ci.yml`, backed by
+`scripts/ci/check_consumer_install.py`, merged to `main` on 2026-08-26. `BP-900h-1`'s ticket
+is `status: done`. Every ticket in this epic is therefore unblocked at the graph level.
+
+The earlier note here read "tickets 01–09 and 12 are unaffected", which was wrong even at the
+time: 12 depends on 11, and 11 depended on 10, so 12 was transitively gated too. Recorded
+because a dependency claim that is checked by eye rather than by walking the graph is exactly
+what this epic exists to make impossible.
 
 ## Dependencies
 
@@ -75,7 +80,7 @@ GE-122d-4    -> GE-122d-1, GE-122d-2
 GE-122d-5    -> GE-122d-2, GE-122d-3
 GE-122e-2    (no dependencies)
 GE-122e-3    -> GE-122e-2, GE-122e-1 (already done)
-BP-900h-6    -> BP-900h-1 (NOT BUILT — outside this epic)
+BP-900h-6    -> BP-900h-1 (done — outside this epic)
 GE-122d-6    -> GE-122d-1, GE-122d-3-ii, GE-122e-3, BP-900h-6
 GE-122d-6-i  -> GE-122d-6
 ```

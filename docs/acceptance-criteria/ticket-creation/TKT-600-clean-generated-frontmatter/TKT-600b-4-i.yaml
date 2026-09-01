@@ -1,0 +1,206 @@
+id: TKT-600b-4-i
+title: "A phase that ran records its own outcome; that is the only write the drive makes to the phase record"
+component: ticket-creation
+components:
+  - build_orchestration
+  - ticket_creation_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical   # owner decision at the approval gate, 2026-09-01
+roadmap_phase: phase_1
+criteria: |
+  Given a drive dispatches the phases a ticket's record requires,
+  When a dispatched phase completes successfully,
+  Then that phase's own entry moves to "signed off" and gains its checklist row and its
+    comment entry,
+  And no entry belonging to a phase that was not dispatched changes in any way,
+  And a phase the drive declined to dispatch is neither marked signed off nor marked
+    excluded by the drive.
+
+  Given a dispatched phase fails,
+  When the drive records the outcome,
+  Then that phase's own entry reflects the failure,
+  And again no entry belonging to any other phase changes.
+depends_on: [TKT-600b-4]
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The sign-off recipe that updates a phase's own status, checklist row and comment together."
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-20260831-1931 — the re-dispatch question this AC deliberately does not answer; a sequencing dependency, recorded in it_requirements."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy the test_spec entries below are drawn from."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: >-
+      The authorship rule as a checkable relation between one drive run and the
+      record it leaves. The permitted write set is exactly the dispatched set — the
+      rule is stated as an equality so that both over-writing and under-writing are
+      violations.
+    properties:
+      dispatched_phases:
+        type: array
+        items:
+          type: string
+      entries_written:
+        type: array
+        items:
+          type: string
+        description: Must equal dispatched_phases, as a set.
+    required:
+      - dispatched_phases
+      - entries_written
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: >-
+    1 rule, applied at every point the drive records a phase outcome — the
+    per-phase result handling in the phase loop and the completion write it feeds.
+    Expressed as an equality between the dispatched set and the written set rather
+    than as a guard on one function, so a later-added write path inherits it.
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - python -m pytest unit_tests/workflows/ -q
+  constraints:
+    - >-
+      The permitted write set is exactly the set of phases dispatched in this run.
+      Not a superset, which is the TKT-600b-4 violation, and not a subset — a
+      dispatched phase whose outcome goes unrecorded is the BUG-23 signature the
+      drive already carries defences against at :414-419.
+    - >-
+      A phase that ran writes its own entry together with its checklist row and its
+      comment entry, as one atomic update, per the sign-off recipe in
+      templates/skills/signoff/SKILL.md. A partial update leaves the parity guard
+      with a contradiction.
+    - >-
+      A phase the drive declined to dispatch must be left exactly as the record
+      states it — neither marked passed nor marked excluded. Marking it excluded is
+      the reconciliation TKT-600b-4 forbids, and it is the more tempting of the two
+      because it looks like a correction rather than a claim.
+    - >-
+      SEQUENCING DEPENDENCY, NOT RESOLVED HERE. Whether a phase re-dispatched after a
+      failure must write a fresh entry is the subject of KI-BO-20260831-1931, whose
+      fix direction settles which of two in-file sources — the frontmatter agents map
+      or the newest per-agent comment — is authoritative for completeness. That
+      question must be answered before the re-dispatch case can be specified, because
+      the answer decides whether "wrote no new comment" means "unchanged" or "still
+      blocked". Implement the first-dispatch case now and leave re-dispatch
+      unconstrained rather than guessing; a guess here would pre-empt that record's
+      fix and could make the stale-comment deadlock permanent.
+    - >-
+      Must not weaken the existing evidence rule that the verdict is derived from the
+      record read back, never from a phase agent's own report of itself. This AC
+      permits a phase to write its outcome; it does not permit the drive to trust
+      that outcome without reading it back.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A drive whose write set over the phase record equals its dispatch set for the
+    run, making TKT-600b-4's prohibition implementable without freezing the record.
+    Consumed by the completion gate, which can then treat every entry as testimony
+    from the party that performed the work.
+expects_from:
+  ac_id: TKT-600b-4
+  contract: >-
+    The prohibition on the drive editing the record, which this constraint bounds so
+    it does not also forbid the sign-offs that are the record's whole purpose.
+test_spec:
+  - name: test_passing_phase_writes_its_own_entry_row_and_comment
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A dispatched phase that completes successfully moves its own entry to the
+      passing status and gains its checklist row and comment entry, all three
+      together. Every other entry in the record is unchanged, asserted as a diff over
+      the whole map.
+  - name: test_failing_phase_records_only_its_own_failure
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A dispatched phase that fails has its own entry reflect the failure, and no
+      entry belonging to any other phase changes. Included because the failure path
+      is where a bulk record rewrite is most likely to be reached for.
+  - name: test_non_dispatched_phase_is_neither_signed_off_nor_excluded_by_the_drive
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      For a phase the drive declined to dispatch, assert the drive writes NEITHER the
+      passing value NOR the exclusion value. Asserting only the passing value is
+      insufficient — the exclusion value is the reconciliation TKT-600b-4 forbids and
+      is the more plausible mistake, because it reads as a correction.
+  - name: test_written_entry_set_equals_dispatched_set
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Execute the real write path through the node harness and compare the set of
+      entries it touched against the set of phases dispatched, asserting equality in
+      both directions. Catches the over-write that TKT-600b-4 forbids and the
+      under-write that leaves a phase's outcome unrecorded — the BUG-23 signature the
+      drive's own comments already document.
+test_rationale: >-
+  Read alone, the parent's prohibition forbids sign-offs too, so the tests here have to
+  establish where the line is rather than that a line exists. Stating the rule as a set
+  equality does that in one assertion and makes both directions of violation fail,
+  which a one-sided "did not touch entry X" check cannot. The boundary entry checks for
+  the exclusion value as well as the passing value because the parent's violation has
+  two faces and only one of them looks dishonest. Re-dispatch is deliberately untested
+  here: KI-BO-20260831-1931 has not settled which in-file source is authoritative for
+  completeness, and a test written now would encode the guess.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-01
+    note: >-
+      Added it_requirements, test_spec, test_rationale, contracts and doc_links.
+      Expressed the authorship rule as an equality between the dispatched set and the
+      written set so both over-write and under-write fail, and recorded the
+      KI-BO-20260831-1931 sequencing dependency the BA asked the IT PO to note rather
+      than resolve. Criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THIS EXISTS TO KEEP TKT-600b-4 IMPLEMENTABLE. Read alone, "the drive never edits the
+  phase record" forbids sign-offs too, and sign-offs are the record's whole purpose. An
+  implementer facing that contradiction would either weaken the prohibition until it
+  stopped biting or freeze the record entirely and break every drive. Neither is
+  intended.
+
+  THE LINE IS AUTHORSHIP, NOT WHETHER A WRITE OCCURRED. A phase that ran recording its
+  own outcome is the record doing its job: the party that did the work says so, and the
+  completion gate later reads that testimony. The drive recording an outcome on behalf
+  of a phase it chose not to run is the record being made to agree with the drive, which
+  is the thing TKT-600b-4 excludes. Same file, same field, opposite meanings.
+
+  DELIBERATELY SILENT ON RE-DISPATCH. Whether a phase re-dispatched after a failure must
+  write a fresh entry is not decided here. It is the subject of KI-BO-20260831-1931 (a
+  phase that returned ok and wrote no comment left an earlier failing comment as the
+  newest, blocking every future run), and that record's fix direction — which of two
+  in-file sources is authoritative for completeness — must be settled before this can be
+  stated without pre-empting it. Left for the IT PO to note as a sequencing dependency
+  rather than resolved here.

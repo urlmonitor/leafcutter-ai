@@ -1,0 +1,247 @@
+id: ACS-1300a-1
+components:
+  - ac_store
+title: "One pass reports both directions of rot, against a stated total"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a requirements store on disk containing four records: one named by a coverage
+    tag in a test file whose path its coverage list does not hold; one whose coverage
+    list names a test file that is not present on disk; one whose coverage list already
+    holds every test file that names it; and one that no coverage tag names anywhere,
+  And a test tree on disk carrying those tag occurrences in both the Python "#" comment
+    form and the JavaScript "//" comment form,
+  When the repair tool is invoked once, out of process, against that store and that tree,
+  Then the first record is reported as a missing link, naming the record's id and the
+    path of the test file that names it,
+  And the second record is reported as a claim to a file that is absent, naming the
+    record's id and the absent path,
+  And the third record appears in the report as examined and already correct, so a
+    record the run left alone is distinguishable in the report from a record the run
+    never reached,
+  And the fourth record appears in the report as examined and carrying no tag,
+  And, given a fifth record whose coverage list carries one entry in each of the
+    dialects the store actually uses — a child record id, a path with a
+    double-colon class-and-function suffix, a bare file path, and a path whose
+    class-and-function suffix is introduced by a SINGLE colon — every entry that
+    names a file present on disk is classified as present, and no entry of any
+    dialect is reported as naming an absent file merely because its suffix form
+    was not the one the parser expected,
+  And the report states how many records were examined, how many tag occurrences were
+    read, and what the run excluded, so each finding arrives with the total it was
+    measured against,
+  And the set of tag occurrences the run acts on is identical, occurrence for
+    occurrence, to the set the existing done-proof scan produces over that same tree —
+    including the "//" occurrences — so the run recognises tags by the rule already
+    established for that purpose rather than by a rule of its own.
+depends_on:
+  - ACS-1300a
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: "THE TRAVERSAL TO REUSE. _scan_test_root_for_covers_tags already walks the test tree for coverage tags in both comment forms, excludes node_modules/.next/dist/coverage/.git/__pycache__/.venv, and returns one record per occurrence with file, line and enclosing function. _build_ac_status_map already enumerates the store. Between them the join this AC describes is one composition of two existing readers — writing a third walk is the drift shape this AC's last clause forbids."
+  - path: scripts/ac_store/test_enforcement.py
+    relationship: implements
+    status: exists
+    relevance: "COVERS_TAG_RE at :57 is the declared canonical tag-recognition rule (BO-2500e-1) and the one done_proof applies. The last clause of this criterion binds the repair to it by observed output. Do not define a new pattern here — see TQ-100b-5."
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-5.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "ALREADY OWNS TAG-RECOGNITION PARITY — do not re-specify it. TQ-100b-5 names four existing definition sites of a coverage-tag rule (R1 test_enforcement:57, R1f check_done_proof:92-95, R2 check_test_ac_tags:38, R3 check_ac_coverage:41) and requires their real output to agree. This AC's final clause is the complement, not a duplicate: it forbids the repair from becoming a FIFTH definition site. Note R3 truncates hierarchical ids and is blind to '//' tags — building the join on it would write wrong links."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "INHERITED, NOT DUPLICATED. The examined/read/excluded clause is this tree paying ACS-1100's standing contract, in ACS-1100's own vocabulary. Do not invent a second vocabulary for stating a denominator."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the coverage field and the `# covers: <id>` tag format that is this join's only key."
+  - path: templates/scripts/commit_guardian/check_ac_coverage.py
+    relationship: relates-to
+    status: exists
+    relevance: "DISQUALIFIED AS A SOURCE OF THE TAG RULE — READ THIS BEFORE COPYING ANY REGEX. Measured 2026-09-01: `_COVERS_REGEX` at :41 is `#\\s*covers:\\s*([A-Z]{2,6}-[0-9]{3,})`. Run against real tags it captures `ACS-1300` from `# covers: ACS-1300a-1` and `BP-100` from `# covers: BP-100k-6`, and it matches no `//` tag at all. It is named here so an implementer who greps for an existing covers regex finds the warning attached to the first hit, not the fifth."
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+    relevance: "The store is the authoritative backlog, which is what makes a wrong coverage entry a wrong backlog rather than a cosmetic defect. Establishes the store-wide-read, staged-write posture this detection pass operates under."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "TAG RECOGNITION COMES FROM THE CANONICAL SEAM, NEVER FROM A NEW PATTERN. The occurrence set must be obtained through `done_proof._scan_test_root_for_covers_tags`, which applies `COVERS_TAG_RE` at `scripts/ac_store/test_enforcement.py:57` — `(?:#|//)\\s*covers:\\s*(\\S+)` — declared canonical by BO-2500e-1. VERIFIED DISQUALIFIED 2026-09-01: `templates/scripts/commit_guardian/check_ac_coverage.py:41` collapses every suffixed id to its L0 root and is blind to `//`. A join built on that rule writes entries onto the WRONG record, which is strictly worse than the missing evidence it replaces."
+  - "SEQUENCING WITH TQ-100b-5, WHICH IS A NOTE AND DELIBERATELY NOT A DEPENDENCY. TQ-100b-5 owns four-way parity across the four existing tag-recognition rules; this AC's final clause is the complement — it forbids a fifth. The two are independent: binding this run's occurrence set to done_proof's by observed output is correct whether or not the other three readers have been reconciled. If TQ-100b-5 later widens what the canonical rule recognises, the correct response is to RE-RUN this repair, which ACS-1300a-2's idempotency clause makes cheap and safe — not to have waited for it."
+  - "`scripts/ac_store/cross_reference_audit.py` IS A READ-SIDE REUSE CANDIDATE ONLY, and the anti-duplication advice in this tree's L0 must be read with that ceiling attached. Safe to reuse: `_detect_worktree_root`, `_load_ac_yamls`, `_write_report`. Its matching layer is difflib text similarity against ticket bodies and is not this join. Its `_apply_backfill` is disqualified outright — verified 2026-09-01, it sets `ac_data[\"work_status\"] = \"done\"` at line 457 and re-serialises the whole record, violating the finished-state refusal and byte stability in a single call."
+  - "THIS AC PRODUCES NO WRITES AT ALL. Detection is read-only: no file under the store may be opened for writing on any path reachable from this AC, and in particular no code path may assign `work_status`. That refusal is inherited from the L0, is refused rather than deferred, and no strength of evidence licenses an exception."
+  - "THE JOIN IS A COMPOSITION OF TWO EXISTING READERS, NOT A THIRD TRAVERSAL. `done_proof._scan_test_root_for_covers_tags` already walks the test tree (both comment forms, with the node_modules / .next / dist / coverage / .git / __pycache__ / .venv exclusions) and `done_proof._build_ac_status_map` already enumerates the store. Writing a new walk over either side is the drift shape the final criterion clause forbids."
+  - "A COVERAGE ENTRY IS CLASSIFIED ON ITS PATH PORTION, AND NO ENTRY MAY BE CALLED ABSENT BECAUSE ITS SUFFIX FORM WAS NOT THE ONE THE PARSER EXPECTED. Measured 2026-09-01, the field carries three dialects — child record ids (3,586 entries), `path::Class::test` (162) and bare file paths (365) — plus GE-107, which writes `path.py:Class::test` with a SINGLE colon. A parser that splits on `::` reads that one entry as four dead links. Both `::` and `:` must therefore be recognised as suffix introducers, and an entry that resolves to no path at all is a reported abstention (ACS-1300c-3), never an absent-file finding. The mechanism is the implementer's choice; all four measured forms classifying correctly is not. THIS IS A SAFETY REQUIREMENT, NOT A FIDELITY ONE: a false absent-file finding is precisely the input ACS-1300a-2-i's removal rule consumes, so a misparse here does not stay a wrong line in a report — it becomes a destructive write one AC downstream."
+  - "EVERY FIGURE THE REPORT STATES CARRIES ITS DENOMINATOR AND ITS EXCLUSIONS, in ACS-1100's existing vocabulary. Do not introduce a second vocabulary for stating a total, and do not hard-code any expected count anywhere in the tool or its tests."
+  - "A RUN THAT COULD NOT DO ITS WORK MUST NOT PRODUCE A CLEAN-LOOKING RESULT (GE-120). An unreadable store root, an unreadable test tree, or a scan that returned zero occurrences because it failed must be distinguishable — in the report and in the process outcome — from a store that genuinely has nothing to report."
+  - "THE TOOL MUST HAVE A REAL OUT-OF-PROCESS ENTRY POINT. Every clause of this criterion is written as 'invoked once, out of process'; a helper only a unit test imports cannot satisfy them. This repository has already shipped a runner whose gates were computed and never executed, so the entry point is the requirement, not the packaging."
+  - "Must complete one whole-store, whole-test-tree pass in a single invocation on a developer machine WITHOUT executing the test suite — the join is a static tag scan over roughly 3,700 records, not a test run. Latency budget: under two minutes."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md rules 1-4), and must fail toward reporting rather than toward silence: an input this pass cannot classify becomes a reported abstention (ACS-1300c-3), never a swallowed exception."
+delivers_to:
+  agent: python-coder
+  contract: "The finding set for one run: per record, a classification of missing-link / absent-file-claim / already-correct / untagged, each naming the record id and the path involved, plus the run's examined and read totals. ACS-1300a-2 consumes this and writes; it must not recompute the join."
+expects_from: null
+test_spec:
+  - name: test_acs_1300a_1_cli_run_reports_missing_link_with_record_id_and_test_path
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the coverage-link repair CLI under scripts/ac_store/, invoked as a subprocess against a temporary store root and test root"
+    description: "Build the four-record fixture store and its test tree on disk, invoke the tool's real command-line entry point as a subprocess (not an imported function), and assert the record whose naming test is absent from its coverage list is reported as a missing link naming BOTH its id and the naming test file's path. This descriptor is also the tree's reachability proof: an entry point that no subprocess can invoke cannot satisfy any criterion in this L1."
+  - name: test_acs_1300a_1_absent_file_claim_is_reported_with_record_id_and_path
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In the same fixture, the record whose coverage list names a file not on disk is reported as a claim to an absent file, naming the record id and the absent path."
+  - name: test_acs_1300a_1_already_correct_and_untagged_records_are_reported_as_examined
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE COLLAPSE THIS FIXTURE EXISTS TO PREVENT. Assert the already-correct record and the untagged record are each PRESENT in the report with their own classification. Absence from the report is the failure — 'untouched' and 'never looked at' must not produce the same observation. Assert presence explicitly; do not assert only on the two findings."
+  - name: test_acs_1300a_1_report_states_examined_read_and_excluded_totals
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The report states how many records were examined, how many tag occurrences were read, and what the run excluded. Assert the totals are present and internally reconcilable against the fixture; do NOT assert a hard-coded number that a fixture change would falsify for the wrong reason."
+  - name: test_acs_1300a_1_occurrence_set_equals_done_proof_scan_occurrence_for_occurrence
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER, AND THE NO-FIFTH-READER CLAUSE. Over the same test tree, assert the run's tag-occurrence set equals `done_proof._scan_test_root_for_covers_tags`'s output occurrence for occurrence — including the `//` occurrences. Compare per occurrence, never by count: matching counts hide two offsetting differences, which is exactly how a second reader drifts undetected."
+  - name: test_acs_1300a_1_every_coverage_dialect_naming_a_present_file_classifies_as_present
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      THE FIFTH-RECORD DIALECT CLAUSE, AND THE FALSE-ABSENT FALSIFIER. In the same fixture
+      store, add a fifth record whose coverage list holds one entry per measured dialect —
+      a child record id, `path.py::Class::test`, a bare `path.py`, and GE-107's
+      `path.py:Class::test` with a SINGLE colon — with every file it names actually present
+      on disk. Assert every entry naming a present file is classified present, and assert
+      the absent-file finding set FOR THIS RECORD is empty. The single-colon entry is the
+      one that fails against a parser splitting on `::`, which reads it as four dead links
+      and reports GE-107 as inverse rot. Assert emptiness, not a per-dialect spot check:
+      checking only that the double-colon entries passed leaves the four false positives
+      in place, and ACS-1300a-2-i's removal rule would act on them destructively.
+  - name: test_acs_1300a_1_hierarchically_suffixed_and_slash_slash_tags_are_not_truncated_or_dropped
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE WRONG-RECORD REGRESSION, WRITTEN AS A TEST BECAUSE THE DEFECT IS LIVE IN THE REPO. Tags naming `ACS-1300a-1` and `BP-100k-6` must match those records and must NOT be attributed to `ACS-1300` or `BP-100`; a `// covers:` tag must be read. This fails against `check_ac_coverage.py:41`'s pattern and passes against `test_enforcement.COVERS_TAG_RE`, so it pins which rule the join actually used."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+- reason: measured-trap-criteria-changed-reapproval-required
+  by: business-analyst
+  at: 2026-09-01
+  note: 'CRITERIA CHANGED ON AN ALREADY-APPROVED RECORD; readiness demoted approved
+    to draft so the approval gate is re-run rather than silently inherited. ONE CLAUSE
+    ADDED, nothing removed or weakened: a fifth fixture record carrying one entry
+    in each dialect the coverage field actually uses — a child record id, a double-colon
+    suffix, a bare path, and a suffix introduced by a SINGLE colon — with a Then clause
+    requiring that no entry be reported as naming an absent file merely because its
+    suffix form was unexpected. Reason: re-measurement 2026-09-01 found three dialects
+    in the field (3,586 child ids, 162 double-colon, 365 bare paths) plus GE-107''s
+    single-colon `path.py:Class::test`, which a naive split on `::` turns into four
+    false inverse-rot findings that ACS-1300a-2-i''s removal rule would then act on
+    destructively. Notes additionally record the phantom-tag direction (roughly 87
+    of 937 tag ids resolve to no record; done_proof already computes this as dangling_tags;
+    ownership left OPEN per the L0), the corrected framing that a restored link changes
+    no record''s eligibility, and this tree''s own 12-of-20 denominator rot as the
+    fresh example for the no-count-in-criteria rule. All existing clauses, it_requirements
+    and test_spec entries UNCHANGED — the IT PO should add one test_spec entry for
+    the new dialect clause at re-approval.'
+- reason: technical-layer-realigned-to-the-added-dialect-clause
+  by: it-po
+  at: 2026-09-01
+  note: 'RE-ENRICHMENT AFTER THE CRITERIA CHANGED. Two additions, nothing removed
+    and no criteria touched. (1) test_spec gains test_acs_1300a_1_every_coverage_dialect_naming_a_present_file_classifies_as_present
+    — the entry the BA''s amendment asked for, covering the fifth-record clause. It
+    asserts the absent-file finding set for that record is EMPTY rather than spot-checking
+    the dialects individually, because a per-dialect check passes while GE-107''s
+    single-colon entry still yields four false findings. (2) it_requirements gains
+    the policy behind it: classification is decided on the entry''s path portion,
+    `:` and `::` are both suffix introducers, an unresolvable entry is an abstention
+    rather than an absent-file finding, and the reason this is a safety rather than
+    fidelity rule is that ACS-1300a-2-i''s removal rule consumes absent-file findings,
+    so the misparse ends in a destructive write one AC downstream. All other it_requirements,
+    test_spec entries, doc_links, contracts, assigned_agent and complexity UNCHANGED
+    and still valid against the amended criteria.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+superseded_by: null
+covered_by:
+  - ACS-1300a-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  DETECTION ONLY. This AC produces the finding set; ACS-1300a-2 is the only place a
+  file is written. Splitting them this way is what makes the preview run in
+  ACS-1300a-2 a real preview rather than a flag on a write path.
+
+  THE FOUR-RECORD FIXTURE IS THE POINT. Three of the four records are there to stop
+  the criterion being satisfied by a run that reports only what it found: the
+  already-correct record must be visibly examined, and the untagged record must be
+  visibly examined, or "untouched" and "never looked at" collapse into the same
+  observation. That collapse is the defect one level down and it is what the ACS-1300
+  L0 notes mean by abstention over silence.
+
+  ANTI-DUPLICATION, MEASURED 2026-09-01 ON THIS BRANCH — the two candidates the L0
+  named were read, and neither performs this join:
+    - scripts/ac_store/ac_coverage_resolver.py resolves a TICKET's ac_traceability
+      block to the records it names and checks three fields are non-empty. It is the
+      ticket-to-record direction and never reads the test tree.
+    - scripts/ac_store/cross_reference_audit.py matches record criteria text against
+      done-ticket text by difflib similarity and keyword overlap. Its enumeration
+      helpers (_detect_worktree_root, _load_ac_yamls, _write_report) are reusable; its
+      matching layer is not this join, and its apply layer is disqualified outright —
+      see ACS-1300c-1-i.
+  The join itself already exists, in done_proof. Compose it; do not rewrite it.
+
+  NO COUNT IN THE CRITERIA, DELIBERATELY. Figures live in the L0 notes with their method
+  and denominator. A criterion pinned to a number is falsified by the next commit that
+  changes the number — and this tree's own evidence section proved the point on
+  2026-09-01, when its "12 of 20" turned out to carry a denominator quoted from a cited
+  sweep and never re-measured. The repository also carries a hand-typed "244 of 607"
+  rotting in the artifact map as the older worked example.
+
+  THE FIELD HAS THREE DIALECTS AND ONE MALFORMED CASE — measured 2026-09-01, and this is
+  a live trap for the parser this AC specifies, not a hypothetical. The coverage field
+  holds child record ids (3,586 entries), `path::Class::test` (162) and bare file paths
+  (365). GE-107 writes `path.py:Class::test` with a SINGLE colon. A parser that splits on
+  `::` misreads that entry as four dead links and reports GE-107 as inverse rot — four
+  false findings, and one destructive removal each if the write step trusts them. The
+  fifth-record clause exists to make that misparse fail here, at detection, before
+  ACS-1300a-2-i's removal rule can act on it.
+
+  PHANTOM TAGS ARE A FOURTH DIRECTION, MEASURED AND DELIBERATELY NOT OWNED HERE. Of 937
+  distinct tag ids in the test tree, 850 resolve to a record — roughly 87 name a record
+  that does not exist. done_proof already computes exactly this set as its dangling_tags
+  output, so no new traversal is needed to surface it. ACS-1300c-3 currently reports
+  these as abstentions. Whether they deserve their own repair direction is an OPEN
+  question the L0 records as undecided; do not resolve it by quietly widening this AC.
+
+  WHAT THIS AC'S FINDINGS DO NOT MEAN. A missing link is a traceability defect, not a
+  blocked piece of work: restoring it does not change any record's mark-done eligibility,
+  because verify_done_eligible reads the direct tag first and only consults the coverage
+  list on the composite path. The report must not be worded to suggest otherwise. See the
+  L0's framing section and ACS-1300c-1's eligibility clauses.

@@ -47,7 +47,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 02: Green test coverage for BP-600 (quick-fix-workflow)
@@ -152,7 +152,6 @@ tests:
 - [x] test-runner — 2026-07-15 07:45
 - [x] pr-reviewer — 2026-07-15 10:24
 - [x] commit — 2026-07-15 10:29
-- [ ] pull-request
 
 ## Comments
 

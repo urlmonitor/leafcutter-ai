@@ -1,0 +1,228 @@
+id: GE-127
+title: "The codebase stays a size a person can still work in"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Files never quietly grow past the point where they can be understood.
+
+  A file that has become too large to hold in your head is the most expensive
+  kind of debt this project carries, and the only moment it is cheap to fix is
+  the moment it crosses the line. Today nothing tells you when that happens, so
+  files pass the threshold unnoticed and are discovered months later, when
+  splitting one means unpicking dozens of changes at once. After this goal, the
+  moment a file grows past what a person can work in is the moment you hear
+  about it, growing an already-oversized file further is refused, the standard
+  applies to everything the project is actually written in rather than only the
+  two file types someone happened to list first, the limit you are told about is
+  the limit that is enforced, and being stopped comes with enough information to
+  act on rather than an instruction to go and think about it.
+depends_on: []
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE PRECONDITION, AND THE RECORD THAT OWNS THE CENSUS. This goal's whole
+      subject is a guard that is present on disk and invoked by nothing at commit
+      time. BP-100n-4 (readiness approved, priority high, phase_1) owns the
+      reachability census that finds scripts nobody wired up, and its day-one
+      triage explicitly registers or dispositions every such script — this one
+      among them. It is also the record that already names this guard as
+      configured-but-uninvoked, which its it_requirements calls evidence of
+      intent. DO NOT restate, re-specify or duplicate that census anywhere in
+      this tree. Where a criterion here needs the gate to be reachable, it takes
+      that as an inherited precondition, not as work of its own.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      The register for this component. KI-CG-20260831-hook-scripts-never-invoked
+      is the finding that establishes the uninvoked-gate population this guard
+      sits in. Read it before decomposing, and do not restate its counts at a
+      higher confidence than it records them.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED OFF, DELIBERATELY NOT WIDENED. INF-800 ("Restructure code safely
+      without breaking what depends on it") owns the SAFETY of a split once you
+      have decided to make one. This goal owns knowing that a split is due and
+      being prevented from deferring it indefinitely. Neither may be closed as a
+      duplicate of the other, and neither may be amended to absorb the other's
+      subject.
+  - path: docs/acceptance-criteria/code-review/CR-100-refactoring-guidance/CR-100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED OFF, DELIBERATELY NOT WIDENED. CR-100 ("Know exactly what to
+      refactor and why — without drowning in noise") owns advisory judgement
+      about code quality across a whole review. This goal owns one mechanical,
+      non-negotiable threshold applied at the moment of change. Advice you can
+      weigh and a line you cannot cross are different products; merging them
+      turns the line into advice, which is the outcome this goal exists to
+      prevent.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-127a
+  - GE-127b
+  - GE-127c
+  - GE-127d
+  - GE-127e
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A NEW GOAL AND NOT AN AMENDMENT TO AN EXISTING ONE. Two existing
+  records were examined as hosts and both were rejected on scope, not on
+  convenience:
+
+    - INF-800 "Restructure code safely without breaking what depends on it" is
+      about performing a split without collateral damage. It presupposes that
+      someone has already decided to split. The entire subject here is the
+      decision point — being told, and being stopped — which INF-800 does not
+      reach and should not be stretched to reach.
+    - CR-100 "Know exactly what to refactor and why — without drowning in noise"
+      is advisory by construction: its value is prioritised, weighable guidance.
+      A size threshold is the opposite kind of thing — one number, no judgement,
+      applied at one moment. Folding a hard line into an advisory goal is the
+      most likely way for the line to quietly become a suggestion.
+
+  Neither was widened. Both are recorded as related, both are fenced in
+  doc_links, and neither may be closed as a duplicate of this tree.
+
+  THE DEADLOCK THIS GOAL EXISTS TO BREAK, AND WHY GE-127b IS THE KEYSTONE. The
+  size guard already exists as a script and is configured — it has a dedicated
+  configuration section naming per-extension limits and a default — but it is
+  invoked by nothing at commit time. It cannot simply be switched on, and that is
+  the whole difficulty: under its own counting rule the repository already holds
+  on the order of two hundred files above the limit it would apply, so turning it
+  on today blocks essentially every commit that touches any of them. The natural
+  responses to that — raise the number until nothing fails, or exempt the
+  offenders — both leave the project exactly where it is.
+
+  GE-127b is the way out and is the highest-value item in this tree. Its promise
+  is a ratchet: a file that is already over the line may still be worked on, but
+  it may not be made bigger. That is what makes the gate switchable on the day it
+  lands without a wall of false alarms, and it is what makes the existing backlog
+  shrink monotonically instead of being frozen behind an exemption list. Decompose
+  it so a baseline behaviour is derivable: the comparison is against the file's
+  own prior size, the direction of change is what is judged, and no fixed
+  threshold is involved in that judgement.
+
+  L1 CUT — BY GUARANTEE, NOT BY DEFECT. Do not re-cut as one L1 per observed
+  shortcoming of the current script; that produces point patches and hides that
+  two of them are the same promise.
+    - GE-127a — TIMING: you are told at the moment it happens, while the change is
+      still one thing to undo.
+    - GE-127b — THE RATCHET: over the line cannot get further over the line. The
+      keystone; see above.
+    - GE-127c — REACH: the standard is stated in terms of what the project is
+      written in, not a list of two file types.
+    - GE-127d — HONESTY: the limit that is published is the limit that is applied,
+      and the number you are told about a file is a number you can reproduce.
+    - GE-127e — ACTIONABILITY: being stopped hands you something to do.
+  GE-127a and GE-127b are deliberately separate. Telling you at the moment of
+  crossing (a) and refusing further growth of something already across (b) are
+  two independent behaviours with two independent implementations, and a file can
+  satisfy either while failing the other. Merged, an implementer satisfies
+  whichever half is cheaper.
+
+  EXTENSION SCOPE IS DELIBERATELY UNRESOLVED HERE — USER DECISION, 2026-09-01.
+  The question "which file types should be capped" was escalated at assessment and
+  the decision was to author the PRINCIPLE now and leave the concrete list to
+  technical enrichment. GE-127c therefore states the standard in language that
+  survives a new language being added to the project and names no file extension.
+  The IT PO pins the list. Two measured facts motivate the principle and belong in
+  that decision rather than in the criteria:
+    - The largest first-party files in this repository are in a language the
+      guard's configuration ALREADY names, so the current list is not wrong so
+      much as incomplete.
+    - Substantial bodies of first-party work sit in languages the configuration
+      names not at all — a majority of the repository's workflow scripts, and
+      dozens of authored documents, exceed the same threshold and are capped by
+      nothing.
+  A criterion in this tree that enumerates extensions is at the wrong altitude
+  and must be rewritten rather than approved.
+
+  EVIDENCE, WITH CONFIDENCE LABELS — carry them through and do not upgrade them.
+    - READ FROM CONFIGURATION AND NOT DISPUTED: the guard has a dedicated
+      configuration section carrying per-extension limits, a default limit, and a
+      two-entry checked-extension list.
+    - READ FROM THE GUARD'S OWN DOCUMENTATION AND NOT DISPUTED: the published
+      description of this gate and the guard's own configuration comment both
+      state that it applies to NEW files only and that modifications to existing
+      large files are exempt. The guard's recorded change history says that
+      exemption was removed. This is GE-127d's subject, and it is a documented
+      contradiction rather than an inference.
+    - MEASURED IN THIS WORKTREE AT AUTHORING TIME, RAW LINE COUNTS: 312 Python
+      files across the four first-party source directories, and 59 authored
+      documents, stand above 400 lines. Method: a per-file line count with no
+      exclusions.
+    - MEASURED AT ASSESSMENT TIME, UNDER THE GUARD'S OWN COUNTING RULE: on the
+      order of 190 files above their applicable limit. The two figures differ
+      because the guard's counting rule discards documentation blocks before
+      counting; that difference is itself part of GE-127d's subject. Do NOT
+      merge the two numbers or present either as the other.
+    - NOT MEASURED, AND NOT TO BE ASSERTED ANYWHERE IN THIS TREE: how many files
+      would be affected once the extension list is settled. That number cannot
+      exist until GE-127c's list is pinned at enrichment.
+
+  INHERITED AND NOT REPEALED. This component's deliberate fail-open convention
+  (an internal error yields a stderr warning and a zero exit so that a script bug
+  never blocks an unrelated commit) applies here unchanged and must not be
+  decomposed away. So does the line GE-120 drew over it: failing open on one bad
+  input while the check still ran is acceptable; reporting success for a check
+  that never ran is not. A size guard that cannot read a file must say so rather
+  than record it as within limits.
+
+  PRECONDITION, NOT SCOPE — READ THIS BEFORE WRITING ANY L2. Every criterion in
+  this tree assumes the guard actually runs at commit time. It does not today, and
+  making it run is BP-100n-4's work, not this tree's. That relationship is
+  expressed in doc_links as a dependency and must stay there. An L2 here that
+  re-specifies the reachability census, restates its counts, or proposes a second
+  one is duplicating an approved, high-priority record and will have to be
+  withdrawn.
+
+  delivers_to AND expects_from ARE NULL BECAUSE NOTHING IS ENRICHED YET, not
+  because these records are terminal. Contracts between records are an L2/L3 field
+  the IT PO fills, and a null here carries no claim either way.
+
+  IDENTIFIER. GE-127 was established free on 2026-09-01 by four independent
+  checks rather than by listing directories, because a folder-only listing
+  under-reports taken ids in this component and three duplicate identifiers were
+  minted here in two days in August by checking free-ness the lazy way:
+    (1) every `^id: GE-` value across the whole AC store — the highest is GE-126;
+    (2) a recursive grep for the literal GE-1xx across docs/, tickets/,
+        templates/, unit_tests/, scripts/ and changelogs/ — the highest citation
+        of any kind is GE-126, and this catches the loose namespace-root records
+        GE-114-1..4 and GE-115 that a folder listing misses;
+    (3) a whole-worktree grep for GE-127, excluding .git — no hits;
+    (4) `git grep` for GE-127 against origin/main, and a grep of the shared main
+        working tree for uncommitted claims — no hits in either.
+  Retired and reserved identifiers were respected: GE-119 is retired and must
+  never be reissued, and GE-121 must not be reissued because GE-111f's and
+  GE-122e's prose cite it repeatedly as a rejected candidate. Per this component's
+  standing rule, RE-VERIFY at merge time rather than trusting this paragraph —
+  id allocation in this store is known-broken (KI-ACD-008).
+
+  Authored at the PO stage; L0 and L1 only. No L2, no test_spec, no
+  it_requirements and no declares_side_effect were written here, by design.

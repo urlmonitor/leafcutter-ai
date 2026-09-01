@@ -409,13 +409,13 @@
                             },
                             "framework": {
                                 "type": "string",
-                                "enum": ["unittest", "pytest"],
-                                "description": "Test framework. Defaults to the project convention (unittest) when omitted."
+                                "enum": ["unittest", "pytest", "vitest", "playwright"],
+                                "description": "Test framework. Defaults to the project convention (unittest) when omitted. unittest and pytest are the project's Python test conventions; vitest runs leafcutter-web's suite (installed, wired via vitest.config.ts, executed by CI so the done-proof gate can read its results); playwright is the Playwright-driven webapp-testing skill, for headless browser/route-render checks, specified by BP-1400's route-render gate. MUST be kept identical to the same enum in config/test_requirements.schema.json — generate_ticket_from_ac.py copies this value straight onto the generated ticket, so a value legal here and not there produces a ticket that violates its own schema, and nothing enforces that schema. unit_tests/ac_store/test_test_spec_framework_vocabulary.py holds the two in step. Naming a framework does NOT assert it is installed: playwright is specified but is not yet a dependency of either package."
                             },
                             "type": {
                                 "type": "string",
-                                "enum": ["unit", "integration", "e2e", "behavioral"],
-                                "description": "Test level. Guides where the test runs and how heavy its fixtures are."
+                                "enum": ["unit", "integration", "e2e", "behavioral", "component"],
+                                "description": "Test level. Guides where the test runs and how heavy its fixtures are. `component` is a rendered-in-isolation UI test — neither a unit test nor end-to-end — and forcing such a test to claim either would make the record misdescribe itself. Kept identical to config/test_requirements.schema.json for the same copy-through reason as `framework`."
                             },
                             "angle": {
                                 "type": "string",

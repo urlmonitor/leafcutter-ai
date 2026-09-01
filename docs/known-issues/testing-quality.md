@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-26
+last_updated: 2026-08-31
 components:
   - testing_quality
 related_docs:
@@ -586,6 +586,87 @@ cannot see, where the absence of the check is documented as correct.
 
 ---
 
+### KI-TQ-012 — A fixture that sandboxes with `git worktree add` sets its identity in the *real* repository's config, and every worktree and every session inherits it
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `unit_tests/portability/test_ge_120e_1_i.py` — the merge fixture's `build()`
+  (`git worktree add` at ~L264, `git config user.*` at L270-271) and its `tearDownClass`
+  (`git worktree remove --force`, ~L338)
+
+**Symptom.** 42 commits across this repository's local branches — authored by several unrelated
+concurrent sessions over roughly eleven days — carry the author
+`GE-120e-1-i fixture <ge120e1i-fixture@example.com>`. None of those sessions was running the
+GE-120 tests. Found while inspecting an unrelated build-output commit:
+
+```
+$ git log --all --author="ge120e1i-fixture" --oneline | wc -l
+42
+$ git config --list --show-origin | grep user\.
+file:/home/henzeh/.gitconfig                     user.email=<the real identity>
+file:.../leafcutter-ai/.git/config                user.email=ge120e1i-fixture@example.com
+file:.../leafcutter-ai/.git/config                user.name=GE-120e-1-i fixture
+```
+
+**Cause.** A linked git worktree **does not have its own config** — it shares `.git/config` with
+the parent repository. The fixture builds its sandbox with
+`git worktree add --detach <tmpdir> HEAD` run at `cwd=_REPO_ROOT`, then sets an identity with
+`git config user.email …` / `user.name …` at `cwd=<the sandbox>`. Because the sandbox is a linked
+worktree rather than a standalone repo, that `git config` — no `--file`, no `--worktree` — lands
+in `leafcutter-ai/.git/config`. The fixture believes it is scoping an identity to a throwaway
+directory; it is in fact setting the identity for the whole repository.
+
+**Blast radius.** Repo-wide and cross-session. Every one of this workspace's 80+ worktrees reads
+that one config file, so a single test run silently re-authored every subsequent commit made by
+every parallel agent and every human, on every branch, until someone noticed.
+
+**Teardown does not save it.** `tearDownClass` runs `git worktree remove --force`. It never
+unsets the two keys, so the pollution outlives the fixture, the test run, and the session.
+
+**Why it stayed invisible for eleven days.** Nothing in the pipeline reads commit authorship, so
+no gate could object. And `origin/main` is **clean** — 0 of the 42 are reachable from it — because
+GitHub's squash-merge rewrites the author to the PR account. So the one surface anybody reviews
+shows the correct name, while the local history that shows the wrong one is never looked at. The
+defect is invisible from exactly where people look and visible only from where they don't.
+
+**The correct pattern is already in this repo.**
+`unit_tests/commit_guardian/test_check_doc_frontmatter_worktree_pathbase.py` builds its sandbox
+with `git init -b main` — a standalone repo with its **own** config — and then sets the identity
+there. That is safe, and it is the only other fixture that both creates a git sandbox and sets an
+identity; of the 11 fixtures using `git worktree add`, this one is the sole offender. So the fix
+is not novel work, it is applying the sibling's approach.
+
+**Fix direction.** Never run `git config` inside a `git worktree add` sandbox. In preference
+order: (1) pass the identity per invocation — `git -c user.name=… -c user.email=… commit …`;
+(2) set `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` / `GIT_COMMITTER_NAME` / `GIT_COMMITTER_EMAIL` in
+the subprocess environment; (3) `git init` a standalone temp repo instead of adding a worktree.
+The first two **cannot leak by construction**, which is why they beat "remember to unset it in
+teardown" — a teardown that must run correctly is the thing that already failed here.
+
+**Guard.** Cover it with a test that snapshots `git config --local --get user.email` in the real
+repo before and after the suite runs and fails on any change. Note that a guard asserting only
+"the fixture set an identity" passes against the defect — the assertion has to be about the
+**parent repo's** config, which is the thing the fixture never meant to touch.
+
+**Remediation applied 2026-08-31.** Both keys were unset from `leafcutter-ai/.git/config`;
+committing now resolves to the real global identity again. The 42 existing commits were left
+as they are — rewriting author metadata across 80+ live worktrees and open PR branches costs
+considerably more than the misattribution does, and none of it reached `main`.
+
+**Worth noting.** The fixture belongs to GE-120 — the epic whose stated purpose is *"trust that a
+green check actually checked something"* — and to `GE-120e-1-i` specifically, a criterion about
+attributing a change set to its real author. Its own harness silently misattributed 42 commits in
+the repository it was written to verify, and every check stayed green throughout.
+
+**Related.** `KI-CG-009` (a hook resolving the repo root to the main checkout rather than the
+worktree — the same "worktrees share more than you think" family).
+
+**Pattern:** shared mutable state reached through a handle that looks scoped.
+
+---
+
 ### KI-TQ-011 — The AC xfail-masking plugin is disabled on the only gate that blocks, so a red baseline for a not-done AC is unmergeable — and where masking does apply it makes the local run exit 0
 
 - **Severity:** high
@@ -753,3 +834,299 @@ Must Be in the Build Deploy-Manifest" (the same two-copy hazard on the import ax
 
 **Pattern:** a verification step performed against a copy of the artifact that the verifier
 does not load — where the failure mode is silence, and silence is the result that means "safe".
+
+---
+
+### KI-TQ-012 — A test fixture reassigns the real repository's commit identity, and every commit made afterwards is authored by the fixture
+
+- **Severity:** high
+- **Status:** open — recurs on every run of the suite; a config repair does not hold
+- **Occurrences:** 3 observed the same day, from three different worktrees — and the offending code is **two** files with **six** call sites, not four in one: a third commit landed authored `GE-120e-1-i fixture`, which is a *different* fixture, so `unit_tests/portability/test_ge_120e_1_i.py` carries the identical defect at 2 further sites
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `unit_tests/portability/test_ge_120e_1.py` — lines 234, 300, 344, 543 — **and
+  `unit_tests/portability/test_ge_120e_1_i.py`**, 2 more sites (found by grepping
+  `fixture@example.com` across the branch after a third misattributed commit; the entry
+  originally named one file because that is the one whose identity happened to land first)
+  (currently on branch `EPIC-TrustThatAGreenCheckActuallyChecked`, unmerged); leaks into
+  `leafcutter-ai/.git/config`, shared by every worktree
+
+**Symptom.** A commit made from the package's main checkout landed with this author:
+
+```text
+commit 0a6ccac5e7a2652f2b650c82b9515849e054972f
+Author: GE-120e-1 fixture <ge120e1-fixture@example.com>
+```
+
+`git config --local --get-regexp '^user\.'` in `leafcutter-ai/` returned:
+
+```text
+user.email ge120e1-fixture@example.com
+user.name  GE-120e-1 fixture
+```
+
+Every prior commit on `main` is authored `BrainCandy <105064581+urlmonitor@users.noreply.github.com>`.
+
+**Cause.** The fixture builds its scenarios as **worktrees of the real repository**, not as
+throwaway `git init` sandboxes:
+
+```python
+_run_git(["worktree", "add", "--detach", str(self.root), "HEAD"], cwd=_REPO_ROOT)
+_run_git(["config", "user.email", "ge120e1-fixture@example.com"], cwd=self.root)
+_run_git(["config", "user.name",  "GE-120e-1 fixture"],            cwd=self.root)
+```
+
+Setting an identity is legitimate — the fixture creates commits and CI has no global
+`user.email`. The defect is the **scope**. Worktrees share `$GIT_COMMON_DIR/config`, so a plain
+`git config` inside a worktree writes to the **shared configuration of the entire repository
+family**, not to the worktree. `tearDownClass` calls `git worktree remove --force` and never
+unsets the keys, so the identity outlives the fixture that set it.
+
+This repository already has `extensions.worktreeConfig = true`, which means the correctly-scoped
+form — `git config --worktree user.email …` — is available today. The fixture just does not use
+it. Four sites, all identical.
+
+**Why this is high and not cosmetic.** The leak is silent, persistent, and repository-wide:
+
+- It affects **every** commit from that checkout afterwards, not just the test run — and
+  because worktrees share the config, every worktree of the repo too. Any epic drive or fast-lane
+  run committing while this is set produces misattributed commits under an address that is not a
+  real contributor.
+- `.git/config` is not tracked, so nothing in `git status`, no pre-commit hook, and no CI gate
+  reports it. It is visible only if someone reads an author line — which is precisely the field
+  everyone skims past.
+- Misattribution is not locally repairable once pushed. Rewriting author metadata on merged
+  history is a force-push to a protected branch.
+
+**How it was found.** Incidentally, and late. The author line was noticed while confirming an
+unrelated commit's contents with `git show --stat`. Nothing surfaced it deliberately. Had the
+check not happened, the following fast-lane run would have committed and opened a PR under the
+fixture identity, since the lane's worktree inherits the same shared config.
+
+**Remediation.**
+
+1. Change all four sites to `git config --worktree …`, which this repo's
+   `extensions.worktreeConfig` already supports. One word per site.
+2. Better still, stop mutating repository state at all: pass the identity per invocation with
+   `git -c user.name=… -c user.email=… commit`, which cannot outlive the process, or set
+   `GIT_AUTHOR_*` / `GIT_COMMITTER_*` in the subprocess environment.
+3. Give `tearDownClass` an `unset` for anything it did set, so a mid-run failure cannot strand
+   the value.
+4. Add a guard: a test that asserts `user.email` in the repository config is unchanged across
+   the suite would have caught this on the first run. The suite currently has no notion that
+   the real repository is shared mutable state.
+
+**Repair applied.** The two keys were reset to the correct identity and the affected commit
+re-authored with `git commit --amend --reset-author` before it was pushed. The fixture itself is
+untouched — it lives on an unmerged branch and fixing it belongs with that branch's work, not
+with an unrelated docs change.
+
+**Recurrence observed within the hour — this is not a historical leak.** The keys were reset at
+roughly 20:00. The next commit, made about an hour later from a *different* worktree, was again
+authored `GE-120e-1 fixture`. `git config --show-origin` located the value in the shared
+`leafcutter-ai/.git/config`, and no pre-commit hook in that run executes pytest. The test file
+does not exist on `main` at all — `unit_tests/portability/` there holds four files, none of them
+`test_ge_120e_1.py`. So the re-set came from a **concurrent session running that branch's suite
+in its own worktree**, and it reached across into every other worktree of the repository.
+
+Three things follow that the single-occurrence framing above understates:
+
+- The blast radius is the whole repository family, live and concurrent. Any agent committing
+  anywhere while another runs this suite inherits the identity, with no signal at either end.
+- A one-time repair is worthless. The value returns on the next run, so the fix has to be in the
+  fixture, not in the config.
+- Under the fleet of parallel agents this repository is designed around, "a test that mutates
+  shared repository state" is not an isolation nicety — it is a race with a persistent,
+  invisible loser.
+
+**Related.** User-memory `feedback_test_isolation_pitfalls` records the sibling traps (root
+`conftest.py` import blast radius; `importlib.reload()` masking cold-import bugs). `KI-TQ-008`
+(a repository-global tree-purity guard false-positives under concurrent agents) is the same
+underlying assumption from the other direction: tests here treat the real repository as private
+scratch space when it is neither private nor scratch.
+
+**Pattern:** a fixture that isolates the *filesystem* (a fresh worktree, removed on teardown)
+while sharing the *configuration* that worktree points at — so the visible half of the sandbox
+is convincing and the invisible half leaks permanently.
+
+---
+
+### KI-TQ-20260901-1655 — A red-baseline gate cannot tell "red because the feature is missing" from "red because the test asserts against a stub defined in the test file", and the second kind is unsatisfiable — one of them blocked a completed seven-AC build
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-09-01
+- **Where:** `unit_tests/ac_store/test_tkt_600b_2.py` as authored by `test-writer` during
+  fast-lane run `wf_903b8551-290`; the gates are `verify_red_baseline` and
+  `verify_green_and_coverage` in `templates/workflows-js/fast-lane-ship.js`
+
+**Symptom.** `test-writer` authored a test that **no production change could ever make pass**:
+
+```python
+def test_signed_off_without_a_signoff_entry_is_rejected(self) -> None:
+    phantom_agents = {"pull-request": "signed_off"}
+    with __import__("pytest").raises(ValueError):
+        _reject_phantom_signoff(phantom_agents, comment_log=[])
+
+# ... 25 lines further down, in the same file:
+
+def _reject_phantom_signoff(agents: dict, comment_log: list) -> None:
+    """Not yet implemented (TKT-600b-2): should raise ValueError when an
+    agent is marked 'signed_off' with no backing comment-log entry."""
+    raise NotImplementedError(
+        "the phantom-sign-off rejection this AC requires does not exist yet"
+    )
+```
+
+The function under test is defined **in the test file**. It raises unconditionally. The only
+edit in the repository that can turn this green is an edit to this file — which is the one
+edit a coder correctly will not make.
+
+**Why both gates were satisfied by it, which is the actual finding.** The test is *genuinely*
+red, so `verify_red_baseline` passed it — correctly, by its own definition. A red baseline is
+evidence that a test constrains **something**; it is not evidence that the test constrains
+**production code**. Nothing between the two gates closes that gap. So:
+
+```
+verify_red_baseline    17/17 red        PASS  → coder dispatched
+python-coder           7 ACs implemented, 4 production files changed
+verify_green_and_coverage  16/17 green  FAIL  → halt, no PR
+release                all 7 ACs returned to todo
+```
+
+The run cost 726,644 subagent tokens and 63 minutes, implemented every one of the seven ACs,
+and produced no pull request. The other sixteen tests were fine; the implementation was fine.
+`coverage_ok` was true and `uncovered_ac_ids` was empty — the gate's own output said the only
+problem was one failing test.
+
+**The release is correct and still makes it worse.** Flipping all seven ACs back to `todo` is
+right on the merits — six-sevenths done is not done. But the effect is that a run which
+produced a complete, working implementation leaves the store looking exactly like a run that
+produced nothing, with the work surviving only as uncommitted changes in a worktree nobody is
+pointed at. Nothing in the returned payload names the worktree as containing salvageable work
+rather than debris. (It does name `worktree_path`, which is how it was recovered — but as a
+location, not as a claim that anything valuable is in it.)
+
+**What the test should have asserted, and why this is not a hard problem.** The AC
+(`TKT-600b-2`) states its own answer twice. Its `test_rationale` says the boundary test "is a
+claim about the checker's behaviour rather than the generator's", and its constraints say the
+AC is "making the generator satisfy an **existing** contract by construction rather than
+introducing a new one". The rejecting checker therefore already existed:
+`_signoff_parity_checks._check_parity` (`:450`) reports a violation for any agent whose status
+is `signed_off` while absent from `## Sign-offs` — which is the phantom record exactly.
+Verified against the real guard over real generator output:
+
+```
+-- correct record (pull-request: not_needed, no checklist row) --
+parity  : []        orphans : []
+-- phantom record (flipped to signed_off, row still absent) --
+VIOLATION: agent 'pull-request' has status 'signed_off' in frontmatter
+           but is missing from ## Sign-offs
+```
+
+So the test-writer invented a validator that did not exist while the AC it was reading pointed
+at one that did. Repaired 2026-09-01 to assert against the real guard; the repaired test is
+still red against the pre-change generator (`TypeError: _build_agents_map() got an unexpected
+keyword argument 'resolved_destination'`), so the red baseline is preserved, not traded away.
+
+**Fix direction.** The cheap, mechanical form: after `verify_red_baseline` and before
+dispatching the coder, reject any new test whose failure originates inside the test file's own
+module — a `NotImplementedError` raised from a helper defined in the test file is the
+signature, and it is detectable from the traceback's final frame without understanding the
+test. That is narrow enough to be worth doing on its own.
+
+The general form is harder and worth stating so the cheap fix is not mistaken for it: a red
+baseline should be evidence that the test is *reachable from a production surface*. The
+existing `reachability` angle in the test-spec taxonomy is the vocabulary for exactly this and
+was not consulted — this entry's test declared `angle: boundary`, and nothing checks that a
+boundary test touches production code at all.
+
+**Do NOT fix this by relaxing the green gate.** Letting 16/17 through would have shipped this
+particular PR and is the wrong lesson: the gate behaved correctly given a bad input. The defect
+is upstream, in what the red gate is willing to accept as a baseline.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse case, and it may deserve
+its own entry there. Every mechanism in that file is a check that passes when it should fail.
+This is a check that fails when nothing is wrong, which is normally the safe direction — except
+that it consumed a completed build and left the store indistinguishable from a run that never
+happened. A gate that cannot be satisfied is not conservative; it is just as much a broken
+oracle as one that cannot be failed.
+
+**Related.** `KI-TQ-010` (nothing asks whether a passing test is *able* to fail) is the exact
+mirror image: that entry is about tests that cannot go red, this one about a test that cannot
+go green. Both are the same missing question — "is this assertion connected to anything?" —
+asked from opposite ends.
+
+---
+
+### KI-TQ-013 — `git commit` in a temp fixture forks a background auto-gc, which races `rmtree` at teardown and fails the required CI suite at random
+
+- **Severity:** medium — never wrong about the code, but it blocks merges and trains people to re-run
+- **Status:** open
+- **Occurrences:** 2 on 2026-09-01, in a single afternoon, on two **different** pull requests —
+  both of which changed **only Markdown**
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `unit_tests/portability/test_bp_900h6i.py:175-181` —
+  `TestBp900h6iEntitlement::test_bp900h6i_step_refuses_an_unentitled_target_and_leaves_it_byte_identical`
+
+**Symptom.** The required `Test suite (pytest)` gate fails with a teardown error, not an
+assertion:
+
+```text
+FAILED unit_tests/portability/test_bp_900h6i.py::TestBp900h6iEntitlement::
+  test_bp900h6i_step_refuses_an_unentitled_target_and_leaves_it_byte_identical
+  - OSError: [Errno 39] Directory not empty: '/tmp/tmpbmd7r91e/developer_tree/.git'
+```
+
+The path differs each time (`tmpbmd7r91e`, `tmp7v5k_chs`). The test's own assertions never
+fail; the body completes and the error is raised on the way out.
+
+**Cause.** The fixture builds a real repository inside a `tempfile.TemporaryDirectory()`:
+
+```python
+with tempfile.TemporaryDirectory() as tmp:
+    target_dir = Path(tmp) / "developer_tree"
+    self._fresh_copy(target_dir)
+    _git(["init"], target_dir)
+    ...
+    pre_commit = _git(["commit", "-m", "developer's pre-existing commit"], target_dir)
+```
+
+`git commit` runs `gc --auto` by default, which **forks a background process** and returns
+immediately. That process is still creating and removing files under `.git/` after `_git(...)`
+has returned and the `with` block has exited. `TemporaryDirectory.__exit__` calls
+`shutil.rmtree`, which enumerates a directory, deletes its contents, then calls `rmdir` — and
+`rmdir` fails with `ENOTEMPTY` if the background process wrote anything in between.
+
+This is a race, so it is timing-dependent: it passes locally every time (verified — 4 passed),
+and fails in CI at a rate somewhere around one run in three based on today's two hits.
+
+**Why it deserves an entry rather than a re-run.** It is a **false red on a required gate**. Both
+occurrences were on documentation-only pull requests, which cannot possibly have caused it, and
+each cost a full ~13-minute suite re-run. The real damage is behavioural: a required check that
+fails for reasons unrelated to the change teaches everyone that a red suite means "re-run it",
+which is precisely the reflex that lets a genuine failure through. It also makes the pytest gate
+useless as a merge signal without a human adjudicating every red.
+
+**Suggested fix, in preference order.**
+
+1. **Disable auto-gc in the fixture** — treat the cause. `git -c gc.auto=0 commit …`, or set
+   `gc.auto=0` alongside the existing `user.email` / `user.name` config calls, or export
+   `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0` for the subprocess environment. A
+   test fixture has no use for garbage collection; it exists for a few seconds.
+2. **Wait for the repository to go quiet before teardown** — sound but harder to get right, and
+   it treats the symptom.
+3. **`shutil.rmtree(..., ignore_errors=True)` or a retry** — makes the symptom go away and hides
+   any *real* teardown failure with it. Only acceptable if 1 proves insufficient.
+
+Sweep for siblings when fixing: any fixture that runs `git commit`, `git clone` or `git fetch`
+inside a `TemporaryDirectory` or `tmp_path` has the same exposure. This test is unlikely to be
+the only one; it is just the one that lost the race twice in one afternoon.
+
+**Related.** `KI-TQ-008` (a repository-global tree-purity guard false-positives under concurrent
+agents) is the same category from a different angle — a check reporting a failure that is about
+the environment rather than the change. `KI-TQ-012` (a fixture leaking git identity into the real
+repository) is the same *file family* mishandling git state, though a different mechanism.
+
+**Pattern:** a fixture that treats a subprocess as finished when it returns, while the tool it
+invoked has deliberately left work running behind it.

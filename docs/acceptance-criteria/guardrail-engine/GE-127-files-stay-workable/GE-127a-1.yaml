@@ -1,0 +1,416 @@
+id: GE-127a-1
+title: "The change that takes a file past its permitted length is refused at the moment it is committed"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked file of a kind the size standard covers stands below its
+    permitted length,
+  And a change is staged that leaves that same file above its permitted length,
+  When the author performs an ordinary commit — no extra command, no extra flag,
+    and nothing invoked by hand,
+  Then the commit does not complete,
+  And the outcome names that file, states the length the standard measured it
+    at, and states the length permitted for a file of its kind,
+  And given instead a change is staged that leaves that same file still below
+    its permitted length,
+  When the author performs an ordinary commit,
+  Then the commit completes and nothing about that file's length is reported at
+    all — no warning, no note, and no line naming the file,
+  And given a change is staged that leaves one covered file above its permitted
+    length while a second covered file in the same commit stays well below its
+    own,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and the file named as being over is the
+    first one only — the second file's compliance neither excuses the first nor
+    is itself reported as a problem.
+depends_on:
+  - GE-127a
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE — INHERITED FROM THE L1 AND NOT RESTATED. Every
+      clause here is expressed as a commit outcome, which presupposes the guard
+      is reached at commit time. Making it reached is BP-100n-4's day-one triage.
+      This record asserts the EFFECT and never the registration: no criterion
+      here mentions a registry, a manifest, a census or a count of scripts, and
+      none may be added. If a criterion here is satisfiable by inspecting a
+      registration surface rather than by attempting a commit, it has been
+      mis-decomposed.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The incumbent guard. Its threshold comparison is already correct for the
+      crossing case; what does not exist is any commit at which it runs. Read the
+      recorded change history entry of 2026-05-01 before assuming the
+      new-files-only exemption is still in force — it is not (that contradiction
+      is GE-127d's subject, not this record's).
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Describes the commit-time invocation shape every clause here is
+      written against.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding on this
+      record specifically: a test that reads the guard's source, or that asserts a
+      registration entry is present, stays green on precisely the unreached gate
+      this criterion exists to make observable.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: true
+declares_side_effect: false
+it_requirements:
+  config_schema_fragment:
+    hooks_manifest:
+      type: object
+      description: >-
+        hooks_manifest.hooks gains ONE entry, under the id `check-file-size` that
+        templates/scripts/commit_guardian/README.md line 41 already documents as a live
+        Blocking gate — so no new id is minted, the false claim is made true. The entry
+        carries the fields its siblings carry (id, tier "judgment", name, entry routed
+        through run_hook.py, language "system", stages ["pre-commit"], pass_filenames).
+        MEASURED, NOT ASSUMED: no NEW TOP-LEVEL KEY is added anywhere in this tree. The
+        `file_size` section already exists at commit_guardian.json line 13 as one of the
+        file's 36 top-level keys, and every limit or scope change GE-127c-1 needs is
+        NESTED inside it — invisible to _package_surface_registry.WATCHED_REGISTRIES,
+        whose mapping_keys container on this file is bound to dotted path "" (the
+        document's own top level) only. The single watched addition is this hooks_manifest
+        id, which is why this record declares package_surface and its siblings do not.
+  reference_file_path: "templates/scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - >-
+      WHICHEVER OF THIS RECORD AND BP-100n-4 LANDS FIRST OWNS THE REGISTRATION; THE OTHER
+      ASSERTS IT AND DOES NOT ADD IT A SECOND TIME. BP-100n-4's day-one triage must
+      dispose of check_file_size.py as one of the 18 top-level gate scripts named by no
+      manifest entry, and its own it_requirements rule out "declared non-gate" for this
+      script specifically, because it is one of the ten that already carry a dedicated
+      configuration section. So the entry will exist either way. This record declares
+      package_surface: true regardless, because declaring it costs nothing when BP-100n-4
+      landed first, whereas omitting it hard-blocks the commit at
+      check-package-surface-declaration when it did not. This is the same
+      whichever-lands-first ownership rule BP-100n-4 already applies to TQ-500b-1.
+    - >-
+      CANONICAL VERSUS BUILD OUTPUT — FOUR PATHS, ONLY ONE OF WHICH IS EDITABLE.
+      templates/scripts/commit_guardian/ is canonical and tracked. scripts/commit_guardian/
+      is an UNTRACKED build output (`git ls-files` returns nothing for it) and is
+      overwritten by build.py. The repo-root .pre-commit-config.yaml is ALSO untracked —
+      it is emitted by build_precommit_config from hooks_manifest, and a hook block
+      hand-added there is silently discarded on the next build, which is the worse failure
+      because it appears to work first. templates/commit-guardian/commit_guardian.json is a
+      DECOY: a 3-key file with 3 hook ids and no file_size section, and manifest parity is
+      one-directional (legacy ⊆ canonical, check_hook_parity.py:291), so it needs no edit.
+      Edit the canonical template only, then re-run build.py.
+    - >-
+      RE-RUNNING build.py IS NOT COSMETIC. config.py:19 sets `_CONFIG_PATH =
+      Path(__file__).resolve().parent / "commit_guardian.json"`, so the hook reads the
+      config sitting BESIDE THE DEPLOYED SCRIPT (.leafcutter/scripts/commit_guardian/).
+      A limit or scope change written only into the template leaves the running gate on
+      the old values with no error. `python scripts/build.py --target-dir .` is part of
+      the change, not a follow-up.
+    - >-
+      DEPLOY-MANIFEST BOUNDARY. build_commit_guardian copies EVERY file in
+      templates/scripts/commit_guardian/ verbatim, so a new sibling module placed INSIDE
+      that directory needs no deploy entry. A module imported from OUTSIDE it MUST be
+      added to the deploy map in scripts/build_phases.py in the same change, or the
+      deployed hook raises ModuleNotFoundError at commit time while the unit tests, which
+      import from the source tree, stay green.
+    - >-
+      HOST AND LAYERING — MEASURED IN THIS WORKTREE, NOT GUESSED. Under check_file_size's
+      own counting rule the guard itself stands at 148 of its 400 permitted lines (217
+      raw), so it has real headroom — but this tree lands six behavioural records on it and
+      the combined ratchet, measurability, scope-declaration and measurement-rule work will
+      exceed 252 lines. Put the shared machinery (previous-length resolution, the
+      measurement function, the outcome assembly) in a sibling module INSIDE
+      templates/scripts/commit_guardian/ and leave the guard the call sites and the printed
+      outcome. Never split outside that directory.
+    - >-
+      THE EXCLUDED_DIRS TRAP — THE OBVIOUS HYGIENE FIX SILENTLY CANCELS THE FEATURE. DO
+      NOT WIRE EXCLUDED_DIRS INTO THIS GUARD AS PART OF THIS WORK. check_file_size.py
+      imports only CHECKED_EXTENSIONS, DEFAULT_LINE_LIMIT and FILE_LINE_LIMITS; it never
+      imports EXCLUDED_DIRS, although config.py:90 exports it and README.md line 65 states
+      that list is "excluded from ALL hooks unless a hook section provides its own
+      override". That inconsistency looks like a defect and inviting to fix. It is not
+      fixable here: the global excluded_dirs list is ["unit_tests", "alembic", "debugging",
+      "legacy", "tests", "templates"] and `templates` is in it — every one of the 13 tracked
+      JavaScript files GE-127c-1 brings into scope lives under templates/workflows-js/. A
+      guard that honours that list ships the widened scope as a guaranteed no-op. If a
+      path-exclusion capability is genuinely wanted, it needs a `file_size`-nested
+      exclusion list chosen for this gate, and the discrepancy with the README's global
+      claim is GE-127d-1's subject, not a silent code change here.
+    - >-
+      SEQUENCING — REGISTERING THIS GATE WITHOUT GE-127b-1's RATCHET IS SELF-BLOCKING, AND
+      THE NUMBER IS MEASURED. Re-measured in this worktree at b846121c9 under the guard's
+      own counting rule: 200 of 845 tracked .py files stand above the 400-line limit
+      already in force, including scripts/build_phases.py at 2603 counted / 3873 raw. The
+      moment the manifest entry lands, every commit touching any of those 200 is refused
+      with no incremental path. GE-127b-1 is what makes that survivable and MUST land in
+      the same change or before it. If this record is built first, its own test descriptors
+      will pass while the repository becomes uncommittable — treat a green run against a
+      blocked working tree as a failure, not a pass.
+    - >-
+      THE ROLLOUT MECHANISMS THAT EXIST, STATED AS THEY ARE — THERE IS NO WARN TIER, SO DO
+      NOT PLAN A RAMP AROUND ONE. What exists: `enabled: false` on a manifest entry, which
+      build_precommit_config honours by filtering on h.get("enabled", True) before emitting
+      entry lines (5 entries use it today); the two exemption registries
+      (drift_gate_exemption_registry, hook_trigger_reachability_exemption_registry), each
+      entry a {path|id, ground} pair with a mandatory non-empty ground; per-gate
+      `excluded_dirs` overrides as `complexity` and `sql_complexity` use; and ad-hoc
+      per-script advisory severity as check_doc_links and check_adr_cross_reference
+      implement individually. What does NOT exist: any warn-versus-enforce tier in the
+      framework. The manifest `tier` field takes only "judgment" (54) and "transform" (6)
+      and is not a severity, and run_hook.py has no advisory handling whatsoever. Note also
+      that BP-100n-4 explicitly forbids using enabled:false to dodge a day-one finding —
+      "that flag records a deliberate, documented decision, never a gate that turned out to
+      be inconvenient on its first run." The ratchet is the rollout mechanism here.
+    - >-
+      Must follow the repo error-handling policy: specific-exception try/except around
+      subprocess, file and JSON I/O; log at WARNING or higher or re-raise; no bare or blind
+      excepts. A swallowed error must never become a measured length — that is the precise
+      fail-open shape GE-127a-1-i exists to make impossible.
+test_spec:
+  - name: test_ge_127a_1_a_change_taking_a_file_over_its_limit_refuses_the_commit_naming_both_lengths
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      In a real temporary git repository with the gate installed, stage a change that takes
+      a covered file from below its permitted length to above it and run an ordinary
+      `git commit`. The commit must not complete, and the captured output must name the
+      file, the length the standard measured, and the length permitted for its kind. All
+      three are read from the process output; none is compared against a literal expected
+      length. THIS IS THE RED BASELINE FOR THE WHOLE TREE — it fails today because no
+      commit is refused for file length. Capture that failing run before any work starts.
+  - name: test_ge_127a_1_a_file_left_under_its_limit_produces_no_output_about_its_length
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A staged change leaving a covered file still below its permitted length commits
+      cleanly and produces no warning, no note and no line naming that file. NAMED MUTATION
+      (mandatory, run it, do not merely describe it — this is the BA's injection 1): change
+      the length comparison so a file at or below its permitted length is refused alongside
+      one above it. Under that injection this descriptor must go RED, failing BY THE COMMIT
+      OUTCOME as well as by the text, and return to green on revert. The injection has a
+      second deliberate property the BA names: it can only turn the descriptor red if the
+      guard actually runs at commit time, so a mutation that changes nothing is the signal
+      that BP-100n-4's registration has not landed — which is how this record proves
+      reachability without restating that census.
+  - name: test_ge_127a_1_only_the_over_limit_file_is_named_when_a_compliant_file_is_in_the_same_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      A commit staging one over-limit covered file and one comfortably compliant covered
+      file is refused, and the reported set contains the first file only — the compliant
+      file is neither excused nor reported. NAMED MUTATION (mandatory, run it — the BA's
+      injection 2): include every staged file of a covered kind in the reported set
+      regardless of its measured length. Under that injection this descriptor must go RED
+      naming the compliant second file, and return to green on revert. Without it the
+      clause is satisfied by a guard that names nothing.
+  - name: test_ge_127a_1_the_refusal_is_emitted_through_the_registered_hook_entry_point
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the gate as a subprocess through the registered hook path
+      and assert that the per-file verdicts appear in the hook's own output stream and that
+      the exit status is the commit outcome rather than an advisory note — non-zero when a
+      covered file is over its limit, zero when none is. A verdict computed by a function
+      nothing at commit time calls is inert, which is the defect this whole tree exists to
+      close.
+  - name: test_ge_127a_1_the_deployed_copy_refuses_the_crossing_commit_in_a_cold_process
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy of the gate and every module it imports load and
+      run in a cold process — a helper placed outside templates/scripts/commit_guardian/
+      without a scripts/build_phases.py deploy-map entry surfaces here as
+      ModuleNotFoundError rather than passing. The deployed run must refuse a crossing
+      commit and must read its limits from the config beside the deployed script, so a
+      change written only into the canonical template and never built fails this descriptor
+      rather than passing on source-tree greenness.
+test_rationale: |
+  Two of the three behavioural clauses here assert an ABSENCE — nothing reported for a
+  compliant file, and only the offender named — and both are green on arrival on today's
+  implementation for the trivial reason that nothing is reported at any commit. That is
+  KI-TQ-010's shape, and it is why each carries an executable injection rather than a note
+  asking someone to confirm the test is meaningful. The BA wrote both injections; they are
+  carried into descriptors here verbatim rather than restated as prose.
+
+  Every descriptor performs an ordinary `git commit` in a real temporary repository and
+  asserts on the process output and the commit outcome. Per CLAUDE.md "Gate / Workflow ACs
+  — Verify Behaviorally, Not by Grep", and per this record's own doc_link, a test that
+  reads the guard's source or asserts that a manifest entry is present stays green on
+  precisely the unreached gate this record exists to make observable — and would also
+  duplicate BP-100n-4, which owns that census and forbids a second one.
+
+  The deployed descriptor is not redundant with the reachability one: the reachability
+  descriptor proves the hook path executes, the deployed descriptor proves the built copy
+  and its config are what execute. config.py resolves commit_guardian.json relative to the
+  deployed script, so a limit change that was never built is invisible to every source-tree
+  test and visible only here.
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-127a-1-i
+    contract: >-
+      The per-file commit-time length verdict and the single outcome stream it is reported
+      through, into which GE-127a-1-i inserts the could-not-be-measured verdict as a named
+      third result distinct from measured-and-over and measured-and-within.
+  - agent: python-coder
+    ac_id: GE-127b-1
+    contract: >-
+      The threshold comparison and the outcome, which GE-127b-1 extends with a second
+      comparison against the file's own previous length. The two comparisons share one
+      measurement function and one outcome; the ratchet is an additional arm on this
+      verdict, never a parallel gate.
+  - agent: python-coder
+    ac_id: GE-127c-1
+    contract: >-
+      The set of staged files the gate measured on the run, which GE-127c-1 requires the
+      outcome to state as a set of kinds, so a kind that was skipped is not read as passed.
+  - agent: python-coder
+    ac_id: GE-127d-2
+    contract: >-
+      The quoted length and the permitted length as they appear in the outcome, which
+      GE-127d-2 requires to be accompanied by a statement of what the quoted length
+      measures and to be reproducible from a published measurement rule.
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-01
+  note: 'criteria untouched. PACKAGE SURFACE TRUE, AND MEASURED: registering this gate adds
+    one id to hooks_manifest.hooks, which _package_surface_registry.WATCHED_REGISTRIES
+    watches on this file as a list_ids container, so check-package-surface-declaration
+    refuses the commit unless a cited AC declares it. Declared here rather than on a sibling
+    because this is the record whose criteria cannot pass without the registration; the
+    whichever-lands-first rule with BP-100n-4 is written into the constraints. NO NEW
+    TOP-LEVEL KEY anywhere in this tree — file_size already exists at commit_guardian.json
+    line 13 among 36 top-level keys, and the mapping_keys container is bound to dotted path
+    "" only, so the nested limit/scope additions GE-127c-1 needs are not watched. The
+    fictional-fragment precedent BP-100n-4-ii records for BP-100k-4 and BP-100k-4-i is
+    deliberately not repeated: hooks_manifest is a real, present key and reference_file_path
+    resolves to a real file. HOST MEASURED under the guard''s own counting rule:
+    check_file_size.py is at 148/400 (217 raw), real headroom, but six behavioural records
+    land on it, so shared machinery goes in a sibling INSIDE
+    templates/scripts/commit_guardian/, which build_commit_guardian copies whole — no
+    scripts/build_phases.py entry needed unless a module is imported from outside that
+    directory. FOUR HAZARDS RECORDED IN CONSTRAINTS: the EXCLUDED_DIRS trap (templates/ is
+    in the global list and every JS file lives there, so wiring it in as hygiene ships the
+    widened scope as a no-op); silent fallback to DEFAULT_LINE_LIMIT 400 when an extension
+    is added to checked_extensions without a line_limits entry (carried on GE-127c-1, which
+    owns the list); the rollout mechanisms as they actually are, with the explicit statement
+    that no warn-versus-enforce tier exists (tier takes only judgment/transform and
+    run_hook.py has no advisory handling); and the self-blocking registration — 200 of 845
+    tracked .py files are over 400 under the guard''s own rule at b846121c9, so GE-127b-1
+    must land with or before this. declares_side_effect false: every Then clause reports to
+    a stream and sets an exit status, the transient case the derivation excludes — same
+    reading as BP-100n-4. test_spec: five executing descriptors, two carrying the BA''s
+    named mutations, one running the registered hook entry point and one running the
+    deployed copy in a cold process.'
+superseded_by: null
+covered_by:
+  - GE-127a-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE ACCEPTANCE IS A REFUSED COMMIT AND NOT A REGISTRATION FACT. The
+  cheapest way to "satisfy" this L1 is to assert that the guard appears in the
+  gate registry. That assertion is true the moment an entry is typed and says
+  nothing about whether an author is ever stopped — and it also duplicates
+  BP-100n-4, which owns the census and forbids a second one. Every clause here is
+  therefore an outcome of attempting a commit. This is also why the record needs
+  no reachability clause of its own: a criterion that cannot pass unless a commit
+  is actually refused cannot pass on an unreached gate.
+
+  THE RED BASELINE IS REAL AND SHOULD BE CAPTURED BEFORE ANY WORK STARTS. Clause
+  one ("the commit does not complete") fails today, because no commit is refused
+  for file length. Capture that failing run first; it is the evidence that the
+  later green means something.
+
+  THE SILENCE ARM IS THE ONE THAT IS EASY TO DROP, AND THE L1 SAYS SO. "A file
+  comfortably under its limit produces no interruption at all" is what stops the
+  criterion being satisfied by warning on everything, which is the same as
+  warning on nothing. It is also green on arrival on an implementation that
+  reports nothing, which is exactly today's implementation, so it needs a
+  mutation rather than a note.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Two clauses here
+  assert an absence and both are green on arrival on any implementation that
+  reports nothing at all. Each carries an injection that must be run and reverted:
+
+  (1) "the commit completes and nothing about that file's length is reported at
+      all" — MUTATION: change the length comparison so that a file at or below
+      its permitted length is refused alongside one above it. Under that
+      injection the under-limit arm must go RED, failing by the commit outcome as
+      well as by the text, and must return to green on revert. This injection has
+      a second and deliberate property: it can only turn the descriptor red if the
+      guard actually runs at commit time. A mutation that changes nothing is the
+      signal that the precondition has not landed — which is how this record
+      proves reachability without restating BP-100n-4's census.
+
+  (2) "the file named as being over is the first one only" — MUTATION: include
+      every staged file of a covered kind in the reported set regardless of its
+      measured length. Under that injection this clause must go RED naming the
+      compliant second file, and return to green on revert. Without it, the clause
+      is satisfied by a guard that names nothing.
+
+  BOUNDARY WITH GE-127b, DELIBERATE AND LOAD-BEARING. This record's population is
+  a file that was UNDER its permitted length before the change and is OVER it
+  after. A file already over before the change is GE-127b-1's population and
+  appears nowhere here. Do not widen either record to cover the other's
+  population; merged, an implementer satisfies whichever half is cheaper.
+
+  BOUNDARY WITH GE-127d. Nothing here specifies WHICH lines are counted, nor
+  whether the number quoted back to the author is reproducible. That is GE-127d's
+  subject and specifying it in two places produces two rules. This record consumes
+  whatever counting rule GE-127d settles.
+
+  BOUNDARY WITH GE-127e. "The outcome names the file, its measured length and the
+  permitted length" is the minimum needed to make this record testable. It is NOT
+  this record's job to make the refusal actionable — what to split and roughly
+  where is GE-127e's promise, and a decomposition that reaches for it here has
+  taken work from a record that does not yet exist.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's, and the named
+  mutations above are written to be turned directly into test descriptors.
+  delivers_to is null because nothing is enriched yet, not because this record is
+  terminal.

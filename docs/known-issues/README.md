@@ -45,22 +45,28 @@ Counts recounted 2026-08-31. This table had listed five of the thirteen files an
 by roughly an order of magnitude on the two largest — an index nobody can trust is worse than
 no index, since it reads as "there are five commit-guardian issues" when there are 35.
 
+Recounted again later the same day and already 20 low across six rows, because several
+same-day PRs each appended entries without touching this table. Every count here is
+`grep -c '^### KI-'` over the file, so it is reproducible in one command — if you are reading
+this table and it matters, re-run the count rather than trusting the number. The drift is not
+a one-off; a table maintained by hand beside files appended by many agents will always lag.
+
 | Component | File | Open entries |
 |---|---|---|
-| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 39 |
-| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 30 |
-| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 26 |
-| `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 23 |
-| `ac_store` | [ac-store.md](ac-store.md) | 15 |
+| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 48 |
+| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 42 |
+| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 36 |
+| `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 25 |
+| `ac_store` | [ac-store.md](ac-store.md) | 19 |
+| `testing_quality` | [testing-quality.md](testing-quality.md) | 16 |
 | `knowledge_management` | [knowledge-management.md](knowledge-management.md) | 12 |
-| `testing_quality` | [testing-quality.md](testing-quality.md) | 11 |
 | `supervisor_system` | [supervisor-system.md](supervisor-system.md) | 6 |
 | `agent_registry` | [agent-registry.md](agent-registry.md) | 3 |
 | `documentation_system` | [documentation-system.md](documentation-system.md) | 3 |
 | `feedback_collector` | [feedback-collector.md](feedback-collector.md) | 3 |
 | `changelog` | [changelog.md](changelog.md) | 2 |
 | `security_scanner` | [security-scanner.md](security-scanner.md) | 1 |
-| | **total** | **174** |
+| | **total** | **216** |
 
 Two id conventions are in use — `KI-CG-035` and `KI-CG-20260826-1612`. A count that
 matches only the first undercounts; the date form is the newer of the two and is the

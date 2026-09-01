@@ -1,0 +1,176 @@
+id: GE-120f-2
+title: "A check whose declared rejection was not observed is named and fails the run, and a check that has never been asked to refuse is never counted among the things keeping the work safe"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the liveness run has examined the checks and written each one's record from what
+    was observed when its declared known-bad input was put through the entry point the
+    protected surface invokes,
+  When the run reports,
+  Then every check whose record says the rejection was not observed is named, together with
+    the input it declared and the rejection it declared, and the run fails,
+  And every check whose record says the attempt has never been made is named as a check
+    whose refusal has never been demonstrated, and the run fails,
+  And no check whose record says either of those things appears in any statement the system
+    makes about what is protecting the work, and none of them is reported as though its
+    refusal had been demonstrated,
+  And a check whose record says the rejection was observed is named in no failing class,
+  And a check exempted on a ground the exemption rule accepts is named in no failing class
+    and does not by itself fail the run,
+  And the reasons the run gives are reasons about that check: a check is never named as not
+    demonstrated on the strength of another check's record, and the run states nothing about
+    how many checks in the family have the condition beyond the figures it measured itself.
+depends_on:
+  - GE-120f
+  - GE-120f-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The record that produces what this one reports. Order matters: a report built before
+      the observation exists can only report the declaration, which is the defect.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5-i.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING, AND THE OWNER OF THE EXEMPTION RULE. What counts as a ground, that a
+      groundless exemption is refused, and that a postponement is not a ground are all its
+      clauses and are NOT restated here. This record states only the consequence for its own
+      failing classes: an accepted exemption falls into neither of them. Anything else about
+      exemptions belongs there.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING. It requires the four values to be carried and distinguishable when a
+      check reports its own result, and requires the per-value figures to sum. This record is
+      about the liveness run's verdict — who is named, and whether the run fails. Neither
+      restates the other; the distinguishability of the values is theirs, the consequence of
+      each value is this one's.
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The vocabulary the failing classes must be named in — the known-bad input, its expected
+      observable rejection, and the state values including the honest placeholder for an
+      attempt never made. Reuse these names in the report so a reader moving between the
+      artifact and the run is reading one language.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      THE STANDING CONTRADICTION THIS RECORD MUST NOT FLATTEN, restated rather than
+      re-litigated. This component has a deliberate fail-open convention: a guard that hits
+      an internal error announces and does not hard-block, and that convention is approved in
+      its own right. It is NOT repealed here. The line this record draws is narrower: a run
+      that completed and observed that a check did not refuse is not an internal error, and
+      reporting it as a success is the failure. A run that could not reach a verdict is the
+      third condition and is governed by the record below this one.
+  - path: templates/hooks/readme_read_guard.py
+    relationship: related
+    status: exists
+    relevance: >-
+      The check this record must name on the repository as it stands. Record the first run's
+      output as evidence on the implementing ticket; do NOT encode the expected list as an
+      assertion, because it becomes false on the day the guards are repaired, which is the
+      day the run starts earning its place.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-120f-2-i
+    contract: >-
+      The named failing classes and the run's report, into which GE-120f-2-i inserts the
+      requirement that the run's outcome — not a note beside it — carries the finding.
+expects_from:
+  - ac_id: GE-120f-1
+    contract: >-
+      The per-check record written from observation, with the declared input, the declared
+      rejection, and the entry point used.
+  - ac_id: GE-126b-5-i
+    contract: >-
+      The disposition of an exempt check, and the rule by which a claimed exemption is
+      accepted or falls back into the not-demonstrated class. This record consumes that
+      verdict and does not re-derive it.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120f-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHAT THIS RECORD OWNS. GE-126b-5 makes the four values visible when a check reports its own
+  result. Visibility is not consequence: a check can carry the never-attempted value in a
+  perfectly honest report and still be counted, everywhere else in the system, among the
+  protections in place. This record attaches the consequence — named, and the run fails —
+  and forbids the counting.
+
+  THE SECOND FAILING CLASS IS THE LOAD-BEARING ONE. Naming a check whose declared rejection
+  was not observed is the easy half; that check at least tried. The class that changes
+  behaviour is the one that has never been asked. If never-asked does not fail, the whole
+  regime is discharged by never asking, and the difference between a guard that refuses and
+  a guard that has never been given anything to refuse survives into every report the system
+  produces — which is the L1's sentence exactly.
+
+  DAY-ONE BLAST RADIUS IS THE CORRECT OUTCOME AND MUST NOT BE PRE-SUPPRESSED. On the commit
+  that lands this, most checks will be named as never demonstrated, because none has been.
+  That is the true state. It must not be quietened by seeding exemption records ahead of the
+  first run, and the natural remedy for the noise — weakening the rule until it stops
+  reporting — is the failure mode this whole tree exists to design against. An honest
+  exemption for checks that genuinely count or measure is required and belongs to
+  GE-126b-5-i; a postponement is not a ground.
+
+  NO COUNT OF INSTANCES. Records authored the same day disagree, and the parent records the
+  figure as disputed and forbids one below it. The final clause makes that mechanical: the
+  run states only what it measured. Nothing in this record states or implies how many checks
+  have the condition.
+
+  NAMED MUTATION FOR THE FIRST ABSENCE-ASSERTING CLAUSE. "A check whose record says the
+  rejection was observed is named in no failing class." ARRIVAL COLOUR: GREEN, vacuously —
+  nothing is reported at all today, so no demonstrated check is currently mis-named.
+  INJECTION: build the failing set from the registered population minus the exempt, ignoring
+  each check's record. Under that injection a check that demonstrably refused is named as not
+  demonstrated; this clause must go RED naming it, and must return to green on revert.
+  Without this injection the clause has no red baseline and no evidential value.
+
+  NAMED MUTATION FOR THE SECOND ABSENCE-ASSERTING CLAUSE. "No check whose refusal has not
+  been observed appears in any statement the system makes about what is protecting the work."
+  ARRIVAL COLOUR: GREEN, vacuously — and this is the most misleading green in the record,
+  because today the reason no undemonstrated check appears in such a statement is that the
+  statement counts every registered check without asking. INJECTION: count a check as
+  protection from the moment it is registered. Under that injection every never-demonstrated
+  check appears in the protection statement; this clause must go RED naming at least one, and
+  must return to green on revert.
+
+  ARRIVAL COLOURS FOR THE REMAINING CLAUSES. Both naming-and-failing clauses are RED on
+  arrival — nothing is named and nothing fails. The exemption clause is RED on arrival, since
+  no disposition exists to honour. The reasons-are-about-that-check clause is GREEN on
+  arrival, vacuously, and its mutation is the shared one below.
+
+  NAMED MUTATION FOR THE ATTRIBUTION CLAUSE. INJECTION: derive one check's class from a
+  family-level summary — mark every check in a group as not demonstrated when any member of
+  the group is. Under that injection a demonstrated check inherits its neighbour's finding
+  and this clause goes RED. It is the same shape as quoting a disputed population figure as
+  though it were measured, and it is the reason the clause is written.

@@ -50,11 +50,13 @@ test_spec:
     target_dir: unit_tests/build_pipeline/
     framework: pytest
     type: unit
+    angle: real_artifact
     description: "Parse .github/workflows/ci.yml and assert a web-app route-render job exists, invokes the Playwright route-smoke harness, is path-filtered on leafcutter-web/**, and does NOT set continue-on-error (blocking)."
   - name: test_route_smoke_harness_iterates_all_routes
     target_dir: leafcutter-web/tests/
     framework: playwright
     type: e2e
+    angle: reachability
     description: "The route-smoke harness enumerates the app's routes (from leafcutter-web/app/**, including /about) and asserts each loads with HTTP 200 and no console/render error; a route returning non-200 or emitting a console error fails the run (non-zero exit)."
 delivers_to:
   ac_id: BP-1400a-4

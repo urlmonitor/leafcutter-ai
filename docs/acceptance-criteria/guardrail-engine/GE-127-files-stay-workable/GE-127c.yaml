@@ -1,0 +1,109 @@
+id: GE-127c
+title: "Every language the project is written in is held to the same standard"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The size standard follows the project, not a list someone wrote once.
+
+  Wherever first-party work is authored, it is held to a workable size — so
+  adopting a new language, or moving work into one the project already uses,
+  does not silently create a place where files can grow without limit. Which
+  kinds of file are in scope is a stated, reviewable decision rather than an
+  accident of what happened to be listed first.
+depends_on:
+  - GE-127
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE. Widening what the standard covers is worth nothing
+      while the guard is invoked by nothing at commit time; that registration is
+      BP-100n-4's day-one triage. Do not restate the census.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The scope decision is a configuration decision on a package surface, which
+      is why it must be stated and reviewable rather than implicit. The concrete
+      set of file kinds is pinned at technical enrichment, not here.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-127c-1
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THE CONCRETE LIST IS DELIBERATELY ABSENT — USER DECISION, 2026-09-01. This
+  question was escalated at assessment as an L0/L1 scope call: which kinds of file
+  should be capped. The decision taken was to author the PRINCIPLE at this level
+  and leave the enumeration to technical enrichment. This record therefore names
+  no file extension, and an L2 beneath it that enumerates extensions is at the
+  wrong altitude and must be rewritten rather than approved. The IT PO pins the
+  set.
+
+  THE PRINCIPLE HAS TO BE DURABLE ACROSS LANGUAGES, WHICH IS WHY IT IS PHRASED AS
+  A STANDARD RATHER THAN A LIST. The failure mode being designed against is the
+  one already present: a scope list written when the project used two kinds of
+  file, never revisited as the project grew into others, with the gap invisible
+  because a file nobody checks produces no finding. A criterion that fixes today's
+  gap by naming today's languages recreates that failure the next time a language
+  is added. The obligation is that scope tracks what the project is actually
+  written in.
+
+  MEASURED FACTS THAT MOTIVATE THE PRINCIPLE — carry them into the enrichment
+  decision, not into the criteria:
+    - The largest first-party files in this repository are in a language the
+      configuration ALREADY names. The current list is incomplete, not wrong, and
+      widening it is therefore not a substitute for GE-127b's ratchet — most of
+      the existing debt is inside the scope that already exists.
+    - Substantial bodies of first-party work sit in languages the configuration
+      names not at all: a majority of the repository's workflow scripts, and
+      dozens of authored documents, exceed the same threshold and are capped by
+      nothing.
+  Both facts point the same way, and together they set the shape of the decision
+  the IT PO must make: adding a kind of file to scope activates GE-127b's ratchet
+  over a population that has never been measured against any limit.
+
+  DIFFERENT KINDS OF FILE MAY WARRANT DIFFERENT LIMITS, AND THAT IS NOT A LOOPHOLE.
+  A document and a source module are not workable at the same length, and the
+  configuration already expresses per-kind limits alongside a default. Being in
+  scope with an appropriate limit is the promise; being in scope with an identical
+  number is not. What must not happen is a kind of file being outside scope by
+  omission — the difference between a limit chosen for it and no limit at all is
+  the whole subject of this criterion.
+
+  THE ARM MOST LIKELY TO BE DROPPED. Anything genuinely NOT first-party — content
+  the project did not author and does not maintain — must remain out of scope, and
+  a decomposition that pulls it in produces a guard that fails on material nobody
+  can refactor. State the exclusion positively rather than leaving it to a path
+  pattern nobody revisits.
+
+  BOUNDARY WITH GE-127d. This L1 decides WHAT IS IN SCOPE. GE-127d decides that the
+  scope and limits actually applied are the ones published. They meet, but the
+  obligations are distinct: a correct scope that nobody can discover from the
+  documentation still fails GE-127d, and a perfectly documented scope that omits
+  half the project still fails this one.

@@ -98,6 +98,7 @@ from build_referential_integrity import (
 )
 from build_config_scaffolds import build_config_scaffolds
 from build_ac_store_scaffold import build_ac_store_scaffold
+from build_architecture_scaffold import build_architecture_namespace_scaffolds
 from build_halt_guard import (
     check_halt_guard,
     format_migration_notice,
@@ -1557,6 +1558,7 @@ def _run_phases(
         ("Config scaffolds", build_config_scaffolds),
         ("AC store scaffold", build_ac_store_scaffold),
         ("AC store docs", build_ac_store_docs),
+        ("Architecture namespace scaffolds", build_architecture_namespace_scaffolds),
         ("Product-truth tooling", build_product_truth),
         ("Agent cards", build_agent_cards),
         ("Doc index", build_doc_index),

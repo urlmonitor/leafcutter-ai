@@ -24,10 +24,28 @@ ARCHITECTURE: Invoked as `python check_package_surface_declaration.py
     it is a `commit-msg`-stage hook. Staged files come from a real
     `git diff --cached --name-only --diff-filter=AM`; the staged and HEAD
     revisions of each watched registry are read with `git show`, and a NEW entry
-    is a key present in the staged document and absent from HEAD. Citations are
-    parsed from the commit-message file and from any staged ticket body in the
-    same commit. The watched-registry enumeration and every pure helper live in
-    _package_surface_registry.py, deployed alongside this file.
+    is a key present in the staged document and absent from EVERY parent of the
+    commit being written. Citations are parsed from the commit-message file and
+    from any staged ticket body in the same commit. The watched-registry
+    enumeration and every pure helper live in _package_surface_registry.py,
+    deployed alongside this file.
+
+    MERGE COMMITS (KI-BP-20260901-0812 / KI-CG-20260826-package-surface-refuses-merge-commits):
+    at the commit-msg stage the index already holds the merged tree, but HEAD
+    still names only the FIRST parent — the commit being merged INTO. `git diff
+    --cached` against HEAD alone therefore reports every entry any OTHER parent
+    already declared as "new", because it is new relative to HEAD even though
+    it is not new to the repository. A merge is detected by reading
+    `MERGE_HEAD` off disk (via `git rev-parse --git-path MERGE_HEAD`, which
+    resolves correctly for a linked worktree) rather than with `git rev-parse
+    -q --verify MERGE_HEAD` — that probe reads only the FIRST line of
+    `MERGE_HEAD` and silently drops every parent after it on an octopus merge
+    (three or more parents), which is exactly the scope this check must not
+    lose per ACS-100i-8-ii. Every non-blank line of `MERGE_HEAD` — one SHA per
+    additional parent — is added to the set of parent revisions an entry must
+    be absent from before it counts as "new". An ordinary, single-parent
+    commit is unaffected — its parent set is just `["HEAD"]`, identical to the
+    pre-fix behaviour.
 
     Exit 0 = allowed; exit 1 = refused. A change touching no watched registry, or
     touching one without adding an entry, exits 0 and says it had NOTHING TO
@@ -44,6 +62,15 @@ DECISION HISTORY:
   - 2026-08-19 [python-coder/ACS-100i-8]: Created alongside the ACS-100i-6
     trigger narrowing. Registration-versus-declaration reconciliation, with
     omission and denial reported as the different acts they are (ACS-100i-8-i).
+  - 2026-09-01 [python-coder/KI-BP-20260901-0812]: "New" is now scoped to every
+    parent of the commit, not just HEAD, so a merge that carries an
+    already-declared upstream registration no longer demands a fresh citation.
+  - 2026-09-01 [python-coder/ACS-100i-8-ii review]: the merge probe read only
+    the FIRST line of `MERGE_HEAD` (via `git rev-parse -q --verify MERGE_HEAD`),
+    so an octopus merge's third and later parents were never consulted and a
+    genuinely-carried entry from one of them was still refused. Fixed by
+    reading `MERGE_HEAD` off disk in full via `git rev-parse --git-path
+    MERGE_HEAD`.
 """
 
 from __future__ import annotations
@@ -136,26 +163,104 @@ def _blob(repo: Path, revision_spec: str) -> str | None:
     return out if code == 0 else None
 
 
-def _new_entries(repo: Path, rel_path: str) -> list[str]:
-    """Return the entry keys ``rel_path`` gains between HEAD and the index.
+def _merge_head_path(repo: Path) -> Path | None:
+    """Return the on-disk path of ``MERGE_HEAD``, or None when it is unknown.
+
+    Args:
+        repo: Repository root.
+
+    Returns:
+        The absolute path git reports for ``MERGE_HEAD`` via
+        ``rev-parse --git-path``, which resolves correctly for a linked
+        worktree (where ``MERGE_HEAD`` lives under the worktree's private
+        git-dir, not a plain ``<repo>/.git/MERGE_HEAD``). None when the probe
+        itself fails, which treats an undeterminable state as unable to
+        locate the file rather than guessing a path.
+    """
+    code, out = _git(repo, "rev-parse", "--git-path", "MERGE_HEAD")
+    if code != 0 or not out.strip():
+        return None
+    path = Path(out.strip())
+    return path if path.is_absolute() else repo / path
+
+
+def _merge_parent_revisions(repo: Path) -> list[str]:
+    """Return every parent SHA a merge in progress names, in file order.
+
+    Args:
+        repo: Repository root.
+
+    Returns:
+        Every non-blank line of ``MERGE_HEAD``, or ``[]`` when no merge is in
+        progress (the file is absent) or it cannot be read. ``MERGE_HEAD``
+        holds one SHA per line: exactly one for an ordinary two-parent merge,
+        and one per additional branch for an octopus merge
+        (KI-CG-20260826-package-surface-refuses-merge-commits fix direction
+        #1: "Octopus merges have several MERGE_HEAD lines — read them all
+        rather than the first"). ``git rev-parse -q --verify MERGE_HEAD``
+        resolves only the FIRST line and was the wrong tool for this reason —
+        confirmed by reproduction: a three-way `git merge --no-commit --no-ff
+        branchA branchB` leaves two lines in ``MERGE_HEAD``, and that probe
+        reports only the one for ``branchA``.
+    """
+    path = _merge_head_path(repo)
+    if path is None or not path.is_file():
+        return []
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        print(
+            f"{_HOOK_PREFIX} WARNING: cannot read {path}: {exc}",
+            file=sys.stderr,
+        )
+        return []
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+def _parent_revisions(repo: Path) -> list[str]:
+    """Return the revision specs naming every parent of the commit in progress.
+
+    Args:
+        repo: Repository root.
+
+    Returns:
+        ``["HEAD"]`` for an ordinary commit; ``["HEAD", <merge-head-sha>, ...]``
+        while a merge is in progress, one entry per line of ``MERGE_HEAD`` —
+        every parent other than the first, including all additional parents
+        of an octopus merge. Each is what lets a merge-carried entry be
+        recognised as already existing rather than newly registered by this
+        commit.
+    """
+    return ["HEAD", *_merge_parent_revisions(repo)]
+
+
+def _new_entries(repo: Path, rel_path: str, parent_revisions: list[str]) -> list[str]:
+    """Return the entry keys ``rel_path`` gains that no parent already has.
 
     Args:
         repo: Repository root.
         rel_path: Repo-relative path of a watched registry.
+        parent_revisions: Revision specs for every parent of the commit being
+            written (see ``_parent_revisions``). An entry present in ANY named
+            parent is not "new" — this is what stops a merge that carries an
+            already-declared upstream registration from being treated as a
+            fresh one just because it is new relative to HEAD alone.
 
     Returns:
-        Sorted keys present in the staged document and absent from HEAD. An
-        edited or removed entry produces none — the obligation attaches to
-        bringing a surface into existence, not to maintaining one.
+        Sorted keys present in the staged document and absent from every
+        parent. An edited or removed entry produces none — the obligation
+        attaches to bringing a surface into existence, not to maintaining one.
     """
     containers = WATCHED_REGISTRIES[rel_path]
     staged = registry_entry_keys(
         parse_registry_document(_blob(repo, f":{rel_path}")), containers
     )
-    head = registry_entry_keys(
-        parse_registry_document(_blob(repo, f"HEAD:{rel_path}")), containers
-    )
-    return sorted(staged - head)
+    known: set[str] = set()
+    for revision in parent_revisions:
+        known |= registry_entry_keys(
+            parse_registry_document(_blob(repo, f"{revision}:{rel_path}")), containers
+        )
+    return sorted(staged - known)
 
 
 def _citations(repo: Path, commit_msg_file: Path, staged: list[str]) -> list[str]:
@@ -364,7 +469,8 @@ def main(argv: list[str] | None = None) -> int:
     staged = _staged_paths(repo)
     touched = [p for p in staged if p in WATCHED_REGISTRIES]
 
-    additions = {p: keys for p in touched if (keys := _new_entries(repo, p))}
+    parents = _parent_revisions(repo)
+    additions = {p: keys for p in touched if (keys := _new_entries(repo, p, parents))}
     if not additions:
         return _nothing_to_evaluate(touched)
 

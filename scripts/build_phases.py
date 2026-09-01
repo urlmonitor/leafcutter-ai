@@ -1482,6 +1482,14 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     #   likewise present in source but absent from this map. Both entries are
     #   now present; see the _ac_components.py entry above for detail.
     #   (#BP-900g-8)
+    # - 2026-09-01 [python-coder]: Added a deploy block for
+    #   config/phase_deferral.yaml, mirroring the existing
+    #   config/ac_store_schema.json block immediately above it.
+    #   generate_ticket_from_ac.py's _build_agents_map now reads this
+    #   declaration the same way it already reads config/guardrail_gates.yaml
+    #   (TKT-600b-1), and a missing declaration must REFUSE generation rather
+    #   than fall back to a built-in default -- so an undeployed declaration
+    #   would make every consumer-install generation call refuse. (#TKT-600b-1)
     """
     # Resolve the module-level AC_STORE_DEPLOY_MAP (source-relative strings) to
     # absolute (source_path, dest_name) pairs. AC_STORE_DEPLOY_MAP is the single
@@ -1549,6 +1557,30 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
             written += 1
             if not dry_run:
                 print("  config/ac_store_schema.json")
+
+    # TKT-600b-1: generate_ticket_from_ac.py's _build_agents_map reads
+    # config/phase_deferral.yaml the same way it already reads
+    # config/guardrail_gates.yaml -- by walking up from its own deployed
+    # location. A declaration that exists only in the package source tree
+    # and is never copied to the deployed config/ directory would silently
+    # resolve to "file not found" in every consumer install, and the AC
+    # requires a missing declaration to REFUSE rather than fall back to a
+    # built-in default -- so every consumer generation call would refuse.
+    # Deploying it here, mirroring config/ac_store_schema.json immediately
+    # above, is what makes the declaration resolvable from the deployed
+    # layout.
+    phase_deferral_src = PACKAGE_ROOT / "config" / "phase_deferral.yaml"
+    if phase_deferral_src.is_file():
+        phase_deferral_output = target_root / "config" / "phase_deferral.yaml"
+        if _write(
+            phase_deferral_output,
+            phase_deferral_src.read_text(encoding="utf-8"),
+            dry_run,
+            force,
+        ):
+            written += 1
+            if not dry_run:
+                print("  config/phase_deferral.yaml")
 
     return written
 
@@ -3144,9 +3176,11 @@ AGENT_SUPPORT_SCRIPT_FILES: tuple[str, ...] = (
     # fast-lane-ship.js's context-bundle dispatch (BO-2400c-1-ii/-iii) invokes
     # this module's `assemble-bundle` CLI subcommand once per run to build the
     # layered LLM context bundle (assemble_context_bundle) — the live lane's
-    # only production call site as of BO-2400c-1. fast-lane-build.js's earlier
-    # reference was an orphaned runner (KI-BO-005: no CLI entry point existed,
-    # so the call was a silent no-op) and is not this deploy justification.
+    # only production call site as of BO-2400c-1. A second runner,
+    # fast-lane-build.js, once referenced this module too, but was an orphan
+    # nothing dispatched (KI-BO-005: no CLI entry point existed, so the call was
+    # a silent no-op); it was never this deploy justification and was deleted
+    # under BO-2400c-1-v.
     # No deploy phase shipped this file before BP-900g-6. Module-scope imports
     # are stdlib only (argparse, json, logging, sys, pathlib, typing) — no
     # sibling module to co-deploy.

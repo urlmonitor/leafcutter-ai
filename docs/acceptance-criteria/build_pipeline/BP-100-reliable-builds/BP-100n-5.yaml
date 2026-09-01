@@ -1,0 +1,180 @@
+id: BP-100n-5
+title: "A finished record's declaration that names parts of a real configuration file is read back against that file, and a named part that is not there is reported by name and fails the run — a declaration checked only for shape is a check that never opened anything"
+component: build-pipeline
+components:
+  - build_pipeline
+  - ac_store
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement record may declare the configuration it expects the finished
+    work to add, by naming one or more top-level parts of a configuration file it
+    also names,
+  And at the time of writing the configuration file that most such records name holds
+    36 top-level parts,
+  And among the records naming parts of that file whose work is recorded as finished,
+    four name a part the file does not contain while one names a part it does,
+  When the declaration check runs,
+  Then for every record whose work is recorded as finished, whose declaration names
+    parts, and whose named file can be opened, each named part is looked up in that
+    file as it stands on disk,
+  And every named part the file does not contain is reported together with the record
+    that named it and the file that was opened, and the run fails,
+  And a record naming a part the file does contain is not reported in any class,
+  And a record whose work is not recorded as finished is not reported for a part the
+    file does not yet contain, because that part is what the unfinished work exists to
+    add,
+  And the run states how many declarations it opened a file for and how many named
+    parts it looked up, and a run that looked up no parts fails as a run that reached
+    no verdict rather than reporting nothing wrong,
+  And given one further finished record is added that names a part the file does not
+    contain, and nothing else in the repository changes,
+  When the check runs again,
+  Then that record is among those reported, and the stated number of parts looked up
+    is greater than the number stated before.
+depends_on:
+  - BP-100n
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SIBLING WHOSE SHAPE THIS REPEATS, DELIBERATELY. BP-100n-4 says a guard whose
+      input is the registry cannot see what the registry omits. This says a guard whose
+      input is the declaration cannot see what the declaration gets wrong about reality.
+      Same rule, different pair of surfaces. Reuse its three-state vocabulary and its
+      moving-count discriminator so the two read alike; do NOT extend its enumeration to
+      cover this, because the populations are different (gate scripts on disk against
+      registry entry lines, versus declared part names against a configuration document).
+  - path: scripts/ac_store/validate_ac.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The incumbent, and the precise gap. It validates that config_schema_fragment is
+      well-formed. It never opens the file the record names, so a declaration can be
+      perfectly shaped and describe a key that has never existed. Verified by the fact
+      that four approved records passed it while contradicting reality.
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The other half of the shape validation. The ac-schema reference warns that AC field
+      enforcement is not single-sourced — the commit hook, its manual-validation fallback,
+      and the agent-side validator each gate independently. A content rule added to only
+      one of them is a partial and sometimes no-op gate; that warning applies to this AC
+      directly.
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: describes
+    status: exists
+    relevance: >-
+      The configuration file the contradicted declarations name. Re-measured at authoring:
+      36 top-level parts. Note the decoy recorded on BP-100n-4 — templates/commit-guardian/
+      commit_guardian.json is a different, much smaller file.
+  - path: "templates/scripts/commit_guardian/check_package_surface_declaration.py"
+    relationship: related
+    status: exists
+    relevance: >-
+      The neighbouring gate on the registration side, and the source of a correction worth
+      carrying: this file contains no occurrence of config_schema_fragment, so the
+      declaration-versus-reality gap is not in this guard. The shape validation lives in
+      the AC-store validator and the AC JSON schema. Fix it where it is, not where it was
+      assumed to be.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      M8 is the closest catalogued mechanism — a check that measures a countable proxy and
+      reports it as a verdict — and this is its declaration-shaped cousin: well-formedness
+      measured, truth reported. Worth citing when the catalogue gains its new entry.
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+delivers_to:
+  - agent: python-coder
+    ac_id: BP-100n-5-i
+    contract: >-
+      The per-declaration finding classes and the two stated figures, into which
+      BP-100n-5-i inserts the uninterpretable and unopenable classes and their own
+      figures.
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-100n-5-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: >-
+  MEASURED IN THIS WORKTREE, 2026-09-01, BY SCANNING THE WHOLE STORE — NOT TAKEN ON
+  TRUST, AND BROADER THAN REPORTED. The brief named two contradicted records; a
+  store-wide sweep of every record carrying an it_requirements.config_schema_fragment
+  whose reference_file_path names commit_guardian.json found more. The file holds 36
+  top-level parts. Among records whose work_status is done and whose fragment keys are
+  part names:
+
+    CONTRADICTED (4) — the named part is absent from the file:
+      BP-100k-4     hook_trigger_reachability                 readiness approved
+      BP-100k-4-i   hook_trigger_reachability_indeterminate   readiness approved
+      GE-122d-6     check-identifier-uniqueness               readiness approved
+      BO-2500b-1    proof_of_done_precommit_hook              readiness draft
+
+    CONFORMING (1) — the positive control, and the reason the distinction is measurable:
+      BP-1100b-5    presence_only_assertion_guard             readiness approved
+
+  GE-122d-6 fails in a second way worth naming: check-identifier-uniqueness is a hook id,
+  not a top-level part, so the declaration is not merely wrong about the file's contents
+  but about what kind of thing the file's top level holds.
+
+
+  WHY THE UNFINISHED RECORDS ARE DELIBERATELY EXCLUDED, AND WHY THAT IS NOT A LOOPHOLE.
+  Eleven further records name parts absent from the file — eight under BO-2900, plus
+  BO-2500c-1-i and others — and every one is todo. For unfinished work a declaration of
+  an absent part is the correct and useful statement: it says what the work will add.
+  The defect is a FINISHED record claiming a configuration that is not there, which is
+  phantom-done in its purest form: the work says it added a key, and the key is not in
+  the file. Scoping to finished work is what makes the finding actionable rather than a
+  wall of noise, and it is also why the check must read work_status rather than readiness
+  — three of the four contradicted records are approved, so approval is not the signal.
+
+
+  ANTI-GREP, AND THE SPECIFIC TRAP HERE. A criterion satisfied by asserting that the
+  fragment parses, that it is a mapping, or that its keys are strings is exactly the
+  incumbent behaviour restated. The observable is a lookup performed against the named
+  file as it stands on disk, and the discriminator is the added-record clause: the stated
+  number of parts looked up must MOVE. An implementation carrying a literal list of
+  known-bad record ids satisfies every other clause and fails that one, which is why it
+  is written last and must be built first.
+
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "A record naming a part the file does
+  contain is not reported in any class" asserts an absence and is green on arrival today,
+  because nothing is reported at all. INJECTION: build the set of the file's parts from
+  its metadata keys only — the two beginning with a double underscore and the comment key
+  — rather than from the whole document's top level. Under that injection BP-1100b-5,
+  which names a part that genuinely exists, is reported as contradicted; this clause must
+  go RED naming it, and must return to green on revert. That single conforming record is
+  the only control the store currently offers, so the mutation must be run rather than
+  described.
+
+
+  DAY-ONE BLAST RADIUS IS FIVE REPORTS AND THAT IS THE CORRECT OUTCOME. The check fails
+  on the commit that lands it until each contradicted record is reconciled — the key added
+  to the file, or the declaration corrected to name what the work actually produced, or
+  the record's work_status corrected because the work is not in fact finished. Landing the
+  check green by pre-suppressing its findings proves nothing. Reconciling BP-100k-4 and
+  BP-100k-4-i in particular changes what the store says is done about the reachability
+  guard, which BP-100n-4 is actively extending; sequence accordingly.

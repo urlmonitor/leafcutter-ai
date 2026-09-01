@@ -1,0 +1,99 @@
+id: ACS-1300c
+components:
+  - ac_store
+title: "A repair that fixes the record without deciding what is finished"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  It restores evidence, reports what it could not judge, and awards nothing.
+
+  Recording that a test proves a requirement never promotes that requirement to
+  finished — that judgement stays where it already lives, behind its own evidence.
+  A record with nothing to repair is left exactly as it was, and evidence the tool
+  cannot trust produces a stated abstention rather than a silent skip or a guess.
+depends_on:
+  - ACS-1300
+doc_links:
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: related
+    status: exists
+    relevance: "WHERE THE DONE BADGE STAYS. The refusal is defined against this surface: promoting finished-state remains this tool's job, behind its own evidence gate. The negative control for this L1 is that a repair run over a record whose proof was just restored leaves that record's finished-state field byte-identical."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "ALREADY OWNS THE BYTE-STABILITY RULE — inherit it verbatim, do not restate it in a competing form. Its it_requirements carry the load-bearing distinction: byte stability means DO NOT WRITE, not write-the-same, because a YAML load-and-dump round trip preserves every value while reformatting quoting, key order and line wrapping. Its test shape (sha256 of raw bytes before and after, plus an anti-no-op control proving the same run acted on records that DID need repair) is the shape to reuse."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e.yaml
+    relationship: related
+    status: exists
+    relevance: "STRUCTURAL PRECEDENT for this L1's existence. TQ-400e is the same shape one tree over — a cross-cutting trust guarantee given its own L1 because a sweep that gets its verdicts wrong destroys trust in every other verdict it produces. Read its decomposition before cutting L2s here."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "The likely home for the standing rule this L1 writes down: restoring a coverage link never promotes work_status. The schema doc is where the next tool author looks, and a rule that exists only in an AC's notes will be re-derived wrongly."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1300c-1
+  - ACS-1300c-2
+  - ACS-1300c-3
+  - ACS-1300c-4
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  THE GUARD ON THE GUARD. The cheapest implementation of ACS-1300a satisfies
+  ACS-1300a perfectly while violating every guarantee here: it loads the store,
+  fills in the gaps, helpfully promotes the records whose proof it just found, and
+  writes all 3,749 files back reformatted. This L1 is what makes that
+  implementation fail.
+
+  THREE GUARANTEES, EACH A NEGATIVE CONTROL — the BA should give each its own L2
+  and should state each in the negative, because each one is satisfied by inaction
+  and must therefore be paired with proof that the same run was live:
+
+  1. AWARDS NOTHING. No AC in the ACS-1300 tree writes work_status, at any level.
+     This is REFUSED, NOT DEFERRED — not a phasing decision, not open to the BA,
+     the IT PO, or an implementer who notices how easy it would be. Restoring an
+     evidence link is not the same act as awarding a done badge; auto-promoting
+     finished-state from derived evidence manufactures a done claim on the single
+     field the entire phantom-done edifice rests on. The neighbouring L1 TQ-400f
+     was authored and then CLOSED UNBUILT on 2026-09-01 partly for approaching
+     this line. Flipping the badge stays with mark_ac_done.py.
+
+  2. REWRITES NOTHING THAT IS ALREADY CORRECT. Byte stability, inherited from
+     TQ-400e-1 — a record with nothing to repair is never opened for writing. Not
+     "written identically": a YAML round trip preserves every value and changes
+     every byte, which at this store's size churns the whole store and makes the
+     diff unreadable. Reuse TQ-400e-1's test shape (raw-byte hash before and
+     after, plus an anti-no-op control in the SAME run), do not invent a second.
+
+  3. ABSTAINS OUT LOUD. Evidence the tool cannot trust produces a reported
+     abstention — never a silent skip, never a write. A skipped record is
+     invisible, and invisibility is the same defect this tree exists to remove,
+     one level down. "Untouched" and "never looked at" must be distinguishable in
+     the report.
+
+  EVERY ONE OF THESE IS SATISFIED BY A TOOL THAT DOES NOTHING AT ALL. Each L2 must
+  therefore assert, in the same run, that records which genuinely needed repair
+  were repaired. Without that pairing this L1 is the easiest green in the tree and
+  proves nothing.
+
+  DOCUMENTATION: `[reference-doc]`. Guarantee (1) is a standing rule the next tool
+  author must not re-derive, and TQ-400f is the evidence that it does get
+  re-derived. A refusal that lives only in an AC's notes is unfindable; it belongs
+  written down beside the field it protects.
