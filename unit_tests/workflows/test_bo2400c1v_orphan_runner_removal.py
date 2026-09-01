@@ -284,7 +284,6 @@ def test_injection_builders_still_deployed_after_the_removal(tmp_path):
         f"stderr (last 800): {result.stderr[-800:]}"
     )
 
-    deployed_orphan = output_root.parent / "scripts" / "fast-lane-build.js"
     deployed_workflow_orphan = output_root / "workflows" / "fast-lane-build.js"
     assert not deployed_workflow_orphan.exists(), (
         f"Precondition for this test ('after the removal') is not yet met: "
