@@ -3144,9 +3144,11 @@ AGENT_SUPPORT_SCRIPT_FILES: tuple[str, ...] = (
     # fast-lane-ship.js's context-bundle dispatch (BO-2400c-1-ii/-iii) invokes
     # this module's `assemble-bundle` CLI subcommand once per run to build the
     # layered LLM context bundle (assemble_context_bundle) — the live lane's
-    # only production call site as of BO-2400c-1. fast-lane-build.js's earlier
-    # reference was an orphaned runner (KI-BO-005: no CLI entry point existed,
-    # so the call was a silent no-op) and is not this deploy justification.
+    # only production call site as of BO-2400c-1. A second runner,
+    # fast-lane-build.js, once referenced this module too, but was an orphan
+    # nothing dispatched (KI-BO-005: no CLI entry point existed, so the call was
+    # a silent no-op); it was never this deploy justification and was deleted
+    # under BO-2400c-1-v.
     # No deploy phase shipped this file before BP-900g-6. Module-scope imports
     # are stdlib only (argparse, json, logging, sys, pathlib, typing) — no
     # sibling module to co-deploy.
