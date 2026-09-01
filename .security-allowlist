@@ -155,3 +155,10 @@ ENTROPY_HIGH:changelogs/2026-09-01-1016-testing-readmes-corrected-the-commit-gua
 # per-line: the entry's surrounding prose can still shift.
 # Duplicated to the workspace root per the dual-update rule.
 ENTROPY_HIGH:changelogs/2026-09-01-1240-a-claim-is-taken-at-face-value-and-now-that-fact-is-pinned.md:*
+
+# The false-green mechanism catalogue cites date-and-slug known-issue ids, which are
+# long hyphenated tokens and read as high-entropy. Prose and cross-references, not
+# credentials. The ids are deliberately NOT reproduced here: quoting one makes this
+# allowlist trip the scanner it suppresses. Glob, not per-line: the catalogue grows.
+# Duplicated to the workspace root per the dual-update rule.
+ENTROPY_HIGH:docs/reference/false-green-mechanisms.md:*

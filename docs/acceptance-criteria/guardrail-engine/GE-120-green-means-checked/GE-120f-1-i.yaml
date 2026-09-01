@@ -1,0 +1,128 @@
+id: GE-120f-1-i
+title: "A refusal produced by reaching inside a check is not a demonstration — the run states the entry point it used, and only the entry point the protected surface invokes counts"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a check whose declared rejection can be produced by calling a part of the check
+    that is reachable only from within it, while the entry point the protected surface
+    invokes does not produce that rejection for the same declared input,
+  When the liveness run examines that check,
+  Then the record it writes comes from the entry point the protected surface invokes, and
+    that check's record says the rejection was not observed,
+  And the run states, for every check it examined, which entry point it put the input
+    through, taken from the invocation it actually performed rather than from the entry
+    point the check's declaration names,
+  And a rejection produced by reaching inside the check is reported as a refusal obtained
+    without using the check's entry point, is named as such, and does not cause that
+    check's record to say the rejection was observed,
+  And a reader of the report can tell which entry point was used for any named check
+    without opening the check.
+depends_on:
+  - GE-120f-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1.yaml"
+    relationship: parent
+    status: exists
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The distinction this record enforces is already written in the schema and has no
+      reader: the entry point field is defined as "the real production way in that this
+      check invokes (CLI, hook, workflow dispatch, deployed script). NOT an internal helper
+      import", and the known-bad input is required to be fed "through the SAME entry point".
+      Adopt that wording rather than minting a second one.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126c-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING, THE ORTHOGONAL AXIS. GE-126c-5 owns which COPY the running process
+      loaded. This record owns which ENTRY POINT the input travelled through. A demonstration
+      can be performed against the right copy through the wrong way in, and against the wrong
+      copy through the right way in; the two conditions are independent and each is silent
+      about the other. Report them with different wording.
+  - path: templates/hooks/readme_read_guard.py
+    relationship: related
+    status: exists
+    relevance: >-
+      The worked example is exactly this shape seen from the other side: the part of that
+      guard which decides whether to refuse answers about a path, and the path the protected
+      surface actually hands it has already been resolved through a link by the time it
+      arrives. A demonstration performed by handing that part an unresolved path would show
+      a refusal that the guard cannot produce in service.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The harness that runs deployed checks out of process. Out-of-process invocation is what
+      makes the entry-point requirement enforceable rather than aspirational — a run that
+      imports part of a check and calls it has already lost the distinction.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-120f-1
+  contract: >-
+    The per-check record written from observation, and the invocation that produced it.
+    This record adds no new observation; it constrains which invocations may produce one
+    and requires the invocation used to be stated.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE RECORD AND NOT A CLAUSE OF ITS PARENT. The parent is satisfiable by
+  a run that puts the declared input through something and records what happened. The
+  cheapest something is the part of the check that decides — imported directly, called with
+  the declared input, watched. That satisfies every parent clause including the
+  alter-and-revert pair, because altering the deciding part changes what the deciding part
+  answers. And it certifies as demonstrated precisely the guard whose deciding part is
+  correct and whose service path never reaches it, which is the worked example and the
+  reason this L1 exists at all. Only a criterion about the invocation itself excludes it.
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "A rejection produced by reaching inside
+  the check does not cause that check's record to say the rejection was observed." ARRIVAL
+  COLOUR: GREEN, vacuously — no record is written for any check today, so none is wrongly
+  written from an inside call. INJECTION: obtain the observation by importing the check and
+  calling the part of it that decides, rather than by invoking the entry point. Under that
+  injection a guard whose deciding part refuses correctly while its service path cannot
+  reach it records the rejection as observed; this clause must go RED naming that guard, and
+  must return to green on revert. Run the injection against the copy the run loads or it
+  will not land.
+
+  SECOND NAMED MUTATION, FOR THE STATED-ENTRY-POINT CLAUSE. INJECTION: build the statement of
+  which entry point was used from the entry point the check's declaration names, rather than
+  from the invocation actually performed. Under that injection the run reports the intended
+  way in for every check whatever it did, the wrong-way-in case becomes indistinguishable
+  from the right one, and only this clause goes RED — the parent's clauses stay green because
+  a record is still written and still moves under alteration. That asymmetry is the reason
+  this record is a separate file. It is the same substitution GE-126c-5 forbids one axis
+  over: a statement built from what the author intended rather than from what the process
+  did.
+
+  ARRIVAL COLOURS FOR THE REMAINING CLAUSES. The Then requiring the record to come from the
+  protected surface's entry point is RED on arrival. The stated-entry-point clause is RED on
+  arrival — nothing is stated today. The reader-can-tell clause is RED on arrival for the
+  same reason.
+
+  A PROXY THAT MUST NOT BECOME THE CRITERION. Whether an invocation crossed a process
+  boundary is a useful smell and is not the requirement: a check legitimately invoked in
+  process by the surface it protects would fail such a rule, and a check invoked out of
+  process by a way in nobody uses would pass it. The observable is which invocation the
+  protected surface performs, not how it is performed.
