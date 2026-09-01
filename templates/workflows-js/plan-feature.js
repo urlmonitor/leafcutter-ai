@@ -1955,6 +1955,45 @@ function _describeRegistryInterpretationFailure(rawContent, parseError) {
 }
 
 /**
+ * Resolve the workspace-setup agent's entry in the registry's `agents`
+ * collection into one of FOUR distinct, representable states — never
+ * collapsing any of them into another:
+ *
+ *   - "permitted"           entry present, permits_shell === true.
+ *   - "denied"               entry present, permits_shell !== true (missing
+ *                            field or explicit false — both are "the entry
+ *                            exists and does not grant permission").
+ *   - "absent"               `agents` is a real array, but no entry in it has
+ *                            this id — the fact is "not listed", never a
+ *                            permission verdict about a nonexistent entry.
+ *   - "no_entries_collection" `registryJson.agents` is not an array at all
+ *                            (e.g. missing key, wrong type) — a distinct,
+ *                            representable fact rather than being silently
+ *                            folded into "absent" (ACD-2100b-3 Delivers-To
+ *                            contract to python-coder).
+ *
+ * This is the single seam that used to collapse "entry absent" and "entry
+ * present and denied" into the SAME `permitsShell = false` outcome
+ * (KI-ACD-009 outcome 3 / ACD-2100b-3): callers must switch on `.state`
+ * rather than re-deriving a boolean, so the absence-vs-denial distinction
+ * this ticket exists to establish cannot be lost again downstream.
+ *
+ * @param {*} registryJson - The parsed registry JSON (or null/undefined).
+ * @param {string} agentId - The workspace-setup agent id to look up.
+ * @returns {{state: "permitted"|"denied"|"absent"|"no_entries_collection"}}
+ */
+function _resolveWorkspaceSetupAgentEntryState(registryJson, agentId) {
+  if (!registryJson || !Array.isArray(registryJson.agents)) {
+    return { state: "no_entries_collection" };
+  }
+  const match = registryJson.agents.find((e) => e && e.id === agentId);
+  if (!match) {
+    return { state: "absent" };
+  }
+  return { state: match.permits_shell === true ? "permitted" : "denied" };
+}
+
+/**
  * Build the single-line POSIX-sh command that resolves BOTH the
  * `pause_store.py` script's repository-anchored location AND the
  * repository-anchored `paused_runs` store directory it must read/write, then
@@ -2168,6 +2207,13 @@ let registryUnreadable = null;
 // which would assert a permission cause this check never established
 // (ACD-2100b-2 / KI-ACD-009 outcome 2).
 let registryUninterpretable = null;
+// Set to the four-state result of _resolveWorkspaceSetupAgentEntryState()
+// once the registry has been read and interpreted — distinguishes "entry
+// present and denied" from "entry absent" (and the entries-collection-
+// missing fourth state), so the halt report below can state the correct,
+// specific fact rather than a single collapsed permission verdict
+// (ACD-2100b-3 / KI-ACD-009 outcome 3).
+let workspaceSetupAgentEntryState = null;
 try {
   const registryParsed = parseAgentJson(
     permissionResult,
@@ -2200,9 +2246,10 @@ try {
       );
     }
     if (!registryUninterpretable) {
-      const entries = (registryJson && Array.isArray(registryJson.agents)) ? registryJson.agents : [];
-      const match = entries.find((e) => e && e.id === workspaceSetupAgentId);
-      permitsShell = !!(match && match.permits_shell === true);
+      workspaceSetupAgentEntryState = _resolveWorkspaceSetupAgentEntryState(
+        registryJson, workspaceSetupAgentId
+      );
+      permitsShell = workspaceSetupAgentEntryState.state === "permitted";
     }
   }
 } catch (_parseErr) {
@@ -2248,22 +2295,63 @@ if (registryUnreadable) {
 }
 
 if (!permitsShell) {
-  await agent(
+  // Two distinct facts about the registry's own contents, and only ONE of
+  // them may be reported as a permission verdict (ACD-2100b-3 / KI-ACD-009
+  // outcome 3): the entry EXISTS and withholds permission ("denied"), versus
+  // the entry does not exist at all — "absent" or, equivalently for
+  // reporting purposes, the entries collection itself was not present
+  // ("no_entries_collection", which is still "not listed"). Both halts fail
+  // closed identically (the run stops before any authoring agent is
+  // dispatched); only the diagnosis differs, and naming the permission
+  // setting is reserved for the case where a permission fact was actually
+  // established.
+  const agentIsListedAndDenied =
+    !!workspaceSetupAgentEntryState && workspaceSetupAgentEntryState.state === "denied";
+
+  if (agentIsListedAndDenied) {
+    const deniedMessage =
+      "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
+      workspaceSetupAgentId + "', which is listed in the agent registry (config/agent_registry.json) " +
+      "but is not permitted to run repository-mutating shell commands. Halting before any authoring " +
+      "agent is dispatched. Report this mis-assignment to the operator: step='worktree-setup', " +
+      "agent='" + workspaceSetupAgentId + "'.";
+    log("[plan-feature][WARNING] " + deniedMessage);
+    await agent(
+      deniedMessage,
+      { agentType: "status-checker", label: "workspace-setup-mis-assignment" }
+    );
+    return {
+      status: "error",
+      message:
+        "Workspace-setup step 'worktree-setup' is configured to dispatch to agent '" +
+        workspaceSetupAgentId + "', which is listed in config/agent_registry.json but denies " +
+        "running repository/shell commands. Halting before any authoring agent is dispatched. " +
+        "Fix config/agent_registry.json's permits_shell field for that agent.",
+    };
+  }
+
+  // The entry does not exist in the registry at all — no permission fact was
+  // ever established, so this report must never name a permission setting;
+  // doing so would send the operator to audit an agent entry that does not
+  // exist (this is the defect ACD-2100b-3 removes).
+  const notFoundMessage =
     "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
-    workspaceSetupAgentId + "', but that agent's registered charter (config/agent_registry.json) " +
-    "does not permit running repository-mutating shell commands. Halting before any authoring " +
-    "agent is dispatched. Report this mis-assignment to the operator: step='worktree-setup', " +
-    "agent='" + workspaceSetupAgentId + "'.",
-    { agentType: "status-checker", label: "workspace-setup-mis-assignment" }
+    workspaceSetupAgentId + "', but that agent was not found in the registry " +
+    "(config/agent_registry.json). Halting before any authoring agent is dispatched. " +
+    "Report this mis-assignment to the operator: step='worktree-setup', agent='" +
+    workspaceSetupAgentId + "'.";
+  log("[plan-feature][WARNING] " + notFoundMessage);
+  await agent(
+    notFoundMessage,
+    { agentType: "status-checker", label: "workspace-setup-agent-not-found" }
   );
   return {
     status: "error",
     message:
       "Workspace-setup step 'worktree-setup' is configured to dispatch to agent '" +
-      workspaceSetupAgentId + "', whose registered charter does not permit running " +
-      "repository/shell commands. Halting before any authoring agent is dispatched. " +
-      "Fix the workspace_setup_agent configuration or config/agent_registry.json's " +
-      "permits_shell field for that agent.",
+      workspaceSetupAgentId + "', which was not found in the registry. Halting before any " +
+      "authoring agent is dispatched. Add an entry for that agent to config/agent_registry.json, " +
+      "or fix the workspace_setup_agent configuration to point at an agent that is listed.",
   };
 }
 
