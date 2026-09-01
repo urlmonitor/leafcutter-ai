@@ -40,7 +40,13 @@ Checking that the records were amended and inferring the tests followed is the w
 
 ### What is preserved here, and what is not
 
-**Preserved:** the coder's finding as an `amended_by` entry on `BO-2400c-1-v`, and the three-test red baseline `test_bo2400c1v_orphan_runner_removal.py` authored by test-writer. All three tests are genuinely red and land as `xfail` — `pytest_ac_enforcement` masks AC-tagged failures while the AC is not `done`, which is what makes committing a red baseline safe.
+**Preserved:** the coder's finding as an `amended_by` entry on `BO-2400c-1-v`.
+
+**Deliberately NOT merged: the red baseline.** `test_bo2400c1v_orphan_runner_removal.py` was authored by test-writer and holds the three tests named in the AC's `test_spec`. It cannot land on `main` yet, and the reason is a design decision rather than a defect. Locally the three report `3 xfailed`, because `pytest_ac_enforcement` masks AC-tagged failures while the AC is not `done`. **CI does not do that** — `.github/workflows/ci.yml` sets `AC_ENFORCE_STRICT: "1"` on the pytest job precisely so the masking is off, and under strict mode the same three are hard failures that block the required gate.
+
+So a red baseline for a not-done AC is structurally unmergeable here, and that is correct: `main` should not carry known-red tests. The baseline belongs in the same change as the implementation that turns it green, which is the ordering the fast lane already uses. The file is retained on branch `spec/bo-2400c-1-v-test-migration-prerequisite` at commit `cd3de7b75` and will land with the build.
+
+The wider lesson is about the evidence, not the file: a local `xfail` is a local convenience and proves nothing about mergeability. Only a strict-mode run answers that question, which is what `AC_ENFORCE_STRICT=1` is for.
 
 **Not done:** nothing is deleted. The orphan and `test_bo2400a_runner_wiring.py` were restored to `HEAD` before the coder finished. `work_status` stays `todo`, `covered_by` and `implemented_by` stay empty — the criterion is not built and nothing here claims it is.
 
