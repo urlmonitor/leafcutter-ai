@@ -66,7 +66,7 @@ class TestUnresolvedDestinationRefuses:
         no file exists therefore fails honestly against today's behaviour.
         """
         with tempfile.TemporaryDirectory() as tmp:
-            ac_store_root = _write_fixture_ac(tmp)
+            ac_store_root = _write_fixture_ac(Path(tmp))
             tickets_root = (
                 Path(tmp) / "tickets" / "00_inbox" / "epics" / "EPIC-Example"
             )
@@ -111,7 +111,7 @@ class TestUnresolvedDestinationRefuses:
         written unconditionally and this refusal assertion fails.
         """
         with tempfile.TemporaryDirectory() as tmp:
-            ac_store_root = _write_fixture_ac(tmp)
+            ac_store_root = _write_fixture_ac(Path(tmp))
             # tickets_root itself LOOKS like a settled epic destination, but
             # per TKT-600b-1-i it must not be treated as one.
             tickets_root = (
