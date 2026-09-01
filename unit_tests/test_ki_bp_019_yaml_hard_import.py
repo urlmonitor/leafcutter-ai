@@ -30,11 +30,23 @@ ARCHITECTURE: "yaml is missing" is simulated in a fresh, real subprocess
     observe a populated frontmatter dict, so a red result from the
     blocked case is known to come from the block and not from a broken
     harness.
-# covers: KI-BP-019
+NOTE ON TRACEABILITY: this module has no ``# covers: XX-NNN`` tag.
+    ``check_test_ac_tags.py``'s ``COVERS_REGEX`` (``[A-Z]{2,6}-[0-9]{3}``)
+    matches Acceptance Criterion IDs, not Known Issue IDs — ``KI-BP-019``
+    does not match that pattern (and, separately, a module-docstring tag
+    is outside the three locations the hook actually reads: the line
+    above ``def``, the function docstring, or the first body line). This
+    fix was authored directly against a Known Issue, not against an
+    Acceptance Criterion, so there is no true ``covers:`` claim to make
+    here; a fabricated tag would satisfy the regex without being honest
+    about coverage. If durable AC-level traceability is wanted for this
+    behaviour, author an AC via ``/plan-feature`` and add a real
+    per-function tag then — do not backfill a fake one now.
 """
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import textwrap
@@ -89,7 +101,12 @@ _BLOCK_YAML_SNIPPET = textwrap.dedent(
 
     def _blocked_import(name, *args, **kwargs):
         if name == "yaml" or name.startswith("yaml."):
-            raise ModuleNotFoundError("No module named 'yaml'")
+            # name= mirrors what Python's real import machinery sets on a
+            # genuine "module not installed" ModuleNotFoundError -- code
+            # under test may branch on exc.name, so the simulation must
+            # carry it too or it is not representative of a real missing
+            # dependency.
+            raise ModuleNotFoundError("No module named 'yaml'", name="yaml")
         return _real_import(name, *args, **kwargs)
 
     builtins.__import__ = _blocked_import
@@ -175,4 +192,170 @@ class TestMissingYamlFailsLoudly:
         )
         assert "ModuleNotFoundError" in result.stderr or "ImportError" in result.stderr, (
             f"expected an import-error traceback naming yaml: stderr={result.stderr!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Finding 1 (post-fix review): registry_validator.validate_produces_field()
+# used to catch ModuleNotFoundError as a plain ImportError and skip its
+# frontmatter check silently, exactly reproducing the KI-BP-019 symptom one
+# file over -- a validator whose job is to check template frontmatter would
+# report a clean run in exactly the environment where its own dependency
+# (via template_compiler) is missing. Fixed by distinguishing "template_compiler
+# itself is not on the path" (legitimate skip) from "template_compiler is on
+# the path but ITS dependency is missing" (must be a loud validation error).
+# ---------------------------------------------------------------------------
+
+_REGISTRY_VALIDATOR_HARNESS_TEMPLATE = textwrap.dedent(
+    """
+    import builtins
+    import json
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, {scripts_dir!r})
+
+    {block_yaml}
+
+    import registry_validator
+
+    package_root = Path({package_root!r})
+    agents = json.loads((package_root / "config" / "agent_registry.json").read_text())["agents"]
+    template_dir = package_root / "templates" / "agents"
+
+    errors = registry_validator.validate_produces_field(agents, template_dir)
+    if errors:
+        print("PRODUCES_CHECK_REPORTED_ERRORS")
+        for e in errors:
+            print(f"ERROR_DETAIL:{{e}}")
+    else:
+        print("PRODUCES_CHECK_CLEAN")
+    """
+)
+
+
+def _write_minimal_registry_fixture(root: Path) -> None:
+    """Write a minimal agent_registry.json + one compliant agent template.
+
+    The fixture is deliberately "clean" -- one agent, whose registry entry
+    AND template frontmatter both declare a valid ``produces`` value -- so
+    that a real run of ``validate_produces_field`` against it reports zero
+    errors whenever the check actually executes. That makes ``errors == []``
+    a meaningful signal of "the check ran and found nothing wrong", not an
+    artifact of the fixture being too sparse to check anything.
+
+    Args:
+        root: Directory to populate as a fake package root (config/ +
+            templates/agents/).
+    """
+    config_dir = root / "config"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    templates_dir = root / "templates" / "agents"
+    templates_dir.mkdir(parents=True, exist_ok=True)
+
+    registry = {
+        "agents": [
+            {
+                "id": "sample-agent",
+                "produces": "production_code",
+                "template_path": "templates/agents/sample-agent.md",
+            }
+        ]
+    }
+    (config_dir / "agent_registry.json").write_text(json.dumps(registry), encoding="utf-8")
+    (templates_dir / "sample-agent.md").write_text(
+        "---\nname: sample-agent\nproduces: production_code\n---\n\nBody.\n",
+        encoding="utf-8",
+    )
+
+
+def _run_registry_validator_harness(
+    *, fixture_root: Path, block_yaml: bool
+) -> subprocess.CompletedProcess[str]:
+    """Run ``validate_produces_field`` against the fixture in a fresh subprocess.
+
+    Args:
+        fixture_root: Path to a directory populated by
+            ``_write_minimal_registry_fixture``.
+        block_yaml: When True, installs the import shim that makes ``yaml``
+            unavailable before ``registry_validator`` (and, transitively,
+            ``template_compiler``) is imported.
+
+    Returns:
+        The completed subprocess result (returncode, stdout, stderr).
+    """
+    script = _REGISTRY_VALIDATOR_HARNESS_TEMPLATE.format(
+        scripts_dir=str(_SCRIPTS_DIR),
+        package_root=str(fixture_root),
+        block_yaml=_BLOCK_YAML_SNIPPET if block_yaml else "",
+    )
+    return subprocess.run(  # noqa: S603 - fixed args, no shell, trusted script
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+
+class TestRegistryValidatorProducesCheckDoesNotReportGreen:
+    """Finding 1: validate_produces_field() must not silently skip-and-pass
+    its frontmatter check when yaml (a template_compiler dependency) is
+    missing -- that relocates the KI-BP-019 defect rather than closing it.
+    """
+
+    def test_control_harness_reports_clean_when_yaml_present(self, tmp_path: Path) -> None:
+        """Sanity check: against a fixture with no real violations and yaml
+        available, the check reports clean.
+
+        This is the control run, proving the harness and fixture are sound
+        so that a "not clean" result from the blocked-yaml case below is
+        trustworthy evidence of the fix rather than a fixture artifact.
+        """
+        _write_minimal_registry_fixture(tmp_path)
+        result = _run_registry_validator_harness(fixture_root=tmp_path, block_yaml=False)
+
+        assert result.returncode == 0, (
+            f"control harness failed unexpectedly: stdout={result.stdout!r} "
+            f"stderr={result.stderr!r}"
+        )
+        assert "PRODUCES_CHECK_CLEAN" in result.stdout, (
+            "control harness did not report a clean produces check against "
+            f"a violation-free fixture: stdout={result.stdout!r} "
+            f"stderr={result.stderr!r}"
+        )
+
+    def test_produces_check_does_not_report_clean_when_yaml_is_unavailable(
+        self, tmp_path: Path
+    ) -> None:
+        """The frontmatter check must not report clean when yaml is missing.
+
+        Before the fix, ``except ImportError`` caught the ``ModuleNotFoundError``
+        raised by ``template_compiler``'s own hard ``import yaml`` and returned
+        the accumulated errors list unchanged -- against this violation-free
+        fixture that meant ``PRODUCES_CHECK_CLEAN``, exactly reproducing
+        KI-BP-019's "reports green while checking nothing" symptom one file
+        over. The fix requires this branch to append a real validation error
+        naming the missing dependency instead.
+        """
+        _write_minimal_registry_fixture(tmp_path)
+        result = _run_registry_validator_harness(fixture_root=tmp_path, block_yaml=True)
+
+        assert result.returncode == 0, (
+            f"harness itself crashed rather than reporting a result: "
+            f"stdout={result.stdout!r} stderr={result.stderr!r}"
+        )
+        assert "PRODUCES_CHECK_CLEAN" not in result.stdout, (
+            "validate_produces_field() reported a clean run with yaml "
+            "unavailable -- this is the KI-BP-019 defect relocated: the "
+            "frontmatter check must not silently skip-and-pass when its own "
+            f"dependency is missing.\nstdout={result.stdout!r}"
+        )
+        assert "PRODUCES_CHECK_REPORTED_ERRORS" in result.stdout, (
+            f"expected a reported-errors result: stdout={result.stdout!r}"
+        )
+        assert "yaml" in result.stdout.lower(), (
+            "the reported error does not name the missing 'yaml' dependency "
+            f"-- it should be distinguishable from a generic skip: "
+            f"stdout={result.stdout!r}"
         )
