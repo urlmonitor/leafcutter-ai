@@ -5,10 +5,10 @@ description: Runs the knowledge-emission harvester for a worktree. Reads unproce
   knowledge_captured events from debugging/logs/knowledge_emissions.jsonl (per ADR-011)
   and routes each to the correct knowledge surface via the capture-learning write
   protocol. A routed event is marked processed so re-runs are idempotent; an event
-  whose entry_kind is unrecognised is left UNMARKED and retained for a later run
-  rather than dropped (INF-400c-2-ii). Reports a summary distinguishing routed from
-  unroutable counts. Invoked by ticket-supervisor or by the user after a batch of
-  phase agents have signed off.
+  whose entry_kind is unrecognised is left UNMARKED and retained for a later run rather
+  than dropped (INF-400c-2-ii). Reports a summary distinguishing routed from unroutable
+  counts. Invoked by ticket-supervisor or by the user after a batch of phase agents
+  have signed off.
 type: card
 status: active
 created: 2026-08-13

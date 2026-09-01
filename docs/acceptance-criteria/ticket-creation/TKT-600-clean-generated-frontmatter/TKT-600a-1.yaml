@@ -113,6 +113,45 @@ it_requirements:
 
     Preserve existing behavior for ACs that already produce correct output.
 
+
+    ONE APPROACH HAS ALREADY BEEN TRIED AND REJECTED IN REVIEW (2026-08-31 fast lane).
+    Do not rebuild it. The attempt kept prose harvesting and added a nine-pattern
+    English-phrase blocklist (_PROSE_CONTEXT_ONLY_CUES) that skipped a whole bullet when
+    it matched cues like "do not edit", "context only", "illustrat", "example path". It
+    was blocked, and measurement against the real inputs shows why:
+
+
+    (a) IT DID NOT FIX THE OBSERVED FAILURE. The bullet that actually broke the GE-123
+    epic carries no cue at all — it is a plain instruction: "The reduced scrutiny applies
+    under docs/acceptance-criteria, docs/retrospectives and templates/skills, which is the
+    defect: templates/skills holds executable Python." With the blocklist in place it
+    still yields [docs/acceptance-criteria, docs/retrospectives, templates/skills] — three
+    bare directories, the exact output that made three tickets unusable.
+
+
+    (b) IT INTRODUCED NEW FALSE EXCLUSIONS. "The value is context dependent, see
+    scripts/goal_to_epic.py for details." -> [] (caught in review). And
+    "This illustrates why scripts/build_phases.py must be updated too." -> [] (a second
+    one, not caught in review). Both silently drop a genuine edit surface, which is the
+    same defect this AC fixes, in the opposite direction.
+
+
+    Guessing authorial intent from English phrasing is not a mechanism. Use the structured
+    sources this AC already names: it_requirements.reference_file_path plus doc_links whose
+    relationship is an edit-surface relationship. Additionally REJECT bare directories —
+    a path with no file extension is not an edit surface, and the on-disk existence gate
+    passes them because directories exist.
+
+
+    AND KNOW WHAT THIS FIX DOES NOT ACHIEVE, so it is not mistaken for a full repair.
+    Measured on 2026-08-31: for all ten GE-123 records with a broken surface, the
+    structured sources yield EMPTY, because their doc_links are all related/describes and
+    their it_requirements are list-form prose. The correct behaviour here is an honest
+    empty surface, not an invented one — the missing edit-surface doc_links are an
+    upstream AC-authoring gap tracked separately. Prefer failing loudly (refuse to emit a
+    ticket whose surface is empty) over silently emitting one, so the gap surfaces at
+    generation time rather than at drive time.
+
     '
   post_write_commands: []
   reference_file_path: scripts/ac_store/generate_ticket_from_ac.py

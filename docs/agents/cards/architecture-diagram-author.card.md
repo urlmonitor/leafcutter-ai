@@ -153,6 +153,7 @@ flowchart TD
 - ACS-900e-2: Component diagram shows the boundary between the new hook and the audit script
 - BO-1000a-4: Sequence diagram of the start-of-step narration emission path
 - BO-1000c-3: Sequence diagram of live progress delivery from background workflow to the conversation
+- BO-100e-5: A sequence diagram shows the repeated eligibility look and where the run decides to stop
 - BO-1300a-4: Sequence diagram: on-demand spot-check pass from invocation to tracked tickets
 - BO-1300d-2: Sequence diagram: automatic end-of-build spot-check wiring
 - BO-1400a-3: Sequence diagram documents the pre-PR real-data and deployable-placement verification flow
@@ -223,6 +224,8 @@ flowchart TD
 - GE-122d-4: The three-stage arrangement is drawn, showing which stage owns which promise
 - GE-124c-5: A sequence diagram shows the ordering that keeps the four verdicts distinguishable
 - GE-124f-4: A component diagram shows the chain across the four stores it crosses
+- GE-126e-4: A diagram shows where the census sits and what it reads to decide who is in scope
+- INF-700b-4: A sequence diagram shows the capture path end to end, including the branch taken when capture cannot complete
 - KM-KGS-100a-4: Component diagram shows the acceptance-criteria store as a knowledge-map surface
 - KM-KGS-100b-4: Sequence diagram of a requirement-to-code traversal
 - PER-100c-4: Sequence diagram for persona capability query workflow
@@ -242,6 +245,7 @@ flowchart TD
 - TQ-100d-2: State diagram of an allowlist entry's added-tracked-flagged lifecycle
 - TQ-400a-6: The component diagram shows one verdict source with three checkers over three populations
 - TQ-400b-6: The lifecycle diagram shows done as an exit-able state, with the demotion edge and what it writes
+- TQ-500b-3: A state diagram showing the five recorded states and which of them mean incomplete
 - UXP-100a-4: Component diagram showing the prototype assembly data flow
 - UXP-100b-4: Sequence diagram showing gap detection and research initiation flow
 - UXP-100c-6: Sequence diagram showing the prototype approval gate lifecycle

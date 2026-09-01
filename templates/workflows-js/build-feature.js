@@ -2813,14 +2813,63 @@ if (target_type === "epic") {
         // same `no_longer_present` field and used to carry the same "were not
         // built" sentence, so a partition applied only to the completion returns
         // would leave the defect live at the one site that can show it.
-        const haltRecheck = epicRecheckReport(
-          compareEpicTicketSets(
-            plannedTicketPaths,
-            await recheckEpicTicketSet(worktreeEpicPath),
-            realWorktreePath
-          ),
-          completedWorkPaths(completedBatches, realWorktreePath)
+        // Hoisted out of the epicRecheckReport() call so the unbuilt-count
+        // block below can reuse both halves. Same comparison, same inputs.
+        const cmpForHalt = compareEpicTicketSets(
+          plannedTicketPaths,
+          await recheckEpicTicketSet(worktreeEpicPath),
+          realWorktreePath
         );
+        const completedForHalt = completedWorkPaths(completedBatches, realWorktreePath);
+        const haltRecheck = epicRecheckReport(cmpForHalt, completedForHalt);
+
+        // BO-300d-1 — KI-BO-025: `plannedTicketPaths` already contains every
+        // ticket from EVERY batch the planner computed, including batches
+        // after the one that just halted. Those later-batch tickets are still
+        // plan members and still present in the epic folder, so `cmpForHalt`
+        // classifies them as neither an addition nor a removal and
+        // `epicRecheckReport` says nothing about them at all — only the
+        // ticket(s) that failed IN THIS BATCH are named, via `haltSummary`.
+        // This names the rest explicitly, by identity, and states the count,
+        // so the operator does not compare the plan against the folder by hand.
+        const haltedPathsThisBatch = haltedTickets
+          .map((r) => toWorktreePath(r.ticket_path, realWorktreePath))
+          .filter(Boolean);
+        const withheldPathsThisBatch = withheldResults
+          .map((r) => toWorktreePath(r.ticket_path, realWorktreePath))
+          .filter(Boolean);
+        const notYetAttemptedPaths = plannedTicketPaths.filter(
+          (p) =>
+            completedForHalt.indexOf(p) === -1 &&
+            haltedPathsThisBatch.indexOf(p) === -1 &&
+            cmpForHalt.removals.indexOf(p) === -1
+        );
+        // COUNT THE NAMED SET, DO NOT SUBTRACT (BO-300d-1) — the stated number
+        // is the cardinality of this set, not total-minus-built, so the count
+        // and the names it is drawn from cannot disagree.
+        //
+        // DE-DUPLICATED ACROSS ALL SOURCES. A piece of work is unbuilt once,
+        // however many ways the run noticed it: a ticket that fails in THIS
+        // batch and is also gone from the folder at the re-read lands in two
+        // of these lists, and concatenating would count and print it twice —
+        // breaking the very invariant the paragraph above claims.
+        //
+        // WITHHELD TICKETS ARE INCLUDED (BO-100e-1-i, added on top of what
+        // BO-300d-1 shipped). A ticket the eligibility gate withheld was never
+        // dispatched, so it is unbuilt in exactly the sense this count is
+        // about. It is already covered by `notYetAttemptedPaths` whenever it
+        // is a plan member, but it is listed explicitly so the set does not
+        // depend on that coincidence holding.
+        const unbuiltNamedPaths = [
+          ...new Set([
+            ...haltedPathsThisBatch,
+            ...withheldPathsThisBatch,
+            ...notYetAttemptedPaths,
+            ...(haltRecheck.fields.discovered_after_planning || []),
+            ...(haltRecheck.fields.no_longer_present_not_completed || []),
+          ]),
+        ];
+        const unbuiltCount = unbuiltNamedPaths.length;
 
         return Object.assign(
           {
@@ -2833,6 +2882,10 @@ if (target_type === "epic") {
                 : "") +
               `.` +
               (haltRecheck.headline ? ` Also: ${haltRecheck.headline}.` : "") +
+              (unbuiltCount > 0
+                ? ` ${unbuiltCount} piece(s) of work in total were not built: ` +
+                  `${unbuiltNamedPaths.join(", ")}.`
+                : "") +
               haltRecheck.suffix,
             epic_path: worktreeEpicPath,
             title: epicTitle,

@@ -1,0 +1,74 @@
+id: BO-2200c-5-i
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "The documentation target is the doc_link the record OWNS, not the first one it mentions"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a leaf AC whose `doc_links` list holds, in this order,
+    1. `docs/reference/plan-feature-layout-and-startup-checks.md` with `relationship: describes`, and
+    2. `docs/how-to/run-the-startup-checks.md` with `relationship: creates`,
+  When a ticket is generated from that AC,
+  Then the target documentation path named on the `### documentation-expert` contract line is
+    `docs/how-to/run-the-startup-checks.md` -- the entry whose relationship declares that this
+    record produces the document -- and NOT
+    `docs/reference/plan-feature-layout-and-startup-checks.md`, which the record only describes
+    and which merely happens to appear first.
+  And regenerating the same AC with those two entries in the opposite order names the same
+    target, so position in the list changes nothing about which document is demanded.
+  And the relationships that confer documentation ownership are exactly `creates` and
+    `modifies`: an entry carrying `describes`, `related`, `constrains`, `specifies`, or
+    `implements` is never selected as the target, at any position, whether or not an owning
+    entry also exists.
+  And the specific regression that must not reappear: an AC that links
+    `docs/reference/ac-schema.md` with `relationship: specifies` -- the shape ~170 records in
+    the store already carry -- is NOT given `docs/reference/ac-schema.md` as its documentation
+    target, because "this document specifies my behaviour" is a statement about an input the
+    record reads, not a claim to produce it.
+  And every path that IS selected as the documentation target also appears in the generated
+    ticket's `files_touched`, so a document a record is told to write is always declared as a
+    file that record will edit -- documentation ownership is a strict subset of edit-surface
+    membership, never disjoint from it.
+depends_on: [BO-2200c-5]
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Authored 2026-08-31 from the user's decision on the documentation-ownership split, after the
+  EPIC-StartingNewWorkTheProperWayAlways drive hard-blocked: 25 tickets, 25 documentation
+  demands, 1 ticket that actually owned the document it was told to produce. 22 of the other 24
+  were pointed at the same page by a `relationship: describes` link.
+
+  DELIBERATE DIVERGENCE from the framing this AC was authored against. The framing proposed
+  reusing the existing edit-surface relationship set -- {constrains, creates, implements,
+  modifies, specifies} -- as the documentation-ownership predicate, so that "ownership means one
+  thing in both fields". Measured against the real store, that predicate re-creates the very
+  collision it is meant to fix, at seven times the scale: ~170 AC records link
+  `docs/reference/ac-schema.md` with `relationship: specifies`, and dozens link
+  `docs/architecture/adrs/ADR-034-knowledge-write-ownership.md` with `relationship: constrains`.
+  Under the wider set, all ~170 would each be told to write `ac-schema.md`.
+
+  The vocabulary is genuinely ambiguous: `specifies` and `constrains` are used across the store
+  to mean "this document governs my work" (an input), while `creates` and `modifies` are the only
+  two that unambiguously mean "this record produces or changes this document" (an output). Only
+  the latter pair can carry a write demand.
+
+  Coherence between the two fields is preserved in the direction that matters, and stated as the
+  final clause: documentation ownership is a strict subset of edit-surface membership. Nothing is
+  demanded as a doc target that is not also declared in files_touched. Narrowing the edit-surface
+  set itself to match was rejected as a separate, riskier change -- files_touched drives the
+  phantom-done surface, and silently shrinking it store-wide belongs to the TKT-500f ACs that own
+  that field, not here.
+
+  Store baseline at authoring time: only 18 of 3,694 AC records carry `relationship: creates` at
+  all. Under this rule the documentation demand becomes rare by default, which is why the
+  ownership-gap check (see the handoff) is a prerequisite and not a nicety.

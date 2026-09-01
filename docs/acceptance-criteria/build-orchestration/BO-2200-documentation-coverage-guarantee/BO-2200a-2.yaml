@@ -68,7 +68,37 @@ test_spec:
     description: "A non-triggering change_target combined with a triggering risk_surface still yields documentation-expert (independent OR evaluation)."
 origin_agent: business-analyst
 created: 2026-07-15
-amended_by: []
+amended_by:
+  - reason: |
+      NARROWED BY BO-2200c-5-iii (recorded 2026-08-31 by business-analyst). A triggering
+      `risk_surface` is now NECESSARY BUT NO LONGER SUFFICIENT for a documentation demand.
+
+      This record states that each of `contract_boundary`, `safety`, `auth`, `privacy` "on its
+      own, causes `documentation-expert` to be required even when the `change_target` alone
+      would not have triggered it". Under BO-2200c-5-iii the record must ALSO own a document --
+      a `doc_links` entry whose relationship is `creates` or `modifies` -- before
+      `documentation-expert` is required. The OR between the two classification dimensions is
+      unchanged; document ownership is a further condition ANDed with the result of that OR,
+      not a third alternative inside it. So the policy reads: (triggering `change_target` OR
+      triggering `risk_surface`) AND document ownership.
+
+      SCOPE OF THIS AMENDMENT -- read before relying on it. BO-2200c-5-iii states its rule
+      using the `change_target` path only ("a triggering `change_target` remains necessary ...
+      but is no longer sufficient"); it does not name `risk_surface`. This amendment reads the
+      ownership gate as a gate on the DEMAND rather than on one dimension of the trigger,
+      because the alternative is incoherent: a record with `risk_surface: auth` that owns no
+      document would still be handed a documentation demand it cannot satisfy, which is the
+      exact failure BO-2200c-5-iii exists to prevent. If the intent is instead that ownership
+      gates only `change_target`-triggered demands, this amendment is wrong and must be
+      withdrawn -- and BO-2200c-5-iii should say so explicitly before it is built.
+
+      IMPLEMENTER NOTE -- belongs to whoever builds BO-2200c-5-iii, NOT to this record. All
+      three behaviours covering this AC assert that `documentation-expert` IS present:
+      `test_risk_surface_contract_boundary_triggers_doc_expert`,
+      `test_each_triggering_risk_surface_requires_doc_expert`, and
+      `test_change_target_and_risk_surface_are_ORed`. Their fixture ACs need an owning
+      `doc_links` entry with relationship `creates` (or `modifies`) or they will fail once
+      ownership gating lands. That fixture change was deliberately NOT made here.
 superseded_by: null
 covered_by: []
 implemented_by:
