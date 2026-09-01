@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 criteria: |
   Given an installed route file that has been changed since it was installed so
@@ -117,9 +117,13 @@ origin_agent: business-analyst
 created: 2026-08-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_guards/test_acd_2100d_2_i.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/21_TICKET-20260826-ACD-2100d-2-i.md
+- scripts/build.py
+- scripts/build_phases.py
+- unit_tests/build_guards/test_acd_2100d_2_i.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |

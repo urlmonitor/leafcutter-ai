@@ -64,6 +64,8 @@ from build_phases import (
     _compute_phase_mappings,
     check_command_reachability,
     AC_STORE_DEPLOY_MAP,
+    set_local_change_baseline,
+    announce_if_local_change_replaced,
 )
 from registry_validator import validate_agent_registry
 from project_context_discovery import (  # noqa: F401 — re-exported for callers
@@ -160,6 +162,11 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
     builds.  Binary or unreadable files fall through to an unconditional write
     (UnicodeDecodeError / OSError are caught and silently ignored).
 
+    When the target exists and IS about to be overwritten (content differs,
+    or its on-disk content could not be read for comparison), calls
+    ``announce_if_local_change_replaced(target)`` first — this is one of the
+    four named compare-before-write branches ACD-2100d-2-i instruments.
+
     In dry-run mode, prints what would happen but does not write. Creates
     parent directories as needed.
 
@@ -189,6 +196,7 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
                 return False
         except (UnicodeDecodeError, OSError):
             pass  # Binary or unreadable file — fall through to write.
+        announce_if_local_change_replaced(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
     return True
@@ -1816,6 +1824,12 @@ def main(argv: list[str] | None = None) -> int:
     # report accurate per-run numbers.
     reset_uptodate_count()
 
+    # Capture the PREVIOUS install's output_mappings as this run's
+    # local-change baseline (ACD-2100d-2-i) BEFORE any phase below writes a
+    # single file — the whole point is to see what the last install produced
+    # before this run's own manifest overwrites the record of it.
+    set_local_change_baseline(target_root, output_root)
+
     # Self-description validation: resolve enforcement level (CLI flag overrides
     # registry config key; registry key overrides the 'warning' built-in default).
     _sd_enforcement: str = "warning"
@@ -2154,4 +2168,16 @@ if __name__ == "__main__":
 #   previously-undiscovered instance: validate_ac_schema.py's missing
 #   _ac_components.py -- concrete evidence the mechanism is derived rather than
 #   an enumeration of the one known case. (#BP-900g-8)
+# - 2026-08-31 [python-coder/EPIC-StartingNewWorkTheProperWayAlways/21]:
+#   write_file() now calls announce_if_local_change_replaced(target) (new
+#   import from build_phases) right before overwriting an existing file whose
+#   on-disk content differs from what is about to be written -- the fourth
+#   named ACD-2100d-2-i compare-before-write branch. main() calls the new
+#   set_local_change_baseline(target_root, output_root) right after
+#   reset_uptodate_count(), before any build phase writes a file, so the
+#   announcement's baseline is the PREVIOUS install's recorded
+#   output_mappings (not this run's own, not-yet-written manifest). The
+#   divergence verdict itself is computed entirely in build_phases.py, which
+#   consumes ACD-2100d-2's own installer-derived mapping rather than a second,
+#   independent determination. (#EPIC-StartingNewWorkTheProperWayAlways/21)
 # ====================================================================

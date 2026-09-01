@@ -65,6 +65,7 @@ from template_compiler import (
     inject_config,
     parse_frontmatter,
 )
+from build_helpers import _canonicalize_output_path
 
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = PACKAGE_ROOT / "templates"
@@ -772,6 +773,11 @@ def _write(target: Path, content: str, dry_run: bool, force: bool) -> bool:
     fall through to an unconditional write (UnicodeDecodeError / OSError are
     caught and silently ignored).
 
+    When the target exists and IS about to be overwritten (content differs,
+    or its on-disk content could not be read for comparison), calls
+    ``announce_if_local_change_replaced(target)`` first — this is one of the
+    four named compare-before-write branches ACD-2100d-2-i instruments.
+
     Args:
         target: Absolute path to the destination file.
         content: Text content to write (UTF-8).
@@ -798,6 +804,7 @@ def _write(target: Path, content: str, dry_run: bool, force: bool) -> bool:
                 return False
         except (UnicodeDecodeError, OSError):
             pass  # Binary or unreadable file — fall through to write.
+        announce_if_local_change_replaced(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
     return True
@@ -808,6 +815,13 @@ def _files_content_identical(src: Path, dst: Path) -> bool:
 
     Uses SHA-256 hashes to compare binary files without loading both into
     memory simultaneously when files are large.
+
+    When the files differ and ``dst`` already exists, calls
+    ``announce_if_local_change_replaced(dst)`` before returning — every
+    caller's pattern is ``if _files_content_identical(...): skip else:
+    shutil.copy2(...)``, so a False return always precedes an overwrite
+    (ACD-2100d-2-i). This is the single instrumentation point for all
+    ``shutil.copy2``-based call sites in this module.
 
     Args:
         src: Source file path.
@@ -823,9 +837,216 @@ def _files_content_identical(src: Path, dst: Path) -> bool:
             h = hashlib.sha256()
             h.update(path.read_bytes())
             return h.hexdigest()
-        return _sha256(src) == _sha256(dst)
+        identical = _sha256(src) == _sha256(dst)
     except OSError:
         return False
+    if not identical:
+        announce_if_local_change_replaced(dst)
+    return identical
+
+
+# ---------------------------------------------------------------------------
+# Local-change-before-overwrite announcement (ACD-2100d-2-i)
+# ---------------------------------------------------------------------------
+#
+# An installed generated file that was edited since the last install (a
+# "local change", per KI-ACD-004 -- the 2026-08-18 incident this record
+# exists to stop repeating) is still always overwritten: the install always
+# wins, and nothing here refuses, preserves, or merges the local edit. What
+# changes is that the overwrite is ANNOUNCED, naming the file, in the run's
+# own output, instead of vanishing silently.
+#
+# The divergence verdict is deliberately NOT authored here. It reuses
+# ACD-2100d-2's own installer-derived mapping and per-file determination --
+# the SAME ``output_mappings`` / ``expected_output_hash`` computation
+# ``build_helpers._compute_output_mappings`` writes into
+# ``.build_manifest.json`` and ``check_output_drift.py`` reads back at
+# commit time -- so the delivery check and this install-time announcement
+# can never disagree about which files diverged (see this ticket's own
+# Implementation Notes: "CONSUME ACD-2100d-2's DETERMINATION, DO NOT AUTHOR
+# ONE"). Concretely: before any phase writes a single file, build.py's
+# main() calls ``set_local_change_baseline`` to record the PREVIOUS run's
+# ``output_mappings`` (read from the ``.build_manifest.json`` already on
+# disk, before this run's own manifest overwrites it). Each of this
+# module's compare-before-write branches (``_write``, above;
+# ``_files_content_identical``, above; and ``build_workflow_scripts``'s own
+# inline SHA-256 compare, below) then calls
+# ``announce_if_local_change_replaced`` right before it overwrites an
+# EXISTING file, while that file's pre-install content is still readable.
+# ``write_file`` in build.py — the fourth named branch — imports
+# ``announce_if_local_change_replaced`` from here rather than duplicating
+# the check.
+#
+# Canonicalisation reuses ``build_helpers._canonicalize_output_path`` — the
+# exact function ``_compute_output_mappings`` itself calls to translate a
+# pre-shim, ``output_root``-relative write target (e.g.
+# ``<output_root>/workflows/build-epic.js``) into the canonical,
+# ``target_root``-relative key ``output_mappings`` actually uses (e.g.
+# ``.claude/workflows/build-epic.js``) — never a second, independently
+# maintained path translation.
+_previous_output_mappings: dict[str, Any] = {}
+_local_change_target_root: Path | None = None
+_local_change_output_root: Path | None = None
+
+
+def set_local_change_baseline(target_root: Path, output_root: Path) -> None:
+    """Record the previous install's output_mappings as this run's baseline.
+
+    Must be called once, by build.py's main(), before any build phase writes
+    a file, so the baseline reflects what the LAST install produced — never
+    this run's own (not-yet-written) manifest. A missing or unreadable
+    previous manifest degrades to an empty baseline (first install, or a
+    manifest this check cannot vouch for): every announcement check below
+    then no-ops rather than raising, since there is nothing to compare
+    against.
+
+    Args:
+        target_root: Absolute path to the target project root. The previous
+            manifest, if any, is read from
+            ``target_root / ".build_manifest.json"`` — the exact path
+            ``write_build_manifest()`` writes to (``repo_root == target_root``
+            there by construction).
+        output_root: Absolute path to the consolidated output directory
+            (``target_root / config["output_root"]``), needed to translate a
+            pre-shim write target into its canonical output_mappings key via
+            ``build_helpers._canonicalize_output_path``.
+    """
+    global _previous_output_mappings, _local_change_target_root, _local_change_output_root  # noqa: PLW0603
+    _local_change_target_root = target_root
+    _local_change_output_root = output_root
+    _previous_output_mappings = {}
+
+    manifest_path = target_root / ".build_manifest.json"
+    if not manifest_path.exists():
+        return  # First install: no prior baseline, nothing can have diverged.
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        _log.warning(
+            "could not read the previous build manifest at %s to establish "
+            "the local-change baseline; local-change announcements are "
+            "disabled for this run: %s",
+            manifest_path,
+            exc,
+        )
+        return
+
+    previous_mappings = manifest.get("output_mappings")
+    if isinstance(previous_mappings, dict):
+        _previous_output_mappings = previous_mappings
+
+
+def _hash_for_local_change_check(path: Path) -> str | None:
+    """Hash pre-write file content identically to check_output_drift.py.
+
+    Normalises CRLF -> LF before hashing, matching
+    ``check_output_drift._sha256_of_file`` exactly, so a Windows checkout's
+    line-ending translation can never manufacture a false "local change"
+    announcement that the delivery check itself would not also report.
+
+    Args:
+        path: Absolute path to the on-disk file to hash.
+
+    Returns:
+        Lowercase hex SHA-256 digest, or None if the file could not be read.
+        The caller must not treat None as "clean" — per the repository
+        error-handling policy, a read failure must not silently suppress the
+        announcement.
+    """
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        _log.warning(
+            "could not read %s to check whether a local change is about to "
+            "be replaced: %s",
+            path,
+            exc,
+        )
+        return None
+    return hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()
+
+
+def _local_change_output_key(target: Path) -> str | None:
+    """Resolve ``target`` to the output_mappings key its determination uses.
+
+    Args:
+        target: Absolute path a compare-before-write branch is about to
+            overwrite.
+
+    Returns:
+        The forward-slash, ``target_root``-relative output_mappings key, or
+        None when no baseline is set or ``target`` cannot be resolved to one
+        (e.g. it lies outside both ``output_root`` and ``target_root``).
+    """
+    if _local_change_target_root is None:
+        return None
+    target_root = _local_change_target_root.resolve()
+    resolved = target.resolve()
+
+    if _local_change_output_root is not None:
+        canonical = _canonicalize_output_path(
+            resolved, _local_change_output_root.resolve(), target_root
+        )
+        if canonical is not None:
+            try:
+                return canonical.relative_to(target_root).as_posix()
+            except ValueError:
+                return None
+
+    try:
+        return resolved.relative_to(target_root).as_posix()
+    except ValueError:
+        return None
+
+
+def announce_if_local_change_replaced(target: Path) -> None:
+    """Print a notice when ``target`` diverged from the previous install.
+
+    Fires only when ALL of the following hold, so a legitimate template
+    change (every file is replaced on every install) is never mistaken for a
+    local edit (per this ticket's own Implementation Notes: "a message for
+    each [generated file] is noise ... which is the same as no message"):
+
+    1. A previous-install baseline exists (``set_local_change_baseline`` was
+       called and found a readable prior manifest).
+    2. ``target`` already exists on disk (nothing has been lost on a first
+       install).
+    3. ``target``'s output_mappings key was recorded by the PREVIOUS install.
+    4. ``target``'s CURRENT on-disk content hash does not match the
+       previously recorded ``expected_output_hash`` for that key — i.e.
+       something changed the file after the last install, the exact
+       KI-ACD-004 shape.
+
+    Never refuses, preserves, or delays the overwrite that follows this
+    call — the install still wins; this only announces the loss before it
+    happens. Callers must invoke this BEFORE overwriting ``target``, while
+    its pre-install content is still readable.
+
+    Args:
+        target: Absolute path about to be overwritten.
+    """
+    if _local_change_target_root is None or not _previous_output_mappings:
+        return
+    if not target.exists():
+        return
+
+    output_key = _local_change_output_key(target)
+    if output_key is None:
+        return
+
+    entry = _previous_output_mappings.get(output_key)
+    previous_hash = entry.get("expected_output_hash") if isinstance(entry, dict) else None
+    if not previous_hash:
+        return  # Not recorded by the previous install — no baseline to diverge from.
+
+    current_hash = _hash_for_local_change_check(target)
+    if current_hash is not None and current_hash == previous_hash:
+        return  # Unchanged since the last install: nothing is being lost.
+
+    # current_hash is None (unreadable) OR it differs from the previous
+    # install's own output — announce either way rather than silently
+    # suppressing a read failure (repository error-handling policy).
+    print(f"[build] NOTICE: a local change is being replaced: {output_key}")
 
 
 # ---------------------------------------------------------------------------
@@ -1161,7 +1382,14 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         if not _should_overwrite(dest, force):
             continue
 
-        # Compare-before-write guard (binary — SHA-256).
+        # Compare-before-write guard (binary — SHA-256). This branch does NOT
+        # route through _files_content_identical() (it compares the rendered
+        # `emitted` bytes to `dest`, not two on-disk files) — ACD-2100d-2-i
+        # names it as the load-bearing fourth branch precisely because of
+        # that: it is the path the route's own deployed copy
+        # (.claude/workflows/*.js) takes, so it must call
+        # announce_if_local_change_replaced() itself rather than relying on
+        # instrumentation elsewhere.
         if dest.exists():
             import hashlib as _hashlib
             existing_digest = _hashlib.sha256(dest.read_bytes()).hexdigest()
@@ -1171,6 +1399,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                 _uptodate_count += 1
                 unchanged += 1
                 continue
+            announce_if_local_change_replaced(dest)
 
         if dry_run:
             print(f"  [DRY-RUN] would write .claude/workflows/{js_file.name}")
@@ -3690,4 +3919,21 @@ def clean_stale_artifacts(
 #   back to the non-resolving path form. COMMAND-SIDE analogue of BP-811 (the
 #   .claude/workflows shim); does not modify or re-parent BP-811.
 #   (#EPIC-BuildPipelinePhantomRemediation/06)
+# - 2026-08-31 [python-coder/EPIC-StartingNewWorkTheProperWayAlways/21]: Added
+#   the ACD-2100d-2-i local-change-before-overwrite announcement.
+#   set_local_change_baseline(), _hash_for_local_change_check(),
+#   _local_change_output_key(), and announce_if_local_change_replaced() are
+#   new; _write(), _files_content_identical(), and build_workflow_scripts()'s
+#   own inline SHA-256 compare each call announce_if_local_change_replaced()
+#   right before overwriting an existing file (write_file() in build.py is
+#   the fourth named branch and imports the same function from here). The
+#   divergence verdict reuses ACD-2100d-2's own installer-derived mapping
+#   (build_helpers._compute_output_mappings's output_mappings /
+#   expected_output_hash, read from the PREVIOUS run's .build_manifest.json
+#   before this run's phases overwrite it) rather than authoring a second,
+#   independent determination -- per this ticket's own Implementation Notes.
+#   Canonicalisation reuses build_helpers._canonicalize_output_path (imported
+#   at module top), the same function _compute_output_mappings itself calls,
+#   so a pre-shim output_root-relative write target resolves to the identical
+#   canonical output_mappings key on both sides. (#EPIC-StartingNewWorkTheProperWayAlways/21)
 # ====================================================================
