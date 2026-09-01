@@ -149,7 +149,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-123b-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/06_TICKET-20260831-GE-123b-1.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -209,3 +210,4 @@ notes: |
   arm-4 run confirmed the reported rules are the private-key header, the
   password assignment and the high-entropy token, with the cloud access key
   suppressed, as the criterion states.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

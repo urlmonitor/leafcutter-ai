@@ -1,0 +1,56 @@
+id: BO-1900e-1-i
+components:
+  - build_orchestration
+  - agent_registry
+title: "A capability an agent's instructions require but nothing declares is unconfirmed, not satisfied"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a phase agent whose own instructions require it to invoke a named capability,
+    and a run in which no declaration of that agent's required capabilities can be found,
+  When the run compares required capabilities against available ones for that dispatch,
+  Then the comparison reports the requirement as unconfirmed and holds the dispatch back,
+    And the comparison does not report the dispatch as fit,
+    And the reason it gives distinguishes a requirement that could not be confirmed from a
+      requirement that was confirmed absent,
+  So an agent's requirements going undeclared is never indistinguishable from its
+    requirements being met.
+depends_on:
+  - BO-1900e-1
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: "Describes what an agent is given at invocation. This AC's subject is the case where what the agent needs was never stated anywhere the run can read."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE FAIL-CLOSED CASE FOR BO-1900e-1. Today no craft declares the capabilities its own
+  instructions oblige it to invoke, so a comparison implemented naively has nothing to
+  compare and would return "fit" for every dispatch — reproducing the observed defect while
+  appearing to be a working check. That is why the absence of a declaration must be its own
+  outcome rather than a pass.
+
+  THREE OUTCOMES, NOT TWO. The third Then clause requires "unconfirmed" to be distinguishable
+  from "confirmed absent". They call for different responses — the first is a gap in the
+  craft's own declaration, the second is a genuine mis-provisioned dispatch — and collapsing
+  them into a single failure makes the first unfixable, because nobody can tell which crafts
+  are undeclared.
+
+  PROOF OBLIGATION. Provable only by running a comparison against a craft with no declaration
+  and observing the outcome it produces. Asserting that a declaration field is absent from a
+  template is a presence check, not evidence of what the run does with the absence.
+
+  MECHANISM IS THE IT PO'S. Where the declaration lives is not decided here.

@@ -1,0 +1,199 @@
+id: BO-3500c-2-ii
+components:
+  - build_orchestration
+  - documentation_system
+title: "Proof for a diagram: its source is valid against the schema it declares, and every project element it names resolves to something that exists"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a member whose artifact is a diagram held as structured data,
+  When its proof is established,
+  Then the diagram's source is checked against the schema that source declares, and is
+    valid against it,
+  And the source contains at least the elements and connections the requirement asked
+    the diagram to show,
+  And every element the source names as a part of this project resolves to a part of
+    this project that exists, in the project's own registers of its parts, its crafts
+    and its skills,
+  And no picture is produced in order to establish any of this — the proof is
+    established from the source alone, so it costs no renderer and holds in a project
+    that has none installed.
+
+  Given a diagram whose source is valid but names a component this project does not
+    have,
+  When its proof is established,
+  Then the proof fails, naming the element that does not resolve.
+
+  Given a written page and a diagram in the same run,
+  When their proofs are established,
+  Then both are established by the same reading instrument, which differs between the
+    two only in how it extracts the references out of the source it is given,
+  And a change to what counts as a resolvable part of this project takes effect for
+    both without either being changed separately.
+
+  Given a member whose artifact is a diagram held in a form this instrument cannot
+    extract references from,
+  When a run resolves a group containing it,
+  Then it is treated as a kind whose proof cannot be established here and is refused
+    before any craft is dispatched,
+  And it is never finished on the strength of the source merely existing or having
+    changed.
+depends_on: [BO-3500c-2]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "An example of the artifact kind in question — an architecture document whose diagram names components that must correspond to real ones."
+  - path: templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py
+    relationship: related
+    status: exists
+    relevance: "The resolution half of this proof, already implemented and running for ONE family of diagram: it parses the spawn diagram out of the agent cards and compares its edges against the craft register in both directions. Read as evidence that the third scenario extends a working mechanism rather than specifying a new one."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "ONE INSTRUMENT, PARAMETERISED — NOT A SECOND IMPLEMENTATION (finding F6, user judgement). The diagram proof IS the reading-class check of BO-3500c-2-i with a per-file-type reference extractor; the schema validation is that per-type parameter. Building it separately gives the project two reading instruments that must agree about what a resolvable project element is, kept in step by discipline, which is the shape this repo keeps paying for."
+  - "NO RENDERER, AT ALL (finding F4). There is no mmdc binary and no root package.json, and this is a portable package installed into arbitrary repositories that cannot assume a JavaScript runtime. Nothing on this path may shell out to a renderer, and no test may require one."
+  - "SCHEMA VALIDATION IS THE PER-TYPE PARAMETER (finding F5). The structured source declares its schema with a `$schema` key; validation resolves that id against a registry of permitted diagram-source schemas held under config/ (alongside config/diagram_types.json, which already governs the diagram_type frontmatter enum and is read at startup by check_doc_frontmatter.py). AN UNRESOLVABLE OR FOREIGN `$schema` IS A FAILURE, NEVER A SKIP — a skip makes the schema clause optional by typing, which is D4's failure mode wearing a different hat."
+  - "REFERENCE EXTRACTOR PER SOURCE FORM — one table, one instrument: (a) structured JSON diagram source -> element ids read from the schema-declared node and edge fields; (b) docs/agents/cards/*.card.md mermaid spawn diagrams -> EXTEND the extractor that already exists and already runs, in templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py (_MERMAID_SPAWNS_PATTERN, _MERMAID_DISPATCHES_PATTERN, _parse_card_spawn_edges, _node_id_to_agent_id, _check_card_registry_mirror — it already compares card edges against config/agent_registry.json in BOTH directions); (c) any other form, including mermaid embedded in prose, -> NOT extractable, refused up front under BO-3500c-4."
+  - "EXTRACT, DO NOT FORK. Lift the extractor and the two-way comparator out of check_agent_spawn_consistency.py into the shared instrument and have the hook CALL it. A copy leaves the repo with two spawn-diagram parsers that drift; the hook keeping its own is how the existing check stops being the working reference this record is built on."
+  - "DEPLOY MANIFEST — THIS IS THE HIGH-RISK STEP ON THIS RECORD. Extracting the extractor creates a new module that a commit-guardian hook imports. It MUST be added to the deploy list in scripts/build_phases.py, or the DEPLOYED check_agent_spawn_consistency hook raises ModuleNotFoundError at runtime and — the hook being a commit gate — blocks every merge. That is the done_proof.py incident verbatim. Verify by running the DEPLOYED hook, not the unit tests, which import from the source tree and mask the gap."
+  - "RESOLUTION TARGETS ARE THE PROJECT'S OWN REGISTERS: docs/components.json (components[].id), config/agent_registry.json (agents[].id), config/skill_registry.json (skills[].id). Only elements the source CLAIMS are parts of this project must resolve — an external system, a user or an abstraction must not be forced to, or the proof is unsatisfiable."
+  - "A CHANGE TO WHAT COUNTS AS A RESOLVABLE PROJECT ELEMENT MUST TAKE EFFECT FOR BOTH PROOFS AT ONCE. One resolver, one registry read, asserted by a test that adds an id to a fixture register and checks both proofs accept it with no second edit."
+  - "NO PRESENCE-ONLY ASSERTIONS. Each test builds a real source and executes the proof or the deployed hook."
+delivers_to:
+  agent: python-coder
+  contract: "The shared reading-class instrument with a per-source-form extractor table: extract_references(path) -> [{element_id, claimed_as_project_part: bool}], plus the two-way registry comparator lifted out of check_agent_spawn_consistency.py. Consumed by BO-3500c-2-i (written page), by this record (diagram), and back by the check_agent_spawn_consistency commit hook, which must call it rather than keep its own copy."
+expects_from:
+  ac_id: BO-3500c-2
+  contract: "derive_proof_kind(path) resolving a structured diagram source to kind `diagram`, class `reading`, and routing a non-extractable diagram form to the no-match sentinel that BO-3500c-4 refuses up front."
+test_spec:
+  - name: test_structured_source_invalid_against_its_declared_schema_fails
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A structured diagram source violating the schema its $schema names fails the proof, with the offending element named."
+  - name: test_unresolvable_schema_id_fails_rather_than_skips
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A source whose $schema names an id absent from the permitted-schema registry FAILS; assert it is not skipped, not passed and not silently downgraded."
+  - name: test_source_missing_a_requested_element_fails
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The source omits an element or connection the requirement asked the diagram to show; the proof fails naming it."
+  - name: test_named_component_absent_from_components_json_fails
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A schema-valid source naming a component this project does not have fails, with the unresolved element named."
+  - name: test_external_label_is_not_required_to_resolve
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A source naming an external system or a user alongside real components passes; only elements claimed as parts of this project are resolved."
+  - name: test_proof_completes_with_no_renderer_available
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Run the proof with no renderer binary on PATH and no node available; assert it completes and that no renderer subprocess was launched."
+  - name: test_page_and_diagram_proofs_share_one_resolver
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Add an id to a fixture register and assert BOTH the page proof and the diagram proof accept references to it, with no second edit — two resolvers fail this."
+  - name: test_spawn_card_extractor_is_called_not_duplicated
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Change the shared extractor's behaviour and assert check_agent_spawn_consistency's verdict changes with it — a forked copy in the hook fails this."
+  - name: test_prose_embedded_mermaid_is_refused_up_front
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A diagram held only as mermaid inside prose is refused before any craft is dispatched, and is never finished on the source merely existing or having changed."
+  - name: test_deployed_spawn_consistency_hook_runs_after_the_extraction
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: "scripts/commit_guardian/hooks/check_agent_spawn_consistency.py (deployed layout)"
+    description: "Build the deploy layout and execute the DEPLOYED hook; assert it exits without ModuleNotFoundError and still detects a card/registry mismatch. Source-tree unit tests cannot see a missing deploy-map entry."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "Findings F4 and F5, plus the one-instrument judgement call. F4: a render gate is not affordable — no renderer is installed, there is no root package manifest, and a portable package installed into arbitrary repositories cannot assume a JavaScript runtime. F5 dissolves the problem rather than weakening the proof: the user is moving to structured data as the foundation for diagrams, and a structured source is schema-validatable, so the malformed-source failure a render catches is caught earlier and more precisely with no renderer at all. The render clause is replaced by schema validation plus element resolution. The third scenario records the decision that a diagram is a distinct authoring kind but NOT a distinct instrument — it is the reading-class check with a per-file-type reference extractor, of which the schema validation is the parameter. The fourth scenario routes diagrams not yet held as structured data to the up-front refusal of BO-3500c-4 rather than to a weaker proof."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE RENDER REQUIREMENT IS GONE, AND WHAT REPLACED IT IS STRICTLY STRONGER (amended
+  2026-08-31, findings F4 and F5). Two facts, in the order they arrived:
+
+    - A RENDER IS NOT AFFORDABLE (F4). There is no diagram renderer installed here and no
+      root package manifest, and this is a portable package that is installed into
+      arbitrary repositories — it cannot assume a JavaScript runtime is present. A
+      required gate that needs one is a gate that fails for reasons about the host rather
+      than about the diagram. On its own, that argument only removes a clause and leaves
+      the proof weaker.
+    - THE USER'S REASON FOR NEEDING A DIAGRAM KIND DISSOLVES IT (F5). They intend to move
+      to structured data as the foundation for diagrams. A diagram held as structured
+      data is SCHEMA-VALIDATABLE, and a schema-validatable source needs no renderer to be
+      checked: malformed source — the failure a render catches — is caught by the schema,
+      earlier and more precisely, with the offending element named. So the proof becomes
+      cheaper AND stronger at once, which is why the render clause could be dropped
+      without weakening anything.
+
+  RENDERING WAS NEVER THE POINT ANYWAY. A diagram that renders beautifully and describes
+  a system that does not exist is the expensive failure, and it is invisible to every
+  check short of resolving the names.
+
+  THE RESOLUTION CLAUSE IS AFFORDABLE HERE SPECIFICALLY, and it is not a new build. This
+  project already keeps registers of its components, its crafts and its skills, so "does
+  this name resolve" is a lookup rather than an inference — and one commit-time check
+  ALREADY DOES EXACTLY THIS for one family of diagram: it parses the spawn diagram out of
+  the agent cards and compares its edges against the craft register in both directions.
+  The work here is extending a mechanism that exists and is running, not inventing one.
+  That is also why the clause is written for elements the diagram claims are parts of
+  this project and not for every label on it — a diagram may legitimately name an
+  external system, a user, or an abstraction, and demanding those resolve would make the
+  proof unsatisfiable.
+
+  ONE INSTRUMENT, PARAMETERISED — NOT TWO IMPLEMENTATIONS (third scenario; a judgement
+  call decided by the user, 2026-08-31). A diagram is a distinct authoring KIND but it is
+  NOT a distinct proof instrument: it is the reading-class check the written page uses,
+  with a denser reference extractor per file type. Given F5, the schema validation IS
+  that per-type parameter. Building it as a second implementation would give the project
+  two reading instruments that must agree about what a resolvable project element is,
+  kept in step by discipline — which is the shape this repo keeps paying for.
+
+  THE FOURTH SCENARIO IS THE HONEST ENDING FOR THE DIAGRAMS THAT ARE NOT YET STRUCTURED
+  DATA. Diagrams embedded in prose exist today in quantity. Until the extractor reaches
+  their form they are refused up front under BO-3500c-4, not passed on existence. That
+  keeps the transition visible instead of quietly creating a class of diagram that is
+  finished on a weaker proof than its neighbours.
+
+  WHY THIS IS STRONGER THAN THE WRITTEN-PAGE PROOF, deliberately. A page is prose and a
+  reader can judge it. A diagram is read as a statement of fact about the system's
+  shape, is believed more readily, and is corrected less often. 119 not-yet-done
+  requirements declare the diagram craft, so whatever this proof is will be applied a
+  great many times before anybody re-examines it.

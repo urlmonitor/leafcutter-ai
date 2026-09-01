@@ -1,0 +1,62 @@
+id: BO-2200c-5-ii
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "Owning a source file is not owning a document, and owning no document produces no invented target"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a leaf AC whose `doc_links` declare ownership over both a source file and a document --
+    `scripts/ac_store/generate_ticket_from_ac.py` with `relationship: modifies`, and
+    `docs/how-to/generate-a-ticket.md` with `relationship: creates`,
+  When a ticket is generated from that AC,
+  Then the documentation target named on the contract line is `docs/how-to/generate-a-ticket.md`
+    and never `scripts/ac_store/generate_ticket_from_ac.py`, while the source file still appears
+    in `files_touched` -- an ownership relationship on a non-document path is an edit surface, not
+    a documentation deliverable.
+
+  And given a second leaf AC whose only ownership entries are source files, with no owned
+    document among its `doc_links`,
+  When a ticket is generated from it,
+  Then the generator determines that the record owns no documentation target, and produces no
+    contract line for it.
+  And no substitute path is invented: the `docs/<genre>/<slugified-ac-id>.md` target that is
+    computed today whenever the links yield nothing is not produced, so a record is never handed a
+    document that exists nowhere, that no other record references, and that only exists because a
+    path had to be filled in.
+
+  And the determination is stated in the generator's run output as an explicit outcome -- naming
+    the record and the reason it owns no documentation -- so "this record owns nothing" is
+    distinguishable from "the doc_links could not be read". A silent empty result is not
+    sufficient: the two cases must be told apart from the output alone.
+depends_on: [BO-2200c-5, BO-2200c-5-i]
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Two failure modes that only appear once selection is driven by relationship (BO-2200c-5-i),
+  neither of which exists today.
+
+  1. The ownership relationships were built for `files_touched`, so most entries carrying them
+     point at source files. A relationship-driven selector that does not also require a document
+     path will happily name a `.py` file as the "target documentation path" -- strictly worse than
+     the current first-with-a-slash rule, which at least tends to hit a docs path first.
+
+  2. Killing the computed fallback is the other half of "no owned document, no demand"
+     (BO-2200c-5-iii). While a path is always invented, there is always something to demand, and
+     the ownership rule cannot express absence. The invented path is also the mechanism behind the
+     `docs/(unspecified genre)/acd-400b-6.md` targets already observed in generated tickets.
+
+  The explicit-determination clause exists because this AC is about a gate NOT firing, which is
+  the easy kind to satisfy vacuously. An implementation that returns nothing because it crashed
+  and an implementation that returns nothing because it correctly found no owned document are
+  indistinguishable from the ticket alone; requiring the reason in the run output makes the
+  difference observable and gives the test something to assert other than absence.

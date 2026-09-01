@@ -105,7 +105,8 @@ amended_by:
   date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/15_TICKET-20260831-GE-123c-2-i.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -133,3 +134,4 @@ notes: |
   and high-entropy ids are emitted inline by the per-file scan and appear nowhere as
   data. Creating that single canonical set is part of this AC's work, not an
   assumption it can make — hence the first it_requirement.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

@@ -54,7 +54,7 @@ _RESULT_LINE_RE = re.compile(
 
 
 # ---------------------------------------------------------------------------
-# Shared helpers (mirrors test_bp_100k_3.py / test_bp_100k_6.py's fixture
+# Shared helpers (mirrors test_bp_100k_3.py / test_bp_100n_1.py's fixture
 # idiom, duplicated rather than imported — small, self-contained fixtures per
 # file is the established convention in this test suite).
 # ---------------------------------------------------------------------------

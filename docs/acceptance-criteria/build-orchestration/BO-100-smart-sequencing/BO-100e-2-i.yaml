@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a set of work in which piece P's prerequisite is Q, Q's is R, and R's is P,
@@ -39,13 +39,124 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "KI-BO-025 — the run this widening applies to; the cycle case is the failure mode the widening itself introduces."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page for the loop; the two unsatisfiable-prerequisite classes named here are new terminating states it must document."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The failure angle and its fail-closed rule: an unsatisfiable prerequisite is an error path that must end the run rather than be absorbed silently."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "Classification of a prerequisite the run can never satisfy. The two classes are reported separately because they call for different operator action."
+    properties:
+      unsatisfiable:
+        type: array
+        items:
+          type: object
+          properties:
+            kind:
+              type: string
+              enum: [prerequisite_cycle, prerequisite_outside_run_set]
+            members:
+              type: array
+              items: {type: string}
+              description: "For prerequisite_cycle, every ticket path in the loop. For prerequisite_outside_run_set, the dependant."
+            named_prerequisite:
+              type: string
+              description: "For prerequisite_outside_run_set, the prerequisite identifier that is not part of this run's set."
+          required: [kind, members]
+    required: [unsatisfiable]
+  reference_file_path: "templates/workflows-js/build-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "THIS HAZARD IS CREATED BY THE WIDENING, NOT DISCOVERED BY IT. Today's single-pass behaviour is immune to a prerequisite cycle because it never asks a second time. The detection must therefore ship WITH BO-100e-1, not after it; a widened loop without it is a hang shipped deliberately."
+    - "TWO DISTINCT CLASSES, REPORTED DISTINCTLY. A prerequisite naming something outside the run's set must be reported differently from a prerequisite that is in the set and has not yet finished. Collapsing them loses the only information that tells the operator whether to wait or to fix a reference. The distinction must be a data property of the classification, never inferred from wording."
+    - "CONTAINMENT IS MANDATORY. An unsatisfiable prerequisite costs the run the work behind it and nothing else. Pieces outside the cycle that can be built must still be built in the same run. A cycle that aborts the whole drive is a regression against the 17 pieces today's behaviour already builds — worse than the defect being fixed."
+    - "DETECTION MUST BE DERIVED FROM THE DECLARED PREREQUISITES, NEVER FROM A LOOK COUNT. 'We looked N times and nothing moved, so assume a cycle' cannot name the members, cannot distinguish the two classes, and misfires on a slow but progressing run. The cycle members must be identified from the dependency relation itself over the run's fixed set."
+    - "A SELF-REFERENCING PREREQUISITE IS A CYCLE OF LENGTH ONE and must be detected by the same rule, not special-cased. Exemptions and detections alike derive from the data, never from a named ticket."
+    - "The run names what it could not build; BO-300d owns what the run SAYS about it. This record requires the classification to be present in the run's record and the run not to claim it finished."
+    - "Deployed/template parity (ADR-001) applies."
+delivers_to:
+  agent: python-coder
+  contract: "The unsatisfiable-prerequisite classification { unsatisfiable: [{ kind: prerequisite_cycle | prerequisite_outside_run_set, members: [ticket paths], named_prerequisite }] }, written into the run's look record and setting ended_because to unsatisfiable_prerequisites when it is the reason the run stopped. Consumed by BO-100e-2's termination record and, downstream, by BO-300d's reporting."
+expects_from:
+  ac_id: BO-100e-2
+  contract: "The bounded look loop, its ended_because channel and the run's fixed set over which the dependency relation is evaluated."
+test_spec:
+  - name: test_three_piece_prerequisite_cycle_ends_the_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "P<-Q<-R<-P driven under the E2 harness: the run terminates within the look bound rather than looking again indefinitely, with ended_because unsatisfiable_prerequisites."
+  - name: test_cycle_members_are_all_named_and_none_is_built
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The classification names all three ticket paths with kind prerequisite_cycle, and no phase dispatch is made for any of the three."
+  - name: test_self_referencing_prerequisite_is_detected_as_a_cycle
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "A one-piece cycle (a ticket whose prerequisite is itself) is classified by the same rule, with itself as the single member — no name-based special case."
+  - name: test_prerequisite_outside_the_run_set_ends_the_run_and_names_the_prerequisite
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "S depends on something absent from the run's set: S is not built, the run ends, and the classification carries kind prerequisite_outside_run_set with the named prerequisite."
+  - name: test_out_of_set_prerequisite_is_reported_distinctly_from_an_unfinished_in_set_one
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Two withheld pieces in one run — one behind an in-set prerequisite that has not finished, one behind an out-of-set prerequisite — carry different kinds in the record. Asserted on the classification value, not on message wording."
+  - name: test_work_outside_the_cycle_is_still_built
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Containment: a set containing both a three-piece cycle and a buildable two-deep chain builds the chain in full and leaves only the cycle members unbuilt."
+  - name: test_unsatisfiable_classification_is_reached_through_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "templates/workflows-js/build-feature.js (E2 top-level body, via run_workflow_under_e2)"
+    description: "Each case is produced by executing the workflow body and reading its terminal payload; the classification is shown to be what ended the run, not merely a value computed and discarded."
+test_rationale: |
+  A cycle test that only asserts "the run finished" is satisfiable by a look ceiling
+  alone, which is why every descriptor here also asserts the classification and its
+  members. The ceiling is BO-100e-2's guarantee; naming the cause is this record's,
+  and the two must not be allowed to substitute for one another.
+
+  The containment descriptor is the false-positive control. Ending the whole drive on
+  the first unsatisfiable prerequisite satisfies termination trivially and would build
+  less than today's single-pass behaviour does — a regression dressed as a fix.
+
+  The two classes are asserted on the classification value rather than on prose so
+  that the distinction survives BO-300d later rewording every operator-facing
+  sentence in the payload.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-31
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -57,3 +168,5 @@ notes: |
   The third scenario is the containment clause: an unsatisfiable prerequisite must
   not become a reason to abandon the whole run, which would be a regression against
   the 17 pieces today's behaviour does build.
+change_target: pipeline
+risk_surface: internal

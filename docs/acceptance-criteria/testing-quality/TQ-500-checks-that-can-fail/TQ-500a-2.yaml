@@ -1,0 +1,145 @@
+id: TQ-500a-2
+components:
+  - testing_quality
+  - build_orchestration
+title: "\"No substitute proof was possible, and here is what I tried\" is a valid answer"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work for which the ordinary before-and-after evidence was
+      impossible, and whose writer, having attempted it, could construct no
+      alteration to the guarded behaviour that any of the tests would object to,
+  When that piece of work is handed on,
+  Then its hand-off record carries a negative answer in the record's existing
+    nested form — the negative result, the reason no substitute evidence was
+    obtainable, and the suggested next step — and that record is a conforming
+    answer,
+    And the piece of work is not reported as a shortfall for carrying it,
+    And a negative written as a bare no, with no reason and no next step, is
+      malformed rather than conforming, and is distinguishable in the output from
+      the reasoned negative above,
+    And the reasoned negative is retained as the answer for that piece of work, so
+      a later reader sees that the question was put and what the attempt was,
+      rather than seeing no answer at all.
+depends_on:
+  - TQ-500a
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Section 2b defines the nested negative shape this AC reuses — result, reason,
+      remediation, all three required — and the Bare-False Rule that makes a bare
+      no malformed and triggers a single supervisor retry. Do not invent a new
+      negative shape; the third Then clause depends on the existing one.
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-010. The failure this clause guards against is the mirror of the
+      recorded one: a mandate with no legitimate negative answer is answered with a
+      fabricated proof, which costs a real test's worth of effort and leaves a
+      false record behind.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Establishes the reasoned negative as a first-class outcome with the same
+      standing as a positive answer — not a failure, not a skip, and not a bare
+      false. Same standing is intended here.
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - >-
+    REUSE THE EXISTING NESTED NEGATIVE SHAPE; DO NOT INVENT A SECOND ONE. The
+    signoff SKILL §2b already defines {result, reason, remediation} with all
+    three sub-keys required, and the third Then clause depends on that existing
+    definition rather than on a new one. Point at §2b; do not restate it in
+    different words, or the two will drift and the reader will have two shapes to
+    parse.
+  - >-
+    SPELL THE OUTCOME, NEVER A BARE BOOLEAN. What keeps this key clear of the
+    §2b Bare-False Rule's one-per-phase auto-retry is the nested-object
+    STRUCTURE, not the enum string. Mirror BP-1100g-5's choice of a named
+    outcome value over a literal false, and keep its spelling byte-identical to
+    §2b.2's — that value is a brand-new enum in the completion_manifest context
+    with no other occurrence under templates/ or scripts/, so nothing validates
+    it until BP-1100g-5-i's reader lands.
+  - >-
+    A BARE NEGATIVE MUST STAY PHYSICALLY WRITABLE. Do not add template wording
+    that makes the malformed form unexpressible. The third Then clause requires
+    the reader to be able to distinguish a bare no from a reasoned negative, and
+    a shape nobody can write leaves that reader nothing to detect — the same
+    reason BP-1100g-5 deliberately left a reasonless negative writable.
+  - >-
+    THE REASONED NEGATIVE MUST BE PRESENTED AS FIRST-CLASS, WITH THE SAME
+    STANDING AS A POSITIVE ANSWER — not a failure, not a skip, not a downgrade.
+    Template wording that frames it as a lesser outcome recreates the pressure
+    to fabricate a proof, which is the failure mode this AC exists to prevent and
+    is strictly worse than the one being fixed.
+  - >-
+    Must not state or imply any threshold on how hard the writer must try before
+    a negative is acceptable. An unmeetable bar produces fabricated alterations
+    recorded as evidence, and no record can establish that an alteration was a
+    good choice.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500b-1
+    contract: >-
+      A third conforming answer shape alongside the two in TQ-500a-1: a nested
+      negative carrying result, reason and next step. The reader must place it in
+      the answer-taken state, never in the answer-owed state, and must place a bare
+      no in neither — a bare no is malformed and reported as such.
+expects_from: null
+test_required: false
+test_rationale: |
+  Genuinely test-free at this AC's boundary, on the BP-1100g-5 precedent. The
+  deliverable is template prose defining a permitted answer shape in
+  templates/skills/signoff/SKILL.md and templates/agents/test-writer.md. A test
+  asserting the shape is described in a template is source-presence evidence and
+  passes on an implementation that records nothing. The reader-side obligations
+  this AC's contract states — a reasoned negative lands in answer-taken, a bare
+  no lands in neither and is reported as malformed — are asserted over emitted
+  records by TQ-500b-1-i (piece F) and by TQ-500b-1's reading, which carry the
+  test contract for them.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept llm-expert and change_target prompt. Pinned reuse of the existing §2b
+      nested negative rather than a new shape, required a named outcome value
+      over a bare boolean, and added the constraint that a bare negative stay
+      physically writable so TQ-500b-1's reader has something to detect.
+      test_required false; the falsifiable half is TQ-500b-1-i piece F.
+      criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  A WRITER FORCED TO PRODUCE A PROOF WILL INVENT ONE. This clause exists because
+  the alternative failure mode is worse than the one being fixed: a fabricated
+  alteration that no test objects to, recorded as though it were evidence, is a
+  green record asserting falsifiability that was never demonstrated — the same
+  self-concealing shape as the defect in KI-TQ-010, arrived at by a different road.
+
+  THE NESTED SHAPE IS NOT A STYLE CHOICE. A bare no is malformed under the existing
+  Bare-False Rule, so writing the negative as a bare no would make the whole
+  hand-off record malformed and trigger a retry. Mirroring the nested form gets the
+  reason and the next step recorded for free, and gives TQ-500b-1's reader a shape
+  it already knows how to read.
+
+  BOUNDARY WITH TQ-500b. This AC makes the honest negative expressible. TQ-500b-1
+  makes it distinguishable from silence at read time. Neither absorbs the other: an
+  expressible negative that reads the same as an absent answer would leave the
+  collapse TQ-500b exists to remove.

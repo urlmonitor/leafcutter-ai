@@ -631,8 +631,17 @@ real AC titles contain.
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-31
+- **2026-08-31 recurrence:** `GE-123`'s title *"Trust that the last check between you and a
+  leaked credential is still on"* yielded `EPIC-TrustThatTheLastCheckBetweenYouAndA` — ending
+  on a bare article, exactly the shape described below. Two further facts from that run: the
+  LLM summariser that would normally avoid truncation is silently unavailable when no `claude`
+  binary is on `PATH` (it logs `claude --version probe failed` and falls through), so the
+  truncation path is the *default* in any non-interactive environment, not the exception. And
+  the script offers **no name override**, so the only remedy is to rename the folder and every
+  `target_epic` stamp afterwards — 28 files for a 27-ticket epic. An `--epic-name` flag would
+  make the defect survivable even unfixed.
 - **Where:** `scripts/goal_to_epic.py:385-433` — `_truncate_pascal_at()`
 - **Reported by:** customer bug report 2026-08-25
 
@@ -671,8 +680,13 @@ keep the cap — the defect is where the cut lands, not that a cut happens.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 3
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 4
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-31
+- **2026-08-31 recurrence:** `EPIC-SuppressionNarrowsNeverDisables`. Seven fields missing this
+  time — `title`, `type`, `depends_on`, `requires_diagram`, `requires_adr`, `change_target`,
+  `risk_surface`. Caught by `ticket_frontmatter_guard` on the first edit to the file, so it
+  fails loudly, which is the good half. The bad half is that it is still unfixed six days and
+  four occurrences later, and every generated epic pays the repair by hand.
 - **Where:** `scripts/goal_to_epic.py:1626` — the frontmatter block in
   `_render_master_plan()`; against `templates/hooks/ticket_frontmatter_guard.py`
 - **Reported by:** customer bug report 2026-08-25
@@ -795,9 +809,17 @@ other.
 ### KI-ACD-014 — `goal_to_epic.py` writes absolute filesystem paths into `implemented_by`
 
 - **Severity:** medium
-- **Status:** open (data corrected by hand 2026-08-25; generator unchanged)
-- **Occurrences:** 2
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Status:** open (data corrected by hand 2026-08-25 and again 2026-08-31; generator unchanged)
+- **Occurrences:** 3
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-31
+- **2026-08-31 recurrence, with a store-wide count:** all 27 leaf ACs of
+  `EPIC-SuppressionNarrowsNeverDisables` were stamped with
+  `- /home/henzeh/projects/leafcutter/worktrees/safety-security/tickets/…` and corrected to
+  repo-relative before the commit. A sweep of the whole store the same day found **60** records
+  carrying an absolute `/home/henzeh` path — `grep -rl "^- /home/" docs/acceptance-criteria/` —
+  so 33 predate this run and are still in the store on `main`. That is the number worth acting
+  on: the generator keeps producing them, nothing rejects them, and each one is a path that
+  resolves on exactly one machine.
 - **Where:** `scripts/goal_to_epic.py` — the `implemented_by` back-reference write
 
 **Symptom.** After generating the GE-120 epic, all 37 AC records carried a
@@ -979,9 +1001,14 @@ test should assert the store is read a bounded number of times independent of ti
 ### KI-ACD-018 — Every generated `depends_on` reference is the pre-move filename, so all 27 inter-ticket edges dangle
 
 - **Severity:** high
-- **Status:** open (data corrected by hand 2026-08-25; generator unchanged)
-- **Occurrences:** 2
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Status:** open (data corrected by hand 2026-08-25 and again 2026-08-31; generator unchanged)
+- **Occurrences:** 3
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-31
+- **2026-08-31 recurrence:** `EPIC-SuppressionNarrowsNeverDisables`, eight references across
+  seven tickets, every one dangling, plus the same names in `Master_Plan.md`'s dependency
+  column. Caught by `check-doc-frontmatter` and repaired by hand. Same generator, same shape,
+  third time — and this is the defect that would leave a driven epic with no build order at
+  all if the guard ever stopped catching it.
 - **Where:** `scripts/goal_to_epic.py` (`_translate_ticket_depends_on`, the epic-folder move,
   `_render_master_plan`) against `templates/hooks/ticket_frontmatter_guard.py`
 
@@ -1334,10 +1361,11 @@ reads another, with a similarly-named third field present to make the omission l
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1 (five records in one epic)
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Occurrences:** 2 (five records in one epic; then 10 of 27 in a second)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-31
 - **Where:** `scripts/ac_store/generate_ticket_from_ac.py::_build_files_touched` — the
   prose-token extractor and its on-disk existence gate
+- **This is the entry that stopped a live drive.** See the 2026-08-31 recurrence at the end.
 
 **Symptom.** `files_touched` on a generated ticket is not a reliable statement of the record's
 edit surface. Three failure directions, all observed in `EPIC-StartingNewWorkTheProperWayAlways`
@@ -1395,5 +1423,114 @@ and check every generated `files_touched` against the criteria before driving th
 `ACD-2100d-1` … `-d-4` carry the repaired lists and dated `IT PO ENRICHMENT` notes recording
 the per-path reasoning.
 
+**2026-08-31 — second occurrence, larger, and it aborted a running build.**
+
+`/build-feature` was launched over `EPIC-SuppressionNarrowsNeverDisables` (27 tickets) and
+**stopped mid-drive** on this defect, after the planner and ~21 phase agents had started but
+before any coder phase ran. **10 of 27 tickets** had an unusable surface — all three directions
+this entry already names, at four times the scale:
+
+| Direction | Count | Tickets |
+|---|---|---|
+| Empty | 4 | `GE-123c-3`, `GE-123d-2`, `GE-123d-4`, `GE-123d-5` |
+| Populated but wrong | 2 | `GE-123d-3`, `GE-123d-4-i` |
+| Bare directories only | 3 | `GE-123a-1-i`, `GE-123a-2`, `GE-123a-3` |
+| Bare directories mixed with real files | 1 | `GE-123a-1` |
+
+The three directory-only tickets each carry exactly
+`['docs/acceptance-criteria', 'docs/retrospectives', 'templates/skills']` — three bare
+directories and not one file. A coder handed that has no edit surface at all, and a scope
+reviewer handed it will accept any change under three top-level trees.
+
+**The populated-but-wrong pair is the reason the drive was stopped rather than paused.** Both
+`GE-123d-3` and `GE-123d-4-i` came out as exactly `['docs/known-issues/commit-guardian.md']`
+— *this file*. `GE-123d-3` is about the secrets scanner announcing a withheld finding; its
+`doc_links` are three entries, **all `relationship: related`**, of which this register is the
+last. With no `creates`/`modifies` link to draw on, the derivation reached past the
+relationship vocabulary and took a pure context reference as the edit surface. Two coder agents
+were minutes away from being pointed at the known-issues register as the file to modify, on
+tickets about scanner behaviour — and the register had been extended with four new entries
+that same hour.
+
+That is this entry's "populated-but-wrong is worse than empty" case, realised: neither ticket
+looks broken, both name a real file that really exists, and the wrongness is only visible if
+you know what the AC is about.
+
+**What this adds to the fix direction.** The existing prescription — take the surface from
+`doc_links` alone — is necessary but **not sufficient**, and this run shows why: a record whose
+links are *all* `related` must yield an **empty** surface and say so, never a context document.
+Restricting to `creates`/`modifies`/`implements`/`specifies`/`constrains` does that, provided
+the fallback is refusal rather than "use whatever links exist". Pair it with a generator-side
+refusal to emit a ticket with an empty surface, so the gap surfaces at generation time instead
+of at drive time.
+
+**Detection before driving, which is now the operative advice.** Do not drive a generated epic
+without auditing the surfaces first:
+
+```
+grep -A6 '^files_touched:' tickets/00_inbox/epics/<EPIC>/*.md
+```
+
+Look for three things: an empty list, an entry with no file extension, and any path whose
+relationship to the ticket's own title you cannot state in a sentence.
+
 **Pattern:** a derived field whose derivation is invisible to its author, failing in three
 directions at once — and whose most damaging failure is the one that looks correct.
+
+---
+
+### KI-ACD-20260831-1934 — A ticket's `depends_on` models lifecycle status where the real requirement is an artifact, and on an L2 with a Roman child that closes a cycle no run can exit
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1 (ACD-2100d-2 / ACD-2100d-2-i, blocking two drives)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** ticket `depends_on` as consumed by the epic planner and
+  `ticket_prioritizer` ("Done tickets satisfy depends_on for other tickets"), interacting
+  with `check-ticket-ac-status-parity` and the parent/child composite rule
+
+**Symptom.** A four-step cycle with no exit:
+
+```
+21 depends_on 20                       21 cannot start until 20 is done
+ticket 20 done   requires ACD-2100d-2 done      (check-ticket-ac-status-parity)
+ACD-2100d-2 done requires ACD-2100d-2-i done    (parent/child composite rule)
+ACD-2100d-2-i is delivered by ticket 21         20 cannot finish until 21 does
+```
+
+Each link is individually correct and defensible. Together they are unsatisfiable.
+
+**Cause.** `depends_on` expresses ordering as *ticket lifecycle status*, but what
+`ACD-2100d-2-i` actually needs from `ACD-2100d-2` is its **code** — the installer-derived
+mapping and per-file divergence determination, which `ACD-2100d-2`'s own contract describes
+as "consumed as a callable determination". That artifact was committed and on the branch
+while the dependency still read as unmet, because the dependency was pointing at a status
+field rather than at the thing it needs.
+
+**Why this shape recurs.** It needs an L2 whose Roman-suffixed constraint child is built by a
+ticket that depends on the L2's own ticket. That is not exotic — it is the default shape the
+generator produces for any `X` / `X-i` pair, and CLAUDE.md already records that L2-done-with-
+Roman-child-todo is the dominant falsely-done composite (13 of 20 in the last store sweep).
+Any such pair where the `-i` ticket declares `depends_on` on its parent's ticket will
+deadlock the same way.
+
+**The tempting wrong exit.** `check-ticket-ac-status-parity` reads only the named AC's *own*
+`work_status`, and the parent/child check validates the staged set — so marking the parent
+`done` and simply not staging the unchanged child passes every gate. That is the "hooks see
+the index, so their silence is not a pass" gap, and using it manufactures exactly the
+falsely-done composite the composite rule exists to prevent. It was rejected here for that
+reason.
+
+**Fix direction.** Distinguish an artifact dependency from a lifecycle dependency. A ticket
+that needs another's *output* should express that as `expects_from` (which already exists and
+already carries the contract text) and should not also carry a `depends_on` edge that gates on
+status. Reserve `depends_on` for genuine ordering — cases where the earlier ticket's *record*
+must be closed, not merely its code present.
+
+**Workaround applied.** `ACD-2100d-2-i`'s `depends_on` was emptied by explicit decision, with
+the reasoning recorded on the ticket. The ordering that genuinely matters — that this record
+must not modify the files computing the determination — lives in the implementation notes,
+not in `depends_on`, and is unaffected.
+
+**Pattern:** an ordering constraint expressed against a proxy (status) for the thing it
+actually requires (an artifact), so it stays unsatisfied after the requirement is met.

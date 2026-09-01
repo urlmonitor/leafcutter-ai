@@ -55,6 +55,7 @@ import json
 import logging
 import re
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -311,7 +312,7 @@ def _resolve_declared_workflows_enabled(
 
     This is the ONLY source ``check_command_reachability`` consults to decide
     whether a name-form workflow reference should be skipped — never whether
-    ``output_root/workflows/`` happens to exist on disk (BP-100k-7). The
+    ``output_root/workflows/`` happens to exist on disk (BP-100n-2). The
     default (``config`` absent, or ``config["workflows"]`` absent) is
     ``False``, matching ``build_workflow_scripts()``'s own documented default
     so the guard and the producer can never disagree about whether the
@@ -371,7 +372,7 @@ def check_command_reachability(
     Whether a name-form workflow reference is skipped is decided SOLELY from
     the declared ``config["workflows"]["enabled"]`` value (via
     ``_resolve_declared_workflows_enabled``), never from whether
-    ``output_root/workflows/`` happens to exist on disk (BP-100k-7). A
+    ``output_root/workflows/`` happens to exist on disk (BP-100n-2). A
     declaration of "enabled" with no deployed output is exactly the failure
     this guard exists to catch and is reported, not skipped; a malformed
     declaration is reported as a distinct "unreadable" condition; every skip
@@ -472,7 +473,7 @@ def check_command_reachability(
         {p.stem for p in workflows_dir.glob("*.js")} if workflows_deployed else set()
     )
     # The SKIP decision below is taken from the declared configuration value
-    # ONLY (BP-100k-7) — `workflows_deployed` above is used solely to build
+    # ONLY (BP-100n-2) — `workflows_deployed` above is used solely to build
     # the registry `registered_workflows` resolves against, never to decide
     # whether a name-form reference should be skipped, on ANY call path.
     #
@@ -538,7 +539,7 @@ def check_command_reachability(
             # toggle, which is the case BP-900g-1 actually exists to catch.
             #
             # The skip decision for a name-form workflow reference is taken
-            # from the DECLARED configuration value alone (BP-100k-7) — never
+            # from the DECLARED configuration value alone (BP-100n-2) — never
             # from whether output_root/workflows/ happens to exist. That
             # conflated two opposite states: deliberately disabled (skip is
             # correct) versus enabled but undeployed (every reference is now
@@ -746,6 +747,111 @@ def get_uptodate_count() -> int:
 
 
 # ---------------------------------------------------------------------------
+# Declared-deploy failures (BP-900g-9) — fail closed on a missing source
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class DeployFailure:
+    """One declared deploy entry whose source file was not found.
+
+    Accumulating records rather than logging strings is what makes "report
+    every entry, not only the first" implementable and testable: a log line is
+    gone once emitted, a record can be counted and asserted on.
+
+    Attributes:
+        phase: The deploy phase that declared the entry (e.g. ``build_ac_store``),
+            so the author knows which declaration to edit.
+        entry: The declaration entry as written, so it can be located in the
+            map without guessing.
+        source_path: The source path that was not found.
+    """
+
+    phase: str
+    entry: str
+    source_path: str
+
+
+class DeployDeclarationError(Exception):
+    """One or more declared deploy entries had no source file.
+
+    Raised ONCE, after every deploy phase has run, carrying the whole
+    accumulated set. Raising per-entry would turn N stale entries into N
+    build-fix-build cycles with a green build between each one, so an author
+    who stops at the first green ships the remaining N-1.
+
+    Args:
+        failures: Every unresolvable declared entry found during the run.
+    """
+
+    def __init__(self, failures: list[DeployFailure]) -> None:
+        self.failures = list(failures)
+        detail = "\n".join(
+            f"  - {f.phase}: declared entry '{f.entry}' has no source at "
+            f"{f.source_path}"
+            for f in self.failures
+        )
+        super().__init__(
+            f"{len(self.failures)} declared deploy "
+            f"{'entry' if len(self.failures) == 1 else 'entries'} could not be "
+            f"resolved to a source file:\n{detail}\n"
+            "A build that completes while silently omitting a declared file "
+            "reports a consumer install that was never produced. Either deploy "
+            "the source, or remove the entry from its declaration."
+        )
+
+
+# Accumulated across ALL deploy phases of one run, so a single build reports
+# the whole remediation set. build.py resets this before the phases run and
+# raises on it afterwards, mirroring the _uptodate_count idiom above.
+_deploy_failures: list[DeployFailure] = []
+
+
+def reset_deploy_failures() -> None:
+    """Clear the accumulated declared-deploy failures.
+
+    Must be called before the build phases run so consecutive invocations in
+    one process (notably the test suite) do not inherit each other's findings.
+    """
+    _deploy_failures.clear()
+
+
+def record_deploy_failure(phase: str, entry: str, source_path: Path | str) -> None:
+    """Record a declared deploy entry whose source file was not found.
+
+    Callers continue iterating after calling this — the point is to reach the
+    end of the declaration and report every unresolvable entry at once.
+
+    Args:
+        phase: Name of the declaring deploy phase.
+        entry: The declaration entry as written.
+        source_path: The path that was not found.
+    """
+    _deploy_failures.append(
+        DeployFailure(phase=phase, entry=entry, source_path=str(source_path))
+    )
+
+
+def get_deploy_failures() -> list[DeployFailure]:
+    """Return the declared-deploy failures accumulated so far this run."""
+    return list(_deploy_failures)
+
+
+def raise_if_deploy_failures() -> None:
+    """Raise :class:`DeployDeclarationError` when any declared entry was unresolvable.
+
+    A no-op when the run found none — "nothing to ship" and "everything
+    shipped" are both success; only "something was promised and dropped" is a
+    failure.
+
+    Raises:
+        DeployDeclarationError: Carrying every accumulated record.
+    """
+    if _deploy_failures:
+        raise DeployDeclarationError(_deploy_failures)
+
+
+# ---------------------------------------------------------------------------
 # Internal write helpers (thin wrappers; callers can also use build.write_file)
 # ---------------------------------------------------------------------------
 
@@ -908,7 +1014,7 @@ def build_agents(target_root: Path, config: dict[str, Any],
 
             # A write failure for one active platform must never be silently
             # absorbed into "the build succeeded" — that is exactly the
-            # silent-success shape BP-100k-8 forbids. Name the platform that
+            # silent-success shape BP-100n-3 forbids. Name the platform that
             # could not be exercised and state it is unverified, rather than
             # letting a bare OSError (or a clean return) hide which platform
             # failed.
@@ -1391,9 +1497,11 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
 
     for src_file, dest_name in deploy_map:
         if not src_file.is_file():
-            _log.warning(
-                "build_ac_store: source script not found, skipping: %s", src_file
-            )
+            # BP-900g-9: was warn-and-continue, which let a declared entry
+            # vanish from the deployed tree while the build exited 0. Record
+            # and keep going so one run reports the whole remediation set;
+            # build.py raises once at the end.
+            record_deploy_failure("build_ac_store", dest_name, src_file)
             continue
 
         output_path = output_dir / dest_name
@@ -2395,7 +2503,12 @@ def build_ac_store_docs(target_root: Path, config: dict[str, Any],
     written = 0
     for template_path, dest_path, display_name in doc_files:
         if not template_path.exists():
-            print(f"  [WARNING] AC store docs: template not found: {template_path}")
+            # BP-900g-9 (n_location_rule: all). Was a bare print(f"[WARNING]
+            # ...") rather than _log.warning — precisely why every
+            # grep-based audit of this file for warn-and-continue sites
+            # missed it. Record and keep going so one run reports the whole
+            # remediation set; build.py raises once at the end.
+            record_deploy_failure("build_ac_store_docs", display_name, template_path)
             continue
         if dest_path.exists():
             print(f"  ac-store-docs: docs/{display_name} exists (skipped)")
@@ -2876,9 +2989,10 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     for script_name in deploy_scripts:
         src_file = scripts_src / script_name
         if not src_file.is_file():
-            _log.warning(
-                "build_workflow_tools: source script not found, skipping: %s", src_file
-            )
+            # BP-900g-9 (n_location_rule: all) — same warn-and-continue shape as
+            # build_ac_store. Fixing only the loop the AC names leaves the
+            # identical hole in its siblings.
+            record_deploy_failure("build_workflow_tools", script_name, src_file)
             continue
 
         output_path = output_dir / script_name
@@ -2948,10 +3062,8 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     for script_name in deploy_scripts:
         src_file = knowledge_src / script_name
         if not src_file.is_file():
-            _log.warning(
-                "build_knowledge_scripts: source script not found, skipping: %s",
-                src_file,
-            )
+            # BP-900g-9 (n_location_rule: all).
+            record_deploy_failure("build_knowledge_scripts", script_name, src_file)
             continue
 
         output_path = output_dir / script_name
@@ -3090,10 +3202,13 @@ def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
     for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
         src_dir = scripts_src / dir_name
         if not src_dir.is_dir():
-            _log.warning(
-                "build_agent_support_scripts: source directory not found, skipping: %s",
-                src_dir,
-            )
+            # BP-900g-9 (n_location_rule: all). A declared source DIRECTORY
+            # going missing is the same dropped promise as a declared file:
+            # was warn-and-continue, which let it vanish from the deployed
+            # tree while the build exited 0. Record and keep going so one
+            # run reports the whole remediation set; build.py raises once at
+            # the end.
+            record_deploy_failure("build_agent_support_scripts", dir_name, src_dir)
             continue
         for src_file in sorted(src_dir.rglob("*.py")):
             rel = src_file.relative_to(scripts_src).as_posix()
@@ -3102,10 +3217,11 @@ def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
     for file_name in AGENT_SUPPORT_SCRIPT_FILES:
         src_file = scripts_src / file_name
         if not src_file.is_file():
-            _log.warning(
-                "build_agent_support_scripts: source script not found, skipping: %s",
-                src_file,
-            )
+            # BP-900g-9 (n_location_rule: all). Note this guards the DECLARED
+            # AGENT_SUPPORT_SCRIPT_FILES list only; the rglob loop just above
+            # iterates what exists on disk, where a missing file is not a
+            # dropped promise and must stay a skip.
+            record_deploy_failure("build_agent_support_scripts", file_name, src_file)
             continue
         written += _copy_agent_support_file(
             src_file, target_root, file_name, dry_run, force
@@ -3200,43 +3316,50 @@ def build_build_orchestration_scripts(target_root: Path, config: dict[str, Any],
     written = 0
 
     if not src_dir.is_dir():
-        _log.warning(
-            "build_build_orchestration_scripts: source directory not found, skipping: %s",
-            src_dir,
+        # BP-900g-9 (n_location_rule: all). This is the phase's OWN declared
+        # source directory, not a glob of what happens to exist on disk — its
+        # absence is a dropped promise, the same shape already closed for the
+        # sibling loops above. Record it and skip ONLY the glob loop below —
+        # do NOT return early. This function has a SECOND declared dependency,
+        # `_deploy_fast_lane_release_dependency()`, and accumulate-then-raise
+        # exists precisely so both absences are recorded from ONE run instead
+        # of trickling out one per build-fix-build cycle (that was the bug:
+        # an early `return 0` here skipped the call below on the same pass).
+        record_deploy_failure(
+            "build_build_orchestration_scripts", "scripts/build_orchestration", src_dir
         )
-        return 0
+    else:
+        for src_file in sorted(src_dir.glob("*.py")):
+            if not src_file.is_file():
+                continue
 
-    for src_file in sorted(src_dir.glob("*.py")):
-        if not src_file.is_file():
-            continue
+            output_path = output_dir / src_file.name
 
-        output_path = output_dir / src_file.name
+            if not _should_overwrite(output_path, force):
+                continue
 
-        if not _should_overwrite(output_path, force):
-            continue
+            if _files_content_identical(src_file, output_path):
+                global _uptodate_count  # noqa: PLW0603
+                _uptodate_count += 1
+                continue
 
-        if _files_content_identical(src_file, output_path):
-            global _uptodate_count  # noqa: PLW0603
-            _uptodate_count += 1
-            continue
-
-        if dry_run:
-            print(f"  [DRY-RUN] would copy scripts/build_orchestration/{src_file.name}")
-            written += 1
-        else:
-            try:
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src_file, output_path)
-            except OSError as exc:
-                _log.warning(
-                    "build_build_orchestration_scripts: failed to copy %s → %s: %s",
-                    src_file,
-                    output_path,
-                    exc,
-                )
-                raise
-            print(f"  scripts/build_orchestration/{src_file.name}")
-            written += 1
+            if dry_run:
+                print(f"  [DRY-RUN] would copy scripts/build_orchestration/{src_file.name}")
+                written += 1
+            else:
+                try:
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src_file, output_path)
+                except OSError as exc:
+                    _log.warning(
+                        "build_build_orchestration_scripts: failed to copy %s → %s: %s",
+                        src_file,
+                        output_path,
+                        exc,
+                    )
+                    raise
+                print(f"  scripts/build_orchestration/{src_file.name}")
+                written += 1
 
     written += _deploy_fast_lane_release_dependency(target_root, dry_run, force)
 
@@ -3276,9 +3399,12 @@ def _deploy_fast_lane_release_dependency(target_root: Path, dry_run: bool,
     output_path = target_root / "scripts" / "release" / "check_changelog_presence.py"
 
     if not src_file.is_file():
-        _log.warning(
-            "build_build_orchestration_scripts: fast_lane.py's release dependency "
-            "not found, skipping: %s",
+        # BP-900g-9 (n_location_rule: all). A single declared path rather than a
+        # loop, but the same promise: fast_lane.py's release dependency is
+        # declared, so its absence is a dropped promise, not a skip.
+        record_deploy_failure(
+            "build_build_orchestration_scripts",
+            "scripts/release/check_changelog_presence.py",
             src_file,
         )
         return 0
@@ -3431,10 +3557,13 @@ def build_product_truth(target_root: Path, config: dict[str, Any],
 
     for src_dir, pattern, dest_subdir in deploy_groups:
         if not src_dir.is_dir():
-            _log.warning(
-                "build_product_truth: source directory not found, skipping: %s",
-                src_dir,
-            )
+            # BP-900g-9 (n_location_rule: all). The glob (pattern) applies
+            # only WITHIN this declared subdir, so the subdir itself is a
+            # declared entry, not a bare directory scan — a missing one is
+            # the same dropped promise as a missing declared file. Was
+            # warn-and-continue. Record and keep going so one run reports
+            # the whole remediation set; build.py raises once at the end.
+            record_deploy_failure("build_product_truth", dest_subdir, src_dir)
             continue
 
         output_dir = output_base / dest_subdir
@@ -3725,4 +3854,18 @@ def clean_stale_artifacts(
 #   own Implementation Notes require — recorded here since it resolved to "no
 #   change needed" rather than a new deploy_map line, so the verification
 #   would otherwise leave no trace. (#TICKET-20260826-BP-1100g-4)
+# - 2026-08-31 [python-coder]: Fixed a BP-900g-9 review finding.
+#   build_build_orchestration_scripts()'s own fail-closed branch did
+#   `record_deploy_failure(...); return 0` when its declared source directory
+#   was absent -- correct for that check alone, but the early return also
+#   skipped the call to _deploy_fast_lane_release_dependency() that follows
+#   it in the SAME function, so when BOTH declared sources were absent only
+#   one failure was recorded per build instead of both -- one
+#   build-fix-build cycle per source rather than both surfacing together.
+#   Guarded the glob loop with `else:` instead of returning early so the
+#   fast-lane dependency check always runs; corrected the in-code comment
+#   that had justified the old early return. Added
+#   test_bp_900g_9_build_orchestration_and_fast_lane_dependency_both_named_in_one_run
+#   to unit_tests/test_bp_900g_9.py; confirmed it fails on the pre-fix code
+#   via a `git stash` of this file. (#BP-900g-9)
 # ====================================================================

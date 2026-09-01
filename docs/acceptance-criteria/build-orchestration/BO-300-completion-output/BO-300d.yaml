@@ -7,8 +7,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   A run that did part of the job says how much is left and what to do about it.
@@ -31,15 +31,83 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The completion guard, already done: it re-reads the work at the end and withholds the finished claim. This criterion does not restate that behaviour — it adds the count, the honest attribution, and the next action on top of it."
-delivers_to: null
-expects_from: null
 assigned_agent: null
-estimated_complexity: null
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 for the behaviour -- the epic completion path in build-feature.js, where compareEpicTicketSets() (deployed ~1838) feeds epicRecheckReport() (deployed ~1952) and the Step 6 message is assembled. Four of the five children change that one location and should land as one coordinated pass; the fifth (BO-300d-5) is a new page at docs/reference/unbuilt-work-reporting.md. templates/workflows-js/build-ticket.js is the TWIN and correctly carries no counterpart -- inspect it and record that, per BO-300a-5."
+  required_skills:
+    - python-coder
+    - reference-author
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p 'test_unbuilt_work_*.py'"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p 'test_epic_*.py'"
+  constraints:
+    - "COMPOSITE ONLY -- no implementation is assigned at this level. The behaviour is delivered by BO-300d-1 through BO-300d-4 (python-coder) and documented by BO-300d-5 (reference-author). This mapping states the constraints that bind ALL of them and must not be satisfied anywhere on its own."
+    - "DO NOT RE-SPECIFY OR WEAKEN THE COMPLETION GUARD. BO-300a-5 is done and correct: the body of work is re-read at reporting time, compared by identity and not by count, unbuilt pieces are named, and the finished claim is withheld. That guard is why KI-BO-025 was caught rather than shipping as a false-complete. Every child adds on top of it; none may reimplement or relax it."
+    - "THE ESTABLISHABILITY TABLE IS BINDING ON EVERY CHILD AND IS CLOSED. Plan member with no completed record -> planned and not finished. Plan member with a recorded outcome saying the work stopped short -> stopped part-way, and this wins on precedence. Not a plan member -> cause not determined. Nothing in the data flow records what the body of work contained when the plan was fixed, so no child may require the never-selected / arrived-mid-run distinction, and no child may introduce a plan-time snapshot in order to make it."
+    - "THE FAMILY'S SHARPEST FALSE GREEN, stated once here because it threatens every child: the code as it stands already emits a well-formed report with the right pieces and the right withheld verdict. A test asserting that unbuilt work was reported passes against the broken implementation. Every discriminating assertion in this family is on a VALUE -- the stated count, the cause for a known-never-selected piece, the action that cause selected -- never on the presence of a report."
+    - "UNDETERMINED IS AN OBLIGATION, NOT A LICENCE. An implementation that labels everything undetermined is a failure of this L1, not a conservative reading of it. The two distinctions the run CAN make are pinned by their own assertions in BO-300d-2 so that implementation goes red."
+    - "THE CLEAN-RUN CONTROL IS MANDATORY AND IS NOT OPTIONAL POLISH. A run that built everything reports clean, with no unbuilt section, no count, no names and no action. Warning on every run is the cheapest way to pass the rest of this family and returns the operator to ignoring the sentence, which is the silence being fixed."
+    - "VERIFY BEHAVIOURALLY. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep'. This repo has already shipped a runner that passed grep-only structural tests while never executing its gates. Drive the real workflow through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and assert on the emitted text; where the unit layer cannot run the workflow, assert the report's values are CONSUMED in control flow, not merely produced."
+    - "SCOPE FENCE. BO-300a-5 is done and settled that mid-run-arriving work is reported and left outstanding; it is not reopened here. This L1 buys exactly three deltas: the count, an honest cause vocabulary, and a per-cause next action -- plus the reference entry that documents them."
+delivers_to: null
+expects_from:
+  - ac_id: BO-300a-5
+    contract: "The completion-time re-read of the body of work, the named unbuilt set compared by identity, the withheld finished claim, and the affirmative-confirmation polarity rule from BO-300a-5-i. This L1 consumes all of it and adds the count, the honest cause, and the action."
+test_required: false
+test_rationale: |
+  Composite. This record has no executable behaviour of its own and no surface a test
+  could address that is not addressed by one of its five children: the count by
+  BO-300d-1, the cause vocabulary and the false-attribution discrimination by
+  BO-300d-2 and BO-300d-2-i, the per-cause action by BO-300d-3, the empty/partial
+  self-account and the mandatory clean-run control by BO-300d-4, and the
+  documentation parity by BO-300d-5. A test authored at this level would either
+  duplicate one of those or assert the aggregate shape of the report, which is
+  precisely the assertion this family has identified as passing against the broken
+  implementation. Coverage is the union of the children; the composite is done when
+  they are.
 origin_agent: product-owner
 created: 2026-08-26
+change_target:
+  - pipeline
+  - docs
+risk_surface: contract_boundary
 amended_by:
-  - reason: "Criteria body corrected 2026-08-26 during L2 decomposition. It enumerated three causes for unbuilt work -- never taken on, arrived after the run started, stopped part-way -- while this record's own notes required an undetermined bucket wherever the distinction cannot be made. Those two halves disagreed, and the criteria half demanded an attribution the run cannot make: nothing in the data flow records what the body of work contained at the moment the plan was fixed, so 'never selected' and 'arrived mid-run' are indistinguishable from what the run holds. That is precisely the specification defect KI-BO-026 records, restated inside the record that exists to fix it. The notes were taken as authoritative and the criteria body now reads 'a cause only where the run can establish that cause from what it holds, and an explicit cause not determined where it cannot'. No obligation was removed: the count, the naming, the per-piece action and the withheld completion claim are all unchanged, and the undetermined bucket is an obligation to be explicit rather than a licence to say nothing. Aligned with the concurrent BO-300a-5 amendment, whose clause reads 'a cause is stated for a piece of unbuilt work only where the drive can establish that cause from what it holds'."
-    by: business-analyst
+- reason: 'Criteria body corrected 2026-08-26 during L2 decomposition. It enumerated
+    three causes for unbuilt work -- never taken on, arrived after the run started,
+    stopped part-way -- while this record''s own notes required an undetermined bucket
+    wherever the distinction cannot be made. Those two halves disagreed, and the criteria
+    half demanded an attribution the run cannot make: nothing in the data flow records
+    what the body of work contained at the moment the plan was fixed, so ''never selected''
+    and ''arrived mid-run'' are indistinguishable from what the run holds. That is
+    precisely the specification defect KI-BO-026 records, restated inside the record
+    that exists to fix it. The notes were taken as authoritative and the criteria
+    body now reads ''a cause only where the run can establish that cause from what
+    it holds, and an explicit cause not determined where it cannot''. No obligation
+    was removed: the count, the naming, the per-piece action and the withheld completion
+    claim are all unchanged, and the undetermined bucket is an obligation to be explicit
+    rather than a licence to say nothing. Aligned with the concurrent BO-300a-5 amendment,
+    whose clause reads ''a cause is stated for a piece of unbuilt work only where
+    the drive can establish that cause from what it holds''.'
+  by: business-analyst
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-08-31'
+  note: Composite enrichment only -- assigned_agent deliberately left null; implementation
+    is assigned on the five children (python-coder on BO-300d-1/-2/-2-i/-3/-4, reference-author
+    on BO-300d-5). Added estimated_complexity L, a structured it_requirements mapping
+    carrying the constraints binding on every child (the establishability table, the
+    do-not-re-specify fence around BO-300a-5, the family's sharpest false green, the
+    undetermined-is-an-obligation rule, the mandatory clean-run control, and the verify-behaviourally
+    rule), an expects_from contract against BO-300a-5, test_required false with a
+    rationale naming where each child's coverage lives, and change_target/risk_surface.
+    criteria untouched -- the 2026-08-26 amendment above stands as written; readiness
+    and priority left for the approval gate.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by:
   - BO-300d-1

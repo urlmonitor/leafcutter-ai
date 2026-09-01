@@ -162,7 +162,8 @@ amended_by:
   date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/22_TICKET-20260831-GE-123d-2.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -227,3 +228,4 @@ notes: |
   it is captured as an it_requirement rather than a criteria change. It is a
   property of the existing matcher, adjacent to KI-CG-004 but not the same
   defect, and repairing the existing high-entropy exemption is out of scope here.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

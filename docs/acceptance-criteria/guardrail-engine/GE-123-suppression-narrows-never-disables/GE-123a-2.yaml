@@ -119,7 +119,8 @@ amended_by:
   date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/03_TICKET-20260831-GE-123a-2.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -143,3 +144,4 @@ notes: |
   Env filenames are the subject of this criterion, as in GE-123a-1 — not a
   casual example. Depends on GE-123a-1 because there is nothing to observe until
   the content scan actually runs on these files.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

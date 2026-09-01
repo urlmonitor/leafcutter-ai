@@ -8,7 +8,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -51,7 +51,7 @@ doc_links:
     relevance: "The registered hook entry point through which that parser reaches a commit. A reader that is not reachable from a registered hook is inert."
 assigned_agent: python-coder
 estimated_complexity: M
-declares_side_effect: true
+declares_side_effect: false
 it_requirements:
   - "THE READER IS NEW. completion_manifest has ZERO code readers today — grep over scripts/ returns no occurrences; it is parsed only by the supervisor LLM. scripts/commit_guardian/_signoff_parity_checks.py already parses a ticket's ## Sign-offs section and is the natural host, but it does not parse the ## Comments block. Extend it rather than adding a second ticket parser."
   - "THE ANTI-GREP CLAUSE IS BINDING. Cardinality must be established from the records the run ACTUALLY EMITTED. A test asserting that the writing side was told to answer, or that a call to record the answer is present in the source, passes on an implementation that never records anything. Assert over emitted records, never over source presence."
@@ -115,6 +115,44 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: derived-field-correction
+  by: testing-expert
+  at: '2026-08-31'
+  note: 'declares_side_effect corrected true -> false. It disagreed with what this
+    record''s own Then clause derives, which check-ac-schema rejects under BO-2900g-2
+    ("a derived value must never be silently overwritten and a disagreement must never
+    be silently ignored"). The derivation asks whether the Then clause asserts a DURABLE
+    effect — an object whose being written outlives the run — and explicitly excludes
+    transient destinations (stdout, stderr, the console). Every Then clause here is
+    "is reported" / "is not reported": this reader observes record shape and emits
+    findings, it writes no file. Derived false is correct and the authored true was
+    wrong from the 2026-08-17 enrichment. Practical consequence of the old value: it
+    routed user-surface-smoker at priority 11.5 for an AC with no durable surface to
+    smoke. criteria untouched.
+
+    HOW IT SURVIVED FOUR MONTHS: the AC hooks read only the commit index, so a record
+    nobody stages is never checked. This fired the first time the file was staged, for
+    an unrelated edit. Silence from these hooks is not a pass — it means they were
+    never handed the file.
+
+    ALSO PINNED HERE, from BP-1100g-5 shipped 2026-08-31 (PR #626, 78eacffb3): build
+    this reader against the strings that AC actually emits, do not re-derive them. Key:
+    cross_layer_seam_answer. Conforming: {result: covered, producing_side, consuming_side}
+    and {result: not_applicable, reason, remediation}. The negative spells not_applicable,
+    NOT the literal false — a reader built against result: false would report every
+    conforming negative as a shortfall, which is the false-shortfall failure mode
+    it_requirement 5 forbids. not_applicable is new IN THE completion_manifest CONTEXT
+    — zero occurrences under templates/ or scripts/ — so this reader is the only thing
+    that will ever validate its spelling there. It is NOT new to the repository: it
+    already exists in config/verification_flow.schema.json as an unrelated boolean field
+    name. Do not treat a match found there as the manifest enum.
+
+    PRIOR ART WORTH READING BEFORE BUILDING THIS. That same schema states the principle
+    this whole tree rests on, in its own words: "The known-bad input that MUST be
+    rejected. A check without one can pass on dead code." It already models an unrun
+    control as state `unverified` rather than an omitted block, so "we never fed it bad
+    input" is visible in the artifact instead of silent. Align with that vocabulary
+    rather than inventing a parallel one.'
 superseded_by: null
 covered_by: []
 implemented_by: []

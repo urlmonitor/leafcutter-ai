@@ -1,0 +1,200 @@
+id: BO-3500c-2-iv
+components:
+  - build_orchestration
+  - llm_authoring
+title: "Proof for a prompt: the surface that consumes it loads it and behaves differently with the instruction present"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a member whose artifact is a prompt or an instruction given to an agent,
+  When its proof is established,
+  Then the surface that consumes that prompt is exercised as part of establishing the
+    proof, and the prompt is loaded by that surface during the exercise,
+  And the surface's observable behaviour with the instruction present differs from its
+    observable behaviour with the instruction absent, in the direction the requirement
+    describes.
+
+  Given a member whose instruction has a consumer that behaves the same way every time
+    it is given the same input,
+  When its proof is established,
+  Then the comparison is made against that consumer,
+  And it needs no credential and no call to a model, and repeating it returns the same
+    answer.
+
+  Given a member whose instruction is consumed only by a model,
+  When its proof is established,
+  Then the comparison is made by calling that model with the instruction present and
+    again with it absent,
+  And the run states that this member's proof required a live model call and what it
+    cost, so the price of this kind is visible rather than absorbed into the run.
+
+  Given a member whose instruction is consumed only by a model, and a run that has no
+    credential for that model or cannot obtain an answer stable enough to be evidence,
+  When the run resolves a group containing that member,
+  Then it is refused before any craft is dispatched, on the ground that this proof
+    cannot be established here,
+  And it is never finished on the strength of the instruction merely being loaded.
+
+  Given two members, one whose instruction has a repeatable consumer and one whose
+    instruction is consumed only by a model,
+  When the run reports on them,
+  Then the two are distinguishable in what it reports, because they cost differently
+    and can end differently.
+
+  Given a prompt that was written and which no surface loads,
+  When its proof is established,
+  Then the proof fails, and the reason given is that nothing consumes it — so an
+    orphaned instruction is caught at the moment it is written rather than months
+    later.
+
+  Given a prompt that is loaded by its surface but whose presence changes nothing the
+    requirement describes,
+  When its proof is established,
+  Then the proof fails, naming the change that was expected and not observed.
+depends_on: [BO-3500c-2]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "The run's crafts are themselves defined by instructions of this kind, so the automation is both the producer and the largest consumer of the artifact kind this proof governs."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "SIZING, CASE 1 — DETERMINISTIC CONSUMER. Unit cost: TWO invocations of the consuming surface, once with the instruction present and once with it absent, in-process or as a subprocess. No credential, no model call, repeatable, zero marginal money, seconds of wall clock. WHERE THE COST SURFACES IN A RUN: nowhere special — it sits inside the proof phase's existing wall clock, like any other gate, and needs no separate accounting. This case CAN be a required check."
+  - "SIZING, CASE 2 — MODEL-ONLY CONSUMER. Unit cost: 2 x N live model calls per member (N = the repeats needed before the answer is stable enough to be evidence) plus a credential, plus non-determinism. WHERE THE COST SURFACES: it must be a NAMED PER-MEMBER LINE in the run's cost report — the same report BO-2400d already produces — never absorbed into the run total, and the member's outcome bucket must be distinct from case 1's. A run whose price varies by orders of magnitude between two members that look alike from outside is a run nobody can budget for."
+  - "SIZING, THE CEILING TODAY. 463 not-yet-done records declare llm-expert, and only 3 of the project's 60 registered agents have an evaluation set to compare against (scripts/evals/agent_eval_config.json: pt-classifier, mock-data-author, flow-author). So most of the model-only bucket has nothing to take a differential against and REFUSES up front under BO-3500c-4 scenario 3 until eval sets exist. That is the honest ending, not a gap in this spec, and it means the model-only path's near-term throughput is bounded by eval-set coverage rather than by budget."
+  - "THE SPLIT OF THE 463 BETWEEN THE TWO BUCKETS IS BEING MEASURED SEPARATELY AND IS NOT A BLOCKER. It changes the SIZE of each case, not the specification of either. Do not wait for it, and do not hard-code either bucket's membership from it when it arrives — the membership is derived per the next requirement."
+  - "WHICH BUCKET A MEMBER IS IN IS DERIVED, NEVER DECLARED (user decision D4). A member is deterministic-consumer iff a non-model surface loads the prompt; resolve that from the same registries BO-3500c-2's table uses — config/agent_registry.json (agents[].template_path), config/skill_registry.json (skills[].template_path), and the hooks_manifest in templates/scripts/commit_guardian/commit_guardian.json. A record may not put itself in the cheap bucket, and a bucket derived from a typed field is the loophole that makes the whole record ornamental."
+  - "LOADED-BY-ITS-SURFACE IS THE CHEAP HALF AND IS NEVER SUFFICIENT ALONE. The differential is mandatory in both cases. An instruction that is loaded and ignored is the second-commonest failure of this kind and the load check cannot see it — this project has shipped exactly that: instructions present in a template that no surface ever loaded, green throughout."
+  - "ORPHAN DETECTION IS A REGISTRY LOOKUP, NOT A TEXT SEARCH. 'Nothing consumes it' is established by finding no registry entry claiming the prompt's path — the same resolution BO-3500c-2 performs — not by grepping the codebase for the filename."
+  - "DIFFERENTIAL, NOT ABSOLUTE. Asking what an agent PRODUCES from a prompt is not reliably repeatable; asking whether observable behaviour DIFFERS with the instruction present and absent is a comparison, and a comparison can be made stable where an absolute assertion cannot."
+  - "COMPARING CLASS. The receipt carries condition_a (instruction absent), condition_b (instruction present) and the observed difference. Identical conditions are rejected at write time by BO-3500c-1 — which is precisely how a model-only member quietly proved by the load check alone is caught after the fact, without re-running anything."
+  - "NO PRESENCE-ONLY ASSERTIONS. Every test exercises the consuming surface or asserts a refusal; a test that reads the prompt file's text passes on an instruction nothing loads."
+delivers_to:
+  agent: python-coder
+  contract: "Prompt-proof result and its cost record: {bucket: 'deterministic'|'model_only' (derived, never declared), consumer: <registry entry claiming the prompt path>, receipt: {condition_a, condition_b, difference}, cost: {model_calls: int, currency_amount: number|null}}. The cost element is consumed by the run's cost report (BO-2400d) as a named per-member line; the bucket is consumed by the outcome-reporting split this record's fifth scenario requires."
+expects_from:
+  ac_id: BO-3500c-2
+  contract: "derive_proof_kind(path) resolving templates/agents/*.md and templates/skills/<id>/ paths to kind `prompt`, class `comparing`, claimed by config/agent_registry.json and config/skill_registry.json at positions 1 and 2 of the resolution table — the same lookup that decides which consumer, and therefore which bucket, a prompt is in."
+test_spec:
+  - name: test_deterministic_consumer_differential_is_repeatable
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Establish the same deterministic-consumer proof twice and assert identical receipts modulo the timestamp — the repeatability the second scenario claims."
+  - name: test_deterministic_consumer_proof_needs_no_credential
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "With all model credentials unset, the deterministic-consumer proof completes and no model call is attempted."
+  - name: test_orphan_prompt_fails_naming_no_consumer
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A prompt whose path no registry claims fails, with 'nothing consumes it' as the reason — established by registry resolution, not by a text search."
+  - name: test_loaded_but_ineffective_prompt_fails_naming_the_expected_change
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The surface loads the prompt but behaves identically with and without it; assert the proof fails and names the change that was expected and not observed."
+  - name: test_bucket_is_derived_from_the_registries_not_declared
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "A member declaring itself deterministic while its only consumer is a model still resolves to the model_only bucket; assert the derived value wins and the declaration is reported as a defect."
+  - name: test_model_only_member_states_its_cost_as_a_named_line
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A model-only proof emits a per-member cost line carrying the model-call count; assert it is present in the run's cost report and attributed to that member, not folded into the total."
+  - name: test_model_only_member_without_credential_is_refused_up_front
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "With no credential or no stable answer available, the member is refused before any craft is dispatched and is never finished on the load check alone."
+  - name: test_the_two_buckets_are_distinguishable_in_the_run_outcome
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Run one member of each bucket and assert a consumer branching on the reported bucket separates them — they cost differently and can end differently."
+  - name: test_prompt_receipt_with_identical_conditions_is_rejected
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "NO RUN. A prompt-proof receipt whose two conditions are equal is refused at write time — the after-the-fact catch for a model-only member proved by the load check alone."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "Finding F2 — the prompt is the expensive kind, not the screen, and the original single-form criterion hid two cases with different costs and different endings. Verified: 463 records declare this craft, and only three of sixty registered crafts have an evaluation set; a model-consumed instruction's differential needs live model calls, is non-deterministic, and needs a credential. Three scenarios added: the deterministic-consumer case (cheap, repeatable, no credential), the model-only case (live call, cost stated in the run), and the model-only case that cannot be established here (refused up front, never finished on the load check alone), plus a clause requiring the two to be distinguishable in what the run reports. The measurement of how many of the 463 have a deterministic consumer is in progress and deliberately not blocking: it changes the size of each case, not the specification of either."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE LARGEST KIND BY A DISTANCE — 463 of the 660 not-yet-done requirements declaring a
+  craft outside the roster declare this one. Whatever proof is chosen here is applied
+  more often than the other four put together, so a weak choice here is most of the
+  damage this tree could do.
+
+  THE PRODUCT OWNER NAMED THIS ALONGSIDE A SCREEN as obviously beyond the written-page
+  floor, and it is the harder of the two, because a prompt genuinely IS a file of text
+  and the temptation to prove it by reading that text is overwhelming. It must be
+  resisted for the reason this repository already knows: a check that inspects source
+  text passes unchanged when the text is defined and never reached, and this project
+  has shipped that exact failure — instructions present in a template that no surface
+  ever loaded, green throughout.
+
+  THE PROOF IS DELIBERATELY TWO-PART, AND THE FIRST PART IS THE AFFORDABLE ONE. That
+  the consuming surface loads the prompt is cheap, mechanical and catches the dominant
+  real failure, which is an orphaned instruction. That the behaviour differs in the
+  described direction is the part that costs. What is NOT available is dropping the
+  second part and keeping only the first: an instruction that is loaded and ignored is
+  the second-commonest failure of this kind, and the first part alone cannot see it.
+
+  THIS IS THE EXPENSIVE KIND, AND THE TREE ORIGINALLY GUESSED THE OPPOSITE (amended
+  2026-08-31, finding F2). BO-3500c-2-iii assumed the screen was the hard one; verified,
+  the screen is affordable today and this one is not. A model-consumed instruction's
+  differential needs live model calls, is not deterministic, and needs a credential. And
+  the exposure here is enormous: 463 records declare this craft, while only THREE of the
+  project's sixty registered crafts have an evaluation set to compare against.
+
+  SO THE TWO CASES ARE SPLIT, AND THAT IS THE SUBSTANCE OF THIS AMENDMENT. An instruction
+  with a REPEATABLE consumer — one that behaves the same way every time on the same input
+  — can have its differential taken cheaply, deterministically, with no credential, and
+  can be a required check. An instruction consumed ONLY BY A MODEL cannot, and its honest
+  endings are different: it costs money per proof, and where there is no credential or no
+  stable answer it must be refused up front rather than finished on the load check alone.
+  Collapsing the two would either make the cheap case needlessly expensive or, far more
+  likely, make the expensive case quietly pass on the cheap case's proof — which is the
+  borrowing BO-3500c-2 forbids and BO-3500c-1's receipt shape is built to expose.
+
+  HOW MANY OF THE 463 FALL INTO WHICH CASE IS BEING MEASURED SEPARATELY and is not a
+  blocker for this criterion. The criterion is written so that the answer changes the
+  SIZE of each case and not the specification of either. If the measurement comes back
+  showing most of the 463 have a deterministic consumer, this kind stops being the
+  expensive one; if it comes back the other way, the third and fourth scenarios are where
+  the cost lands and the refusal is already specified.
+
+  DIFFERENTIAL, NOT ABSOLUTE, and that is the design. Asking what an agent produces
+  from a prompt is not reliably repeatable. Asking whether its observable behaviour
+  differs with the instruction present and absent is a comparison, and a comparison can
+  be made stable where an absolute assertion cannot. Stated this way so the criterion
+  does not force a flaky test.

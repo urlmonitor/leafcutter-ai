@@ -671,6 +671,12 @@ flowchart TD
 - BO-100d-1a: build-epic.js hard-blocks the drive before dispatch when the telemetry sink is unreachable
 - BO-100d-2-i: Remediation that makes a failing probe pass lets the drive proceed
 - BO-100d-2a: build-epic.js lets the drive proceed when the telemetry sink is reachable
+- BO-100e-1: A four-deep chain of prerequisites is carried to the end by one start, in prerequisite order
+- BO-100e-1-i: A prerequisite that did not finish successfully never makes the work behind it eligible
+- BO-100e-2: The run stops when a fresh look finds nothing further it can build, and says so rather than circling
+- BO-100e-2-i: Prerequisites that can never be satisfied — a cycle, or a prerequisite outside the set — end the run with the cause named
+- BO-100e-3: The run carries the layers of the set it started with, and does not absorb work that appears underneath it
+- BO-100e-4: One branch failing does not withhold the later layers of an unrelated branch
 - BO-1100a-1: Staged files are classified into exactly one routing group per file
 - BO-1100a-1-i: Files matching multiple groups are escalated to mixed-change handling
 - BO-1100a-6: Path rules match only their intended directory subtree, not unrelated paths sharing a substring
@@ -894,7 +900,7 @@ flowchart TD
 - BO-2400c-6: Resolving a connected build set reads the store once, and resolves the same set it did before
 - BO-2400c-6-i: A cycle-adjacent subtree resolves identically before and after, proved on a constructed store
 - BO-2400c-6-ii: A caller that supplies no record set still walks the tree correctly
-- BO-2400d-1: Each agent invocation records duration and token counts to the telemetry sink
+- BO-2400d-1: A recorded agent invocation carries its duration and token counts
 - BO-2400d-1-i: An unreachable telemetry sink is surfaced loudly, never silently
 - BO-2400d-2: Each telemetry record is tagged with its lane and agent identity
 - BO-2400d-3: A report compares fast-lane vs heavy-pipeline cost and time per unit of work
@@ -999,6 +1005,11 @@ flowchart TD
 - BO-300c: Finalize command always uses the epic or branch name, never a raw path
 - BO-300c-1: Finalize command uses epic or branch name, not a raw path, in all three locations
 - BO-300c-1-1: Nested epic path is reduced to just the epic name in the finalize command
+- BO-300d-1: The closing report states the number of pieces it did not build, and that number matches the pieces it names
+- BO-300d-2: A cause is stated only where the run can establish it, and is stated as undetermined where it cannot
+- BO-300d-2-i: Each unbuilt piece is reported under exactly one cause, and the causes account for the stated count
+- BO-300d-3: Every unbuilt piece carries the action that finishes it, and the action for an undetermined cause is safe under either explanation
+- BO-300d-4: A run that cannot account for its own work still says so, and a run that finished everything reports clean
 - BO-3100a-1: An agent holding the means to hand off work with no cleared recipient fails assembly
 - BO-3100a-1-i: A record clearing recipients an agent cannot reach is reported as its own distinct mismatch
 - BO-3100a-2: The reconciliation reads the declarations as they stand, so a newly added agent is covered without editing the check
@@ -1034,6 +1045,31 @@ flowchart TD
 - BO-3200e-1-i: The advice on an undetermined outcome points at the inspection that failed, not at the subject
 - BO-3200e-2: An undetermined outcome still stops the work — fail-closed is preserved, only its wording changes
 - BO-3200e-3: Every check that can fail to inspect is driven into that state, and one that answers substantively is named
+- BO-3500a-1: Each member of a build set is produced by the craft that member declares
+- BO-3500a-1-i: No substitution: a member whose craft is unavailable is never given to another craft
+- BO-3500a-1-ii: A member that declares no craft is routed by the default and is visibly marked as such
+- BO-3500a-2: A requirement naming a craft that does not exist is reported as a defective declaration
+- BO-3500a-3: A craft that exists but is absent from this run is reported as a capability gap, judged against the run's own crafts
+- BO-3500b-1: A set mixing code, tests, a page and a diagram is accepted and delivered in one pull request
+- BO-3500b-1-i: A group containing no code at all still builds, and having no test to run is not a failed run
+- BO-3500b-2: A member that cannot be produced fails the whole group — the producible remainder is never shipped as the delivery
+- BO-3500b-2-i: A failed mixed run leaves no half-state behind for the next run to inherit
+- BO-3500b-3: Members are produced in dependency order across crafts, so a page describes the code that run produced
+- BO-3500c-1: A non-code member is finished only with its artifact produced and a proof established and recorded
+- BO-3500c-2: The proof is chosen by the kind of artifact, and the weakest kind's proof is never borrowed by a stronger one
+- BO-3500c-2-i: Proof for a written page: it exists in this run's change, carries content on the subject asked for, and is reachable
+- BO-3500c-2-ii: Proof for a diagram: its source is valid against the schema it declares, and every project element it names resolves to something that exists
+- BO-3500c-2-iii: Proof for a screen: it is loaded and driven, and the described result is observed on the running screen
+- BO-3500c-2-iv: Proof for a prompt: the surface that consumes it loads it and behaves differently with the instruction present
+- BO-3500c-2-v: Proof for a configuration setting: the component that reads it is run, and a different value changes what it does
+- BO-3500c-3: An artifact produced empty fails its proof, whatever its kind
+- BO-3500c-4: A kind of artifact with no defined proof is refused up front, never waived
+- BO-3500d-1: An on-demand report states how much of the backlog the automation can and cannot build
+- BO-3500d-1-i: The report reads the backlog once, reports its own cost, and is never produced as a side effect
+- BO-3500d-2: The unbuildable share is grouped by reason, largest group first, and the groups add up
+- BO-3500d-2-i: A requirement the report cannot classify is counted as unbuildable and listed, never as buildable
+- BO-3500d-3: The report gives starting points as well as records, both from the one reading of the backlog
+- BO-3500d-4: The report is a view, not a verdict: it changes nothing and nothing consults it
 - BO-400a-2-ii: A ticket the drive carried to completion is recorded done in the ticket's own record
 - BO-400a-2-iii: A ticket with any needed phase skipped, blocked or unrecorded is never recorded done
 - BO-400a-2-iv: A completion decision reached with no phase required of the ticket never records it done
@@ -1167,14 +1203,17 @@ flowchart TD
 - BP-100k-4-i: The reachability check raises no false alarm on gates that can fire, and fails rather than passing when it cannot determine reachability at all
 - BP-100k-5: The drift gate examines the deployed surface the build actually wrote, and reports the size of the population it did not examine — a verified count with no denominator is not a pass
 - BP-100k-5-i: The unexamined deployed population reaches zero by registering the deploy surface, never by exempting it, and the newly covered files are provably drift-checked
-- BP-100k-6: A deployed output the build recorded writing but that is absent from disk is reported and fails the run — deletion is the most complete drift there is, and it is the only kind the gate ignores
-- BP-100k-7: A guard skips a check only because the configuration declares the capability off — never because the capability's output happens to be absent, which is the failure the guard exists to catch
-- BP-100k-8: The build-equality guard covers every platform the build can emit, taken from the build's own platform set — a guard that proves equality only for the platforms it chose to enable proves nothing about the rest
 - BP-100m-1: Two source templates deploying to the same command path fail the build, naming both sources and the target
 - BP-100m-1-i: A same-target collision still fails even when the two colliding sources are byte-identical
 - BP-100m-2: Any set of two or more sources mapping to one target is detected, with every colliding source named
 - BP-100m-2-i: One template deployed to different per-platform directories is not a collision
 - BP-100m-3: A later phase can never silently overwrite an earlier phase's artifact — collision is fatal, not last-write-wins
+- BP-100n-1: A deployed output the build recorded writing but that is absent from disk is reported and fails the run — deletion is the most complete drift there is, and it is the only kind the gate ignores
+- BP-100n-2: A guard skips a check only because the configuration declares the capability off — never because the capability's output happens to be absent, which is the failure the guard exists to catch
+- BP-100n-3: The build-equality guard covers every platform the build can emit, taken from the build's own platform set — a guard that proves equality only for the platforms it chose to enable proves nothing about the rest
+- BP-100n-4: The population of commit gates the reachability check walks is taken from the gate scripts present on disk, so a script the registry never mentions is reported as invoked by nothing — a guard whose input is the registry cannot see what the registry omits
+- BP-100n-4-i: A script that is deliberately not a gate is recorded as one with a stated ground and the check honours it; a record that states no ground is itself refused and the script it names stays reported
+- BP-100n-4-ii: The check states how many gate scripts it compared, and a run that compared none is an unresolved run that fails — a comparison that never happened must not be able to look like a comparison that found nothing wrong
 - BP-1100a-3: The surface a generated ticket names contains the file the requirement says will change
 - BP-1100a-4: A file the requirement mentions but never says will change is not named as the work's surface
 - BP-1100a-4-i: A file the requirement forbids touching is never named as the work's surface
@@ -1327,6 +1366,8 @@ flowchart TD
 - BP-900c-2: Error report is emitted to stderr in a structured, parseable format with non-zero exit
 - BP-900c-3: When the source directory exists but the script file is missing or untracked, the suggested action says to commit the source under templates/scripts/
 - BP-900c-3-i: When the source directory itself is absent, the suggested action still points to a deploy phase, not to committing source
+- BP-900c-4: A broken reference whose path a deploy declaration already names is told to restore the source or drop the declaration, never to add a deploy phase
+- BP-900c-4-i: The remediation is read from the deploy declarations the build ships from, so editing a declaration changes the advice
 - BP-900d: Consumer-facing onboarding script is deployable, so build.py preflight does not abort
 - BP-900e-1: A hook registered in commit_guardian.json with no template copy fails the registry-completeness gate
 - BP-900e-1-i: A template-referenced script with no template copy is also flagged, coordinated with the BP-900b preflight
@@ -1712,6 +1753,13 @@ flowchart TD
 - INF-500b-4: trend_report.py gracefully handles empty or absent feedback data
 - INF-500b-5: feedback-analyst agent reads data and returns report without modifying files
 - INF-500b-6: feedback-report command supports --since date filtering
+- INF-500e-1: Delivery is scored on what was retracted, not only on what was claimed
+- INF-500e-2: A figure the report could not obtain reads as unknown, while a measured zero still reads as zero
+- INF-500e-2-i: A truncated merge history is reported as unknown for the weeks it cannot reach, not as a quiet period
+- INF-500e-3: A criterion keeps its identity and its age when it moves to another folder
+- INF-500e-3-i: An age the report cannot establish is left out of the cycle time rather than entered as zero days
+- INF-500e-4: Volume written is attributed to a language and to a kind, so building is distinguishable from bookkeeping
+- INF-500e-5: The weeks compared are whole calendar weeks, oldest first, ending with the one in progress
 - INF-600a-1: Registry declares every skill an agent invokes, with invocation mode
 - INF-600a-1-i: skills_invoked rejects skill IDs that do not resolve to a template or project-local skill
 - INF-600a-2: Agent frontmatter declares structured inputs, outputs, and mutates
@@ -1969,6 +2017,18 @@ flowchart TD
 - TQ-400e-4: A test-free declaration carrying no reason is refused, not honoured
 - TQ-400e-4-i: Honouring and refusing declarations happens per record within one run
 - TQ-400e-5: An honoured exemption stays settled instead of being re-raised every cycle
+- TQ-500a-1-i: The declared kind is honoured, and the requirement's wording is not an input
+- TQ-500a-3-i: An unnamed alteration, an unstated revert, and a revert that did not restore are each named
+- TQ-500b-1: Answer taken, answer not owed, answer owed and absent — three states, never two
+- TQ-500b-1-i: No record and a bad record are different states, and the carve-out is not a blanket silence
+- TQ-500b-2: The missing answer changes the outcome, rather than being printed and passed over
+- TQ-500c-2: A test that never objected is named, and partial objection is not read as success
+- TQ-500c-2-i: The recorded incident replayed: three of four objected, and the fourth carried the headline claim
+- TQ-500c-3: An alteration no test objected to is visible, even when every test objected to some other
+- TQ-500d-1-i: A green-on-arrival record with no answer reads as incomplete, never as not applicable
+- TQ-500d-3: Ordinary before-and-after evidence answers the question outright, and asks nothing more
+- TQ-500e-2: A later reader retrieves what a test was shown to catch, without re-running anything
+- TQ-500e-2-i: Work predating the record returns no answer, and the boundary is the record, not the date
 - UXP-100c-2: Pipeline blocks until the user provides an explicit prototype decision
 - UXP-100c-2-i: Prototype with pending component research cannot be approved — only deferred
 - UXP-100c-4: Rejection stops the pipeline and records the rejection rationale

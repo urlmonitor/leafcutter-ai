@@ -300,6 +300,8 @@ flowchart TD
 - TQ-400c-5: A reader can change the cadence and find the latest published verdict from the guide alone
 - TQ-400d-5: A first-time triager can work a record from the pile to a recorded decision using the guide alone
 - TQ-400e-6: The exemption reference states when a declaration is honoured, when refused, and which records may carry one
+- TQ-500d-2: A how-to that names the exception and walks through taking the substitute evidence
+- TQ-500e-3: Reference documentation defining the answer's recorded form and every state it can hold
 - UXP-100a-3: How-to guide for assembling prototypes from the component library
 - UXP-100c-5: How-to guide for reviewing and deciding on a prototype
 - UXP-606: How-to: read decision diamonds in the Atlas Flows view

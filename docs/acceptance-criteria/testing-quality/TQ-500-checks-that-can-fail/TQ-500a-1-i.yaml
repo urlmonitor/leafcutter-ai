@@ -1,0 +1,206 @@
+id: TQ-500a-1-i
+components:
+  - testing_quality
+  - build_orchestration
+title: "The declared kind is honoured, and the requirement's wording is not an input"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two pieces of work whose requirement text is word-for-word identical —
+      each asking that some new input change no outcome, neither naming a failing
+      case — where the writer declared the ordinary before-and-after evidence for
+      the first and the substitute evidence for the second,
+  When the two hand-off records are read,
+  Then each piece of work is read as the kind its own record declares, and neither
+    is reassigned to the other kind,
+    And repeating the reading with the requirement text of both replaced by
+      unrelated text produces the same two results, because the requirement text
+      is not an input to the reading,
+    And the piece of work declaring the substitute evidence is not reported as a
+      shortfall on the grounds that its requirement carries none of the wording
+      associated with this family of work,
+    And the piece of work declaring the ordinary evidence is not reported as a
+      shortfall on the grounds that its requirement does carry that wording,
+    And these results are established from the hand-off records the run actually
+      produced; a run in which the writing side was instructed to declare a kind
+      but emitted no record leaves that piece of work with no declared kind rather
+      than with an inferred one.
+depends_on:
+  - TQ-500a-1
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-010 Fix direction: "Do not try to detect the class automatically from
+      the AC text — n_location_rule: 0, an absence-shaped Then clause, and the word
+      'negative control' in the notes are all suggestive and none is reliable."
+      This AC is the mechanical proof that no such detection was built.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The reader this test drives. Its false-shortfall discipline applies verbatim:
+      a valid case wrongly reported has exactly one natural remedy — weakening the
+      check until it stops — so the two must-not-report clauses here are as
+      load-bearing as the must-report ones.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    NO CLASSIFIER, AND THE PROHIBITION IS ON THE INPUT NOT THE ALGORITHM. The
+    reading must not open, receive, or reference the requirement's text — not the
+    criteria, not the notes, not n_location_rule, not the expected-outcome shape
+    — at any point, including as a tie-break when the declared kind is
+    ambiguous. The tie-break is the likely form of the regression: it looks like
+    a robustness improvement.
+  - >-
+    THE ANTI-GREP CLAUSE IS BINDING. Both results must be established from the
+    hand-off records the run actually emitted. A test asserting that no
+    classifier appears in the source passes on an implementation that records
+    nothing, and is itself the source-presence proof this AC exists to reject.
+  - >-
+    THE TWO MUST-NOT-REPORT CLAUSES ARE AS LOAD-BEARING AS THE MUST-REPORT ONES.
+    A false shortfall has exactly one natural remedy — weakening the check until
+    it stops — so a reading that reports the substitute-declaring record because
+    its requirement lacks the associated wording, or the ordinary-declaring
+    record because its requirement carries it, has failed this AC even though
+    both records were read.
+  - >-
+    Must not be closed by a change that special-cases the two fixture records.
+    The text-substitution invariant must hold for any pair of records, which is
+    what makes it a property rather than a fixture assertion.
+  - >-
+    Adds no behaviour of its own. This AC is a regression test over TQ-500a-1's
+    record shape and TQ-500b-1's reading; if implementing it requires new
+    production behaviour, that behaviour belongs to one of those two.
+delivers_to: null
+expects_from:
+  ac_id: TQ-500a-1
+  contract: >-
+    Two hand-off records with identical requirement text and opposite declared
+    kinds. This AC asserts each is read as declared, and that substituting the
+    requirement text changes nothing about the reading.
+test_spec:
+  - name: test_tq500a_1_i_declared_kind_is_honoured_for_both_records
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Two records with word-for-word identical requirement text and opposite
+      declared kinds: each is read as the kind its own record declares, neither
+      is reassigned, and neither is reported as a shortfall.
+  - name: test_tq500a_1_i_reading_is_byte_identical_under_substituted_requirement_text
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Run the identical two records twice, the second time with both
+      requirements' text replaced by unrelated prose, and require byte-identical
+      output. NAMED MUTATION (this descriptor asserts an invariance, so it must
+      be shown able to fail): inject a text-consulting tie-break into the reading
+      — when the work item's requirement carries an absence-shaped Then clause,
+      or n_location_rule 0, or the phrase "negative control" in its notes, let
+      that override the declared kind. Under that injection the two runs diverge
+      and THIS TEST MUST GO RED; revert the injection and it must return to
+      green. Record both outcomes in the falsifiability answer for this AC.
+  - name: test_tq500a_1_i_neither_record_is_reported_on_the_grounds_of_its_wording
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      The false-shortfall control. Neither the substitute-declaring record nor
+      the ordinary-declaring record is reported. NAMED MUTATION: with the same
+      text-consulting tie-break injected above, assert this test also goes RED —
+      the substitute-declaring record is reported as a shortfall for carrying
+      none of the associated wording. A pair of must-not-report clauses that
+      stays green under the classifier injection is not testing anything.
+  - name: test_tq500a_1_i_records_are_built_by_the_projects_own_writer_and_read_through_the_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py
+    description: >-
+      Build the two ticket files on disk with the project's own writer
+      (yaml.safe_dump into the ## Comments completion_manifest block per the
+      signoff SKILL §2b recipe), never hand-typed markdown, then read them
+      through the registered hook path as a subprocess. Hand-typed fixtures
+      reproduced the column-0 indentation bias that hid the files_touched parser
+      no-op through seven green sign-offs in this repo.
+  - name: test_tq500a_1_i_a_work_item_with_no_emitted_record_has_no_declared_kind
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The anti-grep clause. A run in which the writing side was instructed to
+      declare a kind but emitted no record for that work item leaves it with no
+      declared kind — not an inferred one, and not a shortfall. NAMED MUTATION:
+      make the reading fall back to inferring the kind when no record is present;
+      this test must go RED under it.
+test_rationale: |
+  "No classifier was built" is not directly observable, and the obvious proof —
+  grepping the source for a classifier — is precisely the source-presence
+  evidence the anti-grep constraint forbids. Running the same two records twice
+  under different requirement text and demanding byte-identical output is the
+  behavioural form of the same statement, and it fails on any implementation
+  that peeks at the text, including one that only peeks as a tie-break.
+
+  THIS AC IS ITSELF A NEGATIVE CONTROL — three of its five descriptors assert an
+  invariance or an absence, and all three are green on arrival by construction.
+  Each therefore names the same concrete injection (the text-consulting
+  tie-break) and requires the descriptor to go RED under it and green again on
+  revert. This AC's own falsifiability answer must be of the substitute kind
+  carrying that alteration and its per-test outcomes. An implementer who signs
+  this off as "green on arrival, nothing to prove" has reproduced KI-TQ-010
+  inside the fix for KI-TQ-010.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      change_target VERIFIED as code, not normalised to the prompt parent — every
+      Then clause describes a reader over emitted records. Added a five-descriptor
+      test_spec in which the three absence/invariance descriptors each name the
+      SAME concrete injection (a text-consulting tie-break on absence-shaped Then
+      clauses, n_location_rule 0, or the phrase "negative control") and require a
+      RED-under-injection, green-on-revert demonstration. real_artifact angle per
+      the hand-off steer. criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE TEXT-SUBSTITUTION CLAUSE. "No classifier was built" is not directly
+  observable, and an assertion that no classifier exists in the source is exactly
+  the source-presence proof the anti-grep clause forbids. Running the same records
+  twice under different requirement text and requiring identical output is the
+  behavioural form of the same statement, and it fails on any implementation that
+  peeks at the text — including one that only peeks as a tie-break.
+
+  THIS AC IS ITSELF A NEGATIVE CONTROL, and the tree it belongs to says what to do
+  about that: its own falsifiability answer must be the substitute kind. The
+  obvious alteration is to make the reading consult the requirement text — for
+  example by treating an absence-shaped expected outcome as declaring the
+  substitute kind — and to require that these clauses object under it. An
+  implementer who records "green on arrival, nothing to prove" for this AC has
+  reproduced KI-TQ-010 inside the fix for KI-TQ-010.
+
+  BOUNDARY. This AC adds no behaviour of its own. It is satisfied only by a
+  regression test over TQ-500a-1's record shape and TQ-500b-1's reading, and it
+  must not be closed by a change that special-cases the two fixture records.

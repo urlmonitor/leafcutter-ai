@@ -584,6 +584,12 @@ flowchart TD
 - TKT-500f-6-iii-b: ticket-supervisor halts (not silently skips) when Test Requirements is absent but an implementation .py is in scope
 - TKT-500g-2: Every route that can drive the work asks one question before skipping the proof phase
 - TKT-500g-2-i: The route that loses the phase is the route the fix must be proven on — a work item built inside a batch keeps its proof phase
+- TQ-500a-1: Exactly one falsifiability answer per piece of work, and the writer says which kind it is
+- TQ-500a-2: "No substitute proof was possible, and here is what I tried" is a valid answer
+- TQ-500a-3: The substitute names the alteration precisely and confirms the behaviour was put back
+- TQ-500c-1: One recorded outcome per test per alteration, and no combined verdict standing in for them
+- TQ-500d-1: Passing on arrival is the expected result here, and it is not the answer
+- TQ-500e-1: The record says what was altered and what each test did, in the record's own words
 - UXP-100a-1: Prototype composition reads the component library catalog before assembly
 - UXP-100a-1-i: Empty or missing component library catalog halts prototype assembly with a diagnostic
 - UXP-100a-2: Prototype output preserves visual and structural consistency with existing pages

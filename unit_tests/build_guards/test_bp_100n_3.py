@@ -1,6 +1,6 @@
 """
-MODULE: unit_tests/build_guards/test_bp_100k_8.py
-GOAL: BP-100k-8 -- the bidirectional manifest/output equality guard added by
+MODULE: unit_tests/build_guards/test_bp_100n_3.py
+GOAL: BP-100n-3 -- the bidirectional manifest/output equality guard added by
     BP-100k-2 (``unit_tests/build_guards/test_bp_100k_2.py``) must exercise
     EVERY platform the build's own platform set declares -- never a fixed
     subset chosen inside the guard's own fixture.
@@ -14,7 +14,7 @@ BUSINESS CONTEXT: ``test_bp_100k_2.py`` pins ``"antigravity": False`` in two
     to enable proves nothing about the rest -- and the omission is invisible
     in that guard's own green result.
     See docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/
-    BP-100k-8.yaml.
+    BP-100n-3.yaml.
 DO NOT EDIT ``test_bp_100k_2.py``: fixing the pin is python-coder's job. This
     module IMPORTS test_bp_100k_2.py's real, unedited fixture helpers (never
     a hand-typed guess at its hardcoded literal) and runs them for real, so
@@ -73,9 +73,15 @@ def _load_bp100k2_module() -> types.ModuleType:
     _UNIQUE_COUNTER[0] += 1
     unique_name = f"_bp100k8_test_bp_100k_2_{_UNIQUE_COUNTER[0]}"
     spec = importlib.util.spec_from_file_location(unique_name, _TEST_BP_100K_2_PATH)
+    if spec is None or spec.loader is None:
+        raise ImportError(
+            f"Could not load a module spec for {_TEST_BP_100K_2_PATH} — "
+            "the fixture file is missing or unimportable, which must fail "
+            "loudly rather than crash later with a confusing TypeError."
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[unique_name] = module
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    spec.loader.exec_module(module)
     return module
 
 
@@ -85,7 +91,7 @@ def _load_bp100k2_module() -> types.ModuleType:
 
 
 class TestGuardExercisesEveryPlatformTheBuildCanEmit(unittest.TestCase):
-    """AC BP-100k-8: exercised platform set == the build's own declared set."""
+    """AC BP-100n-3: exercised platform set == the build's own declared set."""
 
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory()
@@ -95,7 +101,7 @@ class TestGuardExercisesEveryPlatformTheBuildCanEmit(unittest.TestCase):
         self.pkg_root = self.bp2._build_synthetic_full_package(self.workspace)
 
     def test_guard_exercises_every_platform_the_build_can_emit(self) -> None:
-        # covers: BP-100k-8
+        # covers: BP-100n-3
         # --- Oracle: what platforms does the BUILD ITSELF activate for the
         # agents family when the operator supplies no override at all?
         # Determined BEHAVIORALLY against a second, independent synthetic
@@ -152,7 +158,7 @@ class TestGuardExercisesEveryPlatformTheBuildCanEmit(unittest.TestCase):
                 f"but the build itself activates {sorted(declared_agent_platforms)} "
                 "for the agents family. A platform the build emits by default "
                 "must not be silently excluded from the guard's coverage by a "
-                "fixed choice inside the guard's own fixture (BP-100k-8)."
+                "fixed choice inside the guard's own fixture (BP-100n-3)."
             ),
         )
 
@@ -163,7 +169,7 @@ class TestGuardExercisesEveryPlatformTheBuildCanEmit(unittest.TestCase):
 
 
 class TestNoPlatformIsWithheldByAChoiceInsideTheGuard(unittest.TestCase):
-    """AC BP-100k-8: nothing but the build's own config may exclude a platform."""
+    """AC BP-100n-3: nothing but the build's own config may exclude a platform."""
 
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory()
@@ -173,7 +179,7 @@ class TestNoPlatformIsWithheldByAChoiceInsideTheGuard(unittest.TestCase):
         self.pkg_root = self.bp2._build_synthetic_full_package(self.workspace)
 
     def test_no_platform_is_withheld_by_a_choice_inside_the_guard(self) -> None:
-        # covers: BP-100k-8
+        # covers: BP-100n-3
         self.bp2._deploy_agents_and_write_manifest(self.workspace, self.pkg_root)
         manifest = self.bp2._load_manifest(self.pkg_root)
         output_mappings = manifest.get("output_mappings", {})
@@ -200,7 +206,7 @@ class TestNoPlatformIsWithheldByAChoiceInsideTheGuard(unittest.TestCase):
                 "capable of emitting their agents family and nothing here "
                 "declared them off. A platform may only be excluded by the "
                 "build's own configuration, never by a fixed choice made "
-                f"inside the guard (BP-100k-8). output_mappings sample: "
+                f"inside the guard (BP-100n-3). output_mappings sample: "
                 f"{sorted(output_mappings.keys())[:5]}"
             ),
         )
@@ -213,7 +219,7 @@ class TestNoPlatformIsWithheldByAChoiceInsideTheGuard(unittest.TestCase):
 
 
 class TestANewlyEmittablePlatformIsCoveredWithoutEditingTheGuard(unittest.TestCase):
-    """AC BP-100k-8 decisive descriptor.
+    """AC BP-100n-3 decisive descriptor.
 
     Extending the build's declared platform set by one (claude-only ->
     claude+antigravity) must be reflected in the guard's exercised set
@@ -231,7 +237,7 @@ class TestANewlyEmittablePlatformIsCoveredWithoutEditingTheGuard(unittest.TestCa
     def test_a_newly_emittable_platform_is_covered_without_editing_the_guard(
         self,
     ) -> None:
-        # covers: BP-100k-8
+        # covers: BP-100n-3
         # --- "Before": a platform set with only claude active. ---
         before_workspace = self.workspace / "before"
         before_workspace.mkdir()
@@ -320,7 +326,7 @@ class TestANewlyEmittablePlatformIsCoveredWithoutEditingTheGuard(unittest.TestCa
                 f"{sorted(guard_exercised)} -- the extension is not "
                 "reflected without editing the guard itself. Only a guard "
                 "reading the build's own platform set can cover a newly "
-                "emittable platform for free (BP-100k-8)."
+                "emittable platform for free (BP-100n-3)."
             ),
         )
 
@@ -331,7 +337,7 @@ class TestANewlyEmittablePlatformIsCoveredWithoutEditingTheGuard(unittest.TestCa
 
 
 class TestUnexercisablePlatformIsNamedAndTheRunFails(unittest.TestCase):
-    """AC BP-100k-8: "I could not exercise this platform" must never mean
+    """AC BP-100n-3: "I could not exercise this platform" must never mean
     silent success -- it must be a NAMED, failing condition."""
 
     def setUp(self) -> None:
@@ -342,7 +348,7 @@ class TestUnexercisablePlatformIsNamedAndTheRunFails(unittest.TestCase):
         self.pkg_root = self.bp2._build_synthetic_full_package(self.workspace)
 
     def test_unexercisable_platform_is_named_and_the_run_fails(self) -> None:
-        # covers: BP-100k-8
+        # covers: BP-100n-3
         """
         Pre-create the antigravity output directory the deploy would need
         to write into, and make it unwritable -- a real, on-disk
@@ -381,7 +387,7 @@ class TestUnexercisablePlatformIsNamedAndTheRunFails(unittest.TestCase):
 class TestOutputFamilyOfAnUnexercisedPlatformIsNotCountedAsCovered(
     unittest.TestCase
 ):
-    """AC BP-100k-8: a real, on-disk family the guard didn't exercise must
+    """AC BP-100n-3: a real, on-disk family the guard didn't exercise must
     not be silently absent from what the equality assertion claims to have
     verified."""
 
@@ -395,7 +401,7 @@ class TestOutputFamilyOfAnUnexercisedPlatformIsNotCountedAsCovered(
     def test_output_family_of_an_unexercised_platform_is_not_counted_as_covered(
         self,
     ) -> None:
-        # covers: BP-100k-8
+        # covers: BP-100n-3
         build_helpers_mod, build_phases_mod, config_loader_mod = (
             self.bp2._load_pkg_modules(self.pkg_root)
         )
@@ -435,7 +441,7 @@ class TestOutputFamilyOfAnUnexercisedPlatformIsNotCountedAsCovered(
                 "manifest has zero .gemini/agents/ entries -- an output "
                 "family produced under a platform the guard did not "
                 "exercise must not be silently absent from what the "
-                "equality assertion claims to have verified (BP-100k-8). "
+                "equality assertion claims to have verified (BP-100n-3). "
                 f"output_mappings sample: {sorted(output_mappings.keys())[:5]}"
             ),
         )

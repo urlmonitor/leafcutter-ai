@@ -175,6 +175,7 @@ task, then pull only those files.
 | Name | Path | Description |
 |------|------|-------------|
 | consolidated output root | [docs/explanation/consolidated-output-root.md](docs/explanation/consolidated-output-root.md) | The Consolidated Output Root |
+| documentation coverage flow | [docs/explanation/documentation-coverage-flow.md](docs/explanation/documentation-coverage-flow.md) | End-to-end trace of the documentation-coverage mechanism — which agent writes which field, which component reads it, and the four places where the writing side and the reading side disagree. |
 | tdd workflow | [docs/explanation/tdd-workflow.md](docs/explanation/tdd-workflow.md) | This explanation describes how Test-Driven Development works inside leafcutter's |
 | traceability guardrails | [docs/explanation/traceability-guardrails.md](docs/explanation/traceability-guardrails.md) | Which mechanical guardrails currently enforce the links between acceptance criteria, code, tests, documentation and product-truth flows; which layer each one runs in; where the holes are; and which AC families are planned to close them. |
 

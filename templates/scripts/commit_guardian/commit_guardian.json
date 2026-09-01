@@ -1147,6 +1147,19 @@
                 "_comment": "BP-1100g-4: for each staged ticket, extracts the kinds of proof its own ## Test Requirements descriptors promise (the angle value per covers id) and compares them against the kinds already claimed by a test in the tree (BP-1100g-3's collect_test_tag_records — a covers + angle tag on the same test function). A promised kind with no matching claim blocks the commit, naming the ac_id, the stated behaviour, and the missing kind by name. The promise set is the denominator: a kind never promised is never named in a refusal, and a ticket that promises nothing is never refused. Reads only two authored declarations (the Test Requirements angle values and the scanner's per-function records) — never a test's own body (BO-2900a-2). STATIC only — no pytest run at pre-commit time. Bypassable via SKIP=check-proof-promise-claim or --no-verify."
             },
             {
+                "id": "check-ticket-signoff-parity",
+                "tier": "judgment",
+                "name": "Check Ticket Sign-off Parity",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ticket_signoff_parity.py",
+                "language": "system",
+                "files": "^tickets/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": true,
+                "_comment": "Validates parity between a staged ticket's YAML frontmatter agents: map and its ## Sign-offs checklist (warn-only by default; auto-enforced for done/ paths — see check_ticket_signoff_parity.py's own module docstring). BP-1100g-5-i: also runs check_cross_layer_seam_answer() over the ticket's ## Comments completion_manifest: block(s) and reports, by name, any cross_layer_seam_answer that is reasonless, absent, or answered_more_than_once — a reasoned not_applicable and a ticket with no completion_manifest at all (halted run or pre-epoch legacy sign-off) are both left unreported. Registration added here per BP-1100g-5-i's own it_requirements: the check functions predate this entry but were unreachable from any registered hook (see BO-400d-3)."
+            },
+            {
                 "id": "check-ticket-ac-status-parity",
                 "tier": "judgment",
                 "name": "Check Ticket AC Status Parity (KI-1)",

@@ -116,7 +116,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-123a-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/01_TICKET-20260831-GE-123a-1.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -146,3 +147,4 @@ notes: |
 
   The filename finding is still wanted — GE-123a-3 is the positive arm that
   guards it against being deleted rather than de-privileged.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

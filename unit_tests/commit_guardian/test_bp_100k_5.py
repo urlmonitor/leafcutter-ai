@@ -209,6 +209,11 @@ class TestOutputDriftGateExaminesFullDeployedSurface(unittest.TestCase):
     named GAP/EXEMPT) must equal the real deployed surface, not a subset
     silently bounded by directories no manifest key's parent ever mentions."""
 
+    _workspace: Path
+    _build_result: subprocess.CompletedProcess[str]
+    _hook: Path
+    _manifest_path: Path
+
     @classmethod
     def setUpClass(cls) -> None:
         tmpdir = tempfile.TemporaryDirectory()
@@ -316,6 +321,7 @@ class TestOutputDriftGateExaminesFullDeployedSurface(unittest.TestCase):
         self.assertIsNotNone(
             match, f"No RESULT summary line found. Output:\n{self._combined}"
         )
+        assert match is not None  # narrowing for mypy; assertIsNotNone above is the real check
         verified = int(match.group(2))
         uncomparable = int(match.group(3))
         self.assertEqual(

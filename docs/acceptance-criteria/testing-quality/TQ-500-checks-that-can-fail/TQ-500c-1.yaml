@@ -1,0 +1,143 @@
+id: TQ-500c-1
+components:
+  - testing_quality
+title: "One recorded outcome per test per alteration, and no combined verdict standing in for them"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work covered by four tests, whose writer applies three successive
+      alterations to the guarded behaviour and re-runs the tests after each,
+  When that piece of work is handed on,
+  Then its hand-off record states, for every test and every alteration that test was
+    exposed to, whether that test objected under that alteration, with each test
+    identified by name,
+    And the record carries no single combined verdict standing in place of those
+      outcomes,
+    And a record carrying only a statement that the group of tests objected, with no
+      outcome attributed to any individual test, is distinguishable from one carrying
+      the per-test outcomes,
+    And a test that was not exposed to a given alteration is recorded as not exposed,
+      which is distinguishable from that test having been exposed and not objected.
+depends_on:
+  - TQ-500c
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-010 Fix direction item 3, and the evidence table it refers to — four
+      sibling tests against three successive alterations, with a dash for the pairs
+      a test was never exposed to. The last Then clause exists because that table
+      needs three values per cell, not two.
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The writing surface. Its existing red_baseline block is already per test — one
+      entry per test with that test's actual error text — so this record shape
+      follows a convention the writer already keeps, rather than introducing a new
+      habit.
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Section 2b, the record these outcomes ride, and its rule that a manifest item
+      carries one entry per required item.
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    THREE VALUES PER CELL, NOT TWO. The template must define the outcome
+    vocabulary as objected / did_not_object / not_exposed. A two-valued field
+    forces "not exposed" to be written as "did not object", which in the recorded
+    incident would have marked three sound tests inert and produced exactly the
+    flood of false findings whose only natural remedy is to switch the check off.
+  - >-
+    THE PAIR IS THE UNIT OF RECORD. Each entry carries the test's identity, the
+    alteration's identity, and one outcome value. A record shaped as one value
+    per test loses the column axis and makes TQ-500c-3's reading impossible to
+    build — the collapse survives one level of aggregation, which is why the
+    granularity is stated here rather than left to the reader.
+  - >-
+    NO GROUP-LEVEL VERDICT MAY BE EMITTED ALONGSIDE THE PAIRS. The second Then
+    clause is a prohibition on the record, not a preference: if a combined
+    verdict exists, some reader will prefer it, and TQ-500c-2's contract depends
+    on there being nothing to fall back to. Do not add a convenience summary, a
+    ratio, or a count of tests that objected.
+  - >-
+    FOLLOW THE CONVENTION THE WRITER ALREADY KEEPS. templates/agents/test-writer.md's
+    existing red_baseline block is already one entry per test carrying that test's
+    actual error text. Shape the per-pair outcomes on it rather than introducing a
+    second habit, and require the test's identity to be its real test-function
+    name, not a paraphrase.
+  - >-
+    This record rides the same completion_manifest entry as TQ-500a-1's answer,
+    nested inside the substitute shape. It is not a sibling key and not a second
+    block.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500c-2
+    contract: >-
+      Within the substitute answer: one outcome per test per alteration, each
+      carrying the test's identity, the alteration's identity, and one of three
+      values — objected, did not object, not exposed. No group-level verdict is
+      emitted alongside them, so the reader has nothing to prefer over the pairs.
+expects_from:
+  ac_id: TQ-500a-3
+  contract: >-
+    The named alterations these outcomes are recorded against. This AC specifies the
+    granularity of the outcomes, not the choice of alteration.
+test_required: false
+test_rationale: |
+  Genuinely test-free at this AC's boundary, on the BP-1100g-5 precedent. The
+  deliverable is the record shape defined in templates/agents/test-writer.md and
+  templates/skills/signoff/SKILL.md; a test asserting the shape is described in a
+  template is source-presence evidence and passes on an implementation that
+  records nothing. The three-valued cell and the absence of a group verdict are
+  asserted over emitted records by TQ-500c-2, TQ-500c-3 and TQ-500c-2-i, which
+  carry the test contract — TQ-500c-3's fourth descriptor in particular fails
+  outright if the record collapses not_exposed into did_not_object.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept llm-expert and change_target prompt. Pinned three cell values rather
+      than two (the recorded incident's last column is three dashes out of four),
+      made the (test, alteration) pair the unit of record so TQ-500c-3's
+      column-wise reading is buildable, and wrote the no-group-verdict clause as
+      a prohibition on the record rather than a preference. test_required false;
+      the falsifiable halves are TQ-500c-2, TQ-500c-3 and TQ-500c-2-i. criteria
+      untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE AXIS THAT ACTUALLY LOCATED THE RECORDED DEFECT, and it is not a
+  presentation preference. In KI-TQ-010 three of four sibling tests objected to the
+  injected fault and the fourth — the one carrying the piece of work's headline claim
+  — did not. A single combined verdict would have said "the suite catches it" and
+  that test would still be inert today.
+
+  WHY PER ALTERATION AND NOT ONLY PER TEST. The recorded table has three alteration
+  columns, and the collapse survives one level of aggregation: the second test
+  objected only under the second alteration and the fourth only under the third. A
+  record giving one verdict per test across all alterations hides which alteration a
+  test is blind to, and an alteration that no test objected to at all becomes
+  invisible the moment any other alteration was caught.
+
+  THE FOURTH CLAUSE IS NOT PEDANTRY. In the recorded table, three of the four cells
+  in the last column are dashes — those tests were never exposed to the third
+  alteration. Recording "not exposed" as "did not object" would have marked three
+  sound tests inert and produced exactly the flood of false findings whose only
+  natural remedy is to switch the check off.

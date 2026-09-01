@@ -125,7 +125,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-123c-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/14_TICKET-20260831-GE-123c-2.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -163,3 +164,4 @@ notes: |
   rather than per spelling: the two-field and three-field cases are one rule seen
   twice, and a fix written per spelling leaves whichever spelling was not enumerated
   silently broken — the exact shape of the defect being closed.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

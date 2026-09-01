@@ -28,6 +28,9 @@ from pathlib import Path
 
 from config_loader import load_config, validate_config, _JSONSCHEMA_AVAILABLE  # noqa: F401
 from build_phases import (
+    DeployDeclarationError,
+    raise_if_deploy_failures,
+    reset_deploy_failures,
     build_agents,
     build_workflow_scripts,
     build_ac_store,
@@ -1453,7 +1456,7 @@ def _check_command_reachability_guard(output_root: Path, config: dict) -> int:
     against output_root (BP-900g-1). Whether a name-form workflow reference
     is skipped is decided from the declared ``config["workflows"]["enabled"]``
     value, not from whether the workflows output happens to exist on disk
-    (BP-100k-7) — ``config`` must be the SAME configuration object the build
+    (BP-100n-2) — ``config`` must be the SAME configuration object the build
     itself used to decide whether to produce that output.
 
     This is the COMMAND-SIDE analogue of the BP-811 ``.claude/workflows``
@@ -2029,7 +2032,18 @@ def main(argv: list[str] | None = None) -> int:
     if _check_deploy_collision_guard(output_root, config):
         return 1
 
+    # BP-900g-9: clear any accumulated declared-deploy failures before the
+    # phases run, so consecutive in-process invocations do not inherit each
+    # other's findings, then raise ONCE afterwards carrying the whole set.
+    reset_deploy_failures()
+
     total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
+
+    try:
+        raise_if_deploy_failures()
+    except DeployDeclarationError as exc:
+        print(f"[DEPLOY DECLARATION] {exc}", file=sys.stderr)
+        return 1
 
     # Command-reference reachability guard (BP-900g-1 / BP-900g-1-i): after
     # the deploy phases have written real files, scan every deployed

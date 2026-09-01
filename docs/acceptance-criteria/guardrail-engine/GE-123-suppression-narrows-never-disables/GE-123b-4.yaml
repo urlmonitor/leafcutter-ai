@@ -137,7 +137,8 @@ amended_by:
   date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/10_TICKET-20260831-GE-123b-4.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -190,3 +191,4 @@ notes: |
   affected file satisfies all three with no ordering hazard; it is offered as a
   worked shape, not mandated. Baselines re-verified before enrichment: 0 in both
   orders, and 1 for the five-entry arm.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

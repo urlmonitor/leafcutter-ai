@@ -1,0 +1,116 @@
+id: BO-3500a-1-i
+components:
+  - build_orchestration
+  - agent_registry
+title: "No substitution: a member whose craft is unavailable is never given to another craft"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a build set containing a member whose declared craft the run cannot dispatch —
+    whether because no craft of that name exists in the project, or because this run
+    has no place for it,
+  When the run decides what to do about that member,
+  Then no other craft is handed that member,
+  And in particular the craft that writes source code is not handed it,
+  And no craft produces an artifact on that member's behalf,
+  And the member is not marked finished and is not marked as being worked on,
+  And the member's declared craft is left as the member declares it — the run does not
+    rewrite the declaration to a craft it happens to have.
+
+  Given the same set,
+  When the run's ending is inspected,
+  Then the run's answer is the report that names the problem, and never a stand-in
+    artifact produced by a craft that was available.
+depends_on: [BO-3500a-1]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013's closing warning — 'Do not simply skip untestable ACs — that reintroduces phantom-done through the front door.' Substitution is the same failure wearing a different hat: an artifact exists, so the record looks satisfied, and nobody produced what was asked for."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE SUBSTITUTION PATH IS CONCRETE, WHICH IS WHY THIS IS CHEAP TO GET WRONG. templates/workflows-js/fast-lane-ship.js dispatches `agentType: \"test-writer\"` and `agentType: \"python-coder\"` unconditionally, and pins RELEASE_EXECUTOR_AGENT_TYPE to python-coder. When a member's declared craft has no phase, the correct action is to STOP; falling through to those constants is the substitution this record forbids."
+  - "NO WRITE ON THAT MEMBER'S BEHALF. The run must not call claim_build_set, _update_ac_work_status or mark_done_built_acs for the member, and must not write its `assigned_agent`. compute_producibility_verdict is already read-only (BO-2400f-12-i) — preserve that property rather than adding a write beside it."
+  - "ASSERT THE NEGATIVE ON THE STORE AND THE FILESYSTEM, NOT ON THE LOG. After the run the member's YAML must be byte-identical to before (one hash comparison catches work_status, an in-progress marker and an assigned_agent rewrite together), and the member's declared output path must not exist."
+  - "REWRITING THE DECLARATION IS SUBSTITUTION WITH THE EVIDENCE REMOVED, and it is the variant nothing else in this tree detects: it destroys the very field BO-3500d counts, so the coverage figure improves while nothing improves. Treat any write to `assigned_agent` by the run as a defect, including a well-meant normalisation of case or spelling."
+  - "The ending must be the refusal report itself, not a success ending carrying a warning. Assert that the PR-open step did not execute — a stand-in artifact plus an opened pull request is the shape where every visible signal is green and nobody produced what was asked for."
+  - "NO PRESENCE-ONLY ASSERTIONS (check_presence_only_assertions.py is a live ratchet). Each test below executes a run and reads the store and the working tree afterwards."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500a-1
+  contract: "The per-member dispatch plan {ac_id, craft, source} and the run-scoped roster set. This record constrains what the run may do with a plan entry whose craft is not in that roster: nothing."
+test_spec:
+  - name: test_member_with_unavailable_craft_is_not_dispatched_to_any_other_craft
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Run over a store whose member declares architecture-diagram-author with that craft absent from the roster; assert no recorded dispatch pairs that member with python-coder, test-writer or any other craft."
+  - name: test_no_artifact_written_on_behalf_of_unavailable_craft
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "After the run, the member's declared output path does not exist and no new file appears under it."
+  - name: test_member_yaml_byte_identical_after_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Hash the member's on-disk YAML before and after the run and assert equality — catches a done flip, an in-progress marker and an assigned_agent rewrite in one assertion."
+  - name: test_declared_craft_is_never_rewritten_to_an_available_one
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Re-read the member after the run and assert assigned_agent still holds the original craft string exactly, including case."
+  - name: test_ending_is_the_refusal_and_no_pull_request_is_opened
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Assert the run's terminal outcome is the refusal report and that the PR-open step recorded no execution."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  The Product Owner named this constraint explicitly on BO-3500a and it applies to both
+  of the two situations that L1 distinguishes, which is why it is recorded once here
+  rather than twice in BO-3500a-2 and BO-3500a-3.
+
+  WORDING NOTE — DO NOT "IMPROVE" THE THIRD THEN-CLAUSE BACK (KI-BP-20260831-0940).
+  That clause reads "no craft produces an artifact on that member's behalf". The natural
+  phrasing is "no artifact is written on that member's behalf", and it was written that
+  way first. It cannot be used: derive_declares_side_effect() scopes correctly to Then
+  blocks but is NEGATION-BLIND inside them, so "no artifact is written" matches the
+  durable-effect phrase "is written" and derives true. This record is a refusal — its
+  entire content is that nothing happens — so true would be false, and the field is
+  derived rather than authored by opinion (BO-2900g-2), leaving no honest way to set it
+  by hand. The reworded clause means exactly the same thing and derives false, which is
+  correct. Verified minimal case: "Then the run refuses and nothing is written to disk"
+  also derives true. Once the derivation handles negation, restore the plainer wording.
+
+  WHY IT IS A SEPARATE RECORD AND NOT A CLAUSE. Substitution is the cheapest way to make
+  every other criterion in this tree pass. A run that hands a diagram to the code craft
+  produces a file, satisfies a naive existence proof, opens a pull request and reports
+  success — every visible signal is green and nothing anybody asked for was made. Making
+  it a criterion in its own right means a test exists whose only job is to fail when
+  that happens.
+
+  Note the last clause of the first scenario: rewriting the declaration is substitution
+  with the evidence removed. A run that quietly changes a member's declared craft to one
+  it can dispatch destroys the very field BO-3500d counts, so the backlog figure would
+  improve while nothing improved.
