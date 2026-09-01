@@ -50,9 +50,29 @@ stops reading it, which is worse.
 
 Two habits follow. When you fix something a register entry describes, **update the entry
 in the same PR**. And when you pick work off this register, **confirm the defect is live
-in the code before starting** — KI-BP-003 is the cautionary case, because its fix changed
-the resolution strategy rather than adding the deploy-map entry the entry describes, so
-grepping for the obvious symptom still returns nothing and reads as "never fixed".
+in the code before starting**.
+
+**`Status: RESOLVED` is also only a claim, and it is the more dangerous one.** The
+paragraph above cited KI-BP-003 as the cautionary example of a stale *open*. That reading
+was itself wrong, and it was corrected on 2026-09-01: KI-BP-003 was never fixed. The
+2026-08-31 closure was a desk-check that mistook a resolver change for a deploy fix, a
+second reader endorsed it a day later without running anything, and a consumer hit the
+defect the following morning. Full account in the entry.
+
+The asymmetry is what matters. A stale `open` costs someone a wasted investigation and
+they discover the truth immediately, because the first thing they do is go look. A stale
+`RESOLVED` removes the entry from everyone's queue and is discovered by a user. So:
+
+- **Never close an entry by reading code.** Run the thing. Paste the command and its
+  output into the entry — every closure here that turned out to be wrong argued from
+  source, and every one that held quoted a run.
+- **Read the entry's own evidence before overriding it**, and check the dates. KI-BP-003
+  carried a reproduction that post-dated the fix being credited, three lines above the
+  status line that credited it.
+- **Agreement between two readers is not verification** when neither of them executed
+  anything. Two desk-checks are one desk-check.
+- **Zero grep hits are not evidence of anything.** They were read as "the fix is elsewhere"
+  when they meant "there is no deploy site at all."
 
 **Hitting an existing issue.** Increment `Occurrences` and update `Last seen`. Do not
 add a duplicate entry. Occurrences is an escalator, not the score — a blocker seen once
@@ -233,18 +253,38 @@ is also easy to mistake for another author's work. Restore with
 > occurrence of the same shape; see KI-BP-018. Unblock adopters that way if you must, but
 > the entry closes with BP-900g-8.
 
-- **Severity:** was blocker — **RESOLVED**, retained for its evidence. Re-verified 2026-09-01:
-  `_find_doc_types_json()` performs a `__file__`-relative ancestor walk checking both the
-  self-hosted and consumer-deployed layouts, so no fixed deploy location is required.
-- **Status:** **RESOLVED — verified 2026-08-31.** `doc_type_validators.py` no longer needs
-  the file deployed to a fixed location: `_find_doc_types_json()` walks ancestor
-  directories checking both `config/doc_types.json` (dev layout) and
-  `leafcutter/config/doc_types.json` (consumer-deployed layout). The fix changed the
-  RESOLUTION STRATEGY rather than adding a deploy-map entry, which is why grepping
-  `build_phases.py` for `doc_types` still returns nothing and can be misread as "never
-  fixed".
-- **Occurrences:** 4
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
+- **Severity:** blocker.
+- **Status:** **OPEN. Reopened 2026-09-01 — the 2026-08-31 closure was wrong, and the way
+  it was wrong is the more useful half of this entry.**
+
+  > **THE FALSE CLOSURE, recorded rather than deleted.** From 2026-08-31 to 2026-09-01 this
+  > entry read `RESOLVED — verified 2026-08-31`. The closure argued that
+  > `_find_doc_types_json()`'s `__file__`-relative ancestor walk removed the need for any
+  > deploy location, and explicitly explained away the zero `grep doc_types` hits in
+  > `build_phases.py` as a misreading. Both claims were made by desk-check, neither by
+  > running anything.
+  >
+  > Two facts available at the time refute it. The resolver change landed **2026-08-18**
+  > (`160d4f47a`, PR #466) — *seven days before* the `RE-VERIFIED 2026-08-25 — LIVE`
+  > reproduction that still sits three lines above the status line. And the ancestor walk
+  > cannot help a consumer at all: it only ever checks `config/doc_types.json` and
+  > `leafcutter/config/doc_types.json` per ancestor, and in a real adopter install neither
+  > `<consumer>/config/` nor `<consumer>/leafcutter/` exists. A submodule directory named
+  > `leafcutter-ai/` matches neither candidate.
+  >
+  > A second commit then added a `Re-verified 2026-09-01` line endorsing the closure. That
+  > re-verification was not performed either. **Two independent readers agreed with each
+  > other instead of with the code**, and the entry's own contradicting evidence sat
+  > unread between their two edits.
+  >
+  > Refuted by running it: a clean `python scripts/build.py --target-dir /tmp/<scratch>`
+  > off current `origin/main` deploys **three** of the 23 files in `config/`
+  > (`feedback_categories.yaml`, `ac_store_schema.json`, `commit_guardian.json`);
+  > `find <target> -name doc_types.json` returns nothing; and the deployed hook raises
+  > `FileNotFoundError` with `_DOC_TYPES_JSON` resolved to `candidates_checked[0]` — the
+  > walk ran to the filesystem root and matched nothing.
+- **Occurrences:** 5
+- **First seen:** 2026-08-18 · **Last seen:** 2026-09-01
 - **Where:** deploy layout vs `templates/scripts/commit_guardian/doc_type_validators.py:49` (`_find_doc_types_json`)
 
 **Second occurrence, 2026-08-19 — reported from a consumer install, and it is worse there
@@ -307,6 +347,31 @@ the general rule this violates. `doc_types.json`, `diagram_types.json`, and now
 `agent_registry.json` (see KI-BP-012, which covers `agent_registry.json`'s non-deployment and
 its knock-on validation gap in full) are three unfixed instances of that one rule, not three
 separate defects.
+
+**Fifth occurrence, 2026-09-01 — reported by DIAGraph again, and it settles the
+second-versus-third disagreement above.** The adopter reports `check-doc-frontmatter`
+raising `FileNotFoundError` at `doc_type_validators.py:113` on **every** doc carrying
+frontmatter, blocking doc commits for everyone on their `main`, and reproduced against an
+untouched `ADR-012`. `--no-verify` was the only route through; it was the sole failing hook
+across `--all-files`.
+
+That resolves the open question in the third occurrence: with the package directory named
+`leafcutter-ai/` the lookup fails **everywhere**, main checkout included, because neither
+hardcoded candidate can ever match — `<consumer>/config/` does not exist and the submodule
+is not named `leafcutter/`. With it named `leafcutter/` the second candidate resolves in a
+main checkout and fails inside a worktree, which is the second occurrence exactly. **Both
+earlier reports were correct; they were describing different package-directory names.** The
+title may now be widened to say the adopter's `main` is affected — the condition the third
+occurrence set for doing so is met. The one-line probe above stays useful and is unchanged.
+
+Confirmed independently against current `origin/main` by clean-build reproduction (see the
+reopening note at the top of this entry), so this is a property of the code today and not
+of the reporter's install.
+
+The reporter's one wrong detail is worth keeping, because it misdirects the fix: they wrote
+that "the build just puts it somewhere else." It does not. The file is not deployed at all,
+so there is nothing to relocate — an entry has to be added, and per the fix direction above
+that entry must come from a derived closure rather than another hand-added line.
 
 **A concrete fix the reporter proposes, and it is the right one.** Emit the config into the
 deployed tree at build time. `.leafcutter/config/` already exists and is git-tracked in a
