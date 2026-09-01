@@ -7,7 +7,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -43,7 +43,7 @@ doc_links:
     relevance: "States the failure mode plainly — 'a reachability mandate can quietly be satisfied by a renamed criterion test' — and is the reason this L3 is written as an accepted outcome rather than a defect to close."
 assigned_agent: python-coder
 estimated_complexity: S
-declares_side_effect: true
+declares_side_effect: false
 it_requirements:
   reference_file_path: "scripts/commit_guardian/commit_guardian.json"
   n_location_rule: "0 — no registration change; this AC constrains the behaviour and the wording of the hook BP-1100g-4 registers"
@@ -122,6 +122,19 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: derived-field-correction
+  by: testing-expert
+  at: '2026-09-01'
+  note: declares_side_effect corrected true -> false. Every Then clause here is
+    about a refusal verdict and its exact wording -- "the work is NOT refused",
+    "the outcome is identical to [...]", "no part of reaching that outcome opens,
+    reads, parses [...]", "the outcome is reported as 'promised and claimed'
+    [...]" -- and none of them assert a durable object whose being written
+    outlives the run. The derivation excludes transient destinations (stdout,
+    stderr, exit status) on purpose; this AC writes no file, so false is the
+    honest value. it-po's original note argued true because the output is
+    "user-facing commit-time output whose exact wording is load-bearing" --
+    that conflates importance with durability. criteria untouched.
 superseded_by: null
 covered_by: []
 implemented_by: []

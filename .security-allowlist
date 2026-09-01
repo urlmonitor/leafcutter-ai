@@ -148,6 +148,14 @@ ENTROPY_HIGH:unit_tests/README.md:*
 ENTROPY_HIGH:tests/README.md:*
 ENTROPY_HIGH:changelogs/2026-09-01-1016-testing-readmes-corrected-the-commit-guardian-mutation-target-rule-was-wrong-for-31-of-106-test-files.md:*
 
+# The BP-1100g-4-i changelog entry cites a date-and-slug known-issue id (mutation
+# probe landing in the wrong copy) in its closing paragraph — a long hyphenated
+# token that reads as high-entropy. Prose, not a credential. Not reproduced here:
+# quoting it makes this allowlist trip the scanner it suppresses. Glob, not
+# per-line: the entry's surrounding prose can still shift.
+# Duplicated to the workspace root per the dual-update rule.
+ENTROPY_HIGH:changelogs/2026-09-01-1240-a-claim-is-taken-at-face-value-and-now-that-fact-is-pinned.md:*
+
 # The false-green mechanism catalogue cites date-and-slug known-issue ids, which are
 # long hyphenated tokens and read as high-entropy. Prose and cross-references, not
 # credentials. The ids are deliberately NOT reproduced here: quoting one makes this
