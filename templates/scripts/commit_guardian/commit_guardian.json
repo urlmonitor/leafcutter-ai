@@ -555,6 +555,7 @@
             },
             {
                 "id": "check-identifier-uniqueness",
+                "change_set_source": "handed_by_commit_path",
                 "tier": "judgment",
                 "name": "Check Identifier Uniqueness (GE-122 whole-collection numbering pass)",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_identifier_uniqueness.py",
@@ -1206,6 +1207,7 @@
             },
             {
                 "id": "check-ticket-signoff-parity",
+                "change_set_source": "handed_by_commit_path",
                 "tier": "judgment",
                 "name": "Check Ticket Sign-off Parity",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ticket_signoff_parity.py",
