@@ -1,0 +1,64 @@
+id: ACS-100a-3-i
+components:
+  - ac_store
+title: "A test_spec framework the project actually ships is accepted, and an unknown one is still refused"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance-criterion record whose test_spec names a test framework this
+    repository actually ships a runner or skill for,
+  When the schema validator checks that record,
+  Then the record validates, and a component-wide validate_ac_schema run over the
+    directory containing it reports every file valid,
+  And this holds specifically for `framework: playwright`, which the package ships a
+    Playwright-driven `webapp-testing` skill for and which two approved, high-priority
+    records (BP-1400c-1 and BP-1400c-1-i) already declare for a headless route-render
+    check.
+
+  And given a record whose test_spec names a framework this repository ships nothing
+    for — an invented value such as "jasmine" or an empty string —
+  When the same validator checks it,
+  Then validation still fails, and the diagnostic names the offending value and lists
+    the accepted members, so widening the vocabulary does not turn the field into a
+    free-text box.
+
+  Coverage note: the discriminating half is the second block. A test that only asserts
+  playwright is accepted would pass equally against a schema that dropped the enum
+  altogether, which is the opposite of what this criterion asks for — the field must
+  admit what the project ships and refuse what it does not. Both halves are required.
+depends_on: [ACS-100a-3]
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: modifies
+    status: exists
+    relevance: "The test_spec.framework enum. Held ['unittest', 'pytest'], which refused the playwright value two approved BP-1400 records legitimately declare, so validate_ac_schema failed across the whole build_pipeline component for a reason unrelated to any branch."
+  - path: templates/skills/webapp-testing/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The Playwright-based verification skill the package ships. Its existence is why playwright is a framework this project genuinely uses rather than an arbitrary widening of the vocabulary."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_check_ac_schema.py
+implemented_by:
+  - config/ac_store_schema.json
+change_target: schema
+risk_surface: internal
+test_spec:
+  - name: test_playwright_framework_is_accepted_and_unknown_framework_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Validates a record declaring framework: playwright and asserts it passes, then validates a record declaring an unshipped framework and asserts it fails with a diagnostic naming the value and the accepted members. Both halves in one test so the widening cannot be satisfied by removing the enum."
