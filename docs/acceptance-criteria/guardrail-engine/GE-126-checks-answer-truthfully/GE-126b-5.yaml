@@ -1,0 +1,207 @@
+id: GE-126b-5
+title: "A check reports whether it has ever been shown to refuse anything, and never-shown is a different answer from shown-and-refused"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given each check in the family carries, alongside its own configuration, one
+    known-bad input it must reject and the observable rejection that input must
+    produce — a non-zero outcome, a named error, or an absence from what the check
+    emits,
+  And the record of what happened when that input was last fed through the check's
+    real entry point can hold exactly four values: the rejection was observed, the
+    rejection was not observed, the attempt could not be run to a verdict, and the
+    attempt has not been made,
+  When any check reports its result,
+  Then the report carries that record for that check alongside the result, and the
+    four values are distinguishable from one another in the report,
+  And a check whose record says the attempt has not been made is not counted among
+    the checks whose refusal has been observed, and is not reported as though its
+    refusal had been demonstrated,
+  And the run states how many checks it examined in total and how many carried each
+    of the four values, and the four stated figures sum to the stated total,
+  And given one check's record changes from the attempt has not been made to the
+    rejection was observed, and nothing else in the repository changes,
+  When the run repeats,
+  Then the two corresponding stated figures each move by one, in opposite directions,
+    and the stated total is unchanged.
+depends_on:
+  - GE-126b
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b.yaml"
+    relationship: parent
+    status: exists
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE VOCABULARY TO REUSE, NOT REINVENT. This schema already names the four values in
+      its `currently.state` enum — passing, failing, blocked, unverified — and already
+      states the rule this AC enforces, verbatim: "an unrun control records state
+      `unverified` rather than omitting the block, so 'we never fed it bad input' is
+      visible in the artifact instead of silent." It also already models the known-bad
+      input as `negative_control` with an `input` and an `expected_result`. Adopt these
+      names. A second vocabulary beside this one splits the concept in two.
+  - path: docs/testing/test-angles.verification.flow.json
+    relationship: related
+    status: exists
+    relevance: >-
+      The one and only instance document written against that schema. It is the worked
+      example of what a populated record looks like, and it is also the measure of the
+      gap: one document, no reader.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-4.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      SIBLING, NOT DUPLICATE. GE-126b-4 requires the three answers a check can give
+      ABOUT THE WORK IT WAS HANDED — refused, could not inspect, clean — to be written
+      down with the evidence that produced them. This AC is about a fourth thing the
+      check knows about ITSELF: whether its own refusal path has ever been exercised.
+      A check can report all three of GE-126b-4's answers perfectly and still never have
+      been shown able to produce the first one.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126e-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      GE-126e-1 classifies each check by RUNNING it, and GE-126e-2 requires the count
+      examined beside the count found. This AC produces the per-check datum those two
+      aggregate. Share the execution machinery and the notion of the registered set with
+      GE-126e rather than growing a second one — GE-126e's own record already gives that
+      instruction with respect to GE-120c.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The harness that executes the deployed checks out of process from a real separate
+      working copy. Feeding a known-bad input through a real entry point needs exactly
+      that; extend it if it lands first.
+  - path: "templates/scripts/commit_guardian/verify_precommit_active.py"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE EXISTING NEIGHBOUR AND ITS SCOPE LIMIT. With precommit_canary.py it proves the
+      pre-commit MACHINERY can fire in a worktree. It proves nothing about any individual
+      check's ability to refuse. Whole-system liveness against per-check liveness is the
+      gap this AC fills; do not extend the canary to cover it, because a canary that
+      passes says only that something ran.
+  - path: templates/hooks/readme_read_guard.py
+    relationship: related
+    status: exists
+    relevance: >-
+      The worked example of the state this AC makes visible. Registered, running on every
+      edit, and unable to refuse anything — see this AC's notes for the re-derivation.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: false
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-126b-5-i
+    contract: >-
+      The four-value record and the per-value stated figures, into which GE-126b-5-i
+      inserts the exempt disposition and its own figure, and back into which a groundless
+      exemption must fall.
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126b-5-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: >-
+  THE ONE-SENTENCE REASON THIS AC EXISTS. Every existing defence in this repository asks
+  whether a check's verdict is CORRECT. None asks whether the check ever refused anything.
+  A check that has never refused anything and a check that refuses correctly are today
+  indistinguishable in every report the system produces, and eight separate instances of
+  that indistinguishability were found in roughly 36 hours.
+
+
+  THE FOUNDATION ALREADY EXISTS AND HAS NO READER — RE-DERIVED, 2026-09-01.
+  config/verification_flow.schema.json states the principle in its own words and models
+  the exact vocabulary. A repository-wide search for files mentioning it returns seven:
+  the schema itself, one instance document (docs/testing/test-angles.verification.flow.json),
+  two AC records (TQ-500a-1, BP-1100g-5-i), two changelogs, and docs/testing/test-angles.md.
+  There is no code reader. The vocabulary was invented, the schema was written, one
+  document was produced, and the validator was never built — which is itself another
+  instance of the pattern. Build the reader; do not mint a second vocabulary beside it.
+
+
+  WORKED EXAMPLE, RE-DERIVED IN THIS WORKTREE WITH THE GUARD'S OWN CODE, 2026-09-01.
+  templates/hooks/readme_read_guard.py is registered as a PreToolUse hook in settings.json
+  and runs on every Edit and Write. Loading its own `_is_gated` and reproducing main()'s
+  resolve() step gives:
+
+    .claude/hooks/x.py         gated=False   resolved -> <root>/.leafcutter/hooks/x.py
+    .claude/agents/x.md        gated=False   resolved -> <root>/.leafcutter/agents/x.md
+    .claude/skills/x/SKILL.md  gated=False   resolved -> <root>/.leafcutter/skills/x/SKILL.md
+    alembic/versions/x.py      gated=True
+
+  Three of the four gated prefixes are inert because those .claude entries are symlinks
+  into .leafcutter and the resolved path no longer starts with the prefix. The fourth is
+  live and matches nothing: this repository has no alembic directory at all (`ls -d`
+  exits 2). So the guard is registered, enumerated, reachable and running, and cannot
+  refuse anything — while GATED_PREFIXES reads correctly and greppably. It is the exact
+  shape this AC makes visible, and it is invisible to every enumeration and reachability
+  guard already in the store.
+
+  ONE CORRECTION TO THE RECEIVED ACCOUNT, WHICH MATTERS FOR THE FIX. The inertness is
+  usually attributed to relative_to() raising ValueError and the except branch returning
+  False. That is true in the main workspace, where .leafcutter sits in the untracked
+  parent. In a worktree .leafcutter is inside the root, relative_to() succeeds, and the
+  prefix simply fails to match. Same inertness, different branch. A fix that only handles
+  the ValueError leaves every worktree inert — and worktrees are where the drives run.
+
+
+  ANTI-GREP, AND IT IS THE WHOLE SUBJECT. A criterion satisfiable by asserting that a
+  declaration exists, that a list contains an entry, or that a function is defined
+  reproduces this bleed one level up. The declaration must be READ BACK by feeding its
+  stated known-bad input through the check's real entry point and requiring the stated
+  rejection to be observed. A well-formed declaration nobody exercises is instance 5 of
+  this bleed; a correct-looking constant that never matches is instance 8.
+
+
+  THE MOVING-COUNT CLAUSE IS NOT DECORATION. A stated total satisfies a
+  state-your-count requirement while proving nothing, because a hardcoded number is a
+  legal answer. Requiring the figures to MOVE under a varied population is the only form
+  of the requirement that a literal cannot satisfy. This is the same discriminator
+  BP-100n-4 uses, deliberately, so the two read the same way.
+
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "A check whose record says the attempt
+  has not been made is not reported as though its refusal had been demonstrated" is green
+  on arrival, because today nothing is reported at all. INJECTION: treat a missing or
+  unrun record as the rejection having been observed — the default that a hasty
+  implementation reaches for so the first run is quiet. Under that injection every check
+  that has never been exercised reports as demonstrated, the never-made figure falls to
+  zero, and this clause must go RED; revert must restore it. The mutation must be applied
+  to the copy the test loads (GE-126c-5), or it will not land.
+
+
+  DAY-ONE BLAST RADIUS IS THE CORRECT OUTCOME, AND THE HONEST FIGURE IS UNKNOWN. On the
+  commit that lands this, most checks will report that the attempt has not been made,
+  because it has not. That is the true state and must not be pre-suppressed by seeding
+  records. GE-126's own evidence block forbids stating how widespread the defect is until
+  GE-126e has measured it; this AC states no such figure and none may be inferred from it.
+
+
+  FALSE-GREEN CATALOGUE. "A guard whose refusal path has never been exercised" is not in
+  docs/reference/false-green-mechanisms.md. M5 is a validator that validates nothing on a
+  bad argument shape; M8 is a proxy reported as a verdict. Neither covers a guard that
+  runs correctly on every input it is ever given and has no reachable refusal. Recommend
+  a new entry.
