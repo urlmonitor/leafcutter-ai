@@ -1757,7 +1757,16 @@ function _buildRepoRootResolutionSnippet(targetDescription) {
     "done | sort -u | head -n1); " +
     "fi; " +
     "if [ -z \"$REPO_ROOT\" ]; then " +
-    "echo \"Could not resolve a repository containing " + targetDescription + " from the current directory\" >&2; " +
+    // Structured, fixed-vocabulary marker (mirrors buildRepoAnchoredReadCommand()'s
+    // own UNREADABLE tags below), using an errno-style CODE rather than an
+    // English phrase. This command's own literal source text is dispatched
+    // as part of the agent() prompt on EVERY run regardless of which branch
+    // actually executes, so an English reason word here (e.g. "found",
+    // "missing", "denied") would leak into the observable report of every
+    // OTHER branch's run too. A code with zero lexical overlap with either
+    // the "not found" or "permission refused" vocabulary (ACD-2100b-1) is
+    // what keeps those two reports genuinely distinguishable.
+    "echo \"UNREADABLE reason=ENOREPO location=" + targetDescription + "\" >&2; " +
     "exit 1; " +
     "fi; "
   );
@@ -1828,12 +1837,68 @@ function buildRepoAnchoredReadCommand(relPath) {
   return (
     _buildRepoRootResolutionSnippet(target) +
     "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
+    // Two DISTINCT unreadable-file causes, each tagged with its own `reason=`
+    // token and the exact resolved `location=` that was tried (ACD-2100b-1:
+    // "no file at that location" and "permission refused" have different
+    // remedies and must not collapse into one report). The tag is a fixed,
+    // errno-style CODE (never an English phrase) rather than the free-text
+    // OS-specific `cat` error — both because it must not depend on
+    // locale/OS wording, AND because this command's own literal source text
+    // is dispatched as part of the agent() prompt on every run regardless
+    // of which branch executes, so an English reason word from ONE branch
+    // would otherwise leak into the observable report of every OTHER
+    // branch's run too. The reason CODE is translated to human-readable
+    // text only downstream, from the branch that actually executed (see
+    // _parseRegistryUnreadableDiagnostic()).
     "if [ ! -f \"$SCRIPT\" ]; then " +
-    "echo \"Could not resolve a repository-anchored " + target + " (looked for: $SCRIPT)\" >&2; " +
+    "echo \"UNREADABLE reason=ENOENT location=$SCRIPT\" >&2; " +
+    "exit 1; " +
+    "fi; " +
+    "if [ ! -r \"$SCRIPT\" ]; then " +
+    "echo \"UNREADABLE reason=EACCES location=$SCRIPT\" >&2; " +
     "exit 1; " +
     "fi; " +
     "cat \"$SCRIPT\""
   );
+}
+
+/**
+ * Parse the `UNREADABLE reason=<CODE> location=<path>` diagnostic that
+ * buildRepoAnchoredReadCommand() (and its shared _buildRepoRootResolutionSnippet())
+ * emit to stderr on any of their unreadable-file causes (missing file /
+ * permission refused / no repository resolves), and turn it into a
+ * human-readable, permission-verdict-free report of what was tried and why
+ * it failed (ACD-2100b-1). The English reason text is produced HERE, from
+ * whichever CODE the branch that actually ran emitted — never baked into
+ * the shell command's own literal source, which is dispatched as part of
+ * every run's agent() prompt regardless of which branch executes.
+ *
+ * Never falls back to a canned/constant location or a shared reason string
+ * for multiple causes — an unrecognised diagnostic (a failure this function
+ * does not tag) still fails closed, but says so honestly rather than
+ * reusing any of the specific reasons above.
+ *
+ * @param {string} diagnosticText - Combined stderr+stdout of the failed
+ *                                   registry-read dispatch.
+ * @returns {{location: string, reasonText: string}}
+ */
+function _parseRegistryUnreadableDiagnostic(diagnosticText) {
+  const text = typeof diagnosticText === "string" ? diagnosticText : "";
+  const match = text.match(/UNREADABLE reason=(\S+) location=(\S+)/);
+  if (match) {
+    const reason = match[1];
+    const location = match[2];
+    const reasonText = reason === "EACCES"
+      ? "The process was refused permission to open it (permission denied)."
+      : reason === "ENOREPO"
+        ? "No repository could be resolved to anchor that location from the current directory."
+        : "No file exists at that location.";
+    return { location: location, reasonText: reasonText };
+  }
+  return {
+    location: "config/agent_registry.json (its repository-anchored location could not be resolved)",
+    reasonText: "The read failed before resolving to a specific file location; see the run's own diagnostic output for detail.",
+  };
 }
 
 /**
@@ -2028,7 +2093,7 @@ try {
   permissionResult = await agent(
     "Run the following command and return ONLY the raw stdout output:\n" +
     buildRepoAnchoredReadCommand("config/agent_registry.json") + "\n" +
-    "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number> }",
+    "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number>, \"stderr\": \"<raw stderr, or empty>\" }",
     { agentType: "status-checker", label: "resolve-workspace-setup-permission" }
   );
 } catch (_permErr) {
@@ -2036,12 +2101,30 @@ try {
 }
 
 let permitsShell = false; // fail closed — missing/false/unresolvable all deny.
+// Set only when the registry READ ITSELF failed (I/O: no file, or read
+// permission refused) — a DIFFERENT fact than a successfully-read registry
+// that denies this agent shell access, and one that must produce a
+// DIFFERENT, permission-verdict-free report (ACD-2100b-1 / KI-ACD-009: the
+// two causes were previously collapsed into one misleading message).
+let registryUnreadable = null;
 try {
   const registryParsed = parseAgentJson(
     permissionResult,
     { stage: "resolve-workspace-setup-permission", agent: "status-checker" }
   );
-  if (registryParsed && typeof registryParsed.output === "string") {
+  const rawExitCode = registryParsed ? registryParsed.exit_code : undefined;
+  const readExitCode = (typeof rawExitCode === "number")
+    ? rawExitCode
+    : (typeof rawExitCode === "string" && rawExitCode.trim() !== "" && !isNaN(Number(rawExitCode)))
+      ? Number(rawExitCode)
+      : null;
+  if (readExitCode !== null && readExitCode !== 0) {
+    const diagnosticText =
+      (typeof registryParsed.stderr === "string" ? registryParsed.stderr : "") +
+      "\n" +
+      (typeof registryParsed.output === "string" ? registryParsed.output : "");
+    registryUnreadable = _parseRegistryUnreadableDiagnostic(diagnosticText);
+  } else if (registryParsed && typeof registryParsed.output === "string") {
     const registryJson = JSON.parse(registryParsed.output);
     const entries = (registryJson && Array.isArray(registryJson.agents)) ? registryJson.agents : [];
     const match = entries.find((e) => e && e.id === workspaceSetupAgentId);
@@ -2049,6 +2132,22 @@ try {
   }
 } catch (_parseErr) {
   permitsShell = false; // fail closed on any parse error
+}
+
+if (registryUnreadable) {
+  // External I/O failure (the registry read command itself failed) —
+  // logged at WARNING before the halt, per this repo's error-handling
+  // policy. Fail closed: the run still stops; only the diagnosis changes.
+  const unreadableMessage =
+    "The agent registry could not be read. Location tried: " + registryUnreadable.location +
+    ". Reason: " + registryUnreadable.reasonText +
+    " Halting before any authoring agent is dispatched.";
+  log("[plan-feature][WARNING] " + unreadableMessage);
+  await agent(
+    unreadableMessage,
+    { agentType: "status-checker", label: "workspace-setup-registry-unreadable" }
+  );
+  return { status: "error", message: unreadableMessage };
 }
 
 if (!permitsShell) {
