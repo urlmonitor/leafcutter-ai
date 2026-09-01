@@ -375,8 +375,12 @@ class TestFilesTouchedExcludesRealOnDiskProseIllustrationPaths:
         ),
     )
     def test_files_touched_excludes_context_only_real_file_mentioned_in_prose(self):
-        # covers: TKT-600a-1
-        # angle: criterion
+        # NO "covers:" TAG ON PURPOSE. This test does not cover TKT-600a-1 -- it
+        # records a case the AC's 2026-09-01 criteria deliberately place OUT of
+        # scope. A covers-tag here would claim an xfail as proof of done, and
+        # check_done_proof correctly refuses that: it reads these tags, not the
+        # record's covered_by list, so leaving the tag while omitting the record
+        # entry states two different things in two places.
         """Retained as the executable statement of what TKT-600a-1 does NOT do.
 
         A prose bullet explicitly saying a real, existing file is CONTEXT ONLY
