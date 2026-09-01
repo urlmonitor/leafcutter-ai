@@ -1,0 +1,74 @@
+id: ACD-2200d
+components:
+  - ac_driven_dev
+  - git_vcs_operations
+readiness: draft
+priority: medium
+title: "A planning session lands as one clean change"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Everything a session produced arrives as a single reviewable change.
+
+  Instead of a trail of partial saves left behind by each stage you get one
+  change containing the finished result. Abandoning a session leaves nothing
+  recorded and interrupting one does not lose the work you already approved.
+depends_on:
+  - ACD-2200
+doc_links:
+  - path: docs/architecture/adrs/ADR-012-retire-create-ticket-js.md
+    relationship: describes
+    status: exists
+    relevance: "Establishes the route whose staged-commit invariant this L1 replaces."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - sequence-diagram
+notes: |
+  THIS L1 SUPERSEDES A LIVE APPROVED REQUIREMENT -- ACT ON IT EXPLICITLY.
+  ACD-300g ("Each stage's AC output is committed to git before the workflow
+  advances to the next stage") is readiness approved, work_status in_progress
+  and implemented_by scripts/workflows/plan-feature.js, with four children
+  ACD-300g-1..4. Its criteria mandate one commit per stage and a stage-naming
+  commit message. That is the direct opposite of this L1. When this is approved
+  ACD-300g and ACD-300g-1..3 must be set status superseded_by with
+  superseded_by: ACD-2200d. Do not build this while ACD-300g remains active --
+  a store holding both is a store where either outcome can be called correct.
+
+  WHAT ACD-300g WAS BUYING -- BOTH MUST SURVIVE THE COLLAPSE OR THIS IS A
+  REGRESSION DRESSED AS A SIMPLIFICATION:
+    - ACD-300g-4: cancel commits nothing. Drafts stay on disk uncommitted. With
+      one commit at the end this becomes easier rather than harder -- but it
+      must still be asserted, not assumed.
+    - ACD-300g-2-i: partial-run recovery. Uncommitted AC files left by a crashed
+      earlier session are DETECTED. Per-stage commits were the crash-recovery
+      mechanism; removing them removes it. Either carry the detection forward or
+      have the user accept the loss knowingly. Do not let it lapse by silence.
+
+  PAIRED WITH ACD-2200c -- READ THAT ONE BEFORE DECOMPOSING THIS. The AC
+  commit-guardian hooks validate only what is in that commit's index. Changing
+  from several small commits to one large one changes what those hooks see. In
+  particular a session that adds children to an existing parent must stage the
+  PARENT alongside the children or check_ac_parent_covered_by and
+  check_done_proof never look at a parent at all -- the exact structural blind
+  spot that let ACD-400a drift for five days. A single end-of-session commit
+  makes this easier to get right and much worse to get wrong.
+
+  ALSO IN SCOPE: the commit must be surgical. It contains the session's AC files
+  and nothing else. This repository has a live trap where an unrelated build
+  step rewrites docs/INDEX.md and a broad stage silently commits a ~175-line
+  deletion alongside the intended work.

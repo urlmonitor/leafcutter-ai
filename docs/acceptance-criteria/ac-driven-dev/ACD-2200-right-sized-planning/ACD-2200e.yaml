@@ -1,0 +1,63 @@
+id: ACD-2200e
+components:
+  - ac_driven_dev
+  - git_vcs_operations
+readiness: draft
+priority: medium
+title: "Putting your work up for review is your call"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Nothing is opened for review until you say it should be.
+
+  When a session finishes you are asked whether to put the result up for review
+  and either answer ends the session cleanly. Declining leaves the work safely
+  saved and openable later. Nothing is published on your behalf.
+depends_on:
+  - ACD-2200
+doc_links:
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: planned
+    relevance: "Must tell the user how to put a declined session up for review afterwards -- otherwise declining reads as losing the work."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+notes: |
+  WHY THIS IS A SIBLING OF ACD-2200d RATHER THAN PART OF IT. They are one
+  moment in time but two guarantees with different failure modes: d is about
+  what is recorded, e is about what is exposed. Splitting them also keeps each
+  inside the 5-L2-per-L1 cap, which a combined "commit and publish" L1 would
+  strain.
+
+  THIS IS A CONSENT GATE AND INHERITS THE ACD-2200b RULES. The question at the
+  end is a user decision. It may not be answered by an agent and a well-formed
+  agent reply carrying an explicit answer is still not consent (ACD-2100c-1 /
+  ACD-2100c-4). If the run genuinely cannot reach a person the correct default
+  is the conservative one -- do not open.
+
+  DECLINING MUST NOT BE A DEAD END. If the answer is no the user needs a stated
+  way to open it later. An opt-in that strands the work is worse than an
+  unconditional one, because the ceremony reappears as manual recovery.
+
+  ENVIRONMENT CONSTRAINT FOR THE IT PO, not a requirement of this AC: in this
+  workspace opening a pull request is blocked at the CLI level under the EMU
+  account and needs either an account switch or the REST endpoint. Whatever
+  carries out the affirmative answer must surface that failure as a failure --
+  a silent non-open after the user said yes is the mirror image of the defect
+  this L1 fixes.

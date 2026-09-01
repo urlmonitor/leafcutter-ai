@@ -1,0 +1,143 @@
+id: ACD-2200
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Planning a change costs no more than the change is worth"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Specifying work should cost in proportion to the work itself.
+
+  Today every request pays the same price: the same stages, the same paperwork,
+  the same waiting, whether it is a one-line correction or a new capability. So
+  small work either buys a large specification it does not need or quietly goes
+  around the route entirely -- and going around is what loses the triage, the
+  approval points and the safe staging the route exists to provide. This goal is
+  met when a small request produces a small specification and a short exchange;
+  when deciding things feels like answering a question rather than restarting a
+  stalled machine; when correctness is guaranteed by checks that run whenever
+  work is saved instead of by remembering to follow steps; and when the result
+  arrives as one clean change that is shared for review only if you say so.
+depends_on: []
+doc_links:
+  - path: docs/architecture/adrs/ADR-012-retire-create-ticket-js.md
+    relationship: describes
+    status: exists
+    relevance: "Establishes this route as the mandated entry point for all new work, which is what makes its cost a product problem rather than a preference."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: contradicts
+    status: exists
+    relevance: "The pause-and-resume mechanism ACD-2200b displaces for the interactive case. ADR-024 needs an amendment or a successor before ACD-2200b can be built -- see notes."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The store contract every right-sized output still has to satisfy. Scaling the specification down must not scale schema validity down with it."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2200a
+  - ACD-2200b
+  - ACD-2200c
+  - ACD-2200d
+  - ACD-2200e
+  - ACD-2200f
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-09-01, product-owner): authored from a user request to make AC
+  authoring scale to the size of the request, to run planning as an agile skill
+  in the main loop rather than as a monolithic workflow, to enforce correctness
+  at the commit boundary instead of through orchestrator ceremony, to keep
+  worktree isolation mandatory, to collapse per-stage commits into one commit
+  and to make opening a pull request an opt-in question at the end.
+
+  WHY THE L0 IS NOT NAMED AFTER THE ROUTE OR THE SKILL. The value is that
+  specifying work costs what the work is worth. If the route were served by some
+  other automation tomorrow the outcome would matter identically. "Skill",
+  "workflow", "main loop", "pre-commit" and "pull request" are all mechanism and
+  live at L1 and below or in these notes.
+
+  SIZE OF THE THING BEING REPLACED (verified 2026-09-01):
+  templates/workflows-js/plan-feature.js is 2849 lines. ACD-2100's verified
+  notes place gate resolution at 1552-1642, the permits-shell computation at
+  1745-1791 and the worktree shell-out at 1800. That single file is the
+  "monolithic workflow" in the request.
+
+  --- CRITICAL ANALYSIS: WHAT THIS REQUEST COLLIDES WITH ---
+
+  Three live requirements say the opposite of what was asked. None may be
+  quietly overwritten by an L2. Each needs an explicit supersede-or-keep
+  decision BEFORE the corresponding L1 is built.
+
+    1. ACD-300g "Each stage's AC output is committed to git before the workflow
+       advances to the next stage" -- readiness approved, work_status
+       in_progress, implemented_by scripts/workflows/plan-feature.js. Its
+       criteria mandate a commit per stage and a commit message naming the
+       stage. ACD-2200d mandates exactly one commit for the session. These
+       cannot both hold. ACD-300g and its four children ACD-300g-1..4 must be
+       superseded by ACD-2200d, not silently contradicted. Note what ACD-300g
+       was BUYING -- crash recovery of partial authoring work (ACD-300g-2-i) and
+       a no-commit-on-cancel guarantee (ACD-300g-4). ACD-2200d must carry both
+       forward or the collapse is a regression.
+    2. ACD-300b "A workflow script orchestrates the authoring agents in sequence"
+       -- readiness reviewed, in_progress. Its criteria state the workflow script
+       dispatches each agent as a sub-agent. Running planning in the main loop
+       displaces the script as orchestrator. Supersede or re-scope ACD-300b to
+       "the route decides which authoring stages a request needs" -- which is the
+       part worth keeping.
+    3. ADR-024 (interactive pause-resume) and ACD-2100c-2 / ACD-2100c-3 /
+       ACD-2100e. Those exist BECAUSE a headless workflow cannot reach a person,
+       and they are the correct answer for that world. In the main loop the run
+       can always reach the person, so the pause store stops being the primary
+       path. It may still be needed for a genuinely non-interactive invocation.
+       ACD-2200b must state which -- retire, or keep as an explicitly
+       non-interactive fallback. Do not let an L2 decide this by omission.
+
+  ALREADY COVERED -- DO NOT RE-AUTHOR. The user asked that pre-flight checks be
+  direct shell calls rather than agent dispatches. ACD-2100b-5 ("The startup
+  check reads the registry itself instead of asking an agent to read it") is
+  approved and covers precisely that for the startup charter check, and
+  ACD-2100c-1/c-4 cover the related "no agent answers for the user" rule. This
+  tree therefore has NO L1 for that ask. If a second pre-flight check is found
+  that still dispatches an agent, extend ACD-2100b rather than opening a
+  sibling here.
+
+  PARTIAL OVERLAP -- ACD-300a (triage classifies the request and checks for
+  duplicates). Triage already picks a STARTING stage from strategic /
+  behavioral / technical / covered. What it does not do is bound the DEPTH and
+  VOLUME of what gets authored once a stage starts. ACD-2200a is scoped to that
+  gap and must consume ACD-300a's routing decision rather than replace it.
+
+  DELIBERATELY OUT OF SCOPE (named so the BA does not absorb them):
+    - The whole ACD-2100 tree. Those are defect fixes to the current route. This
+      tree is a reshaping of it. If ACD-2200b lands first, several ACD-2100
+      defects become unreachable rather than fixed -- flag that at build time;
+      do not pre-emptively close them here.
+    - Which checks the commit boundary should run. ACD-2200c requires that the
+      guarantee live at the commit boundary; it does not author new checks. New
+      or changed hooks belong to the commit_guardian / precommit_hooks
+      components.
+    - The AC-Driven Build v2 migration (ACD-1600/1700/1800/1900/2000). That is
+      about what an AC CONTAINS. This tree is about how much of it is produced
+      and at what cost. They touch the same store and must not be merged.
+    - KI-ACD-006 (a run that authors zero ACs reports success). Adjacent to
+      ACD-2200a's smallest-output case and to ACD-2200d's cancel path. Still a
+      separate concern.
+
+  AUTHORING CONSTRAINTS IN THIS COMPONENT (from PROJECT_CONTEXT.md):
+  no commas in AC titles (KI-ACD-010); child caps are 7 L1 per L0 and 5 L2 per
+  L1 -- this tree deliberately ships 6 L1 to leave one slot; depends_on,
+  criteria, title and req_status are write-locked to product-owner /
+  business-analyst / it-po / a human.

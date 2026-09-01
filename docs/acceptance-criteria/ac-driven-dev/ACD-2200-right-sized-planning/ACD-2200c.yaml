@@ -1,0 +1,80 @@
+id: ACD-2200c
+components:
+  - ac_driven_dev
+  - commit_guardian
+readiness: draft
+priority: medium
+title: "Correctness is guaranteed by checks you cannot forget"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  What makes the result valid is checked when work is saved -- not by following steps.
+
+  Whatever route produced it and whoever was driving it, work is verified at the
+  moment it is recorded and again before it is accepted. A shortcut cannot
+  produce an invalid result and a skipped step cannot produce a silent one.
+depends_on:
+  - ACD-2200
+doc_links:
+  - path: docs/pre-commit-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The commit-boundary guarantee this L1 leans on. Must state which validity properties are guaranteed there rather than by the route."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Names the enforcement points and warns that AC field validation is not single-sourced -- a rule added to only one gate is a partial gate."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  WHAT THIS L1 IS AND IS NOT. It requires that the guarantee of a valid result
+  LIVE at the commit boundary and in the acceptance check rather than in the
+  route's own sequencing. It does NOT author new checks. Any new or changed hook
+  belongs to the commit_guardian / precommit_hooks components and gets its own
+  AC there; this one owns the relocation of responsibility and the proof that
+  nothing was lost in the move.
+
+  THE MOVE IS ONLY SAFE IF THE INVENTORY IS TAKEN FIRST. Enumerate every
+  correctness property the current route guarantees by sequencing before
+  removing any of it, and for each one name the boundary check that now carries
+  it or record explicitly that it is being dropped and why. An unenumerated
+  property is a property that disappears silently.
+
+  THREE VERIFIED HAZARDS THAT MAKE THE NAIVE VERSION OF THIS A FALSE GREEN:
+    1. The AC hooks validate only the files present in that commit's INDEX --
+       they do not read the store. A fact true of the store but not of the
+       staged set is structurally unreachable to them. Their silence is not a
+       pass; it means they were never given the file. This is how ACD-400a
+       carried a stale covered_by for five days and a falsely done parent
+       through every commit in the window. Collapsing to one commit
+       (ACD-2200d) changes what is in the index at check time -- work that
+       through this L1 together with ACD-2200d, never separately.
+    2. Several of those hooks ignore argv entirely and read the index or
+       HOOK_TEST_FILES. Passing a path on the command line does not make them
+       check that path. Verify a hook actually saw the file before trusting its
+       exit code.
+    3. AC field validation is not single-sourced. config/ac_store_schema.json,
+       the commit hook's manual-validation fallback, and the agent-side
+       validator are three separate enforcement points. A rule added to one is a
+       partial and sometimes no-op gate.
+
+  ADDITIONALLY: a check that runs only in CI is not a commit-boundary guarantee
+  for a local run and a hook that is not established in a worktree is silently
+  skipped for the whole session. Both are known live conditions in this
+  repository. State which of the two boundaries carries each property.

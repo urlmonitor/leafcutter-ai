@@ -1,0 +1,64 @@
+id: ACD-2200a
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Small requests get small specifications"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  How much requirement you get back matches how much you asked for.
+
+  A one-line correction produces a single testable statement and a short
+  exchange. A new capability still produces the full picture. You are never made
+  to review a tree of paperwork that is larger than the change it describes and
+  never handed a stub for something that genuinely needed thinking through.
+depends_on:
+  - ACD-2200
+doc_links:
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: planned
+    relevance: "Must tell the user what size of output to expect for what size of request, so a short result reads as correct rather than as a failure."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+notes: |
+  SCOPE FENCE AGAINST ACD-300a. Triage already classifies a request as
+  strategic / behavioral / technical / covered and picks a starting stage. This
+  L1 is NOT a second triage. It bounds the depth and volume produced once a
+  stage starts -- how many levels are authored and how many siblings at each
+  level. Consume ACD-300a's decision; do not re-derive it.
+
+  THE FAILURE THIS MUST NOT INTRODUCE. The cheap way to satisfy "small output"
+  is to stop authoring L2/L3 for small requests. That would defeat the reason
+  the store exists: the leaf AC is what tests assert against, so a request that
+  produces no testable leaf produces work that cannot be verified as done --
+  the phantom-done mode this repository exists to prevent (CLAUDE.md, "New Work
+  Goes Through ACs"). The floor is therefore at least one testable leaf, always.
+  Right-sizing removes LEVELS AND SIBLINGS above the leaf, never the leaf.
+
+  ADJACENT AND EXCLUDED: KI-ACD-006 -- a run that authors zero ACs currently
+  reports success. That is a false-success defect, not a sizing rule. Do not
+  annex it; do note that this L1's floor makes zero-output a detectable
+  violation rather than a silent one.
+
+  OPEN QUESTION FOR THE BA, DO NOT GUESS: what decides the size -- the triage
+  classification alone, an explicit user statement of scope, or a judgement made
+  during the conversation? The user's phrasing ("scale down to the size of the
+  request") does not settle it. Put it to the user before decomposing.

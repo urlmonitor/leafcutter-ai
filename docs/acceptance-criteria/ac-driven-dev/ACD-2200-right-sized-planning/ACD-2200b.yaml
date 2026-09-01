@@ -1,0 +1,75 @@
+id: ACD-2200b
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Deciding feels like a conversation rather than restarting a machine"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Questions reach you while you are there and your answer continues the work.
+
+  When the route needs a decision it asks you and carries straight on from your
+  reply. Nothing stalls into a saved record you have to come back and revive
+  and no answer is ever supplied on your behalf. Changing your mind mid-way
+  costs a sentence rather than a restart.
+depends_on:
+  - ACD-2200
+doc_links:
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: contradicts
+    status: exists
+    relevance: "Mandates the pause-and-resume mechanism this L1 displaces for the interactive case. Must be amended or superseded before this L1 is built."
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: planned
+    relevance: "The interaction model changes shape here -- the guide has to describe the new one."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+notes: |
+  HARD PREREQUISITE -- AN ARCHITECTURE DECISION THIS AC CANNOT MAKE FOR ITSELF.
+  ADR-024 mandates interactive pause-resume and ACD-2100c-2 / ACD-2100c-3 /
+  ACD-2100e build on it. Those are the CORRECT answer for a run that cannot
+  reach a person. Running planning in the main loop removes that condition for
+  the interactive case but not necessarily for every case. Before decomposition
+  the user must settle one question: is the pause store retired outright or
+  retained as an explicitly non-interactive fallback? An L2 must not settle it
+  by omission -- silently dropping it would strand the approved ACD-2100c work
+  and would delete the durability guarantee that a run never discards a
+  person's answer.
+
+  WHAT MUST SURVIVE THE CHANGE, whichever way that question goes. These are
+  already-approved guarantees, not new asks:
+    - ACD-2100c-1 / ACD-2100c-4: a decision recorded as the user's must come
+      from the user. A well-formed agent reply carrying an explicit decision is
+      still not consent. This is the defect that made the current route accept
+      a status-checker refusal as a cancel.
+    - ACD-2100c-5: work is discarded only when the person chooses to discard it.
+    - ACD-300c: approve / edit / cancel remain the three answers at a gate and
+      "edit" re-runs the same stage with the feedback rather than dropping it.
+
+  ALREADY COVERED ELSEWHERE -- the user's ask that pre-flight checks be direct
+  shell calls rather than agent dispatches is homed at ACD-2100b-5 and is
+  deliberately NOT re-authored here. If decomposition finds a second pre-flight
+  check that still dispatches an agent extend ACD-2100b.
+
+  EVIDENCE STANDARD (CLAUDE.md, "Gate / Workflow ACs"): a test that greps the
+  route for conversational-gate prose proves nothing. Prove this behaviourally
+  in a fresh process on a real run.
