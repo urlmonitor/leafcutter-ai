@@ -3611,6 +3611,13 @@ def main(argv: list[str] | None = None) -> int:
         change_targets = _normalize_change_target(ac)
         risk_surface = ac.get("risk_surface") or None
         declares_side_effect = bool(ac.get("declares_side_effect", False))
+        # Pass the deferral inputs through, exactly as the write path does. A
+        # preview that omits them reports `pull-request: needed` for a ticket
+        # that would be written with `not_needed` — a preview that misstates the
+        # very field this mechanism exists to get right, and misstates it in the
+        # direction of the original defect. --verify's readiness report is read
+        # by people deciding whether a ticket is sound, so the two paths must
+        # agree on their inputs.
         agents = _build_agents_map(
             assigned_agent,
             change_targets=change_targets,
@@ -3618,6 +3625,8 @@ def main(argv: list[str] | None = None) -> int:
             files_touched=files_touched,
             declares_side_effect=declares_side_effect,
             has_authored_test_spec=_has_authored_test_spec(ac),
+            resolved_destination=args.resolved_destination,
+            phase_deferral_path=args.phase_deferral_path,
         )
         frontmatter = _build_frontmatter(
             ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
@@ -3651,7 +3660,7 @@ def main(argv: list[str] | None = None) -> int:
     change_targets = _normalize_change_target(ac)
     risk_surface = ac.get("risk_surface") or None
     declares_side_effect = bool(ac.get("declares_side_effect", False))
-    agents, refusal = _build_agents_map_for_write_path(
+    built_agents, refusal = _build_agents_map_for_write_path(
         assigned_agent,
         change_targets=change_targets,
         risk_surface=risk_surface,
@@ -3665,6 +3674,22 @@ def main(argv: list[str] | None = None) -> int:
     if refusal is not None:
         print(refusal, file=sys.stderr)
         return 1
+    if built_agents is None:
+        # The contract is (map, None) or (None, refusal); (None, None) is a bug
+        # in the builder, not a caller error. Naming it here costs one branch and
+        # turns an obscure TypeError several frames downstream into a stated
+        # cause.
+        print(
+            "ERROR: internal: the agents-map builder returned neither a map nor "
+            "a refusal. This is a defect in _build_agents_map_for_write_path.",
+            file=sys.stderr,
+        )
+        return 1
+    # Bound to a distinct name above, then narrowed here: the dry-run branch
+    # earlier in this function already binds `agents` to a plain dict, so
+    # assigning an Optional straight onto that name is a type error even though
+    # the two branches never both run.
+    agents = built_agents
     frontmatter = _build_frontmatter(
         ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
     )

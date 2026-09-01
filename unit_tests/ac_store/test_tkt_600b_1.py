@@ -21,8 +21,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import pytest
-
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "scripts" / "ac_store"
 sys.path.insert(0, str(_SCRIPTS_DIR))
@@ -176,4 +174,109 @@ class TestEpicDestinationRecordMatchesDriveDispatch:
         assert "declaration" in proc.stderr.lower(), (
             "the refusal must name the missing declaration as the cause, not "
             f"an unrelated argparse error; stderr={proc.stderr!r}"
+        )
+
+    def test_dry_run_preview_agrees_with_the_written_ticket(self) -> None:
+        # covers: TKT-600b-1
+        # angle: seam
+        """
+        --dry-run / --verify must show the SAME phase record the write path
+        would produce for the same inputs.
+
+        This is the seam between "what the tool shows you" and "what the tool
+        writes", and it was broken in the first implementation of this AC: the
+        dry-run branch called _build_agents_map() without the deferral
+        arguments, so a preview reported `pull-request: needed` for a ticket
+        that would be written with `not_needed`. That is not a cosmetic
+        mismatch — it is the preview misstating the exact field this mechanism
+        exists to get right, in the direction of the original defect, on the
+        surface (--verify's readiness report) a person reads when deciding
+        whether a ticket is sound.
+
+        Driven through the REAL CLI, not by calling the two builders with the
+        same arguments. That distinction is the whole test: the defect was that
+        main()'s dry-run branch did not PASS the deferral arguments, so a test
+        that hands both builders the arguments and compares them would have
+        passed against the broken code. The only thing that catches a call site
+        omitting an argument is invoking the call site.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            declaration_path = Path(tmp) / "phase_deferral.yaml"
+            declaration_path.write_text(
+                _DECLARATION_EPIC_DEFERS_PULL_REQUEST, encoding="utf-8"
+            )
+            ac_root = Path(tmp) / "docs" / "acceptance-criteria" / "infra"
+            ac_root.mkdir(parents=True)
+            (ac_root / "BO-PREVIEW-1.yaml").write_text(
+                "id: BO-PREVIEW-1\n"
+                "title: Preview parity fixture\n"
+                "component: infra\n"
+                "level: L2\n"
+                "status: active\n"
+                "work_status: todo\n"
+                "assigned_agent: python-coder\n"
+                "change_target: code\n"
+                "risk_surface: contract_boundary\n"
+                "estimated_complexity: S\n"
+                "criteria: |\n"
+                "  Given a fixture AC\n"
+                "  When generated\n"
+                "  Then a ticket exists\n",
+                encoding="utf-8",
+            )
+            tickets_root = Path(tmp) / "tickets" / "00_inbox" / "epics" / "EPIC-Example"
+            tickets_root.mkdir(parents=True)
+            destination = str(tickets_root / "01_foo.md")
+
+            argv = [
+                sys.executable,
+                str(_SCRIPTS_DIR / "generate_ticket_from_ac.py"),
+                "--ac",
+                "BO-PREVIEW-1",
+                "--ac-root",
+                str(ac_root.parent.parent),
+                "--tickets-root",
+                str(tickets_root),
+                "--resolved-destination",
+                destination,
+                "--phase-deferral-path",
+                str(declaration_path),
+            ]
+
+            preview_proc = subprocess.run(
+                [*argv, "--dry-run"], capture_output=True, text=True, timeout=60
+            )
+            write_proc = subprocess.run(
+                argv, capture_output=True, text=True, timeout=60
+            )
+
+            assert preview_proc.returncode == 0, (
+                f"--dry-run failed: {preview_proc.stderr!r}"
+            )
+            assert write_proc.returncode == 0, (
+                f"write path failed: {write_proc.stderr!r}"
+            )
+
+            written_files = list(tickets_root.glob("*.md"))
+            assert len(written_files) == 1, (
+                f"expected exactly one written ticket, got {written_files!r}"
+            )
+            written_text = written_files[0].read_text(encoding="utf-8")
+
+        preview_text = preview_proc.stdout
+
+        assert "pull-request: not_needed" in written_text, (
+            "precondition: the WRITTEN ticket must defer pull-request for an "
+            "epic destination, or this test is comparing against the wrong "
+            "baseline"
+        )
+        assert "pull-request: not_needed" in preview_text, (
+            "the --dry-run preview reports a different pull-request status "
+            "than the ticket actually written for the same inputs. A preview "
+            "that misstates this field misstates it in the direction of the "
+            "very defect TKT-600b fixes."
+        )
+        assert "pull-request: needed" not in preview_text, (
+            "the preview still contains 'pull-request: needed' — the deferral "
+            "arguments are not reaching the dry-run branch's agents-map call"
         )

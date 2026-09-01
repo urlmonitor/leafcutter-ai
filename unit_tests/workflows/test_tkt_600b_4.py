@@ -22,8 +22,6 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-import pytest
-
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "build-feature.js"
 
