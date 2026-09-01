@@ -103,6 +103,11 @@
             "type": "command",
             "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/check_exception_handling_hook.py\"'",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'd=\"$PWD\"; while [ ! -d \"$d/.claude/hooks\" ] && [ \"$d\" != \"/\" ]; do d=\"$(dirname \"$d\")\"; done; python \"$d/.claude/hooks/check_identifier_uniqueness_authoring.py\"'",
+            "timeout": 20
           }
         ]
       }

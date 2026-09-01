@@ -291,6 +291,78 @@ jobs:
           pre-commit run check-ac-circular-deps
           pre-commit run check-ac-pattern-refs
 
+  numbering-guarantee-valid:
+    name: Numbering guarantee valid (GE-122d-1)
+    runs-on: ubuntu-latest
+    # Shared-build stage for GE-122's whole-collection numbering rule
+    # (GE-122d-1). This is a SEPARATE job from ac-store-valid on purpose:
+    # test_acs200i_ac_gate_rule_parity.py asserts ac-store-valid runs ONLY
+    # hooks scoped to the docs/acceptance-criteria/*.yaml files: pattern in
+    # the manifest, and check-identifier-uniqueness is not one of them (it
+    # is always_run / pass_filenames: false, scoped to the whole collection,
+    # not to AC YAML files) — folding it into that job would break that
+    # parity guard.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history required so the base ref (PR) / pre-push SHA (push)
+          # is reachable for the reset below — same requirement as
+          # ac-store-valid, and for the same reason (see the staging steps).
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — deploy .leafcutter so the guardian hooks resolve
+        run: python scripts/build.py --target-dir .
+
+      - name: Stage the PR's changes so a contested number is attributed (PR)
+        # WHY THE reset --soft: this hook's *inspection* is genuinely
+        # whole-collection and always_run: true / pass_filenames: false at
+        # the pre-commit level — that half of the old comment here was
+        # correct. What it missed is that the hook's EXIT CODE is not
+        # whole-collection: main() (check_identifier_uniqueness.py) calls
+        # _get_staged_paths() (`git diff --cached --name-only`) and, via
+        # compute_commit_disposition, blocks ONLY on a finding with a
+        # claimant in that staged set — every other finding is printed as
+        # "reported-but-unattributed ... not blocking" and the hook exits 0.
+        # In a CI checkout the PR's files are committed, not staged, so with
+        # no reset the staged set is genuinely empty (git ran fine — this is
+        # not the "could not be determined" fallback path) and EVERY
+        # contested number, including one the PR itself introduces, comes
+        # back unattributed. Moving HEAD back to the base ref makes exactly
+        # the PR's added/modified files appear staged, the identical
+        # technique ac-store-valid already documents for the AC guardrails
+        # and the technique this AC's (GE-122d-1) own it_requirements names
+        # explicitly. Verified both ways in a scratch clone: with the reset,
+        # a deliberately contested ADR number introduced by the diff fails
+        # the job (exit 1); without it, the same collision passes (exit 0).
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          git reset --soft "origin/${{ github.base_ref }}"
+
+      - name: Stage the push's changes so a contested number is attributed (push)
+        # Same requirement as the PR step above, for a direct push to main:
+        # reset to the pre-push SHA (github.event.before) so the commit(s)
+        # just pushed appear staged and a contested number introduced by the
+        # push is attributed rather than silently reported-but-unattributed.
+        if: github.event_name != 'pull_request'
+        run: git reset --soft "${{ github.event.before }}"
+
+      - name: Check numbering uniqueness (GE-122d-1 shared-build stage)
+        # Run through pre-commit rather than calling the script directly, so
+        # the shared-build and commit-time rule sets are literally the same
+        # config and cannot drift apart (same technique the ac-store-valid
+        # job already uses for the AC guardrails, per this AC's
+        # it_requirements).
+        run: pre-commit run check-identifier-uniqueness
+
   changelog-presence:
     name: "Changelog entry present"
     runs-on: ubuntu-latest
