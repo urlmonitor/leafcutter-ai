@@ -1,0 +1,508 @@
+id: GE-127d-2
+title: "The length a file is quoted at is one the author can arrive at themselves by following a published measurement rule"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a file of a kind the size standard covers stands above its permitted
+    length under the measurement rule in force,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and the outcome states the length the
+    standard arrived at, the length permitted, and what the stated length
+    measures,
+  And the measurement rule the standard applied is published,
+  And applying that published rule independently to the same file arrives at
+    exactly the length the standard quoted,
+  And given the measurement rule in force is changed in any way that alters the
+    length arrived at for one particular file, and nothing else changes,
+  When the author performs an ordinary commit staging that file,
+  Then what is published states the changed rule, and applying it independently
+    to that file arrives at exactly the length the standard now quotes —
+    establishing that what is published is taken from the rule actually in force
+    rather than maintained alongside it,
+  And given a file containing content that the rule in force does not count
+    towards its length, so that the length quoted for it and the total number of
+    lines it contains are different quantities,
+  When that file is refused,
+  Then an author who counts every line in the file and arrives at the other
+    quantity can tell from the outcome alone which of the two the standard
+    stated, and reconcile the difference without inspecting anything else,
+  And given a file containing no content that the rule in force declines to
+    count,
+  When its length is quoted,
+  Then the length quoted and the total number of lines it contains are the same
+    number.
+depends_on:
+  - GE-127d
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SIBLING, AND THE BOUNDARY BETWEEN THEM. GE-127d-1 requires the published
+      rule and the enforced rule to agree on WHICH kinds of file are covered, WHEN
+      the standard applies, and HOW LONG a file of each kind may be. This record
+      requires the number a file is QUOTED AT to be reproducible from a published
+      measurement rule. They meet and do not overlap: a perfectly agreed limit is
+      unusable if the length it is compared against cannot be arrived at
+      independently, and a perfectly reproducible number is worthless if the limit
+      it is measured against is not the published one. Note the ordering
+      consequence, which is real: once this record publishes the measurement rule,
+      that statement becomes one more published place stating the rule, and
+      GE-127d-1's comparison applies to it thereafter. Whichever lands second
+      inherits the other's surface rather than adding a parallel check.
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE — INHERITED AND NOT RESTATED. Every clause here is an
+      outcome of attempting an ordinary commit and presupposes the guard is reached
+      at commit time; that registration is BP-100n-4's day-one triage. Do not
+      restate the census, its counts, or any part of it.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE MEASUREMENT RULE IN FORCE, READ FROM SOURCE IN THIS WORKTREE ON
+      2026-09-01, RECORDED SO THE IT PO DOES NOT HAVE TO REDERIVE IT — AND NOT
+      PINNED BY ANY CRITERION ABOVE. count_lines discards triple-quoted blocks in
+      both quote styles and C-style block comments before counting, and counts
+      everything else. Two consequences follow that the criteria are written
+      around. First, blank lines and hash comments ARE counted, so deleting them
+      moves the number. Second, docstrings are NOT counted, so deleting them does
+      not. The refusal message instructs authors not to delete blank lines,
+      comments or docstrings to get under the limit — which names both the action
+      that works and the action that does nothing, without distinguishing them,
+      to an author who cannot see the rule. That is the concrete shape of the
+      problem this record closes.
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The published description of this gate states a limit and says nothing about
+      how the length it is compared against is arrived at. Publishing the
+      measurement rule is a change to a published surface, which is why this record
+      shares GE-127d's docs change target.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Carries the per-kind limits the quoted length is compared against. If the
+      measurement rule becomes configurable rather than fixed, this is the surface
+      it would land on — and it is a watched package surface, so a new top-level
+      key requires a declaring AC. A consequence to weigh at enrichment, not a
+      decision taken here.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Describes the commit-time invocation shape every clause here is
+      written against.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", with the same twist
+      that applies to GE-127d-1: part of the artifact under test is text, so the
+      tempting test greps the published wording for a sentence about counting. Such
+      a test is satisfied by an edit and stays green the next time the rule moves
+      and the sentence does not. The reproducibility clauses must be discharged by
+      applying the published rule and comparing numbers, never by matching prose.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    THE MEASUREMENT RULE ITSELF — DECIDED, AS THE BA REQUIRED, AND IT IS "KEEP THE RULE, PUBLISH
+    IT". The rule in force stays: discard triple-quoted blocks in both Python quote styles and
+    C-style /* */ block comments, then count every remaining line, including blank lines and hash
+    comments. It is not changed here for two reasons that both point the same way. First, this
+    record's own notes concede the rule is defensible on the merits — a file is hard to work in
+    because of how much there is to reason about, and a module's docstrings are not that. Second,
+    and decisively: changing the rule changes the population. Under the rule in force 200 of 845
+    tracked .py files stand above 400; under a raw count 314 do. Adopting the raw count as part of
+    this record would add 114 Python files to GE-127b-1's ratchet in the same change that publishes
+    the rule, entangling a transparency fix with a scope expansion nobody costed. If the rule is
+    later judged wrong, that is its own record with its own measured population.
+  - >-
+    THE RULE HAS A KNOWN ASYMMETRY THAT MUST BE PUBLISHED, NOT JUST THE RULE'S SHAPE. Under the rule
+    in force, deleting blank lines and hash comments DOES reduce the quoted number and deleting
+    docstrings does NOT. The refusal message currently forbids both in one breath, naming the action
+    that works and the action that does nothing without distinguishing them. Publishing "which lines
+    are counted" is not sufficient on its own — the published statement must make that asymmetry
+    legible, and the refusal message must stop forbidding an action that cannot help the author
+    anyway. This is the concrete shape of the problem the record closes and the reason it is not
+    cosmetic.
+  - >-
+    ONE MEASUREMENT FUNCTION, AND THE PUBLISHED STATEMENT DERIVED FROM IT RATHER THAN MAINTAINED
+    BESIDE IT. The same pure function that GE-127a-1's threshold comparison and GE-127b-1's before-
+    and-after comparison call must be the one whose behaviour is published and the one the
+    reproducibility clauses re-derive against. The published statement must be generated from, or
+    mechanically checked against, that function — a hand-written sentence is the "satisfied by
+    editing a sentence" failure the parent L1 names and this tree has already shipped once, exactly
+    that way. It is also the BA's named injection 2 and the descriptor that catches it.
+  - >-
+    THE OUTCOME MUST STATE WHAT THE QUOTED NUMBER MEASURES, NOT ONLY THE TWO NUMBERS. The incumbent
+    shape prints an arrived-at number and a permitted number and nothing about what the first of
+    them counts. That is the shape that will be reached for and it is the BA's named injection 1.
+    The refusal must carry enough for an author who counts every line in the file and gets a
+    different figure to reconcile the difference from the outcome alone.
+  - >-
+    NO PACKAGE SURFACE — MEASURED. This record adds no hooks_manifest.hooks id (it changes the
+    outcome text of the gate GE-127a-1 registers, and adds a published statement) and no new
+    top-level mapping key to commit_guardian.json. IF the measurement rule is later made
+    configurable, its keys go NESTED under the existing `file_size` section at line 13, which
+    WATCHED_REGISTRIES does not see — the mapping_keys container is bound to dotted path "", the
+    document's own top level, only. That is the recommended home if configurability is wanted; a new
+    top-level key is not, and would drag a package-surface declaration and the structured five-field
+    spec onto this record. Do NOT mint a config_schema_fragment key to clear the validator: the
+    BP-100k-4 / BP-100k-4-i precedent BP-100n-4-ii records produced two keys that were never created
+    and are still absent from commit_guardian.json's 36 top-level keys.
+  - >-
+    THE PUBLISHED STATEMENT BECOMES ONE MORE SURFACE GE-127d-1 COMPARES — WIRE IT, DO NOT BUILD A
+    PARALLEL CHECK. Whichever of these two records lands second inherits the other's surface. If
+    GE-127d-1 lands first, add wherever this measurement statement lives to its configured
+    published-surface list in the same change. If this record lands first, its statement must be
+    machine-comparable so GE-127d-1 can consume it. Two reconciliation checks over overlapping
+    surface sets is the drift both records exist to prevent.
+  - >-
+    ASSERT REPRODUCIBILITY BY RE-DERIVATION, NEVER AGAINST A LITERAL. Every equality clause must be
+    discharged by applying the published rule to the file at run time and comparing against the
+    number the gate emitted, with the file's content VARIED between runs so the two numbers must
+    move together. A test carrying a hard-coded expected length asserts the author's belief about
+    today's rule and stays green when the rule and the published statement drift apart together —
+    which is the failure this record exists to forbid. Same by-variation construction BP-100n-4-ii
+    requires of its stated counts, for the same reason.
+  - >-
+    THE DEGENERATE ARM IS A BOUNDARY CHECK THAT MUST SURVIVE A LATER RULE CHANGE. A file containing
+    nothing the rule declines to count must be quoted its total number of lines. Implement it as a
+    consequence of the rule rather than as a special case: if a later record changes the rule to
+    count everything, that arm becomes the whole behaviour and the divergence arm simply never
+    arises. Neither arm may name what the rule discards.
+  - >-
+    HOST, LAYERING AND THE BUILD. The measurement function and the derivation of its published
+    statement belong in the same sibling module inside templates/scripts/commit_guardian/ that holds
+    GE-127b-1's previous-length resolution — build_commit_guardian copies that directory whole, so
+    no scripts/build_phases.py deploy entry is needed; a module imported from outside it does need
+    one. templates/scripts/commit_guardian/ is canonical; scripts/commit_guardian/ and the repo-root
+    .pre-commit-config.yaml are untracked build outputs; templates/commit-guardian/ is a decoy.
+    config.py:19 resolves the config beside the DEPLOYED script, so `python scripts/build.py
+    --target-dir .` is part of this change.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around file I/O and
+    any decode; log at WARNING or higher or re-raise; no bare or blind excepts. A file whose length
+    cannot be established has no quotable number at all and takes GE-127a-1-i's INDETERMINATE path,
+    never a quoted length of zero.
+test_spec:
+  - name: test_ge_127d_2_the_refusal_states_the_arrived_at_length_the_permitted_length_and_what_is_measured
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A covered file above its permitted length under the rule in force refuses the commit, and the
+      outcome states the length arrived at, the length permitted, AND what the stated length
+      measures. NAMED MUTATION (mandatory, run it — the BA's injection 1): restore the bare
+      presentation, stating the two numbers and nothing about what the first counts. Under the
+      injection this descriptor must go RED and the reconciliation descriptor below must go RED with
+      it, then both return to green on revert. Without it the clause is satisfied by any message
+      containing two numbers. The unmutated arm fails today outright — nothing is quoted, because no
+      commit is refused for file length — so capture that as the baseline.
+  - name: test_ge_127d_2_applying_the_published_rule_independently_arrives_at_the_quoted_length
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      Read the published measurement rule, apply it independently to the same file, and require the
+      result to equal exactly the length the gate quoted. Assert by re-derivation with the file's
+      content VARIED between runs so both numbers must move together — never against a hard-coded
+      expected length, which asserts today's belief and stays green when rule and statement drift
+      apart together. Fails today outright: the measurement rule is published nowhere.
+  - name: test_ge_127d_2_changing_the_rule_in_force_changes_both_what_is_published_and_what_is_quoted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Change the measurement rule in force in a way that alters the length arrived at for one
+      particular file, changing nothing else, and require that what is published states the changed
+      rule AND that applying it independently arrives at exactly the length now quoted. NAMED
+      MUTATION (mandatory, run it — the BA's injection 2): publish the measurement rule as fixed text
+      maintained separately from the rule applied, then change the rule in force. Under the injection
+      the independently-derived number diverges from the quoted one and this descriptor must go RED,
+      returning to green on revert. A static sentence passes every other arm here on the day it is
+      written; this is the only descriptor that catches it.
+  - name: test_ge_127d_2_a_file_with_discarded_content_lets_the_author_reconcile_the_two_quantities
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      For a refused file containing content the rule declines to count — so the quoted length and the
+      total number of lines differ — an author who counts every line and arrives at the other
+      quantity can tell from the outcome alone which of the two the standard stated, and reconcile
+      the difference without inspecting anything else. Assert against both quantities computed at run
+      time, not against literals.
+  - name: test_ge_127d_2_a_file_with_no_discarded_content_is_quoted_its_total_line_count
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE DEGENERATE ARM. A covered file containing nothing the rule in force declines to count is
+      quoted a length equal to its total number of lines. Both numbers are computed at run time from
+      the same file, so the descriptor survives a later change to the rule: if the rule ever counts
+      everything, this becomes the whole behaviour rather than a gap.
+  - name: test_ge_127d_2_the_asymmetry_between_removable_and_non_removable_content_is_legible_from_the_outcome
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Take one refused file and produce two variants — one with blank lines and hash comments removed,
+      one with docstrings removed — and require the quoted length to move for the first and not for
+      the second, and require the outcome to be one an author can predict that from. This is the
+      concrete trap the record exists to close: the incumbent refusal forbids both actions in one
+      breath while only one of them can help, and an author who tries the forbidden thing and finds
+      it half-works concludes the gate is broken.
+  - name: test_ge_127d_2_the_quoted_length_and_its_measurement_statement_reach_the_registered_hook_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the gate as a subprocess through the registered hook path and assert
+      that the quoted length, the permitted length and the statement of what is measured all appear in
+      the hook's own output stream, and that the exit status is the commit outcome rather than an
+      advisory note. A number computed by a function nothing at commit time calls is inert.
+  - name: test_ge_127d_2_the_deployed_copy_quotes_a_length_reproducible_from_its_deployed_published_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy and every module it imports load and run in a cold process — a
+      helper outside templates/scripts/commit_guardian/ with no scripts/build_phases.py deploy-map
+      entry surfaces here as ModuleNotFoundError rather than passing. Over a real oversized tracked
+      file, the deployed run quotes a length, and applying the DEPLOYED published rule independently
+      arrives at exactly that length. Guards the case where the rule is corrected in the canonical
+      template and the published statement ships from a stale build.
+test_rationale: |
+  Unlike its siblings this record has no green-on-arrival problem for most arms: every clause requires
+  something to be REPORTED, and the first, second and fourth arms fail today outright — no commit is
+  refused for file length, the measurement rule is published nowhere, and nothing is quoted. Those
+  failing runs are the baseline.
+
+  Two hazards survive a red baseline and each carries the BA's named injection, carried into a
+  descriptor verbatim. The bare-presentation injection defends "the outcome states what the stated
+  length measures", which is otherwise satisfied by any message containing two numbers — and the
+  incumbent shape is exactly that message, so it is the shape that will be reached for. The
+  static-sentence injection defends the derivation clause and is the only descriptor in this record
+  that catches a hand-written published statement: such a sentence passes every other arm here on the
+  day it is written, and this tree has already shipped that exact failure once, in the two
+  new-files-only statements GE-127d-1 exists to reconcile.
+
+  Every equality clause is discharged by re-derivation with content varied between runs rather than
+  against a literal, because a hard-coded expected length asserts the author's belief about today's
+  rule and stays green when the rule and the published statement drift apart together — the same
+  by-variation construction BP-100n-4-ii requires of its stated counts.
+
+  One descriptor exists that the criteria do not name and that the pinned rule decision makes
+  necessary: the asymmetry descriptor. Keeping the rule in force means keeping the property that
+  deleting blank lines and hash comments moves the number while deleting docstrings does not, and the
+  refusal currently forbids both in one breath. Publishing the rule without making that asymmetry
+  legible leaves the trap intact while satisfying the letter of every other clause.
+
+  The deployed descriptor is not redundant with the reachability one: it catches a published statement
+  shipped from a stale build, which is the failure mode config.py's resolve-beside-the-deployed-script
+  behaviour makes available and which no source-tree test can see.
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-127d-1
+    contract: >-
+      The published statement of the measurement rule, which becomes one more published place stating
+      the rule and therefore one more surface GE-127d-1's comparison must cover. It must be
+      machine-comparable against the measurement function rather than free prose. Whichever record
+      lands second wires into the other's surface list; neither builds a parallel check.
+  - agent: documentation-expert
+    ac_id: null
+    contract: >-
+      The measurement rule and its removable-versus-non-removable asymmetry, for the reference-doc
+      GE-127d's documentation_triggers require. The published text must be derived from or
+      mechanically checked against the measurement function, not maintained alongside it.
+expects_from:
+  ac_id: GE-127a-1
+  contract: >-
+    The quoted length and the permitted length as they appear in the outcome, and the single shared
+    measurement function that produces the first of them. This record requires that number to be
+    accompanied by a statement of what it measures and to be reproducible from a published rule; it
+    introduces no second measurement and no second outcome.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-01
+  note: 'criteria untouched. THE RULE DECISION THE BA DEFERRED IS TAKEN, AND IT IS "KEEP THE RULE,
+    PUBLISH IT": discard triple-quoted blocks in both quote styles and C-style block comments, count
+    everything else including blank lines and hash comments. Two grounds — the rule is defensible on
+    the merits (a file is hard to work in because of how much there is to reason about), and changing
+    it changes the population. Re-measured at b846121c9: 200 of 845 tracked .py files are over 400
+    under the rule in force, 314 over 400 raw, so adopting the raw count here would add 114 Python
+    files to GE-127b-1''s ratchet inside a transparency fix. Both figures reproduce the BA''s exactly,
+    and the L0''s 312 differs only by walk scope, as this record''s notes already state. PACKAGE
+    SURFACE FALSE, MEASURED: no hooks_manifest id and no new top-level mapping key; if the rule is
+    later made configurable its keys go NESTED under the existing file_size section at
+    commit_guardian.json line 13, which the mapping_keys container at dotted path "" does not see. No
+    config_schema_fragment minted; the BP-100k-4 / BP-100k-4-i fictional-key precedent is not repeated.
+    ONE MEASUREMENT FUNCTION, four call sites (this record, GE-127a-1''s threshold, GE-127b-1''s two
+    ratchet measurements), with the published statement DERIVED from it rather than maintained beside
+    it — the hand-written-sentence failure is the BA''s injection 2 and this tree has shipped it once
+    already. ORDERING WITH GE-127d-1 WIRED EXPLICITLY: the published statement becomes one more surface
+    that record compares, and whichever lands second joins the other''s surface list rather than adding
+    a parallel check. declares_side_effect false: every Then clause reports to a stream and sets an exit
+    status. test_spec: eight executing descriptors carrying both of the BA''s named mutations, plus an
+    asymmetry descriptor the criteria do not name but the kept rule makes necessary (deleting blank
+    lines and hash comments moves the number, deleting docstrings does not, and the incumbent refusal
+    forbids both in one breath), plus the registered hook entry point and the deployed copy in a cold
+    process.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+notes: |
+  THE RULE ITSELF IS DELIBERATELY NOT PINNED HERE, AND AN AMENDMENT THAT PINS IT
+  IS AT THE WRONG ALTITUDE. No clause above says that any particular class of
+  content is or is not counted. What is required is that whatever rule is applied
+  is published and reproducible by the person subject to it. Which rule is correct
+  is a technical decision for the IT PO at enrichment, and every criterion above
+  is written to survive that decision going either way and to survive it being
+  revisited later. The rule in force at authoring time is recorded in the doc_links
+  above so the IT PO does not have to rederive it — recording it there and not in
+  the criteria is the point.
+
+  WHY THIS IS NOT COSMETIC. A limit enforced with a number the author cannot
+  reproduce cannot be argued with, planned against, or trusted when it blocks a
+  commit. The predictable response to a verdict that reads as arbitrary is to look
+  for the cheapest way past it, and the parent L1 says so directly: the gate's own
+  message tells authors not to delete blank lines, comments or documentation to get
+  under the limit, and that instruction only holds if the rule and the limit are
+  legible. If they are not, stripping content is the first thing a rational author
+  tries, and the guard ends up making files worse rather than smaller.
+
+  THE CONCRETE TRAP, MEASURED AND NOT INFERRED. Under the rule in force, deleting
+  blank lines and hash comments DOES reduce the quoted number, and deleting
+  docstrings does NOT. The refusal message forbids both in one breath. An author
+  who is over the limit, cannot see the rule, and tries the thing the message
+  forbids will find that one of the two moves the number and the other does not,
+  with no explanation available — which is precisely the "the gate is broken"
+  conclusion this record exists to prevent. Whichever rule enrichment settles on,
+  the remedy is the same: publish it, and quote numbers that can be arrived at
+  from it.
+
+  THREE FIGURES IN CIRCULATION IN THIS TREE, WITH THEIR SCOPES, SO NOBODY READS A
+  SCOPE DIFFERENCE AS DRIFT. All three are about the same codebase and none
+  contradicts another:
+    - 200 — files of the covered kind standing above their applicable limit under
+      the measurement rule IN FORCE. Measured in this worktree on 2026-09-01 over
+      tracked files. (Assessment recorded "on the order of 190"; this is the
+      re-measurement, and it is the figure GE-127b-1 carries.)
+    - 314 — files of the covered kind standing above 400 RAW lines, no exclusions.
+      Measured in this worktree on 2026-09-01, over ALL TRACKED FILES of that kind.
+    - 312 — the L0's figure for the same raw count, taken over a walk of FOUR
+      FIRST-PARTY SOURCE DIRECTORIES rather than over all tracked files.
+  312 and 314 differ by SCOPE OF THE WALK and are not drift, not a discrepancy, and
+  not a correction of one another — do not reconcile them as an error or replace
+  one with the other. 200 and 314 differ by the MEASUREMENT RULE, over the same
+  scope, and that gap is exactly this record's subject: the same codebase yields
+  two defensible answers and today nothing tells an author which one they are being
+  quoted.
+
+  THIS RECORD TAKES NO POSITION ON WHICH ANSWER IS RIGHT. Discarding documentation
+  blocks before counting may well be the correct rule — a file is hard to work in
+  because of how much of it there is to reason about, not how many bytes it holds.
+  The obligation here is narrower and survives either answer: publish the rule, and
+  quote a number that can be arrived at from it.
+
+  RED BASELINES AND MUTATIONS — READ THE DISTINCTION, IT IS NOT UNIFORM ACROSS THIS
+  RECORD. Unlike its siblings, every clause here requires something to be REPORTED,
+  so none is green on arrival for the trivial reason that nothing is reported. The
+  first, second and fourth arms fail today outright: no commit is refused for file
+  length, the measurement rule is published nowhere, and nothing is quoted. Capture
+  those failing runs as the baseline. Two hazards remain that a red baseline alone
+  does not defend against, and each carries a named injection that must be RUN and
+  reverted:
+
+  (1) "the outcome states what the stated length measures" — MUTATION: restore the
+      bare presentation, stating the arrived-at number and the permitted number and
+      nothing about what the first of them counts. That is the incumbent shape and
+      the shape that will be reached for. Under the injection this clause must go
+      RED, and the reconciliation clause must go RED with it, then both return to
+      green on revert. Without this injection the clause is satisfied by any
+      message that happens to contain two numbers.
+
+  (2) "what is published is taken from the rule actually in force rather than
+      maintained alongside it" — MUTATION: publish the measurement rule as fixed
+      text maintained separately from the rule applied, then change the rule in
+      force so it arrives at a different length for one file. Under the injection
+      the independently-derived number diverges from the quoted one and the third
+      arm must go RED, returning to green on revert. This is the "satisfied by
+      editing a sentence" failure the parent L1 names, and this tree has already
+      shipped that failure once, exactly that way. A static sentence passes every
+      other arm here on the day it is written.
+
+  ASSERT REPRODUCIBILITY BY RE-DERIVATION, NEVER AGAINST A LITERAL. The equality
+  clauses must be discharged by applying the published rule to the file at run time
+  and comparing the result against the number the standard emitted. A test carrying
+  a hard-coded expected length satisfies a reproducibility requirement while proving
+  nothing about reproducibility — it asserts the author's belief about today's rule,
+  and it stays green when the rule and the published statement drift apart together.
+  Vary the file's content between runs and require the quoted number and the
+  independently derived number to move together. This is the same by-variation
+  construction BP-100n-4-ii requires of its stated counts, and for the same reason.
+
+  THE DEGENERATE ARM IS A BOUNDARY CHECK AND IT SURVIVES A RULE CHANGE. A file
+  containing nothing the rule declines to count must be quoted its total number of
+  lines. If enrichment later chooses a rule that counts everything, that arm becomes
+  the whole behaviour and the divergence arm simply never arises — which is the
+  correct outcome, not a gap. Neither arm names what the rule discards, so neither
+  needs rewriting if the rule changes.
+
+  BOUNDARY WITH GE-127b. That record's ratchet consumes whatever length this
+  measurement rule produces, and the interaction is a real hazard rather than a
+  formality: if the rule declines to count some class of content, a change that adds
+  only that class registers as no growth and the ratchet allows it. That consequence
+  belongs to the rule decision made here and is inherited there. It is named in
+  GE-127b-1's notes as well, from the other side, and neither record may settle it
+  alone.
+
+  BOUNDARY WITH GE-127e. This record makes the number TRUE and reproducible.
+  GE-127e makes the refusal ACTIONABLE. A gate can quote a perfectly reproducible
+  number and still leave the author with nothing to do about it. GE-127e has no
+  child yet; that gap stays open and deliberately deferred.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. The IT PO owns the rule decision itself,
+  where the published statement lives, and whether the measurement rule becomes
+  configurable — the criteria above hold under every one of those choices.

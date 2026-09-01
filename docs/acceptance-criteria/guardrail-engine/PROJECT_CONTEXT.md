@@ -312,3 +312,94 @@ record, which ADR-029 calls out as worse than the ambiguity being repaired. The
 module was renamed to `test_ge_118c_doc_types_deployed_resolution.py`. Rule:
 rename when the old id still resolves to something; leave it when the old id is
 retired.
+
+## Root-id registry update, 2026-09-01 — GE-127 minted
+
+Highest taken root in this component is now **GE-127**. Established free by four
+independent checks, none of which is a directory listing (a folder-only listing
+under-reports taken ids here — `GE-114-1..4` and `GE-115` sit loose at namespace
+root):
+
+1. every `^id: GE-` value across the whole AC store — highest was GE-126;
+2. a recursive grep for the literal `GE-1[0-9][0-9]` across `docs/`, `tickets/`,
+   `templates/`, `unit_tests/`, `scripts/` and `changelogs/` — highest citation
+   of any kind was GE-126, and this is the check that catches the loose files;
+3. a whole-worktree grep for `GE-127` excluding `.git` — no hits;
+4. `git grep GE-127 origin/main`, plus a grep of the shared main working tree for
+   an uncommitted claim — no hits in either.
+
+Still binding: `GE-119` is retired and must never be reissued; `GE-121` must not
+be reissued because GE-111f's and GE-122e's prose cite it repeatedly as a rejected
+candidate. Re-verify the next free root at time of use — id allocation in this
+store is known-broken (KI-ACD-008).
+
+## SILENCE≠PASS, observed while authoring GE-127 — `scan_ac_orphans.py`
+
+`python scripts/ac_store/scan_ac_orphans.py --component <name>` is **not a valid
+invocation**. The script takes a positional subcommand (`parent-links` or
+`draft-orphans`) and rejects `--component` with an argparse usage error on stderr.
+Piped through `| grep -i <your-id>` — the natural way to check your own tree — it
+produces **no output**, which is indistinguishable from a clean pass. The correct
+form is `scan_ac_orphans.py parent-links` with no component filter; it scans the
+whole store. Confirm the run actually looked at something before believing it: a
+store-wide run on 2026-09-01 reported 22 parents with orphaned children, so a
+`grep -c "Parent: "` of 22 is the evidence the scan ran, and a `grep -c` of 0 for
+your own ids is then a real result. This is the same shape as GE-120 and GE-126.
+
+## GE-127 files-stay-workable: framing note for the BA and IT PO (2026-09-01, PO)
+
+New root L0 `GE-127-files-stay-workable/`, five L1 children GE-127a..e,
+`origin_agent: BrainCandy`, `readiness: draft`, `priority: medium`,
+`roadmap_phase: phase_1`, `component: guardrail-engine`,
+`components: [commit_guardian]`, `change_target: code`,
+`risk_surface: contract_boundary`. Subject: the file-size gate exists as a script
+and is configured, but is invoked by nothing at commit time, and cannot simply be
+switched on. Full evidence with confidence labels, the cut rationale and the
+inherited constraints live in the L0's `notes` — read that before decomposing.
+
+**GE-127b is the keystone and the highest-value item.** It is the ratchet: a file
+already over the line may be worked on but not made larger, judged against that
+file's own previous size rather than any threshold. That is what makes the gate
+switchable on the day it lands — under the guard's own counting rule the repo
+already holds ~190 files above their limit, so a flat threshold blocks nearly
+every commit that touches one. Its notes state the derivable baseline behaviour
+explicitly (three arms: grew → refuse; same-or-smaller → allow even though still
+over; no previous size → out of scope, that is the threshold's job) and mark the
+negative arm mandatory, because every positive arm is satisfied by an
+implementation that permits everything.
+
+**L1 cut is by guarantee, not by defect. Do not re-cut per observed shortcoming.**
+GE-127a timing (the crossing event) / GE-127b the ratchet (already over) /
+GE-127c reach (which languages) / GE-127d honesty (published rule = applied rule)
+/ GE-127e actionability (the refusal hands you a starting point). GE-127a and
+GE-127b are deliberately separate: different populations, different
+implementations, and merged they let an implementer build whichever half is
+cheaper.
+
+**USER DECISION baked into GE-127c — do not undo it.** Which file extensions to
+cap was escalated as an L0/L1 scope call and the user decided: author the
+principle now, pin the concrete list at technical enrichment. GE-127c therefore
+names no extension, and an L2 beneath it that enumerates extensions is at the
+wrong altitude. The motivating measurements are in that record's notes rather
+than its criteria.
+
+**BP-100n-4 IS A PRECONDITION, NOT SCOPE — the sharpest hazard for the BA.**
+BP-100n-4 (approved, high, phase_1) owns the uninvoked-gate census and its
+day-one triage is what registers this script. Every GE-127 record carries it as a
+`depends_on` doc_link for exactly this reason. An L2 here that restates the
+census, repeats its counts, or proposes a second reachability guard is
+duplicating an approved high-priority record.
+
+**INF-800 and CR-100 were examined as hosts and deliberately NOT widened.**
+INF-800 owns performing a split safely once decided; CR-100 owns advisory,
+weighable refactoring guidance. This goal owns knowing a split is due and being
+prevented from deferring it. Folding a hard line into an advisory goal is the most
+likely route to the line quietly becoming a suggestion. Both are fenced in
+doc_links; neither may be closed as a duplicate of this tree.
+
+**Two evidence figures that must not be merged.** ~190 files above their limit
+under the guard's own counting rule (measured at assessment) versus 312 Python
+files and 59 documents above 400 raw lines (measured in-worktree at authoring,
+per-file count, no exclusions). They differ because the counting rule discards
+documentation blocks before counting — and that difference is itself GE-127d's
+subject. Carry both labels; upgrade neither.

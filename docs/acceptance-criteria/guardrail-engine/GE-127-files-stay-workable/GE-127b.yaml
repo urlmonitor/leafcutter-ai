@@ -1,0 +1,109 @@
+id: GE-127b
+title: "A file already over the line cannot get further over it"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Oversized files can be worked on, but never made bigger.
+
+  A file that is already past a workable size may still be fixed, corrected and
+  improved — but a change that leaves it larger than it was is refused, and the
+  refusal is judged against that file's own previous size rather than against
+  any threshold. The backlog of oversized files can therefore only ever shrink,
+  and the standard can be switched on today without stopping work on the files
+  that already breach it.
+depends_on:
+  - GE-127
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE. This is the criterion that makes switching the
+      gate on survivable, and switching it on is BP-100n-4's day-one triage. The
+      dependency runs this way round and matters for sequencing: without the
+      ratchet, that triage's only options for this script are register-and-block
+      -everything or disposition-it-away. Do not restate the census here.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-127b-1
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE KEYSTONE OF THE GOAL AND THE ITEM THAT RESOLVES THE DEADLOCK. The
+  size standard cannot be turned on as a flat threshold: under the guard's own
+  counting rule this repository already holds on the order of 190 files above
+  their applicable limit (measured at assessment; a raw line count over the four
+  first-party source directories gives 312 Python files and 59 documents above
+  400 lines — see the L0's evidence labels and do not conflate the two figures).
+  A flat threshold switched on today refuses essentially every commit that
+  touches any of them. The two obvious escapes — raise the number until nothing
+  fails, or exempt the existing offenders — both leave the codebase exactly where
+  it is, permanently.
+
+  THE BASELINE BEHAVIOUR THE BA MUST BE ABLE TO DERIVE, STATED PLAINLY SO IT CAN
+  BE. The comparison is between the file as it stands after the change and the
+  same file as it stood before the change. The judgement is on the DIRECTION of
+  that comparison, for files already above their limit. Three consequences follow
+  and each should become a scenario rather than being left to inference:
+    - A file above the limit that the change leaves LARGER is refused.
+    - A file above the limit that the change leaves the same size or SMALLER is
+      allowed, even though it is still above the limit. This arm is not a
+      concession; it is the mechanism. Without it the ratchet is a freeze, and a
+      frozen file never gets refactored because no one can touch it.
+    - A brand-new file has no previous size, so nothing about this criterion
+      applies to it. Its governing rule is the threshold, which is GE-127a's
+      subject. Say this explicitly; a decomposition that treats "no previous
+      size" as "previous size of zero" refuses every new file ever created.
+
+  MANDATORY NEGATIVE ARM — WITHOUT IT THE WHOLE CRITERION IS VACUOUS. Every
+  positive scenario above is satisfied by an implementation that permits
+  everything. The arm that distinguishes a working ratchet from a disabled one is
+  an oversized file made one unit larger, refused. Pair it with an oversized file
+  made smaller, allowed. Either arm alone can be passed by a stuck answer.
+
+  THE SHRINKING-BACKLOG CLAIM IS PART OF THE PROMISE, NOT A SIDE-EFFECT. The
+  value being sold is that the population of oversized files is monotonically
+  non-increasing once this lands. An implementation that permits an oversized file
+  to grow under any routine condition — a large mechanical rename, a generated
+  block, a merge — breaks that promise even if every hand-written scenario passes.
+  Whether any such condition warrants an exception is a decision to be taken
+  explicitly and recorded, never defaulted into existence.
+
+  BOUNDARY WITH GE-127a, DELIBERATE. That L1 owns the crossing event: a file going
+  from under the line to over it. This one owns files that are already over.
+  Neither closes the other, and merging them lets an implementer satisfy the pair
+  by building whichever half is cheaper.
+
+  BOUNDARY WITH GE-127d. The question of what counts as the file's size — which
+  lines are counted and which discarded — belongs to GE-127d and must be settled
+  in one place. This criterion consumes that answer; it must not restate it.
+  Note the interaction, because it is a real hazard rather than a formality: if
+  the counting rule discards some kinds of line, then a change that only ADDS
+  discarded lines registers as no growth. Whether that is correct is GE-127d's
+  call to make and this criterion's to inherit.

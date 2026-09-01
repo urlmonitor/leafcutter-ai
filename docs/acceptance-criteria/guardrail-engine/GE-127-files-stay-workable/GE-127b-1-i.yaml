@@ -1,0 +1,492 @@
+id: GE-127b-1-i
+title: "A run that could not establish any previous length says which situation it is in and refuses, and a clean run states how many files it compared"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the source from which every covered file's previous length is obtained
+    cannot be established for this run — it cannot be reached at all, or it is
+    reached and what it returns cannot be interpreted,
+  When the author performs an ordinary commit,
+  Then the outcome states that the previous lengths could not be established,
+    names which of those two situations occurred, and the commit does not
+    complete,
+  And given that source is established successfully and holds no covered file at
+    all, so that no covered file anywhere has a previous length to be compared
+    against,
+  When the author performs an ordinary commit,
+  Then that is reported as a third, separately named situation, and the commit
+    likewise does not complete,
+  And given that source is established successfully and does hold covered files,
+    while the particular commit being made stages only covered files that are
+    newly added and so have no previous length of their own,
+  When the author performs an ordinary commit,
+  Then the commit completes — what refuses is the source holding nothing to
+    compare against, never a particular commit happening to have nothing to
+    compare,
+  And in none of those three unresolvable situations is any file reported as not
+    having grown, and in none does the commit complete as though every staged
+    covered file had been compared against its previous length and found not to
+    have grown,
+  And given any run in which the source was established,
+  When the outcome is reported,
+  Then it states how many staged covered files it compared against a previous
+    length, whatever that number is, including when it is none, and a stated
+    count of none does not by itself refuse the commit,
+  And given such a run in which at least one staged covered file had a previous
+    length and no covered file grew,
+  When the outcome is reported,
+  Then the stated number is greater than zero, and it is that positive number —
+    not the absence of anything to report — that establishes the run as having
+    found no growth.
+depends_on:
+  - GE-127b-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-ii.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE CONTRACT THIS RECORD REUSES VERBATIM AND MUST NOT RESTATE DIFFERENTLY.
+      It pins, for the reachability guard, the identical shape: a summary that
+      states its population sizes so a run that examined nothing cannot look like
+      a run that examined everything; two unavailability situations distinguished
+      BY NAME rather than merely both failing; a successfully-empty result
+      carrying the same epistemic weight as a failed lookup; an "INDETERMINATE:
+      reason=<text>" line with exit 2, alongside exit 0 clean and exit 1 for a
+      reported finding. Reuse that vocabulary and that 0/1/2 exit-status contract
+      unchanged. Do not mint a third verdict set and do not widen the exit-status
+      set. Its constraint that the indeterminate path be exercised by making the
+      lookup genuinely unavailable at run time, never by asserting that an error
+      branch exists in the source, applies here unchanged.
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Where that fail-closed contract was first written, and the origin of the
+      standing constraint on exercising the indeterminate path for real.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      The four precedents this record exists to stop repeating on a fifth guard.
+      KI-CG-034 examined 169 files, compared none, and exited 0. KI-CG-012 reports
+      a clean pass on a file it never validated. KI-CG-018 exits 0 without
+      inspecting anything and its own "did I look?" diagnostic cannot fire on the
+      paths where it did not. In each one the missing artifact was a stated count.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "AC-store hygiene" records the fourth precedent in this repository's own
+      tooling — a bare directory matched nothing, printed "No YAML files to
+      validate." and exited 0 for eight days, so the documented defence against
+      store rot was itself a no-op while reporting clean throughout. The habit that
+      survived the fix is exactly the positive-count assertion required here:
+      before believing a pass, confirm the run actually named some files. Error
+      Handling Policy Rule 3 also applies — a swallowed lookup error must never
+      become an empty population.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    THE POPULATION THESE CLAUSES ARE ABOUT IS THE RESOLUTION OF THE PREVIOUS-LENGTH SOURCE,
+    NOT THE PER-COMMIT SET OF STAGED FILES THAT HAVE A PREDECESSOR. READ THIS BEFORE
+    IMPLEMENTING ANYTHING ELSE HERE — the wrong reading breaks the sibling. GE-127b-1's
+    fourth arm requires a commit staging only newly added files to COMPLETE. Under the pinned
+    HEAD-blob source, such a commit has no staged file with a predecessor, so a naive reading
+    of this record's second clause ("the record holds a previous length for no file
+    whatsoever" → refuse) would refuse exactly the commit the sibling requires to succeed.
+    The two records are reconciled by taking the population to be the previous-length SOURCE
+    resolved for the run — the repository's HEAD tree and the ability to read blobs from it —
+    rather than the per-commit lookup results. Concretely: "cannot be read at all" means git
+    is unavailable, the working copy is not a repository, or HEAD does not resolve (an
+    initial commit with no parent); "read and cannot be interpreted" means HEAD resolves but a
+    blob read fails or its content cannot be decoded in the encoding the standard reads;
+    "established successfully and holds a previous length for no file whatsoever" means HEAD
+    resolves and its tree contains no covered file at all. A commit adding only new covered
+    files against a populated HEAD is NONE of those three and must complete. This reading is
+    also the one that matches BP-100n-4-ii, whose two populations are both repository-wide
+    (the gate-script directory listing and the registry) rather than per-invocation.
+  - >-
+    THE STATED COUNT IS THE NUMBER OF STAGED COVERED FILES ACTUALLY COMPARED AGAINST A
+    PREVIOUS LENGTH, AND ITS POSITIVITY IS CONDITIONAL ON THERE BEING SOMETHING TO COMPARE.
+    The criterion's fourth arm opens "given a run in which the previous lengths were
+    established", which scopes the positive-count requirement to runs where at least one
+    staged covered file has a predecessor. An all-new-files commit is outside that scope and
+    must not be refused for a compared-count of zero. Implement the count as an unconditional
+    statement in the outcome — always printed, whatever its value — and the refusal as a
+    consequence of the SOURCE being unresolvable or empty, never of the count being zero.
+    This is the positive-count form BP-100n-4-ii requires: make the empty state
+    unrepresentable in the output, then derive the refusal from the source state rather than
+    from the number.
+  - >-
+    NO PACKAGE SURFACE — MEASURED. This record adds no hooks_manifest.hooks id and no new
+    top-level mapping key to commit_guardian.json, the only two containers
+    _package_surface_registry.WATCHED_REGISTRIES binds on that file. It changes the outcome's
+    summary line and adds the source-resolution floor. Do NOT mint a config_schema_fragment
+    key to clear the structured-spec validator: BP-100n-4-ii records that BP-100k-4 and
+    BP-100k-4-i each declared a key that was never created, and commit_guardian.json's 36
+    top-level keys still contain neither. A second imaginary key would make the machine-checked
+    spec less trustworthy than no spec at all.
+  - >-
+    REUSE BP-100n-4-ii's VERDICT VOCABULARY AND EXIT-STATUS CONTRACT UNCHANGED, AND THE SAME
+    ONE GE-127a-1-i PINS. "INDETERMINATE: reason=<text>" naming which situation occurred, with
+    exit 2; exit 0 for a clean run; exit 1 for a reported finding, which keeps GE-127b-1's
+    grew-and-refused case distinguishable from an unresolvable one. Do not mint a third verdict
+    set and do not widen the exit-status set. All three unresolvable conditions here — HEAD
+    unreadable, HEAD uninterpretable, HEAD holding no covered file — report through that same
+    line with different reason text.
+  - >-
+    ONE SUMMARY LINE, EXTENDED IN PLACE, NEVER A SECOND ONE. Whatever the run states about how
+    many files it compared belongs in the single outcome the author already reads from this
+    gate. A second summary printed elsewhere lets one line report a determinate run while the
+    other reports an empty one, and the reader has no way to know which is authoritative. This
+    is BP-100n-4-ii's one-summary rule applied here.
+  - >-
+    THE TWO UNAVAILABLE SITUATIONS ARE DISTINGUISHED BY NAME, NOT MERELY BOTH REFUSED. "The
+    previous lengths could not be read" and "they were read successfully and there are none"
+    demand opposite responses — a broken lookup versus a genuinely empty history — and
+    collapsing them costs the reader the only information that separates them.
+  - >-
+    A SWALLOWED LOOKUP ERROR MUST NEVER BECOME AN EMPTY POPULATION, AND AN EMPTY POPULATION
+    MUST NEVER BECOME A COMPLETED COMMIT. This is the exact shape all four cited precedents
+    shipped — KI-CG-034 examined 169 files, compared zero and exited 0; KI-CG-012; KI-CG-018;
+    the AC-store validator's bare-directory no-op that reported clean for eight days. The
+    subprocess call to git is external I/O under the repo error-handling policy: specific
+    exceptions only (subprocess.CalledProcessError, subprocess.SubprocessError, OSError,
+    UnicodeDecodeError), log at WARNING or higher or re-raise, and the re-raise-equivalent here
+    is the INDETERMINATE verdict.
+  - >-
+    EXERCISE THE UNAVAILABLE STATES FOR REAL. Make the previous-length source genuinely
+    unavailable at run time — a working copy that is not a git repository, a repository with
+    no HEAD commit, a HEAD whose blob read fails — and make the empty state genuinely empty.
+    BP-100k-4-i's standing constraint applies unchanged: never assert that an error branch is
+    present in the source, because such an assertion stays green on precisely the fail-open
+    implementation this record exists to forbid.
+  - >-
+    HOST, LAYERING AND THE BUILD. The floor and the summary assembly belong in the same sibling
+    module inside templates/scripts/commit_guardian/ that holds GE-127b-1's previous-length
+    resolution — build_commit_guardian copies that directory whole, so no
+    scripts/build_phases.py deploy entry is needed; a module imported from outside it does need
+    one. templates/scripts/commit_guardian/ is canonical; scripts/commit_guardian/ and the
+    repo-root .pre-commit-config.yaml are untracked build outputs; templates/commit-guardian/
+    is a decoy. config.py:19 resolves the config beside the DEPLOYED script, so
+    `python scripts/build.py --target-dir .` is part of this change.
+test_spec:
+  - name: test_ge_127b_1_i_an_unreadable_previous_length_source_is_named_as_such_and_refuses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      With the previous-length source made GENUINELY unavailable at run time — a working copy
+      that is not a git repository, or a repository whose HEAD does not resolve — the executed
+      gate states that the previous lengths could not be established, names this specific
+      situation as the could-not-be-read one, and the commit does not complete. Exercised by
+      breaking the lookup for real, never by asserting an error branch exists in the source.
+  - name: test_ge_127b_1_i_an_uninterpretable_previous_length_source_names_its_own_reason_and_refuses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      A source that resolves but whose content cannot be interpreted — a HEAD blob that cannot
+      be decoded in the encoding the standard reads — is reported with a reason naming that
+      situation specifically, distinct in text from the could-not-be-read one, and the commit
+      does not complete.
+  - name: test_ge_127b_1_i_a_source_holding_no_previous_length_for_any_covered_file_is_the_third_named_situation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A source that resolves successfully and holds no covered file at all — a repository whose
+      HEAD tree contains none — is reported as a DIFFERENT, separately named situation from
+      both unavailable ones, and also refuses. Establishes that a successfully-empty resolution
+      carries the same epistemic weight as a failed one while remaining distinguishable from it
+      in the outcome.
+  - name: test_ge_127b_1_i_a_commit_adding_only_new_covered_files_against_a_populated_history_completes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE SEAM DESCRIPTOR THAT KEEPS THIS RECORD FROM BREAKING ITS PARENT — the disambiguation
+      pinned in it_requirements, made executable. In a repository whose HEAD already holds
+      covered files, stage a commit consisting only of NEWLY ADDED covered files, all below
+      their permitted lengths. The commit must complete, and the outcome must state a compared
+      count of zero without that zero causing a refusal. An implementation that reads "holds a
+      previous length for no file whatsoever" as the per-commit lookup result rather than as
+      the resolution of the source refuses this commit and contradicts GE-127b-1's fourth arm.
+      This descriptor and GE-127b-1's newly-added-file descriptor must be green simultaneously.
+  - name: test_ge_127b_1_i_neither_unavailable_situation_reports_any_file_as_not_having_grown
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      In none of the three unresolvable situations is any file reported as not having grown, and
+      in none does the commit complete as though every file had been compared and found not to
+      have grown. NAMED MUTATION (mandatory, run it, do not merely describe it — the BA's
+      injection): make the previous-length lookup yield an empty collection on error rather than
+      raising or returning an unavailability signal. That is the ordinary fail-open shape and
+      the one all four cited precedents actually shipped. Under the injection every file
+      compares against nothing, the run states zero files compared, and the commit completes;
+      this descriptor must go RED, and it must fail BY THE COMMIT OUTCOME as well as by the
+      text, then return to green on revert.
+  - name: test_ge_127b_1_i_the_stated_compared_count_moves_with_the_number_of_covered_files_staged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      ASSERT BY VARIATION, NEVER AGAINST A LITERAL. Run the gate twice over the same repository,
+      staging a different number of covered files with predecessors each time, and require the
+      stated compared-count read from the gate's own output to move with it. A fixed expected
+      number satisfies a stated-count requirement while proving nothing about what was examined
+      — which is the same defect one level up, and is how every one of the cited precedents
+      passed its own tests.
+  - name: test_ge_127b_1_i_a_clean_run_states_a_positive_compared_count_and_that_is_what_makes_it_clean
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Over a run in which at least one staged covered file has a predecessor and none has grown,
+      the stated compared-count read from the gate's own output is greater than zero, and it is
+      that positive number — not the absence of findings — that establishes the run as clean. A
+      run reporting nothing while stating a compared count of zero must not be accepted as clean
+      by this descriptor.
+  - name: test_ge_127b_1_i_the_count_and_the_indeterminate_verdict_reach_the_registered_hook_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the gate as a subprocess through the registered hook path and
+      assert that the compared-count appears in the hook's own output stream on a determinate
+      run, that the indeterminate verdict and its named reason appear on an unresolvable one,
+      and that the exit status is the commit outcome in both cases rather than an advisory note.
+      A count computed by a function nothing at commit time calls is inert — which is the defect
+      this whole family exists to close.
+  - name: test_ge_127b_1_i_the_deployed_copy_fails_closed_when_the_previous_length_source_is_unavailable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy and every module it imports load and run in a cold
+      process — a helper outside templates/scripts/commit_guardian/ with no
+      scripts/build_phases.py deploy-map entry surfaces here as ModuleNotFoundError rather than
+      passing. With the previous-length source made genuinely unavailable to that deployed run,
+      it emits the indeterminate verdict with its named reason and exits non-zero; over the real
+      repository it states a compared count greater than zero and exits zero. Source-tree
+      greenness cannot substitute: the hook runs from the deployed layout.
+test_rationale: |
+  Every clause here asserts what the gate must NOT do — must not report a file as not having
+  grown, must not let the commit through, must not let a comparison that never happened look
+  like one that found nothing. On today's implementation, which has no previous-length notion
+  at all, all of them are green on arrival for the trivial reason that nothing is reported.
+  That is KI-TQ-010's shape, and it is why the absence-asserting clause carries the BA's
+  executable injection rather than a note. Requiring that injection to fail by the COMMIT
+  OUTCOME as well as by the text is deliberate: a check that prints a worried message and then
+  exits 0 is indistinguishable from a passing one to pre-commit, which reads only the status.
+
+  The mutation is not hypothetical — an error path returning an empty collection instead of an
+  unavailability signal is a reconstruction of KI-CG-034, KI-CG-012, KI-CG-018 and the AC-store
+  validator's bare-directory no-op, all four of which shipped exactly that shape on this
+  surface.
+
+  The compared-count descriptor asserts by variation rather than against a literal because a
+  hard-coded number satisfies a stated-count requirement while proving nothing about what was
+  examined. BP-100n-4-ii requires the same construction for the same reason.
+
+  One descriptor exists that the criteria do not name, and it is load-bearing: the
+  all-new-files commit. The criteria as written use one population for both the source
+  resolution and the per-commit comparison, and the per-commit reading of the empty-source
+  clause refuses exactly the commit GE-127b-1's fourth arm requires to complete. That
+  descriptor and GE-127b-1's newly-added-file descriptor must be green simultaneously, which
+  is what forces the reading pinned in it_requirements and makes the two records consistent.
+
+  Per BP-100k-4-i's standing constraint, every unresolvable state is exercised by making the
+  lookup genuinely unavailable at run time; the reachability descriptor runs the registered
+  hook entry point and the deployed descriptor runs the built copy, so a missing deploy-map
+  entry cannot hide behind source-tree imports.
+delivers_to: null
+expects_from:
+  ac_id: GE-127b-1
+  contract: >-
+    The comparison of each covered file's length after the change against the
+    length it stood at before, and the population of previous lengths that
+    comparison consumes. This record requires that population's size to be stated,
+    and converts its unavailability or its emptiness from a silent completed
+    commit into a named refusal.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-01
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, MEASURED: no hooks_manifest.hooks id and
+    no new top-level mapping key — the only two containers WATCHED_REGISTRIES binds on
+    commit_guardian.json. No config_schema_fragment minted; the BP-100k-4 / BP-100k-4-i
+    fictional-key precedent BP-100n-4-ii records is explicitly not repeated. VERDICT
+    VOCABULARY: reuse BP-100n-4-ii''s "INDETERMINATE: reason=<text>" with the 0/1/2 exit
+    contract, the same one pinned on GE-127a-1-i, so all three unresolvable conditions here
+    report through one line and GE-127b-1''s grew-and-refused case stays distinguishable at
+    exit 1. AMBIGUITY RESOLVED RATHER THAN LEFT FOR THE CODER — AND FLAGGED TO THE USER: the
+    criteria use ONE population for both the source resolution and the per-commit comparison,
+    and under the pinned HEAD-blob source the per-commit reading of clause 2 ("holds a previous
+    length for no file whatsoever" → refuse) refuses exactly the all-new-files commit
+    GE-127b-1''s fourth arm requires to COMPLETE. The reading pinned in it_requirements takes
+    the population to be the resolution of the previous-length source (git available, HEAD
+    resolves, HEAD tree holds covered files) rather than the per-commit lookup results, which
+    reconciles the two records and matches BP-100n-4-ii, whose populations are likewise
+    repository-wide. A dedicated seam descriptor makes that reading executable and requires it
+    to be green simultaneously with GE-127b-1''s newly-added-file descriptor. This is
+    recommended to the user as a BA clarification to clause 2 rather than left as an
+    it_requirement gloss on ambiguous criteria. declares_side_effect false: every Then clause
+    reports to a stream and sets an exit status. test_spec: nine executing descriptors, one
+    carrying the BA''s named mutation, one the all-new-files seam, one asserting the count by
+    variation, one the registered hook entry point and one the deployed copy in a cold
+    process.'
+- reason: criteria-correction
+  by: business-analyst
+  at: 2026-09-01
+  note: 'CRITERIA plus one BA notes paragraph. NO it-po enrichment field touched —
+    it_requirements, test_spec, doc_links, package_surface, assigned_agent,
+    estimated_complexity and readiness are all exactly as the it-po pass left them.
+    Fixes a contradiction with the
+    parent GE-127b-1 that the it-po pass identified and recommended back to the BA
+    rather than leaving as an it_requirements gloss. THE DEFECT: the criteria used
+    ONE word — "the record of the length each covered file previously stood at" —
+    for TWO different populations, the repository-wide previous-length SOURCE and
+    the per-commit set of staged files that happen to have a predecessor. Under the
+    pinned HEAD-blob source, the per-commit reading made two clauses refuse a commit
+    staging only newly added covered files: clause 2 ("holds a previous length for
+    no file whatsoever") and the final positive-count clause. GE-127b-1''s fourth arm
+    requires exactly that commit to COMPLETE, because a file with no previous length
+    is out of scope for the ratchet rather than a blocked commit. THE FIX: the two
+    populations are now named separately. Clauses 1 and 2 are about the SOURCE being
+    unreachable, uninterpretable, or holding no covered file at all — all three
+    repository-wide, matching BP-100n-4-ii, whose populations are likewise
+    repository-wide rather than per-invocation. A NEW third arm states the
+    legitimate case positively and executably: source established and populated,
+    commit stages only newly added covered files, commit completes. The count clause
+    now requires the number to be stated unconditionally including when it is none,
+    states that a count of none does not by itself refuse, and scopes the
+    positive-count requirement to runs where at least one staged covered file had a
+    predecessor. This makes the reading the it-po pinned in it_requirements
+    unambiguous IN THE CRITERIA, which is what the seam descriptor
+    test_ge_127b_1_i_a_commit_adding_only_new_covered_files_against_a_populated_history_completes
+    asserts and what lets it be green simultaneously with GE-127b-1''s
+    newly-added-file descriptor. UNCHANGED AND DELIBERATELY SO: BP-100n-4-ii''s
+    "INDETERMINATE: reason=<text>" vocabulary and the 0/1/2 exit-status contract; the
+    requirement that the situations be distinguished BY NAME; the absence-asserting
+    clause and its named mutation. GE-127b-1 was NOT touched — its four arms are
+    correct as written. NOTES PARAGRAPH CORRECTED IN THE SAME TURN, ON A SCOPE
+    WIDENING GRANTED FOR EXACTLY THAT PARAGRAPH: the BA note headed "THE TWO
+    SITUATIONS MUST BE DISTINGUISHED BY NAME" undercounted once the criteria named
+    three, and was carried briefly as a flagged residual before being closed. It now
+    reads "THE THREE UNRESOLVABLE SITUATIONS ...", enumerates all three, and adds a
+    paragraph naming the FOURTH state that is deliberately NOT among them — source
+    established and populated, commit staging only newly added covered files, commit
+    completes. Leaving a prose statement that miscounted the rule it describes was
+    not worth carrying in the one tree whose own subject is a rule stated in two
+    places that disagreed for four months; that is the same defect one level up, in
+    the record specifying the fix for it. No other paragraph of the notes was
+    touched.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS NOT PARANOIA. The ratchet introduces a population that did not exist
+  before — a previous length per covered file — and a population that must be
+  resolved is a population that can come back empty. This repository has shipped
+  guards that exit 0 having examined nothing at least four times on this surface
+  alone, and every one of them shipped the same shape: an error path that yields
+  an empty collection rather than an unavailability signal. GE-127b-1 without this
+  floor is the fifth.
+
+  THE POSITIVE-COUNT FORM IS THE REQUIREMENT AND THE REFUSAL IS DERIVED FROM IT.
+  "Refuses when it compared nothing" and "states how many it compared" are
+  different requirements. The first is satisfiable by a guard on one code path;
+  the second makes the empty state unrepresentable in the outcome, so a reader —
+  human, agent, or a log being grepped — can tell a run that compared everything
+  from a run that compared nothing without knowing which branch was taken.
+  Implement the second and derive the first from it.
+
+  THE THREE UNRESOLVABLE SITUATIONS MUST BE DISTINGUISHED BY NAME, NOT MERELY ALL
+  REFUSE. They are: the previous-length source could not be reached at all; it was
+  reached and what it returned could not be interpreted; it was established
+  successfully and holds no covered file at all. Those are three different facts
+  about the world and they demand three different responses — a broken
+  environment, a source that resolves but carries content that cannot be read, and
+  a genuinely empty history. Collapsing any of them into a shared message costs
+  the reader the only information that separates them.
+
+  A FOURTH STATE EXISTS, IS NOT AMONG THE THREE, AND MUST NEVER BE FOLDED IN: the
+  source is established and populated, and the particular commit stages only newly
+  added covered files, so there is nothing to compare on this run. That commit
+  COMPLETES. It is the state this record originally conflated with the third, and
+  keeping it visibly outside the refusing set is what keeps this record consistent
+  with GE-127b-1's fourth arm. The distinction is between the SOURCE having nothing
+  to compare against, which refuses, and a COMMIT having nothing to compare, which
+  does not.
+
+  NAMED MUTATION — MANDATORY, EXECUTE IT, DO NOT MERELY DESCRIBE IT. The clause
+  beginning "in neither of those situations is any file reported as not having
+  grown" asserts an absence, and on any implementation that reports nothing it is
+  green on arrival — which is today's implementation exactly. MUTATION: make the
+  previous-length lookup yield an empty collection on error rather than raising or
+  returning an unavailability signal. That is the ordinary fail-open shape and the
+  one all four cited precedents actually shipped. Under the injection every file
+  compares against nothing, the run states zero files compared, and the commit
+  completes; this clause must go RED, and it must fail BY THE COMMIT OUTCOME as
+  well as by the text, then return to green on revert. Requiring failure by the
+  outcome is deliberate: a check that prints a worried message and then lets the
+  commit through is indistinguishable from a passing one to everything downstream
+  of it.
+
+  ASSERT THE STATED COUNT BY VARIATION, NEVER AGAINST A LITERAL. Vary the number
+  of covered files staged between two runs and require the stated compared-count
+  to move with it. A fixed expected number satisfies a stated-count requirement
+  while proving nothing about what was examined — which is the same defect one
+  level up, and is how every one of the cited precedents passed its own tests.
+
+  EXERCISE THE UNAVAILABLE STATES FOR REAL. Make the lookup genuinely unavailable
+  at run time — absent, unreadable, or present and not interpretable — and make
+  the empty state genuinely empty. Never assert that an error branch is present in
+  the source: a source assertion stays green on precisely the fail-open
+  implementation this record exists to forbid.
+
+  ONE SUMMARY, NOT TWO. Whatever the run states about how many files it compared
+  belongs in the single outcome the author already reads. A second summary printed
+  elsewhere lets one of them report a determinate run while the other reports an
+  empty one, and the reader has no way to know which is authoritative.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect.
