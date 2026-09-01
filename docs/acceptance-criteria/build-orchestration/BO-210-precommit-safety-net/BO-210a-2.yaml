@@ -18,7 +18,17 @@ criteria: |
     check-exception-handling, check-file-size, check-ac-schema, check-ac-limits,
     and check-contract-shrinking,
   And no other field in the config independently determines whether a hook gates a commit,
-  And a hook id absent from blocking_hook_ids is treated as non-gating by any reader.
+  And a hook id absent from blocking_hook_ids is treated as non-gating by any reader,
+  And given each id on that array is offered to a reader as a hook that gates a
+    commit,
+  When a change that violates what that hook checks is committed,
+  Then the commit is blocked by that hook — an id earns its place on this array by
+    being reached at commit time, never merely by appearing on it,
+  And given an id on the array that no commit-time invocation reaches,
+  When the array is read to decide which hooks gate a commit,
+  Then that id is named as approved-but-unreached and the discrepancy fails — an
+    id this array approves as gating, while nothing invokes it, is never left
+    sitting on the list indistinguishable from the ids that do block a commit.
 depends_on: [BO-210a, BO-210a-1]
 doc_links:
   - path: "templates/skills/precommit-autofix/SKILL.md"
@@ -36,6 +46,91 @@ it_requirements:
   - "blocking_hook_ids must be the sole gating list — no parallel gating signal"
   - "The candidate gating hook ids must all be present in the array"
   - "Edit the deployed config and its packaged template source together; the build.py round-trip must leave both in parity"
+test_spec:
+  - name: test_bo_210a_2_the_resolved_gating_set_moves_with_the_one_array_and_is_the_seven_ids
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Resolve the gating set by EXECUTING the reader over the config, never by loading the
+      JSON and matching a literal. On the real config the resolved set is exactly the seven
+      ids. Single authority is asserted by VARIATION, not by a fixed comparison: add an id to
+      blocking_hook_ids and the resolved set gains it; drop one and the resolved set loses it.
+      A reader that returns a hard-coded seven-element set passes a fixed-literal assertion
+      and must fail this one.
+  - name: test_bo_210a_2_no_second_field_can_make_a_hook_gate_or_stop_it_gating
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      NAMED MUTATION (mandatory, run it, do not merely describe it): plant a plausible
+      parallel gating signal in the config beside the array — a per-hook blocking/enabled
+      style flag asserting gating for an id NOT on blocking_hook_ids, and the same flag
+      denying gating for an id that IS on it. The resolved gating set must be unchanged by
+      both plants. If either plant moves the set, a second field is independently
+      determining gating and this descriptor fails. Green-on-arrival is the risk here: on a
+      reader that consults only the array the plants are inert, which is exactly why the
+      plants are executed rather than assumed.
+  - name: test_bo_210a_2_an_id_absent_from_the_array_does_not_block_a_violating_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      With an id removed from blocking_hook_ids, stage a change that violates what that hook
+      checks and take it through the commit path. The observable outcome is that the commit
+      is not blocked by that hook — non-gating is proven by the commit completing, never by
+      the id's absence from a data structure. Restoring the id restores the block, so the
+      array's contents and the commit outcome are shown to be the same fact.
+  - name: test_bo_210a_2_every_id_on_the_array_blocks_a_real_violating_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      git commit through the registered pre-commit surface
+      (.pre-commit-config.yaml -> .leafcutter/scripts/commit_guardian/run_hook.py)
+    description: >-
+      PRODUCTION ENTRY POINT, PARAMETERISED OVER THE ARRAY ITSELF — the cases are generated
+      from blocking_hook_ids as read at run time, so an id added to the array later cannot
+      escape this descriptor. For each id, stage a change that violates what that hook
+      checks and attempt a real commit through the registered surface. Assert the commit is
+      BLOCKED — by the exit status, not only by text — and that the blocking hook is named
+      in the output. A hook whose script exists on disk but is invoked by no entry line
+      completes the commit and fails here; that is the point.
+  - name: test_bo_210a_2_an_approved_but_unreached_id_is_named_and_the_read_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      Reading the array to decide which hooks gate a commit must NAME any id that no
+      commit-time invocation reaches, and fail. Asserted on the outcome, not on config
+      contents: an id is treated as reached only when the commit path can be made to block
+      on it. NAMED MUTATION A (mandatory, executable): append a synthetic id to
+      blocking_hook_ids that nothing anywhere invokes — the read must fail AND the failure
+      text must contain that exact id; removing it returns the descriptor to its prior
+      verdict. NAMED MUTATION B (mandatory, executable): make the resolution of which ids
+      are reached return an empty result on error instead of an unavailability signal — the
+      ordinary fail-open shape. Under B the read reports no unreached ids and succeeds; this
+      descriptor must go RED, and by the exit status as well as the text. B is not optional:
+      the clause is satisfiable by a check that examines nothing, which is the one way it
+      could pass while the dead gates it exists to expose stay dead.
+  - name: test_bo_210a_2_the_array_the_commit_actually_consumes_is_the_deployed_one
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the gating decision is taken in the DEPLOYED layout against the
+      deployed config, in a cold process. Assert the deployed and packaged-template copies
+      of blocking_hook_ids agree after the build round-trip, and that the deployed commit
+      path blocks on an id read from the deployed copy. An array edited only in the template
+      leaves the running commit unchanged, and an array edited only in the deployed copy
+      disappears on the next build; both surface here rather than as a green source-tree
+      run over a config no commit consumes.
 delivers_to:
   agent: llm-expert
   contract: "A top-level blocking_hook_ids JSON array (array of hook-id strings) in precommit-autofix.json that the re-dispatch skill logic reads to decide which failures trigger originator re-dispatch"
@@ -44,7 +139,112 @@ expects_from:
   contract: "The reconciled routing config document to add the array into"
 origin_agent: business-analyst
 created: 2026-06-16
-amended_by: []
+amended_by:
+- reason: test-contract-authored
+  by: business-analyst
+  at: 2026-09-01
+  note: >-
+    CRITERIA UNTOUCHED, AND THIS IS NOT PART OF THE REACHABILITY AMENDMENT BELOW. Only
+    test_spec was added. readiness, change_target, assigned_agent and every criteria clause
+    are exactly as the entry below left them.
+
+
+    THE GAP PRE-DATES THIS WORKTREE. This AC has been readiness: approved, work_status: todo,
+    change_target: config with assigned_agent: python-coder — an approved, not-yet-built leaf
+    code AC — and carried no test_spec at all, which _ac_schema_validators.py's test-contract
+    rule forbids. It is the state at HEAD, not damage from the amendment. It surfaced only now
+    because the AC hooks validate the staged index rather than the store, so a record is
+    checked on the commits that happen to stage it; this is the first commit to stage this
+    file since that rule became active. Its silence in the interim was never a pass.
+
+
+    RECLASSIFYING TO NON-CODE WAS CONSIDERED AND REJECTED. The escape hatch the validator
+    offers is change_target docs/prompt with a non-coder agent. It does not apply: this AC
+    constrains a real config artifact a coder edits — precommit-autofix.json — and the
+    reachability clause it now carries is a statement about commit outcomes. Declaring it
+    test-free to clear a gate would be the phantom-done shape one level up.
+
+
+    SIX EXECUTING DESCRIPTORS, NO GREP. Per CLAUDE.md "Gate / Workflow ACs — Verify
+    Behaviorally, Not by Grep", no descriptor here is satisfiable by reading the config or
+    the generated .pre-commit-config.yaml for a hook id — a source or config read stays green
+    on precisely the dead-gate state these clauses forbid. Single authority is asserted by
+    varying the array and watching the resolved set move, never by matching a fixed
+    seven-element literal. One descriptor runs the registered commit surface and asserts the
+    commit outcome by exit status, parameterised over the array as read at run time so a
+    later addition cannot escape it. One runs the deployed copy in a cold process. The
+    absence-asserting reachability clause carries two named executable mutations: a synthetic
+    unreached id that the failure text must name, and the fail-open injection that makes the
+    reached-set resolution return empty on error — under which the clause passes while every
+    dead gate stays dead, which is why it is mandatory rather than advisory.
+
+
+    NO SECOND CENSUS. BP-100n-4 owns the reachability census and its constraint against a
+    parallel guard applies unchanged; these descriptors assert the OUTCOME an unreached id
+    must produce and count nothing. BP-100n-4-ii fixes its summary at four numbers and gains
+    no fifth population from this.
+- reason: scope-addition-criteria-changed-reapproval-required
+  by: business-analyst
+  at: 2026-09-01
+  note: >-
+    THE ENUMERATION IS UNTOUCHED — the seven ids stay exactly as they were, and the array is
+    not the thing that is wrong. One closing clause is added requiring that every id on the
+    array is actually REACHED at commit time, and that an id invoked by nothing is named as
+    approved-but-unreached rather than sitting silently on the list. readiness was demoted
+    approved to draft by this pass so the approval gate would re-run on the changed criteria;
+    BrainCandy reviewed that demotion on 2026-09-01 and restored approved, judging the added
+    clause a correction to already-approved intent rather than new criteria. Recorded here
+    rather than left as a bare field change, so the restoration is attributable and a later
+    reader does not mistake it for a demotion that never happened.
+
+
+    WHY: this AC is true-in-fact as written — the array exists and matches — while its
+    central claim is false. It declares itself "the single authority on which hooks gate a
+    commit", and precommit-autofix/SKILL.md Step 4 reads it as exactly that (line 61: an id
+    absent from the array is non-gating and is skipped entirely; line 63 names all seven as
+    "the seven gating hooks"), which is KI-CG-020's fourth leg of hook registration. So the
+    store currently holds an APPROVED criterion asserting that dead gates block commits, and
+    a reader that trusts it is misled in the one direction the AC exists to prevent.
+
+
+    RE-MEASURED IN THIS WORKTREE AT b846121c9 ON 2026-09-01, AND THE NUMBERS HAVE MOVED SINCE
+    THE ASSESSMENT RUN — the assessment found five of the seven ids invoked by nothing; it is
+    now THREE. check-exception-handling and check-contract-shrinking have since been
+    registered and are genuinely reached (deployed .pre-commit-config.yaml lines 276/278 and
+    262/264). Current state of the seven: REACHED — check-exception-handling, check-ac-schema
+    (350/352), check-contract-shrinking. NOT REACHED — check-complexity, check-docstrings,
+    check-file-size; all three scripts are present on disk in
+    templates/scripts/commit_guardian/ and are named by no entry line anywhere in the
+    generated config (zero grep matches for check_complexity / check_docstrings /
+    check_file_size in it), and none of the three has a hooks_manifest entry under its id.
+    FOURTH CASE, DISTINCT — check-ac-limits names no registered hook id at all; the script
+    check_ac_limits.py IS invoked, but under the id check-ac-tree-limits (302/304). So the
+    script gates while the id on this array names nothing, which is precisely the id-versus-
+    entry-line distinction BP-100n-4 warns a name-to-id comparison gets wrong. Counting that
+    case, four of the seven approved ids name no hook that runs under that id.
+
+
+    SURROUNDING CENSUS ALSO MOVED, re-measured independently against
+    templates/scripts/commit_guardian/commit_guardian.json: 67 check_*.py on disk (was 66),
+    61 hooks_manifest entries (was 59), 62 distinct .py filenames named across entry lines
+    (was 60), 18 scripts named by no entry line (was 19). 5 enabled:false — unchanged.
+    Reported for the record only; this AC asserts none of these numbers and the amendment
+    does not introduce any.
+
+
+    DELIBERATELY NOT DONE, AND WHY. (1) No blocking_hook_ids-versus-emitted-config cross-check
+    was added as a new AC or as a new population in the BP-100n-4 family: BP-100n-4-ii fixes
+    its census summary at exactly four numbers, so a fifth population would contradict an
+    approved L3. The requirement belongs here, in the AC that owns the array. (2) No second
+    reachability census is specified. BP-100n-4 owns the census and its constraint "do not
+    build a second reachability guard beside it, or the two will disagree about how many gates
+    exist" applies unchanged; the added clause therefore states the OUTCOME an unreached id
+    must produce and does not restate, re-enumerate, or re-count anything BP-100n-4 enumerates.
+    (3) Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", the reached-at-
+    commit-time clause is written as a commit that violates the hook and is blocked by it —
+    verification runs through the registered surface, never by grepping the config or the
+    generated .pre-commit-config.yaml for a hook id, which would stay green on exactly the
+    dead-gate state this clause exists to forbid.
 superseded_by: null
 covered_by: []
 implemented_by: []
