@@ -3425,3 +3425,57 @@ hazard: the argument above never depended on those two records being red. It dep
 not since been touched, which is still true of every one of the ~3,200 records no recent PR
 has modified. The next such record will be just as invisible, and now there is no red
 component sitting on `main` to make the point. Land ACS-200h.
+
+---
+
+### KI-BP-20260901-1345 — A tempdir-cleanup race in the portability suite fails the REQUIRED pytest check at random, on a PR that touched nothing near it
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1 (confirmed flaky, not deterministic)
+- **First seen:** 2026-09-01
+- **Where:** `unit_tests/portability/test_bp_900h6i.py::TestBp900h6iEntitlement::test_bp900h6i_step_refuses_an_unentitled_target_and_leaves_it_byte_identical`
+
+**Symptom.** The required `Test suite (pytest)` check failed on PR #683 — a schema-and-docs
+change touching no portability code — with a teardown error, not an assertion:
+
+```
+FAILED unit_tests/portability/test_bp_900h6i.py::...::test_bp900h6i_step_refuses_an_unentitled_target_and_leaves_it_byte_identical
+  OSError: [Errno 39] Directory not empty: '/tmp/tmp1eqh3ix5/developer_tree/.git'
+1 failed, 5463 passed, 11 skipped, 6 xfailed, 16 warnings, 577 subtests passed in 770.68s
+```
+
+**Confirmed flaky rather than assumed flaky.** Re-run of the same job at the same commit, no
+code change: **pass**, 10/10 checks green, and #683 merged at `b3d3c95e5`. It also passes
+locally (4 passed). So the failure is not a function of the branch's content, and re-running
+is currently the whole remediation.
+
+**Why it is worth an entry despite being "just a flake".** It is in a **required** status
+check, so it does not degrade anything — it blocks. The failure mode is also the maximally
+confusing one: it fails during directory teardown inside a `.git` directory the test itself
+created, which means the error text names neither the test's subject nor anything the PR
+author changed. A contributor hitting this on their own PR has no way to tell it apart from a
+real regression they caused, and the honest response — "read the failure, it says my change
+broke portability" — leads directly away from the answer.
+
+An unregistered flake in a required gate also erodes the gate. The learned response to a
+required check failing becomes "re-run it", which is exactly the habit that lets a real
+failure through on the second attempt.
+
+**Likely cause, stated as a hypothesis and not a finding.** `Errno 39` on a `.git` directory
+during cleanup is the signature of something still writing into the tree as
+`TemporaryDirectory.__exit__` walks it — a git subprocess (gc, index-pack, or a background
+maintenance task) outliving the code that spawned it. This has NOT been confirmed; nobody has
+instrumented the teardown. Anyone fixing it should establish that before changing anything,
+because the alternative causes (a filesystem-level race on the CI runner's `/tmp`, or a
+handle held by a fixture) call for different fixes.
+
+**Fix direction.** Wait for spawned git processes before leaving the context manager, or give
+the fixture an `ignore_cleanup_errors=True` teardown (Python 3.10+) — but only after the cause
+is established. Reaching for `ignore_cleanup_errors` first would silence the symptom at the
+cost of losing the evidence, and if the cause is a leaked subprocess then the leak is a real
+defect in the code under test, not in the fixture.
+
+**Related.** User-memory `feedback_test_isolation_pitfalls` and `KI-TQ-012` (a fixture that
+sandboxes the filesystem while leaking into shared state) are the same family: tests here
+treat the runner's environment as private scratch space with weaker guarantees than assumed.

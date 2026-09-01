@@ -947,3 +947,112 @@ scratch space when it is neither private nor scratch.
 **Pattern:** a fixture that isolates the *filesystem* (a fresh worktree, removed on teardown)
 while sharing the *configuration* that worktree points at — so the visible half of the sandbox
 is convincing and the invisible half leaks permanently.
+
+---
+
+### KI-TQ-20260901-1655 — A red-baseline gate cannot tell "red because the feature is missing" from "red because the test asserts against a stub defined in the test file", and the second kind is unsatisfiable — one of them blocked a completed seven-AC build
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-09-01
+- **Where:** `unit_tests/ac_store/test_tkt_600b_2.py` as authored by `test-writer` during
+  fast-lane run `wf_903b8551-290`; the gates are `verify_red_baseline` and
+  `verify_green_and_coverage` in `templates/workflows-js/fast-lane-ship.js`
+
+**Symptom.** `test-writer` authored a test that **no production change could ever make pass**:
+
+```python
+def test_signed_off_without_a_signoff_entry_is_rejected(self) -> None:
+    phantom_agents = {"pull-request": "signed_off"}
+    with __import__("pytest").raises(ValueError):
+        _reject_phantom_signoff(phantom_agents, comment_log=[])
+
+# ... 25 lines further down, in the same file:
+
+def _reject_phantom_signoff(agents: dict, comment_log: list) -> None:
+    """Not yet implemented (TKT-600b-2): should raise ValueError when an
+    agent is marked 'signed_off' with no backing comment-log entry."""
+    raise NotImplementedError(
+        "the phantom-sign-off rejection this AC requires does not exist yet"
+    )
+```
+
+The function under test is defined **in the test file**. It raises unconditionally. The only
+edit in the repository that can turn this green is an edit to this file — which is the one
+edit a coder correctly will not make.
+
+**Why both gates were satisfied by it, which is the actual finding.** The test is *genuinely*
+red, so `verify_red_baseline` passed it — correctly, by its own definition. A red baseline is
+evidence that a test constrains **something**; it is not evidence that the test constrains
+**production code**. Nothing between the two gates closes that gap. So:
+
+```
+verify_red_baseline    17/17 red        PASS  → coder dispatched
+python-coder           7 ACs implemented, 4 production files changed
+verify_green_and_coverage  16/17 green  FAIL  → halt, no PR
+release                all 7 ACs returned to todo
+```
+
+The run cost 726,644 subagent tokens and 63 minutes, implemented every one of the seven ACs,
+and produced no pull request. The other sixteen tests were fine; the implementation was fine.
+`coverage_ok` was true and `uncovered_ac_ids` was empty — the gate's own output said the only
+problem was one failing test.
+
+**The release is correct and still makes it worse.** Flipping all seven ACs back to `todo` is
+right on the merits — six-sevenths done is not done. But the effect is that a run which
+produced a complete, working implementation leaves the store looking exactly like a run that
+produced nothing, with the work surviving only as uncommitted changes in a worktree nobody is
+pointed at. Nothing in the returned payload names the worktree as containing salvageable work
+rather than debris. (It does name `worktree_path`, which is how it was recovered — but as a
+location, not as a claim that anything valuable is in it.)
+
+**What the test should have asserted, and why this is not a hard problem.** The AC
+(`TKT-600b-2`) states its own answer twice. Its `test_rationale` says the boundary test "is a
+claim about the checker's behaviour rather than the generator's", and its constraints say the
+AC is "making the generator satisfy an **existing** contract by construction rather than
+introducing a new one". The rejecting checker therefore already existed:
+`_signoff_parity_checks._check_parity` (`:450`) reports a violation for any agent whose status
+is `signed_off` while absent from `## Sign-offs` — which is the phantom record exactly.
+Verified against the real guard over real generator output:
+
+```
+-- correct record (pull-request: not_needed, no checklist row) --
+parity  : []        orphans : []
+-- phantom record (flipped to signed_off, row still absent) --
+VIOLATION: agent 'pull-request' has status 'signed_off' in frontmatter
+           but is missing from ## Sign-offs
+```
+
+So the test-writer invented a validator that did not exist while the AC it was reading pointed
+at one that did. Repaired 2026-09-01 to assert against the real guard; the repaired test is
+still red against the pre-change generator (`TypeError: _build_agents_map() got an unexpected
+keyword argument 'resolved_destination'`), so the red baseline is preserved, not traded away.
+
+**Fix direction.** The cheap, mechanical form: after `verify_red_baseline` and before
+dispatching the coder, reject any new test whose failure originates inside the test file's own
+module — a `NotImplementedError` raised from a helper defined in the test file is the
+signature, and it is detectable from the traceback's final frame without understanding the
+test. That is narrow enough to be worth doing on its own.
+
+The general form is harder and worth stating so the cheap fix is not mistaken for it: a red
+baseline should be evidence that the test is *reachable from a production surface*. The
+existing `reachability` angle in the test-spec taxonomy is the vocabulary for exactly this and
+was not consulted — this entry's test declared `angle: boundary`, and nothing checks that a
+boundary test touches production code at all.
+
+**Do NOT fix this by relaxing the green gate.** Letting 16/17 through would have shipped this
+particular PR and is the wrong lesson: the gate behaved correctly given a bad input. The defect
+is upstream, in what the red gate is willing to accept as a baseline.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse case, and it may deserve
+its own entry there. Every mechanism in that file is a check that passes when it should fail.
+This is a check that fails when nothing is wrong, which is normally the safe direction — except
+that it consumed a completed build and left the store indistinguishable from a run that never
+happened. A gate that cannot be satisfied is not conservative; it is just as much a broken
+oracle as one that cannot be failed.
+
+**Related.** `KI-TQ-010` (nothing asks whether a passing test is *able* to fail) is the exact
+mirror image: that entry is about tests that cannot go red, this one about a test that cannot
+go green. Both are the same missing question — "is this assertion connected to anything?" —
+asked from opposite ends.
