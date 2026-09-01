@@ -1,13 +1,21 @@
 {
-  "_comment": "Whole-store refusal baseline for ACS-100i-7. Records the refusal messages that are NOT attributable to the top-level package-surface if/then rule. The guard test asserts this set is byte-identical: none added, none removed, no message changed. A shrunken set normally means validation was loosened generally instead of the trigger narrowed. REGENERATED 2026-09-01: the previous 28-record baseline was measured at 969d7bc0, and ALL 28 of its entries were the same defect — test_spec entries rejected for declaring `framework: vitest` (26), `framework: playwright` (2), or `type: component` (9 of those 28), against enums that predate leafcutter-web and so could not name the frameworks this repo actually runs. Those enums were widened in the immediately preceding commit, in BOTH config/ac_store_schema.json and config/test_requirements.schema.json, so all 28 records now validate. Their disappearance is a vocabulary repair, not a loosening: the guard run that produced this file reported Added: [] and Messages changed: [] — only removals, and only these 28. See KI-ACS-010. Regenerate ONLY in a commit that can point at the record edit explaining each removal; never to make a red assertion go green.",
-  "measured_at_commit": "aa5dc04e",
+  "_comment": "Whole-store refusal baseline for ACS-100i-7. Records the refusal messages that are NOT attributable to the top-level package-surface if/then rule. The guard test asserts this set is byte-identical: none added, none removed, no message changed. A shrunken set normally means validation was loosened generally instead of the trigger narrowed. RE-MEASURED 2026-09-01 at merge commit 1695b0ec, against the merged tree rather than either side's pre-merge number. Two baselines converged here. This branch widened test_spec's framework enum to name vitest AND playwright, and type to name component, in BOTH config/ac_store_schema.json and config/test_requirements.schema.json — taking the refusal set from 28 to 0. Concurrently and independently, origin/main widened framework to name playwright only, in ac_store_schema.json only, taking its own baseline from 28 to 26 — the 26 remaining being the records that declare vitest. The merge takes the superset, which is why the count here is 0 and not 26. The disappearance is a vocabulary repair, not a loosening: the pre-merge guard run reported Added: [] and Messages changed: [] — removals only. See KI-ACS-010. NOTE FOR WHOEVER READS THIS NEXT: with an empty set the 'Removed' direction of the guard is now vacuous; the 'Added' direction still bites, and that is the direction that matters. Regenerate ONLY in a commit that can point at the record or schema edit explaining each removal; never to make a red assertion go green.",
+  "measured_at_commit": "1695b0ec",
   "measured_on": "2026-09-01",
-  "supersedes": {
-    "measured_at_commit": "969d7bc0",
-    "measured_on": "2026-08-25",
-    "unrelated_refusal_count": 28,
-    "reason": "All 28 entries were test_spec framework/type enum refusals, resolved by widening both schemas to name vitest, playwright and component."
-  },
+  "supersedes": [
+    {
+      "measured_at_commit": "969d7bc0",
+      "measured_on": "2026-08-25",
+      "unrelated_refusal_count": 28,
+      "reason": "The common ancestor of both fixes. All 28 entries were test_spec framework/type enum refusals: 26 records declaring framework vitest, 2 declaring playwright, 9 of them also declaring type component."
+    },
+    {
+      "measured_at_commit": "00df3e72b",
+      "measured_on": "2026-09-01",
+      "unrelated_refusal_count": 26,
+      "reason": "origin/main's independent, narrower fix — playwright added to ac_store_schema.json alone. It resolved its 2 playwright records, left the 26 vitest ones refused, and left config/test_requirements.schema.json at [unittest, pytest], so a playwright AC would validate while generating a ticket that violates its own unenforced schema. Superseded by this branch's superset widening of both schemas."
+    }
+  ],
   "store_dir": "docs/acceptance-criteria",
   "index_yaml_excluded": true,
   "store_record_count": 3256,
