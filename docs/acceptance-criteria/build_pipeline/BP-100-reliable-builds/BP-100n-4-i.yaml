@@ -1,0 +1,366 @@
+id: BP-100n-4-i
+components:
+  - build_pipeline
+title: "A script that is deliberately not a gate is recorded as one with a stated ground and the check honours it; a record that states no ground is itself refused and the script it names stays reported"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given some of the scripts kept alongside the commit gates are deliberately not
+    gates — a shared module the gates import, a script superseded by another and
+    kept for reference, a tool that runs only in continuous integration,
+  And there is a register of deliberate non-gates in which each record names one
+    script and states the ground on which that script is not a gate,
+  When the reachability check runs,
+  Then a script whose record states a ground is reported as a declared non-gate,
+    quoting that ground, is not counted among the scripts nothing invokes, and
+    does not fail the run,
+  And given a record that names a script but states no ground,
+  When the check runs,
+  Then that record is reported as refused, and the script it names is counted
+    among the scripts nothing invokes and fails the run — a blank ground is not a
+    ground,
+  And given a record naming a script that is not present on disk,
+  When the check runs,
+  Then that record is reported as stale and named, so the register cannot
+    accumulate cover for scripts that no longer exist,
+  And the number of declared non-gates is stated in the run's summary alongside
+    the number of scripts compared and the number reported, so the size of the
+    register is visible in every run rather than only on inspection,
+  And given a script is present on disk, is invoked by the commit-time
+    configuration, and also carries a record in the register,
+  When the check runs,
+  Then it is reported as invoked and the redundant record is named, so the
+    register does not silently retain cover for a script that no longer needs it.
+depends_on:
+  - BP-100n-4
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Holds hook_trigger_reachability_exemption_registry — nine entries shaped
+      {"id": <gate-id>, "ground": <text>} — which is the register this criterion
+      mirrors. Reuse that shape and its documented ground-required rule rather than
+      inventing a third exemption vocabulary; note the register here is keyed on a
+      SCRIPT, not on a gate id, because an unregistered script has no gate id to be
+      keyed by. That is precisely why check-ticket-signoff-parity is absent from the
+      existing nine: nobody exempted it, because nothing looked.
+  - path: "templates/scripts/commit_guardian/_hook_trigger_reachability_helpers.py"
+    relationship: modifies
+    status: exists
+    relevance: >-
+      validate_exemptions already implements the grounded/groundless distinction for the
+      existing register — a groundless entry is REJECTED and falls through to the
+      un-exempted verdict rather than silently covering the gate. Extend that function;
+      a second validator would drift from it.
+  - path: "templates/scripts/commit_guardian/check_hook_trigger_reachability.py"
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Its module docstring states the three-way reachable / declared-exempt-with-ground /
+      unreachable contract and the reasoning for it, including why a correct-but-context-
+      dependent trigger must be exempted rather than have the check's verdict weakened.
+      The same reasoning transfers verbatim to a library module that is correctly not a gate.
+  - path: "docs/known-issues/commit-guardian.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-CG-20260831-hook-scripts-never-invoked Remediation: "triage the remaining 23:
+      register, delete, or add to the exemption registry with a stated ground". This
+      criterion specifies the third of those three, which is the one that keeps the check
+      alive after it is first right about something inconvenient.
+  - path: "templates/scripts/commit_guardian/_package_surface_registry.py"
+    relationship: describes
+    status: exists
+    relevance: >-
+      WHY THE REGISTER REUSES AN EXISTING KEY. WATCHED_REGISTRIES watches
+      commit_guardian.json on its own top level by mapping key, and its metadata exclusion
+      set is only {"$schema", "_comment"}. A new top-level key such as
+      declared_non_gate_register would therefore be a newly registered package surface and
+      check-package-surface-declaration would refuse the commit unless a cited AC declared
+      it. Records added INSIDE the existing list are neither a new mapping key nor a new
+      hooks_manifest.hooks id, so this AC registers no watched entry.
+  - path: "templates/scripts/commit_guardian/_drift_exemptions.py"
+    relationship: describes
+    status: exists
+    relevance: >-
+      The precedent validate_exemptions was modelled on (BP-100k-3): EXEMPT with a stated
+      ground, REJECTED when the ground is blank. Both registers must agree on what counts
+      as a ground; one shared validator is the only way that stays true.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  config_schema_fragment:
+    hook_trigger_reachability_exemption_registry:
+      type: array
+      description: >-
+        The existing nine-entry register, extended with a SECOND, script-keyed record
+        shape so that a script no registry entry names — and which therefore has no gate
+        id to be keyed by — can be declared a non-gate at all. The id-keyed shape stays
+        valid and unchanged for registered gates. The ground-required rule is identical
+        for both shapes.
+      items:
+        type: object
+        required:
+          - ground
+        properties:
+          id:
+            type: string
+            description: >-
+              Gate id — the EXISTING shape, for a registered gate whose trigger matches no
+              tracked path today. Unchanged; the nine current entries keep working.
+          script:
+            type: string
+            description: >-
+              Gate-script filename as it appears in templates/scripts/commit_guardian/ —
+              the NEW shape, for a script that no registry entry names. This is the only
+              stable identity an unregistered script has.
+          ground:
+            type: string
+            minLength: 1
+            description: >-
+              Why this script is not a gate, or why zero matches is expected. Blank or
+              whitespace-only is REJECTED, never honoured, and its subject stays reported.
+  reference_file_path: "templates/scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "one per declared non-gate — exactly one record per script, no record covering more than one script, and no second register introduced anywhere"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - >-
+      THE KEY SHAPE IS THE REAL DESIGN DECISION, AND IT IS THE SCRIPT FILENAME. The
+      existing register is keyed on gate id. An unregistered script has no gate id, so
+      id-keying cannot name the very population this register exists to cover — which is
+      exactly why check-ticket-signoff-parity is absent from the current nine: nobody
+      exempted it, because nothing looked. Records for scripts that no registry entry
+      names are keyed on the script filename as it appears in
+      templates/scripts/commit_guardian/.
+    - >-
+      ONE REGISTER, ONE VALIDATOR. Extend hook_trigger_reachability_exemption_registry and
+      extend validate_exemptions in _hook_trigger_reachability_helpers.py. Do not add a
+      second top-level key and do not write a second validator: two validators drift on
+      what counts as a ground, and that is the one thing they must never disagree about.
+      The existing REJECTED EXEMPTION ENTRY vocabulary is reused verbatim, including its
+      sentinel-id rejection.
+    - >-
+      NO NEW TOP-LEVEL KEY — AND THIS IS THE PACKAGE-SURFACE CONSEQUENCE, NOT A STYLE
+      PREFERENCE. WATCHED_REGISTRIES watches commit_guardian.json's top level by mapping
+      key with only "$schema" and "_comment" excluded, so a key such as
+      declared_non_gate_register would be a newly registered surface and
+      check-package-surface-declaration would refuse the commit unless a cited AC declared
+      package_surface: true. Records added inside the existing list are neither a new
+      mapping key nor a new hooks_manifest.hooks id, so this AC declares
+      package_surface: false. If an implementer nevertheless introduces a new top-level
+      key, raise it rather than working around it — the declaration then belongs here and
+      the structured spec must move with it.
+    - >-
+      A BLANK GROUND IS NOT A GROUND, AND THE REFUSAL MUST BE OBSERVABLE IN THE VERDICT,
+      NOT ONLY IN THE LOG. The observable difference between a register that is checked
+      and one that is merely consulted is that a refused record leaves its script in the
+      invoked-by-nothing class and the run still fails. A refusal message printed beside a
+      script that quietly disappeared from the reported set is the failure mode.
+    - >-
+      THE REGISTER MUST BE PRUNABLE BY THE CHECK ITSELF. Stale (the record names a script
+      not present on disk) and redundant (the record names a script the commit-time
+      configuration invokes) are reported conditions, never silent skips. Cover that
+      outlives its subject is how a check quietly stops checking, and this register is the
+      one artifact in the design whose whole purpose is to suppress findings.
+    - >-
+      GROUND TEXT MUST STATE WHY THE SCRIPT IS NOT A GATE. A ground reading only that
+      triage is pending, that registration is planned, or that the findings are not yet
+      resolved is a suppression under another name; those scripts belong in
+      hooks_manifest.hooks instead. Note in particular that ten of the nineteen already
+      carry a dedicated configuration section in this same file, which argues against a
+      non-gate disposition for them (see BP-100n-4).
+    - >-
+      CANONICAL VERSUS BUILD OUTPUT. templates/scripts/commit_guardian/ is canonical;
+      scripts/commit_guardian/ is a build output build.py overwrites. Add the records to
+      the template and re-run build.py — a record added only to the deployed copy vanishes
+      on the next build, and one added only to the template is invisible to the running
+      hook.
+    - >-
+      Must follow the repo error-handling policy: specific-exception try/except around
+      file and JSON I/O; log at WARNING or higher or re-raise; no bare or blind excepts. A
+      malformed record must be reported and refused, never skipped silently — a skipped
+      record is indistinguishable from an honoured one from outside the process.
+test_spec:
+  - name: test_bp_100n_4_i_a_grounded_record_is_a_declared_non_gate_quoting_its_ground
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A script whose register record states a ground is reported as a declared non-gate
+      with that ground quoted in the output, is absent from the invoked-by-nothing set,
+      and does not drive a non-zero exit. NAMED MUTATION (mandatory, run it, do not merely
+      describe it): key the register lookup on the hook id rather than on the script
+      filename. Every declared non-gate then fails to resolve, because an unregistered
+      script has no hook id, and each is reported as invoked by nothing. This descriptor
+      must go RED under that injection, naming every script in the register, and return to
+      green on revert. The clause is green on arrival on any implementation that reports
+      nothing, which is why the injection is not optional.
+  - name: test_bp_100n_4_i_a_groundless_record_is_refused_and_its_script_stays_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      A record naming a script but stating no ground is reported as refused, in the same
+      REJECTED EXEMPTION ENTRY vocabulary validate_exemptions already emits, AND its
+      script remains counted among the scripts nothing invokes so the run still fails.
+      NAMED MUTATION (mandatory, run it): accept a record whose ground is the empty string
+      or whitespace only. This descriptor must go RED under that injection, and it must
+      fail BY THE SCRIPT NOT BEING REPORTED — not merely by the refusal text being absent.
+      That distinction is the observable difference between a register that is checked and
+      one that is merely consulted. Assert the blank-ground verdict against both register
+      shapes so the id-keyed and script-keyed halves cannot diverge on what counts as a
+      ground.
+  - name: test_bp_100n_4_i_a_record_naming_an_absent_script_is_reported_stale_by_name
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A record naming a script that is not present on disk is reported as stale and named
+      in the output, so the register cannot accumulate cover for scripts that no longer
+      exist. Red on arrival — no such register exists yet — so no injection is required.
+  - name: test_bp_100n_4_i_the_summary_states_the_declared_non_gate_count
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The run summary states the number of declared non-gates alongside the number of
+      scripts compared and the number reported, so the size of the register is visible in
+      every run rather than only on inspection. Asserted by varying the register between
+      two runs and requiring the stated count to move with it — never by matching a fixed
+      number, which would pass on a hard-coded literal.
+  - name: test_bp_100n_4_i_a_record_covering_an_invoked_script_is_named_as_redundant
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A script that is present on disk, is invoked by the commit-time configuration, and
+      also carries a register record is reported as invoked, and the redundant record is
+      named, so the register does not silently retain cover for a script that no longer
+      needs it. Red on arrival for the same reason as the stale-record descriptor.
+  - name: test_bp_100n_4_i_declared_non_gate_verdicts_are_emitted_through_the_registered_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_hook_trigger_reachability.py
+    description: >-
+      PRODUCTION ENTRY POINT, FROM THE DEPLOYED LAYOUT. Run the check as a subprocess
+      through the registered hook path after build.py, with the register records read from
+      the real deployed commit_guardian.json rather than a fixture-only key, and assert
+      that the declared-non-gate verdicts and the register count appear in the hook's own
+      output. Add a record to the canonical template and assert it is invisible to the
+      deployed hook until build.py runs — the canonical-versus-build-output trap made
+      observable rather than merely documented.
+test_rationale: |
+  The grounded-record clause is an assertion that something is NOT reported, and it is
+  green on arrival on any implementation that reports nothing at all — the same shape as
+  KI-TQ-010. Its evidential value comes entirely from the id-keying injection, which is
+  also the design question this criterion exists to settle: an unregistered script has no
+  gate id, so an id-keyed register cannot name the population it is for.
+
+  The groundless-record descriptor is required to fail by the SCRIPT'S ABSENCE from the
+  reported set rather than by missing refusal text, because a check that prints a refusal
+  and then honours the record anyway is exactly a register that is consulted rather than
+  checked — and would read as correct in every log.
+
+  The stale-record and redundant-record descriptors need no injection: both are red on
+  arrival, because no such register exists yet. They are the register's own version of
+  this tree's thesis — cover that outlives its subject is how a check quietly stops
+  checking.
+
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", no descriptor
+  may be satisfied by reading commit_guardian.json or the helper source as text. Every one
+  executes the check as a process and asserts on the emitted verdicts, the counts and the
+  exit status, and the reachability descriptor runs the deployed copy so the
+  template-versus-build-output gap surfaces as a failure rather than as a passing test
+  against a file the hook never reads.
+delivers_to: null
+expects_from:
+  ac_id: BP-100n-4
+  contract: >-
+    The per-script verdict set and the run summary counts, into which this criterion
+    inserts the declared-non-gate verdict and its own count, and whose reported class
+    a groundless record must fall back into.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-31
+  note: 'criteria untouched. KEY SHAPE DECIDED: records for unregistered scripts are
+    keyed on the SCRIPT FILENAME, not on a gate id, because an unregistered script
+    has no gate id — the id-keyed shape stays valid and unchanged for the nine existing
+    registered-gate entries. REGISTER LOCATION DECIDED: extend the existing hook_trigger_reachability_exemption_registry
+    key rather than adding a new top-level one, because _package_surface_registry.WATCHED_REGISTRIES
+    watches commit_guardian.json''s top level by mapping key (metadata exclusions
+    are only "$schema" and "_comment"), so a new key would trip check-package-surface-declaration;
+    records added inside the existing list are neither a new mapping key nor a new
+    hooks_manifest.hooks id, hence package_surface: false here while BP-100n-4 carries
+    the true declaration for the hooks_manifest additions its triage makes. Validator:
+    extend validate_exemptions, never add a second one — the two shapes must agree
+    on what counts as a ground. declares_side_effect false: every Then clause reports
+    to a stream and sets an exit status. test_spec: six executing descriptors, two
+    carrying the BA''s named mutations.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  WHY THIS EXISTS AS A SEPARATE CRITERION. Some of the 19 scripts named by no entry line
+  will legitimately never be gates. A check with no exemption path gets disabled the first
+  time it is right about something inconvenient — that is the observed lifecycle of a
+  guard in this repository, and it is cheaper to specify the escape hatch now than to
+  discover it as a suppression later. The escape hatch is deliberately narrow: it requires
+  a written ground, and a blank ground is refused rather than accepted, so the register
+  cannot become a silent allowlist.
+
+
+  MUTATIONS FOR THE ABSENCE-ASSERTING CLAUSES. The clause "a script whose record states a
+  ground is not counted among the scripts nothing invokes" is an assertion that something
+  is NOT reported, and it is green on arrival on any implementation that reports nothing.
+  Two mutations give it evidential value:
+
+  (1) MUTATION: key the register lookup on the hook id rather than on the script filename.
+  Every declared non-gate then fails to resolve — an unregistered script has no hook id —
+  and each is reported as invoked by nothing. The clause must fail under this mutation,
+  naming every script in the register.
+
+  (2) MUTATION: accept a record whose ground is the empty string, or whitespace only.
+  The groundless-record clause must fail, and it must fail by the script NOT being
+  reported — the observable difference between a register that is checked and one that is
+  merely consulted. Pair this with the existing REJECTED-groundless behaviour in
+  validate_exemptions so the two registers cannot diverge on what counts as a ground.
+
+
+  THE STALE-RECORD AND REDUNDANT-RECORD CLAUSES ARE THE REGISTER'S OWN VERSION OF THIS
+  EPIC'S THESIS. A register nobody prunes accumulates cover for scripts that are gone or
+  for scripts that are now invoked, and cover that outlives its subject is exactly how a
+  check quietly stops checking. Both are reported conditions rather than silent skips,
+  and neither needs its own mutation: both are red on arrival, because no such register
+  exists yet.

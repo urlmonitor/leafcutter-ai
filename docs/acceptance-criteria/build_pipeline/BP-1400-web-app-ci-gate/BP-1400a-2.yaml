@@ -58,7 +58,7 @@ superseded_by: null
 covered_by:
   - BP-1400a-2-i
 implemented_by:
-- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/03_TICKET-20260721-BP-1400a-2.md
+- tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/03_TICKET-20260721-BP-1400a-2.md
 notes: |
   Path-scoping is authored as a behavior (not merely an edge case) because "the
   check runs when it should and does not needlessly block unrelated changes" is

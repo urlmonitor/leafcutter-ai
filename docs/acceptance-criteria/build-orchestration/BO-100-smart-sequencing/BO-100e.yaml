@@ -7,8 +7,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Start the build once and it finishes the whole thing, however deeply layered.
@@ -29,13 +29,85 @@ doc_links:
     relationship: modifies
     status: exists
     relevance: "The delivery topology this criterion changes: how much of a layered body of work a single drive is expected to carry."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page for the surface that changes: templates/workflows-js/build-feature.js, its single epic-planner dispatch and the batch loop that consumes it."
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+    relevance: "Why the epic drive plans centrally and dispatches flat depth-1 phase agents; the widening must stay inside that topology and must not reintroduce a supervisor layer."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "The E2 top-level-body form build-feature.js is written in, and therefore the form the widened loop must keep."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/workflows-js/build-feature.js is a package source deployed by build.py; the widening only reaches an operator through that deploy."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The set-cover taxonomy the family's test_spec angles are charged from, and the corpus entry (fast lane, 2026-07-22) that makes a grep-only proof inadmissible here."
 delivers_to: null
 expects_from: null
 assigned_agent: null
-estimated_complexity: null
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "The eligibility-look record the widened drive must produce once per run. Every child of BO-100e reads or writes part of this one shape; it is defined here so the five children cannot each invent their own."
+    properties:
+      looks:
+        type: integer
+        description: "How many times the run asked again which work is eligible. A run that asked exactly once has looks == 1."
+      look_records:
+        type: array
+        description: "One entry per look, in order."
+        items:
+          type: object
+          properties:
+            look_number: {type: integer}
+            released: {type: array, items: {type: string}, description: "Ticket paths this look newly made eligible."}
+            released_count: {type: integer}
+          required: [look_number, released_count]
+      run_set:
+        type: array
+        items: {type: string}
+        description: "The set of work fixed when the run started, by ticket path. Identical at the last look and the first (BO-100e-3)."
+      ended_because:
+        type: string
+        enum: [no_further_work_eligible, unsatisfiable_prerequisites, look_ceiling_reached, halted]
+      unbuilt:
+        type: array
+        items: {type: string}
+        description: "Pieces in run_set the run did not build, each with the prerequisite that withheld it."
+    required: [looks, look_records, run_set, ended_because]
+  reference_file_path: "templates/workflows-js/build-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+    - architecture-diagram-author
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "SURFACE, named once for the whole family: templates/workflows-js/build-feature.js. The epic-planner agent() call (~line 2145) sits OUTSIDE the `for (const batch of batches)` loop (~line 2206) and there is no re-plan anywhere in the file. There is exactly ONE copy of this file in the repo (n_location_rule: 1); the twin build-ticket.js drives a single piece of work and has no epic set to re-look at, so mirroring the widening into it would be wrong rather than symmetric — the same reasoning the BO-300a-5 comment at ~line 1814 already records."
+    - "THE PLANNER IS NOT THE DEFECT. Its prompt (~lines 2137-2141) correctly computes the maximal antichain of tickets whose depends_on are met. At plan time nothing is done, so that set is exactly the prerequisite-free tickets. The defect is that its single answer is treated as the whole schedule. Do not fix this by weakening the planner's eligibility rule; fix it by asking again."
+    - "COUNTING BATCHES PROVES NOTHING. The observed 8 'batches' were the antichain split by files_touched overlap — a PARALLELISM split, not a dependency sequence; seven held a single ticket, which reads like a chain and is not one. No it_requirement in this family may be discharged by a batch count, and no test may assert one as its proof of ordering."
+    - "The run's set of work must become a start-of-run enumeration of the epic folder, NOT the union of the first plan's batch membership. Today `plannedTicketPaths` (~line 2156) is derived from `batches`, so the baseline BO-300a-5's completion-time re-read compares against is the SCHEDULE, not the SET. Left as-is, widening the loop silently re-classifies never-scheduled work; the 20 unbuilt tickets of KI-BO-025 were already eligible to be reported as mid-run 'additions' under that conflation. Separating schedule from set is a precondition for BO-100e-3, not an optimisation."
+    - "BO-300d IS NOT IN SCOPE. What the run SAYS about work it left behind belongs to BO-300d in full. This family may require only that a run which did not build everything does not CLAIM to have finished (i.e. does not return a success-shaped status with epic_complete true)."
+    - "BO-300a-5 IS SETTLED AND STAYS SETTLED. Work that appears mid-run is detected, reported and left outstanding. No child of BO-100e may absorb it. BO-100e-3 is the standing control that proves the widening did not reopen it."
+    - "Deployed/template parity (ADR-001): build-feature.js reaches an operator only through build.py. A widening present in the template and absent from the deployed copy is the BP-811 shape of phantom-done and is not done."
+    - "E2 top-level-body form (ADR-030) must be preserved: the widened loop lives in the script's top-level body, not inside a re-introduced `run()` wrapper — a never-invoked entry function is the finalize-feature.js failure recorded in docs/testing/test-angles.md."
 origin_agent: product-owner
 created: 2026-08-26
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-31
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by:
   - BO-100e-1

@@ -3208,3 +3208,230 @@ assume is enforcing.
 `KI-CG-021`, `KI-CG-022` (the same defect recorded per-hook).
 
 **Pattern:** a gate that is three separate kinds of off, each of which alone would suffice.
+
+---
+
+### KI-CG-20260831-fictional-config-schema-fragment — two approved acceptance criteria declare a package-surface config key that was never created, and the validator that demanded the declaration cannot tell
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 2 (same defect, two sibling records)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4.yaml`
+  (`it_requirements.config_schema_fragment.hook_trigger_reachability`) and `BP-100k-4-i.yaml`
+  (`…hook_trigger_reachability_indeterminate`); `templates/scripts/commit_guardian/_package_surface_registry.py`;
+  `check_package_surface_declaration`
+
+**Symptom.** Both records carry a structured `config_schema_fragment` naming a top-level key
+of `commit_guardian.json`, complete with `type`, `description` and a `reference_file_path`.
+Neither key exists. Measured in the worktree:
+
+```
+commit_guardian.json top-level keys                 36
+hook_trigger_reachability                       ABSENT
+hook_trigger_reachability_indeterminate         ABSENT
+```
+
+Both ACs are `work_status: done` and `readiness: approved`. The behaviour they describe
+shipped; the configuration surface they declare did not.
+
+**Cause.** `check-package-surface-declaration` requires a record that registers a package
+surface to carry a structured `it_requirements` spec. It checks that the declaration is
+*present and well-formed*. It does not check that the key it names is *real* — there is no
+step that opens `commit_guardian.json` and looks. So the cheapest way to clear the gate is to
+write a plausible fragment, and a plausible fragment is indistinguishable from a true one.
+
+**Why this matters more than a stale field.** The spec is machine-checked, which is exactly
+what makes it dangerous: a reader who knows the validator ran will trust the fragment
+describes the surface. Two records now assert a configuration contract that has never
+existed, and the assertion carries the authority of a passed gate. **A spec that is validated
+for shape but not for existence is worse than no spec** — no spec prompts a reader to go and
+look.
+
+It also propagates. An `it-po` enriching a sibling reached for the same pattern as precedent
+and had to be told not to, which would have made three. That near-miss is how this was found.
+
+**Remediation.** Decide per record whether the key should exist. If yes, create it in
+`commit_guardian.json` and keep the fragment. If no, remove the fragment and re-derive
+whether `package_surface` is truthfully `true` at all. Then close the gap in the validator:
+when a `config_schema_fragment` names a key in a `reference_file_path`, open that file and
+require the key to be present — the same disk-versus-declaration comparison
+`KI-CG-20260831-hook-scripts-never-invoked` asks for one layer down. Both are the same
+omission: a check that reads the declaration and never the thing declared.
+
+**Not fixed here, deliberately.** Found while enriching `BP-100n-4-ii`, which was steered away
+from copying the pattern and carries an `it_requirement` saying why. Repairing two approved,
+done records is a store-integrity change with its own blast radius and belongs in its own
+change rather than riding along with unrelated criteria.
+
+**How it was found.** An `it-po` agent checked whether the precedent it was about to copy
+described a real key, instead of copying it because a validator had passed it.
+
+**Related.** `KI-CG-20260831-hook-scripts-never-invoked` (the same declaration-versus-reality
+gap, one layer down). `BP-100n-4-ii` (the record that declined to repeat it). `BO-2000d` (the
+thin-or-fictional-spec rule this violates).
+
+**Pattern:** a validator that checks a declaration is well-formed and never checks that what
+it declares exists — so the cheapest way to pass it is to invent something plausible.
+
+---
+
+### KI-CG-20260831-1933 — `check-predone-scope` compares the whole branch diff against one ticket's `files_touched`, so it can never pass on a multi-ticket epic branch
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 3 (three commits on one epic branch, each skipped)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/commit_guardian/hooks/check_files_touched_reconciliation.py` —
+  `_BRANCH_BASE_CANDIDATES = ["origin/main", "main"]` at `:67` and the three-dot branch diff
+  at `:114` ("Return files changed in this branch relative to origin/main")
+
+**Symptom.** Committing a ticket transitioning to `status: done` on an epic branch:
+
+```
+[check-predone-scope] ERROR: source files changed but not declared in
+files_touched or out_of_scope
+
+  Ticket : .../02_TICKET-20260826-ACD-2100a-2.md
+  Undeclared source files:
+    - templates/workflows-js/plan-feature.js
+    - unit_tests/ac_driven_dev/test_acd_2100a_2.py
+    - unit_tests/build_guards/test_acd_2100d_2.py
+    - unit_tests/test_workflow_dual_engine.py
+    - unit_tests/workflows/test_acd_2100a_1.py
+```
+
+Every file it names belongs to a **different ticket** on the same branch — 01 and 20. None
+of them has anything to do with ticket 02.
+
+**Cause.** The hook computes its change set as `origin/main...HEAD`, the entire branch, and
+compares that against the `files_touched` of whichever single ticket is transitioning to
+done. That is correct for a one-ticket branch, which is the only shape it appears to assume.
+On an epic branch every ticket after the first inevitably sees every earlier ticket's files
+as undeclared, and the set grows as the epic proceeds.
+
+**Why high rather than medium.** The only ways to make it pass are both wrong. Declaring
+another ticket's files in this ticket's `out_of_scope` is false, and it would have to be
+repeated for all 25 tickets, each with a different and growing list — which would also
+destroy the field's value as a scope signal for `change-scope-reviewer`. The alternative is
+skipping the hook, which is what actually happened three times. A gate whose only passing
+strategies are falsification or bypass provides no protection on the branch type it most
+needs to.
+
+**Fix direction.** Scope the diff to the commits that belong to the ticket rather than to the
+branch. The per-ticket commits are identifiable — they carry the AC id — or the hook could
+compare against the staged set plus the ticket's own prior commits. Failing that, detect an
+epic-member ticket (path under `EPIC-*/`) and compare against the union of all sibling
+`files_touched`, which at least makes the assertion true even if it is weaker.
+
+**Workaround in use.** `SKIP=check-predone-scope`, recorded in each affected commit message
+with the reason, so the skips are auditable rather than silent.
+
+**Pattern:** a gate whose correctness assumption (one ticket per branch) is invisible in its
+output, so its failure reads as a finding about the ticket rather than about itself.
+
+---
+
+### KI-CG-20260831-manifest-shadowing — `check-build-drift` takes the first `.build_manifest.json` it finds, and an obsolete one at a higher-priority root makes it report every template in the repository as unregistered
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/commit_guardian/check_build_drift.py` — `_resolve_manifest_path()`
+  (first-match return, no validation) and the `package_offset` read at
+  `manifest.get("package_root", "") or ""`; same resolution shared by `check_output_drift`
+
+**Symptom.** A commit staging exactly one AC YAML file — no Python, no templates — was
+refused by `check-build-drift` with 170 findings:
+
+```text
+UNCOMPARABLE: GAP templates/agents/README.md action=run build.py to register it
+UNCOMPARABLE: GAP templates/agents/ac-validator.md action=run build.py to register it
+... (168 more)
+check-build-drift: RESULT verified=0 uncomparable=170 exempt=0 gaps=170 drifted=0 missing=0 unreadable=0
+```
+
+`verified=0` is the tell. The hook did not find drift — it compared **nothing at all** and
+then failed on its own inability to compare. `drifted=0` says the same thing from the other
+side: not one template actually differed from its deployed copy.
+
+**Cause — two defects compounding.**
+
+*First, manifest resolution returns the first hit and never asks whether it is the right
+one.* `_resolve_manifest_path()` walks candidate roots in priority order and returns on the
+first `.build_manifest.json` that exists. Root 1 is the git toplevel; root 2 is the workspace
+root. Two manifests were present:
+
+| | path | mtime | templates | `output_mappings` | `package_root` |
+|---|---|---|---|---|---|
+| root 1 (**chosen**) | `leafcutter-ai/.build_manifest.json` | Aug 26 | 61 | 154 | **absent** |
+| root 2 (ignored) | `leafcutter/.build_manifest.json` | Aug 31 | 174 | 464 | `"leafcutter-ai"` |
+
+The obsolete one won on position. There is no mtime comparison, no completeness check, and
+no signal in the output naming which file was used.
+
+*Second, the missing-field fallback degrades toward a known-wrong value.* Both manifests key
+templates as `leafcutter-ai/templates/…`, but only the current one records the offset
+`package_root: "leafcutter-ai"`. The hook reads it as:
+
+```python
+package_offset = manifest.get("package_root", "") or ""
+```
+
+with the comment *"Missing key degrades to `""` for manifests written before this field
+existed."* That assumes a manifest lacking the field was written in a layout whose offset is
+genuinely empty. The Aug 26 manifest simply **predates the field** — its true offset is
+`leafcutter-ai`. So `templates_base` collapsed to the package root, lookup keys were computed
+as `templates/agents/README.md`, and every one was compared against manifest keys spelled
+`leafcutter-ai/templates/agents/README.md`.
+
+Nothing matched. That is why the count is **170 and not 113** — 61 of those templates *are* in
+the stale manifest, under a key spelling the hook never generated. A pure staleness bug would
+have reported only the 113 genuinely-absent ones; reporting all 170 is the signature of a
+total key-namespace miss.
+
+**Why it went unnoticed until now.** Root 1 is the git toplevel of the *current process*. From
+a worktree that is the worktree root, which holds no manifest, so the search falls through to
+the workspace root and finds the good one. Nearly every commit in this repository is made from
+a worktree. The defect only fires in the package's own main checkout — the one place least
+often committed from, and the one place `.build_manifest.json` is gitignored so the stale file
+never shows in `git status`.
+
+**Why this is worse than a false negative.** The comment above the offset read says the
+git-based heuristic it replaced *"failed open for any git-unavailable layout"* and that failing
+open "is the failure mode this whole ticket exists to remove." The replacement does fail
+closed — but at a **100% false-positive rate**, on a commit touching nothing it guards. A gate
+that blocks every commit with a wall of findings about files the author did not touch is not
+safer than one that stays quiet; it is the fastest way to teach everyone to reach for `SKIP=`,
+and once that reflex exists the gate's real findings go with it.
+
+**Remediation.** Three separable changes, in order of value:
+
+1. **Validate the manifest before trusting it, and say which one was used.** A manifest whose
+   key namespace does not intersect the paths about to be looked up is unusable — detect that
+   and either continue the root search or emit a distinct diagnostic. `verified=0` with
+   `gaps=N` should never be reported as a finding about the templates; it is a finding about
+   the run. Print the resolved manifest path on every run.
+2. **Refuse a manifest without `package_root` rather than guessing its offset.** The field is
+   an offset that cannot be inferred; absent it, the honest states are "re-run `build.py`" or
+   "keep searching", not "assume empty". A schema-version marker would make this explicit.
+3. **Prefer the freshest usable manifest** over the first found, or have `build.py` remove a
+   manifest it supersedes at another root so two can never coexist.
+
+**Workaround in use.** Move the stale manifest aside
+(`mv leafcutter-ai/.build_manifest.json /tmp/`) and re-run the canonical
+`python scripts/build.py --target-dir <workspace-root>`. After that `check-build-drift` passed
+with `verified=464`, and `check-output-drift` — which shares the resolution — surfaced 8
+genuine unregistered workspace artifacts instead of 170 phantoms.
+
+**Related.** `KI-BP-011` (the manifest is written to the package that ran the build rather than
+the install it describes) is how two manifests come to exist at two roots in the first place;
+this entry is what the *reader* of those manifests does about it. `KI-CG-034`
+(`check_output_drift` keys paths in two namespaces that never intersect) is the same
+key-namespace class of defect in the sibling hook.
+
+**Pattern:** a backward-compatibility fallback that converts "I do not know this value" into a
+specific wrong value, in a resolver that had already picked the wrong input — so two
+independently-reasonable graceful degradations compose into a confident, precise, entirely
+false report.

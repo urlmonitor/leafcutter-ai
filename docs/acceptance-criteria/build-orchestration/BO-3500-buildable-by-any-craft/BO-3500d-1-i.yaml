@@ -1,0 +1,123 @@
+id: BO-3500d-1-i
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "The report reads the backlog once, reports its own cost, and is never produced as a side effect"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a backlog of several thousand requirements,
+  When the buildability report is produced,
+  Then the backlog is read once for that report, however many requirements the report
+    classifies,
+  And classifying one more requirement does not cause the backlog to be read again.
+
+  Given the same report,
+  When it has been produced,
+  Then it states how long it took to produce,
+  And that figure is measured by the report rather than asserted, so the cost of the
+    report is a number its reader can see.
+
+  Given a build run, a commit, and the project's routine checks,
+  When each of them runs,
+  Then none of them produces the buildability report as a side effect,
+  And none of them waits for it — the cost of the report is never added to the wait
+    before a build starts.
+depends_on: [BO-3500d-1]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-016 measures the constraint this criterion is written against: one full read of the backlog costs roughly thirty to forty seconds and still scales with total backlog size. The entry's residual is explicit that a single read is now the floor, not that reading is cheap."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "ASSERT THE NUMBER OF READS, NEVER A DURATION. KI-BO-016's own fix was tested with a parse-count assertion for exactly this reason; a wall-clock bound is flaky by construction and will be quarantined within a month. Instrument the store-open/parse call and assert the count is 1 regardless of how many records the report classifies."
+  - "SELF-TIMING IS MEASURED, NOT ASSERTED. Wrap the report's own work in a monotonic clock and emit duration_seconds as a field. The TEST must not assert the value — it asserts the field is present and is a measured number, with the read-count asserted separately. The clause exists because the cost will drift: KI-BO-016's residual says plainly that the single-read floor scales with backlog size."
+  - "THE MEASURED FLOOR, FOR SIZING: one full read cost roughly 90 s before BO-2400c-6 and 27-39 s after, over 3,232 records. Affordable: one report, produced when asked, costing one read. NOT affordable and therefore not to be built: the figure computed on every build run, on every commit, on a routine check, or as anything a gate consults — each multiplies a thirty-second cost by the frequency of the thing it hangs off."
+  - "NO SIDE-EFFECT PRODUCTION. No build run, no commit hook and no routine check may produce the report or wait for it. Establish this by EXECUTING those paths and asserting the report entry point was never invoked — not by scanning source for the absence of a reference, which proves nothing about behaviour and is the evidence shape this component rejects."
+  - "The one-read property must survive the starting-point figure of BO-3500d-3, which is the expensive one: reachability is computed over the graph already in hand, never by resolving each starting point."
+  - "NO PRESENCE-ONLY ASSERTIONS. Every test instruments and counts, or executes a path and checks a call was not made."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500d-1
+  contract: "The report structure and its single store-reading pass. This record fixes the cost properties of that pass: exactly one read per report, a self-measured duration_seconds field, and no producer of the report anywhere in the build, commit or routine-check paths."
+test_spec:
+  - name: test_backlog_read_exactly_once_per_report
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Instrument the store read and assert the count is exactly 1 for one report over a multi-thousand-record fixture."
+  - name: test_read_count_does_not_grow_with_records_classified
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Produce reports over a 100-record and a 1,000-record fixture and assert the read count is identical — classifying one more record must not cause another read."
+  - name: test_report_states_its_own_measured_duration
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "duration_seconds is present, is a number, and was produced by the report's own clock rather than a constant. Do not assert its magnitude."
+  - name: test_build_run_does_not_produce_the_report
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Execute a build run and assert the report entry point was never invoked and the run did not wait on it."
+  - name: test_commit_and_routine_checks_do_not_produce_the_report
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Execute the commit-guardian hook path and assert the report entry point was never invoked."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE PRODUCT OWNER'S THIRD DEFERRED QUESTION, ANSWERED HERE. The question was whether
+  the coverage figure is cheap enough to compute given KI-BO-016, and the instruction
+  was to say so in the criteria rather than specify something unaffordable.
+
+  THE MEASUREMENT, taken from KI-BO-016 rather than assumed. One full read of the
+  backlog cost roughly 90 seconds before BO-2400c-6, and 27 to 39 seconds after, over
+  3,232 records. That is the floor and it grows with the backlog. So:
+
+    - AFFORDABLE: one report, produced when asked, costing one read. Tens of seconds
+      of an operator's deliberate wait, comparable to the wait a single build already
+      pays before its first craft is dispatched.
+    - NOT AFFORDABLE, and therefore not specified anywhere in BO-3500d: computing the
+      figure on every build run, on every commit, on a routine check, or as anything a
+      gate consults. Each of those would multiply a thirty-second cost by the frequency
+      of the thing it hangs off, and the resulting tax would be paid by every operator
+      to benefit a report almost none of them asked for.
+    - NOT AFFORDABLE, and specifically avoided by BO-3500d-3: resolving each possible
+      starting point separately to work out how many starting points build. That is the
+      figure that most wants computing and the naive way of getting it is a read per
+      starting point — thousands of reads. BO-3500d-3 requires it be derived from the
+      one read instead.
+
+  THE READ-ONCE CLAUSE IS THE SAME DEFECT KI-BO-016 RECORDS, one level up. That entry
+  is about a resolver that re-read the whole backlog once per expansion; a report that
+  re-read it once per requirement classified would be the identical mistake with a
+  worse multiplier. It was fixed there by a parse-count assertion rather than a
+  wall-clock bound, and the same shape of test applies here: assert the number of reads,
+  never a duration, or the test is flaky by construction.
+
+  THE SELF-TIMING CLAUSE exists because this cost will drift. KI-BO-016's residual says
+  plainly that the single-read floor scales with backlog size and will worsen as the
+  backlog grows. A report that states its own duration makes that drift visible to the
+  person who would otherwise be the last to know.

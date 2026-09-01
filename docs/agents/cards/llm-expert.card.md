@@ -452,6 +452,8 @@ flowchart TD
 - BP-700d-2: Onboard wizard no longer offers frontend-design as a separate optional skill
 - GE-104a-2: Planning-time trigger flips documentation-expert to needed when a ticket adds a new page without its reference doc
 - GE-104a-2-i: DSL trigger expresses a new-page-without-matching-doc condition (negation feasibility open question)
+- GE-123a-4: The reference says that recognising a file by its name adds to the checking rather than ending it
+- GE-123b-5: The reference says when a suppression is declined, what it is judged against, and what the author will see
 - GE-123c-5: The document that lists the accepted suppression forms also says what is rejected and why
 - GE-123d-4-ii: The reference states where the exemption applies, in one place, as a closed list
 - GE-125a-3: The reference names the four places that get less scrutiny and says they are read from the top of the project down
@@ -582,6 +584,12 @@ flowchart TD
 - TKT-500f-6-iii-b: ticket-supervisor halts (not silently skips) when Test Requirements is absent but an implementation .py is in scope
 - TKT-500g-2: Every route that can drive the work asks one question before skipping the proof phase
 - TKT-500g-2-i: The route that loses the phase is the route the fix must be proven on — a work item built inside a batch keeps its proof phase
+- TQ-500a-1: Exactly one falsifiability answer per piece of work, and the writer says which kind it is
+- TQ-500a-2: "No substitute proof was possible, and here is what I tried" is a valid answer
+- TQ-500a-3: The substitute names the alteration precisely and confirms the behaviour was put back
+- TQ-500c-1: One recorded outcome per test per alteration, and no combined verdict standing in for them
+- TQ-500d-1: Passing on arrival is the expected result here, and it is not the answer
+- TQ-500e-1: The record says what was altered and what each test did, in the record's own words
 - UXP-100a-1: Prototype composition reads the component library catalog before assembly
 - UXP-100a-1-i: Empty or missing component library catalog halts prototype assembly with a diagnostic
 - UXP-100a-2: Prototype output preserves visual and structural consistency with existing pages

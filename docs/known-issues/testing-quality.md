@@ -454,11 +454,14 @@ production one**, so a bug shows up as a failure rather than as agreement.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Occurrences:** 2
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-31
 - **Where:** `templates/agents/test-writer.md` (red-baseline protocol);
   `templates/agents/test-runner.md`; `templates/workflows-js/build-feature.js` `phaseOrder`;
   `CLAUDE.md` → "TDD Order — test-writer Must Precede python-coder"
+- **2026-08-31: a second occurrence, in a different shape and with a shipped consequence** —
+  see the end of this entry. Four green tests, an AC marked `done`, and the behaviour never
+  worked; found only when the unfixed code broke a live 27-ticket build.
 
 **Symptom.** The pipeline's only evidence that a test constrains anything is the **red baseline**:
 the suite must fail before the coder runs. That check is structurally unavailable to a whole class
@@ -522,6 +525,57 @@ suggestive and none is reliable. Instead:
 3. **Prefer per-mutation results over a single pass/fail.** The table above is what located the
    defect — three tests caught the leak and the aggregate looked fine. A mutation proof reported
    as one boolean would have said "the suite catches it" and test 3 would still be inert today.
+
+**2026-08-31 — second occurrence: a fixture made vacuous by the very gate the code was supposed
+to stop relying on. `TKT-600a-1` was marked `done` on a test that would pass on entirely
+unfixed code.**
+
+`TKT-600a-1` says *"files_touched contains only real edit-surface paths … and NOT illustrative
+file paths that merely appear inside prose it_requirements bullets"*. It carries four tagged
+tests. All four pass. It is `work_status: done`. The behaviour was never implemented.
+
+The mechanism is worth stating precisely, because it is not the usual "the test asserts the
+wrong thing" — the test asserts exactly the right thing, on inputs that cannot exercise it:
+
+```
+the test's own fixture — src/foo.py, deploy/foo.py (do not exist on disk)
+   _build_files_touched(...)  ->  []                                    PASSES
+
+the same narrative shape, naming paths that DO exist
+   -> ['docs/acceptance-criteria', 'docs/retrospectives', 'templates/skills']
+
+a real file mentioned only in order to say DO NOT edit it
+   "Do not edit templates/skills/security-scanner/SKILL.md here; it is context only."
+   -> ['templates/skills/security-scanner/SKILL.md']
+```
+
+`_build_files_touched` still harvests every slash-bearing token from prose. What removes the
+fixture's paths is the **on-disk existence gate** — not the fix. The test therefore passes
+identically before and after the change it was written to prove, which is this entry's question
+("can this test fail?") answered *no*, arrived at by a route the red-baseline protocol cannot
+see: the test was green on arrival because its inputs were unreachable, not because the
+assertion was weak.
+
+The third line is the sharpest consequence. An `it_requirement` whose entire purpose is to say
+*"this file is context, do not edit it"* makes that file the ticket's declared edit surface.
+
+**The consequence was not hypothetical.** The unfixed extractor produced the surfaces for
+`EPIC-SuppressionNarrowsNeverDisables`: 10 of 27 tickets unusable, three carrying nothing but
+bare directories, and two pointed at `docs/known-issues/commit-guardian.md` — a live document —
+as the file to modify. The build was stopped mid-drive. Five days and one "done" AC after the
+test was written, the first thing to actually detect the defect was a production run.
+
+**What this adds to the fix direction above.** The three prescriptions there are about negative
+controls with no red phase. This case adds a fourth, for tests that DO have a red phase on
+paper: **a fixture must be capable of reaching the code under test.** A path-filtering test
+whose fixture paths do not exist is filtered by the existence gate before the filter under test
+ever runs. The cheap general form is the mutation proof this entry already recommends — reverting
+the fix must turn the test red, and here it would not have.
+
+**Related.** `KI-ACD-023` (the `files_touched` defect this test was supposed to prevent, now at
+two occurrences). `KI-ACS-004` (`TKT-600a-1` is already cited there for a *different* failure —
+`done` with an empty `implemented_by` — so the same record has now produced two distinct
+done-quality defects).
 
 **Related.** `KI-TQ-009` (a test-local oracle reproducing the production bug — same family: the
 test agrees with the code instead of constraining it). `KI-TQ-005` (fixtures that never built the
@@ -701,3 +755,192 @@ opposite direction.
 
 **Pattern:** two correct-looking mechanisms whose defaults contradict, where the one that loses is
 the one every practice is written against.
+
+---
+
+### KI-TQ-20260831-mutation-probe-lands-in-the-wrong-copy — a mutation proof injected into `templates/` proves nothing, because the tests import the build output — and it fails green
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** any mutation proof in this repository that targets
+  `templates/scripts/commit_guardian/*.py`; the tests that import via
+  `_REPO_ROOT / "scripts" / "commit_guardian"` (a symlink to `.leafcutter/scripts/commit_guardian/`);
+  `templates/agents/test-writer.md` (where the mutation-proof obligation is being added)
+
+**Symptom.** `KI-TQ-010` establishes that a negative control must be falsified by injecting the
+leak it forbids and confirming the test goes red. In this repository that procedure has a trap
+that makes it silently do nothing.
+
+Two copies of every commit-guardian module exist: the canonical source under
+`templates/scripts/commit_guardian/`, and the build output under `scripts/commit_guardian/`
+(a symlink to `.leafcutter/…`, regenerated by `build.py`). Unit tests import the **build
+output** — `sys.path.insert(0, _REPO_ROOT / "scripts" / "commit_guardian")`. A mutation
+applied to the template is therefore never loaded by the test that is supposed to catch it.
+
+**Observed, on `BP-1100g-5-i`'s own verification (2026-08-31):**
+
+| mutation target | result | what it appears to mean |
+|---|---|---|
+| `templates/scripts/commit_guardian/_cross_layer_seam_checks.py` | **4 passed** | "the negative control is dead" |
+| `scripts/commit_guardian/_cross_layer_seam_checks.py` (deployed) | **3 failed, 1 passed** | the control is sound |
+
+The same injection — neutering the reasoned-negative branch so a conforming
+`result: not_applicable` reports as a shortfall — produced opposite verdicts depending only on
+which copy was edited. Against the deployed copy the record-W clause failed with exactly the
+message it should: *"record W (reasoned negative) must never be reported as a shortfall"*.
+
+**Why this is high, and worse than an ordinary footgun.** It fails in the **green** direction.
+A mutation that does not land looks identical to a test that cannot fail — the exact defect the
+proof exists to detect. So the trap does not merely waste the check; it **manufactures a false
+positive for `KI-TQ-010` itself**, and the natural response to "my negative control is dead" is
+to rewrite a test that was already correct. Had the first result been believed, sound tests
+would have been "fixed" and the real conclusion — that the control works — never reached.
+
+A weaker tell exists and is worth knowing: the run time. The template-mutation run took 0.24s;
+the landed-mutation run took 33.5s, because the deployed hook subprocess actually did work
+once findings appeared. A mutation that changes nothing about how long the suite takes has
+probably changed nothing at all.
+
+**Cause.** Source/output duplication, plus an import path that resolves to the output. Neither
+is wrong on its own — the tests import the deployed copy deliberately, because a guard is only
+real if the deployed copy behaves — but nothing tells the person performing a mutation proof
+which copy the test will load, and the two are byte-identical after any `build.py` run, so
+inspection does not reveal the difference either.
+
+**Remediation.** Two parts, and the first is cheap enough to do immediately.
+
+1. **State the rule wherever the mutation-proof obligation is written** (`test-writer.md`, and
+   the `TQ-500` criteria now specifying this): *mutate the copy the test imports, or run
+   `build.py` after mutating the template.* Prefer mutating the deployed copy — it is the
+   shorter loop and it is what the assertion actually exercises.
+2. **Make the probe self-verifying.** A mutation proof should confirm the injection reached the
+   code under test before concluding anything from the result — the mutated module's own
+   `__file__` at import time is enough, and the deployed-vs-template distinction becomes
+   observable rather than assumed. Without that, a green mutation run is indistinguishable
+   from a dead test.
+
+**How it was found.** By suspecting the result rather than accepting it. The four-green outcome
+was the expected shape of a real defect and would have been reported as occurrence #6 of
+`KI-TQ-010`; checking which copy the test imported, before writing that up, is the only reason
+it was not.
+
+**Related.** `KI-TQ-010` (the obligation this trap defeats — read them together; this entry is
+the operational half). `BP-1100g-3-ii` (the same source-vs-deployed split, that time causing
+the defect rather than hiding it). `TQ-500a-3` and `TQ-500c-2-i` (criteria that will require
+mutation proofs and therefore inherit this trap). CLAUDE.md → "New Hook / Gate Dependencies
+Must Be in the Build Deploy-Manifest" (the same two-copy hazard on the import axis).
+
+**Pattern:** a verification step performed against a copy of the artifact that the verifier
+does not load — where the failure mode is silence, and silence is the result that means "safe".
+
+---
+
+### KI-TQ-012 — A test fixture reassigns the real repository's commit identity, and every commit made afterwards is authored by the fixture
+
+- **Severity:** high
+- **Status:** open — recurs on every run of the suite; a config repair does not hold
+- **Occurrences:** 2 observed within one hour, from two different worktrees (four call sites in one file)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `unit_tests/portability/test_ge_120e_1.py` — lines 234, 300, 344, 543
+  (currently on branch `EPIC-TrustThatAGreenCheckActuallyChecked`, unmerged); leaks into
+  `leafcutter-ai/.git/config`, shared by every worktree
+
+**Symptom.** A commit made from the package's main checkout landed with this author:
+
+```text
+commit 0a6ccac5e7a2652f2b650c82b9515849e054972f
+Author: GE-120e-1 fixture <ge120e1-fixture@example.com>
+```
+
+`git config --local --get-regexp '^user\.'` in `leafcutter-ai/` returned:
+
+```text
+user.email ge120e1-fixture@example.com
+user.name  GE-120e-1 fixture
+```
+
+Every prior commit on `main` is authored `BrainCandy <105064581+urlmonitor@users.noreply.github.com>`.
+
+**Cause.** The fixture builds its scenarios as **worktrees of the real repository**, not as
+throwaway `git init` sandboxes:
+
+```python
+_run_git(["worktree", "add", "--detach", str(self.root), "HEAD"], cwd=_REPO_ROOT)
+_run_git(["config", "user.email", "ge120e1-fixture@example.com"], cwd=self.root)
+_run_git(["config", "user.name",  "GE-120e-1 fixture"],            cwd=self.root)
+```
+
+Setting an identity is legitimate — the fixture creates commits and CI has no global
+`user.email`. The defect is the **scope**. Worktrees share `$GIT_COMMON_DIR/config`, so a plain
+`git config` inside a worktree writes to the **shared configuration of the entire repository
+family**, not to the worktree. `tearDownClass` calls `git worktree remove --force` and never
+unsets the keys, so the identity outlives the fixture that set it.
+
+This repository already has `extensions.worktreeConfig = true`, which means the correctly-scoped
+form — `git config --worktree user.email …` — is available today. The fixture just does not use
+it. Four sites, all identical.
+
+**Why this is high and not cosmetic.** The leak is silent, persistent, and repository-wide:
+
+- It affects **every** commit from that checkout afterwards, not just the test run — and
+  because worktrees share the config, every worktree of the repo too. Any epic drive or fast-lane
+  run committing while this is set produces misattributed commits under an address that is not a
+  real contributor.
+- `.git/config` is not tracked, so nothing in `git status`, no pre-commit hook, and no CI gate
+  reports it. It is visible only if someone reads an author line — which is precisely the field
+  everyone skims past.
+- Misattribution is not locally repairable once pushed. Rewriting author metadata on merged
+  history is a force-push to a protected branch.
+
+**How it was found.** Incidentally, and late. The author line was noticed while confirming an
+unrelated commit's contents with `git show --stat`. Nothing surfaced it deliberately. Had the
+check not happened, the following fast-lane run would have committed and opened a PR under the
+fixture identity, since the lane's worktree inherits the same shared config.
+
+**Remediation.**
+
+1. Change all four sites to `git config --worktree …`, which this repo's
+   `extensions.worktreeConfig` already supports. One word per site.
+2. Better still, stop mutating repository state at all: pass the identity per invocation with
+   `git -c user.name=… -c user.email=… commit`, which cannot outlive the process, or set
+   `GIT_AUTHOR_*` / `GIT_COMMITTER_*` in the subprocess environment.
+3. Give `tearDownClass` an `unset` for anything it did set, so a mid-run failure cannot strand
+   the value.
+4. Add a guard: a test that asserts `user.email` in the repository config is unchanged across
+   the suite would have caught this on the first run. The suite currently has no notion that
+   the real repository is shared mutable state.
+
+**Repair applied.** The two keys were reset to the correct identity and the affected commit
+re-authored with `git commit --amend --reset-author` before it was pushed. The fixture itself is
+untouched — it lives on an unmerged branch and fixing it belongs with that branch's work, not
+with an unrelated docs change.
+
+**Recurrence observed within the hour — this is not a historical leak.** The keys were reset at
+roughly 20:00. The next commit, made about an hour later from a *different* worktree, was again
+authored `GE-120e-1 fixture`. `git config --show-origin` located the value in the shared
+`leafcutter-ai/.git/config`, and no pre-commit hook in that run executes pytest. The test file
+does not exist on `main` at all — `unit_tests/portability/` there holds four files, none of them
+`test_ge_120e_1.py`. So the re-set came from a **concurrent session running that branch's suite
+in its own worktree**, and it reached across into every other worktree of the repository.
+
+Three things follow that the single-occurrence framing above understates:
+
+- The blast radius is the whole repository family, live and concurrent. Any agent committing
+  anywhere while another runs this suite inherits the identity, with no signal at either end.
+- A one-time repair is worthless. The value returns on the next run, so the fix has to be in the
+  fixture, not in the config.
+- Under the fleet of parallel agents this repository is designed around, "a test that mutates
+  shared repository state" is not an isolation nicety — it is a race with a persistent,
+  invisible loser.
+
+**Related.** User-memory `feedback_test_isolation_pitfalls` records the sibling traps (root
+`conftest.py` import blast radius; `importlib.reload()` masking cold-import bugs). `KI-TQ-008`
+(a repository-global tree-purity guard false-positives under concurrent agents) is the same
+underlying assumption from the other direction: tests here treat the real repository as private
+scratch space when it is neither private nor scratch.
+
+**Pattern:** a fixture that isolates the *filesystem* (a fresh worktree, removed on teardown)
+while sharing the *configuration* that worktree points at — so the visible half of the sandbox
+is convincing and the invisible half leaks permanently.

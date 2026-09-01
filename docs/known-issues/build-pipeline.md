@@ -2780,3 +2780,433 @@ part of the gate, and an empty scope must never be reported the same way as a sa
 done-proof gate's nodeid lookup that cannot match a parametrized test — the fail-*closed*
 counterpart; this one fails open). `BP-1100b-5` (presence-only assertions ceasing to count as
 coverage — the same underlying question of whether a check actually examined anything).
+
+**ADDENDUM, 2026-08-31 (same day, same job): a SECOND defect, and it is the one that hid the
+first.** Observed on PR #634. The job failed — not on a type error, but on the step before it:
+
+```text
++ f0d22094...9ad2aec2 main       -> origin/main  (forced update)
+fatal: origin/main...HEAD: no merge base
+##[error]Process completed with exit code 128.
+```
+
+The step runs `git fetch --no-tags --depth=1 origin "$BASE"` and then computes
+`git diff "origin/$BASE"...HEAD` — a **three-dot** diff, which needs the merge base. A
+`--depth=1` fetch does not reliably make the merge base reachable, and when the base branch
+has moved since checkout (here: another PR merged minutes earlier, hence the *forced update*)
+the diff aborts with exit 128 before mypy is ever invoked.
+
+So the job has two independent ways of telling you nothing:
+
+| | pathspec (above) | shallow fetch (this) |
+|---|---|---|
+| Failure direction | fails **open** — SUCCESS having checked nothing | fails **loud** — exit 128 |
+| Trigger | any PR touching only a top-level `scripts/` file | base branch moves between checkout and fetch |
+| What the reader sees | a green check | a red check that is not about types |
+
+The second is why the first survived. A check that goes red for reasons unrelated to its
+subject trains everyone to discount it — and once discounted, a *green* from that same check
+is not read carefully either. The pathspec bug needed exactly that inattention to last as long
+as it did. Fixing the pathspec without fixing this leaves the signal untrustworthy in the
+other direction.
+
+**Fix.** Either drop `--depth=1` (the checkout already uses `fetch-depth: 0`, so the shallow
+fetch buys nothing and costs the merge base), or switch the diff to two-dot
+`origin/$BASE..HEAD`, which needs no merge base. Prefer dropping `--depth=1`: two-dot changes
+which commits are considered, and the intent here really is "what this PR adds relative to the
+fork point".
+
+**A note on the ordering, since it recurs.** This addendum exists because merging the PR that
+*filed* this KI moved `main` and broke the very next PR's run of the same job. Not a
+coincidence worth writing down for its own sake — but it does mean the failure is most likely
+in exactly the situation where PRs are being merged in sequence, which is when CI signal
+matters most.
+
+---
+
+### KI-BP-20260831-0940 — `derive_declares_side_effect` is negation-blind, so a refusal criterion is forced to declare the side effect whose absence is its entire content
+
+- **Severity:** medium — it does not fail open, it forces a FALSE value into the store
+- **Status:** open — no AC
+- **Occurrences:** 1 (BO-3500a-1-i, 2026-08-31), but see the population estimate below
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `derive_declares_side_effect()` in
+  `templates/scripts/commit_guardian/_ac_schema_validators.py` (~line 674), reached through
+  `validate_declares_side_effect()` and the `check-ac-schema` pre-commit hook.
+
+**Symptom.** Committing `BO-3500a-1-i` was refused with:
+
+```text
+[check-ac-schema]: criteria assert a durable, observable effect (a file written, a record
+persisted, a state-changing command) but declares_side_effect is not set — add
+declares_side_effect: true. This value must be DERIVED from the AC's own Then clause, not
+authored by opinion (BO-2900g-2).
+```
+
+That record is a **refusal** criterion. Its Then block is entirely negative: no other craft is
+handed the member, no artifact is produced for it, it is not marked finished, its declaration
+is not rewritten. Nothing durable happens — that is the whole requirement.
+
+**Cause, verified with a minimal case rather than inferred.** The derivation scopes to Then
+blocks correctly, but inside them it matches durable-effect phrases without regard to negation:
+
+```text
+derive({'criteria': 'Then the file is written to disk ...'})            -> True   correct
+derive({'criteria': 'Then the run refuses and nothing is written ...'}) -> True   WRONG
+```
+
+The second is the whole bug in one line: *nothing is written* contains *is written*.
+
+Bisecting the real record confirms both halves of the behaviour. Fed clause-by-clause in
+isolation every clause derives `False` — because with no preceding `Then` the scoping drops
+them. Fed cumulatively, the value flips on exactly `And no artifact is written on that
+member's behalf by any craft`. So the Then-scoping works; the negation handling does not.
+
+**Why this one is worth more than its single occurrence.** The two honest options are both
+unavailable:
+
+- `true` is a lie, and it mis-routes. `user-surface-smoker` is selected from this field, and
+  the field's documented meaning is *durable effect*.
+- `false` contradicts the derivation, and `BO-2900g-2` states the value must be derived rather
+  than authored — so hand-setting it is exactly what the rule forbids.
+
+The `ac-driven-dev` register's note on `BP-1100g-4` records the same collision from the other
+side and asserts that for a commit-time refusal "the derivation correctly returns `False`". On
+the evidence above that claim does not generalise: whether a refusal derives correctly depends
+only on whether its wording happens to avoid the phrase list.
+
+**Population.** Every refusal, guard, gate and no-op criterion in the store is a candidate, and
+this component is full of them — the whole `BO-3500a` family, `BO-2400f-12`'s producibility
+refusal, and `BO-3500c-4`'s up-front refusal are all written as "nothing happens" criteria. It
+has not bitten more often because the trigger is the presence of a phrase-list word inside a
+negated clause, which is a wording accident.
+
+**Fix.** Handle negation inside the Then block — at minimum, do not match a durable-effect
+phrase when it is governed by a preceding negator (`no`, `not`, `never`, `nothing`) within the
+same clause. Note this is genuinely harder than it looks: `no artifact is written on that
+member's behalf` needs the negator to reach across the noun phrase. If a robust rule is not
+cheap, the honest alternative is to make the failure a **question rather than a verdict** —
+report that the clause is ambiguous and require the author to record which reading applies,
+rather than asserting a value the criteria contradict.
+
+**Workaround in force.** `BO-3500a-1-i`'s third Then-clause is worded "no craft produces an
+artifact on that member's behalf" rather than "no artifact is written ...". Same meaning,
+derives `false`, which is correct. The record carries a note pointing at this entry and telling
+the next author not to restore the plainer wording until the derivation handles negation —
+because the natural phrasing is the one that breaks.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — a textual rule that cannot distinguish
+a statement from its negation. Same family as the `/\n{4,}/` empty-layer heuristic fixed earlier
+today, which could not distinguish an empty layer from content ending in a blank line, and as
+the forbidden-phrase prompt test that flagged a prohibition for containing the words it
+prohibits. Three instances in one day suggests the general lesson: **a regex over prose cannot
+carry a polarity, so any check built that way must either handle negation explicitly or report
+ambiguity instead of a verdict.**
+
+**Related.** `BO-2900g-2` (the derive-don't-author rule this collides with). `KI-BP-20260831-0620`
+(the mypy gate — the other kind of gate defect found today; that one fails open, this one fails
+closed onto a false value).
+
+---
+
+### KI-BP-20260831-0728 — The hook-script integrity check strips the `hooks/` segment off every declared entry, so it reports three real scripts as missing on every build
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/build_precommit.py`, `_check_hook_script_integrity()`
+
+**Symptom.** Every build prints three integrity warnings:
+
+```
+Hook 'check-agent-spawn-consistency': script 'check_agent_spawn_consistency.py' not found
+  at canonical path .../templates/scripts/commit_guardian/check_agent_spawn_consistency.py
+Hook 'check-agent-verification-consistency': script ... not found at canonical path ...
+Hook 'check-predone-scope': script 'check_files_touched_reconciliation.py' not found ...
+```
+
+All three scripts exist. They live under a `hooks/` subdirectory and `commit_guardian.json`'s
+`entry` fields point at them correctly —
+`.../commit_guardian/hooks/check_agent_spawn_consistency.py`. The check computes
+`cg_dir = TEMPLATES_DIR / "scripts" / "commit_guardian"`, strips the path prefix off the declared
+entry, and looks for a flat filename in `cg_dir`. The `hooks/` segment is discarded, so the lookup
+can never succeed for any hook living in a subdirectory.
+
+**Not a fixture artefact.** Found while diagnosing an unrelated synthetic-package test failure,
+where the first hypothesis was that the fixture had not copied those files. It had — the fixture
+copies `templates/` wholesale including `hooks/`. The mismatch reproduces identically against the
+real tree.
+
+**Why it has survived.** The check is warning-only: it neither aborts the build nor changes the
+exit status. So it has printed three false alarms on every build for as long as those hooks have
+lived under `hooks/`, and the cost has been paid in attention rather than failures. That is also
+the hazard — a check known to be noisy trains everyone to skim it, so a genuinely missing hook
+script would read exactly like these three.
+
+**Fix direction.** Resolve the declared `entry` relative to the commit-guardian root instead of
+discarding its directory component. Then check whether any hook is *actually* missing once the
+false positives clear — currently unknowable from the output. Consider whether the check should
+fail rather than warn once accurate: a hook registered in the manifest whose script does not exist
+is the `KI-BP-018` fail-open shape, and `build_precommit.py` separately emits a registered hook
+into the generated config even when its script is absent (its own docstring says it "does not
+raise or return an error").
+
+**Pattern:** a check that mangles the path it was given and reports the result as the file's
+absence — the guard's own input is wrong, rather than the thing it guards.
+
+---
+
+### KI-BP-20260831-1014 — Seven declared package sources are skipped with no log at all, and BP-900g-9's scope line used "does it warn" as the boundary the AC says is not the observable
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `scripts/build_phases.py` — `build_vision`, `build_components_registry`,
+  `build_ui_context`, `build_antigravity_instructions`, `build_feedback`'s `config_src` check,
+  `build_commit_guardian`'s manifest check, and two `manifest_path.exists()` checks in
+  `build_ticket_lifecycle`
+
+**Symptom.** Each names a specific package source literally and, when it is absent, skips it with
+**no output on any stream** — a bare `return 0`, or an `if ...exists():` with no `else`. The build
+then reports success. A missing `VISION.template.md`, `feedback_categories.yaml` or
+`commit_guardian.json` produces an install quietly lacking that artefact, and nothing says so.
+
+These are quieter than the defect BP-900g-9 closed. That one at least printed a warning before
+continuing; these print nothing.
+
+**The scope line that left them, recorded because it is the more useful finding.** BP-900g-9
+carries `n_location_rule: all`. The line applied while converting sites was: in scope = a
+literally-named declared source whose absence produces a WARNING and the build continues; out of
+scope = skipped silently.
+
+Review called that **"defensible but convenient"**, and the reason is sharp: BP-900g-9's own
+central constraint is that *the observable is the exit code, not the log text*. Using "does it
+currently emit a warning" as the scope boundary therefore contradicts the criterion being scoped —
+it lets the presence of a log line, which the AC says is not what matters, decide which sites get
+fixed. A site that fails silently needs a non-zero exit at least as much as one that fails loudly.
+
+The line was drawn mid-implementation, after the enforcement set had already grown across several
+passes, and its real function was to stop the ticket expanding without end. That is a fair thing to
+want and not a principle. Recorded here so the next person decides on the merits rather than
+inheriting the rationalisation.
+
+**Why they were not simply folded in.** These are single named package templates and config files,
+not entries in a drifting hand-maintained map, so the recurrence risk that makes `KI-BP-018` a
+blocker is lower. And it is not free: making `build_vision` fail closed means a package missing its
+vision template can no longer build at all. That may be right, but it is a behaviour change
+deserving its own decision rather than a silent ride-along on another ticket.
+
+**Fix direction.** Decide the question the scope line dodged: is a silently-skipped declared source
+in scope for "a declared deploy entry whose source is missing fails the build"? If yes, record them
+through `record_deploy_failure()` like the rest — noting that `build_vision` and friends are
+write-if-absent scaffolds whose *target* absence is normal, so it is the missing *source template*
+that must fail. If no, say so explicitly in BP-900g-9's notes so the exclusion is a recorded
+decision rather than an artefact of how the audit was framed.
+
+**CORRECTION, 2026-08-31 — this entry was itself incomplete when first written, in a way that
+matters more than the argument above.** As originally filed it debated the *principle* of the
+"warns = in scope, silent = deferred" boundary while a site squarely on the IN-SCOPE side of that
+boundary had never been swept: `build_build_orchestration_scripts`' own declared source-directory
+check still did `_log.warning(...); return 0`. Review found it. Auditing whether a boundary is
+principled is worthless if you have not first confirmed everything inside it was actually covered
+— and this entry did the former while skipping the latter. That site is now converted; the entry
+is corrected rather than quietly amended.
+
+Two things hid it, both worth knowing because both defeat search:
+
+- **The phase name lies about location.** `_deploy_fast_lane_release_dependency`, called nine
+  lines below inside the *same function*, was already converted, and its `record_deploy_failure`
+  call passes the phase string `"build_build_orchestration_scripts"`. Searching that phase name
+  returns a hit inside the function, which reads as "covered". It is not — the hit belongs to the
+  helper, not to the directory check.
+- **The log string had already been "fixed twice".** Its warning uses the same template as
+  `build_agent_support_scripts` and `build_product_truth` — `"source directory not found,
+  skipping"` — so grepping that string and fixing a couple of matches looks complete.
+
+That is now the fifth distinct audit method to miss a site in this one file: a search framed on
+loops using `continue`; a grep keyed on `_log.warning`; a "glob-shaped, out of scope" judgement;
+a `git stash` comparison that could not distinguish a stale build output from a real defect; and
+phase-name matching. Every one failed the same way — the key could not see the thing. Reading
+every `build_*` and `_deploy_*` function and asking what each does when its named source is absent
+is the only method that has found them, and it has found them every time. Treat that as the
+required method for any "find every instance" audit of `scripts/build_phases.py`, not as a
+preference.
+
+**One further candidate, found by that reading and deliberately not fixed here.**
+`build_template_standalone_scripts` globs `templates/scripts/*.py`, but its own docstring names
+`setup_ticket_worktree.py` as the declared deliverable. If the tree exists and that one file is
+deleted, the glob simply omits it — no warning, no failure, nothing anywhere. Arguably worse than
+the nine now converted, because those at least logged. It is left alone because its declaration
+lives in prose rather than in a machine-readable list, which makes it a different shape from the
+rest and a judgement rather than a mechanical conversion. Worth its own decision.
+
+**Pattern:** a scope boundary drawn on a property the governing criterion explicitly says is not
+the observable — and, in this entry's first draft, a boundary audited for principle without being
+audited for coverage.
+
+---
+
+### KI-BP-20260831-1333 — `check-output-drift` blocks a commit on a gitignored cache file, so the gate fails on something no commit could ever contain
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** the `check-output-drift` pre-commit hook (leafcutter Direction B), its
+  `gaps` classification
+
+**Symptom.** A commit touching only `scripts/knowledge/`, `tests/knowledge/`,
+`docs/acceptance-criteria/` and `changelogs/` was refused:
+
+```
+Check Output Drift (leafcutter Direction B).....Failed
+- hook id: check-output-drift
+- exit code: 2
+UNCOMPARABLE: GAP .claude/.cache/readme_markers/fallback-125345.json
+              action=run build.py to register it
+RESULT verified=476 uncomparable=6 exempt=5 gaps=1 drifted=0 missing=0 unreadable=0
+```
+
+Note `drifted=0`. Nothing had drifted. The single `gap` is the whole failure.
+
+**The file is gitignored.**
+
+```
+$ git check-ignore -v .claude/.cache/readme_markers/fallback-125345.json
+.gitignore:15:.claude/.cache/    .claude/.cache/readme_markers/fallback-125345.json
+```
+
+So it can never appear in any commit, cannot be staged, and is unrelated to the diff being
+refused. Its contents point at a *different* file again — `scripts/changelog/README.md` —
+which the commit did not touch.
+
+**The prescribed fix does not work.** `action=run build.py to register it` was followed:
+a scoped `build.py --target-dir <worktree> --force` ran to completion, and the hook failed
+identically afterwards. The marker was created during worktree bootstrap (timestamp 12:49,
+before any of the work) and a sibling worktree from an earlier run does not have the
+directory at all. Unblocked only by moving the file out of the tree by hand.
+
+**Why this is worse than a nuisance.** A gate that fails on untracked, gitignored, machine-
+local state makes its verdict a function of the developer's filesystem rather than of the
+change. Two people with identical diffs get different answers, CI and local disagree, and
+the documented remedy is a no-op — so the natural next move is `--no-verify`, which disables
+every *other* hook in the same run. A gate that cannot be satisfied honestly teaches people
+to skip the gate.
+
+**Fix direction.** Exclude gitignored paths from the drift comparison entirely — if git will
+not track it, the hook has no business gating on it. If cache markers genuinely need
+verifying, that belongs in `build.py`'s own self-check, not in a commit gate. Failing that,
+`gaps` on an ignored path should be reported as INFO and not affect exit status: `drifted=0`
+should mean the hook passes.
+
+**Related.** `KI-BP-20260826-1331` (shared deployed `.leafcutter/` as a per-worktree collage
+— same root theme: build-output state that varies per checkout being treated as
+commit-worthy truth).
+
+---
+
+### KI-BP-20260831-1334 — Every fast-lane worktree bootstrap regenerates ten agent cards as drift, and the lane stages with `git add -A`
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 3 (three separate worktrees in one afternoon, identical ten files)
+- **Where:** worktree bootstrap's `build.py` run; `templates/workflows-js/fast-lane-ship.js`
+  Step 2 staging
+
+**Symptom.** Immediately after `create-fastlane-worktree` completes — before any agent has
+done any work — `git status` in the new worktree shows exactly ten modified files:
+
+```
+docs/agents/cards/{architecture-diagram-author, business-analyst, documentation-expert,
+documentation-verifier, it-po, knowledge-harvester, llm-expert, product-owner,
+python-coder, reference-author}.card.md
+```
+
+Reproduced in three independent worktrees created hours apart, same ten files each time. So
+the committed cards and the cards `build.py` generates from the current templates do not
+agree, and every bootstrap surfaces it afresh.
+
+**The reason it matters is the staging rule.** The fast lane's commit step stages with
+`git add -A` (`KI-BO-029`). Any lane that reaches commit therefore sweeps ten unrelated
+regenerated cards into its PR, attributed to whatever AC it was building. In three runs this
+was caught and reverted by hand each time; a run that is not watched will ship them.
+
+**Two defects, and the second is the durable one.** The card/template disagreement is a
+content bug someone can fix by regenerating and committing. The `git add -A` is a
+*mechanism* bug: it guarantees that any pre-existing drift, from any source, is silently
+adopted by the next PR to pass through the lane. Fixing the cards without fixing the staging
+just waits for the next drift.
+
+**Fix direction.** Stage explicitly — the lane knows which files its build set touches, and
+`files_touched` already exists for exactly this. Separately, regenerate and commit the ten
+cards so a fresh bootstrap is clean, and add a bootstrap assertion that a newly created
+worktree has an empty `git status`: a provisioning step that leaves the tree dirty has not
+finished.
+
+**Related.** `KI-BO-029` (the `git add -A` itself). `KI-BP-20260831-1333` (the other
+build-output-state defect found the same day — that one blocks a commit, this one silently
+enlarges it; opposite failure directions, same underlying confusion about which files the
+build owns).
+
+---
+
+### KI-BP-20260901-0812 — A hook was registered on `main` without the surface declaration its own gate requires, and the gate now refuses the next person to touch it
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `templates/scripts/commit_guardian/commit_guardian.json` (entry
+  `check-ticket-signoff-parity`), `docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml`,
+  and the `check-package-surface-declaration` hook (ACS-100i-8)
+
+**Two defects, and it matters which is which.**
+
+**One — a real registration is on `main` with no declaration behind it.** Commit `406375c88`
+added the `check-ticket-signoff-parity` entry to `commit_guardian.json`, citing `BP-1100g-5-i`.
+That AC has no `package_surface` field at all. ACS-100i-8 exists precisely to refuse
+"registering a surface without declaring it" — its own config comment says the declaration
+"is under the author's control and can simply be omitted, but the registration cannot be." The
+registration happened and the declaration did not, so that commit should have been refused and
+was not. How it got through is unestablished; the likeliest candidates are the hook not being
+installed in that worktree (`KI-BP-004`, deployed hooks frozen at build time) or an
+unrecorded bypass.
+
+**Two — the hook cannot tell a merge from a registration.** Any later branch that merges
+`origin/main` inherits the entry and is refused, because the hook sees a new entry in the diff
+and asks for a citation. The entry is not new to the repository, only to that branch. This is
+the defect that makes the first one everyone else's problem: the debt does not sit with whoever
+created it, it blocks the next person to merge.
+
+**Why it could not be fixed in passing.** Adding `package_surface: true` to `BP-1100g-5-i`
+triggers ACS-100i-6, which requires `it_requirements` to be a five-field structured object.
+That AC's `it_requirements` is a list of eight prose constraints, so declaring the surface
+would fail schema validation. The correct fix is to restructure that AC — which belongs to
+whoever owns `BP-1100g-5-i`, not to an unrelated merge that happens to trip over it. Recorded
+rather than bodged.
+
+**Observed.** Merging `origin/main` into `fix/bp900g9-remaining-sites` on 2026-09-01:
+
+```
+[check-package-surface-declaration] REFUSED: this change adds a package-registry entry, but
+none of the acceptance criteria it cites declares a package surface.
+  templates/scripts/commit_guardian/commit_guardian.json: new entry 'check-ticket-signoff-parity'
+  cited: ... BP-1100g-5-i
+  Set `package_surface: true` on the criterion that registers this surface, then re-commit.
+```
+
+Citing `BP-1100g-5-i` explicitly did not satisfy it, because the citation is checked against the
+AC's declaration rather than merely being present — which is the hook working correctly on a
+premise that is already false upstream.
+
+**Fix direction.** Two separate pieces. For the debt: set `package_surface: true` on
+`BP-1100g-5-i` and restructure its `it_requirements` to the object form ACS-100i-6 then
+requires. For the hook: it should evaluate entries the *commit itself* introduces relative to
+its merge base, not every entry new to the branch, so a merge carrying an already-declared
+registration passes without a citation. Until both land, every branch that merges `main` will
+hit this and will either bypass it or stall.
+
+**Pattern:** a gate that failed to fire where the defect was introduced, and fires instead on
+everyone who arrives afterwards.

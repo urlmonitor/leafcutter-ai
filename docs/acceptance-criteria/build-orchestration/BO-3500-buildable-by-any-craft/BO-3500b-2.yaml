@@ -1,0 +1,136 @@
+id: BO-3500b-2
+components:
+  - build_orchestration
+title: "A member that cannot be produced fails the whole group — the producible remainder is never shipped as the delivery"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a mixed group in which the craft responsible for one member is dispatched and
+    that member's artifact is not produced,
+  When the run reaches its ending,
+  Then the run reports failure,
+  And it does not open a pull request presenting the members that were produced as the
+    delivery of the group it was asked to build,
+  And no member of the group is marked finished, including the members whose artifacts
+    were produced,
+  And the failure names the member that was not produced and the craft that did not
+    produce it.
+
+  Given the same group,
+  When an operator reads the run's ending,
+  Then the ending distinguishes a group that was refused before any work from a group
+    that was attempted and failed part way — so an operator can tell whether the
+    automation cannot do this yet or tried and could not.
+
+  Given a mixed group,
+  When the run succeeds,
+  Then every member of the group was produced — a run may not reach a successful ending
+    having produced some members and quietly reduced the group to those.
+depends_on: [BO-3500b]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "The standing constraint this criterion enforces: 'Do not simply skip untestable ACs — that reintroduces phantom-done through the front door.' Skipping at run time, after the group was accepted, is the harder version to notice."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ATOMICITY IS PER GROUP, NOT PER MEMBER. mark_done_built_acs (scripts/build_orchestration/fast_lane.py) must be called ONCE, after every member's artifact is produced and every proof established, or not at all. A per-member done-marking loop satisfies the happy path and fails this criterion silently."
+  - "GATE THE PR-OPEN STEP ON THE GROUP VERDICT. Do not open the pull request and then annotate it with a warning about the missing member — that is a partial delivery reported as a success, and afterwards the store cannot distinguish the missing page from a page nobody asked for."
+  - "DO NOT DELETE THE PRODUCED ARTIFACTS. The criterion says the run does not CLAIM them as the delivery, not that the work is thrown away. An operator inspecting the worktree afterwards must still find them — assert their continued presence explicitly, so a future 'tidy up on failure' change cannot pass."
+  - "'REFUSED BEFORE WORK' AND 'ATTEMPTED AND FAILED' MUST DIFFER IN A MACHINE-READABLE OUTCOME FIELD, same rule and same enum family as BO-3500a-2's reason codes. They have different costs and different remedies, and a run that reports them identically makes BO-3500d-2 unable to tell a capability gap from a flaky craft."
+  - "THIRD SCENARIO IS THE ONE AN IMPLEMENTATION EVADES. A run can satisfy the two failure scenarios and never fail, by reducing the group as soon as a craft looks unlikely to deliver. So the success path must compare its delivered member set against resolve_connected_build_set's output, not against the set that was dispatched; success is available only for the group AS RESOLVED."
+  - "The failure must name the member AND the craft that did not produce it, as fields on the outcome, not only in prose."
+  - "NO PRESENCE-ONLY ASSERTIONS. Execute a run with one craft stubbed to produce nothing and assert on the store, the working tree and the absence of a PR."
+delivers_to:
+  agent: python-coder
+  contract: "Group failure outcome: {reason_code: 'member_not_produced', ac_id, craft, phase: 'attempted', produced_members: [...]} — distinct in reason_code from the pre-work refusals of BO-3500a-2 / BO-3500a-3 / BO-3500c-4. Consumed by the run's ending and by BO-3500d-2's grouping vocabulary."
+expects_from:
+  ac_id: BO-3500b-1
+  contract: "The group-completion account derived from the resolved set (one entry per resolved member, each delivered or blocked) and the single-PR arc, which this record gates on the whole-group verdict."
+test_spec:
+  - name: test_one_unproduced_member_fails_the_whole_group
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Stub one craft to produce nothing; assert the run's terminal outcome is failure."
+  - name: test_no_pull_request_opened_on_partial_production
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "After the partial run, assert no PR/commit was created presenting the produced members as the delivery."
+  - name: test_no_member_marked_done_including_the_produced_ones
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Read every member's YAML from disk after the run and assert none carries work_status done — including the members whose artifacts were produced."
+  - name: test_produced_artifacts_remain_in_the_worktree
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The anti-over-correction test: the artifacts that WERE produced are still on disk after the failure; the run must not delete them."
+  - name: test_failure_names_the_member_and_the_craft
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The failure outcome carries the unproduced member's ac_id and the craft that did not produce it as fields."
+  - name: test_refused_before_work_and_attempted_and_failed_differ_by_reason_code
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Produce both endings from the same harness and assert a consumer branching on reason_code separates them."
+  - name: test_success_is_unreachable_for_a_reduced_group
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Force the dispatched set to be a strict subset of the resolved set and assert the run cannot reach a successful ending."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: [BO-3500b-2-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  BO-3500b's notes forbid one solution by name: building the code members and dropping
+  the rest. BO-2400f-12 already forbids it on the refusal path — refuse the set whole,
+  do not build the remainder. What has no criterion anywhere is the same failure on the
+  path this tree opens up: a group that was accepted because every craft was available,
+  and then one craft did not deliver.
+
+  WHY THAT IS THE MORE DANGEROUS OF THE TWO. On the refusal path nothing was built, so
+  a partial delivery is conspicuous. Here the run has real code, real tests and a real
+  pull request in hand, and the only thing missing is the page. Every incentive in the
+  implementation points at opening the pull request anyway and mentioning the page in a
+  warning. That is a partial delivery reported as a success, and the store afterwards
+  cannot distinguish the missing page from a page nobody asked for.
+
+  THE THIRD SCENARIO exists because the first two describe failure and an implementation
+  can satisfy both while never failing — by reducing the group as soon as a craft looks
+  unlikely to deliver, so the run that runs is a group it can complete. Stated
+  positively, the successful ending is only available for the group as resolved.
+
+  THE SECOND SCENARIO protects BO-3500d and the operator equally. "Refused before work"
+  and "attempted and failed" have different costs and different remedies, and a run that
+  reports them identically makes the coverage figure unable to tell a capability gap
+  from a flaky craft.
+
+  TESTABILITY. Execute a run with one craft stubbed to produce nothing, and assert on
+  the store, the working tree and the absence of a pull request. Note what must NOT be
+  asserted: that the produced artifacts were deleted. This criterion says the run does
+  not claim them as the delivery, not that the work is thrown away — an operator
+  inspecting the worktree afterwards should still find it.

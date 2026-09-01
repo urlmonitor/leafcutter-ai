@@ -187,6 +187,8 @@ flowchart TD
 - ACS-900b-3: How-to guide and sequence diagram for the retirement-blocks-commit behavior
 - ACS-900c-2: How-to guide documents the block message and how to act on it
 - ACS-900d-3: How-to guide documents the legitimate-pass cases so the check is trusted
+- AGC-100c-2: How to build and verify Codex-native Leafcutter agents
+- AGC-100f-2: Reference for the Codex agent compatibility contract
 - BO-1300a-3: How-to guide: requesting an independent spot-check of a finished feature
 - BO-1500c-4: How-to guide for delivering approved ACs via the reviewed PR path
 - BO-1700a-10: How-to guide: proving pre-commit protection is live in a worktree
@@ -204,6 +206,7 @@ flowchart TD
 - BO-2200c-6: A reference doc explains the documentation-coverage gate, the verifier, and the Agent Contracts brief
 - BO-2400a-6: How-to: run the fast-lane build loop for a cohesive batch
 - BO-2400b-4: How-to: choose the right build path (fast lane vs heavy pipeline)
+- BO-2400c-1-vii: The bundle's reference page describes the function that exists
 - BO-2400c-4: Reference: fast-lane prompt caching (layout, TTL, prefix reuse)
 - BO-2400d-4: Reference: build telemetry record schema and lane tagging
 - BO-2400d-5: How-to: generate and read the fast-lane vs heavy-pipeline comparison report
@@ -265,8 +268,6 @@ flowchart TD
 - GE-122b-4: Which locations must carry a number, and which need not, is written down
 - GE-122c-3: A person blocked where nobody can be brought in has a procedure to follow
 - GE-122d-5: Which stage you can skip, and what still catches you, is written down
-- GE-123a-4: The reference says that recognising a file by its name adds to the checking rather than ending it
-- GE-123b-5: The reference says when a suppression is declined, what it is judged against, and what the author will see
 - GE-123c-4: Someone writing their first suppression can find out how to write one instead of copying a neighbouring line
 - GE-124a-4: A how-to shows where the declaration goes in each front-end file shape
 - GE-124b-4: A how-to shows an author how to pin one element to one criterion
@@ -299,6 +300,8 @@ flowchart TD
 - TQ-400c-5: A reader can change the cadence and find the latest published verdict from the guide alone
 - TQ-400d-5: A first-time triager can work a record from the pile to a recorded decision using the guide alone
 - TQ-400e-6: The exemption reference states when a declaration is honoured, when refused, and which records may carry one
+- TQ-500d-2: A how-to that names the exception and walks through taking the substitute evidence
+- TQ-500e-3: Reference documentation defining the answer's recorded form and every state it can hold
 - UXP-100a-3: How-to guide for assembling prototypes from the component library
 - UXP-100c-5: How-to guide for reviewing and deciding on a prototype
 - UXP-606: How-to: read decision diamonds in the Atlas Flows view

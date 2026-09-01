@@ -164,7 +164,14 @@ class _EpicOutcomeCase(unittest.TestCase):
         worktree = self._worktree()
         planned = ["01_a.md", "02_b.md"]
         epic_path, paths = self.build_epic(worktree, planned)
-        reads = [{"present": self.present(paths, planned)}, {"error": RECHECK_ERROR}]
+        reads = [
+            {"present": self.present(paths, planned)},
+            # Terminating look (BO-100e-1): both tickets already driven to
+            # completion by look 1, so look 2 must release nothing to end the
+            # search before the completion-time re-read below is attempted.
+            {"batches": [], "present": self.present(paths, planned)},
+            {"error": RECHECK_ERROR},
+        ]
         result = self.drive_epic(worktree, epic_path, paths, reads)["result"]
         return result, {"added_paths": [], "expects_error": True, "batches_run": 1}
 
@@ -176,6 +183,10 @@ class _EpicOutcomeCase(unittest.TestCase):
         epic_path, paths = self.build_epic(worktree, planned + added)
         reads = [
             {"present": self.present(paths, planned)},
+            # Terminating look: nothing further is eligible from the run set
+            # look 1 froze, so the search ends before the completion-time
+            # re-read (below) is the one that discovers the growth.
+            {"batches": [], "present": self.present(paths, planned)},
             {"present": self.present(paths, planned + added)},
         ]
         result = self.drive_epic(worktree, epic_path, paths, reads)["result"]
@@ -231,6 +242,8 @@ class _EpicOutcomeCase(unittest.TestCase):
         epic_path, paths = self.build_epic(worktree, planned)
         reads = [
             {"present": self.present(paths, planned)},
+            # Terminating look — nothing further is eligible.
+            {"batches": [], "present": self.present(paths, planned)},
             {"present": self.present(paths, planned)},
         ]
         result = self.drive_epic(worktree, epic_path, paths, reads)["result"]

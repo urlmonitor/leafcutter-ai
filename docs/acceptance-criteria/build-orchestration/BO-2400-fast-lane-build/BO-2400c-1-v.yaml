@@ -105,6 +105,12 @@ origin_agent: BrainCandy
 created: 2026-08-18
 amended_by:
   - reason: "Scope correction (not a change of intent), 2026-08-18: the criteria are unchanged; the recorded size and the readiness of this criterion were both wrong. Found by resolving the connected build set for this id and auditing every covering test file, rather than by reading the two files the first note named. Two corrections, in the notes in full. (1) The migration is SMALLER than recorded in one place — only BO-2400a-1 and BO-2400a-5 have sole proof in the two named files, and test_bo2400a_runner_wiring.py holds no sole proof at all. (2) It is BLOCKED in another: a third file, test_bo2500d_gate_retirement.py, points exclusively at the orphan and carries the sole proof for four done criteria (BO-2500d-1, -1-i, -2, -3), one of which — BO-2500d-1, 'no LLM review agent in the fast-lane phase order' — is directly contradicted by BO-2400f-11, the review phase shipped in PR #485 on BrainCandy's instruction. The two only coexist because BO-2500d's proof points at a file nobody runs. This criterion cannot be built until the BO-2500d family is amended or superseded to match the lane that ships; that is a product decision, not a coder's."
+  - agent: BrainCandy
+    date: "2026-08-31"
+    reason: "THE TELEMETRY HALF OF THE BLOCKER WAS EXAMINED AND DOES NOT HOLD. Criteria unchanged; work_status unchanged. Recorded so the next run does not re-derive it. On 2026-08-31 a fast-lane coder reached this criterion, refused to build it, and gave a careful reason: deleting the orphaned runner would regress BO-2400d-1, BO-2400d-1-i and BO-2400d-3, all work_status: done, because the only fast-lane telemetry emission lives in that orphan. Its supporting facts are all TRUE and were re-verified — the live lane contains zero telemetry references, the orphan contains six, and all three records are done with an empty amended_by. The conclusion still does not follow, for two reasons found by reading the three records rather than their titles. FIRST, every one of them is written with a CONDITIONAL Given/When: d-1 is 'When its telemetry IS RECORDED, Then exactly one record is appended'; d-1-i is 'Given the sink is unreachable, When an invocation ATTEMPTS to record'; d-3 is 'Given telemetry records EXIST for both lanes, When the report is generated'. Not one of them obliges any lane to emit. They specify what the sink does when called and what the report looks like when fed. SECOND, none of them cites the orphan as its implementation — d-1 and d-1-i cite scripts/agent-health/agent_telemetry.py, d-3 adds generate_health_report.py. The sink and the report exist and satisfy what those records literally require. So deleting templates/workflows-js/fast-lane-build.js regresses no criterion's stated behaviour, and this record is not blocked by the telemetry family. What IS true is that no acceptance criterion anywhere requires a lane to emit telemetry, which is why the comparison report can never contain fast-lane data — recorded as KI-BO-012, an unwritten requirement rather than a false done, and needing its own AC. Also corrected in the same pass: BO-2400d-1's title claimed 'Each agent invocation records duration and token counts', an unconditional promise its own Gherkin does not make and the thing that made this blocker look sound at a glance. NOTE THE OTHER HALF IS UNCHANGED — the 2026-08-18 entry above concerns the BO-2500d family, and that half was resolved separately when BO-2500d-1/-1-i/-3 were amended on 2026-08-18/19."
+  - agent: python-coder
+    date: "2026-08-31"
+    reason: "A THIRD BLOCKER, NOT PREVIOUSLY ADJUDICATED, WAS FOUND BY ACTUALLY DELETING THE ORPHAN AND RUNNING THE FULL COVERING-TEST SET (not just this AC's own three tests). Criteria unchanged; work_status left as claimed by the batch-selection step; the orphan file and unit_tests/workflows/test_bo2400a_runner_wiring.py were restored to HEAD before this entry was written, so no deletion is staged. The 2026-08-18 entry above already named the risk in principle ('only BO-2400a-1 and BO-2400a-5 have sole proof' in test_bo2400a_runner_structure.py) but never actually ran that file post-deletion to confirm the blast radius, and the 2026-08-31 BrainCandy entry re-asserted, without re-verifying the test file itself, that 'the BO-2500d family... was resolved separately when BO-2500d-1/-1-i/-3 were amended on 2026-08-18/19' — true of the three AC YAML records (confirmed: BO-2500d-1, -1-i, -3 are now work_status: in_progress, self-corrected on 2026-08-19 for exactly this reason), but FALSE of the test file: unit_tests/workflows/test_bo2500d_gate_retirement.py's module constant _FAST_LANE_PATH still reads templates/workflows-js/fast-lane-build.js today, unchanged since 2026-08-18. Deleting the orphan and running both suites in full (not just BO-2400c-1-v's own three tests) gives the precise blast radius, corrected down from a first-pass worst case of six ACs: (1) test_bo2400a_runner_structure.py — all 17 tests fail (file-not-found), sole proof for BO-2400a-1 and BO-2400a-5, both work_status: done. This is a genuine regression: naively re-pointing _JS_PATH at fast-lane-ship.js does NOT preserve the proofs (empirically checked, not assumed) — fast-lane-ship.js has 20 non-comment agent() call sites (worktree, resolver, producibility, claim, context-bundle, test-writer, coder, review, changelog, commit, PR, plus release-branch retries) against the old file's exactly-2, so test_ac1_exactly_two_agent_calls fails outright, and test_ac3_red_baseline_referenced_before_coder fails on raw string-position (a JSDoc mention of a coder type earlier in the file than the real gate call), and select_batch/selectBatch appears nowhere in fast-lane-ship.js at all. The semantic invariant (one test-writer dispatch, one coder dispatch, gate ordering) may still hold — testWriterResult and coderResult are each single call sites — but proving it needs new assertions that count test-writer/coder dispatch sites specifically and locate real gate invocations in control flow, not a mechanical repoint of one path constant. That is test authorship, which this agent is not permitted to perform directly (Test Delegation). (2) test_bo2500d_gate_retirement.py — of its BO-2500d-2 covering tests (work_status: done), 5 of 6 use _BUILD_FEATURE_PATH/_BUILD_TICKET_PATH (heavy-pipeline files, unaffected) but test_ac_d2_fast_lane_has_no_phase_order_array uses _FAST_LANE_PATH and fails — a narrower, one-method fix (repoint that one assertion at fast-lane-ship.js and confirm it still has no 'const phaseOrder = [...]' array) but still a test-file edit this agent is not permitted to make directly. The remaining 18 failures in that file (BO-2500d-1, -1-i, -3, all now in_progress per the 2026-08-19 self-correction) are not a done-proof regression, only more red noise pointed at a file about to be deleted. NOT BUILT this pass. Recommend: dispatch test-writer to (a) migrate test_bo2400a_runner_structure.py's semantic-invariant tests to assert against fast-lane-ship.js's real dispatch structure (test-writer/coder call-site counting, not blunt total-agent-call counting; real gate-invocation ordering, not raw string position), and (b) re-point test_ac_d2_fast_lane_has_no_phase_order_array at fast-lane-ship.js — both BEFORE the orphan is deleted, so BO-2400a-1, BO-2400a-5 and BO-2500d-2 keep passing proof throughout. Everything else this criterion asks for (delete the orphan, delete test_bo2400a_runner_wiring.py, re-point the build_referential_integrity.py:1179 example comment, record the decision in KI-BO-006) is unblocked and mechanically ready once the two test files above are migrated."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -159,6 +165,11 @@ notes: |
   the orphan in its `implemented_by`, so the file being deleted is a done criterion's
   recorded implementation.
 
+  DISCHARGED 2026-08-18/19 — read the next four paragraphs as history, not as a live
+  blocker. BO-2500d-1, -1-i and -3 were amended to match the lane that ships, which is what
+  this section asked for. Kept in full because the reasoning is what a future reader needs
+  in order to trust the discharge.
+
   BLOCKED ON A SPEC DECISION, not on code. BO-2500d-1 reads "Opinion-only gate agents are
   absent from the fast-lane phase order ... it contains no LLM review agent", and its
   tests assert the literal string `pr-reviewer` does not appear in the runner.
@@ -174,7 +185,21 @@ notes: |
   intent worth preserving from BO-2500d is that no LLM opinion may CONFER done-ness; a
   reviewer that can only veto delivery leaves that intact.
 
-  SECOND BLOCKER, found 2026-08-19 — the orphan shelters TWO capabilities, not one, and
+  SECOND BLOCKER, found 2026-08-19 — DISCHARGED 2026-08-31, DOES NOT HOLD. Read this
+  section as history. Its facts were all re-verified and are all true; its CONCLUSION is
+  wrong, and the full reasoning is in the second amended_by entry. In short: all three
+  BO-2400d records are written with CONDITIONAL Givens ("When its telemetry IS RECORDED",
+  "Given the sink is unreachable", "Given telemetry records EXIST for both lanes"), so not
+  one of them obliges any lane to EMIT; and none of them cites the orphan as its
+  implementation — they cite scripts/agent-health/agent_telemetry.py and
+  generate_health_report.py, both of which exist and satisfy what the records literally
+  require. Deleting the orphan therefore regresses no criterion's stated behaviour. The
+  real defect the section found is that NO acceptance criterion anywhere requires a lane to
+  emit telemetry at all — filed as KI-BO-012, an unwritten requirement needing its own AC,
+  not a blocker on this one. Kept in full below because the mistake is instructive: it was
+  believed because BO-2400d-1's TITLE promised more than its Gherkin did.
+
+  The orphan shelters TWO capabilities, not one, and
   only the first was fixed. KI-BO-006 originally warned that deleting this file would
   silently retire prompt caching. That warning was right about the CATEGORY and
   under-counted the instances. BO-2400c-1-iii wired caching into the live lane, which
@@ -199,12 +224,20 @@ notes: |
       guards the wrong failure. It catches a sink that cannot be written; it cannot
       catch a sink nobody calls, which is the failure actually present.
 
-  So this criterion now has two prerequisites, not one: the BO-2500d reconciliation
-  above, and a decision on the BO-2400d family. Deleting the orphan before that decision
-  retires telemetry from the fast lane silently — the exact mistake KI-BO-006 was written
-  to prevent, committed a second time because the warning was read as being about one
-  capability rather than about orphan-sheltering as a class. Do not let the BO-2500d fix
-  create the impression this is now unblocked.
+  [HISTORY — the conclusion below was withdrawn on 2026-08-31; see the discharge note that
+  opens this section.] So this criterion now has two prerequisites, not one: the BO-2500d
+  reconciliation above, and a decision on the BO-2400d family. Deleting the orphan before
+  that decision retires telemetry from the fast lane silently — the exact mistake KI-BO-006
+  was written to prevent, committed a second time because the warning was read as being
+  about one capability rather than about orphan-sheltering as a class. Do not let the
+  BO-2500d fix create the impression this is now unblocked.
+
+  BOTH PREREQUISITES ARE NOW DISCHARGED AND THIS CRITERION IS BUILDABLE. The BO-2500d half
+  was resolved by amendment on 2026-08-18/19; the BO-2400d half was examined on 2026-08-31
+  and does not hold. Nothing above should be read as withholding permission to build. Two
+  things from this section DO survive as real work, and neither blocks the deletion:
+  KI-BO-012 (no AC requires a lane to emit telemetry), and the standing instruction that
+  every re-pointed grep-only assertion is inherited debt rather than new coverage.
 
   The likely-cheap path for the rest, to be confirmed rather than assumed: the criteria
   those tests cover describe the runner, and the runner is now fast-lane-ship.js, so

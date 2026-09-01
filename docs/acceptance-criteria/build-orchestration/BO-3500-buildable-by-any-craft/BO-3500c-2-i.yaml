@@ -1,0 +1,154 @@
+id: BO-3500c-2-i
+components:
+  - build_orchestration
+  - documentation_system
+title: "Proof for a written page: it exists in this run's change, carries content on the subject asked for, and is reachable"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a member whose artifact is a written page,
+  When its proof is established,
+  Then the page the requirement named exists and is part of the change this run
+    produced,
+  And the page carries content beyond its heading and any template scaffolding,
+  And the subject the requirement named is addressed in that content,
+  And the page is reachable from a surface a person wrote and maintains — a link from an
+    existing page, a reference carried by a requirement, or a project instruction file —
+    so a page nobody can find is not counted as delivered.
+
+  Given a page whose only route in is an index that this same run generates,
+  When its proof is established,
+  Then that route does not satisfy reachability and the proof fails,
+  And the reason given is that the evidence and the thing it is evidence for share a
+    producer — so a reachability check that a rebuild can satisfy, or empty, is not
+    evidence at all.
+
+  Given a member whose named page already existed and was not changed by this run,
+  When its proof is established,
+  Then the proof fails and the member is not finished — an unchanged page is not
+    evidence that this run wrote anything.
+depends_on: [BO-3500c-2]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013 fix direction 2 proposes exactly the first two clauses of the first scenario. The remaining clauses are the difference between that floor and a proof."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "READING CLASS. This proof compares nothing, so its receipt carries NO condition_a, condition_b or difference (BO-3500c-1). If the implementation ever emits one, the receipt is rejected at write time — that cross-check is intentional, not redundancy."
+  - "'EXISTS AND IS PART OF THIS RUN'S CHANGE' MEANS THE RUN'S OWN DIFF against its base ref, not a filesystem stat. A file that was already there passes a stat and proves nothing; the third scenario exists to fail exactly that."
+  - "'CONTENT BEYOND HEADING AND SCAFFOLDING' IS MEASURED AGAINST THE DECLARED TEMPLATE for the doc's type (config/doc_types.json), not against a fixed byte count. A byte threshold is either trivially passed by boilerplate or fails a legitimately short reference page."
+  - "'THE SUBJECT IS ADDRESSED' IS DELIBERATELY MODEST AND MUST STAY MODEST: the terms the requirement names appear in the BODY, not only in the heading. No quality judgement — a machine can check address, not merit, and a clause demanding merit would be untestable and satisfied by anything."
+  - "REACHABILITY MUST KEY OFF A HAND-AUTHORED SURFACE AND NEVER docs/INDEX.md (finding F3). scripts/generate_doc_index.py REGENERATES that index during the same build.py run, so the proof and the thing proved would share a producer and the check would pass because the build ran. KI-BP-016 also records a mis-rooted build overwriting it with a 'No docs found.' stub, so the same check fails for reasons unrelated to the page. Both directions are noise. Accepted surfaces: an inbound link from an existing hand-maintained .md, a doc_links entry on an AC record, or a project instruction file (CLAUDE.md / README.md)."
+  - "THE GENERATED-INDEX ROUTE MUST BE ACTIVELY REJECTED, not merely not preferred: if the only inbound link comes from a generated file, the proof FAILS with that reason stated. Determine 'generated' from the producing scripts' declared outputs, not from a hard-coded filename list — a filename list is the same by-name exemption D4 forbids elsewhere."
+  - "REUSE BO-2200's EXISTING DOCUMENTATION CHECKS WHERE THEY ALREADY DO THIS. This is not a second documentation gate; it is the proof instrument for one kind in a lean run that until now could not produce that kind at all. Reuse is a merit here."
+  - "NO PRESENCE-ONLY ASSERTIONS. Every test constructs a real page in a real diff and executes the proof."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500c-2
+  contract: "derive_proof_kind(path) resolving a docs/**/*.md deliverable to kind `docs`, class `reading`, and the shared reference/resolution instrument this proof shares with the diagram proof (BO-3500c-2-ii) — one resolver, one idea of what a resolvable project element is."
+test_spec:
+  - name: test_named_page_absent_from_the_runs_diff_fails_the_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A page that exists on disk but is not in the run's diff fails; a filesystem stat would pass it."
+  - name: test_unchanged_preexisting_page_fails_the_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The page the requirement names existed before and was not modified by this run; assert the member is not finished."
+  - name: test_heading_only_page_fails_the_content_clause
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A page containing only its heading and the declared template scaffolding for its doc type fails."
+  - name: test_page_not_addressing_the_named_subject_fails
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A substantial page written about something other than the subject the requirement named fails, with the subject stated in the reason."
+  - name: test_generated_index_only_route_fails_reachability
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "FINDING F3'S TEST. The page's only inbound link is from docs/INDEX.md; assert the proof fails and the reason states that the evidence and the thing proved share a producer."
+  - name: test_hand_authored_backlink_satisfies_reachability
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A link from a hand-maintained page, an AC doc_links entry, or a project instruction file each satisfy reachability."
+  - name: test_generated_surfaces_identified_from_declared_outputs
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Add a new generator output to the declared-outputs source and assert links from that file stop counting for reachability, with no edit to any filename list."
+  - name: test_written_page_receipt_carries_no_second_condition
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "After a passing page proof, the stored receipt has instrument/invocation/outcome/at and none of condition_a, condition_b or difference."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "Finding F3 — the reachability clause was circular. It required the page to appear in the project's documentation index, which is GENERATED during the same build the run executes, so the proof and the thing proved shared a producer; and the known-issues register records that index being overwritten with an empty stub by a mis-rooted build, so the check can also fail for an unrelated reason. Reachability is now required from a hand-authored surface, and a second scenario rejects a generated-index-only route explicitly."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE FLOOR, WITH THE TWO CHEAPEST WAYS PAST IT CLOSED. KI-BO-013 suggests "the named
+  doc file exists and changed in the diff", which is defensible and is where this
+  starts. Two things defeat it and both have happened in this repository: a page
+  created as an empty stub, and a page written about something other than what was
+  asked for. The content clause and the subject clause close them.
+
+  THE REACHABILITY CLAUSE is the one that will be argued about, so the reason is worth
+  stating. An unlinked page is not documentation; it is a file. A build that writes pages
+  nobody can reach would raise the count of finished documentation requirements while the
+  documentation gets no better — a coverage figure improving with no benefit is exactly
+  the failure BO-3500d exists to prevent, arriving through the mechanism meant to fix it.
+
+  BUT THE FIRST VERSION OF THAT CLAUSE WAS CIRCULAR, and the correction is the second
+  scenario (amended 2026-08-31, finding F3). It asked that the page appear in the
+  project's documentation index. That index is GENERATED, by the same build the run
+  executes — so the proof and the thing proved share a producer, and the check passes
+  because the build ran rather than because anybody can find the page. Worse, the
+  known-issues register carries a live instance of that index being overwritten with an
+  empty stub by a mis-rooted build, which means the same check can also FAIL for a reason
+  that has nothing to do with the page. Both directions are noise.
+
+  SO REACHABILITY IS FROM A HAND-AUTHORED SURFACE: a back-link from a page a person
+  maintains, a documentation reference carried by a requirement, or a project instruction
+  file. Those are written deliberately and are not regenerated by the run being proved.
+  This is strictly cheaper than the generated-index check as well as being honest — it is
+  a read of files already in the change.
+
+  THE SUBJECT CLAUSE IS DELIBERATELY MODEST. It asks that the subject the requirement
+  named is addressed, which a machine can check. It does not ask that the page is good,
+  which a machine cannot. Judging quality belongs to review, and a criterion that
+  demanded it would be untestable and would be quietly satisfied by anything.
+
+  BOUNDARY vs BO-2200, which demands and enforces documentation on the thorough path.
+  This is not a second documentation gate. It is the proof instrument for one kind of
+  artifact in a lean run that until now could not produce that kind at all. If the
+  checks BO-2200 already performs are the right ones, reuse them — that is a merit,
+  not a duplication.

@@ -509,7 +509,18 @@ carry the learning text).
 ### KI-KM-011 — A valid-JSON non-object line crashes the harvester with an unhandled `AttributeError`, and the sink already contains junk lines the repo's own checklist puts there
 
 - **Severity:** medium
-- **Status:** open
+- **Status:** **PARTIALLY RESOLVED 2026-08-31.** The crash is fixed — `INF-700c-1-i`
+  (PR #650) added the `isinstance(event, dict)` guard and 1-based malformed-line
+  reporting, so a bare JSON scalar is now counted as malformed instead of killing the
+  run, and a reader can tell a whole-file read from a truncated one. Verified: 53 tests
+  green, including a case built from the real 33-line sink.
+  **The other half is still open, and is why this entry is narrowed rather than deleted:**
+  `CLAUDE.md`'s Pre-Drive Checklist still prescribes
+  `echo '{"probe":"pre-drive-check"}' >> debugging/logs/agent_telemetry.jsonl`, so the
+  documented check keeps writing non-event lines into the stream the harvester reads.
+  The harvester now tolerates them; nothing has stopped producing them. Remaining fix:
+  change the probe to a non-appending writability check (`test -w`) or point it at a
+  scratch path.
 - **Occurrences:** 1
 - **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
 - **Where:** `scripts/knowledge/harvest_learnings.py` — the per-line loop, at
@@ -537,11 +548,12 @@ check is itself a producer of non-event lines in the shared stream the harvester
 a small instance of the same shape as `KI-BP-007`: an instruction that quietly creates the
 condition another component must tolerate.
 
-**Fix direction.** Widen the guard to `isinstance(event, dict)` before `.get()`, and count
-skipped lines with their line numbers rather than dropping them silently — a reader
-currently cannot tell a whole-file read from one truncated at line 19. Do **not** add a
-sixth exit code for it. Separately, change the checklist's probe to a `test -w` style check
-that does not append, or point it at a scratch path.
+**Fix direction.** ~~Widen the guard to `isinstance(event, dict)` before `.get()`, and count
+skipped lines with their line numbers rather than dropping them silently~~ — **done in
+PR #650**, with no sixth exit code added, as prescribed. **Still outstanding:** change the
+checklist's probe to a `test -w` style check that does not append, or point it at a scratch
+path. Until that lands the sink keeps accruing probe lines; they are now counted and
+reported rather than fatal, which is a smaller problem but not the absence of one.
 
 **Related.** `INF-700c-1-i` (owns the resilience-and-reporting behaviour, with test specs
 authored). `INF-400c-4-iii` (owns filtering the harvester's own stream out of the shared
