@@ -233,7 +233,9 @@ is also easy to mistake for another author's work. Restore with
 > occurrence of the same shape; see KI-BP-018. Unblock adopters that way if you must, but
 > the entry closes with BP-900g-8.
 
-- **Severity:** blocker
+- **Severity:** was blocker — **RESOLVED**, retained for its evidence. Re-verified 2026-09-01:
+  `_find_doc_types_json()` performs a `__file__`-relative ancestor walk checking both the
+  self-hosted and consumer-deployed layouts, so no fixed deploy location is required.
 - **Status:** **RESOLVED — verified 2026-08-31.** `doc_type_validators.py` no longer needs
   the file deployed to a fixed location: `_find_doc_types_json()` walks ancestor
   directories checking both `config/doc_types.json` (dev layout) and
@@ -569,7 +571,9 @@ source no longer has.
 > polices. This is the fourth round of "add the missing module"; see KI-BP-018 and build
 > BP-900g-8/-9 instead.
 
-- **Severity:** blocker
+- **Severity:** was blocker — **RESOLVED**, retained for its evidence. Re-verified 2026-09-01:
+  `_ac_components.py` appears six times in `build_phases.py`, including in the AC-store deploy
+  map.
 - **Status:** **RESOLVED — verified 2026-08-31.** `validate_ac_schema.py` and
   `_ac_components.py` are both in the AC-store deploy map (`build_phases.py:1249`,
   `:1258`), the latter carrying an explicit comment naming the import that needs it.
@@ -1699,8 +1703,43 @@ through a path that only resolves at the project root.
 
 ### KI-BP-018 — No build phase can fail the build, the deploy set is hand-listed in ~26 places, and nothing verifies the deployed tree is complete
 
-- **Severity:** blocker
-- **Status:** open — ACs exist and are approved but unbuilt: BP-900g-8 (derive the closure) and BP-900g-9 (fail closed)
+- **Severity:** medium — **DOWNGRADED from blocker 2026-09-01**; see "What has changed" below.
+  Two of this entry's three findings are fixed and shipped. The third, the hand-listed deploy
+  set, is real but no longer blocking: an incomplete deploy now fails the build loudly instead
+  of shipping silently, so the remaining defect costs maintenance rather than correctness.
+- **Status:** open in part — BP-900g-8 (derive the closure) and BP-900g-9 (fail closed) are
+  both **built and merged**. Finding 2 remains, with no AC.
+
+**WHAT HAS CHANGED, 2026-09-01.** This entry was written as three findings. Verified against
+`origin/main` today:
+
+1. **"No build phase can fail the build" — FIXED.** BP-900g-9 shipped
+   `DeployDeclarationError` with a module-level accumulator; nine declared-deploy sites now
+   record every unresolvable entry and `raise_if_deploy_failures()` raises once, which `main()`
+   catches and returns 1 on. Verified: nine `record_deploy_failure(` call sites in
+   `build_phases.py`, and both `raise_if_deploy_failures()` and
+   `_check_intra_package_closure_guard` wired into `build.py`.
+2. **"The deploy set is hand-listed in ~26 places" — STILL OPEN, and this is what the entry now
+   tracks.** BP-900g-8 derived the *closure* (what a deployed script imports) and the
+   *manifest* side; it did not derive the *deploy declaration*. `AC_STORE_DEPLOY_MAP`,
+   `AGENT_SUPPORT_SCRIPT_DIRS`/`_FILES`, the per-phase `deploy_scripts` lists and their mirrors
+   in `build.py` are all still hand-maintained.
+3. **"Nothing verifies the deployed tree is complete" — SUBSTANTIALLY FIXED.** BP-900g-8's
+   intra-package closure guard runs as a preflight and can fail the build.
+
+**Why medium and not closed.** The remaining hand-lists are exactly what produced this entry's
+recurrence history — four rounds of "add the missing module" before anyone treated the list
+itself as the defect. That risk has not gone away. What has gone away is the silence: a
+declaration that names a source which is not there now stops the build and names the phase,
+the entry and the path. A stale hand-list is discovered at build time rather than discovered
+by an adopter whose install was quietly incomplete. That is the difference between a blocker
+and maintenance debt.
+
+**The honest residual.** Nine sites fail closed on a *declared* entry whose source is missing.
+Nothing yet catches the opposite: a file that *should* be declared and is not. That is the
+half the hand-lists still own, and the reason this entry stays open rather than being deleted.
+See also `KI-BP-20260831-1014` for seven further declared sources that skip silently with no
+log at all.
 - **Occurrences:** 1 (structural; it is the mechanism behind KI-BP-003, 005, 006, 008, 009, 012, 016 and 017)
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/build.py` `_run_phases` (~:1097-1184), `main` return at ~:1714, `_manifest_ac_store_scripts` (~:331-349); `scripts/build_referential_integrity.py:270`
