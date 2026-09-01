@@ -125,31 +125,29 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SCRIPT_PATH = _REPO_ROOT / "scripts" / "repair_epic_member_pr_phase.py"
 
-_SRC_NOT_DONE = (
-    _REPO_ROOT
-    / "tickets"
-    / "00_inbox"
-    / "epics"
-    / "EPIC-DispatchPreflightGate"
-    / "04_TICKET-20260708-BO-1900a-2.md"
-)
-_SRC_DONE = (
-    _REPO_ROOT
-    / "tickets"
-    / "00_inbox"
-    / "epics"
-    / "EPIC-BuildPipelinePhantomRemediation"
-    / "05_bp1200b1_ci_test_gate_blocking.md"
-)
-_SRC_STANDALONE = _REPO_ROOT / "tickets" / "TICKET-20260716-TKT-500f-11.md"
-_SRC_NO_SIGNOFFS = (
-    _REPO_ROOT
-    / "tickets"
-    / "00_inbox"
-    / "epics"
-    / "EPIC-ACStoreFoundation"
-    / "01_schema_validation.md"
-)
+# DONORS ARE FROZEN SNAPSHOTS OF REAL TICKETS, NOT LIVE REFERENCES.
+#
+# These four files are byte-for-byte copies of real tickets taken from this
+# repository at 4c61e8cec, the commit immediately before the repair ran. They
+# are real artifacts — `yaml.safe_dump` output, column-0 list dashes, the actual
+# `## Sign-offs` formatting — which is the whole reason this suite does not
+# hand-author fixtures: a frontmatter parser once shipped here as a complete
+# no-op on every real ticket while its indented hand-written fixtures passed.
+#
+# They were originally read from the live `tickets/` tree, and that was wrong in
+# a way that only showed up once the repair ran: the repair CHANGED those
+# tickets, so every donor stopped containing `pull-request: needed` and five
+# tests failed on their own fixture assumption. The suite was coupled to mutable
+# state it was itself mutating.
+#
+# Snapshotting keeps the fidelity and drops the coupling. Do not re-point these
+# at `tickets/` — the tree is repaired now, and will be repaired again.
+_FIXTURE_DIR = _REPO_ROOT / "unit_tests" / "fixtures" / "repair_epic_member_pr_phase"
+
+_SRC_NOT_DONE = _FIXTURE_DIR / "epic_member_not_done.md"
+_SRC_DONE = _FIXTURE_DIR / "epic_member_done.md"
+_SRC_STANDALONE = _FIXTURE_DIR / "standalone.md"
+_SRC_NO_SIGNOFFS = _FIXTURE_DIR / "epic_member_no_signoffs.md"
 
 _NOT_IMPLEMENTED_MSG = "scripts/repair_epic_member_pr_phase.py not yet implemented"
 
@@ -166,9 +164,16 @@ _SIGNOFF_LINE = "- [ ] pull-request\n"
 def _assert_donor_tickets_present() -> None:
     for path in (_SRC_NOT_DONE, _SRC_DONE, _SRC_STANDALONE, _SRC_NO_SIGNOFFS):
         assert path.is_file(), (
-            f"donor ticket fixture missing from the real store: {path} — "
-            "this test file's fixtures are copied verbatim from real tickets; "
-            "if this file moved, re-point the constant, do not hand-author a replacement."
+            f"donor snapshot missing: {path} — these are frozen byte-for-byte "
+            "copies of real tickets taken at 4c61e8cec. If one is gone, restore "
+            "it from that commit; do NOT hand-author a replacement and do NOT "
+            "re-point at the live tickets/ tree, which the repair mutates."
+        )
+        assert _OLD_AGENT_LINE in path.read_text(encoding="utf-8"), (
+            f"donor snapshot {path} no longer contains {_OLD_AGENT_LINE!r}. A "
+            "donor that has already been repaired cannot exercise the repair — "
+            "this assertion exists because the donors were once read live from "
+            "tickets/ and the repair silently invalidated all four of them."
         )
 
 
