@@ -30,17 +30,22 @@ ARCHITECTURE: Invoked as `python check_package_surface_declaration.py
     enumeration and every pure helper live in _package_surface_registry.py,
     deployed alongside this file.
 
-    MERGE COMMITS (KI-BP-20260901-0812): at the commit-msg stage the index
-    already holds the merged tree, but HEAD still names only the FIRST parent —
-    the commit being merged INTO. `git diff --cached` against HEAD alone
-    therefore reports every entry the SECOND parent (`MERGE_HEAD`) already
-    declared as "new", because it is new relative to HEAD even though it is not
-    new to the repository. A merge is detected via `git rev-parse -q --verify
-    MERGE_HEAD` (the same probe `check_contract_shrinking.py` and
-    `check_ac_limits.py` use); when it succeeds, `MERGE_HEAD` is added to the
-    set of parent revisions an entry must be absent from before it counts as
-    "new". An ordinary, single-parent commit is unaffected — its parent set is
-    just `["HEAD"]`, identical to the pre-fix behaviour.
+    MERGE COMMITS (KI-BP-20260901-0812 / KI-CG-20260826-package-surface-refuses-merge-commits):
+    at the commit-msg stage the index already holds the merged tree, but HEAD
+    still names only the FIRST parent — the commit being merged INTO. `git diff
+    --cached` against HEAD alone therefore reports every entry any OTHER parent
+    already declared as "new", because it is new relative to HEAD even though
+    it is not new to the repository. A merge is detected by reading
+    `MERGE_HEAD` off disk (via `git rev-parse --git-path MERGE_HEAD`, which
+    resolves correctly for a linked worktree) rather than with `git rev-parse
+    -q --verify MERGE_HEAD` — that probe reads only the FIRST line of
+    `MERGE_HEAD` and silently drops every parent after it on an octopus merge
+    (three or more parents), which is exactly the scope this check must not
+    lose per ACS-100i-8-ii. Every non-blank line of `MERGE_HEAD` — one SHA per
+    additional parent — is added to the set of parent revisions an entry must
+    be absent from before it counts as "new". An ordinary, single-parent
+    commit is unaffected — its parent set is just `["HEAD"]`, identical to the
+    pre-fix behaviour.
 
     Exit 0 = allowed; exit 1 = refused. A change touching no watched registry, or
     touching one without adding an entry, exits 0 and says it had NOTHING TO
@@ -60,6 +65,12 @@ DECISION HISTORY:
   - 2026-09-01 [python-coder/KI-BP-20260901-0812]: "New" is now scoped to every
     parent of the commit, not just HEAD, so a merge that carries an
     already-declared upstream registration no longer demands a fresh citation.
+  - 2026-09-01 [python-coder/ACS-100i-8-ii review]: the merge probe read only
+    the FIRST line of `MERGE_HEAD` (via `git rev-parse -q --verify MERGE_HEAD`),
+    so an octopus merge's third and later parents were never consulted and a
+    genuinely-carried entry from one of them was still refused. Fixed by
+    reading `MERGE_HEAD` off disk in full via `git rev-parse --git-path
+    MERGE_HEAD`.
 """
 
 from __future__ import annotations
@@ -152,20 +163,58 @@ def _blob(repo: Path, revision_spec: str) -> str | None:
     return out if code == 0 else None
 
 
-def _is_merge_in_progress(repo: Path) -> bool:
-    """Return whether the commit being written has a second parent.
+def _merge_head_path(repo: Path) -> Path | None:
+    """Return the on-disk path of ``MERGE_HEAD``, or None when it is unknown.
 
     Args:
         repo: Repository root.
 
     Returns:
-        True when ``MERGE_HEAD`` resolves (a merge commit is being written),
-        False otherwise — including when the probe itself fails, which treats
-        an undeterminable state as an ordinary commit rather than silently
-        widening the parent set.
+        The absolute path git reports for ``MERGE_HEAD`` via
+        ``rev-parse --git-path``, which resolves correctly for a linked
+        worktree (where ``MERGE_HEAD`` lives under the worktree's private
+        git-dir, not a plain ``<repo>/.git/MERGE_HEAD``). None when the probe
+        itself fails, which treats an undeterminable state as unable to
+        locate the file rather than guessing a path.
     """
-    code, _ = _git(repo, "rev-parse", "-q", "--verify", "MERGE_HEAD")
-    return code == 0
+    code, out = _git(repo, "rev-parse", "--git-path", "MERGE_HEAD")
+    if code != 0 or not out.strip():
+        return None
+    path = Path(out.strip())
+    return path if path.is_absolute() else repo / path
+
+
+def _merge_parent_revisions(repo: Path) -> list[str]:
+    """Return every parent SHA a merge in progress names, in file order.
+
+    Args:
+        repo: Repository root.
+
+    Returns:
+        Every non-blank line of ``MERGE_HEAD``, or ``[]`` when no merge is in
+        progress (the file is absent) or it cannot be read. ``MERGE_HEAD``
+        holds one SHA per line: exactly one for an ordinary two-parent merge,
+        and one per additional branch for an octopus merge
+        (KI-CG-20260826-package-surface-refuses-merge-commits fix direction
+        #1: "Octopus merges have several MERGE_HEAD lines — read them all
+        rather than the first"). ``git rev-parse -q --verify MERGE_HEAD``
+        resolves only the FIRST line and was the wrong tool for this reason —
+        confirmed by reproduction: a three-way `git merge --no-commit --no-ff
+        branchA branchB` leaves two lines in ``MERGE_HEAD``, and that probe
+        reports only the one for ``branchA``.
+    """
+    path = _merge_head_path(repo)
+    if path is None or not path.is_file():
+        return []
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        print(
+            f"{_HOOK_PREFIX} WARNING: cannot read {path}: {exc}",
+            file=sys.stderr,
+        )
+        return []
+    return [line.strip() for line in text.splitlines() if line.strip()]
 
 
 def _parent_revisions(repo: Path) -> list[str]:
@@ -175,19 +224,14 @@ def _parent_revisions(repo: Path) -> list[str]:
         repo: Repository root.
 
     Returns:
-        ``["HEAD"]`` for an ordinary commit; ``["HEAD", "MERGE_HEAD"]`` while a
-        merge is in progress. `MERGE_HEAD` is the second parent — the branch
-        being merged in — and is what lets a merge-carried entry be recognised
-        as already existing rather than newly registered by this commit. This
-        mirrors the ``check_contract_shrinking.py`` / ``check_ac_limits.py``
-        merge probe rather than reading `.git/MERGE_HEAD` directly, so an
-        octopus merge's additional parents are not enumerated — the same scope
-        those sibling hooks accept.
+        ``["HEAD"]`` for an ordinary commit; ``["HEAD", <merge-head-sha>, ...]``
+        while a merge is in progress, one entry per line of ``MERGE_HEAD`` —
+        every parent other than the first, including all additional parents
+        of an octopus merge. Each is what lets a merge-carried entry be
+        recognised as already existing rather than newly registered by this
+        commit.
     """
-    revisions = ["HEAD"]
-    if _is_merge_in_progress(repo):
-        revisions.append("MERGE_HEAD")
-    return revisions
+    return ["HEAD", *_merge_parent_revisions(repo)]
 
 
 def _new_entries(repo: Path, rel_path: str, parent_revisions: list[str]) -> list[str]:

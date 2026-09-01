@@ -3074,9 +3074,35 @@ build owns).
 
 ### KI-BP-20260901-0812 — A hook was registered on `main` without the surface declaration its own gate requires, and the gate now refuses the next person to touch it
 
-- **Severity:** high
-- **Status:** open — no AC
-- **Occurrences:** 1
+> **PARTIAL DUPLICATE — corrected 2026-09-01, in the wrong register.** The second of the two
+> defects below (the hook refusing merges) was **already filed on 2026-08-26** as
+> `KI-CG-20260826-package-surface-refuses-merge-commits` in `commit-guardian.md`, with the
+> same mechanism, the same fix direction, and two observed occurrences (PRs #601 and #577)
+> against this entry's one. That entry is the canonical record for the hook defect; read it
+> first. It is also more complete than this one was: it names the octopus-merge caveat, and
+> the independent sibling defect `KI-CG-20260826-1612` (all six AC guardians filter the index
+> on `--diff-filter=AM`, so a *renamed* record is invisible to every one of them — which a
+> tree split requires and which the merge-scope fix does **not** address).
+>
+> Filed here in error because the search went to `build-pipeline.md`, where the *consequence*
+> was felt, rather than `commit-guardian.md`, where the hook lives. That is the same
+> component-misfiling this register keeps producing, and the datetime-id convention does not
+> prevent it — a unique id stops two entries colliding, it does not stop the same defect being
+> written twice in two files. Worth noting as the residual the id change did not solve.
+>
+> **What is NOT duplicated, and why this entry stays:** the first defect below — that
+> `BP-1100g-5-i` registered a hook while carrying no `package_surface` field, so ACS-100i-8
+> should have refused that registration when it landed and did not. The 2026-08-26 entry does
+> not cover that; it is about the hook's behaviour, not about the undeclared registration that
+> reached `main`. That half is corrected by the declaration fix on `BP-1100g-5-i`.
+
+- **Severity:** medium — downgraded from high on 2026-09-01. The merge-refusal half is
+  the pre-existing `KI-CG-20260826-package-surface-refuses-merge-commits`; what remains
+  unique here is the undeclared registration, which is real but narrower.
+- **Status:** open in part — the merge-refusal half is fixed by `ACS-100i-8-ii`; the
+  undeclared-registration half is fixed by the `BP-1100g-5-i` declaration correction. The
+  question of *how* ACS-100i-8 failed to fire on `406375c88` remains unanswered.
+- **Occurrences:** 1 here; see the canonical entry for 2 more
 - **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
 - **Where:** `templates/scripts/commit_guardian/commit_guardian.json` (entry
   `check-ticket-signoff-parity`), `docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml`,

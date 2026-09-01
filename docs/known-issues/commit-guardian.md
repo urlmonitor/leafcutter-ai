@@ -2539,9 +2539,20 @@ nothing and reports success).
 > The sequential `KI-CG-NNN` entries above keep their ids.
 
 - **Severity:** high
-- **Status:** open — no AC
-- **Occurrences:** 2 observed (2026-08-26, PRs #601 and #577); reproducible on demand
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Status:** **being fixed 2026-09-01** — AC: `ACS-100i-8-ii` ("An entry a merge carries from
+  a parent is not an entry the merge registers"), an L3 technical constraint on ACS-100i-8.
+  The fix scopes the added-entry computation to what the commit introduces relative to its own
+  parents: an entry counts as added only when absent from EVERY parent. Single-parent
+  behaviour is unchanged. The negative control is preserved — an entry present in no parent
+  and cited by no declaring AC is still refused, including mid-merge alongside a legitimately
+  carried one, so this is not a merge exemption.
+  **Not addressed by that fix:** the `--diff-filter=AM` rename blindness in
+  `KI-CG-20260826-1612` below, which is independent and still open.
+- **Occurrences:** 4 observed — 2026-08-26 PRs #601 and #577; 2026-09-01 PR #661 (bypassed
+  with an authorised `SKIP`, and misfiled at the time as
+  `KI-BP-20260901-0812` in `build-pipeline.md` before this entry was found — see the
+  correction there); reproducible on demand
+- **First seen:** 2026-08-26 · **Last seen:** 2026-09-01
 - **Where:** `templates/scripts/commit_guardian/check_package_surface_declaration.py`
   → `_new_entries()` (~:139-158)
 
