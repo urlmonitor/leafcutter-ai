@@ -1233,7 +1233,15 @@ defect and refused to proceed.
 ### KI-BO-020 — The fast lane's release-on-failure path is dead: it dispatches `status-checker`, which refuses the role, so aborted runs strand their claims
 
 - **Severity:** high — silent, and it defeats a criterion believed to be working
-- **Status:** open
+- **Status:** **RESOLVED** (fix landed under `BO-2400f-10-i`; verified 2026-09-01) — **but read
+  the residual below, which is a different and still-open defect.**
+  `fast-lane-ship.js:490` now declares `const RELEASE_EXECUTOR_AGENT_TYPE = "python-coder";`
+  and all nine release sites route through that one constant rather than a per-site literal.
+  Confirmed live, not merely by reading: a `/fast-lane-build BO-2400c-1-v` run on 2026-09-01
+  halted at the coder phase and reported `Release: succeeded — BO-2400c-1-v returned to todo`.
+  This entry sat at `open` for a week after being fixed, and was recommended as the next thing
+  to build on 2026-09-01 before anyone checked the code — the second stale entry found in a
+  single review of this register.
 - **Occurrences:** 2 observed; every failing path that releases is affected
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/fast-lane-ship.js` — the release dispatches on the
@@ -3019,3 +3027,95 @@ one lane-level defect that is unambiguously worse with more lanes).
 **Pattern (provisional):** isolation designed around the artifact people can see — the working
 tree — while the machinery underneath it stays global, so the blast radius of a single run is
 larger than the directory it was given.
+
+---
+
+### KI-BO-20260901-1620 — `permits_shell` is a three-state field read as two, so the fix for KI-BO-020 picked an agent the schema also calls read-only — and three shell dispatches still go to the one agent that explicitly forbids it
+
+- **Severity:** high — one live charter violation on the claim path, and the guard that should
+  catch it does not exist
+- **Status:** open — no AC
+- **Occurrences:** 1 systemic (4 dispatch sites, 3 still wrong)
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `config/agent_registry.json` (`permits_shell`, declared on exactly 2 of ~40 agents);
+  `config/agent_registry.schema.json:123-125`; `templates/workflows-js/fast-lane-ship.js:490`
+  (the fix) and lines **666**, **750**, **824** (the unfixed dispatches)
+
+**Symptom — the field has three states and the code reads two.** The schema is explicit:
+
+> `permits_shell` … True if this agent's registered charter permits running repository-mutating
+> shell commands … **False or absent means the agent must be treated as read-only** for
+> dispatch-permission gates.
+
+Measured across the registry, only **two** agents declare it at all:
+
+| agent | `permits_shell` | schema meaning |
+|---|---|---|
+| `status-checker` | `false` | read-only |
+| `worktree-agent` | `true` | may run repository-mutating shell |
+| everyone else, incl. `python-coder` | **absent** | read-only |
+
+`KI-BO-020`'s fix reasoned from the wrong predicate. Its comment at `fast-lane-ship.js:481-489`
+justifies the substitution as: *"dispatch an executor whose declared … entry does not explicitly
+forbid running shell commands (permits_shell !== false) … python-coder's entry declares no such
+restriction."* Under the schema's own definition, `absent` **is** the restriction. So the fix
+replaced an agent the schema calls read-only with another agent the schema also calls read-only,
+and the only agent actually chartered for this is `worktree-agent`.
+
+It works in practice — `python-coder` does not refuse, and a live run confirmed the release
+succeeds — so the *behaviour* is fixed. The *justification* is not, and it is written into the
+code as a comment future readers will copy.
+
+**The larger half: three dispatches were never fixed.** `KI-BO-020` was scoped to the release
+path, so only that one moved. These still send `status-checker` — the single agent that
+explicitly declares `permits_shell: false` — to run Bash:
+
+| line | dispatch | what the command does |
+|---|---|---|
+| 666 | resolve | reads the store |
+| 750 | producibility | reads the store |
+| **824** | **claim** | **flips `todo` → `in_progress` in the AC store** |
+
+Line 824 is the one that matters. Claiming *writes* to the store, which is repository-mutating
+by the schema's own wording, and it is dispatched to the agent that forbids exactly that. It is
+also the mechanism every parallel fast-lane run depends on for mutual exclusion.
+
+**Why it has not blown up yet, and why that is not reassurance.** `status-checker` refuses by
+*judgement*, not by mechanism — it reads its own charter and declines. It refused the release
+prompt twice (`KI-BO-020`) because that prompt opened `You are the release-phase agent`, an overt
+role reassignment. The claim prompt opens `You are the claim-phase agent for a fast-lane build`
+— the same shape. It has not refused **yet**. Nothing prevents it doing so on the next run, on a
+different model, or after a template edit, and if it refuses at the claim step the run loses its
+only exclusion guarantee.
+
+**Nothing enforces the field.** No hook, gate or test compares a workflow's `agentType`
+dispatches against `permits_shell`. The field is declared, documented, and consulted by exactly
+one hand-written comment. That is why a wrong reading of it survived review and shipped.
+
+**Suggested fix, and the ordering matters.**
+
+1. **Decide what the field means and make `absent` explicit.** Either backfill `permits_shell`
+   on every registry entry so there is no third state, or change the schema so absent means
+   "permitted" and `false` is the only restriction. The current "absent == false" reading is
+   defensible but nobody follows it, which is the evidence it is the wrong default.
+2. **Enforce it mechanically.** A check that walks each `templates/workflows-js/*.js` for
+   `agentType:` literals whose prompt contains a shell invocation, and fails when the named agent
+   is not `permits_shell: true`. Without this, step 1 is another field nobody reads.
+3. **Fix the three dispatches**, claim first. The honest options are the same two `KI-BO-020`
+   named: dispatch an agent whose charter actually covers it, or stop using an agent. Note that
+   the second is **not available** — the E2 engine gives the workflow body no filesystem or
+   subprocess access, so every side effect must go through an `agent()` call. That constraint
+   should be recorded wherever this is fixed, because "just call the CLI directly" is the
+   obvious suggestion and it cannot be done.
+4. **Consider whether a chartered executor agent should exist.** These four dispatches all do the
+   same thing: run one deterministic `fast_lane.py` subcommand and parse its JSON. That is not
+   `status-checker`'s job and it is not `python-coder`'s either. Authoring one is `llm-expert`'s
+   surface — the `KI-BO-020` fix comment says as much and explicitly defers it.
+
+**Related.** `KI-BO-020` (resolved — the release path; this entry is its residual).
+`KI-BO-20260901-1450` (the fast lane's isolation stops at the worktree boundary; the claim path
+is the mechanism that entry's parallel-safety question depends on).
+
+**Pattern:** a permission field with a documented tri-state, no enforcement, and two of ~40
+records populated — so the first person to consult it reasoned from the populated cases and got
+the default backwards, in a comment that now teaches the error.
