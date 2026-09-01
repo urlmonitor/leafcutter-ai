@@ -430,6 +430,7 @@ flowchart TD
 - ACS-100a-1: Required fields reject missing values at commit time
 - ACS-100a-2: ID field enforces PREFIX-NNN regex pattern
 - ACS-100a-3: Status field accepts only the three allowed enum values
+- ACS-100a-3-i: A test_spec framework the project actually ships is accepted, and an unknown one is still refused
 - ACS-100a-4: Additional properties are rejected to prevent schema drift
 - ACS-100a-5: superseded_by field enforces conditional constraint with status
 - ACS-100a-6: Dangling depends_on and expects_from references blocked at commit time
@@ -479,6 +480,7 @@ flowchart TD
 - ACS-100i-7-i: A record that declares a package surface is refused by the whole-store pass just as it is by a single-file check
 - ACS-100i-8: A package surface cannot come into existence without a record that declared it
 - ACS-100i-8-i: Denying the surface, and citing no record at all, are refused on the same terms as omitting the declaration
+- ACS-100i-8-ii: An entry a merge carries from a parent is not an entry the merge registers
 - ACS-100i-9: A record naming a producer that is not a registered agent is refused, and both the commit-time gate and the store-wide pass reach the same rule
 - ACS-100i-9-i: Both readers of the store yield the same producer name, whatever quoting the record was written with
 - ACS-100i-9-ii: When the agent registry cannot be read, the check says it did not run instead of passing quietly
@@ -499,6 +501,19 @@ flowchart TD
 - ACS-1200d-1-i: A tree that was un-parked but never broken down is shown as exactly that
 - ACS-1200d-2: Half an un-park is refused, and the message says which half is missing
 - ACS-1200d-3: Parking a tree never adds work to the buildable queue, and un-parking alone does not either
+- ACS-1300a-1: One pass reports both directions of rot, against a stated total
+- ACS-1300a-1-i: A tag token is normalised before matching, so a multi-id tag names every record on the line
+- ACS-1300a-2: Repair happens only when it is asked for, and the run that changes nothing still says everything
+- ACS-1300a-2-i: Dropping a claim is per-entry and reported, and an entry the rule cannot judge is never dropped
+- ACS-1300a-3: A coverage list holding child requirement ids is left alone, and the run says why
+- ACS-1300b-1: The delivery paths that can finish work without recording the link are enumerated from the repository
+- ACS-1300b-1-i: A path that legitimately records no link is a stated exemption, never an omission
+- ACS-1300b-2: A bypassing path records the link by reaching the existing writer, not a second one
+- ACS-1300b-3: A newly added delivery path cannot quietly join the bypassing set
+- ACS-1300c-1: The repair awards nothing — the finished-state field is never written
+- ACS-1300c-1-i: Reusing an existing backfill that promotes finished state does not satisfy the refusal
+- ACS-1300c-2: A record with nothing to repair is never opened for writing
+- ACS-1300c-3: Evidence the run cannot judge produces a stated abstention, never a silent skip and never a write
 - ACS-200d: New tickets must reference their source AC
 - ACS-200e: The standalone AC validator enforces the same schema as the commit-time gate
 - ACS-200f: An AC whose covering tests genuinely pass can be marked done through the normal path, without the operator knowing an environment variable
@@ -1932,6 +1947,13 @@ flowchart TD
 - TKT-500g-4-i: An empty demand is not a way to say "no proof needed" — it is refused by name
 - TKT-500g-5: The readiness report never calls a demanded proof unnecessary
 - TKT-600a-1: Generated files_touched excludes prose-illustration paths; depends_on is guard-valid
+- TKT-600b-1: The generated phase record names exactly the phases the drive will dispatch for that ticket's location
+- TKT-600b-1-i: Generation refuses rather than guesses when the ticket's final location is not yet settled
+- TKT-600b-1-ii: A phase the drive will not run is recorded as excluded, never left out of the record
+- TKT-600b-2: An excluded phase is recorded as excluded, never as signed off, and carries no sign-off row
+- TKT-600b-3: A ticket generated outside an epic keeps its own pull-request phase and cannot finish without it
+- TKT-600b-4: The drive never edits a ticket's phase record to make it agree with the drive's own behaviour
+- TKT-600b-4-i: A phase that ran records its own outcome; that is the only write the drive makes to the phase record
 - TQ-100a-1: The suite runs every loadable test even when one file fails to load
 - TQ-100a-1-i: A test file importing a nonexistent module does not stop the other files
 - TQ-100a-1-ii: A test file that raises at module scope does not stop the other files

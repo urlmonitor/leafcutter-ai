@@ -935,7 +935,7 @@ def write_build_manifest(
     dry_run: bool = False,
     target_root: Path | None = None,
     config: dict[str, Any] | None = None,
-) -> None:
+) -> str:
     """Write .build_manifest.json with template hashes and expected output hashes.
 
     The ``templates`` section records the SHA-256 content hash of every .md file
@@ -986,6 +986,18 @@ def write_build_manifest(
         target_root: Root of the target project. Required for output_mappings.
         config: Merged config dict used for placeholder injection. Required
             for output_mappings.
+
+    Returns:
+        The non-empty ``output_mappings_error`` string (naming the exception
+        type and message) when the whole ``output_mappings`` computation
+        raised and the record could not be produced for this build, or ``""``
+        when it succeeded, was not attempted (``target_root``/``config`` not
+        supplied), or the call short-circuited before reaching that step
+        (e.g. ``templates/agents/`` missing). BP-1500d-3: this is the typed
+        failure signal the build's own exit path consumes so a build that
+        cannot produce the record reports failure rather than warning once
+        and reporting success -- see ``scripts/build.py``'s call site, which
+        turns a non-empty return into a non-zero process exit status.
     """
     templates_dir = package_root / "templates" / "agents"
     # The manifest lives in target_root (the actual project/deploy root — the
@@ -1000,7 +1012,7 @@ def write_build_manifest(
 
     if not templates_dir.is_dir():
         _warn(f"templates/agents/ not found at {templates_dir}; skipping.")
-        return
+        return ""
 
     # --- Direction A: template hashes (flat dict, backward-compatible) ---
     # relative_to(repo_root) is wrapped per-file: repo_root is target_root,
@@ -1136,7 +1148,7 @@ def write_build_manifest(
             f"would write build manifest ({len(template_hashes)} template "
             f"+ {len(output_mappings)} output_mappings entries) -> {manifest_path}"
         )
-        return
+        return output_mappings_error
 
     manifest_path.write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",
@@ -1146,6 +1158,7 @@ def write_build_manifest(
         f"build manifest ({len(template_hashes)} template "
         f"+ {len(output_mappings)} output_mappings entries) -> {manifest_path}"
     )
+    return output_mappings_error
 
 
 def seed_docs(target_root: Path, dry_run: bool) -> None:

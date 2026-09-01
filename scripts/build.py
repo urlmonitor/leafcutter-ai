@@ -2083,12 +2083,27 @@ def main(argv: list[str] | None = None) -> int:
 
     print()
     _heading("Build manifest")
-    write_build_manifest(
+    manifest_error = write_build_manifest(
         package_root,
         dry_run=args.dry_run,
         target_root=target_root,
         config=config,
     )
+    # BP-1500d-3: the record of what this build put into target_root is the
+    # output_mappings section of .build_manifest.json. When it could not be
+    # produced, write_build_manifest() returns the non-empty error instead of
+    # only warning -- this is the load-bearing enforcement point: the exit
+    # status must be a function of whether the record was producible, not
+    # just the printed message (a build that only warns here leaves every
+    # automated caller believing the install is protected when it is not).
+    if manifest_error:
+        _error(
+            "Build manifest record (output_mappings) could not be produced "
+            f"for target project {target_root}: {manifest_error}. This "
+            "install has no verifiable output_mappings record, so the build "
+            "has failed rather than reporting success with a missing record."
+        )
+        return 1
 
     # Write .leafcutter.lock so the halt-guard knows the build baseline
     if not args.dry_run:
