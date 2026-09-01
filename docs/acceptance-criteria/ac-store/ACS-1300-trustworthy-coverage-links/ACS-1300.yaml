@@ -174,8 +174,14 @@ notes: |
     - Of those 549, 376 have an entirely empty coverage list.
     - Of those 549, 527 are already mark_ac_done-eligible — see the framing
       section above.
-    - Inverse rot: 9 of 521 coverage entries that look like test paths (1.7%)
-      point at a file that does not exist, concentrated in two missing files.
+    - Inverse rot: 9 of the 416 records whose coverage list names a test at all
+      (2.2%) point at a file that does not exist, concentrated in two missing
+      files. Those 416 records carry 525 test-naming entries between them. An
+      earlier draft of this bullet read "9 of 521 coverage entries": a superseded
+      entry count from the pre-re-measurement pass, standing where a RECORD count
+      belonged. Corrected 2026-09-01 — and note that 9/521 and 9/416 are both
+      arithmetically fine and differ only in what they are a fraction OF, which
+      is why an unlabelled denominator survives review so easily.
     - Phantom tags: of 937 distinct tag ids in the test tree, 850 resolve to a
       record — so roughly 87 name a record that does not exist. Verified NOT to
       be fallout from the BP-100k to BP-100n split: no -6/-7/-8 tags survive and

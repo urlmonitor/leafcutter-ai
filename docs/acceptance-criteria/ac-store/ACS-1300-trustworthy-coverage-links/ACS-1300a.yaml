@@ -104,10 +104,26 @@ notes: |
   siblings. They are one traversal of one store producing two kinds of correction,
   and they share a report. Figures re-measured 2026-09-01 (see the L0 notes for
   method, denominator and the correction history): forward rot is the dominant case
-  at 549 of 856 tagged records under the FILE-LEVEL rule — 585 under the stricter
-  function-level rule, so always say which rule a figure uses — of which 376 have
-  an entirely empty list; inverse rot is 9 of 521 path-shaped entries, concentrated
-  in two missing files.
+  at 549 of 850 tagged-and-resolving records under the FILE-LEVEL rule — 585 under
+  the stricter function-level rule, so always say which rule a figure uses — of
+  which 376 have an entirely empty list; inverse rot is 9 of the 416 records that
+  name a test at all (525 such entries), concentrated in two missing files.
+
+  THE DENOMINATOR ABOVE WAS ITSELF WRONG FOR ONE COMMIT, AND THAT IS THE WHOLE
+  POINT OF THIS PARAGRAPH. It read "549 of 856" until 2026-09-01: a re-measured
+  NUMERATOR was pasted against a denominator carried over from the earlier count,
+  by an author who supplied the new 549 without the 850 that went with it. 850 is
+  the tagged-and-resolving population (937 distinct tag ids, of which 850 resolve
+  to a record); 856 came from a different count and appears nowhere in the
+  re-measurement. The inverse-rot figure was wrong the same way — 521 was an
+  entry count standing where a record count belonged.
+
+  Both errors were caught by reading the measurement back against the record,
+  not by any gate: no validator compares a figure to its denominator, and both
+  passed schema validation and the full pre-commit hook suite. This is the
+  identical failure this tree documents two paragraphs down ("244 of 607") and
+  the one ACS-1100 exists to prevent, committed inside the record that cites it.
+  Anyone amending these figures must restate the denominator in the same edit.
 
   PROVISIONAL, AND THE POINT GENERALISES: an independent re-measurement was in
   flight when this was authored. No count may be written into a criteria block, at
