@@ -281,6 +281,16 @@ reports as a 22.22% quality score rather than an infrastructure failure).
 
 ## M7 — A module invoked as a CLI that has no CLI
 
+> **Status, 2026-09-01:** the mechanism is real and this worked example still
+> teaches it, but both specifics below have since been resolved.
+> `injection_builders.py` gained an `assemble-bundle` CLI subcommand
+> (BO-2400c-1-ii), so KI-BO-005 is **closed**; and the caller quoted here,
+> `fast-lane-build.js`, was an orphaned second runner nothing ever dispatched
+> and has been **deleted** (BO-2400c-1-v, absorbing KI-BO-005 into KI-BO-006).
+> The text below is left as written — it is the record of what was verified on
+> the day, and rewriting it would erase the evidence that the mechanism fires
+> in practice.
+
 The path resolves, the subprocess exits 0, and nothing happens. Verified today:
 `templates/workflows-js/fast-lane-build.js:121` calls
 

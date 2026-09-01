@@ -33,7 +33,10 @@ unmet `depends_on` prerequisites, in dependency order, readiness-agnostic —
 pointing at the AC is the go-ahead), runs the lean loop above scoped to that set,
 then auto-commits and opens a pull request. This is the `fast-lane-ship`
 workflow, shimmed by [templates/commands/fast-lane-build.md](../../templates/commands/fast-lane-build.md).
-The lean loop itself (`fast-lane-build.js`) remains the inner primitive it drives.
+The lean loop is **inlined inside `fast-lane-ship.js`**, not a separate file it
+calls out to. A second runner, `fast-lane-build.js`, once existed and was never
+dispatched by anything; it was deleted under `BO-2400c-1-v`. There is exactly one
+fast-lane runner.
 
 To see everything that still needs building first, export the build backlog as a
 JSON dataflow:
@@ -60,15 +63,17 @@ This guide covers:
 
 Before invoking `/fast-lane-build`, confirm the following.
 
-**The workflow is deployed.** Verify `fast-lane-build.js` is present in the
-Claude Code workflows directory:
+**The workflow is deployed.** Verify `fast-lane-ship.js` is present in the
+deployed workflows directory:
 
 ```bash
-ls .claude/workflows/fast-lane-build.js
+ls .leafcutter/workflows/fast-lane-ship.js
 ```
 
 If the file is absent, run `build.py` using a leafcutter-ai version that
-includes the `fast-lane-build.js` workflow template.
+includes the `fast-lane-ship.js` workflow template, and confirm the `workflows`
+feature is enabled in `skills_config.json` — the workflows directory is only
+populated for a consumer who opts in.
 
 **The gate script is deployed.** Verify the gate script is reachable from the
 worktree root:

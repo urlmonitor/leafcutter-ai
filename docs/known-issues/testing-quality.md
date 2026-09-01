@@ -760,9 +760,12 @@ does not load — where the failure mode is silence, and silence is the result t
 
 - **Severity:** high
 - **Status:** open — recurs on every run of the suite; a config repair does not hold
-- **Occurrences:** 2 observed within one hour, from two different worktrees (four call sites in one file)
+- **Occurrences:** 3 observed the same day, from three different worktrees — and the offending code is **two** files with **six** call sites, not four in one: a third commit landed authored `GE-120e-1-i fixture`, which is a *different* fixture, so `unit_tests/portability/test_ge_120e_1_i.py` carries the identical defect at 2 further sites
 - **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
-- **Where:** `unit_tests/portability/test_ge_120e_1.py` — lines 234, 300, 344, 543
+- **Where:** `unit_tests/portability/test_ge_120e_1.py` — lines 234, 300, 344, 543 — **and
+  `unit_tests/portability/test_ge_120e_1_i.py`**, 2 more sites (found by grepping
+  `fixture@example.com` across the branch after a third misattributed commit; the entry
+  originally named one file because that is the one whose identity happened to land first)
   (currently on branch `EPIC-TrustThatAGreenCheckActuallyChecked`, unmerged); leaks into
   `leafcutter-ai/.git/config`, shared by every worktree
 
