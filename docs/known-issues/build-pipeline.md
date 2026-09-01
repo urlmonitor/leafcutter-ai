@@ -3136,7 +3136,12 @@ everyone who arrives afterwards.
 ### KI-BP-20260901-0914 — `ac-store-valid`'s per-PR diff scope means a schema-invalid AC record can sit on `main` indefinitely, invisible to CI, while the documented whole-component pre-flight that would catch it is optional, manual, and never wired in
 
 - **Severity:** high
-- **Status:** open — no AC
+- **Status:** OPEN — no AC. The two-record *instance* was fixed 2026-09-01 (the enum was
+  widened; see `KI-ACS-010` → Resolution), but **the scope gap this entry is actually about
+  is untouched**: ACS-200h is still unbuilt, so the store can still go red on `main` with
+  every required check green. Do not read the instance fix as closing this. If anything the
+  gap is now less visible, because the one component that happened to be demonstrably red
+  is no longer red.
 - **Occurrences:** 1 (the two records below); the scope gap itself applies to every AC ever
   merged before 2026-08-17 or untouched since
 - **First seen:** 2026-09-01
@@ -3254,4 +3259,14 @@ than 'the store', and the store is what people believe was checked."
 **Related.** `KI-ACS-001` (a validator invocation resolving to zero files reported success for
 eight days) is the sibling failure at the tooling layer — this entry's whole-component sweep
 is the fix KI-ACS-001 made trustworthy again, which is exactly why it was the tool that caught
-this.
+this. `KI-ACS-010` is the vocabulary gap that produced the instance; its Resolution section
+records the fix.
+
+**Instance closed 2026-09-01, gap not.** `validate_ac_schema.py docs/acceptance-criteria`
+now reports the full 3,256-record store valid — zero refusals, down from 28. So the
+concrete demonstration in this entry can no longer be reproduced, and that is precisely the
+hazard: the argument above never depended on those two records being red. It depended on
+`ac-store-valid` being *structurally incapable* of seeing a record that predates it and has
+not since been touched, which is still true of every one of the ~3,200 records no recent PR
+has modified. The next such record will be just as invisible, and now there is no red
+component sitting on `main` to make the point. Land ACS-200h.

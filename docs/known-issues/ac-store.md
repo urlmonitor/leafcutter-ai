@@ -640,7 +640,8 @@ them — an unstaged fix will appear not to work.
 ### KI-ACS-010 — The store's test vocabulary is Python-only, so 29 web-app ACs are unvalidatable landmines
 
 - **Severity:** high
-- **Status:** open — no AC
+- **Status:** RESOLVED 2026-09-01 — both enums widened; see "Resolution" at the end of
+  this entry. Kept rather than deleted because the coupling it documents is permanent.
 - **Occurrences:** 2
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `config/ac_store_schema.json` → `test_spec[].framework` and
@@ -742,9 +743,16 @@ leave them for whoever touches them next.
 
 **Do both schemas in the one change, and add a test asserting the two vocabularies are
 equal.** They are hand-duplicated today with nothing holding them in step, which is how
-they drift apart again the moment one is edited alone. Because
-`config/ac_store_schema.json` is a package surface, the change needs an AC declaring
-`package_surface: true` or `check-package-surface-declaration` will refuse the commit.
+they drift apart again the moment one is edited alone.
+
+~~Because `config/ac_store_schema.json` is a package surface, the change needs an AC
+declaring `package_surface: true` or `check-package-surface-declaration` will refuse the
+commit.~~ **This was wrong, and struck out rather than deleted so the next person does not
+re-derive it.** `scripts/commit_guardian/_package_surface_registry.py:39-47` enumerates the
+four watched files and `config/ac_store_schema.json` is not among them. The claim was
+plausible enough to have deterred the fix for a week: it named a real hook, a real flag and
+a real refusal, and only the membership was false. Check the registry, not the intuition —
+"is a package surface" is a list, not a judgement.
 
 **Where to build it.** Prefer **AR-100** ("Every part of your codebase has a specialist who
 genuinely owns it") over a standalone `ac_store` patch. AR-100's criteria require that
@@ -758,6 +766,41 @@ it does not.
 locally-clean folder run does not clear these). BO-2900g-3 (the MIGRATE-DO-NOT-DEFER
 constraint this violates). `ACS-200h`, named at `ci.yml:215` as the unbuilt whole-store
 backstop, is the check that would have surfaced this on day one.
+
+**Resolution — 2026-09-01, two commits on `fix/bp-1400-test-spec-angle`.**
+
+Both enums widened in one change, as this entry prescribed: `framework` gains `vitest` and
+`playwright`, `type` gains `component`, in `config/ac_store_schema.json` **and**
+`config/test_requirements.schema.json`. The axis question above was settled the way it
+argued for — `component` is a level, so it joined `type` and not `angle`.
+
+`unit_tests/ac_store/test_test_spec_framework_vocabulary.py::test_framework_enums_agree_across_both_schemas`
+is the requested equality assertion. It is green before and after the change by
+construction: it is a drift guard, not a red-baseline test, and saying so is more useful
+than presenting it as evidence the fix worked.
+
+No record was rewritten, because none needed to be — the whole point was that all 28 were
+already telling the truth. Afterwards the entire 3,256-record store validates: the
+ACS-100i-7 whole-store refusal baseline went from 28 entries to zero, with the guard
+reporting `Added: []` and `Messages changed: []`. Removals only, which is the shape that
+distinguishes a vocabulary repair from validation quietly getting weaker.
+
+Two things this resolution deliberately did **not** do:
+
+- It did not build AR-100. "Where to build it" above is still right that three enum values
+  is a patch and the general rule is the durable fix; the patch was taken because 28
+  records were live landmines. AR-100 remains the real answer and is not closed by this.
+- It did not touch `config/skills_config.schema.json:232`, which carries the same
+  two-value enum on an unrelated field (a Python test-directory map read by `test-writer`).
+  Widening it would have been scope nobody asked for.
+
+**And it made a quieter defect louder, so read `KI-ACS-20260901-1520` next.**
+`generate_ticket_from_ac.py` hard-codes `.py` on every derived test filename regardless of
+declared framework, and `done_proof.py` routes the proof oracle **by file extension** — so
+a `framework: playwright` record generates a Python filename and the wrong runner is asked
+for evidence. Until 2026-09-01 the schema failure was the only thing keeping that family
+visible. Widening makes those records validate and look healthy. It was filed *before* the
+widening landed, on purpose.
 
 ---
 
