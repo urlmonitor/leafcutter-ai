@@ -50,8 +50,16 @@ def _load_module(path: Path, name: str):
 
     Returns:
         The executed module object.
+
+    Raises:
+        ImportError: If no spec (or no loader on the spec) could be resolved
+            for ``path`` -- a None spec/loader means the module could not be
+            found at all, which should fail loudly here rather than surface
+            later as an obscure AttributeError on None.
     """
     spec = ilu.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not resolve a module spec/loader for {path}.")
     module = ilu.module_from_spec(spec)
     sys.modules[name] = module
     spec.loader.exec_module(module)

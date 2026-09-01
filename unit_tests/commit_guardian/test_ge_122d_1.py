@@ -46,7 +46,24 @@ _AUTHORING_TIME_MODULE = _REPO_ROOT / "templates" / "hooks" / "check_identifier_
 
 
 def _load_module(path: Path, name: str):
+    """Load a module fresh from an explicit file path (never from sys.path).
+
+    Args:
+        path: Absolute path to the .py file to load.
+        name: The name to register it under in sys.modules.
+
+    Returns:
+        The executed module object.
+
+    Raises:
+        ImportError: If no spec (or no loader on the spec) could be resolved
+            for ``path`` -- a None spec/loader means the module could not be
+            found at all, which should fail loudly here rather than surface
+            later as an obscure AttributeError on None.
+    """
     spec = _ilu.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not resolve a module spec/loader for {path}.")
     module = _ilu.module_from_spec(spec)
     sys.modules[name] = module
     spec.loader.exec_module(module)
@@ -125,4 +142,10 @@ if __name__ == "__main__":
 #   RED stub. Confirmed via `ls templates/hooks/` that no authoring-time
 #   identifier-uniqueness hook exists; expected to fail on the
 #   assertTrue(_AUTHORING_TIME_MODULE.exists()) assertion.
+# - 2026-09-01 [python-coder/PR #635 CI fix]: `_load_module` narrowed the
+#   `ModuleSpec | None` / `Loader | None` returns from
+#   `spec_from_file_location` with an explicit `ImportError` raise instead of
+#   the implicit None-attribute access mypy flagged (arg-type / union-attr on
+#   spec.loader / module_from_spec). Same defect as test_ge_122d_6.py's
+#   `_load_module`, fixed identically.
 # ====================================================================
