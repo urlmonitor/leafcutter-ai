@@ -48,6 +48,8 @@ DOC_LINKS:
   - docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122d-1.yaml
   - docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122a-1.yaml
   - templates/scripts/commit_guardian/check_identifier_uniqueness.py
+  - templates/hooks/ticket_frontmatter_guard.py
+  - templates/settings.json
 
 DECISION HISTORY:
   - 2026-08-31 [python-coder/GE-122d-1]: Created. Fills the previously-empty
@@ -62,6 +64,23 @@ DECISION HISTORY:
     three stages evaluate identically, not to the authoring hook's full
     Claude Code integration, which is a separate, not-yet-scheduled
     increment.
+  - 2026-09-01 [python-coder/GE-122d-1, reachability fix]: Added ``main()``
+    and registered this hook in ``templates/settings.json``'s PostToolUse
+    Edit|Write entry. The prior increment's module was correct but
+    unreachable: GE-122d-1's own amended_by history (2026-08-31, "manual")
+    records that a previous ``work_status: done`` flip was reverted because
+    this exact module "appears ZERO times in the ten hooks wired in
+    .leafcutter/settings.json" — a module that behaves correctly when
+    called is not evidence anything calls it. ``main()`` reads the
+    PostToolUse stdin payload (fail-open on malformed input, per the
+    sibling hooks in this directory), resolves the project root by walking
+    up from ``Path.cwd()`` for the same marker files
+    ticket_frontmatter_guard.py's ``find_project_root`` uses, and evaluates
+    ``evaluate_identifier_uniqueness`` against it. Fails open (exit 0) on
+    any condition that prevents evaluation itself (no resolvable root, the
+    shared module missing, malformed stdin); blocks (exit 2, per the
+    PostToolUse "exit 2 = block with content" contract this directory's
+    other hooks already use) only on a genuinely contested collection.
   - 2026-08-31 [python-coder/GE-122d-6, bug-fix, PR #635 empirical review
     findings 1/2/9]: Three fixes, each independently reproduced before being
     fixed:
@@ -148,6 +167,13 @@ from pathlib import Path
 _THIS_FILE = Path(__file__).resolve()
 _SHARED_MODULE_NAME = "check_identifier_uniqueness"
 _SHARED_MODULE_RELATIVE_PATH = Path("scripts") / "commit_guardian" / "check_identifier_uniqueness.py"
+
+#: Project-root markers checked in order of preference when this hook is
+#: invoked with no explicit root argument (the real PostToolUse invocation
+#: shape — see templates/settings.json's Edit|Write registration). Mirrors
+#: ticket_frontmatter_guard.py's MARKER_FILES list so both hooks agree on
+#: what "the project root" means.
+_ROOT_MARKER_FILES = [".git", "CLAUDE.md", "pyproject.toml", "requirements-dev.txt"]
 
 
 def _find_shared_module_path() -> Path | None:
@@ -280,3 +306,111 @@ def evaluate_identifier_uniqueness(root_path: str) -> str:
             "unresolvable_namespaces": unresolvable_namespaces,
         }
     )
+
+
+# ---------------------------------------------------------------------------
+# PostToolUse entry point
+# ---------------------------------------------------------------------------
+
+
+def _find_project_root(start: Path) -> Path | None:
+    """Walk up from *start* to the first ancestor holding a project-root marker.
+
+    Uses the same marker list as ticket_frontmatter_guard.py's
+    ``find_project_root`` so every authoring-time hook agrees on what "the
+    project root" means, without a cross-file import (this hook resolves its
+    own dependencies by path-walking, not by package import — see this
+    module's ARCHITECTURE note).
+
+    Args:
+        start: Path to begin the search from.
+
+    Returns:
+        The first ancestor directory containing any marker in
+        ``_ROOT_MARKER_FILES``, or ``None`` when no marker is found within
+        15 levels.
+    """
+    cur = start
+    for _ in range(15):
+        if any((cur / marker).exists() for marker in _ROOT_MARKER_FILES):
+            return cur
+        if cur.parent == cur:
+            return None
+        cur = cur.parent
+    return None
+
+
+def _build_block_message(payload: dict) -> str:
+    """Build the human-readable blocking message for a contested collection.
+
+    Args:
+        payload: The parsed JSON payload returned by
+            ``evaluate_identifier_uniqueness``.
+
+    Returns:
+        Multi-line string injected back to Claude as a blocking feedback entry.
+    """
+    lines = [
+        "NUMBERING GUARANTEE VIOLATION (GE-122) — a number claims more than one thing:",
+        "",
+    ]
+    for number in payload.get("contested_numbers", []):
+        lines.append(f"  {number} is claimed by more than one artifact.")
+    for namespace in payload.get("unresolvable_namespaces", []):
+        lines.append(f"  namespace '{namespace}' could not be resolved at all (root/config missing or unreadable).")
+    lines.append("")
+    lines.append(
+        "This is the same whole-collection rule the commit-time and shared-build "
+        "stages enforce (GE-122d-1) — fixing it now is cheaper than at commit time."
+    )
+    return "\n".join(lines)
+
+
+def main() -> None:
+    """Entry point. Evaluates the numbering rule and emits a PostToolUse decision.
+
+    Reads the PostToolUse payload from stdin (the same shape every other
+    Edit|Write hook in this directory reads — see
+    check_exception_handling_hook.py / ticket_frontmatter_guard.py), then
+    evaluates GE-122's whole-collection rule against the current project
+    root via ``evaluate_identifier_uniqueness``. This is the ONLY authoring
+    stage entry point that Claude Code's PostToolUse mechanism can actually
+    reach (see this AC's amended_by history: a correctly-behaving module
+    that nothing calls is not a working stage).
+
+    Fails open (exits 0, never blocks) on any condition that prevents
+    evaluation itself: malformed stdin, no resolvable project root, or the
+    shared module being unavailable — per CLAUDE.md's hook fail-open
+    carve-out, a hook crash must never block an unrelated Edit/Write. A
+    *contested* collection is not fail-open: it is the exact condition this
+    hook exists to surface, so it blocks (exit 2) with a message naming
+    every contested number and every unresolvable namespace.
+    """
+    try:
+        sys.stdin.read()
+    except (OSError, ValueError):
+        sys.exit(0)
+
+    project_root = _find_project_root(Path.cwd())
+    if project_root is None:
+        sys.exit(0)
+
+    try:
+        payload = json.loads(evaluate_identifier_uniqueness(str(project_root)))
+    except (ModuleNotFoundError, OSError, ValueError) as exc:
+        print(
+            f"[check_identifier_uniqueness_authoring] could not evaluate the numbering "
+            f"rule: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(0)
+
+    if payload.get("passed", True):
+        sys.exit(0)
+
+    print(_build_block_message(payload))
+    sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()

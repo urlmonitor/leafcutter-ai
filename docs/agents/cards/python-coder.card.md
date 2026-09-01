@@ -430,6 +430,7 @@ flowchart TD
 - ACS-100a-1: Required fields reject missing values at commit time
 - ACS-100a-2: ID field enforces PREFIX-NNN regex pattern
 - ACS-100a-3: Status field accepts only the three allowed enum values
+- ACS-100a-3-i: A test_spec framework the project actually ships is accepted, and an unknown one is still refused
 - ACS-100a-4: Additional properties are rejected to prevent schema drift
 - ACS-100a-5: superseded_by field enforces conditional constraint with status
 - ACS-100a-6: Dangling depends_on and expects_from references blocked at commit time
@@ -1932,6 +1933,13 @@ flowchart TD
 - TKT-500g-4-i: An empty demand is not a way to say "no proof needed" — it is refused by name
 - TKT-500g-5: The readiness report never calls a demanded proof unnecessary
 - TKT-600a-1: Generated files_touched excludes prose-illustration paths; depends_on is guard-valid
+- TKT-600b-1: The generated phase record names exactly the phases the drive will dispatch for that ticket's location
+- TKT-600b-1-i: Generation refuses rather than guesses when the ticket's final location is not yet settled
+- TKT-600b-1-ii: A phase the drive will not run is recorded as excluded, never left out of the record
+- TKT-600b-2: An excluded phase is recorded as excluded, never as signed off, and carries no sign-off row
+- TKT-600b-3: A ticket generated outside an epic keeps its own pull-request phase and cannot finish without it
+- TKT-600b-4: The drive never edits a ticket's phase record to make it agree with the drive's own behaviour
+- TKT-600b-4-i: A phase that ran records its own outcome; that is the only write the drive makes to the phase record
 - TQ-100a-1: The suite runs every loadable test even when one file fails to load
 - TQ-100a-1-i: A test file importing a nonexistent module does not stop the other files
 - TQ-100a-1-ii: A test file that raises at module scope does not stop the other files

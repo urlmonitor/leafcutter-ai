@@ -291,6 +291,41 @@ jobs:
           pre-commit run check-ac-circular-deps
           pre-commit run check-ac-pattern-refs
 
+  numbering-guarantee-valid:
+    name: Numbering guarantee valid (GE-122d-1)
+    runs-on: ubuntu-latest
+    # Shared-build stage for GE-122's whole-collection numbering rule
+    # (GE-122d-1). This is a SEPARATE job from ac-store-valid on purpose:
+    # test_acs200i_ac_gate_rule_parity.py asserts ac-store-valid runs ONLY
+    # hooks scoped to the docs/acceptance-criteria/*.yaml files: pattern in
+    # the manifest, and check-identifier-uniqueness is not one of them (it
+    # is always_run / pass_filenames: false, scoped to the whole collection,
+    # not to AC YAML files) — folding it into that job would break that
+    # parity guard.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — deploy .leafcutter so the guardian hooks resolve
+        run: python scripts/build.py --target-dir .
+
+      - name: Check numbering uniqueness (GE-122d-1 shared-build stage)
+        # Run through pre-commit rather than calling the script directly, so
+        # the shared-build and commit-time rule sets are literally the same
+        # config and cannot drift apart (same technique the ac-store-valid
+        # job already uses for the AC guardrails, per this AC's
+        # it_requirements). The hook is `always_run: true` /
+        # `pass_filenames: false`, so it evaluates the whole collection
+        # regardless of what is staged — no git-reset staging trick needed.
+        run: pre-commit run check-identifier-uniqueness
+
   changelog-presence:
     name: "Changelog entry present"
     runs-on: ubuntu-latest
