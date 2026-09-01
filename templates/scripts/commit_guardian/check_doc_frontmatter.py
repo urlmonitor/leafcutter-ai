@@ -32,6 +32,21 @@ Ticket checks:
        sibling ``done/`` subfolder, or — when the ticket itself lives in
        ``done/`` — to the parent of ``done/``).
 
+Merge scoping (AC GE-120e-1, superseding GE-120e-3-ii):
+    When ``MERGE_HEAD`` is present, ``get_staged_md_files`` narrows its result
+    to ``.md`` paths differing from BOTH merge parents — i.e. content the
+    merge author's own resolution introduced or changed — via the SHARED
+    ``_authored_change.get_authored_change()`` derivation, the same one
+    ``check_contract_shrinking.py`` consumes, so both checks answer "what did
+    the author change" identically. A merge stages the entire incoming
+    branch, so an unscoped ``git diff --cached`` also names every ``.md``
+    file the OTHER side ever touched, which the merge author neither wrote
+    nor can fix. Outside a merge, the full staged set is used unchanged — the
+    stricter, pre-existing behaviour. When the derivation cannot be computed
+    at all (e.g. a git failure resolving the merge-parent side),
+    ``get_staged_md_files`` returns ``None`` — a could-not-check outcome —
+    rather than falling back to the unscoped staged set.
+
 Exit Codes:
     0 - All files pass validation (warnings are printed but do not block)
     1 - One or more files have blocking violations
@@ -107,6 +122,35 @@ from frontmatter_validators import (
     validate_doc_file,
     validate_ticket_file,
 )
+
+try:
+    from check_outcome import (  # type: ignore[import]
+        OUTCOME_COULD_NOT_CHECK,
+        OUTCOME_NOTHING_TO_INSPECT,
+        emit_result,
+    )
+except ImportError:
+    # check_outcome.py is deployed alongside this file in every real layout
+    # (build.py copies the whole templates/scripts/commit_guardian/ tree), so
+    # this fallback exists only for a working copy that exposes this check
+    # script in isolation (e.g. a test fixture) -- same pattern as
+    # check_ac_parent_covered_by.py / check_contract_shrinking.py. The values
+    # here MUST stay in sync with check_outcome.py.
+    OUTCOME_NOTHING_TO_INSPECT = "nothing_to_inspect"
+    OUTCOME_COULD_NOT_CHECK = "could_not_check"
+
+try:
+    from _authored_change import get_authored_change  # type: ignore[import]
+except ImportError:
+    # _authored_change.py is deployed alongside this file in every real
+    # layout (build.py copies the whole templates/scripts/commit_guardian/
+    # tree). This fallback exists only for a working copy that exposes this
+    # check script in isolation (e.g. a test fixture that predates GE-120e-1).
+    get_authored_change = None  # type: ignore[assignment]
+
+    def emit_result(outcome: str) -> None:
+        """Fallback RESULT-line emitter used when check_outcome is absent."""
+        print(f"RESULT: {outcome}", file=sys.stdout)
 
 # ---------------------------------------------------------------------------
 # File processing
@@ -276,32 +320,76 @@ def is_terminal_or_done_subfolder(filepath: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def get_staged_md_files() -> dict[str, str]:
-    """Get all staged .md files with their git status.
+def _get_shared_authored_change():
+    """Call the shared ``get_authored_change()``, degrading a broken import to ``None``.
+
+    Mirrors ``check_contract_shrinking.py``'s helper of the same name: the
+    shared module is a dependency this check does not control, and GE-120e-1's
+    AC-5 requires that if it is broken (raises unexpectedly, as opposed to the
+    ordinary git-failure path it already reports via ``could_not_check``),
+    every consumer degrades to could-not-check identically rather than
+    crashing the whole pre-commit process or silently passing on bad data.
 
     Returns:
-        dict[str, str]: Mapping of filepath to git status code.
+        The ``AuthoredChange``, or ``None`` (shared module unavailable, or it
+        raised unexpectedly — an ordinary derivation failure is instead
+        reported IN BAND via the returned ``AuthoredChange.could_not_check``).
     """
+    if get_authored_change is None:
+        return None
     try:
-        result = subprocess.run(
-            ["git", "diff", "--cached", "--name-status"],
-            capture_output=True, text=True, check=True,
-        )
-    except subprocess.CalledProcessError:
-        return {}
+        return get_authored_change()
+    except Exception as exc:  # noqa: BLE001 - shared dependency may raise unpredictably; must degrade to could-not-check, never crash or widen (GE-120e-1 AC-5).
+        print(f"WARNING: shared change-set derivation raised: {exc}", file=sys.stderr)
+        return None
 
-    staged = {}
-    for line in result.stdout.strip().split("\n"):
-        if not line:
-            continue
-        parts = line.split("\t")
-        if len(parts) >= 2:
-            status = parts[0]
-            filepath = parts[-1]
-            if filepath.lower().endswith(".md") and not status.startswith("D"):
-                staged[filepath] = status
 
-    return staged
+def get_staged_md_files() -> dict[str, str] | None:
+    """Get all staged .md files with their git status.
+
+    During a merge (``MERGE_HEAD`` present), the result is narrowed — via the
+    shared ``_authored_change.get_authored_change()`` derivation (GE-120e-1,
+    see the module docstring's "Merge scoping" section) — to paths not
+    carried in verbatim from the incoming branch. Outside a merge, every
+    staged ``.md`` file is returned unchanged.
+
+    Returns:
+        dict[str, str] | None: Mapping of filepath to git status code, or
+        ``None`` when the shared derivation could not be computed at all —
+        a could-not-check outcome the caller must NOT treat as "nothing
+        staged" (which would silently skip validation) nor widen to the
+        unscoped staged set.
+    """
+    if get_authored_change is None:
+        # Shared module unavailable in this working copy (isolated test
+        # fixture predating GE-120e-1) -- fall back to a plain, unscoped
+        # git diff --cached --name-status so this file keeps working there.
+        try:
+            result = subprocess.run(
+                ["git", "diff", "--cached", "--name-status"],
+                capture_output=True, text=True, check=True,
+            )
+        except (OSError, subprocess.CalledProcessError) as exc:
+            print(f"WARNING: git diff --cached --name-status failed: {exc}", file=sys.stderr)
+            return None
+        name_status = {}
+        for line in result.stdout.strip().split("\n"):
+            if not line:
+                continue
+            parts = line.split("\t")
+            if len(parts) >= 2:
+                name_status[parts[-1]] = parts[0]
+    else:
+        authored = _get_shared_authored_change()
+        if authored is None or authored.could_not_check:
+            return None
+        name_status = dict(authored.name_status)
+
+    return {
+        filepath: status
+        for filepath, status in name_status.items()
+        if filepath.lower().endswith(".md") and not status.startswith("D")
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -407,7 +495,7 @@ def check_roadmap_staleness(project_root: Path) -> None:
         )
 
 
-def get_files_to_check(args: argparse.Namespace, project_root: Path) -> dict[str, str]:
+def get_files_to_check(args: argparse.Namespace, project_root: Path) -> dict[str, str] | None:
     """Determine which files to check based on CLI arguments.
 
     Args:
@@ -415,7 +503,11 @@ def get_files_to_check(args: argparse.Namespace, project_root: Path) -> dict[str
         project_root: Absolute path to the project root.
 
     Returns:
-        dict[str, str]: Mapping of relative file paths to their git status.
+        dict[str, str] | None: Mapping of relative file paths to their git
+        status, or ``None`` — only possible on the default (no ``--file`` /
+        ``--all`` / positional filenames) path — when
+        ``get_staged_md_files()`` could not compute the authored change set
+        at all (could-not-check; see that function's docstring).
     """
     if args.file:
         try:
@@ -446,6 +538,40 @@ def get_files_to_check(args: argparse.Namespace, project_root: Path) -> dict[str
         return files
 
     return get_staged_md_files()
+
+
+def _report_if_nothing_to_inspect(args: argparse.Namespace) -> None:
+    """Emit GE-120e-1-i's outcome when the merge author authored no .md content.
+
+    GE-120e-1-i: an empty authored (merge-scoped) change set is a value to
+    report, never a signal to widen the scan back to the whole staged tree —
+    that anti-pattern is already avoided by construction in
+    ``get_staged_md_files`` (an empty scoped intersection from the shared
+    ``_authored_change.get_authored_change()`` derivation narrows the staged
+    set to ``{}``, not a fallback to the unscoped diff). This function only
+    decides whether to ANNOUNCE that empty state on the shared,
+    machine-readable RESULT line, distinguishing "nothing of the author's to
+    inspect" from GE-120a-1's OUTCOME_COULD_NOT_CHECK ("a check that never
+    looked"). Only meaningful for the default (no ``--file`` / ``--all`` /
+    positional filenames) invocation, where the staged set actually goes
+    through merge scoping; a manual file selection is never "merge-derived",
+    so it is skipped here. Called only from the non-blocking (pass) path in
+    ``main()`` — empty is a PASS, not a skip; a could-not-check outcome is
+    handled separately in ``main()`` before this function is ever reached.
+
+    Args:
+        args: Parsed command-line arguments.
+    """
+    if args.file or args.all or args.filenames:
+        return
+    authored = _get_shared_authored_change()
+    if (
+        authored is not None
+        and not authored.could_not_check
+        and len(authored.states) > 1
+        and not authored.paths
+    ):
+        emit_result(OUTCOME_NOTHING_TO_INSPECT)
 
 
 def print_results(all_errors: list[str], all_warnings: list[str], passed_count: int) -> int:
@@ -538,7 +664,22 @@ def main() -> int:
     valid_components = load_components_registry(project_root)
     files_to_check = get_files_to_check(args, project_root)
 
+    if files_to_check is None:
+        # GE-120e-1: the shared change-set derivation could not be computed
+        # (e.g. a git failure resolving the merge-parent side). Report
+        # could-not-check and skip validation for THIS commit rather than
+        # widening the scan to the unscoped staged set.
+        print(
+            "WARNING: could not derive the authored (merge-scoped) change "
+            "set for this commit — skipping frontmatter validation rather "
+            "than falling back to the whole staged set.",
+            file=sys.stderr,
+        )
+        emit_result(OUTCOME_COULD_NOT_CHECK)
+        return 0
+
     if not files_to_check:
+        _report_if_nothing_to_inspect(args)
         return 0
 
     all_errors: list[str] = []
@@ -573,6 +714,41 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-31 [python-coder/GE-120e-1, pr-reviewer remediation]: The shared
+  module imported below was renamed from _resolve_change_set.py/
+  get_change_set() to _authored_change.py/get_authored_change(), to honour
+  the contract unit_tests/portability/test_ge_120e_4_i.py (ticket 36) had
+  already established for it. get_staged_md_files() and
+  _report_if_nothing_to_inspect() were updated to read the renamed module's
+  in-band could_not_check/states fields instead of a None sentinel/head_ref.
+  (#EPIC-TrustThatAGreenCheckActuallyChecked/28)
+- 2026-08-31 [python-coder/GE-120e-1]: get_staged_md_files() now derives its
+  scoped set from the SHARED templates/scripts/commit_guardian/
+  _authored_change.get_authored_change() (also consumed by
+  check_contract_shrinking.py) instead of the private
+  frontmatter_validators.merge_scoped_md_paths(), which is removed. It
+  returns None on a could-not-check outcome instead of falling back to the
+  unscoped staged set; main() and _report_if_nothing_to_inspect() were
+  updated to handle that None distinctly from "nothing staged".
+  (#EPIC-TrustThatAGreenCheckActuallyChecked/28)
+- 2026-08-25 [python-coder/GE-120e-1-i]: Added _report_if_nothing_to_inspect(),
+  called from main()'s empty-files_to_check pass path. Emits the shared
+  check_outcome.OUTCOME_NOTHING_TO_INSPECT RESULT line when
+  frontmatter_validators.merge_scoped_md_paths() finds the merge author's
+  own resolution touched no .md content -- an explicit, non-widening empty
+  result, distinguishable from GE-120a-1's OUTCOME_COULD_NOT_CHECK. No
+  change to the pass/block decision itself (the merge-scoped narrowing that
+  makes AC-1/AC-2 true here was already in place via GE-120e-3-ii, below).
+  (#EPIC-TrustThatAGreenCheckActuallyChecked/29)
+- 2026-08-25 [python-coder/GE-120e-3-ii]: get_staged_md_files() now applies
+  frontmatter_validators.merge_scoped_md_paths() to narrow the staged .md
+  set to paths differing from BOTH merge parents whenever MERGE_HEAD is
+  present, mirroring check_contract_shrinking.py's _merge_scoped_paths
+  idiom. Fixes two false-positive shapes: naming carried-in .md content
+  the merge author never touched, and blocking a merge whose invalid
+  frontmatter arrived unchanged from a parent with no author resolution.
+  The new helpers live in frontmatter_validators.py, not here, to keep
+  this file under the 400-line limit. (AC GE-120e-3-ii)
 - 2026-05-19 11:30 [EPIC-RoadmapStewardship/03]: Added roadmap_staleness check. (#EPIC-RoadmapStewardship/03)
   Adds check_roadmap_staleness() and _load_roadmap_staleness_threshold() to
   fire a warn-only stderr warning when docs/roadmap.json.last_updated exceeds

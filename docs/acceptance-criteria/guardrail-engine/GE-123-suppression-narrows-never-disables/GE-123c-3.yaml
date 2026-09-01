@@ -56,6 +56,10 @@ depends_on:
   - GE-123c-1
   - GE-123c-2
 doc_links:
+  - path: templates/skills/security-scanner/scripts/scan_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. _load_allowlist in this module is where an allowlist line is parsed and where the existing warn-and-skip diagnostic for outright-malformed entries is already emitted on the error stream (the GE-113c-3-v contract). Extending that one convention to the unmatchable class is an edit here, and the same edit is what the sibling criteria GE-123c-1 and GE-123c-2 name in their own requirements. The pre-commit check templates/scripts/commit_guardian/check_secrets.py is the delivery path this criterion verifies through, not a second edit surface: it consumes the findings stream and needs no change for the diagnostic to reach the developer. Canonical copy per ADR-001 — the deployed copy the hook imports is a build.py output."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -138,6 +142,22 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added one doc_link,
+    templates/skills/security-scanner/scripts/scan_secrets.py with relationship modifies.
+    Nothing else changed; all pre-existing doc_links kept at their original relationships,
+    including the ADR-001 and test-angles entries at describes. WHY: this record declared
+    no edit surface, leaving the ticket generator to harvest paths out of prose
+    (KI-ACD-023). The warning this criterion is about is emitted from _load_allowlist in
+    scan_secrets.py, which already carries the GE-113c-3-v warn-and-skip convention on the
+    error stream for outright-malformed entries; extending that one convention to the
+    unmatchable class is an edit there, and the sibling criteria GE-123c-1 and GE-123c-2
+    name the same file in their own requirements. ONE SURFACE, NOT TWO, and the reasoning
+    is worth recording because this record talks about the pre-commit check constantly:
+    templates/scripts/commit_guardian/check_secrets.py is the DELIVERY PATH this criterion
+    verifies through, not a second edit surface. It consumes the findings stream and needs
+    no change for a diagnostic already written to stderr to reach the developer. The
+    it_requirement about the hook importing the deployed copy is a parity instruction
+    (edit templates/, run build.py), not a second file to edit.'
 superseded_by: null
 covered_by:
   - GE-123c-3-i
