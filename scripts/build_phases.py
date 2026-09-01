@@ -1927,6 +1927,41 @@ def build_ticket_lifecycle(target_root: Path, config: dict[str, Any],
     return written
 
 
+# ---------------------------------------------------------------------------
+# GE-122d-1: the shared numbering-rule evaluation module also deploys to
+# hooks/ (authoring-time), not only scripts/commit_guardian/ (commit-time and
+# shared-build).
+# ---------------------------------------------------------------------------
+# ``check_identifier_uniqueness.py`` and its sibling underscore-prefixed
+# modules are the single evaluation GE-122d-1 requires to be run IDENTICALLY
+# at all three commit-lifecycle stages. The commit-time and shared-build
+# stages already receive them via this function's own whole-directory copy
+# below; the authoring-time stage runs from a DIFFERENT deployed layout
+# (``<target_root>/hooks/``, populated by ``build_hooks`` from
+# ``templates/hooks/`` only) that this module set never reached before this
+# ticket. Without this second deploy destination the authoring-time stage
+# silently has nothing to run at all -- a three-way disagreement in exactly
+# the shape GE-122d-1 forbids, and invisible to source-tree unit tests that
+# import one canonical file directly rather than exercising the deployed
+# layout (see this ticket's Implementation Notes, "THE HARD PART IS
+# DEPLOY-PATH, NOT DESIGN").
+#
+# Named as a module-level constant (not inlined in the loop below) per
+# architect-review's instruction to keep this deploy entry "next to the
+# existing commit_guardian file list rather than inventing a second copy
+# step, so a future reviewer sees one deploy-manifest edit covering both
+# destinations, not two that can drift." Only the module and its direct/
+# transitive underscore-prefixed dependencies are listed here -- verified by
+# reading each file's own imports, not guessed.
+SHARED_NUMBERING_RULE_HOOK_FILES: tuple[str, ...] = (
+    "check_identifier_uniqueness.py",
+    "_commit_disposition.py",
+    "_uniqueness_scanners.py",
+    "_uniqueness_types.py",
+    "_work_items_scanner.py",
+)
+
+
 def build_commit_guardian(target_root: Path, config: dict[str, Any],
                           dry_run: bool, force: bool) -> int:
     """Copy commit guardian files to the consumer directory structure.
@@ -1945,6 +1980,15 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
       "guardian installed" indicator for ``check_guardian_scripts_complete()``
       (BO-1700e-5 — no-config detection).
 
+    GE-122d-1: files named in ``SHARED_NUMBERING_RULE_HOOK_FILES`` are
+    ADDITIONALLY deployed verbatim (same injected content) to
+    ``<target_root>/hooks/`` — the authoring-time stage's deploy destination
+    — so the single numbering-rule evaluation is importable identically from
+    both deploy layouts. This only fires when the "claude" platform is
+    active (the same platform ``build_hooks`` gates its own ``hooks/``
+    output on), so a consumer that has disabled the Claude platform does not
+    gain a ``hooks/`` directory it never asked for.
+
     Args:
         target_root: Absolute path to the target project root directory.
         config: Merged config dictionary used for placeholder injection.
@@ -1953,6 +1997,18 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
 
     Returns:
         Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-09-01 10:44 [python-coder/GE-122d-1]: Added the
+    #   SHARED_NUMBERING_RULE_HOOK_FILES deploy step so check_identifier_uniqueness.py
+    #   and its underscore-prefixed siblings (the GE-122a-1 evaluation module) also
+    #   land at <target_root>/hooks/ — the authoring-time stage's deploy
+    #   destination, which build_hooks alone never populated because it only
+    #   copies files that live directly under templates/hooks/. Verified against
+    #   a real `python scripts/build.py` run: the module deploys to both
+    #   .leafcutter/hooks/ and (via the pre-existing shim_map entry) .claude/hooks/,
+    #   and runs there with no ModuleNotFoundError.
+    #   (#EPIC-TheNumberingGuaranteeHoldsAtEveryStage/01)
     """
     cg_dir = TEMPLATES_DIR / "scripts" / "commit_guardian"
     if not cg_dir.exists():
@@ -1960,6 +2016,16 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
 
     output_dir = target_root / "scripts" / "commit_guardian"
     written = 0
+
+    platforms = config.get("platforms", {
+        "claude": True,
+        "antigravity": True,
+        "cursor": False,
+        "copilot": False,
+        "cline": False,
+    })
+    claude_hooks_active = platforms.get("claude", True) if isinstance(platforms, dict) else True
+    hooks_output_dir = target_root / "hooks"
 
     for template_file in sorted(cg_dir.rglob("*")):
         if not template_file.is_file():
@@ -1973,6 +2039,17 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
                 written += 1
                 if not dry_run:
                     print(f"  commit_guardian/{rel}")
+            if (
+                claude_hooks_active
+                and template_file.suffix == ".py"
+                and rel.parent == Path(".")
+                and template_file.name in SHARED_NUMBERING_RULE_HOOK_FILES
+            ):
+                hooks_output_path = hooks_output_dir / template_file.name
+                if _write(hooks_output_path, text, dry_run, force):
+                    written += 1
+                    if not dry_run:
+                        print(f"  hooks/{template_file.name}")
         else:
             # SHA-256 compare-before-copy skips identical binary files.
             if not _should_overwrite(output_path, force):
