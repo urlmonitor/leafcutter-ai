@@ -470,6 +470,119 @@ by the mechanical reader in BP-1100g-5-i, not by this skill.
 
 ---
 
+## §2b.3 Reachability Entry-Point Answer (test-writer only, BP-1100g-2)
+
+`test-writer`'s reachability angle (see the Test Angles taught set in
+`templates/agents/test-writer.md`) requires a reachability test to invoke the
+real production entry point. For the roughly 80% of work that arrives with no
+authored plan, nothing upstream can name that entry point — the request
+itself says so, via BO-2900g-4's single unresolved sentinel. Before
+BP-1100g-2 that judgement was made silently, once per ticket, with no way for
+a later reader to see which entry point (if any) the writer actually
+resolved, or whether it even looked. This section is the record shape that
+closes that gap — the sibling of `cross_layer_seam_answer` (§2b.2) for the
+reachability judgement rather than the seam judgement.
+
+### Key
+
+The fixed key token is `reachability_entry_point_answer`. It is declared
+**once, here**, and used **verbatim** — identical spelling, same place in the
+manifest — in `templates/agents/test-writer.md`. Do not introduce a second
+spelling anywhere; a fixed token is what lets BP-1100g-5-i's mechanical reader
+(built for `cross_layer_seam_answer`) be extended to this key without
+inventing a second convention.
+
+### Scope — per work item, never per run
+
+Exactly like `cross_layer_seam_answer`, `reachability_entry_point_answer`
+lives inside the `completion_manifest:` block of a single sign-off comment,
+already scoped to one ticket. A run that hands off several tickets produces
+several sign-off comments, each with its own `completion_manifest:` — and
+each one's `reachability_entry_point_answer` must be freshly derived from
+THAT ticket's own work. Never carry one ticket's resolution forward into a
+sibling ticket's manifest in the same run.
+
+### Two conforming shapes
+
+**(a) Resolved** — a real entry point was either already named in the
+request, or was resolved by `test-writer` using the decision procedure in
+`templates/agents/test-writer.md`:
+
+```yaml
+completion_manifest:
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "<the real production entry point — CLI command, the hook's own runner invocation, slash command, workflow dispatch, or main() invoked with real argv>"
+```
+
+`entry_point` is required and must name a real, checkable invocation surface
+— not restate the fact of resolution ("resolved: yes" alone is not a
+conforming answer, mirroring `cross_layer_seam_answer`'s own rule against a
+bare "seam covered: yes"). When the request already named an entry point,
+`entry_point` MUST be that value, copied through **unchanged** — writing a
+different value, or the unresolved sentinel, in its place is non-conforming
+(see "answered-over-a-named-request" below).
+
+**(b) Not found** — the decision procedure's search genuinely found no entry
+point:
+
+```yaml
+completion_manifest:
+  reachability_entry_point_answer:
+    result: not_found
+    reason: "<non-empty — what was checked and why nothing qualified>"
+    remediation: "<non-empty — the suggested next step>"
+```
+
+This uses the same three sub-keys as the §2b Bare-False Rule's nested shape
+(`result`, `reason`, `remediation`) — a nested object, never a bare scalar —
+but it deliberately spells the outcome `not_found` rather than the literal
+`false`, for the same reason `cross_layer_seam_answer` spells its negative
+`not_applicable` rather than `false`: a reasoned "no way in, and here is what
+I looked for" is a first-class conforming answer, not a failed checklist
+item, and the Bare-False Rule's automatic supervisor retry exists to correct
+broken checklists, not honest negatives. A writer forced to name an entry
+point when none exists will invent one; recording `not_found` with a genuine
+`reason` is the record this whole gap needs — never pressure a fabricated
+`resolved` value out of an agent to avoid writing `not_found`.
+
+### Non-conforming states (the reader reports each by name)
+
+- **absent** — the sign-off's `completion_manifest:` has no
+  `reachability_entry_point_answer` key at all, on a ticket where a
+  reachability-angle test was written.
+- **reasonless** — `result: not_found` is present but `reason` is missing or
+  an empty string. Because this key is always a nested object (never the
+  bare scalar `false`), a reasonless `not_found` is not intercepted by the
+  Bare-False Rule and lands on disk exactly as written — it must remain
+  physically writable so the mechanical reader has a genuine reasonless
+  record to detect, even though it is still non-conforming.
+- **answered-more-than-once** — the same ticket's sign-off carries more than
+  one `reachability_entry_point_answer` entry (e.g. one written from a
+  conditional branch and a second left over from an unconditional line after
+  the same if/else). Emit from exactly one branch of the resolution
+  (already-named copy-through, resolved, or not-found), never more than one —
+  the same BO-1000b-1-i double-recording trap named in
+  `cross_layer_seam_answer`'s own non-conforming states.
+- **answered-over-a-named-request** — the request already named a real entry
+  point (a non-sentinel value on the request's entry-point field), but the
+  recorded `entry_point` differs from it, or the record uses the unresolved
+  sentinel instead. When an entry point is already named, the writer's job is
+  to copy it through, not to re-judge or discard it.
+
+### This is a declaration, not evidence
+
+`reachability_entry_point_answer` is a statement `test-writer` writes about
+its own resolution. It is not evidence that the named test actually entered
+that entry point while it ran, it feeds no done/pass/eligibility decision
+anywhere in the pipeline, and nothing in this skill (or elsewhere in this
+AC's boundary) inspects the test to verify the declaration is true. Whether a
+test genuinely went in through the way in is decided exclusively by watching
+the run — that is BO-2900a's execution observer (BO-2900a-2), not this
+record.
+
+---
+
 ## §2c AC Coverage Sign-Off (runs AFTER work, BEFORE phase sign-off checkbox)
 
 ### Overview
