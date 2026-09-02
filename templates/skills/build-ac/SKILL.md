@@ -51,6 +51,24 @@ is absent or empty.
 pre-ACD-1200 build-ac behaviour. No mode message is printed. The agent
 proceeds directly to `generate_ticket_from_ac.py`.
 
+**One required argument the agent must supply (TKT-600b-1-i):
+`--location-kind`.** The generator will not guess whether a ticket is
+standalone or an epic member, because that decides whether the
+`pull-request` phase is dispatched for it — and guessing wrong is the defect
+TKT-600b exists to remove. It refuses when neither `--location-kind` nor
+`--resolved-destination` is given.
+
+The leaf path builds a ticket to be driven on its own, so it passes
+`--location-kind standalone`. Mode B (`goal_to_epic.py`) passes
+`epic_member` for every leaf it emits, since those are assembled into an epic
+folder. `--tickets-root` is a staging root and is explicitly not accepted as a
+substitute for either.
+
+This is a call the caller makes, never a default the script applies: with no
+caller supplying a destination today, defaulting to `standalone` would mark
+every epic member as needing its own PR — silently reinstating the original
+bug.
+
 ### Output contract
 
 ```

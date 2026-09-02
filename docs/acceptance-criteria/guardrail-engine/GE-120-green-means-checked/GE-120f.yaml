@@ -1,0 +1,228 @@
+id: GE-120f
+title: "A guard that has never said no is not counted as protection"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Protection counts only once it has been seen to refuse something.
+
+  Every protective check earns its place by being handed something it must
+  reject and being seen to reject it. A check that has never refused anything
+  is named as unproven rather than counted among the things keeping your work
+  safe, so one that would wave everything through is visible instead of quietly
+  reassuring.
+depends_on:
+  - GE-120
+doc_links:
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE VOCABULARY THIS L1 IS THE BENEFIT STATEMENT FOR. The repository already wrote
+      the rule down — "The known-bad input that MUST be rejected. A check without one can
+      pass on dead code" — and already models the escape hatch (not_applicable + reason)
+      and the four-value state (passing / failing / blocked / unverified). It has ZERO code
+      readers, which is itself an instance of the defect. Reuse this vocabulary; never mint
+      a second one beside it.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The catalogue this shape is MISSING from. M5 is a validator that validates nothing on
+      a bad argument shape; M8 is a proxy reported as a verdict. Neither covers a guard that
+      answers correctly on every input it is ever given because its refusal branch is
+      unreachable. A new entry is recommended.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: templates/hooks/readme_read_guard.py
+    relationship: related
+    status: exists
+    relevance: >-
+      The worked example, re-derived with the guard's own gating helper on 2026-09-01:
+      registered, correctly wired, running on every edit, and unable to refuse anything.
+      Three of its four gated prefixes resolve out from under themselves through symlinks
+      and never match; the fourth names a directory this repository does not have. Nothing
+      in the system today can tell it apart from a guard that refuses correctly.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING, NOT A DUPLICATE AND NOT TO BE RE-AUTHORED HERE. GE-126b-5 and
+      GE-126b-5-i (with GE-126c-5, GE-126c-5-i and BP-100n-5, BP-100n-5-i) are the first
+      four L2/L3 records of this same regime, authored 2026-09-01 and landing in the same
+      commit as this L1. They carry the per-check report leg on the interrogation surface.
+      This L1 is the home for the REMAINDER of the regime. See the notes for the split and
+      why it is a capacity artifact rather than a design decision.
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      BOUNDARY — ENUMERATION. BP-100n-4 (approved) owns which guards are in the set at all,
+      taken from the scripts on disk rather than from the registry. It does not ask whether
+      a guard in the set can refuse.
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      BOUNDARY — REACHABILITY. BP-100k-4 owns a registered commit gate whose activation
+      condition can never match. Closest neighbour of the four, and still insufficient:
+      its subject is commit gates and its method is reasoning about the trigger, whereas
+      the worked example is an edit-time guard whose trigger reads as matchable and only
+      fails once paths are resolved. Neither closes the other.
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      BOUNDARY — FALSIFIABILITY OF TESTS. TQ-500 asks whether a passing test would have
+      caught the problem. This L1 asks the same question of the GUARDS. Same shape, two
+      populations; neither closes the other.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The harness that executes the deployed checks out of process from a real separate
+      working copy. Feeding a known-bad input through a real entry point needs exactly
+      that machinery — extend it rather than growing a second one.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120f-1
+  - GE-120f-2
+  - GE-120f-3
+  - GE-120f-4
+  - GE-120f-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHAT THIS L1 ADDS THAT ITS FOUR SIBLINGS DO NOT. GE-120a is about a check that
+  KNOWS it could not run and must say so. GE-120b is about the same check reaching
+  the same verdict from any working copy. GE-120c is about proving that sameness by
+  running the real checks. GE-120e is about a block being attributable to something
+  you actually did. Every one of them presumes a check whose refusal is reachable and
+  asks whether its verdict is CORRECT. The shape here is the one none of them can
+  see: a check that is right on every input it is ever given, because it has no
+  reachable refusal at all. It never reports a degraded outcome, because it never
+  degrades. It reaches the same verdict everywhere, because it reaches the same
+  verdict on everything.
+
+  PARENT CHOICE — GE-120, deliberately, over GE-126.
+    GE-120's L0 sentence is "Trust that a green check actually checked something",
+    and its criteria draw the line at green meaning it was checked rather than that
+    it could not run. A guard with an unreachable refusal is that failure in its
+    purest form: it is green on every input including the ones it exists to stop.
+    GE-126's L0 is the INTERROGATION surface — what you get back when you hand a
+    check your own file, run a copy of it, or follow the procedure for adding one.
+    That is a narrower reader. The worked example fails during ordinary editing, with
+    nobody interrogating anything, so filing it under the interrogation goal would put
+    the general condition beneath a specific way of noticing it. GE-120 is the right
+    parent and this record does not restate any of GE-120a..e.
+
+  WHY A NEW L1 AND NOT MORE L2s — CAPACITY, MEASURED, NOT PREFERENCE.
+    As of 2026-09-01 every L1 under both GE-120 and GE-126 is at the five-L2 cap
+    (GE-120c already carries a live child_limit_override: 6 and sits at 6). Both L0s
+    hold five L1s against a cap of seven, so the two free slots at L1 are the only
+    room in this family. The alternative — a sixth child under an existing L1 — needs
+    a child_limit_override, the same temporary waiver this store keeps having to
+    discharge; BP-100k's was DISCHARGED rather than raised in the 2026-08-26 split, so
+    do not read its history as headroom.
+
+  THE FREEZE ON THIS FOLDER HAS EXPIRED — VERIFIED, NOT ASSUMED.
+    GE-126's L0 notes (written 2026-08-26) state that
+    unit_tests/commit_guardian/test_ge_122e_1.py asserts
+    `git diff origin/main -- <this folder>` is EMPTY, so neither a new child file nor
+    an appended covered_by entry is possible here. That claim is STALE and was already
+    stale when it was written. The module was amended 2026-08-18 to an id-stability
+    set-difference: it asserts every id the folder claimed at the baseline is still
+    claimed, and every yaml under the folder declares an id beginning GE-120. Its own
+    docstring says the check "remains one-directional on purpose: ADDING a record to
+    the tree is ordinary growth ... and must not fail", and records that the freeze,
+    not the merits, is what closed this parent to the GE-118c record a day earlier.
+    Both assertions were re-read in full before this file was written, and this record
+    satisfies both. Standing rule from this component holds and is reaffirmed: read the
+    guard test over a candidate parent, never a note describing it.
+
+  BOUNDARIES FOR THE BA — four adjacent owners, none of them sufficient, and the
+  worked example is the proof of that.
+    - BP-100n-4 (approved) owns ENUMERATION: which guards are in the set at all.
+    - BP-100k-4 owns REACHABILITY for a REGISTERED gate whose trigger can never match.
+    - TQ-500 owns falsifiability of TESTS. This L1 owns falsifiability of GUARDS.
+    - GE-120c-6 owns a deployed guard that nothing invokes.
+    readme_read_guard is registered, enumerated, invoked, reachable and running on
+    every edit — and unable to refuse. It passes all four and is the thing this L1
+    exists to catch. Do not let decomposition close any of the four as a duplicate of
+    this one, and do not let this one be closed as a duplicate of them.
+
+  THE REGIME IS SPLIT ACROSS TWO GOALS, AND THE SPLIT IS A CAPACITY ARTIFACT.
+    Four records of this regime were authored on 2026-09-01 under GE-126b and GE-126c
+    (GE-126b-5, GE-126b-5-i, GE-126c-5, GE-126c-5-i) plus two under BP-100n. They land
+    in the same commit as this L1 and MUST NOT be re-authored, restated or duplicated
+    beneath it. This L1 is the home for the remaining three to five behaviours of the
+    regime. Two consequences the BA should carry rather than resolve silently:
+      - Cross-link in both directions when decomposing, so neither half reads as the
+        whole rule.
+      - Whether the GE-126b-5 / GE-126c-5 records should eventually be re-homed under
+        this L1 is a USER decision, not a BA one. It is worth raising precisely because
+        part of the reason they went to GE-126 was the expired freeze recorded above.
+        Do not move them as part of decomposing this record.
+
+  EVIDENCE, WITH CONFIDENCE LABELS — carry them through and do not upgrade them.
+    - DIRECTLY OBSERVED AND RE-DERIVED IN THIS WORKTREE, 2026-09-01, using the guard's
+      own gating helper: templates/hooks/readme_read_guard.py gates nothing. Three of
+      its four prefixes resolve through symlinks into the deployed tree and stop
+      matching; the fourth names alembic/, which this repository does not contain.
+      The inertness arises by TWO different mechanisms depending on layout — an
+      exception in the main workspace, a plain failed prefix match inside a worktree —
+      so a repair that handles only the first leaves every worktree inert, and
+      worktrees are where the drives run.
+    - COUNT IS DISPUTED AND MUST NOT BE CITED. The brief for this record states nine
+      instances of this shape in roughly 36 hours; GE-126b-5, written the same day,
+      states eight. No criterion below this record may state or imply a figure. The
+      individually named instances stand on their own; the population is exactly what
+      GE-126e's census exists to measure, and until it has run there is no number.
+    - READ FROM SOURCE, NOT DISPUTED: config/verification_flow.schema.json states the
+      principle and models the vocabulary, and has no code reader. The vocabulary was
+      invented, one instance document was produced, and the validator was never built.
+
+  ANTI-GREP, AND IT IS THE WHOLE SUBJECT — restate this in every L2 below this record.
+    A criterion satisfiable by asserting that a declaration exists, that a list has an
+    entry, or that a function is defined reproduces this defect one level up. The
+    declaration must be READ BACK: feed the stated known-bad input through the check's
+    real entry point and require the stated refusal to be observed. Note also that
+    templates/scripts/commit_guardian is canonical and scripts/commit_guardian is a
+    symlink into the deployed tree — a mutation proof applied to the copy the test does
+    not load fails GREEN, which is instance one of this same family.
+
+  DAY-ONE BLAST RADIUS IS THE CORRECT OUTCOME. On the commit that lands this, most
+  guards will report that no refusal has ever been demonstrated, because none has.
+  That is the true state. It must not be pre-suppressed by seeding records, and the
+  natural remedy for the resulting noise — weakening the rule until it goes quiet — is
+  the failure mode to design against. An honest exemption for guards that genuinely
+  count or measure rather than accept or reject is required; a postponement is not a
+  ground for one.
+
+  documentation_triggers is [reference-doc] because a rule the whole family must obey
+  has to be written where the next check author will find it, and because what is
+  currently written down is a vocabulary with no reader. No component-diagram trigger:
+  the execution surface is GE-120c's and should be extended, not duplicated.
+
+  Authored at the PO stage; L1 only. No L2, no L3, no test_spec, no it_requirements,
+  no assigned_agent — the BA and IT PO own those.

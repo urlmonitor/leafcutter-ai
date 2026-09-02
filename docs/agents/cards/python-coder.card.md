@@ -430,6 +430,7 @@ flowchart TD
 - ACS-100a-1: Required fields reject missing values at commit time
 - ACS-100a-2: ID field enforces PREFIX-NNN regex pattern
 - ACS-100a-3: Status field accepts only the three allowed enum values
+- ACS-100a-3-i: A test_spec framework the project actually ships is accepted, and an unknown one is still refused
 - ACS-100a-4: Additional properties are rejected to prevent schema drift
 - ACS-100a-5: superseded_by field enforces conditional constraint with status
 - ACS-100a-6: Dangling depends_on and expects_from references blocked at commit time
@@ -479,6 +480,7 @@ flowchart TD
 - ACS-100i-7-i: A record that declares a package surface is refused by the whole-store pass just as it is by a single-file check
 - ACS-100i-8: A package surface cannot come into existence without a record that declared it
 - ACS-100i-8-i: Denying the surface, and citing no record at all, are refused on the same terms as omitting the declaration
+- ACS-100i-8-ii: An entry a merge carries from a parent is not an entry the merge registers
 - ACS-100i-9: A record naming a producer that is not a registered agent is refused, and both the commit-time gate and the store-wide pass reach the same rule
 - ACS-100i-9-i: Both readers of the store yield the same producer name, whatever quoting the record was written with
 - ACS-100i-9-ii: When the agent registry cannot be read, the check says it did not run instead of passing quietly
@@ -499,6 +501,19 @@ flowchart TD
 - ACS-1200d-1-i: A tree that was un-parked but never broken down is shown as exactly that
 - ACS-1200d-2: Half an un-park is refused, and the message says which half is missing
 - ACS-1200d-3: Parking a tree never adds work to the buildable queue, and un-parking alone does not either
+- ACS-1300a-1: One pass reports both directions of rot, against a stated total
+- ACS-1300a-1-i: A tag token is normalised before matching, so a multi-id tag names every record on the line
+- ACS-1300a-2: Repair happens only when it is asked for, and the run that changes nothing still says everything
+- ACS-1300a-2-i: Dropping a claim is per-entry and reported, and an entry the rule cannot judge is never dropped
+- ACS-1300a-3: A coverage list holding child requirement ids is left alone, and the run says why
+- ACS-1300b-1: The delivery paths that can finish work without recording the link are enumerated from the repository
+- ACS-1300b-1-i: A path that legitimately records no link is a stated exemption, never an omission
+- ACS-1300b-2: A bypassing path records the link by reaching the existing writer, not a second one
+- ACS-1300b-3: A newly added delivery path cannot quietly join the bypassing set
+- ACS-1300c-1: The repair awards nothing — the finished-state field is never written
+- ACS-1300c-1-i: Reusing an existing backfill that promotes finished state does not satisfy the refusal
+- ACS-1300c-2: A record with nothing to repair is never opened for writing
+- ACS-1300c-3: Evidence the run cannot judge produces a stated abstention, never a silent skip and never a write
 - ACS-200d: New tickets must reference their source AC
 - ACS-200e: The standalone AC validator enforces the same schema as the commit-time gate
 - ACS-200f: An AC whose covering tests genuinely pass can be marked done through the normal path, without the operator knowing an environment variable
@@ -1214,6 +1229,8 @@ flowchart TD
 - BP-100n-4: The population of commit gates the reachability check walks is taken from the gate scripts present on disk, so a script the registry never mentions is reported as invoked by nothing — a guard whose input is the registry cannot see what the registry omits
 - BP-100n-4-i: A script that is deliberately not a gate is recorded as one with a stated ground and the check honours it; a record that states no ground is itself refused and the script it names stays reported
 - BP-100n-4-ii: The check states how many gate scripts it compared, and a run that compared none is an unresolved run that fails — a comparison that never happened must not be able to look like a comparison that found nothing wrong
+- BP-100n-5: A finished record's declaration that names parts of a real configuration file is read back against that file, and a named part that is not there is reported by name and fails the run — a declaration checked only for shape is a check that never opened anything
+- BP-100n-5-i: A declaration whose shape the check cannot interpret, and a named file it cannot open, are each reported as their own unresolved condition — never folded into the conforming class and never into each other
 - BP-1100a-3: The surface a generated ticket names contains the file the requirement says will change
 - BP-1100a-4: A file the requirement mentions but never says will change is not named as the work's surface
 - BP-1100a-4-i: A file the requirement forbids touching is never named as the work's surface
@@ -1571,6 +1588,14 @@ flowchart TD
 - GE-120e-2: Which checks work out their own change set is read from the manifest, not from the two that were caught
 - GE-120e-4: Undoing or replaying someone else's recorded change is treated the same way as merging it in
 - GE-120e-4-i: Reworking a merge after the operation record is gone still attributes only the author's part
+- GE-120f-1: A check's refusal is established by putting its declared known-bad input through the entry point the protected surface uses, and the record says what was observed rather than what was declared
+- GE-120f-1-i: A refusal produced by reaching inside a check is not a demonstration — the run states the entry point it used, and only the entry point the protected surface invokes counts
+- GE-120f-1-ii: A check that also refuses the work it is meant to accept has demonstrated nothing — refusing everything is as inert as refusing nothing, and is reported under its own wording
+- GE-120f-2: A check whose declared rejection was not observed is named and fails the run, and a check that has never been asked to refuse is never counted among the things keeping the work safe
+- GE-120f-2-i: The finding is the run's own outcome, never a note printed beside a success — and a run that could not reach a verdict is unresolved rather than either
+- GE-120f-3: The liveness run states how many checks it actually put an input through, that figure moves when the population moves, and a run that put an input through none fails as unresolved
+- GE-120f-4: A check joins the protected family only by declaring what it must refuse, read from where it is registered — so the next check inherits the requirement by existing rather than by someone remembering
+- GE-120f-4-i: A check that was already registered when the requirement arrived is subject to it identically, and a ground that is a fact about when a check was registered is no ground at all
 - GE-122a-1: A whole-collection pass reports every number claimed by two artifacts
 - GE-122a-1-i: A collision is found even when only one claimant is in the current change set
 - GE-122a-1-ii: Excusing a merged-in decision record must not excuse the author's own record claiming the same number
@@ -1686,10 +1711,14 @@ flowchart TD
 - GE-126b-1-i: The statement arrives without being asked for and nothing can switch it off
 - GE-126b-2: A store that was never found and a store with nothing to look at are two different answers
 - GE-126b-3: The check finds the same store from wherever you happen to be standing
+- GE-126b-5: A check reports whether it has ever been shown to refuse anything, and never-shown is a different answer from shown-and-refused
+- GE-126b-5-i: A check with nothing it could be asked to refuse says why, and a claimed exemption whose ground is that the demonstration has not been done is refused like one with no ground at all
 - GE-126c-1: The build-source copy refuses the same record the deployed copy blocks
 - GE-126c-1-i: The copy the build produces does not inherit the refusal
 - GE-126c-2: The refusal names the copy you ran and the copy that works
 - GE-126c-3: The refusal follows from what the copy is and not from whether a dependency happened to load
+- GE-126c-5: A proof that a guard can fail states which copy of the guard the running process loaded, and an alteration the loaded copy never saw is refused instead of read as evidence
+- GE-126c-5-i: A verdict that did not move under an applied alteration is reported as an alteration that changed nothing, and is distinguishable from one that never reached the code
 - GE-126d-1: A check registered on every documented leg but missing from the autofix roster is named
 - GE-126d-1-i: A roster entry naming a check that no longer exists is named too
 - GE-126d-2: Recording a deliberate exclusion silences the report for that check and no other
@@ -1932,6 +1961,13 @@ flowchart TD
 - TKT-500g-4-i: An empty demand is not a way to say "no proof needed" — it is refused by name
 - TKT-500g-5: The readiness report never calls a demanded proof unnecessary
 - TKT-600a-1: Generated files_touched excludes prose-illustration paths; depends_on is guard-valid
+- TKT-600b-1: The generated phase record names exactly the phases the drive will dispatch for that ticket's location
+- TKT-600b-1-i: Generation refuses rather than guesses when the ticket's final location is not yet settled
+- TKT-600b-1-ii: A phase the drive will not run is recorded as excluded, never left out of the record
+- TKT-600b-2: An excluded phase is recorded as excluded, never as signed off, and carries no sign-off row
+- TKT-600b-3: A ticket generated outside an epic keeps its own pull-request phase and cannot finish without it
+- TKT-600b-4: The drive never edits a ticket's phase record to make it agree with the drive's own behaviour
+- TKT-600b-4-i: A phase that ran records its own outcome; that is the only write the drive makes to the phase record
 - TQ-100a-1: The suite runs every loadable test even when one file fails to load
 - TQ-100a-1-i: A test file importing a nonexistent module does not stop the other files
 - TQ-100a-1-ii: A test file that raises at module scope does not stop the other files
