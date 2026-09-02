@@ -68,5 +68,4 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
-documentation_triggers: []
 documentation_rationale: "Internal test coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram adds value."
