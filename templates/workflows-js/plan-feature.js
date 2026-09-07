@@ -2230,6 +2230,13 @@ let registryUninterpretable = null;
 // specific fact rather than a single collapsed permission verdict
 // (ACD-2100b-3 / KI-ACD-009 outcome 3).
 let workspaceSetupAgentEntryState = null;
+// Captures WHAT was found in the registry where the `agents` entries
+// collection was expected, whenever workspaceSetupAgentEntryState.state ===
+// "no_entries_collection" — so the halt report below can name it (its value
+// and its type) rather than assert an absence or denial verdict this check
+// never established (ACD-2100b-3-i).
+let noEntriesCollectionFoundValue;
+let noEntriesCollectionFound = false;
 try {
   const registryParsed = parseAgentJson(
     permissionResult,
@@ -2266,6 +2273,15 @@ try {
         registryJson, workspaceSetupAgentId
       );
       permitsShell = workspaceSetupAgentEntryState.state === "permitted";
+      if (workspaceSetupAgentEntryState.state === "no_entries_collection") {
+        // Record WHAT was found in place of the `agents` collection — the
+        // registry parsed cleanly as JSON (registryJson is truthy) but its
+        // `agents` field is not an array — so the halt report can name the
+        // value/type an operator can use to tell a wrong file from a
+        // structurally changed one (ACD-2100b-3-i).
+        noEntriesCollectionFound = true;
+        noEntriesCollectionFoundValue = registryJson ? registryJson.agents : undefined;
+      }
     }
   }
 } catch (_parseErr) {
@@ -2311,18 +2327,22 @@ if (registryUnreadable) {
 }
 
 if (!permitsShell) {
-  // Two distinct facts about the registry's own contents, and only ONE of
+  // Three distinct facts about the registry's own contents, and only ONE of
   // them may be reported as a permission verdict (ACD-2100b-3 / KI-ACD-009
-  // outcome 3): the entry EXISTS and withholds permission ("denied"), versus
-  // the entry does not exist at all — "absent" or, equivalently for
-  // reporting purposes, the entries collection itself was not present
-  // ("no_entries_collection", which is still "not listed"). Both halts fail
-  // closed identically (the run stops before any authoring agent is
-  // dispatched); only the diagnosis differs, and naming the permission
-  // setting is reserved for the case where a permission fact was actually
-  // established.
+  // outcome 3): the entry EXISTS and withholds permission ("denied"), the
+  // entry does not exist in a real entries collection ("absent" — "not
+  // listed", never a permission verdict about a nonexistent entry), or the
+  // entries collection itself is not there at all ("no_entries_collection" —
+  // a registry that parses but cannot be used, not a synonym for "absent"
+  // and never reported as one, ACD-2100b-3-i). Every halt fails closed
+  // identically (the run stops before any authoring agent is dispatched);
+  // only the diagnosis differs, and naming the permission setting is
+  // reserved for the case where a permission fact was actually established.
   const agentIsListedAndDenied =
     !!workspaceSetupAgentEntryState && workspaceSetupAgentEntryState.state === "denied";
+  const registryHasNoEntriesCollection =
+    !!workspaceSetupAgentEntryState &&
+    workspaceSetupAgentEntryState.state === "no_entries_collection";
 
   if (agentIsListedAndDenied) {
     const deniedMessage =
@@ -2344,6 +2364,37 @@ if (!permitsShell) {
         "running repository/shell commands. Halting before any authoring agent is dispatched. " +
         "Fix config/agent_registry.json's permits_shell field for that agent.",
     };
+  }
+
+  if (registryHasNoEntriesCollection) {
+    // The registry parsed cleanly as JSON, but its `agents` field is not a
+    // list of agent entries at all — the check never got as far as looking
+    // for this agent's id inside a collection, because there was no
+    // collection to search. This is a THIRD distinct fact about the
+    // registry's contents, not a synonym for "absent" (which would assert an
+    // absence verdict this check never established) nor for "denied" (which
+    // would assert a permission fact this check never established). Name
+    // WHAT was found where the agent entries were expected, so the operator
+    // can tell a wrong file from a structurally changed one (ACD-2100b-3-i).
+    const foundValue = noEntriesCollectionFound ? noEntriesCollectionFoundValue : undefined;
+    const foundTypeText = typeof foundValue;
+    let foundValueText;
+    try {
+      foundValueText = JSON.stringify(foundValue);
+    } catch (_stringifyErr) {
+      foundValueText = String(foundValue);
+    }
+    const noEntriesCollectionMessage =
+      "The agent registry (config/agent_registry.json) could not be used: its 'agents' field is " +
+      "not a list of agent entries. Found " + foundTypeText + " " + foundValueText + " where the " +
+      "agent entries collection was expected. Halting before any authoring agent is dispatched. " +
+      "Fix config/agent_registry.json so that 'agents' is a list of agent entries.";
+    log("[plan-feature][WARNING] " + noEntriesCollectionMessage);
+    await agent(
+      noEntriesCollectionMessage,
+      { agentType: "status-checker", label: "workspace-setup-registry-no-entries-collection" }
+    );
+    return { status: "error", message: noEntriesCollectionMessage };
   }
 
   // The entry does not exist in the registry at all — no permission fact was
