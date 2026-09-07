@@ -4008,15 +4008,47 @@ is supposed to satisfy it, and the resulting failure is attributed to the last a
 ### KI-BO-20260907-1555 — `failed` is a terminal phase state: the dispatcher filters it out, so a phase that exhausted its retries can never be re-run by any later drive
 
 - **Severity:** high
-- **Status:** open
+- **Status:** **RESOLVED 2026-09-07** — fix direction 1 taken, in both twins. Left in the
+  register rather than deleted because the reasoning below is why the predicate is shaped the
+  way it is, and the entry is cited from the code.
 - **Occurrences:** 1 confirmed in detail (GE-120 ticket 36); 6 further tickets in the same
-  epic currently carry at least one `failed` phase
+  epic carried at least one `failed` phase when this was filed
 - **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
-- **Where:** `templates/workflows-js/build-ticket.js:1293`
+- **Where (before the fix):** `templates/workflows-js/build-ticket.js:1293`
   (`orderedPhases.filter((p) => p.status === "needed")`), against the planner schema at
   `:70` whose status enum is `['needed', 'signed_off', 'not_needed', 'failed']`.
-  **TWIN: `build-feature.js:1541` carries the identical filter (verified) — fix both or
-  neither.**
+  **TWIN: `build-feature.js:1541` carried the identical filter (verified) — both fixed.**
+
+> **Resolution.** The inline filter in both drivers is replaced by a pure, named
+> `selectDispatchableByStatus(orderedPhases)` selecting `needed` **or** `failed`. It is a
+> function rather than a widened inline filter for two reasons: the `failed` half is a
+> decision that has to be readable at the call site, and a pure top-level function can be
+> extracted and **executed** under `node` by the unit layer — which
+> `unit_tests/workflows/test_ki_bo_20260907_1555_failed_phase_redispatch.py` does, running
+> the real on-disk function from both files against GE-120 ticket 36's actual frontmatter.
+>
+> **Measured before and after** on that ticket's real phase map: the old predicate returned
+> **0** phases, the new one returns **5**.
+>
+> **Why re-dispatch terminates**, which was the load-bearing question: on success a phase
+> agent *sets* `signed_off` (signoff skill §"Update frontmatter" step 1) rather than
+> find-replacing the literal `needed`, so the `failed` row is cleared and the phase does not
+> return on the next drive. On failure it stays `failed`, where it already was. The
+> within-drive retry ladder is untouched. This also makes the driver match the state machine
+> the signoff skill already documented — *"`failed` → `signed_off` after rework"* — which the
+> dispatcher had simply never implemented.
+>
+> **Deliberately not done:** a cross-drive attempt counter (part of fix direction 1 as
+> originally written). Without it a genuinely unfixable phase is retried once per re-drive.
+> That is operator-gated rather than automatic, and strictly better than the dead end it
+> replaces, but it means an unattended epic re-drive now spends one attempt per failed phase.
+> Revisit if that cost shows up.
+>
+> **Fix direction 2 is still open and still worth doing.** The `noPhaseRequired` refusal at
+> `build-ticket.js:902` remains scoped to "absent, empty, or every phase `not_needed`", and
+> its advice still reads *"Do not look for a failed phase"*. That message is now much harder
+> to reach — an all-`failed` ticket dispatches instead of refusing — but if it is ever reached
+> it still misdirects.
 
 **The dispatcher recognises four phase states and will act on exactly one of them.** The
 planner is explicitly asked to report `failed` — it is in the schema enum, and the read-back
@@ -4071,7 +4103,8 @@ already carrying `failed` phases. In the five of those that still have some `nee
 symptom is quieter and worse: the drive runs, makes real progress, and silently never retries
 the failed phase, so each re-drive shrinks the `needed` set while the `failed` set stays frozen.
 
-**Fix direction, in preference order.**
+**Fix direction, in preference order.** *(1 taken; the attempt-counter half of it and item 2
+remain open — see the resolution note above.)*
 
 1. **Treat `failed` as re-dispatchable.** Change the filter at `:1293` to select `needed` **or**
    `failed`, and carry a per-phase attempt counter in the frontmatter so the retry ladder's cap
