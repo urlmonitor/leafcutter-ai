@@ -1,0 +1,72 @@
+id: UXP-700a
+title: "A brand-new project gets a real record, not an empty promise"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - build_pipeline
+level: L1
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Day one: a working record that honestly says it is empty.
+
+  When the tooling is installed into a project that has never used it, that
+  project comes away with a genuine, working, empty record — one that reports
+  itself as empty and behaves correctly from the first day, rather than arriving
+  broken, arriving pre-filled with somebody else's content, or appearing to work
+  because there is nothing in it yet.
+depends_on:
+  - UXP-700
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/authoring-product-truth-artifacts.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by:
+  - UXP-700a-1
+  - UXP-700a-2
+  - UXP-700a-3
+  - UXP-700a-4
+  - UXP-700a-5
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  The "produce" L1, restated as the failure it prevents: an adopter installs the
+  tooling and ends up with no record at all, or with a record that is not theirs.
+
+  DIRECTLY OBSERVED (2026-09-07, this repo, reproducible). A from-scratch empty
+  product-truth store — the exact shape a fresh install produces — does not
+  merely pass; it first CRASHES. With empty flows/, mock-data/ and mockups/
+  directories present, the store checker exited with an uncaught Python
+  traceback because docs/product-truth/classifier/eval.jsonl did not exist.
+  Only after that file was created by hand, and the derived index rebuilt, did
+  the checker report success. So the day-one experience today is: crash, then
+  (see UXP-700b) a success message that means nothing. Both halves are this
+  L1's problem; the second half is UXP-700b's.
+
+  This L1 pairs with UXP-700b and must not absorb it. (a) is "the empty record
+  exists and works"; (b) is "the empty record cannot be mistaken for a full
+  one". Building (a) without (b) produces the worse outcome of the two.
+
+  The build_pipeline component tag is deliberate: the gap is in what install
+  lays down, not only in what the ux-prototyping surface later reads.

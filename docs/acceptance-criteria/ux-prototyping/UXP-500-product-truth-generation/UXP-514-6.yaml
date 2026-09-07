@@ -1,0 +1,94 @@
+id: UXP-514-6
+title: "An index field copied from an artifact is compared against that artifact"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a store index in which the description recorded against a journey differs from the
+    description in the journey file itself,
+  When the record is checked,
+  Then the check reports that artifact, naming the artifact, the field, and both values,
+  And every scalar field the index copies from a source artifact is compared, not only the
+    derived lookups,
+  And an artifact whose copied fields all match its source is not reported,
+  And the check states how many artifact fields it compared, and that figure rises when an
+    artifact is added.
+depends_on:
+  - UXP-514
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-514.yaml"
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-3.yaml
+    relationship: context
+    status: exists
+    relevance: "The general anti-vacuity rule these four checks are instances of."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-514
+  contract: "The umbrella drift check this record is one of the four named parts of."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/scripts/validate_product_truth.py
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  This is the one check in the family with a live, reproducible failure in the real store, so
+  the assertion can and should be made against a fixture built from the real shape rather than a
+  minimal one. The every-copied-field clause needs a varying assertion: an implementation that
+  compares only the description would satisfy the first clause forever and miss the next copied
+  field somebody adds.
+test_spec:
+  - name: test_index_description_differing_from_the_source_is_reported_with_both_values
+    target_dir: unit_tests/product_truth/
+    description: "An index entry whose description differs from the journey's own produces a finding naming the artifact, the field and both texts."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_every_copied_scalar_field_is_compared_not_only_the_description
+    target_dir: unit_tests/product_truth/
+    description: "Altering any copied scalar field in the index, not just the description, produces a finding."
+    type: integration
+    angle: seam
+    framework: unittest
+  - name: test_matching_copied_fields_produce_no_finding
+    target_dir: unit_tests/product_truth/
+    description: "An index whose copied fields all equal their sources produces no finding."
+    type: integration
+    angle: boundary
+    framework: unittest
+notes: |
+  THE GAP D3 LEAVES. Measured 2026-09-07: all 14 of 14 journeys carry an index description
+  differing from the journey file's own. Index copies run 89-218 characters; source descriptions
+  run 365-938. Examples: how-acs-are-built 197 vs 938; author-product-truth 218 vs 731;
+  checkout-and-pay 203 vs 748. UXP-514's D3 checks by_component / by_entity / by_flow / by_ac -
+  the DERIVED LOOKUPS - and does not look at artifacts[] scalar fields at all, so nothing in the
+  store covers this today.
+
+  PLACEMENT RATIONALE. This surface is listed on UXP-700c as drift sub-surface 4, and it is
+  authored HERE instead, under UXP-590 by way of UXP-514. Reason: the L0's own notes draw the
+  line as UXP-590 = the record agreeing with ITSELF, UXP-700c = the record agreeing with THE
+  CODE. An index description disagreeing with the journey file it was copied from is the record
+  disagreeing with itself, so it is UXP-590's axis, not UXP-700c's. The growth that CAUSED the
+  duplication is UXP-700e's and is recorded as UXP-700e-2; that AC removes the second copy,
+  while this one guards it in the meantime. Both are wanted and neither supersedes the other.
+
+  EXPECT THIS TO FAIL ON FIRST RUN against the live store, on all 14 journeys. That is correct
+  and is the point; the remediation is UXP-700e-2, not a suppression.

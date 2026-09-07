@@ -1,14 +1,14 @@
 id: UXP-512
 components:
   - ux_prototyping
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Generator writes the product_truth back-ref onto each AC (many-to-many, wholesale)"
 component: ux-prototyping
 level: L2
 status: active
 req_status: approved
-work_status: done
+work_status: in_progress
 criteria: |
   Given the by_ac inversion of the flow->AC edges,
   When generate_product_truth.py runs,
@@ -32,13 +32,61 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+- reason: '2026-09-07: demoted from work_status done to in_progress. BO-2500b requires a covers-tagged passing test before an AC may be done, and no test in the tree carries a covers tag for this id (3828 such tags exist elsewhere, so the convention is established, not absent). The record claimed done without proof. Coverage was audited: UXP-511 and UXP-513 each have exactly one real test proving one clause of a two-clause criterion, linked in covered_by as partial evidence and deliberately NOT tagged as covers, since a tag would make the gate green while half the criterion stays unproven. UXP-510, UXP-512 and UXP-514 have no test at all. The remaining work is carried in each record''s test_spec.'
+- reason: '2026-09-07 business-analyst: recorded that the existing fixture never exercises
+    the write path, and authored the test_spec that would.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by:
   - docs/product-truth/scripts/generate_product_truth.py
 change_target: code
 risk_surface: internal
+test_required: true
+test_rationale: |
+  This AC is work_status done with covered_by empty, and the 2026-09-07 audit found the reason
+  the gap is invisible: the fixture in use creates an EMPTY docs/acceptance-criteria directory,
+  so the code path that writes a product_truth block onto an AC file is never entered and every
+  assertion downstream of it is vacuously satisfied. The fixture must therefore contain at least
+  one real AC file, and the formatting-preservation clause has to be asserted by comparing the
+  file's other lines byte for byte - a YAML round-trip comparison would pass against a full
+  re-serialize, which is exactly what the criteria forbid.
+test_spec:
+  - name: test_product_truth_block_is_written_onto_a_referenced_ac_file
+    target_dir: unit_tests/product_truth/
+    description: "With a non-empty AC store, the referenced AC file gains a product_truth block matching its by_ac entry."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_product_truth_block_is_overwritten_wholesale_not_merged
+    target_dir: unit_tests/product_truth/
+    description: "An AC carrying a stale product_truth list ends with exactly the current inversion, with no leftover entries."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_key_is_omitted_entirely_when_no_flow_references_the_ac
+    target_dir: unit_tests/product_truth/
+    description: "An AC no flow node references has no product_truth key after the run."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_surrounding_yaml_lines_are_byte_identical_after_the_edit
+    target_dir: unit_tests/product_truth/
+    description: "Every line of the AC file outside the product_truth block is unchanged, including comments, key order and quoting."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+notes: |
+  COVERAGE STATUS as at 2026-09-07: DONE IN NAME ONLY. work_status is done, covered_by is empty,
+  and the fixture that exists creates an empty docs/acceptance-criteria directory - so the write
+  path this AC describes is never exercised by anything. That is worse than having no test,
+  because a green suite implies the behaviour is checked.
+
+  The record is left at work_status done because the implementation did land. Closing the gap is
+  the test_spec above.
 product_truth:
   - flow: leafcutter/generate-product-truth
     node: invert

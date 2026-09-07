@@ -1,0 +1,68 @@
+id: UXP-700c-1-i
+title: "A pointer the checker cannot classify is reported as unresolvable, never as sound"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a pointer whose target lies outside the kinds of target the checker knows how to
+    resolve,
+  When the record is checked,
+  Then that pointer is reported as not resolvable, naming the artifact that holds it and the
+    reason the target could not be classified,
+  And it is excluded from the stated count of pointers resolved,
+  And it is not reported as a broken pointer,
+  And the run's outcome is not the outcome for a record that was checked and found sound while
+    any pointer is unresolvable.
+depends_on:
+  - UXP-700c-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c-1.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700c-1
+  contract: "The pointer verdict this record adds a third value to."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  A two-valued verdict forces every pointer the checker does not understand into one of the two
+  buckets. Classifying it as sound hides real drift; classifying it as broken produces noise an
+  adopter learns to ignore, which hides real drift a second way. The test must assert the third
+  value exists and that the unresolvable pointer appears in neither of the other two lists.
+test_spec:
+  - name: test_unclassifiable_pointer_is_reported_as_unresolvable
+    target_dir: unit_tests/product_truth/
+    description: "A pointer of an unknown target kind is reported as unresolvable with a stated reason."
+    type: unit
+    angle: boundary
+    framework: unittest
+  - name: test_unresolvable_pointer_is_in_neither_the_resolved_nor_the_broken_set
+    target_dir: unit_tests/product_truth/
+    description: "The unresolvable pointer is excluded from the resolved count and absent from the broken list."
+    type: unit
+    angle: boundary
+    framework: unittest
+notes: |
+  Named mutation: fold unresolvable into resolved. UXP-700c-1's tests all stay green because
+  every pointer it feeds is classifiable; only this record turns red. That asymmetry is why it
+  is a record of its own rather than a clause of the parent.

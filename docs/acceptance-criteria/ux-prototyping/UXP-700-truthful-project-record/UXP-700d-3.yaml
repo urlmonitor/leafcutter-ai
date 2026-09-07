@@ -1,0 +1,93 @@
+id: UXP-700d-3
+title: "Every piece of example content says it is an example, read on its own"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - ac_store
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given any example artifact or any example acceptance criterion,
+  When it is read on its own, by a person or by an agent that knows nothing about where it came
+    from,
+  Then it states the product it belongs to and that that product is an example,
+  And that statement is held in the artifact itself rather than inferred from its location,
+  And an artifact of the project's own record read the same way carries no such statement,
+  And an artifact whose stated product disagrees with the product root it lives under is
+    reported, naming both.
+depends_on:
+  - UXP-700d
+  - UXP-700d-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700d.yaml"
+doc_links:
+  - path: docs/product-truth/schemas/flow.schema.json
+    relationship: specifies
+    status: exists
+    relevance: "The artifact shape that gains the declaration; a source field already exists with values real and mock and may be the right axis to build on."
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: frontend-coder
+  contract: "A self-declared example marker on every example artifact and criterion, so any reading surface can label it without consulting a registry."
+expects_from:
+  ac_id: UXP-700d-1
+  contract: "The product-root ownership predicate this declaration is cross-checked against."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+  - docs
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  The read-in-isolation clause is the whole point and it cannot be tested through any interface
+  that has already resolved the artifact's location - the test has to load the file's own
+  content and assert the declaration is in it. The disagreement clause needs a separate
+  negative fixture, because a declaration nothing cross-checks is a second hand-maintained
+  field, which is the drift surface UXP-700c and UXP-514-6 exist to close.
+test_spec:
+  - name: test_example_artifact_declares_its_example_product_in_its_own_content
+    target_dir: unit_tests/product_truth/
+    description: "Loading an example artifact's file content alone reveals the product it belongs to and that the product is an example."
+    type: unit
+    angle: real_artifact
+    framework: unittest
+  - name: test_project_owned_artifact_carries_no_example_declaration
+    target_dir: unit_tests/product_truth/
+    description: "A project-owned artifact read the same way carries no example declaration."
+    type: unit
+    angle: boundary
+    framework: unittest
+  - name: test_declaration_disagreeing_with_the_product_root_is_reported
+    target_dir: unit_tests/product_truth/
+    description: "An artifact declaring the example product while living under the project's root is reported naming both values."
+    type: integration
+    angle: failure
+    framework: unittest
+notes: |
+  The complaint in the L1 is that the example criteria are "indistinguishable, field for field,
+  from genuine work". This AC is the field that makes them distinguishable, and the last clause
+  is what stops it becoming a fourteenth hand-written summary: it is cross-checked against the
+  location, so the two cannot silently disagree.
+
+  The flow schema already carries a source field with values real and mock, and index.json
+  records source: mock for the fern-and-fig artifacts. The IT PO should establish whether that
+  existing axis can carry this meaning before minting a second field - but note it is currently
+  absent from the acceptance-criteria store entirely, which is the half of the problem that
+  matters most here.

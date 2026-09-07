@@ -1,0 +1,103 @@
+id: UXP-700d-2
+title: "No piece of the example product can be picked up as work"
+component: ux-prototyping
+components:
+  - ac_store
+  - ux_prototyping
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the acceptance criteria that describe the example product,
+  When the store of work is scanned for items that are ready to be worked on, and for items
+    waiting on a blocker,
+  Then none of the example product's criteria appears in either set,
+  And the scan states how many criteria it set aside as example content,
+  And the example criteria remain readable and still describe the example product, so anything
+    that reads them continues to work.
+depends_on:
+  - UXP-700d
+  - UXP-700d-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700d.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-210-buy-a-plant/UXP-210d.yaml
+    relationship: context
+    status: exists
+    relevance: "The example criteria this AC sets aside. They must remain readable; only their eligibility as work changes."
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "An example-content classification on the work store that the ready-leaf scan and the ticket generator both honour."
+expects_from:
+  ac_id: UXP-700d-1
+  contract: "The product-root ownership predicate, extended to the acceptance-criteria store."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by:
+  - UXP-700d-2-i
+  - UXP-700d-2-ii
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  The consequence being prevented is an agent being dispatched to build a fictional plant shop,
+  so the assertion has to be made against the real ready-leaf scan over a store containing the
+  example criteria - not against a helper function. A unit test of a classification function
+  would pass while the scan that actually dispatches work ignores it, which is precisely the
+  current state: the classification information (a separate feature folder, a fictional
+  product) is already present and the scan does not use it.
+test_spec:
+  - name: test_ready_leaf_scan_returns_no_example_criteria
+    target_dir: unit_tests/ac_store/
+    description: "Scanning a store containing the example criteria returns none of them in the ready set."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_blocked_set_contains_no_example_criteria
+    target_dir: unit_tests/ac_store/
+    description: "None of the example criteria appears in the blocked set either, so none becomes ready when a blocker clears."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_scan_states_how_many_criteria_it_set_aside
+    target_dir: unit_tests/ac_store/
+    description: "The scan reports a set-aside count, and that count is non-zero for a store containing example criteria."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_example_criteria_remain_readable_after_the_change
+    target_dir: unit_tests/ac_store/
+    description: "Each example criterion still loads and still carries its original content."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+notes: |
+  VERIFIED 2026-09-07, independently reproduced. 18 demo acceptance criteria for a fictional
+  plant shop sit in the real backlog: 13 files under UXP-210-buy-a-plant and 5 under
+  UXP-220-track-an-order. They carry readiness reviewed or approved, req_status approved,
+  work_status done / in_progress / todo, and assigned_agent frontend-coder - indistinguishable,
+  field for field, from genuine work. UXP-210a and UXP-220a are level L2 with an empty
+  depends_on, so they are roots with nothing above them.
+
+  This is the sharpest edge of UXP-700d and the reason the L1 carries the ac_store component
+  tag. An L2 set that only separated flows, mock-data and mockups would leave the dispatchable
+  plant-shop criteria in place.
+
+  DELIBERATELY NOT PROPOSED HERE: deleting, deprecating or superseding the example criteria.
+  They are the worked example the tooling ships. Only their eligibility as work changes.

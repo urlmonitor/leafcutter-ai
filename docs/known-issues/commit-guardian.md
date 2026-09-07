@@ -3804,3 +3804,92 @@ concrete case where an unattended, unconfirmed commit did real damage, and the r
 human-gate reading of this rule is the one with evidence behind it.
 `docs/reference/false-green-mechanisms.md` — a guard that reports enforcement it does not
 perform.
+
+---
+
+### KI-CG-20260907-0745 — `enforce_commit_delegation` and `inline_work_guard` locate themselves by testing for the *directory* `.claude/hooks`, so a partial one shadows the real set and blocks every Bash, Edit and Write call
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** the generated `.claude/settings.json` — both `PreToolUse` entries (matchers `Bash` and `Edit|Write`). The defect is in the inline `bash -c` resolver they share, not in either Python hook.
+- **Reported by:** observed in the self-hosting workspace `C:\Users\Hendrik\Code\leafcutter` after a v7.0.194 build
+
+**Symptom.** Every Bash call, and every Edit/Write, made while the working directory sits inside a
+nested repo is rejected before it runs:
+
+```text
+PreToolUse:Bash hook error: ... can't open file
+'C:\Users\Hendrik\Code\leafcutter\leafcutter-ai\.claude\hooks\enforce_commit_delegation.py':
+[Errno 2] No such file or directory
+```
+
+`cd` cannot escape it. The hook fires *before* the command, resolving from the tool's persistent
+working directory, so the very command that would move out of the directory is itself blocked.
+
+**Mechanism.** Both hooks share one resolver, shipped verbatim in `.claude/settings.json`:
+
+```bash
+d="$PWD"; while [ ! -d "$d/.claude/hooks" ] && [ "$d" != "/" ]; do d="$(dirname "$d")"; done
+python "$d/.claude/hooks/enforce_commit_delegation.py"
+```
+
+The loop stops at the first ancestor that **contains a `.claude/hooks` directory**, then invokes a
+**specific script** inside it. A directory-existence test is standing in for a script-existence
+test. Any ancestor holding a *partial* `.claude/hooks` — one written by an older package version,
+or belonging to a different project — captures the walk, and every script that directory lacks
+becomes unreachable.
+
+The self-hosting layout produces exactly that shape. `build.py --target-dir <workspace>` writes
+the current hook set to `<workspace>/.claude/hooks/` (13 scripts here), while
+`<workspace>/leafcutter-ai/.claude/hooks/` retains whatever an earlier build left (6 here). The
+path is gitignored (`.gitignore:19`), so nothing surfaces the divergence. Any tool call made from
+inside `leafcutter-ai/` resolves to the 6-script directory and fails on the 7 it does not have.
+
+**Detection.** Walk the same path the hook walks, from the cwd where the call fails:
+
+```bash
+d="$PWD"; while [ ! -d "$d/.claude/hooks" ] && [ "$d" != "/" ]; do d="$(dirname "$d")"; done
+echo "resolved to: $d"; ls "$d/.claude/hooks" | wc -l
+```
+
+Compare against the repository root's own count. A smaller number at the nearer ancestor is the
+fault. The error text names the resolved path, which identifies the shadowing directory directly —
+that much is well behaved.
+
+**Impact observed, and why the severity is high.** Two subagent audits dispatched in one session
+ran to completion **with no shell at all** — both `ac-scanner` and `knowledge-query` require Bash —
+and returned findings reconstructed from `Read` probing alone. One of them drew two incorrect
+conclusions about which acceptance criteria covered which subject, inferred precisely because it
+could not grep. Neither agent could `cd` out of the trap, and neither surfaced the degradation
+until its final report. A guard that cannot find itself does not merely fail; it silently degrades
+every agent downstream of it, and the degradation looks like a completed audit.
+
+**Workaround.** Move the session working directory above the shadowing repo, or make the near
+directory complete:
+
+```bash
+cp <workspace>/.claude/hooks/*.py <nested-repo>/.claude/hooks/
+```
+
+Both are local repairs and neither survives the next build.
+
+**Fix direction.** Test for the script rather than the directory, so the walk continues past a
+partial one instead of stopping at it:
+
+```bash
+d="$PWD"; while [ ! -f "$d/.claude/hooks/enforce_commit_delegation.py" ] && [ "$d" != "/" ]; do d="$(dirname "$d")"; done
+```
+
+Independently, the hook should **fail open with a warning** when it cannot locate itself. A
+delegation guard that did not run is a missing guard; a delegation guard that blocks every tool
+call is a stopped workstation, and the second failure mode is worse than the first — especially
+for a subagent, which has no way to diagnose or repair it. Both `PreToolUse` entries carry the
+same inline walk, so a fix must touch both. This resolver is generated into every consumer's
+`settings.json`, so any adopter whose tree contains a nested repo with a partial `.claude/hooks`
+inherits it.
+
+**Related.** KI-CG-016 concerns the same hook but a different defect — it matches the phrase
+"commit" anywhere in the command string. This entry is about the resolver that decides *which
+copy* of the hook runs, not about what the hook does once it is running.

@@ -1,14 +1,14 @@
 id: UXP-514
 components:
   - ux_prototyping
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Validator errors on derived-vs-source drift (impl_status, product_truth, indexes, screen->mockup)"
 component: ux-prototyping
 level: L2
 status: active
 req_status: approved
-work_status: done
+work_status: in_progress
 criteria: |
   Given the product-truth store,
   When validate_product_truth.py runs,
@@ -36,13 +36,86 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+- reason: '2026-09-07: demoted from work_status done to in_progress. BO-2500b requires a covers-tagged passing test before an AC may be done, and no test in the tree carries a covers tag for this id (3828 such tags exist elsewhere, so the convention is established, not absent). The record claimed done without proof. Coverage was audited: UXP-511 and UXP-513 each have exactly one real test proving one clause of a two-clause criterion, linked in covered_by as partial evidence and deliberately NOT tagged as covers, since a tag would make the gate green while half the criterion stays unproven. UXP-510, UXP-512 and UXP-514 have no test at all. The remaining work is carried in each record''s test_spec.'
+- reason: '2026-09-07 business-analyst: decomposed into six children (D1-D4, an anti-vacuity
+    sibling, and the artifacts[] scalar-field gap D3 leaves). Criteria unchanged;
+    this AC is retained as the umbrella and is NOT superseded.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
-covered_by: []
+covered_by:
+  - UXP-514-1
+  - UXP-514-2
+  - UXP-514-3
+  - UXP-514-4
+  - UXP-514-5
+  - UXP-514-6
 implemented_by:
   - docs/product-truth/scripts/validate_product_truth.py
+test_required: true
+test_spec:
+  - name: test_validator_errors_when_stored_impl_status_diverges_from_recomputed
+    target_dir: unit_tests/product_truth/
+    description: "A step whose stored impl_status disagrees with the value recomputed from its ACs' work_status is reported by name and the run exits non-zero (D1)."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_validator_errors_on_product_truth_that_the_inversion_does_not_support
+    target_dir: unit_tests/product_truth/
+    description: "An AC whose product_truth block disagrees with the by_ac inversion, and an AC carrying a block no flow references, are each reported as their own named error (D2)."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_validator_errors_when_a_derived_index_diverges_from_a_fresh_rebuild
+    target_dir: unit_tests/product_truth/
+    description: "Each of by_component, by_entity, by_flow and by_ac is compared against a fresh rebuild and a divergence in any one names that key (D3)."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_unresolvable_screen_warns_on_a_draft_flow_and_errors_on_an_approved_one
+    target_dir: unit_tests/product_truth/
+    description: "The same unregistered screen id is a warning while its flow is unapproved and an error once it is approved, so the severity follows the flow's readiness rather than being fixed (D4)."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_each_check_reports_which_one_fired_rather_than_a_bare_exit_code
+    target_dir: unit_tests/product_truth/
+    description: "A run failing one check names that check, so a caller reading only the exit code is not the only way to tell D1 from D4."
+    type: integration
+    angle: real_artifact
+    framework: unittest
 change_target: code
 risk_surface: internal
+notes: |
+  DECOMPOSED 2026-09-07, not superseded. This AC packs four separately-failing checks into one
+  set of And clauses with a single implementation reference, no fixture and no named error
+  string. Each check now has its own child with its own fixture and its own named finding:
+
+    UXP-514-1  D1  step impl_status vs the status recomputed from its criteria
+    UXP-514-2  D2  an AC's product_truth back-reference vs the by_ac inversion
+    UXP-514-3  D3  the derived index lookups vs a fresh rebuild
+    UXP-514-4  D4  a step's screen resolving to a registered mockup, gated on approval
+    UXP-514-5      anti-vacuity: none of the four reports clean on an empty input set
+    UXP-514-6      the artifacts[] scalar fields D3 does not look at
+
+  WHY THE ANTI-VACUITY SIBLING EXISTS. Every clause above is of the form "errors if ANY X
+  differs". That is universally quantified, so all four are vacuously true when their input set
+  is empty, and an empty store consequently produced "OK ... (0 warnings)" and exit 0 on
+  2026-09-07. UXP-514-5 is the instance, for these four checks, of the general rule in
+  UXP-700b-3.
+
+  COVERAGE STATUS as at 2026-09-07: DONE IN NAME ONLY. work_status has been done since
+  2026-07-14 and no test drives any of the four checks. The covered_by entries above are child
+  ACs, not tests; the tests are specified per child.
+
+  ID FORM. The children use the canonical child-id form UXP-514-N so derive_parent_id() resolves
+  them to UXP-514. They are level L3 because their parent is level L2 - the same relationship
+  UXP-609-2 has to UXP-609. The authoring request called them L2, meaning the granularity, not
+  the positional level field. Numeric-sibling ids (UXP-517, UXP-518, ...) were deliberately NOT
+  used: derive_parent_id() resolves those to nothing, which is how UXP-490 accumulated nine
+  children while counting as zero against the 3-7 cap.
 product_truth:
   - flow: leafcutter/generate-product-truth
     node: validate
