@@ -715,10 +715,24 @@ sides — a generator emitting artifacts its own repository's gates reject.
 
 ---
 
-### KI-BO-015 — `_worktree_exists` does not know the `fast-lane/` prefix, so a fast-lane run can never reuse its own worktree and aborts at phase one
+### KI-BO-015 — `_worktree_exists` does not know the `fast-lane/` prefix, so a fast-lane run cannot recognise its own workspace and aborts at phase one
 
 - **Severity:** high
-- **Status:** open
+- **Status:** **RESOLVED 2026-09-01 — root cause fixed; the remedy this entry proposed was
+  deliberately NOT taken.** `_worktree_exists` now matches `refs/heads/fast-lane/<branch>`, so
+  the prefix blindness is gone and the lookup can see its own workspace. What it does on
+  finding one is a **named refusal**, not reuse — specified by `BO-2400f-13` and its four
+  children, and recorded as **ADR-039**. Verified: 10/10 on
+  `test_bo2400f_13_occupied_workspace_refusal.py` plus 45 further tests across the changed
+  module, all under `AC_ENFORCE_STRICT=1`.
+  **The title above was corrected on the same date.** It read *"can never **reuse** its own
+  worktree"*, which states the remedy as if it were the defect. The defect is that the lookup
+  cannot **recognise** its own workspace; what to do about a recognised one was always a
+  separate question, and this entry's own fix-direction listed it as undecided. The old
+  wording cost a real collision: a test-writer derived a regression guard asserting reuse from
+  this entry's framing while a coder implemented the AC's refusal, and the two met at the green
+  gate after ~907k subagent tokens.
+  **Do not delete this entry** — acceptance criteria and commit messages cite it by id.
 - **Occurrences:** 1
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
 - **Where:** `templates/scripts/setup_ticket_worktree.py:232-275` (`_worktree_exists`), called at `:1289` from `cmd_create_fastlane_worktree`; branch built at `:1286` by `_fastlane_branch` (`:487-500`)
