@@ -75,6 +75,31 @@ _HERE = Path(__file__).resolve().parent
 from _resolve_root import find_project_root  # noqa: E402
 
 # ---------------------------------------------------------------------------
+# BO-2900d-2: shared reachability-exemption seam (same module BO-2900d-1's
+# no-way-in gate in done_proof.py reads — see that module's own comment for
+# why there is exactly one reader). Imported at module load time since this
+# file already lives directly beside _reachability_inventory.py in both
+# layouts (no sibling-directory hop needed, unlike done_proof.py's case).
+# ---------------------------------------------------------------------------
+try:
+    from _reachability_inventory import exemptions_in_force, load_exemptions
+except ImportError as _reachability_import_exc:  # pragma: no cover - see below
+    print(
+        "WARNING: check_done_proof: reachability-exemption seam unavailable "
+        f"({_reachability_import_exc}); exemption inventory will report zero "
+        "entries on every run.",
+        file=sys.stderr,
+    )
+
+    def load_exemptions(_registry_path):  # type: ignore[no-redef]
+        """Fallback used only when _reachability_inventory is not importable."""
+        return []
+
+    def exemptions_in_force(_exemptions):  # type: ignore[no-redef]
+        """Fallback used only when _reachability_inventory is not importable."""
+        return []
+
+# ---------------------------------------------------------------------------
 # Fail-safe top-level import so ``verify_done_eligible`` is a module-level
 # attribute that unittest.mock.patch can replace.  Falls back to None when
 # ``done_proof`` is not importable (e.g. the templates/ source layout whose
@@ -561,6 +586,79 @@ def check_changed_done_acs(
 
 
 # ---------------------------------------------------------------------------
+# BO-2900d-2: exemption inventory report
+#
+# Emitted on EVERY run of the guard, regardless of mode and regardless of
+# whether any violation was found — the natural implementation (printing
+# exemptions only when explaining a suppressed finding) is the defect this
+# AC exists to close: nobody ever sees the whole accumulated set otherwise.
+# ---------------------------------------------------------------------------
+
+
+def build_exemption_inventory_report(project_root: Path) -> dict:
+    """Build the ``exemption_inventory_report`` for *project_root*.
+
+    Reads ``config/reachability_exemptions.yaml`` via the shared
+    ``_reachability_inventory`` seam (the same reader BO-2900d-1's no-way-in
+    gate uses) so the guard's refusal and its own inventory can never
+    disagree about what is recorded.
+
+    Args:
+        project_root: Root directory containing ``config/``.
+
+    Returns:
+        ``{"in_force": [{"item", "kind", "reason"}, ...], "total_in_force": int,
+        "stale": []}`` per BO-2900d-2's schema. ``stale`` detection
+        (BO-2900d-3) is out of this AC's scope and is always empty here.
+        A registry that cannot be read/parsed logs a warning and reports
+        zero exemptions (fail-closed: an unreadable registry must never be
+        treated as "everything is exempt").
+    """
+    registry_path = project_root / "config" / "reachability_exemptions.yaml"
+    try:
+        exemptions = load_exemptions(registry_path)
+    except (OSError, ValueError) as exc:
+        print(
+            f"WARNING: check_done_proof: cannot load {registry_path}: {exc}",
+            file=sys.stderr,
+        )
+        exemptions = []
+    in_force = exemptions_in_force(exemptions)
+    return {
+        "in_force": [
+            {
+                "item": entry.get("item"),
+                "kind": entry.get("kind"),
+                "reason": entry.get("reason"),
+            }
+            for entry in in_force
+        ],
+        "total_in_force": len(in_force),
+        "stale": [],
+    }
+
+
+def print_exemption_inventory_report(project_root: Path) -> None:
+    """Print the exemption inventory: one line per entry, then the total.
+
+    Called unconditionally from :func:`main` for every mode and every
+    outcome (BO-2900d-2's "on a run that reports no findings" clause) — this
+    is a SEPARATE section of the output from any violations printed above
+    it; a refusing run still prints both.
+
+    Args:
+        project_root: Root directory containing ``config/``.
+    """
+    report = build_exemption_inventory_report(project_root)
+    for entry in report["in_force"]:
+        print(
+            f"[check-done-proof] exemption in force: {entry['item']} "
+            f"({entry['kind']}) — {entry['reason']}"
+        )
+    print(f"[check-done-proof] exemptions in force: {report['total_in_force']}")
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -665,12 +763,14 @@ def main(argv: list[str] | None = None) -> int:
         staged_paths = _get_staged_ac_yaml_paths(project_root)
         violations = check_staged_done_proofs(staged_paths, test_root=test_root)
 
-    if not violations:
-        return 0
-
     for v in violations:
         print(f"[check-done-proof] {v['ac_id']}: {v['reason']}")
-    return 1
+
+    # BO-2900d-2: printed on EVERY run — clean or refusing, every mode —
+    # never gated behind `if violations`. See the module docstring above.
+    print_exemption_inventory_report(project_root)
+
+    return 1 if violations else 0
 
 
 if __name__ == "__main__":

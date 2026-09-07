@@ -78,6 +78,7 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
@@ -91,6 +92,48 @@ import yaml
 # test_enforcement lazily imports done_proof inside a function body,
 # so this top-level import does NOT create a circular dependency.
 from test_enforcement import COVERS_TAG_RE
+
+# ---------------------------------------------------------------------------
+# BO-2900d-1: shared reachability-exemption seam import.
+#
+# _reachability_inventory.py lives beside check_done_proof.py under the
+# sibling commit_guardian/ directory in BOTH layouts this module runs in:
+#     <repo>/scripts/ac_store/done_proof.py           -> ../commit_guardian
+#     <repo>/.leafcutter/scripts/ac_store/done_proof.py -> ../commit_guardian
+# (the same sibling-directory relationship check_done_proof.py already
+# relies on to reach ac_store/ from the other side). Resolved lazily inside
+# _load_reachability_seam() rather than at module import time so a
+# templates/ source layout missing the deployed commit_guardian/ sibling
+# (or an as-yet-unbuilt worktree) degrades to "no exemptions" rather than
+# crashing every import of this module.
+# ---------------------------------------------------------------------------
+_COMMIT_GUARDIAN_DIR = Path(__file__).resolve().parent.parent / "commit_guardian"
+
+
+def _load_reachability_seam():
+    """Import and return the shared reachability-exemption seam.
+
+    Returns:
+        A ``(load_exemptions, is_exempt, ReachabilityRegistryError)`` tuple
+        from ``_reachability_inventory`` when importable.
+
+    Raises:
+        ImportError: the sibling ``commit_guardian/_reachability_inventory.py``
+            module is not present in this layout. Callers treat this the
+            same as "no exemptions recorded" (fail-open per the
+            error-handling policy: an unreadable/absent exemption mechanism
+            must never itself grant a pass, and must never crash the
+            eligibility oracle).
+    """
+    if str(_COMMIT_GUARDIAN_DIR) not in sys.path:
+        sys.path.insert(0, str(_COMMIT_GUARDIAN_DIR))
+    from _reachability_inventory import (
+        ReachabilityRegistryError,
+        is_exempt,
+        load_exemptions,
+    )
+
+    return load_exemptions, is_exempt, ReachabilityRegistryError
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -1408,6 +1451,329 @@ def _verify_composite_eligible(
 
 
 # ---------------------------------------------------------------------------
+# Internal helpers — reachability gate (BO-2900d-1)
+#
+# A criterion's covers-tagged test can PASS while the code it proves is
+# reachable by nothing when the product runs: a module with no runtime way
+# in of its own (no `if __name__ == "__main__":`) that no other module in
+# the project imports either. This gate only refuses a LEAF AC whose direct
+# linked test(s) already pass (see verify_done_eligible's leaf path) — it
+# never overrides a test failure that already explains ineligibility, and it
+# never applies to the composite path.
+# ---------------------------------------------------------------------------
+
+# Matches a module's own runtime entry-point guard.
+_MAIN_GUARD_RE = re.compile(r'if\s+__name__\s*==\s*[\'"]__main__[\'"]\s*:')
+
+
+def _local_import_module_names(test_file: Path) -> set[str]:
+    """Return bare (non-dotted) module names imported at the top of *test_file*.
+
+    Uses :mod:`ast` (never a text-match of import statements) so a bare
+    ``import foo`` or ``from foo import bar`` is recognised regardless of
+    formatting.  Dotted imports (``import pkg.sub``, third-party or stdlib
+    packages) are excluded — this gate only reasons about single-file
+    project-local modules reached the same way the fixture units in
+    BO-2900d-1's own test_spec are: a flat ``sys.path.insert`` plus a bare
+    module import.
+
+    Args:
+        test_file: Path to the covers-tagged test file to scan.
+
+    Returns:
+        Set of bare module name strings.  Empty when the file cannot be
+        read or does not parse as Python.
+    """
+    try:
+        text = test_file.read_text(encoding="utf-8")
+        tree = ast.parse(text)
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return set()
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if "." not in alias.name:
+                    names.add(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module and node.level == 0 and "." not in node.module:
+                names.add(node.module)
+    return names
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    """True when *path* is *root* itself or lives under it."""
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+_SYS_PATH_INSERT_RE = re.compile(
+    r"""sys\.path\.insert\(\s*0\s*,\s*['"]([^'"]+)['"]\s*\)"""
+)
+
+
+def _sys_path_insert_dirs(test_file: Path) -> list[Path]:
+    """Return directories the test file inserts onto ``sys.path`` via a literal.
+
+    Matches ``sys.path.insert(0, "<literal path>")`` (the exact form the
+    fixture units in BO-2900d-1's test_spec use to make a bare import
+    resolve). Only literal string arguments are recognised — this is a
+    static hint, not an execution of the test file.
+
+    Args:
+        test_file: Path to the covers-tagged test file to scan.
+
+    Returns:
+        List of existing directory Paths, in the order they appear in the
+        file (mirroring Python's own sys.path search order). Empty when the
+        file cannot be read or inserts no literal directory.
+    """
+    try:
+        text = test_file.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    dirs: list[Path] = []
+    for match in _SYS_PATH_INSERT_RE.finditer(text):
+        candidate = Path(match.group(1))
+        if candidate.is_dir():
+            dirs.append(candidate)
+    return dirs
+
+
+def _resolve_candidate_unit(
+    module_name: str, test_file: Path, project_root: Path, test_root: Path
+) -> Path | None:
+    """Find the ``.py`` file *module_name* resolves to when imported by *test_file*.
+
+    A bare module name can exist at more than one path in a project (two
+    unrelated units both named ``helpers.py`` is entirely legal Python). A
+    project-wide search that just picks "the first file with this name" is
+    ambiguous exactly there, and would silently attribute one test's import
+    to a different, same-named unit elsewhere in the tree. Resolution
+    therefore mirrors how the import actually resolves at runtime: prefer a
+    directory the test itself inserted onto ``sys.path`` (see
+    :func:`_sys_path_insert_dirs`) — the same directories Python's own
+    import machinery would search first for that test. Only when the test
+    inserts no such directory does this fall back to a project-wide search,
+    accepting the ambiguity as a best-effort default for tests that resolve
+    their import some other way (e.g. an installed/editable package).
+
+    Args:
+        module_name: Bare module name imported by *test_file*.
+        test_file: The covers-tagged test file doing the importing.
+        project_root: Root directory to search recursively (fallback only).
+        test_root: Excluded from the search — a module physically living
+            inside the test tree is test-support code, not implementing code.
+
+    Returns:
+        The resolved path, or ``None`` when no matching file exists.
+    """
+    for sys_path_dir in _sys_path_insert_dirs(test_file):
+        candidate = sys_path_dir / f"{module_name}.py"
+        if candidate.is_file() and not _is_excluded_path(candidate):
+            return candidate
+
+    try:
+        matches = sorted(project_root.rglob(f"{module_name}.py"))
+    except OSError:
+        return None
+    for candidate in matches:
+        if _is_excluded_path(candidate):
+            continue
+        if _is_within(candidate, test_root):
+            continue
+        return candidate
+    return None
+
+
+def _has_entry_point_of_its_own(module_path: Path) -> bool:
+    """True when *module_path* defines its own ``if __name__ == "__main__":`` guard."""
+    try:
+        text = module_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return bool(_MAIN_GUARD_RE.search(text))
+
+
+def _is_imported_elsewhere(
+    module_name: str, module_path: Path, project_root: Path, test_root: Path
+) -> bool:
+    """True when some OTHER project file (outside test_root) imports *module_name*.
+
+    A textual search for ``import <name>`` / ``from <name> import`` across
+    every other ``.py`` file under *project_root*, excluding *module_path*
+    itself and anything under *test_root* (a test importing the unit does
+    not give the unit a runtime way in — that is exactly the case this gate
+    exists to catch).
+
+    Args:
+        module_name: The bare module name to search for.
+        module_path: The candidate unit's own path (excluded from the search).
+        project_root: Root directory to search recursively.
+        test_root: Excluded from the search.
+
+    Returns:
+        ``True`` iff some other project file imports the module by name.
+    """
+    import_re = re.compile(
+        rf"(?:^|\s)(?:import\s+{re.escape(module_name)}\b"
+        rf"|from\s+{re.escape(module_name)}\s+import\b)"
+    )
+    try:
+        candidates = project_root.rglob("*.py")
+    except OSError:
+        return False
+    for candidate in candidates:
+        if _is_excluded_path(candidate):
+            continue
+        if candidate == module_path or _is_within(candidate, test_root):
+            continue
+        try:
+            text = candidate.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if import_re.search(text):
+            return True
+    return False
+
+
+def _infer_project_root(ac_root: Path, test_root: Path) -> Path:
+    """Return the common ancestor of *ac_root* and *test_root*.
+
+    Both are conventionally rooted at the same project, so their common
+    ancestor bounds the reachability scan to that project rather than the
+    whole filesystem. Falls back to *test_root* on the rare filesystem where
+    the two share no common path (e.g. different drives on Windows).
+    """
+    try:
+        return Path(
+            os.path.commonpath([str(ac_root.resolve()), str(test_root.resolve())])
+        )
+    except ValueError:
+        return test_root.resolve()
+
+
+def _find_no_entry_point_unit(
+    linked_tests: list[dict], project_root: Path, test_root: Path
+) -> str | None:
+    """Return the repo-relative path of a linked test's unit with no way in.
+
+    For each Python linked test, inspects the bare module names it imports
+    directly. A candidate unit "has no way in" when BOTH hold: it defines no
+    ``if __name__ == "__main__":`` of its own, AND no other project file
+    (outside the test tree) imports it. Only Python linked tests are
+    inspected — this gate does not extend to the TypeScript/JS path.
+
+    Args:
+        linked_tests: Covers-tagged test dicts for the AC being evaluated.
+        project_root: Root directory bounding the reachability scan.
+        test_root: The project's test tree, excluded from candidate
+            resolution and from the "imported elsewhere" search.
+
+    Returns:
+        The first no-way-in unit's path, relative to *project_root* when
+        possible (absolute otherwise); ``None`` when every resolvable
+        candidate has a way in.
+    """
+    for test in linked_tests:
+        test_file = Path(test["file"])
+        if test_file.suffix != ".py":
+            continue
+        for module_name in sorted(_local_import_module_names(test_file)):
+            candidate = _resolve_candidate_unit(
+                module_name, test_file, project_root, test_root
+            )
+            if candidate is None:
+                continue
+            if _has_entry_point_of_its_own(candidate):
+                continue
+            if _is_imported_elsewhere(module_name, candidate, project_root, test_root):
+                continue
+            try:
+                return str(candidate.relative_to(project_root))
+            except ValueError:
+                return str(candidate)
+    return None
+
+
+def _apply_reachability_gate(
+    verdict: dict, *, ac_id: str, linked_tests: list[dict], ac_root: Path, test_root: Path
+) -> dict:
+    """Apply the BO-2900d-1 reachability gate to an otherwise-eligible verdict.
+
+    Only called when *verdict* is already ``eligible: True`` (leaf path, all
+    linked tests passing). Finds the first linked unit with no runtime way
+    in of its own (see :func:`_find_no_entry_point_unit`); when none exists,
+    returns *verdict* unchanged. When one exists, checks the shared
+    reachability-exemption seam (BO-2900d-1): a recorded, reasoned exemption
+    for that exact unit releases the refusal and is announced on the
+    returned verdict (never silently absorbed); the absence of one refuses
+    the criterion with ``refusal_cause: "no_entry_point_reaches_code"``.
+
+    Args:
+        verdict: The eligibility verdict computed so far (``eligible: True``).
+        ac_id: The AC identifier being evaluated (for the refusal message).
+        linked_tests: The AC's Python covers-tagged linked tests.
+        ac_root: Root directory of the AC YAML store.
+        test_root: Root directory of the test tree.
+
+    Returns:
+        *verdict* unchanged when no no-way-in unit is found or the unit is
+        exempted (with exemption details attached); an ``eligible: False``
+        verdict carrying ``refusal_cause`` and ``unit`` otherwise.
+    """
+    project_root = _infer_project_root(ac_root, test_root)
+    unit = _find_no_entry_point_unit(linked_tests, project_root, test_root)
+    if unit is None:
+        return verdict
+
+    exemptions: list[dict] = []
+    exempt_verdict = False
+    try:
+        load_exemptions, is_exempt, registry_error_cls = _load_reachability_seam()
+    except ImportError as exc:
+        print(
+            f"WARNING: done_proof: reachability-exemption seam unavailable, "
+            f"treating {unit} as unexempted: {exc}",
+            file=sys.stderr,
+        )
+    else:
+        registry_path = project_root / "config" / "reachability_exemptions.yaml"
+        try:
+            exemptions = load_exemptions(registry_path)
+        except registry_error_cls as exc:
+            print(
+                f"WARNING: done_proof: cannot load {registry_path}: {exc}",
+                file=sys.stderr,
+            )
+        exempt_verdict = is_exempt(unit, exemptions)
+
+    if exempt_verdict:
+        matched_reason = next(
+            (e.get("reason") for e in exemptions if e.get("item") == unit), ""
+        )
+        exempted = dict(verdict)
+        exempted["exemption"] = {"item": unit, "reason": matched_reason}
+        return exempted
+
+    return {
+        "eligible": False,
+        "reason": (
+            f"no way of running the product reaches {unit} (refusal_cause: "
+            f"no_entry_point_reaches_code) for {ac_id}"
+        ),
+        "refusal_cause": "no_entry_point_reaches_code",
+        "unit": unit,
+        "passing_tests": verdict.get("passing_tests", []),
+        "failing_tests": verdict.get("failing_tests", []),
+        "dangling_tags": verdict.get("dangling_tags", []),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -1592,13 +1958,23 @@ def verify_done_eligible(
             "dangling_tags": dangling_tags,
         }
 
-    return {
+    success_verdict = {
         "eligible": True,
         "reason": "",
         "passing_tests": passing_tests,
         "failing_tests": [],
         "dangling_tags": dangling_tags,
     }
+    # BO-2900d-1: an otherwise-eligible leaf can still implement code that
+    # nothing reaches when the product runs. Only reached once every linked
+    # test already passes — this gate never overrides a genuine test failure.
+    return _apply_reachability_gate(
+        success_verdict,
+        ac_id=ac_id,
+        linked_tests=py_linked,
+        ac_root=ac_root,
+        test_root=test_root,
+    )
 
 
 # DECISION HISTORY
