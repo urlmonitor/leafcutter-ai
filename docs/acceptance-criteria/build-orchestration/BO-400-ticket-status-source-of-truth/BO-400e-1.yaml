@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -134,7 +134,10 @@ test_spec:
     description: "REQUIRED -- invoke the production entry point: load and execute the real workflow script via unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and assert the derivation actually runs during a close. Do NOT satisfy this by importing a helper directly, and do NOT satisfy it by asserting the derivation code is present in the source: the broken driver contains phase-list code too."
 origin_agent: business-analyst
 created: 2026-09-07
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by: []

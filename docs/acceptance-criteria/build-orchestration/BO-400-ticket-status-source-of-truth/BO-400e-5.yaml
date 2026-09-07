@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -101,23 +101,23 @@ expects_from:
 origin_agent: business-analyst
 created: 2026-09-07
 amended_by:
-  - reason: criteria-narrowed
-    by: human user
-    at: 2026-09-07
-    note: >-
-      Removed the second scenario ("given a reader comparing the diagram against
-      the drivers after a later change, when a second route has been introduced,
-      then that route is one the diagram does not contain"). It was a
-      counterfactual about a code change that does not exist: not checkable at
-      authoring time, satisfied vacuously by the completeness clauses above it,
-      and it implied a standing drift gate that nothing in this repository
-      performs and no record owns. Flagged by it-po during enrichment, which
-      correctly declined to edit criteria itself; removed at the approval gate.
-      The completeness clauses are untouched, including "exactly one path in the
-      diagram ends in the finished state being written". If a real drift check is
-      wanted — something that notices when the drivers gain a route the diagram
-      lacks — it needs its own AC outside this family, which is at its five-child
-      cap.
+- reason: criteria-narrowed
+  by: human user
+  at: 2026-09-07
+  note: 'Removed the second scenario ("given a reader comparing the diagram against
+    the drivers after a later change, when a second route has been introduced, then
+    that route is one the diagram does not contain"). It was a counterfactual about
+    a code change that does not exist: not checkable at authoring time, satisfied
+    vacuously by the completeness clauses above it, and it implied a standing drift
+    gate that nothing in this repository performs and no record owns. Flagged by it-po
+    during enrichment, which correctly declined to edit criteria itself; removed at
+    the approval gate. The completeness clauses are untouched, including "exactly
+    one path in the diagram ends in the finished state being written". If a real drift
+    check is wanted — something that notices when the drivers gain a route the diagram
+    lacks — it needs its own AC outside this family, which is at its five-child cap.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by: []
