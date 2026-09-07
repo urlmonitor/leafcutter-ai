@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-26
+last_updated: 2026-09-07
 components:
   - commit_guardian
 related_docs:
@@ -2714,68 +2714,78 @@ nothing and reports success).
 
 ---
 
-### KI-CG-20260831-0713 — `check-hook-trigger-reachability` blocks EVERY commit in a consumer project that tracks no Python
+### KI-CG-20260831-0713 — PARTIALLY fixed by BP-100k-4-ii; the adopter still cannot commit, for a different reason
 
-- **Severity:** blocker
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
-- **Where:** `templates/scripts/commit_guardian/commit_guardian.json:1082-1093` (the gate's
-  own manifest entry), `templates/scripts/commit_guardian/check_hook_trigger_reachability.py`,
-  and `hook_trigger_reachability_exemption_registry` in the same config
+- **Severity:** blocker — unchanged. The reported symptom, "a consumer project cannot make a
+  commit at all", still reproduces.
+- **Status:** open. The kind-based half is fixed; the location-based half is not, and the
+  location-based half is the larger population.
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07
 
-**The defect.** The gate shipped by `BP-100k-4` is `always_run: true`, `pass_filenames: false`,
-and exits non-zero when any registered hook's `files` pattern matches no tracked path. It is
-rendered into every consumer's `.pre-commit-config.yaml` — `_render_hook_yaml` in
-`scripts/build_precommit.py` iterates the whole `hooks_manifest` with no tier filtering and no
-opt-out. Two registered hooks trigger on `files: '\.py$'`: `check-placeholder-defaults` and
-`check-exception-handling`. **A consumer project containing no Python therefore cannot make a
-commit at all.**
+**This entry was briefly marked CLOSED, and that was wrong.** The closure was written when
+`BP-100k-4-ii` landed and it is corrected here rather than quietly amended, because a
+blocker-severity entry reading CLOSED over a still-reproducing symptom is the exact failure
+this register exists to catch — one level up from the code.
 
-**Evidence — reproduced independently, twice, against the real registry.**
-Synthetic consumer repos, gate executed as a process with cwd inside the probe:
+**What BP-100k-4-ii genuinely fixed.** `evaluate_gate` now draws a could-ever/does-now
+distinction: a kind-based condition such as `files: '\.py$'`, matching zero tracked paths, is
+reported under a fourth verdict `NOTHING-TO-MATCH` and does not fail the run, while a
+condition naming a location no checkout could ever produce is still `UNREACHABLE` and still
+blocks. See `BP-100k-4-ii.yaml` and `unit_tests/commit_guardian/test_bp_100k_4_ii.py`,
+verified against a real `build.py`-deployed consumer tracking zero `.py` files. That work is
+sound and is not in question.
 
-| probe | result |
-|---|---|
-| Fresh TypeScript consumer (`src/index.ts`, `README.md`, `.gitignore`) | `exit 1` · `RESULT total=52 unreachable=27 exempt=9` |
-| **Fully-onboarded** consumer — adds `docs/*.md`, `docs/components.json`, `docs/roadmap.json`, `docs/acceptance-criteria/*.yaml`, `tickets/*.md`, `docs/product-truth/*.json` | **still `exit 1`** · `RESULT total=52 unreachable=2 exempt=9` |
-
-The onboarded residue is exactly the two language-shaped triggers:
+**Why the symptom survives it.** Only three registered conditions are kind-shaped. The rest
+are location-shaped, and a fresh consumer tracks almost none of those locations. Two
+independent measurements on 2026-09-07:
 
 ```
-UNREACHABLE: check-placeholder-defaults reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
-UNREACHABLE: check-exception-handling   reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
+runtime, real deployed consumer tracking one placeholder file (pr-reviewer):
+  exit 1 · RESULT total=56 unreachable=28 exempt=6 nothing_to_match=7
+
+static, counted from commit_guardian.json hooks_manifest:
+  46 conditions carry a files pattern
+   3 kind-shaped (check-placeholder-defaults, check-mermaid-complexity, check-exception-handling)
+  43 location-shaped
+  35 location-shaped AND absent from hook_trigger_reachability_exemption_registry
 ```
 
-So this is not a not-yet-onboarded edge case. There is no amount of correct onboarding that
-clears it short of adding a `.py` file to the consumer's own tracked tree.
+The two numbers differ because the static 35 is an upper bound — some location patterns do
+match files a real install leaves tracked. 28 ≤ 35 is the expected relationship, and the
+agreement in shape is what makes the runtime figure trustworthy rather than a one-off.
 
-**Why the blast-radius sweep missed it.** `BP-100k-4`'s consumer-layout check was done — nine
-grounded exemptions exist and they are good ones — but every exemption reasons about a
-**path-shaped** pattern ("this path only exists inside the vendored package / the gitignored
-deploy mirror"). No one asked the different question a **language-shaped** pattern raises:
-*what if the consumer simply is not a Python project?* The package is self-hosted in Python, so
-`\.py$` always matches here, and the gate is green in the only repo it was exercised in.
+So `BP-100k-4-ii` moved 7 conditions out of the blocking set and left roughly 28 in it. The
+adopter's first commit still fails.
 
-Two further gates look like the same omission and have no exemption:
-`check-surface-components-e3` (targets `config/agent_registry.json` — the **same file**
-`check-agent-spawn-consistency` was exempted for) and `check-eval-staleness`.
+**The residual this entry previously named, restored.** The pre-closure text flagged
+`check-surface-components-e3` and `check-eval-staleness` as looking like the same omission
+with no exemption. Both were re-confirmed still `UNREACHABLE` on 2026-09-07. They are not
+special — they are two members of the ~28, and naming only them would understate the
+population. They are kept here because they were the two already identified by name and
+losing them was how this residual nearly went untracked.
 
-**Suggested fix (not applied).** Distinguish "this trigger is dead" from "this repository has
-none of that kind of file yet". A pattern that names a language or file family should be
-unreachable only when the repository *could* have such files. Options: extend the exemption
-vocabulary with a language-conditional ground; skip language-shaped triggers when the
-repository tracks zero files of that type; or make the gate advisory in consumer installs and
-blocking only in the package's own checkout. Whichever is chosen, add a consumer-layout probe
-that tracks **no** `.py` to the test suite — the existing consumer fixture has Python in it,
-which is why this passed.
+**Fix direction, and what NOT to do.** Do not extend the exemption registry to ~28 entries to
+make the number go to zero. An exemption is an audited statement that a specific condition
+legitimately cannot match here, and mass-adding them converts an audited list into a
+rubber stamp — the shape `BP-100k-4-i` was written to prevent. The real question is whether a
+location-based condition naming a path that a *consumer install does not create* is
+"unreachable" at all, or whether reachability must be evaluated against the layout the gate
+is running in rather than against the package's own. That is a design decision about the
+gate's frame of reference, and it wants an AC of its own rather than a patch.
 
-**Found by** an adversarial review of the shipped `ab9e91c41`, then independently reproduced
-before filing.
+**Related.** `BP-100k-4-ii` (the kind-based half, done). `BP-100n-4` (the same gate's
+opposite defect — it walks only registered hooks, so an unregistered script is invisible;
+`todo`). `BP-900h-6-iii` (the consumer simulation must exercise a language-absent adopter, so
+this class is caught by CI rather than by hand).
 
-**Pattern:** the inverse of this register's usual M5 — not a gate that passes without checking,
-but a gate that **fails without a defect**. Same root cause though: the gate cannot tell
-"nothing to check" from "something is wrong".
+**Pattern:** a fix that is correct, well-tested, and closes the mechanism it names, mistaken
+for a fix that closes the *symptom* — because the symptom had two independent causes and only
+one was in scope.
+
+**Scope note — this closes only the too-strict half.** The check still walks only
+*registered* hooks, so a script the registry never mentions remains invisible to it
+(`BP-100n-4` and its siblings, `todo` on `main` as of this fix). That is a distinct, still-open
+defect and is not resolved by this entry's closure.
 
 ---
 
