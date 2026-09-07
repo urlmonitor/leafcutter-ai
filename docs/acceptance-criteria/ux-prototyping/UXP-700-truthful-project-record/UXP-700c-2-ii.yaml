@@ -1,0 +1,79 @@
+id: UXP-700c-2-ii
+title: "A journey known to be behind carries that mark in the record itself"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a journey that the last check reported as behind,
+  When that check completes,
+  Then a mark is written into the journey record stating that it is behind and what it was
+    last confirmed against,
+  And that mark is written to disk in the record itself, so any surface that reads the record
+    can show it without re-running the check,
+  And a later check that finds the journey current removes the mark,
+  And no mark is written for a journey the check did not examine.
+depends_on:
+  - UXP-700c-2
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c-2.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-591.yaml
+    relationship: context
+    status: exists
+    relevance: "The Atlas is the surface that will render the mark. This AC produces the mark; rendering it is a separate, frontend-owned behaviour."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: frontend-coder
+  contract: "A behind-mark on the journey artifact, readable without running the checker, for the Atlas to display before the journey's content."
+expects_from:
+  ac_id: UXP-700c-2
+  contract: "The behind verdict this record makes durable."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+declares_side_effect: true
+test_required: true
+test_rationale: |
+  A verdict that exists only in a check's console output is invisible to every reader who did
+  not run the check, which is nearly all of them. The durability clause is therefore the point
+  of the record and must be asserted by reading the artifact back from disk in a separate
+  process, not by inspecting an in-memory result. The removal clause needs its own assertion or
+  the mark becomes permanent and readers learn to ignore it.
+test_spec:
+  - name: test_behind_verdict_writes_a_durable_mark_on_the_journey
+    target_dir: unit_tests/product_truth/
+    description: "After a check reports a journey behind, re-reading that journey from disk shows the mark and what it was last confirmed against."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_mark_is_removed_when_the_journey_becomes_current_again
+    target_dir: unit_tests/product_truth/
+    description: "Re-confirming the journey and re-checking removes the mark from the artifact."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_no_mark_is_written_for_a_journey_the_check_did_not_examine
+    target_dir: unit_tests/product_truth/
+    description: "A journey excluded from the check's scope is unchanged on disk after the run."
+    type: integration
+    angle: boundary
+    framework: unittest
+notes: |
+  This is the quarantine mechanism the L1 implies ("no citations, no freshness stamps, no
+  quarantine"). Scoped to producing the mark, assigned to python-coder. Rendering it ahead of
+  the journey's content in the Atlas is frontend work and is deliberately NOT folded in here -
+  one agent per AC. The delivers_to contract is the seam; if the rendering half is wanted as a
+  tracked behaviour it needs its own AC under UXP-591.

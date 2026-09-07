@@ -1,0 +1,56 @@
+id: UXP-700a-2-i
+title: "Zero-artifact derived lookups are present and empty, never absent"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the store index produced for a record holding zero artifacts,
+  When a reader asks that index for the artifacts belonging to a component, to an entity, to a
+    journey, and to an acceptance criterion,
+  Then each of those four lookups returns an empty result,
+  And no lookup fails on account of its entry being missing from the index,
+  And the state "this lookup was never written" does not occur, so an empty result is the only
+    thing a reader has to interpret.
+depends_on:
+  - UXP-700a-2
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700a-2.yaml"
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+delivers_to: null
+expects_from:
+  ac_id: UXP-700a-2
+  contract: "The zero-artifact index whose shape this constrains."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_rationale: |
+  An absent map and an empty map are indistinguishable to a test that only checks truthiness of
+  the lookup result. The test must assert the key is present and its value is empty, which is
+  what stops a consumer crashing on a lookup during a project's first week.
+test_spec:
+  - name: test_zero_artifact_index_has_every_derived_lookup_present_and_empty
+    target_dir: unit_tests/product_truth/
+    description: "Each of the four derived lookups is a present key whose value is an empty collection."
+    type: unit
+    angle: boundary
+    framework: unittest
+notes: |
+  The four lookups are index.json by_component, by_entity, by_flow and by_ac. Named here rather
+  than in criteria so the criterion survives a rename of the index fields.

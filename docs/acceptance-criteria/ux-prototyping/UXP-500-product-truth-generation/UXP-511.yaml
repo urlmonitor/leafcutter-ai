@@ -33,13 +33,64 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+  - reason: "2026-09-07 business-analyst: linked the one genuinely covering test for the by_ac inversion clause; recorded the index-rebuild half as still uncovered and authored its test_spec."
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/test_apply_flow_backlinks.py::test_reruns_generator_regenerates_derived"
 implemented_by:
   - docs/product-truth/scripts/generate_product_truth.py
 change_target: code
 risk_surface: internal
+test_required: true
+test_rationale: |
+  PARTIAL COVERAGE, DELIBERATELY NOT CLOSED. The linked test proves the by_ac inversion clause
+  only. The second clause - rebuilding by_component / by_entity / by_flow from artifacts on disk
+  - and the third - syncing each flow artifact's rollup into the index - have no test at all.
+  Listing this AC as covered on the strength of one third of its criteria would convert a
+  visible gap into a hidden one, which is the failure UXP-700b exists to prevent, so the
+  uncovered clauses are recorded here as an explicit work order instead.
+test_spec:
+  - name: test_by_component_is_rebuilt_from_artifacts_on_disk
+    target_dir: unit_tests/product_truth/
+    description: "Adding an artifact with a new component makes that component appear in the rebuilt by_component lookup."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_by_entity_is_rebuilt_from_artifacts_on_disk
+    target_dir: unit_tests/product_truth/
+    description: "Adding an artifact naming a new entity makes that entity appear in the rebuilt by_entity lookup."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_by_flow_is_rebuilt_from_the_flows_and_mocks_on_disk
+    target_dir: unit_tests/product_truth/
+    description: "Adding a flow makes it appear in the rebuilt by_flow lookup, and removing it removes the entry."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_derived_lookups_are_deterministically_ordered
+    target_dir: unit_tests/product_truth/
+    description: "Two rebuilds from the same artifacts produce identically ordered lookups, so a fresh rebuild always equals the stored value."
+    type: unit
+    angle: seam
+    framework: unittest
+  - name: test_flow_artifact_rollup_in_the_index_matches_the_recomputed_rollup
+    target_dir: unit_tests/product_truth/
+    description: "Changing a criterion's work_status changes the flow artifact's rollup in the index on the next run."
+    type: integration
+    angle: seam
+    framework: unittest
+notes: |
+  COVERAGE STATUS as at 2026-09-07: PARTIALLY COVERED - do not read the covered_by entry as full
+  coverage.
+
+  What the linked test proves: unit_tests/test_apply_flow_backlinks.py::
+  test_reruns_generator_regenerates_derived exercises the by_ac inversion clause.
+
+  What is still uncovered: the index-rebuild clause (by_component / by_entity / by_flow) and the
+  rollup-sync clause. The test_spec above is the work order for those. This AC must not be
+  marked fully covered until every entry in that spec exists and passes.
 product_truth:
   - flow: leafcutter/generate-product-truth
     node: derive

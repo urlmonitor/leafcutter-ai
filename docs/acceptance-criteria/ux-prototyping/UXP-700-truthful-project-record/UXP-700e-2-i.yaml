@@ -1,0 +1,71 @@
+id: UXP-700e-2-i
+title: "The derived short form is bounded, reproducible, and not editable in place"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a journey whose authoritative description is 938 characters long,
+  When the shorter form is derived,
+  Then the derived form is no longer than the declared bound for the place it is shown,
+  And deriving it twice from the same description produces the same text,
+  And an edit made directly to the derived form is reported, naming the authoritative
+    description as the place to edit instead,
+  And the derived form ends in a way that shows a reader it was shortened, so nobody reads it
+    as the whole description.
+depends_on:
+  - UXP-700e-2
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700e-2.yaml"
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700e-2
+  contract: "The derivation this record constrains."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_rationale: |
+  Reproducibility has to be asserted separately from correctness: a derivation that truncates
+  at a word boundary chosen by a hash or a locale-sensitive rule produces different text on
+  different machines and would reintroduce the platform-dependent verdict problem recorded in
+  UXP-700c-3-i. The in-place-edit clause is what stops the derived form quietly becoming a
+  second authored one again, which is exactly how the current state arose.
+test_spec:
+  - name: test_derived_short_form_respects_the_declared_bound
+    target_dir: unit_tests/product_truth/
+    description: "Deriving from a 938-character description yields text no longer than the bound."
+    type: unit
+    angle: boundary
+    framework: unittest
+  - name: test_derivation_is_reproducible
+    target_dir: unit_tests/product_truth/
+    description: "Deriving twice from the same input yields identical text."
+    type: unit
+    angle: criterion
+    framework: unittest
+  - name: test_editing_the_derived_form_in_place_is_reported
+    target_dir: unit_tests/product_truth/
+    description: "A hand edit to the derived form is reported and names the authoritative description."
+    type: integration
+    angle: failure
+    framework: unittest
+notes: |
+  938 characters is the measured length of the longest existing description
+  (how-acs-are-built). Used as the concrete fixture value so the test exercises the real worst
+  case rather than a convenient one.

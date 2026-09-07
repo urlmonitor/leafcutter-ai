@@ -1,0 +1,78 @@
+id: UXP-700b
+title: "A check that looked at nothing never reports success"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  "All clear" means something was examined — never that there was nothing there.
+
+  When the tooling checks the record and finds nothing to check, it says so
+  plainly instead of reporting a clean result. A person reading the outcome can
+  always tell the difference between "I inspected your project and it is sound"
+  and "there was nothing for me to inspect".
+depends_on:
+  - UXP-700
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+    relevance: "Parent principle. GE-120 is 'green means it was checked' for the commit guards; this L1 is the same rule applied to the project record. Align the vocabulary; do not duplicate GE-120's scope."
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-609-2.yaml
+    relationship: context
+    status: exists
+    relevance: "Existing pattern to mirror — 'the drift-guard fails when it read zero fixture records; it never passes on nothing'. Already authored and done for one check; this L1 generalises it to the record's own checks."
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-700b-1
+  - UXP-700b-2
+  - UXP-700b-3
+  - UXP-700b-4
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  ANTI-VACUITY. Kept as its own L1 rather than folded into UXP-700c, on purpose.
+  A vacuous check is the MECHANISM that conceals both UXP-700a (no record) and
+  UXP-700c (drifted record). Merging it into the drift L1 would make the thing
+  that hides the failures a sub-clause of one of the failures it hides.
+
+  DIRECTLY OBSERVED AND REPRODUCED (2026-09-07, this repo). A completely empty
+  product-truth store, with its derived index regenerated, produced:
+      OK: 0 flows, 0 mock-data, 0 mockups, eval + index + derived data valid
+      (0 warnings)      exit 0
+  That output is character-for-character the shape of a real pass. Nothing in it
+  distinguishes "your project's record is sound" from "your project has no
+  record". This is the acceptance shape for the L1: those two runs must not look
+  alike.
+
+  ALSO OBSERVED, and relevant to the BA: the store checker is not wired into any
+  automatic gate. A repo-wide search for callers of the product-truth checker
+  found it referenced only by ACs, agent cards, ADRs and how-to docs — there is
+  no entry for it in .pre-commit-config.yaml and no CI step. So today the check
+  is both vacuous when empty AND not automatically run. Fixing only the message
+  leaves nobody reading it. Whether the un-run problem belongs here or in
+  UXP-700c is a BA call; it is recorded on both.
+
+  STANDING-RULE CAUTION — inherited from GE-120, do not let it be flattened.
+  This project has a deliberate fail-open convention: a guard that hits an
+  internal error exits 0 with a warning so a script bug never blocks unrelated
+  work. This L1 does NOT repeal that. The distinction is narrower: failing open
+  on one bad input while the check still ran is fine; reporting SUCCESS when the
+  check never examined anything is not. The unit of the rule is visibility, not
+  blocking.

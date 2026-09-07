@@ -1,0 +1,64 @@
+id: UXP-700d-5
+title: "A reference for how example content is kept apart from a project's own record"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a person deciding where to put a new artifact, or a person auditing what is example
+    content and what is not,
+  When they open the reference on example content,
+  Then it states the rule that decides which product an artifact belongs to, and that the rule
+    is the product root rather than the artifact's content,
+  And it lists every surface that honours the separation - the project's record, the store of
+    work, and the reading surfaces - and states what each returns for example content,
+  And it states that the example content is required to keep existing, naming the decisions that
+    depend on it, so a future reader does not read the separation as a plan to delete it,
+  And it states how to add a new example product and how to add a new example artifact to an
+    existing one.
+depends_on:
+  - UXP-700d
+  - UXP-700d-1
+  - UXP-700d-2
+  - UXP-700d-3
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700d.yaml"
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: context
+    status: exists
+    relevance: "One of the decisions that depends on the example content existing; must be named in the reference."
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-593.yaml
+    relationship: context
+    status: exists
+    relevance: "Mock mode depends on the bundled fixture content; must be named in the reference."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700d-1
+  contract: "The ownership rule the reference states."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+test_required: false
+test_rationale: |
+  The deliverable is prose. Every behaviour it describes is pinned by executable tests on
+  UXP-700d-1 through UXP-700d-4; documentation-verifier is the correct gate. A test asserting
+  the document names ADR-022 would pass on a stub containing only that name.
+notes: |
+  Produced because UXP-700d declares documentation_triggers: [reference-doc]. The third clause
+  is the one that matters most in six months: the whole tree reads as hostile to the example
+  content, and without an explicit statement that ADR-022 and UXP-550/UXP-593 require it, a
+  future cleanup will delete fern-and-fig and break mock mode.

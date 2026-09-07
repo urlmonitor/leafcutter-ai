@@ -1,0 +1,71 @@
+id: UXP-700e
+title: "The record stays small enough that a person can still review it"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  One canonical record per thing — it grows by extension, never by duplication.
+
+  As a project grows, its record stays something a person can actually sit down
+  and read. There is one authoritative description of each thing rather than
+  several near-copies, so reviewing the record stays a job someone will do,
+  instead of a job everyone quietly stops doing.
+depends_on:
+  - UXP-700
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: specifies
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-300
+  - UXP-700e-1
+  - UXP-700e-2
+  - UXP-700e-3
+  - UXP-700e-4
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: internal
+notes: |
+  The "bound size" L1, restated as its failure mode: the record becomes too
+  large to review, so nobody reviews it, so every other guarantee in this tree
+  degrades to unread text.
+
+  RE-PARENTING — UXP-300 becomes this L1's first L2. UXP-300 ("one canonical
+  dataset per entity per component; extend, never duplicate") was an ORPHAN: an
+  L2 with an empty depends_on and an empty covered_by, sitting under no parent
+  since 2026-07-10. Its rule is precisely this L1's mechanism, so it is adopted
+  here rather than restated. UXP-300 keeps its id and its folder — only its
+  depends_on gains UXP-700e. This L1 therefore starts with one child; the BA
+  should expect to add siblings rather than treat one child as complete.
+
+  ROADMAP PHASE DELIBERATELY UNSET — a question for the user, not a default.
+  Like UXP-700c, this reads as later hardening: a record only outgrows its
+  readers after a project has been running a while, whereas phase_1 is about
+  installing cleanly into any project. Left untagged rather than stamped
+  phase_1.
+
+  MEASURED EVIDENCE (2026-09-07, shared with UXP-700c and pointing the other
+  way). Every one of the 14 flows has a hand-written short summary in the index
+  (89-218 characters) standing in for the real one in the flow file (365-938
+  characters). Nobody was being careless: the authoritative summaries had grown
+  past what the reading surface could carry, so a second, shorter, unguarded
+  copy appeared beside each one. That is this failure mode caught in the act —
+  a record outgrowing its reviewers produces duplication, and the duplication is
+  what then drifts. UXP-700c owns the drift; this L1 owns the growth that caused
+  it.

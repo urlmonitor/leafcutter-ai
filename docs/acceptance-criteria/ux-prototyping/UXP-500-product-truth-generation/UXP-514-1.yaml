@@ -1,0 +1,82 @@
+id: UXP-514-1
+title: "D1: a step whose stated implementation status disagrees with its criteria is named"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a journey in which one step states its implementation status as done while one of the
+    acceptance criteria that step names is not done,
+  When the record is checked,
+  Then the check reports that step, naming the journey, the step, the status the record holds
+    and the status recomputed from the criteria the step names,
+  And a step whose stated status equals the recomputed one is not reported,
+  And the check states how many steps it recomputed, and that figure rises by one when a step
+    is added.
+depends_on:
+  - UXP-514
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-514.yaml"
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-3.yaml
+    relationship: context
+    status: exists
+    relevance: "The general anti-vacuity rule these four checks are instances of."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-514
+  contract: "The umbrella drift check this record is one of the four named parts of."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/scripts/validate_product_truth.py
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  UXP-514 has been work_status done since 2026-07-14 with covered_by empty and no test drives
+  any of its four checks. This record is one quarter of that gap. The fixture has to be a store
+  built to disagree, because the live store agrees by construction (the generator writes the
+  value the validator recomputes), so a test over the real store asserts nothing. The stated
+  error text is named in the description so the assertion is on the message an adopter reads,
+  not on the exit status alone.
+test_spec:
+  - name: test_impl_status_disagreeing_with_recomputed_status_is_reported
+    target_dir: unit_tests/product_truth/
+    description: "A fixture store whose step states done while a named criterion is todo produces a finding naming the flow, the node, the stored status and the recomputed status."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_agreeing_impl_status_is_not_reported
+    target_dir: unit_tests/product_truth/
+    description: "A fixture store whose stated statuses match the recomputation produces no D1 finding."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_recomputed_step_count_rises_with_the_number_of_steps
+    target_dir: unit_tests/product_truth/
+    description: "Adding one step to the fixture raises the D1 recomputed count by exactly one."
+    type: integration
+    angle: seam
+    framework: unittest
+notes: |
+  D1 of the four checks UXP-514 names. Split out so each check has its own fixture and its own
+  named finding: a single record with four "And" clauses is satisfiable by implementing one and
+  reporting all four failures through one message, which is what makes an adopter unable to act
+  on the report.
+
+  UXP-514 is NOT superseded by this split. It stays as the umbrella and keeps its done
+  accounting for the implementation that landed; these children carry the verification that was
+  never written.

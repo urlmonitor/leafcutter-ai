@@ -1,0 +1,63 @@
+id: UXP-700b-1-ii
+title: "Partial emptiness is reported per artifact type, not rounded to sound"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a record holding three journeys, zero example datasets and zero screens,
+  When the record's checker runs,
+  Then it names example data and screens as the types for which it read zero records,
+  And it does not name journeys,
+  And the outcome it reports is not the outcome for a record that was checked and found sound.
+depends_on:
+  - UXP-700b-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-1.yaml"
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700b-1
+  contract: "The per-type zero-record reporting this record exercises on a mixed store."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_rationale: |
+  An implementation that only distinguishes "wholly empty" from "not wholly empty" passes
+  UXP-700b-1 in full and still hides the state this project is actually in today - a store with
+  fourteen journeys and zero real screens. The mixed store is the case that matters and it
+  needs its own fixture.
+test_spec:
+  - name: test_mixed_store_names_only_the_empty_artifact_types
+    target_dir: unit_tests/product_truth/
+    description: "With three journeys and no example data or screens, the report names example data and screens and does not name journeys."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_mixed_store_outcome_is_not_the_clean_pass_outcome
+    target_dir: unit_tests/product_truth/
+    description: "A partially empty store does not report the outcome reserved for a sound checked store."
+    type: integration
+    angle: criterion
+    framework: unittest
+notes: |
+  This is the case leafcutter's own store is in for screens: 10 of 10 registered mockups belong
+  to the example product, so the project's own screen population is zero. See UXP-700d-4, which
+  owns the reporting of a type whose entire population is example content; this record owns the
+  simpler case of a type whose population is zero.

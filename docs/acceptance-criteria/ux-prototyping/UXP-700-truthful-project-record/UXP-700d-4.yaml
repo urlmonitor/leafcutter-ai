@@ -1,0 +1,78 @@
+id: UXP-700d-4
+title: "An artifact type whose whole population is example content is reported"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project whose record holds at least one artifact of a given type,
+  When the record is checked,
+  Then the check states, for each artifact type, how many artifacts of that type belong to the
+    project and how many belong to the example product,
+  And an artifact type whose project count is zero while its example count is not is reported
+    by name,
+  And an example artifact is never counted as satisfying that type for the project,
+  And a type for which both counts are zero is reported as empty rather than as example-only.
+depends_on:
+  - UXP-700d
+  - UXP-700d-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700d.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-1-ii.yaml
+    relationship: context
+    status: exists
+    relevance: "Adjacent case. UXP-700b-1-ii owns a type whose population is zero; this AC owns a type whose population is entirely example content."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700d-1
+  contract: "The per-artifact ownership predicate these counts are grouped by."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_rationale: |
+  This is the check that would have caught the current state, where 10 of 10 screens are
+  example content and a reader looking at a populated mockups/ directory concludes the product
+  is documented. The both-zero clause needs its own assertion because the obvious implementation
+  divides by the total and produces a misleading example-only verdict, or an error, on an empty
+  store - which would make this check the source of a fresh vacuous pass.
+test_spec:
+  - name: test_type_with_only_example_artifacts_is_reported_by_name
+    target_dir: unit_tests/product_truth/
+    description: "A store whose screens are all example content reports screens as example-only."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_per_type_project_and_example_counts_are_both_stated
+    target_dir: unit_tests/product_truth/
+    description: "The report carries two counts per artifact type and they sum to that type's population."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_type_with_no_artifacts_at_all_is_reported_empty_not_example_only
+    target_dir: unit_tests/product_truth/
+    description: "A type with zero project and zero example artifacts is reported as empty."
+    type: unit
+    angle: boundary
+    framework: unittest
+notes: |
+  VERIFIED 2026-09-07: all 10 mockups in the store are fern-and-fig, and fern-and-fig is the
+  only directory under mockups/. There are zero mockups of the real product. As the L1 puts it,
+  for that artifact type the demo is not a corner of the record - it IS the record.
+
+  This AC does NOT require anyone to author real mockups. It requires the state to be visible.
+  Whether to author them is a product decision the report should provoke, not one this record
+  makes.

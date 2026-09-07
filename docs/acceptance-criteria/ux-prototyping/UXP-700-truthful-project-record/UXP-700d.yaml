@@ -1,0 +1,89 @@
+id: UXP-700d
+title: "Example content can never be mistaken for the real product"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - ac_store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Demo material stays demo — it never poses as your product or your work queue.
+
+  The sample content that ships to show how the tooling works is kept plainly
+  and structurally apart from a project's own record and its own list of work to
+  be done. Nobody — and nothing acting on your behalf — can read the examples as
+  a description of your product, or pick a piece of the demo up as real work.
+depends_on:
+  - UXP-700
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: context
+    status: exists
+    relevance: "CONSTRAINT, not a target. ADR-022 depends on the example content continuing to exist. The requirement is separation, never deletion."
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-554.yaml
+    relationship: context
+    status: exists
+    relevance: "Mock mode also depends on the example content existing and remaining referenceable."
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-700d-1
+  - UXP-700d-2
+  - UXP-700d-3
+  - UXP-700d-4
+  - UXP-700d-5
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+notes: |
+  THE USER'S HARD CONSTRAINT. Also the most under-scoped of the five: the
+  contamination is NOT confined to the product-truth store. It reaches into the
+  real backlog, which is why this L1 carries the ac_store component tag.
+
+  VERIFIED 2026-09-07 (independently reproduced, not taken on report).
+    - 18 demo acceptance criteria for a fictional plant shop sit in the REAL
+      backlog: 13 files under UXP-210-buy-a-plant and 5 under
+      UXP-220-track-an-order. They carry readiness reviewed or approved,
+      req_status approved, work_status done/in_progress/todo, and a real
+      assigned_agent (frontend-coder) — indistinguishable, field for field,
+      from genuine work.
+    - UXP-210a and UXP-220a are level L2 with an empty depends_on — roots with
+      no parent, so nothing above them contains or explains them.
+    - WORSE THAN REPORTED. The store scanner surfaces TWO of them as READY
+      LEAVES, not one: UXP-210d-4 ("Order summary is shown before payment") and
+      UXP-210d-5 ("Entering payment details creates a Payment record"), both
+      assigned to frontend-coder, both in the ready set alongside 649 real
+      items. A third, UXP-210d-6, sits in the blocked set and becomes ready the
+      moment its blocker clears. The concrete consequence: an agent can be
+      dispatched, today, to build plant-shop checkout and payment handling
+      inside leafcutter.
+    - Every one of the 10 mockups in the store is fern-and-fig
+      (cart, checkout, notify-me, order-confirmation, order-detail, orders-list,
+      plant-detail, plant-listing, shipment-tracking, sign-in) and they are the
+      only directory under mockups/. There are zero mockups of the real product.
+      So the demo is not a corner of the record — for that artifact type it IS
+      the record.
+
+  SEPARATION, NOT DELETION — non-negotiable. ADR-022 and UXP-550/UXP-593 (mock
+  mode) DEPEND on the example content existing. The requirement is structural:
+  its own product root, its own index, its own identity, so that no scan, no
+  agent, and no reader crosses from one into the other by accident.
+  fern-and-fig stays, and stays referenceable, as an example.
+
+  Scope note for the BA: this L1 must reach into the acceptance-criteria store,
+  not only the product-truth store. An L2 set that only separates flows,
+  mock-data and mockups leaves the two dispatchable plant-shop tickets in place
+  and misses the sharpest edge of the failure.

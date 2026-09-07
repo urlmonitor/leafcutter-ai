@@ -1,0 +1,118 @@
+id: UXP-700
+title: "What your project says about itself is true, and stays true as the code changes"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  A record of your project you can rely on — at any size, in any project.
+
+  Every project that adopts this tooling gets a written record of what it does:
+  the journeys through it, the example data behind them, and the screens people
+  see. That record is only worth having if you can trust it without checking it
+  yourself. This goal makes it trustworthy in both directions of a project's
+  life: honest on day one when it is empty and has nothing to say, and still
+  correct months later when it is large, busy, and nobody remembers writing half
+  of it. You should be able to read it and act on it, rather than reading it and
+  then going to confirm it.
+depends_on: []
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-490-product-truth/UXP-490.yaml
+    relationship: context
+    status: exists
+    relevance: "Sibling L0, deliberately NOT the parent. UXP-490 is leafcutter's own product truth, authored and reviewed in this repo. UXP-700 is an adopter's record in a consumer project. See notes."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+    relevance: "Same anti-vacuity principle applied to the commit checks. UXP-700b is its instance inside the project record."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-700a
+  - UXP-700b
+  - UXP-700c
+  - UXP-700d
+  - UXP-700e
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+notes: |
+  ADD-VS-GRAFT — a NEW sibling L0 was chosen over hanging this under UXP-490.
+  Four reasons, in order of strength. Do NOT re-argue this from the verbs in
+  UXP-490's title ("review", "look at", "see"): that argument is refutable,
+  because UXP-590 ("links are generated and kept truthful automatically") and
+  UXP-493 ("a living layer ... the layer maintains itself") already carry trust
+  language inside UXP-490's own subtree.
+
+    1. DIFFERENT CUSTOMER. Everything under UXP-490 is leafcutter's own product
+       truth, authored here, reviewed by leafcutter's PO. UXP-700 is about an
+       ADOPTER's record inside a CONSUMER project — someone who installed the
+       tooling and has never read this repo. Same artifacts, different owner,
+       different failure consequences.
+    2. DIFFERENT HONESTY AXIS. UXP-590 keeps the record INTERNALLY consistent
+       (flow <-> AC <-> index <-> back-reference all agree with each other).
+       UXP-700 is about the record's correspondence WITH THE CODE IT DESCRIBES.
+       Internal consistency is achievable while being uniformly wrong about the
+       product. These two must not be merged, and UXP-590 stays where it is.
+    3. UXP-490 IS ALREADY OVER THE CHILD CAP. Nine L1s name it in depends_on
+       (UXP-491, 492, 493, 590, 591, 592, 594, 596, 611) against a 3-7 rule,
+       and its own covered_by lists only five of them (491, 492, 493, 596, 611)
+       — so 590/591/592/594 are children by one edge and orphans by the other.
+       A horizontal split of UXP-490 is owed BEFORE anything is added to it.
+       That split is deliberately NOT performed here; see OPEN ITEM below.
+       RESOLVED 2026-09-07: the split was performed on user authorisation.
+       UXP-493, UXP-590, UXP-592 and UXP-594 moved to a new sibling L0,
+       UXP-800 (the production side of product truth); UXP-490 keeps five.
+       UXP-590 did NOT move under UXP-700 — reason 2 above still holds and
+       was the explicit constraint on the split.
+    4. LITMUS. Swap the Atlas for any other viewer and UXP-490 collapses — it
+       names "/flows view", "render live", "colours every step". UXP-700
+       survives any viewer, any authoring agent, and any store format, because
+       its subject is the record's truthfulness, not its presentation.
+
+  HOSTS ALREADY CONSIDERED AND REJECTED — do not re-litigate: BO-3600, GE-120,
+  BP-1100, TQ-400/TQ-500, GE-127, UXP-100.
+
+  L1 CUT — BY FAILURE MODE, NOT BY ACTIVITY. The originating request described
+  this as "produce / maintain / bound size". That cut was deliberately not used:
+  those are activities the tooling performs, whereas what a user experiences is
+  a failure. Two of the five failure modes below (b and d) fall entirely outside
+  the produce/maintain/bound triple, which is the evidence that the activity cut
+  loses requirements.
+    a = there is no record, or a fake one          (was "produce")
+    b = an empty check passes as a real one        (NOT in the activity cut)
+    c = the record drifts from the code, silently  (was "maintain")
+    d = example content poses as the real product  (NOT in the activity cut)
+    e = the record outgrows its reviewers          (was "bound size")
+  Do NOT fold (b) into (c). A vacuous check is precisely the mechanism that
+  hides both (a) and (c) — it is the reason the other failures go unnoticed, so
+  it earns its own L1 rather than becoming a clause of the drift L1.
+
+  OPEN ITEM FOR THE USER (not for the BA to decide):
+    - CLOSED 2026-09-07 — UXP-490's horizontal split was performed on user
+      authorisation (see reason 3 above). New sibling L0 UXP-800 was created;
+      four L1s were reparented by depends_on/covered_by with no id renames.
+      Still open for the user: UXP-800's title and criteria are BA-drafted and
+      need PO review (its readiness is draft for that reason), and UXP-490's
+      criteria gained one BA-authored Scope paragraph that is likewise
+      PO-reviewable.
+    - ROADMAP PHASE. (a), (b) and (d) are tagged phase_1 — they sit squarely
+      in "installs into any project ... reliable enough to use across multiple
+      repos". (c) and (e) read as later hardening and are deliberately left
+      UNTAGGED rather than stamped phase_1. The user should assign them.
+
+  Authored at the PO stage; L0/L1 only. BA decomposes to L2/L3.

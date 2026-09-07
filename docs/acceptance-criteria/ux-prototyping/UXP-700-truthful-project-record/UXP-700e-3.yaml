@@ -1,0 +1,89 @@
+id: UXP-700e-3
+title: "The record's labels come from declared vocabularies, so one thing has one name"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the labels a journey carries - the component it belongs to, and the tags it is filed
+    under,
+  When the record is checked,
+  Then each component label resolves to a component registered in the project, and one that
+    does not is reported naming the artifact and the label,
+  And each tag matches the declared shape for a tag, and one that does not is reported the same
+    way,
+  And the check states how many labels it resolved, so a run over a record carrying no labels is
+    distinguishable from a run in which every label resolved,
+  And a label that differs from a registered one only by case or by spacing is reported as the
+    registered one having been meant, rather than as a new label.
+depends_on:
+  - UXP-700e
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700e.yaml"
+doc_links:
+  - path: docs/components.json
+    relationship: specifies
+    status: exists
+    relevance: "The registry component labels must resolve against."
+  - path: docs/product-truth/schemas/flow.schema.json
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-700e-1
+  contract: "The declared-shape mechanism the tag pattern is expressed through."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-700e-3-i
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: internal
+test_required: true
+test_rationale: |
+  Free-text labels degrade by accumulating near-duplicates rather than by producing invalid
+  values, so a test that only feeds an obviously wrong label misses the real failure. The
+  near-miss clause is the one that matters and needs its own fixture: a label differing only by
+  case is the form a reviewer will not notice and a scan will treat as a distinct facet.
+test_spec:
+  - name: test_unregistered_component_label_is_reported_with_artifact_and_label
+    target_dir: unit_tests/product_truth/
+    description: "A journey labelled with a component absent from the registry is reported naming both."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_tag_not_matching_the_declared_shape_is_reported
+    target_dir: unit_tests/product_truth/
+    description: "A tag violating the declared pattern is reported naming the artifact and the tag."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_near_miss_label_is_reported_as_the_registered_one_having_been_meant
+    target_dir: unit_tests/product_truth/
+    description: "A component label differing only by case or spacing is reported as a near miss naming the registered label."
+    type: unit
+    angle: boundary
+    framework: unittest
+  - name: test_resolved_label_count_rises_with_the_number_of_labels
+    target_dir: unit_tests/product_truth/
+    description: "Adding one labelled artifact raises the stated resolved-label count."
+    type: integration
+    angle: seam
+    framework: unittest
+notes: |
+  MEASURED 2026-09-07: tags has no pattern and component is free text in the artifact shapes.
+  Note also that index.json currently records component values in the AC-store kebab vocabulary
+  (for example ux-prototyping) while docs/components.json uses underscore ids (ux_prototyping).
+  Those are two different registries and the IT PO must decide which one artifact labels resolve
+  against BEFORE this is built - resolving against the wrong one turns every existing artifact
+  into a finding. This is flagged as an open question, not settled here.

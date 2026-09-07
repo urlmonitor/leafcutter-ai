@@ -1,0 +1,61 @@
+id: UXP-700c-4
+title: "A how-to for reading a drift report and reconciling the record"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a person who has just been told by the automatic checks that part of their record is
+    behind,
+  When they open the how-to for reconciling the record,
+  Then it states, for each kind of finding the checker can report - a pointer that does not
+    resolve, a pointer it could not classify, a journey behind, a journey never confirmed -
+    what the finding means and what to open first,
+  And it walks through reconciling one journey end to end, including how to record that the
+    journey has been confirmed against the current code,
+  And it states what to do when the code was right and the record was wrong, and separately
+    what to do when the record was right and the code was wrong,
+  And it states that a separator-only difference between platforms is not drift and must not be
+    reconciled as though it were.
+depends_on:
+  - UXP-700c
+  - UXP-700c-2
+  - UXP-700c-3
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c.yaml"
+doc_links:
+  - path: docs/how-to/authoring-product-truth-artifacts.md
+    relationship: related
+    status: exists
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700c-2
+  contract: "The finding vocabulary the how-to explains."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+test_required: false
+test_rationale: |
+  The deliverable is prose whose subject behaviours are pinned by executable tests on
+  UXP-700c-1, UXP-700c-2 and UXP-700c-3. A structural test over the document would pass on a
+  stub with the right headings, which is the vacuous shape UXP-700b forbids.
+notes: |
+  Produced because UXP-700c declares documentation_triggers: [how-to, sequence-diagram]. The
+  last clause exists because the single most likely reaction to this feature landing is someone
+  on Windows treating fourteen separator-only index mismatches as fourteen drifted journeys and
+  "fixing" the record.

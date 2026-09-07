@@ -1,0 +1,71 @@
+id: UXP-700a-1-i
+title: "An absent start-up input is named, not crashed on"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a freshly installed record in which the classifier evaluation set has never been
+    authored, so the input the checker expects to read is absent,
+  When the record's checker runs,
+  Then it names the absent input and the artifact class that input belongs to as a reported
+    condition,
+  And it reaches a stated verdict rather than terminating with an unhandled failure,
+  And the verdict it reaches is not the verdict it reports for a record it checked and found
+    sound.
+depends_on:
+  - UXP-700a-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700a-1.yaml"
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700a-1
+  contract: "The deployed empty record whose checker this exercises."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_rationale: |
+  The defect is an uncaught traceback, so the test must run the checker as a process against a
+  store missing the input and assert on the process outcome. Asserting on a caught exception
+  inside the module would pass against the current broken behaviour, because it is the caller
+  that dies.
+test_spec:
+  - name: test_absent_classifier_eval_is_reported_not_raised
+    target_dir: unit_tests/product_truth/
+    description: "A store with no classifier evaluation set produces a message naming that input and a stated verdict, with no traceback on stderr."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_absent_startup_input_verdict_differs_from_clean_pass
+    target_dir: unit_tests/product_truth/
+    description: "The verdict for the missing-input run is distinguishable from the verdict for a populated, sound store."
+    type: integration
+    angle: boundary
+    framework: unittest
+notes: |
+  DIRECTLY OBSERVED (2026-09-07, this repo, reproducible). With empty flows/, mock-data/ and
+  mockups/ present, the store checker exited with an uncaught Python traceback because
+  docs/product-truth/classifier/eval.jsonl did not exist. Only after that file was created by
+  hand, and the derived index rebuilt, did the checker report success.
+
+  NAMED MUTATION for the last clause: make the missing-input path return the same verdict as a
+  clean run. Only this record turns red; UXP-700a-1 still passes, which is why the clause is a
+  record of its own rather than a clause of the parent.

@@ -17,7 +17,7 @@ criteria: |
   depend on — so what I review is always the current truth and the layer maintains itself
   as features are defined and built.
 depends_on:
-  - UXP-490
+  - UXP-800
 doc_links:
   - path: docs/product-truth/flows/leafcutter/product-truth-architecture.flow.json
     relationship: implemented-by-step
@@ -26,7 +26,9 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-10
-amended_by: []
+amended_by:
+  - reason: "2026-09-07 business-analyst: reparented from UXP-490 to UXP-800 by a horizontal split (ac-tree-split Pattern A). UXP-490 had nine L1 children against a 3-7 rule; this L1 is about the store and how it is kept fresh, which is the production axis UXP-800 now owns, not the review-and-see axis UXP-490 keeps. Id unchanged."
+  - reason: "2026-09-07 business-analyst: covered_by scope repair. UXP-422a is a grandchild (it declares depends_on UXP-422, and UXP-422 already lists it), so it is removed here. covered_by is a direct-children list — the convention is now stated in docs/reference/ac-schema.md 'covered_by — Scope Convention'. No link is lost. UXP-420a and UXP-421a are retained because they declare depends_on UXP-493, i.e. they are direct children by the only edge they assert."
 superseded_by: null
 covered_by:
   - UXP-420
@@ -34,7 +36,6 @@ covered_by:
   - UXP-421
   - UXP-421a
   - UXP-422
-  - UXP-422a
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

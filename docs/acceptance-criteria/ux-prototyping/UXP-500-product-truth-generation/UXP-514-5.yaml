@@ -1,0 +1,83 @@
+id: UXP-514-5
+title: "None of the four drift checks reports a clean result on an empty input set"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a record in which the input set for one of the four drift checks is empty - no journey
+    step carries an implementation status, or no acceptance criterion carries a back-reference,
+    or the index holds no derived entries, or no journey step names a screen,
+  When the record is checked,
+  Then that check reports that it was not exercised, naming the input it needed,
+  And it does not report that no drift was found,
+  And the run's overall outcome is not the outcome for a record that was checked and found sound
+    while any of the four reports it was not exercised,
+  And each of the four is reported independently, so three exercised checks and one unexercised
+    check are distinguishable from four exercised checks.
+depends_on:
+  - UXP-514
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-514.yaml"
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-3.yaml
+    relationship: context
+    status: exists
+    relevance: "The general anti-vacuity rule these four checks are instances of."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-514
+  contract: "The umbrella drift check this record is one of the four named parts of."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/scripts/validate_product_truth.py
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  Every clause of UXP-514 is universally quantified ("errors if ANY X differs"), so all four are
+  vacuously satisfied when their input set is empty - which is the state a freshly installed
+  record is in. The only way to prove this is a fixture per check with that check's input set
+  emptied while the others stay populated; a wholly empty store would leave all four unexercised
+  at once and could not distinguish independent reporting from a single global flag.
+test_spec:
+  - name: test_each_drift_check_reports_not_exercised_on_its_own_empty_input
+    target_dir: unit_tests/product_truth/
+    description: "Four fixtures, each emptying one check's input set, each producing a not-exercised report naming that input."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_unexercised_drift_check_does_not_report_no_drift_found
+    target_dir: unit_tests/product_truth/
+    description: "The not-exercised report replaces, and does not accompany, a no-drift-found statement."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_three_exercised_and_one_unexercised_is_distinguishable_from_four_exercised
+    target_dir: unit_tests/product_truth/
+    description: "Emptying one check's input changes only that check's reported state."
+    type: integration
+    angle: boundary
+    framework: unittest
+notes: |
+  THE ANTI-VACUITY SIBLING. This is the instance, for these four specific checks, of the general
+  rule in UXP-700b-3. It is recorded here as well as there because UXP-700b-3 states the rule
+  the record's checks are held to, while this record is what an implementer working on UXP-514
+  will actually read.
+
+  DIRECTLY OBSERVED 2026-09-07: an empty store produced "OK: 0 flows, 0 mock-data, 0 mockups,
+  eval + index + derived data valid (0 warnings)" and exit 0 - a clean pass produced by all four
+  of these checks being vacuously true.

@@ -15,7 +15,7 @@ criteria: |
   the define-a-feature pipeline only drafts the artifacts that are actually warranted, and
   the decision is measured against a gold eval set rather than guessed.
 depends_on:
-  - UXP-490
+  - UXP-800
 doc_links:
   - path: docs/product-truth/classifier/eval.jsonl
     relationship: implemented-by-step
@@ -24,7 +24,8 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+  - reason: "2026-09-07 business-analyst: reparented from UXP-490 to UXP-800 by a horizontal split (ac-tree-split Pattern A). UXP-490 had nine L1 children against a 3-7 rule; deciding which product-truth artifacts a request warrants is production machinery, not the review-and-see axis UXP-490 keeps. Id unchanged."
 superseded_by: null
 covered_by:
   - UXP-530

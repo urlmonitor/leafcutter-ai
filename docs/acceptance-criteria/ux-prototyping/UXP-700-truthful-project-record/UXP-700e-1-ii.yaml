@@ -1,0 +1,72 @@
+id: UXP-700e-1-ii
+title: "Enforcement tightens only when nothing is left on the older shape"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a bound in its warning period,
+  When every artifact in the record declares the shape version in which that bound took effect,
+  Then the bound may be tightened so that exceeding it stops the work that triggered the check,
+  And while any artifact still declares an older shape version, tightening is refused and the
+    refusal names the artifacts still on the older version,
+  And the decision to tighten is taken from what the record contains, so a date passing does not
+    tighten a bound and a hand-edited flag cannot tighten it either.
+depends_on:
+  - UXP-700e-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700e-1.yaml"
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-700e-1-i
+  contract: "The per-artifact shape version this record reads to decide readiness to tighten."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  A warning period with no defined end is a warning forever, and a warning period ended by a
+  date is ended whether or not the backfill happened. The load-bearing assertion is the refusal
+  case: with one artifact left on the old version, tightening must be refused and must name that
+  artifact. Asserting only the success case would pass against an implementation that always
+  tightens.
+test_spec:
+  - name: test_tightening_is_refused_while_any_artifact_is_on_the_older_version
+    target_dir: unit_tests/product_truth/
+    description: "With one artifact left on the older shape version, the attempt to tighten is refused and names that artifact."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_tightening_is_permitted_once_every_artifact_declares_the_new_version
+    target_dir: unit_tests/product_truth/
+    description: "With the backfill complete, the bound tightens and an exceeding artifact stops the caller."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_a_date_alone_does_not_tighten_a_bound
+    target_dir: unit_tests/product_truth/
+    description: "Advancing the clock past any configured date does not tighten a bound while artifacts remain on the older version."
+    type: unit
+    angle: boundary
+    framework: unittest
+notes: |
+  Named mutation for the last clause: replace the population test with a date comparison. The
+  first two tests still pass on a store that happens to be fully backfilled; only the third
+  turns red. That is why the clause is asserted separately.

@@ -1,0 +1,63 @@
+id: UXP-700b-2-i
+title: "A check that did not run is listed as not run, and contributes nothing"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a check whose precondition is absent, so the check does not execute,
+  When the record's checker reports its outcome,
+  Then that check is listed with a stated reason for not having executed,
+  And that check contributes no records to any stated examined figure,
+  And the outcome reported is not the outcome for a record that was checked and found sound
+    while any check is listed as not executed.
+depends_on:
+  - UXP-700b-2
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-2.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700b-2
+  contract: "The per-check figures this record constrains for the not-executed case."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  A check that silently vanishes from the report is the sharpest form of the failure this L1
+  exists for: the reader sees only checks that passed and concludes everything was checked. The
+  test must assert the absent check is PRESENT in the report with a reason, which no
+  omit-on-skip implementation can satisfy.
+test_spec:
+  - name: test_unexecuted_check_is_listed_with_a_reason
+    target_dir: unit_tests/product_truth/
+    description: "A check whose precondition is absent appears in the report with a stated reason rather than being omitted."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_unexecuted_check_adds_nothing_to_examined_figures
+    target_dir: unit_tests/product_truth/
+    description: "The examined totals are the same whether or not the unexecutable check is present."
+    type: unit
+    angle: boundary
+    framework: unittest
+notes: |
+  Named mutation: drop the not-executed entry from the report. UXP-700b-2's counts still add up
+  and its tests stay green; only this record turns red. That asymmetry is why it is a record of
+  its own.

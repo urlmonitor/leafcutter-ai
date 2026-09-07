@@ -1,0 +1,63 @@
+id: UXP-700e-4
+title: "A reference for the record's size bounds and how a shape change is rolled out"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a person about to add a bound to the record's shape, or a person who has just been told
+    their artifact exceeds one,
+  When they open the reference on the record's size bounds,
+  Then it lists every declared bound, its value, the field it applies to and the shape version
+    in which it took effect,
+  And it states the rollout order a new bound must follow - declare behind a new shape version,
+    warn, backfill, and only then tighten - and that tightening is decided by the record being
+    fully backfilled rather than by a date,
+  And it states which fields are authored and which are derived, so a reader knows which text to
+    edit when the two disagree,
+  And it records the measurement that motivated the bounds, including that a 120-character
+    description cap would fail all 14 journeys as they stand.
+depends_on:
+  - UXP-700e
+  - UXP-700e-1
+  - UXP-700e-2
+  - UXP-700e-3
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700e.yaml"
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: specifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "House style for a reference doc of this kind in this repository."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700e-1
+  contract: "The declared bounds the reference lists."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+test_required: false
+test_rationale: |
+  The deliverable is prose. The rollout order it documents is pinned by executable tests on
+  UXP-700e-1-i and UXP-700e-1-ii; documentation-verifier is the correct gate. A test asserting
+  the document lists each bound would drift the moment a bound is added and would be satisfied
+  by a table of headings.
+notes: |
+  Produced because UXP-700e declares documentation_triggers: [reference-doc]. The third clause
+  is the one that pays for itself: the current 14 hand-written index descriptions exist because
+  nobody could tell from the record which of the two texts was the authored one.

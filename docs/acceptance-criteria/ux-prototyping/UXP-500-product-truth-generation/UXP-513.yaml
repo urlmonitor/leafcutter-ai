@@ -32,13 +32,64 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+  - reason: "2026-09-07 business-analyst: linked the one genuinely covering test for the idempotency clause; recorded the --check CLI contract as uncovered and authored its test_spec."
 superseded_by: null
-covered_by: []
+covered_by:
+  - "unit_tests/test_generate_product_truth_idempotency.py::test_second_regen_produces_no_file_change"
 implemented_by:
   - docs/product-truth/scripts/generate_product_truth.py
 change_target: code
 risk_surface: internal
+test_required: true
+test_rationale: |
+  PARTIAL COVERAGE, DELIBERATELY NOT CLOSED. The linked test proves the idempotency clause only.
+  The --check contract - compute everything, write nothing, and exit non-zero if and only if a
+  derived file would change - has zero tests, and it is the half that backs a live gate. Both
+  arms of the "if and only if" need their own assertion, and the writes-nothing clause needs a
+  file-mutation assertion rather than an exit-status one, because a --check that writes and then
+  reports correctly passes every status-only test while corrupting the store it was asked not to
+  touch.
+test_spec:
+  - name: test_check_exits_non_zero_when_a_derived_file_would_change
+    target_dir: unit_tests/product_truth/
+    description: "With a stale derived file present, --check exits non-zero."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_check_exits_zero_when_nothing_would_change
+    target_dir: unit_tests/product_truth/
+    description: "With derived data current, --check exits zero - the only-if arm of the contract."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_check_writes_nothing_even_when_it_reports_a_change
+    target_dir: unit_tests/product_truth/
+    description: "Every file in the store is byte-identical after a --check run that exited non-zero."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_check_names_which_derived_file_would_change
+    target_dir: unit_tests/product_truth/
+    description: "The --check output names the stale file, so a caller can act on the failure."
+    type: integration
+    angle: failure
+    framework: unittest
+notes: |
+  COVERAGE STATUS as at 2026-09-07: PARTIALLY COVERED - do not read the covered_by entry as full
+  coverage.
+
+  What the linked test proves: unit_tests/test_generate_product_truth_idempotency.py::
+  test_second_regen_produces_no_file_change exercises the byte-stability clause.
+
+  What is still uncovered: the entire --check CLI contract, which backs a live pre-commit hook.
+  The test_spec above is the work order. This AC must not be marked fully covered until it
+  exists and passes.
+
+  RELATED RISK: UXP-700e-3-i introduces a write-new serialisation change that will make the
+  first regeneration after it lands non-idempotent by design, for the three flows whose
+  expands_to is currently a bare string. Read the idempotency clause as "stable once the shape
+  has settled" and expect one deliberate churn commit.
 product_truth:
   - flow: leafcutter/generate-product-truth
     node: backref

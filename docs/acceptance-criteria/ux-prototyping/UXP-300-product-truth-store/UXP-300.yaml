@@ -16,7 +16,8 @@ criteria: |
   And each entity has exactly one canonical mock-data artifact per component (extend, never duplicate),
   And flows link to acceptance criteria via step.implements (flow -> AC), while AC -> flow is derived,
   And scripts/validate_product_truth.py passes for the store.
-depends_on: []
+depends_on:
+  - UXP-700e
 doc_links:
   - path: docs/product-truth/README.md
     relationship: specifies

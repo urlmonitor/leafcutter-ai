@@ -1,0 +1,85 @@
+id: UXP-700c-3-i
+title: "The verdict does not depend on which operating system the check ran on"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the same project record and the same automatic check,
+  When the check runs on Windows and again on a POSIX system,
+  Then both runs report the same verdict and name the same artifacts,
+  And a difference that consists only of how the two systems spell a path is never reported as
+    the record having fallen behind,
+  And the keys the record's index uses to name its own files are spelled identically on both
+    systems, so a rebuild produced on one is byte-identical to a rebuild produced on the other.
+depends_on:
+  - UXP-700c-3
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c-3.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+    relevance: "GE-120 requires a check to reach the same verdict wherever you are working. This record is that requirement for the record's own checker."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-700c-3
+  contract: "The gate whose verdict this record makes platform-independent."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  A test that runs only on the CI platform can never see this defect - that is why it has gone
+  unnoticed. The assertion has to be made against the separator explicitly (build the index
+  with a path built from OS-native parts and assert the emitted key uses the canonical
+  separator), so it fails on a POSIX runner when the code is wrong, rather than requiring a
+  Windows runner to catch it.
+test_spec:
+  - name: test_index_path_keys_use_the_canonical_separator_on_every_platform
+    target_dir: unit_tests/portability/
+    description: "Index keys built from OS-native path objects are emitted with forward slashes regardless of the host separator."
+    type: unit
+    angle: criterion
+    framework: unittest
+  - name: test_separator_only_difference_is_not_reported_as_the_record_being_behind
+    target_dir: unit_tests/portability/
+    description: "An index whose keys differ from a fresh rebuild only by path separator produces no behind or drift finding."
+    type: unit
+    angle: boundary
+    framework: unittest
+  - name: test_rebuild_is_byte_identical_across_simulated_host_separators
+    target_dir: unit_tests/portability/
+    description: "Rebuilding the index with the host separator forced to each value yields identical bytes."
+    type: unit
+    angle: seam
+    framework: unittest
+notes: |
+  THIS IS A PORTABILITY DEFECT, NOT DRIFT. Stated explicitly because the L1 warns that anyone
+  citing it as drift is wrong. Measured 2026-09-07: the checker fails on Windows with
+  "[index] by_flow does not match a fresh rebuild"; all 14 by_flow mismatches are
+  path-separator-only, produced by generate_product_truth.py line 423 using
+  str(path.relative_to(STORE)), with ZERO genuine content differences. Do not write this up as
+  the record having drifted, and do not use it as evidence for UXP-700c-1 or UXP-700c-2.
+
+  PLACEMENT NOTE, recorded because it deviates from the authoring request. This was asked for
+  as an L2 under UXP-700c. It is authored as an L3 under UXP-700c-3 because the 5-L2-per-L1
+  hard cap (ACS-100c-1) combined with UXP-700c's two mandatory documentation ACs leaves exactly
+  three behavioural L2 slots, all of which are taken by the L1's own named sub-surfaces. It sits
+  under UXP-700c-3 because a false verdict is a property of the gate, which is that AC's
+  subject. Alternative homes considered and rejected: UXP-700a (the install path, which is not
+  where the defect lives) and GE-120 (whose every L1 is already at 5/5 per the BA memory note of
+  2026-09-01). Nothing is lost by the L3 placement: it carries its own test_spec and is
+  independently buildable.

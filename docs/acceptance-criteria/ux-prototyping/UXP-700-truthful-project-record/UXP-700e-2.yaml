@@ -1,0 +1,93 @@
+id: UXP-700e-2
+title: "Each thing is described once; a shorter form is derived, never separately authored"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a journey whose authoritative description lives in the journey itself,
+  When a shorter form of that description is needed for a place that cannot show the whole of
+    it,
+  Then the shorter form is produced from the authoritative one at the time it is needed,
+  And no second, separately authored description of the same journey exists anywhere in the
+    record,
+  And changing the authoritative description changes every place the shorter form appears, with
+    no other edit,
+  And a second authored description introduced anywhere in the record is reported, naming the
+    journey and both places its description is held.
+depends_on:
+  - UXP-700e
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700e.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-300-product-truth-store/UXP-300.yaml
+    relationship: context
+    status: exists
+    relevance: "Sibling L2 and this L1's existing child: one canonical dataset per entity per component, extend never duplicate. This AC applies the same rule to descriptions."
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-514.yaml
+    relationship: context
+    status: exists
+    relevance: "Complementary, not duplicate. UXP-514-6 guards the duplicate copy while it exists; this AC removes the duplication."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-700e-1
+  contract: "The declared bound for the place the shorter form is shown."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-700e-2-i
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: internal
+test_required: true
+test_rationale: |
+  The propagation clause is the only one that distinguishes a derived form from a second
+  authored one, and it can only be tested by changing the source and re-reading the derived
+  place. A test asserting the two currently match would pass today for 0 of 14 journeys and,
+  more importantly, would pass tomorrow on a store where someone had simply re-copied the text
+  by hand. The last clause needs a negative fixture or the rule has nothing enforcing it once
+  the current duplication is removed.
+test_spec:
+  - name: test_shorter_form_is_produced_from_the_authoritative_description
+    target_dir: unit_tests/product_truth/
+    description: "The short form shown in the index is computed from the journey's own description."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_changing_the_authoritative_description_changes_every_shorter_form
+    target_dir: unit_tests/product_truth/
+    description: "Editing a journey's description and regenerating changes the index short form, with no other file edited."
+    type: integration
+    angle: seam
+    framework: unittest
+  - name: test_a_second_authored_description_is_reported
+    target_dir: unit_tests/product_truth/
+    description: "A hand-authored second description for the same journey is reported naming the journey and both locations."
+    type: integration
+    angle: failure
+    framework: unittest
+notes: |
+  MEASURED 2026-09-07: all 14 of 14 journeys carry a description in the index that differs from
+  the description in the journey file. The index copies run 89 to 218 characters; the source
+  descriptions run 365 to 938. Examples: how-acs-are-built 197 vs 938; author-product-truth 218
+  vs 731; checkout-and-pay 203 vs 748.
+
+  OWNERSHIP SPLIT, recorded so the two records are not merged. The duplication is this L1's
+  (a record outgrowing its reviewers produces a shorter second copy). The divergence between
+  the two copies is an internal-consistency defect and is owned by UXP-514-6 under UXP-590,
+  which is where internal consistency lives. UXP-514-6 guards the copy while it exists; this AC
+  removes the need for it. Both are wanted: the guard lands first and cheaply, this lands later
+  and structurally.
+
+  This is NOT UXP-700c's drift. UXP-700c is the record's agreement with the code; this is the
+  record's agreement with itself, caused by growth.

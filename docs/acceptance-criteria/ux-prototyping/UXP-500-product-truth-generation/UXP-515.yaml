@@ -15,8 +15,11 @@ criteria: |
   Then the mockup is a first-class artifact type with its own schema (mockup.schema.json)
   and index registration,
   And a step's screen resolves to a registered mockup so the validator can gate on it,
-  And at least one mockup is drawn in full (the gold reference) while the rest are
-  registered stubs.
+  And at least one mockup is drawn in full, to serve as the worked reference for the artifact
+  type, while the rest are registered stubs,
+  And that fully drawn reference belongs to the example product and is registered under the
+  example product's own root, so it demonstrates the artifact type without standing in as a
+  screen of the project's own product.
 depends_on:
   - UXP-590
 doc_links:
@@ -26,6 +29,11 @@ doc_links:
   - path: docs/product-truth/mockups/fern-and-fig/plant-listing.mockup.json
     relationship: implemented-by-step
     status: exists
+    relevance: "The fully drawn reference. It is EXAMPLE content and must stay under the example product root; it is not a screen of leafcutter's own product. See UXP-700d-1."
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700d.yaml
+    relationship: context
+    status: exists
+    relevance: "The constraint this AC was re-scoped against: example content is kept structurally apart from a project's own record, and is never deleted."
 assigned_agent: frontend-coder
 estimated_complexity: M
 it_requirements: |
@@ -36,7 +44,8 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+  - reason: "2026-09-07 business-analyst: re-scoped to resolve a direct conflict with UXP-700d. The gold-reference clause named a fern-and-fig mockup inside the real store, which made example content the reference screen for the project's own record. The clause now requires the fully drawn reference to be example content held under the example product root. Nothing is deleted; ADR-022 and UXP-550/UXP-593 continue to depend on plant-listing existing and remaining referenceable."
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -44,3 +53,26 @@ implemented_by:
   - docs/product-truth/mockups/fern-and-fig/plant-listing.mockup.json
 change_target: code
 risk_surface: internal
+notes: |
+  RE-SCOPED 2026-09-07, not re-pointed. The original third clause read "at least one mockup is
+  drawn in full (the gold reference)" and named
+  docs/product-truth/mockups/fern-and-fig/plant-listing.mockup.json in implemented_by. That made
+  a fictional plant shop's screen the reference screen inside the project's own record, which is
+  precisely the failure UXP-700d names.
+
+  Two repairs were considered:
+    RE-POINT - move the gold reference to a mockup of leafcutter's own product. REJECTED for
+      now: there are zero real-product mockups in the store (all 10 are fern-and-fig), so
+      re-pointing would make this AC depend on an artifact nobody has authored, turning a
+      shipped in_progress record into a blocked one. Authoring a real-product mockup is a
+      product decision, and UXP-700d-4 exists to surface the need for it rather than to force
+      it here.
+    RE-SCOPE - keep plant-listing as the reference and say plainly what it is. TAKEN. The clause
+      now requires the fully drawn reference to be example content under the example product
+      root, which satisfies both this AC's purpose (one artifact of the type is drawn in full,
+      so the schema is proved against something real) and UXP-700d's requirement (nothing
+      example-owned is readable as the project's own record).
+
+  implemented_by is left unchanged: plant-listing.mockup.json really is what implements this,
+  and ADR-022 together with UXP-550/UXP-593 require it to keep existing and to remain
+  referenceable. Separation, never deletion.

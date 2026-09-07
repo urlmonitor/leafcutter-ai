@@ -1,0 +1,78 @@
+id: UXP-700e-1-i
+title: "A new bound arrives as a warning behind a declared shape version, and blocks nothing that predates it"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a proposed longest-description bound of 120 characters, which every one of the 14
+    journeys in the record today exceeds,
+  When that bound is introduced,
+  Then each journey states which version of the record's shape it was authored against,
+  And a journey authored against a version older than the one in which the bound took effect is
+    reported as a warning and does not stop the work that triggered the check,
+  And only a journey declaring the version in which the bound took effect is held to it,
+  And a journey declaring no version at all is treated as predating the bound and is reported
+    as needing a version, not as violating the bound.
+depends_on:
+  - UXP-700e-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700e-1.yaml"
+doc_links:
+  - path: docs/product-truth/schemas/flow.schema.json
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-700e-1
+  contract: "The bound measurement this record decides the consequence of."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  The migration is the risk, not the bound. A 120-character description cap fails all 14
+  existing journeys, so an implementation that enforces on introduction breaks the repository
+  the day it lands. The no-version case needs its own assertion because that is the state every
+  existing journey is in - if it defaults to the new version, the warning period protects
+  nothing.
+test_spec:
+  - name: test_journey_predating_the_bound_is_warned_and_not_blocked
+    target_dir: unit_tests/product_truth/
+    description: "A journey declaring an older shape version exceeding the bound produces a warning and does not stop the caller."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_journey_declaring_the_new_version_is_held_to_the_bound
+    target_dir: unit_tests/product_truth/
+    description: "A journey declaring the version in which the bound took effect and exceeding it is reported as a violation."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_journey_with_no_declared_version_is_treated_as_predating_the_bound
+    target_dir: unit_tests/product_truth/
+    description: "An unversioned journey is reported as needing a version, not as violating the bound."
+    type: integration
+    angle: boundary
+    framework: unittest
+notes: |
+  MIGRATION CONSTRAINT, measured 2026-09-07 and non-negotiable: a 120-character summary cap
+  fails ALL 14 existing flows (their summaries run 365 to 938 characters). First enforcement
+  must be a warning, not a block.
+
+  The number 120 is used here as the concrete worked example because it is the figure the
+  measurement was taken against. It is not fixed by this record - UXP-700e-1 owns where bounds
+  are declared, and the actual value is a product decision.

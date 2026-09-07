@@ -1,0 +1,80 @@
+id: UXP-700c-1
+title: "Every pointer the record makes resolves, and one that does not is named"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a project record whose journeys, example datasets and screens point at acceptance
+    criteria, at each other, and at files in the project,
+  When the record is checked,
+  Then every pointer is resolved against what the project holds now,
+  And each pointer whose target does not exist is reported naming the artifact that holds the
+    pointer, the position within that artifact, and the target that did not resolve,
+  And the check states how many pointers it resolved, so a run that resolved none is
+    distinguishable from a run in which none were broken.
+depends_on:
+  - UXP-700c
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-590.yaml
+    relationship: context
+    status: exists
+    relevance: "Adjacent, not the same. UXP-590 keeps the record internally consistent; this AC checks the record's pointers against the project outside it."
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A per-pointer verdict (resolved / broken / unresolvable) that UXP-700c-3 surfaces through the automatic gate."
+expects_from:
+  ac_id: UXP-700b-2
+  contract: "The per-check examined-figure convention this check's resolved count follows."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-700c-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  The failure being closed is a pointer that silently stops resolving, so the fixture must
+  contain a deliberately broken pointer and the assertion must be on the message naming the
+  holder, the position and the target - a bare non-zero outcome does not tell an adopter which
+  of fourteen journeys to open. The resolved-count clause needs its own varying-population
+  assertion, because a checker that walks zero pointers reports no breakages and looks clean.
+test_spec:
+  - name: test_broken_pointer_is_reported_with_holder_position_and_target
+    target_dir: unit_tests/product_truth/
+    description: "A journey step pointing at an acceptance criterion that does not exist is reported naming the journey, the step and the missing criterion."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_intact_pointers_are_not_reported
+    target_dir: unit_tests/product_truth/
+    description: "A store in which every pointer resolves produces no pointer report."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_resolved_pointer_count_rises_with_the_number_of_pointers
+    target_dir: unit_tests/product_truth/
+    description: "Adding one pointer raises the stated resolved count by exactly one."
+    type: integration
+    angle: seam
+    framework: unittest
+notes: |
+  Sub-surface 1 of the four the L1 lists (citations). This is the TIER-1 FLOOR of the pair
+  UXP-700c-1 / UXP-700c-2, following the tiered shape recorded in the BA memory for GE-111b:
+  the floor asks only "does the target exist", needs no external tooling, and is always on;
+  UXP-700c-2 is the content tier that asks whether the target still says what the record claims.
+  The floor must not be made to depend on the content tier, or a tooling gap disables both.

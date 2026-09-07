@@ -1,0 +1,88 @@
+id: UXP-700d-1
+title: "Example artifacts live under their own product root and never appear in a project's own record"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the example product's journeys, example datasets and screens,
+  When the artifacts belonging to the project's own record are enumerated,
+  Then none of the example product's artifacts is returned,
+  And the example product's artifacts are still returned when the example product is asked for
+    by name,
+  And which product an artifact belongs to is decided by the product root it lives under rather
+    than by anything in its content, so an artifact cannot belong to both and cannot be moved
+    between them by an edit.
+depends_on:
+  - UXP-700d
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700d.yaml"
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: context
+    status: exists
+    relevance: "Hard constraint. ADR-022 depends on the example content continuing to exist and remaining referenceable. Separation, never deletion."
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-554.yaml
+    relationship: context
+    status: exists
+    relevance: "Mock mode also depends on the example content existing and remaining resolvable by name."
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "A product-root-derived ownership predicate that UXP-700d-2 reuses for the work store and UXP-700d-4 reuses for per-type population counts."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-700d-1-i
+  - UXP-700d-1-ii
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  Two failure modes have to be excluded at once and a single test cannot do it. A test that
+  only asserts the example artifacts are absent from the project's record is satisfied by
+  deleting them, which breaks ADR-022 and mock mode. A test that only asserts they are still
+  reachable is satisfied by changing nothing. Both assertions are required, and the
+  ownership-by-location clause needs a third test or the predicate degrades into a name list
+  that the next added artifact escapes.
+test_spec:
+  - name: test_projects_own_record_excludes_every_example_artifact
+    target_dir: unit_tests/product_truth/
+    description: "Enumerating the project's own record returns no artifact under the example product root."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_example_product_remains_enumerable_by_name
+    target_dir: unit_tests/product_truth/
+    description: "Asking for the example product by name returns its journeys, datasets and screens, so separation is not achieved by deletion."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_ownership_is_decided_by_product_root_not_by_content
+    target_dir: unit_tests/product_truth/
+    description: "Editing an example artifact's content does not move it into the project's record, and editing a project artifact's content does not move it out."
+    type: unit
+    angle: seam
+    framework: unittest
+notes: |
+  VERIFIED 2026-09-07. Every one of the 10 mockups in the store is fern-and-fig (cart,
+  checkout, notify-me, order-confirmation, order-detail, orders-list, plant-detail,
+  plant-listing, shipment-tracking, sign-in) and fern-and-fig is the only directory under
+  mockups/. There are zero mockups of the real product. Flows are split across
+  flows/fern-and-fig/ (3) and flows/leafcutter/ (11), so a product-root axis already exists for
+  flows and needs generalising, not inventing.
+
+  SEPARATION, NOT DELETION - non-negotiable per the L1 and ADR-022. Any implementation that
+  removes fern-and-fig fails this AC, not passes it.

@@ -1,0 +1,68 @@
+id: UXP-700d-2-ii
+title: "A real criterion stored beside the example set is still dispatchable"
+component: ux-prototyping
+components:
+  - ac_store
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a real acceptance criterion that is ready to be worked on and is stored in the same
+    component namespace as the example criteria,
+  When the store of work is scanned,
+  Then that criterion is returned in the ready set,
+  And it is not counted among the criteria set aside as example content,
+  And the rule that set the example criteria aside did not depend on the component namespace
+    they share with it.
+depends_on:
+  - UXP-700d-2
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700d-2.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-514.yaml
+    relationship: context
+    status: exists
+    relevance: "A real ux-prototyping criterion in the same namespace as the example criteria; the kind of record that must stay dispatchable."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700d-2
+  contract: "The set-aside classification whose acceptable input this record supplies."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  The example criteria share the ux-prototyping component with every real AC in this feature
+  tree, so the most obvious implementation - set aside anything under ux-prototyping - would
+  pass UXP-700d-2 and UXP-700d-2-i and silently remove the whole component from the work queue.
+  This is the paired acceptable input and the last clause is the assertion that catches that
+  specific wrong fix.
+test_spec:
+  - name: test_a_real_criterion_in_the_shared_namespace_stays_in_the_ready_set
+    target_dir: unit_tests/ac_store/
+    description: "A ready real criterion under the ux-prototyping component is returned by the scan."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_set_aside_rule_does_not_key_on_the_component_namespace
+    target_dir: unit_tests/ac_store/
+    description: "Moving a real criterion into the same component as the example criteria does not set it aside."
+    type: unit
+    angle: seam
+    framework: unittest
+notes: |
+  This is the record that decides the shape of the fix. Component namespace is NOT a usable
+  discriminator here, because the 18 example criteria and every AC in the UXP-700 tree share
+  component: ux-prototyping. The discriminator has to be the product the criteria describe, as
+  UXP-700d-1 establishes for artifacts.

@@ -19,6 +19,10 @@ criteria: |
   Product-truth artifacts plug into the existing AC-driven pipeline: each flow step
   links to the acceptance criteria that implement it, and the /flows view colours
   every step by those ACs' live work_status.
+
+  Scope: this goal is the consumption side — looking at the artifacts, approving them,
+  and reading a status that is true. Producing them and keeping those links honest is
+  its sibling UXP-800.
 depends_on: []
 doc_links:
   - path: docs/product-truth/flows/leafcutter/define-a-feature.flow.json
@@ -34,12 +38,15 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-10
-amended_by: []
+amended_by:
+  - reason: "2026-09-07 business-analyst: covered_by drift repair only. UXP-590, UXP-591, UXP-592 and UXP-594 each declare depends_on [UXP-490] but were absent from this list. This records the edges that already exist; it does NOT add children. The horizontal split this L0 is owed (nine L1s against a 3-7 rule) remains outstanding and is recorded on UXP-700 as an open item for the user."
+  - reason: "2026-09-07 business-analyst: horizontal split performed (ac-tree-split Pattern A), closing the item recorded above. Nine L1 children -> five. UXP-493, UXP-590, UXP-592 and UXP-594 moved to a new sibling L0, UXP-800, which owns the production side of product truth (the store, the classifier, the authoring agents, and the single writer of the derived flow-to-AC links). UXP-491, UXP-492, UXP-591, UXP-596 and UXP-611 stayed: they serve this L0's own promise of looking at product truth, approving it, and reading a status that is true. No AC ids were renamed — renaming would have broken citations in docs/product-truth/index.json by_ac, flow files' implements arrays, ADRs and agent cards. Consequence, stated plainly: because the ids keep the numeric-sibling form, derive_parent_id still returns None for all of them, so check_ac_limits counted zero children before the split and counts zero after. The split corrects the store's recorded edges, not the hook's view."
+  - reason: "2026-09-07 business-analyst: criteria narrowed by one added Scope paragraph after the split, per ac-tree-split step 10. The value statement and title are untouched. FLAGGED FOR PO REVIEW — L0 criteria are PO domain and this sentence is BA-authored."
 superseded_by: null
 covered_by:
   - UXP-491
   - UXP-492
-  - UXP-493
+  - UXP-591
   - UXP-596
   - UXP-611
 implemented_by: []

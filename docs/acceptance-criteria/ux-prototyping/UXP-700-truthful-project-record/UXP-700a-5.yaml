@@ -1,0 +1,61 @@
+id: UXP-700a-5
+title: "A how-to for starting a project record from nothing"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a person who has just installed the tooling into a project of their own and has never
+    read this repository,
+  When they open the how-to for starting a project record,
+  Then it states what the empty record contains and where each artifact type lives,
+  And it walks through authoring the first journey, the first example dataset and the first
+    screen, in that order, with a worked example at each step,
+  And it states what the checker reports for a record that is still empty and how that report
+    differs from the report for a record that was checked and found sound,
+  And it states that the example product ships separately, is obtained by asking for it, and is
+    not part of the reader's own record.
+depends_on:
+  - UXP-700a
+  - UXP-700a-1
+  - UXP-700a-3
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700a.yaml"
+doc_links:
+  - path: docs/how-to/authoring-product-truth-artifacts.md
+    relationship: related
+    status: exists
+    relevance: "Existing how-to for authoring artifacts. This AC covers the step before it: getting a record at all."
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700a-1
+  contract: "The shape of the installed empty record that the how-to describes."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+test_required: false
+test_rationale: |
+  The deliverable is prose. Its correctness is checked by documentation-verifier against the
+  behaviour the sibling ACs pin, and by the repository's doc-coverage guard; a unit test
+  asserting the presence of headings would pass on a stub and is the kind of vacuous check
+  UXP-700b exists to forbid.
+notes: |
+  Produced because UXP-700a declares documentation_triggers: [how-to]. The fourth clause is
+  load-bearing and must not be dropped in review: it is the only place a reader is told that
+  the fern-and-fig example is not theirs, which is the reader-facing half of UXP-700d.

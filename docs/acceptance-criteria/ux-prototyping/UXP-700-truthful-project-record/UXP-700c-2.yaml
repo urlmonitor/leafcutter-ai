@@ -1,0 +1,90 @@
+id: UXP-700c-2
+title: "The record states what it was last confirmed against, and says so when that has moved"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a journey that describes behaviour implemented by a set of acceptance criteria and by
+    files in the project,
+  When the record is checked,
+  Then each journey states the state of the things it describes at the moment it was last
+    confirmed against them,
+  And a journey whose described things have changed since that moment is reported as behind,
+    naming the journey and each described thing that changed,
+  And a journey whose described things have not changed since that moment is not reported,
+  And the check states how many journeys it compared, and that figure rises by one when a
+    journey is added.
+depends_on:
+  - UXP-700c
+  - UXP-700c-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-590.yaml
+    relationship: context
+    status: exists
+    relevance: "UXP-590 keeps the record self-consistent. This AC is the record's agreement with the code, which can be false while UXP-590 holds."
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "A per-journey behind/current/never-confirmed verdict consumed by UXP-700c-2-ii and surfaced by UXP-700c-3."
+expects_from:
+  ac_id: UXP-700c-1
+  contract: "Pointers already known to resolve, so a behind verdict is not produced for a target that simply vanished."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-700c-2-i
+  - UXP-700c-2-ii
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  Freshness cannot be tested from a single snapshot: the assertion is about a change between
+  two states, so the test must construct a store, record a confirmation, mutate a described
+  thing, and re-check. A test that only asserts a confirmation field exists would pass against
+  a field nobody ever compares - which is the exact shape of the fourteen hand-written index
+  summaries this L1 was written from.
+test_spec:
+  - name: test_journey_is_reported_behind_after_a_described_thing_changes
+    target_dir: unit_tests/product_truth/
+    description: "Confirming a journey, then changing an acceptance criterion it describes, causes the journey to be reported behind naming that criterion."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_journey_is_not_reported_when_nothing_it_describes_changed
+    target_dir: unit_tests/product_truth/
+    description: "A confirmed journey whose described things are untouched is absent from the report."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_compared_journey_count_rises_with_the_number_of_journeys
+    target_dir: unit_tests/product_truth/
+    description: "Adding one journey raises the stated compared count by exactly one."
+    type: integration
+    angle: seam
+    framework: unittest
+notes: |
+  Sub-surface 2 of the four the L1 lists (freshness). This is the CONTENT TIER above the
+  UXP-700c-1 floor: the floor asks whether the target exists, this asks whether it still says
+  what the record claims.
+
+  The store today has no freshness stamp of any kind - the asof fields present on impl_summary
+  and on the by_ac back-references record when the DERIVED data was regenerated, not when a
+  human confirmed the journey against the code. Reusing those fields for this purpose would
+  make every journey permanently current, since the generator rewrites them on every run. The
+  IT PO must not resolve this AC onto the existing asof fields.

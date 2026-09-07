@@ -25,15 +25,14 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-10
-amended_by: []
+amended_by:
+  - reason: "2026-09-07 business-analyst: covered_by scope repair. UXP-401a and UXP-402a are grandchildren (they declare depends_on UXP-401 and UXP-402 respectively, and those parents already list them), so they are removed here. covered_by is a direct-children list — the convention is now stated in docs/reference/ac-schema.md 'covered_by — Scope Convention'. No link is lost: every removed id remains listed by its own immediate parent. UXP-400a is retained because it declares depends_on UXP-491, i.e. it is a direct child by the only edge it asserts."
 superseded_by: null
 covered_by:
   - UXP-400
   - UXP-400a
   - UXP-401
-  - UXP-401a
   - UXP-402
-  - UXP-402a
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

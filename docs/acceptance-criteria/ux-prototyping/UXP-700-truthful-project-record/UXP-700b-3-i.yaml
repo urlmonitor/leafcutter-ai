@@ -1,0 +1,67 @@
+id: UXP-700b-3-i
+title: "One record is enough to exercise the rule, and a violating record still fails it"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a check phrased as a rule that must hold of every record of some kind,
+  And a project record holding exactly one record of that kind, which satisfies the rule,
+  When the check runs,
+  Then it reports that the rule holds and that it examined one record,
+  And it does not report that it was not exercised.
+  Given instead a project record holding exactly one record of that kind, which violates the
+    rule,
+  When the check runs,
+  Then it reports the violation naming that record,
+  And it does not report that it was not exercised.
+depends_on:
+  - UXP-700b-3
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-3.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-609-2.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700b-3
+  contract: "The not-exercised verdict whose boundary this record pins at a population of one."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_rationale: |
+  UXP-700b-3 alone is discharged by a check that always reports not-exercised - a guard that
+  refuses everything is as useless as one that refuses nothing. The two-scenario shape is
+  deliberate: it is one behaviour (the boundary at a population of one) and both halves must be
+  asserted together or the boundary is not pinned.
+test_spec:
+  - name: test_single_satisfying_record_reports_the_rule_holds_and_one_examined
+    target_dir: unit_tests/product_truth/
+    description: "Population of one that satisfies the rule yields a holds verdict with an examined figure of one."
+    type: unit
+    angle: boundary
+    framework: unittest
+  - name: test_single_violating_record_reports_the_violation_by_name
+    target_dir: unit_tests/product_truth/
+    description: "Population of one that violates the rule yields a violation naming that record, not a not-exercised report."
+    type: unit
+    angle: failure
+    framework: unittest
+notes: |
+  Two Given/When/Then scenarios in one record is intentional: this is the negative control for
+  UXP-700b-3 and a control needs both its arms in the same record, or one arm can be
+  implemented and the other quietly dropped.

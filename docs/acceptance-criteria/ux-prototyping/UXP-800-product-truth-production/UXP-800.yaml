@@ -1,0 +1,86 @@
+id: UXP-800
+components:
+  - ux_prototyping
+readiness: draft
+priority: medium
+title: "The product-truth record is produced and kept truthful by the system, not maintained by hand"
+component: ux-prototyping
+level: L0
+status: active
+req_status: active
+work_status: in_progress
+criteria: |
+  As a product owner, I want the product-truth record to be produced and maintained by
+  the system itself — where the artifacts live, which of them a given request actually
+  warrants, which agents draft them, and the derived links that say which steps are
+  built — so that the record I later review exists without anyone hand-maintaining it,
+  and so a link that has gone stale fails a check rather than quietly misleading me.
+
+  This is the production side of product truth. Its sibling UXP-490 is the consumption
+  side: reviewing flows, mock data and mockups and seeing which steps are built. What
+  UXP-490 renders, this goal writes and keeps honest.
+depends_on: []
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/product-truth-architecture.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/author-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-490-product-truth/UXP-490.yaml
+    relationship: context
+    status: exists
+    relevance: "Sibling L0 this goal was split out of, deliberately NOT the parent. UXP-490 is the consumption axis (review flows and mockups, see which steps are built). UXP-800 is the production axis (the store, what decides what gets written, who drafts it, and what keeps the derived links honest)."
+delivers_to: null
+expects_from: {}
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+  - reason: "2026-09-07 business-analyst: created by a horizontal split (ac-tree-split Pattern A) of UXP-490, which had accumulated nine L1 children against the documented 3-7 rule. UXP-493, UXP-590, UXP-592 and UXP-594 moved here; UXP-491, UXP-492, UXP-591, UXP-596 and UXP-611 stayed. No AC ids were renamed. Title and criteria are BA-drafted and need PO review — readiness is draft for that reason, even though every child is already reviewed or approved."
+superseded_by: null
+covered_by:
+  - UXP-493
+  - UXP-590
+  - UXP-592
+  - UXP-594
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS L0 EXISTS. UXP-490 held nine L1 children against a 3-7 rule, and it never
+  tripped check_ac_limits: all nine use the numeric-sibling id form (UXP-491, UXP-590,
+  ...), and derive_parent_id returns None for every one of them, so the hook counted
+  zero children under UXP-490 and had nothing to flag. The overcrowding was real; only
+  the alarm was missing.
+
+  THE SPLIT AXIS. UXP-490's own promise has two halves that had silently merged. One
+  half is a person looking at product truth and believing what they see — a flow drawn
+  in the Atlas, a fork readable as a decision, a step coloured by real work_status, a
+  design that says which criteria it shows. The other half is the machinery that makes
+  those artifacts exist and stay correct — the store's shape, the classifier that
+  decides which artifacts a request warrants, the authoring agents that draft them, and
+  the single writer that generates the flow-to-AC links and fails CI when they drift.
+  A goal that owns both cannot be finished, because "I can see it" and "it wrote itself
+  correctly" are answered by different work with different evidence.
+
+  UXP-590 STAYS ON THE PRODUCTION SIDE, NOT UNDER UXP-700. This was considered and
+  rejected. UXP-590 is the internal-consistency axis: the derived links inside the
+  product-truth store agree with the AC store they are computed from. UXP-700c is the
+  correspondence-with-code axis: the record agrees with the repository it describes.
+  They are different claims with different failure modes, and merging them was ruled
+  out on review. UXP-590 belongs with the pipeline that writes the links.
+
+  MECHANICAL LIMIT, STATED PLAINLY. Because no ids were renamed, check_ac_limits still
+  derives no parent for UXP-493/590/592/594 and therefore still counts zero children
+  under BOTH UXP-800 and UXP-490. This split restores the 3-7 discipline in the store's
+  own recorded edges (depends_on and covered_by); it does not and cannot make the hook
+  see them. Making the hook see them requires renaming every child to the canonical
+  form (UXP-490a, UXP-490b, ...), which would break citations in
+  docs/product-truth/index.json by_ac, flow files' implements arrays, ADRs and agent
+  cards. That trade was judged not worth taking for an advisory count.
