@@ -1,0 +1,117 @@
+id: BO-400e-3
+components:
+  - build_orchestration
+  - supervisor_system
+title: "One door: the finished state is only ever written by the mechanism that checks it, and the blanket override is not the way through"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket that a drive is about to close,
+    And two routes by which its recorded state could today be set to finished -- the
+      mechanism that reads the ticket's record and checks it, and a direct edit of that
+      record by whoever was asked to close the ticket,
+  When the drive closes the ticket,
+  Then the ticket's record is written to the finished state by the checking mechanism and
+    by nothing else,
+    And the instruction under which the close is carried out names that mechanism as the
+      route and does not describe editing the recorded state directly,
+    And the close is carried out without the blanket override -- the one that switches off
+      the allowed-transition rules along with the check -- so a close that only succeeds
+      because the override was passed is not a close through this door,
+  And given the same ticket and a run in which the checking mechanism refuses,
+  When the drive reaches the close,
+  Then no finished state appears on that ticket by any route: the recorded state is
+    unchanged, and the run reports the ticket as not closed rather than closing it another
+    way,
+  And given the same ticket carried instead by the driver that carries a single ticket
+    rather than a whole epic,
+  When that driver closes it,
+  Then the close goes through the same mechanism and produces the same recorded state,
+  So there is exactly one way the finished state is ever reached, and the route that
+    bypasses the check is closed rather than discouraged.
+depends_on:
+  - BO-400e
+  - BO-400e-1
+  - BO-400e-2
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver's completion-write step is the two-doored one: its prompt names the confirmed phases AND instructs a direct edit of the ticket's frontmatter. It contains no reference to the guarded mechanism at all today. TWIN of build-ticket.js."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket twin. Both file headers declare the completion write a twin; a change in one only leaves two different answers to the same question."
+  - path: templates/agents/status-checker.md
+    relationship: modifies
+    status: exists
+    relevance: "The party that performs the write. Its closing protocol -- every entry in the agents map is signed off or not needed -- is the correct rule and is the one that must always win; the instruction it is given must route it through the checking mechanism rather than to a direct edit."
+  - path: scripts/set_ticket_status.py
+    relationship: modifies
+    status: exists
+    relevance: "The one door. Note it has no exclusion parameter and that its only override also bypasses the transition allow-list, which is why the override cannot become the ordinary close path."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400b.yaml
+    relationship: related
+    status: exists
+    relevance: "States this intent at L1 -- when any agent or supervisor needs to change a ticket's status it invokes a single script -- while none of its three L2 children makes that script the only writer. This criterion supplies the missing enforcement without editing BO-400b."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "Behavioral harness. The load-bearing case -- make the checking mechanism refuse and assert no finished state appears by any other route -- can only be observed by running the real workflow and reading back what it wrote."
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: true
+delivers_to:
+  agent: python-coder
+  contract: "A single write path to the finished state: the checking mechanism, invoked identically by both drivers, with no direct-edit instruction anywhere in the close and no override on the ordinary close path"
+expects_from:
+  ac_id: BO-400e-2
+  contract: "A checking mechanism that refuses while any demanded step is unaccounted for -- the behaviour that makes routing every close through it worth doing"
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  Behaviour (c) of the four the parent BO-400e names.
+
+  THE DEFECT IS TWO DOORS IN ONE PROMPT, NOT AGENT CAPRICE. The completion write dispatches
+  a closing party with a prompt that does two things at once: it names the confirmed
+  phases, and it says to edit the ticket's frontmatter so the status reads done. Two routes
+  follow from that single instruction -- the guarded one, which reads the record and
+  refuses, and the literal one, a direct edit that touches no check at all. Verified on
+  origin/main: the epic driver contains ZERO references to the guarded mechanism by name.
+  Three observed tickets were in identical states; the refusal came from the first route
+  and the two done writes from the second.
+
+  A FIX EXPRESSED ONLY AS BETTER PROMPT WORDING CANNOT HOLD. That is why the criterion
+  requires one door rather than one instruction: the next prompt edit reopens the second
+  door otherwise. The instruction clause above is real but it is the weaker half -- it is
+  also the only clause a source-reading test can see, and a test that checks only it passes
+  on an implementation where the second door is still reachable.
+
+  THE LOAD-BEARING CLAUSE IS THE REFUSING-MECHANISM CASE. Make the checking mechanism
+  refuse, drive the close, and assert nothing was written. That is the only observation
+  that distinguishes "the second door is closed" from "the second door exists and was not
+  taken this time".
+
+  THE OVERRIDE IS THE LENIENT BRANCH WEARING A FLAG. A decomposition that converges the two
+  doors by having the writer always pass the blanket override has recreated the permissive
+  path and additionally switched off the allowed-transition rules. The override clause is
+  in the criteria for that reason and must be exercised: a close carried out with the
+  override does not satisfy this record.
+
+  BOTH TWINS IN ONE CHANGE, per BO-400a-2-ii's standing constraint -- and here the twin
+  clause is in the criteria itself, because a one-sided landing produces a system where the
+  single-ticket driver closes through the door and the epic driver does not.

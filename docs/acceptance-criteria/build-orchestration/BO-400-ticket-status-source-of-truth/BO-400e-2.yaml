@@ -1,0 +1,107 @@
+id: BO-400e-2
+components:
+  - build_orchestration
+  - supervisor_system
+title: "A demanded step nobody accounted for still blocks the finished state, and the block is not lifted by softening what counts"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose record names a phase as needed and carries no sign-off for it,
+    And every other phase that record names as needed does carry one,
+  When a close of that ticket is attempted,
+  Then the finished state is not written,
+    And the ticket's recorded state is left exactly as it was found,
+    And the attempt is refused with a message naming the phase that is unaccounted for,
+    And the ticket's record still names that phase as needed afterwards -- the refusal is
+      not resolved by rewriting the demand away, and the demand is not reclassified as
+      not-needed, excluded, or already satisfied as a side effect of being refused,
+  And given a second ticket carried by the same run, whose record names the same phases as
+    needed and carries a sign-off for every one of them,
+  When its close is attempted,
+  Then the finished state is written for that second ticket,
+  So the refusal is a decision taken about the evidence in the record, and not a mechanism
+    that has simply stopped writing; and the only way to turn the first ticket into the
+    second is to account for the outstanding phase, never to make the check more agreeable.
+depends_on:
+  - BO-400e
+  - BO-400e-1
+doc_links:
+  - path: scripts/set_ticket_status.py
+    relationship: modifies
+    status: exists
+    relevance: "The guarded door. Its agents-parity check is the refusal being preserved and made unavoidable; the blanket override is not a surgical exception and is out of scope as a route around this."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400a-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Specifies this refusal for one writer, down to the exact message string. RATIFIED by BO-400e and by this child: its rule is correct, is not narrowed, and is the rule that must always win."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400a-2-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "The driver-side refusal, already done, and the source of the control-case discipline used here: without a positive case in the same run, a driver that never writes at all passes every refusal."
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver, whose completion write must reach the refusal instead of routing around it. TWIN of build-ticket.js."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket twin; the same refusal must be reachable here in the same change."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "Behavioral harness. Both the refused ticket and the control ticket must be driven through the real workflow and asserted on the record the run wrote."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-20260831-1932 records that the refusing path is the correct one and that unification must be toward the refusal. KI-BO-20260831-1930 records the operational cost of that -- 316 tickets that will now halt reliably."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-400e-1
+  contract: "The set of demanded steps, read from the ticket's own record rather than from the party asking for the close -- the input this refusal is taken against"
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Behaviour (b) of the four the parent BO-400e names. The parent warns that folding this
+  into (a) causes (a) to be built as "trust the caller" and the guard to be quietly
+  deleted, so it is authored as its own record.
+
+  THIS RECORD IS WHERE TWO OF THE THREE NAMED WRONG FIXES DIE.
+    - FIX ONLY THE REFUSAL (make the strict path stop refusing, leave the lenient path
+      alone). Fails the first Then: the finished state is not written. The lenient branch
+      is the worse of the two -- it wrote done onto a ticket whose source AC still read
+      work_status: todo, which check-ticket-ac-status-parity then had to catch at commit
+      time.
+    - CONVERGE BY LOOSENING (unify on the permissive answer, by the blanket override or by
+      dropping the parity check). Fails the same clause, and separately fails the clause
+      that the record must still name the phase as needed afterwards -- which is the
+      behavioural form of "the remedy for a record that asks for the wrong thing is to
+      correct the record, never to soften the reader".
+
+  THE CONTROL CASE IS NOT OPTIONAL. BO-400a-2-iii learned this the hard way: a driver
+  reverted to never writing at all satisfies every refusal clause and looks correct. The
+  second ticket, in the same run, is what makes the refusal attributable to the missing
+  sign-off rather than to a writer that has stopped.
+
+  DELIBERATE CONSEQUENCE, NOT A SHORTFALL. Once this lands, work whose record still
+  demands a step it never got is refused reliably where before it slipped through roughly
+  two times in three. That is more halts, and it is correct. The one-time correction of
+  the existing population, and a pre-dispatch check that catches such a record before a
+  drive spends hours on it, are both real needs and neither belongs in this record.
+
+  VERIFY BY EXECUTION, NEVER BY GREP -- the parity check already exists in the source, so
+  a structural test passes on the broken driver. BOTH TWINS IN ONE CHANGE, per
+  BO-400a-2-ii's standing constraint.
