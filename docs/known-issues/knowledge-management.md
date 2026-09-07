@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-25
+last_updated: 2026-09-07
 components:
   - knowledge_management
 related_docs:
@@ -567,11 +567,34 @@ telemetry file). `KI-BP-007` (documented instruction, silent consequence).
 > itself describes. The sequential `KI-KM-NNN` entries above keep their ids.
 
 - **Severity:** medium
-- **Status:** open — no AC
+- **Status:** open — no AC · **partially remediated 2026-09-07 (2 of 11 converted, 9 remain)**
 - **Occurrences:** ongoing (introduced 2026-08-26)
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **First seen:** 2026-08-26 · **Last seen:** 2026-09-07
 - **Where:** the `## How to use this file` → **Adding an issue** block in all thirteen
   `docs/known-issues/*.md` registers
+
+> **2026-09-07 — re-measured, and the count was exactly right.** A fresh grep for
+> `section using the next free number` against `origin/main` returned **eleven** files,
+> confirming this entry's measurement thirteen days on: nothing had been converted in the
+> interval. Two were fixed in passing while filing unrelated defects —
+> `ac-driven-dev.md` (adopted `KI-ACD-YYYYMMDD-HHMM`) and `commit-guardian.md` (adopted
+> `KI-CG-YYYYMMDD-short-slug`, that register's own dominant form). **Nine still teach the
+> retired scheme:** `agent-registry.md`, `ac-store.md`, `changelog.md`,
+> `documentation-system.md`, `feedback-collector.md`, `knowledge-management.md` (this file),
+> `security-scanner.md`, `supervisor-system.md`, `testing-quality.md`.
+>
+> Each converted register declares whichever form its own existing entries already use, per
+> fix-direction 1's "the choice matters less than that it is the same everywhere" — applied
+> per-file rather than globally, since a global pick would contradict one register or the
+> other and no one has made that call. `commit-guardian.md` was 10 slug to 2 timestamp, so a
+> timestamp declaration there was drafted and then corrected before commit; check the
+> distribution before declaring a form in the remaining nine.
+>
+> The grep that finds them must be the **prescription**, not the phrase:
+> `grep -ln "section using the next free number" docs/known-issues/*.md`. A loose search for
+> "next free number" also matches the two registers that were already fixed, because their
+> *rationale* section quotes the retired wording in order to argue against it — so the loose
+> form reports 13 of 13 and makes a converted register look unconverted.
 
 **Background.** `KI-BO-024` established that *"append the next free number"* cannot work
 under concurrent authors: it requires every author to read the same file at the same moment

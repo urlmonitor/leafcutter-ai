@@ -24,9 +24,27 @@ acceptance criterion for something nobody has decided to build yet.
 **Read it before adding new capability to this component.** Fixing what is already
 broken takes precedence over building more.
 
-**Adding an issue.** Append a new `### KI-CG-NNN` section using the next free number.
-Nothing here is generated — edit it by hand. Fill in what you actually know; an issue
-recorded with a thin `Evidence` line is far better than one not recorded.
+**Adding an issue.** Append a new `### KI-CG-YYYYMMDD-short-slug` section — the UTC date you
+filed it plus a few words naming the defect. Nothing here is generated — edit it by hand. Fill
+in what you actually know; an issue recorded with a thin `Evidence` line is far better than one
+not recorded.
+
+**Why a date-and-slug id and not the next free number.** Sequential ids collide whenever two
+sessions file at once, and this register is the reason the convention changed: on 2026-08-26
+two different defects both landed as `KI-CG-012`, and a changelog ended up describing
+`KI-CG-012` using what became `KI-CG-013`'s text. Renumbering is worse than it sounds — inbound
+references do not disambiguate, so a rename can silently repoint a citation at the wrong
+defect. Existing `KI-CG-NNN` entries keep their ids; **do not renumber them.**
+
+A few entries here use `KI-CG-YYYYMMDD-HHMM` instead. Both forms are collision-free and both
+sort and grep identically on the `KI-CG-` prefix; the slug form is written above because it is
+what the large majority of this register's entries already use. Do not renumber the timestamped
+ones to match — see `KI-KM-20260826-id-convention-diverged-across-registers`, which measured the
+inbound references that would break.
+
+This instruction was itself stale until 2026-09-07: it kept prescribing next-free-number for
+twelve days after the convention changed, in the very register whose collision prompted the
+change.
 
 **Hitting an existing issue.** Increment `Occurrences` and update `Last seen`. Do not
 add a duplicate entry. Occurrences is an escalator, not the score — a blocker seen once
