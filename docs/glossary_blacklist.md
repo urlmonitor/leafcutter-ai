@@ -5,7 +5,7 @@ description: Terms excluded from the project glossary, managed automatically by 
   jargon candidates.
 type: reference
 created: '2026-07-09'
-last_updated: '2026-08-18'
+last_updated: '2026-09-07'
 status: active
 components: []
 ---
@@ -26,6 +26,7 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | test_command_live_trader | JSON config field name in skills_config.json reference table, not a domain concept | 2026-05-27 |
 | test_command_sql | JSON config field name in skills_config.json reference table, not a domain concept | 2026-05-27 |
 | test_command_single_file_pattern | JSON config field name in skills_config.json reference table, not a domain concept | 2026-05-27 |
+| test_bp_100k_4_ii | Test module filename referenced in a known-issue closure note (unit_tests/commit_guardian/test_bp_100k_4_ii.py), not a domain concept | 2026-09-07 |
 | changelog_categories_path | JSON config field name in skills_config.json reference table, not a domain concept | 2026-05-27 |
 | precommit_autofix_config_path | JSON config field name in skills_config.json reference table, not a domain concept | 2026-05-27 |
 | test_output_dir | JSON config field name in skills_config.json reference table, not a domain concept | 2026-05-27 |
