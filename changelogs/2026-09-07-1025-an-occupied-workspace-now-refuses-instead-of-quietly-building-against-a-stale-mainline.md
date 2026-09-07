@@ -1,7 +1,7 @@
 ---
 title: An occupied workspace now refuses, instead of quietly building against a stale mainline
-date: "2026-09-01"
-time: "17:20"
+date: "2026-09-07"
+time: "10:25"
 type: manual
 components:
   - build_orchestration

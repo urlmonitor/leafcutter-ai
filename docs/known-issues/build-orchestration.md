@@ -718,7 +718,7 @@ sides — a generator emitting artifacts its own repository's gates reject.
 ### KI-BO-015 — `_worktree_exists` does not know the `fast-lane/` prefix, so a fast-lane run cannot recognise its own workspace and aborts at phase one
 
 - **Severity:** high
-- **Status:** **RESOLVED 2026-09-01 — root cause fixed; the remedy this entry proposed was
+- **Status:** **RESOLVED 2026-09-07 — root cause fixed; the remedy this entry proposed was
   deliberately NOT taken.** `_worktree_exists` now matches `refs/heads/fast-lane/<branch>`, so
   the prefix blindness is gone and the lookup can see its own workspace. What it does on
   finding one is a **named refusal**, not reuse — specified by `BO-2400f-13` and its four
