@@ -57,6 +57,7 @@ from build_phases import (
     clean_stale_artifacts,
     build_workflow_tools,
     build_knowledge_scripts,
+    build_knowledge_sink_declaration,
     build_build_orchestration_scripts,
     build_agent_support_scripts,
     AGENT_SUPPORT_SCRIPT_DIRS,
@@ -1258,6 +1259,7 @@ _CONFIG_FILE_PHASE_BY_NAME: dict[str, str] = {
     "paths.json": "build_ac_store",
     "phase_deferral.yaml": "build_ac_store",
     "feedback_categories.yaml": "build_feedback",
+    "knowledge_sink.json": "build_knowledge_sink_declaration",
 }
 _DOCS_FILE_PHASE_BY_NAME: dict[str, str] = {
     "components.json": "build_components_registry",
@@ -1725,6 +1727,7 @@ def _run_phases(
         ("Sync platforms", build_sync_platforms),
         ("Workflow tools", build_workflow_tools),
         ("Knowledge scripts", build_knowledge_scripts),
+        ("Knowledge sink declaration", build_knowledge_sink_declaration),
         ("Build orchestration scripts", build_build_orchestration_scripts),
         ("Agent support scripts", build_agent_support_scripts),
         ("Template standalone scripts", build_template_standalone_scripts),
@@ -2533,4 +2536,10 @@ if __name__ == "__main__":
 #   previously-undiscovered instance: validate_ac_schema.py's missing
 #   _ac_components.py -- concrete evidence the mechanism is derived rather than
 #   an enumeration of the one known case. (#BP-900g-8)
+# - 2026-09-07 [python-coder]: Registered the new build_knowledge_sink_declaration
+#   internal phase (declares the build-time knowledge-emission sink absolute
+#   path -- see build_phases.py for the phase itself) right after "Knowledge
+#   scripts" in _run_phases, and added its config file name to
+#   _CONFIG_FILE_PHASE_BY_NAME for the existing diagnostic remediation-hint map.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
 # ====================================================================

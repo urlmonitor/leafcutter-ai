@@ -3230,6 +3230,74 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     return written
 
 
+def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
+                                      dry_run: bool, force: bool) -> int:
+    """Declare this install's absolute knowledge-emission sink path.
+
+    Writes ``config/knowledge_sink.json`` under the consolidated output root
+    (bound to ``target_root`` here per the internal-phase calling convention
+    -- see ``_run_phases``), recording the absolute path THIS build fixes as
+    the project's knowledge-emission sink: ``<project_root>/debugging/logs/
+    knowledge_emissions.jsonl``, where ``project_root`` is exactly one level
+    above the consolidated output root this function itself was called with
+    (``output_root == project_root / output_root_name``). This is
+    deliberately the historical CWD-relative default's own path, anchored
+    absolutely -- and deliberately NOT ``build_feedback``'s
+    ``<output_root>/debugging/logs/`` (which that phase creates eagerly on
+    every build): the sink is a durable operational log the project owns,
+    not a build artifact that ``.leafcutter`` gets wiped and regenerated
+    around, and its parent directory must not already exist merely because
+    a build ran (AC INF-400c-4-v: obtainable without emitting or harvesting,
+    and without conjuring anything into existence by asking).
+
+    The path is derived ENTIRELY from ``target_root`` (an absolute argument
+    ``build.py`` already resolved from ``--target-dir``) -- never discovered
+    by walking the filesystem for a repository or marker file. This is what
+    makes a nested consumer install's sink land at the consumer's own root
+    and a workspace install's sink land beside the rest of that install's
+    deployed content, rather than beside the package sources, in every
+    install shape (AC INF-400c-4-v).
+
+    A NOTE is always printed alongside the write: a build has no reliable way
+    to tell whether the directory it was pointed at is an already-installed
+    project's own root or a separate, isolated working directory of a
+    DIFFERENT install that already has its own sink elsewhere, so every build
+    states plainly which is being declared rather than silently doing the
+    wrong one only some of the time (AC INF-400c-4-v: "a second sink produced
+    in silence is the original defect restored in full").
+
+    Args:
+        target_root: Absolute path to the consolidated output directory
+            (bound to ``output_root`` by ``_run_phases``'s internal-phase
+            calling convention).
+        config: Merged config dictionary (accepted for interface parity; not
+            consumed).
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites an existing declaration.
+
+    Returns:
+        1 if the declaration was (or would be, in dry-run mode) written; 0
+        when the on-disk declaration is already byte-identical (see
+        ``_write``'s compare-before-write guard).
+    """
+    project_root = target_root.parent
+    sink_path = project_root / "debugging" / "logs" / "knowledge_emissions.jsonl"
+    content = json.dumps({"knowledge_emission_sink": str(sink_path)}, indent=2) + "\n"
+    output_path = target_root / "config" / "knowledge_sink.json"
+
+    if _write(output_path, content, dry_run, force):
+        print(f"  config/knowledge_sink.json -> {sink_path}")
+        print(
+            "  NOTE: this build declares the knowledge-emission SINK for "
+            "THIS working directory. A separate, isolated working directory "
+            "of a project that already has an install elsewhere gets its "
+            "own, SECOND sink here rather than silently sharing the "
+            "original -- see AC INF-400c-4-v."
+        )
+        return 1
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Agent-support script deploy spec (AC BP-900g-5)
 # ---------------------------------------------------------------------------
@@ -4003,4 +4071,22 @@ def clean_stale_artifacts(
 #   test_bp_900g_9_build_orchestration_and_fast_lane_dependency_both_named_in_one_run
 #   to unit_tests/test_bp_900g_9.py; confirmed it fails on the pre-fix code
 #   via a `git stash` of this file. (#BP-900g-9)
+# - 2026-09-07 [python-coder]: Added build_knowledge_sink_declaration(), a new
+#   internal-phase writing config/knowledge_sink.json under the consolidated
+#   output root: an absolute, build-time-fixed declaration of this install's
+#   knowledge-emission sink at <project_root>/debugging/logs/
+#   knowledge_emissions.jsonl (project_root == the internal-phase's own
+#   target_root parameter, .parent — one level above the consolidated output
+#   root per _run_phases's calling convention). Derived entirely from the
+#   already-resolved --target-dir argument, never from filesystem discovery,
+#   so a nested consumer install's sink lands at the consumer's own root and
+#   a workspace install's sink lands beside the rest of that install's
+#   deployed content rather than beside the package sources. Deliberately
+#   NOT placed under build_feedback's own <output_root>/debugging/logs/
+#   (which that phase creates eagerly on every build) so the sink's own
+#   parent directory does not spring into existence merely because a build
+#   ran. Always prints a NOTE naming the declared sink, since a build cannot
+#   tell whether its target is an already-installed project's own root or a
+#   separate working directory of a different install with a sink
+#   elsewhere. (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
 # ====================================================================
