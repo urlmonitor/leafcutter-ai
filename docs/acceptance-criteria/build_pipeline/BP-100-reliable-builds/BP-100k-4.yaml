@@ -129,9 +129,27 @@ amended_by:
       being unit_tests/commit_guardian/test_ge_122e_1.py, an unrelated
       guardrail-engine test from another branch). implemented_by and covered_by
       recorded from the real files, not from the ticket's ac_coverage field.
+  - by: BrainCandy
+    at: 2026-09-01
+    note: >-
+      Scope limitation recorded, and BP-100k-4-ii added to cover it. This
+      record's criteria are framed as "no path THIS REPOSITORY is able to
+      stage" — the package repository, where Python is always present. The
+      shipped gate applies that framing to whatever project it runs in, so an
+      adopter tracking no Python has its two Python-selecting conditions
+      classified exactly like a condition naming a directory that can never
+      exist, and cannot commit at all (KI-CG-20260831-0713, blocker, confirmed
+      live on origin/main 2026-09-01: always_run true, pass_filenames false).
+      work_status is deliberately LEFT AT done rather than flipped: what this
+      record specifies is implemented and its tests pass, and the blocker lies
+      outside its stated scope. Flipping it would assert a regression that did
+      not happen and would obscure where the real gap is. The unfinished work
+      lives in the new child, which is where the could-ever versus does-now
+      distinction belongs.
 superseded_by: null
 covered_by:
   - BP-100k-4-i
+  - BP-100k-4-ii
   - unit_tests/commit_guardian/test_bp_100k_4.py
 implemented_by:
   - templates/scripts/commit_guardian/check_hook_trigger_reachability.py
