@@ -293,7 +293,8 @@ is also easy to mistake for another author's work. Restore with
   > visible, which the AC requires — but each is a dependency static analysis cannot see.
   > `submit_feedback.py` reaching `config/feedback_categories.yaml` through
   > `_find_config_root()` is the same shape as the defect fixed here and remains
-  > underivable. That is tracked as its own entry, not folded into this closure.
+  > underivable. Tracked as `KI-BP-20260907-1120` and `KI-BP-20260907-1125` below, not
+  > folded into this closure.
   > `diagram_type_validators`'s silent fallback to a built-in constant (KI-CG-002) is also
   > untouched: shipping the file fixes the symptom, not the silence.
 
@@ -3719,3 +3720,82 @@ properly.
 fixed migration list — so its clean report is indistinguishable from a clean tree. Same shape
 as the bare-directory AC validator and the stale-ref merge audit recorded in `CLAUDE.md`: a
 check that examined nothing must not look like a check that found nothing.
+
+---
+
+### KI-BP-20260907-1120 — 409 reads the closure guard cannot resolve statically, none of them triaged, each one a potential KI-BP-003
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build_referential_integrity.py` (the data-read detectors added by
+  BP-900g-8-ii), surfaced on every `build.py` run
+
+BP-900g-8-ii widened the deployed-dependency closure to see non-code reads, and correctly
+reports what it **cannot** resolve rather than dropping it — a closure that silently omits
+what it could not derive is indistinguishable from one that found nothing to complain about.
+A clean build emits about **409** such `unresolvable data-file read` lines.
+
+**That disclosure is the AC working. The 409 unexamined entries behind it are the issue.**
+Each is a call site where a deployed script reads a path static analysis could not reduce, so
+each is a place where the guard cannot tell whether the file ships. That is precisely the
+condition that hid KI-BP-003 through five occurrences and an adopter-blocking failure.
+
+**One is already named and is the same shape.** `submit_feedback.py` reaches
+`config/feedback_categories.yaml` through an indirected `_find_config_root()` walk — an
+ancestor walk resolved at runtime, exactly like the `doc_types.json` reader whose declaring
+file turned out never to be deployed. It sits adjacent to the already-open KI-BP-017 (feedback
+scripts not provisioned into a worktree), which suggests the pair has a common cause worth
+establishing before either is fixed.
+
+**Nothing enumerates or triages the set.** There is no list, no owner, and no way to tell a
+resolved-and-fine read from a not-yet-looked-at one. The AC required the underivable set be
+*visible*; visibility without triage is where this stops.
+
+**Fix direction.** Produce the inventory as data rather than as log lines — path, reading
+script, why it could not be resolved — then triage each into: genuinely external (exclude
+with a reason), resolvable with a better detector (extend the derivation), or a real
+undeclared dependency (deploy it). Expect the third bucket to be non-empty; KI-BP-003 was in
+it. Do this before adding detectors, so the detector work is aimed at measured cases rather
+than guessed ones.
+
+**Pattern:** a guard that correctly reports its own blind spots, in a form nobody can act on
+— so the disclosure discharges the obligation without reducing the risk.
+
+---
+
+### KI-BP-20260907-1125 — a warning that fires 409 times on a green build is not a warning, and the 410th is the one that matters
+
+- **Severity:** medium — and the more dangerous half of the pair above
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build_referential_integrity.py:1207` (per-read WARNING), with the
+  author's own measurement at `:1183-1191`
+
+The unresolvable-read disclosure logs **one WARNING per call site, per build, unaggregated**.
+On a clean, fully-green build that is ~409 lines of warning output. A signal at that volume
+is not a signal — it is texture, and the operator learns to scroll past the block. The next
+genuinely new unresolvable read appears as line 410 of an already-ignored wall.
+
+**The volume was known and traded away deliberately**, which is why this is filed as its own
+entry rather than as a grumble. The code comment at `:1183-1191` records that the author
+measured "400+ warnings ... none of which named an actual intra-package dependency" and
+shipped anyway, because the AC required underivable reads to be disclosed rather than
+dropped. That was the right call against the AC as written; it leaves the disclosure
+technically satisfied and practically inert.
+
+**Fix direction.** Aggregate: one RESULT line carrying the count, the full list behind a flag
+or an artifact file, and a **ratchet** so the number can only fall — a build that increases it
+says so loudly. That converts a constant into a trend, which is the only form in which this
+information can be acted on. It also makes the triage in `KI-BP-20260907-1120` measurable
+instead of open-ended.
+
+**Do not fix this by lowering the log level or dropping the reads.** The disclosure exists
+because BP-900g-8-ii forbids silently omitting what the derivation could not resolve, and
+demoting it to DEBUG is that omission wearing a different hat.
+
+**Pattern:** a correct disclosure emitted at a volume that guarantees it is unread — noise
+generated by a guard, which is worse than noise generated by nothing, because it trains the
+operator to ignore the one channel that will eventually carry a real finding.
