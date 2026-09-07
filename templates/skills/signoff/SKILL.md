@@ -732,7 +732,7 @@ Every phase agent appends one `## Comments` entry per invocation. The heading is
 | Tag | When to use | Effect on supervisor |
 |---|---|---|
 | `ok` | Phase completed, no concerns. | Spawns the next `needed` agent in natural order. |
-| `handoff` | Phase completed and explicitly hands to a named sibling (the prose body MUST name the receiving agent). | Spawns the named agent next, regardless of natural ordering. |
+| `handoff` | Phase completed and explicitly hands to a named sibling (the prose body MUST name the receiving agent). When dispatched for a machine-parsed result (see the Machine-Parsed Dispatch Output Contract in your agent template), also set `handoff_target: "<agent-name>"` in the returned JSON — the `ticket-supervisor` agent reads the prose body, but the `build-feature.js` / `build-ticket.js` workflow drivers route on this field, not on prose (see BO-3000a). | Spawns the named agent next, regardless of natural ordering. |
 | `blocker` | Phase could not complete; another agent must fix something first. | Triggers failure adjudication: respawn sibling, ask user, or escalate to brainstorm-lead. |
 | `question` | Phase needs user clarification. | Halts the ticket; surfaces the question to the user. |
 
@@ -758,7 +758,10 @@ completion_manifest:
 ```
 
 - For `ok`: a one-liner summarising what changed and any test status.
-- For `handoff`: the named recipient and a one-sentence reason.
+- For `handoff`: the named recipient and a one-sentence reason. On the machine-parsed
+  path, the recipient named here in prose is for the human/ticket-supervisor reader;
+  the JSON result MUST separately carry `handoff_target: "<agent-name>"` for the
+  workflow drivers, which do not parse this prose.
 - For `blocker`: what was attempted, why it failed, and a specific suggested remediation (which agent to respawn, or what user input is needed).
 - For `question`: the precise ambiguity and the options the user should choose between.
 
@@ -890,6 +893,12 @@ agents:
 ### 2026-05-08 14:45 — architect-review (status: handoff)
 Approach approved at the architecture level (extract a writer interface; thin adapter for live vs historic). Handing to python-coder for implementation; no further architectural review needed unless the writer interface needs more than 2 implementations.
 ```
+
+If this sign-off is on the machine-parsed dispatch path (see your agent template's
+Machine-Parsed Dispatch Output Contract), the JSON result for the same phase MUST
+also carry `handoff_target: "python-coder"`. The comment prose above is what a human
+or the `ticket-supervisor` agent reads; `handoff_target` is the only field the
+`build-feature.js` / `build-ticket.js` workflow drivers route on.
 
 ---
 

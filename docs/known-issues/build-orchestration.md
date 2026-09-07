@@ -3407,6 +3407,194 @@ than against an observable side effect — the same substitution of a proxy for 
 
 ---
 
+### KI-BO-20260907-0850 — `build-ticket.js` is the declared twin of the driver just fixed: one defect is unfixed there and the other handler is a generation behind, so `/build-ticket` still loses the ticket in ways `/build-feature` no longer does
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 0 observed on this path; the twin defect was observed 3× on `build-feature.js`
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/workflows-js/build-ticket.js` — the per-ticket phase loop at `:1258`
+  (`for (const currentPhase of neededPhases)`) and the handoff branch · twin of
+  `templates/workflows-js/build-feature.js`
+  <br>The handoff branch is deliberately cited without a line number: it moves whenever either
+  half is edited, so a number there rots. The loop line is stable and is the one to grep.
+
+**Symptom.** PR #687 fixed two dispatch defects in `build-feature.js`: the frozen phase list
+(`BO-3700`) and the handoff contract (`BO-3000a`). `build-ticket.js` received neither.
+
+**Corrected 2026-09-07, same day as filing.** The first version of this entry said the twin
+"carries **both** defects unchanged". That overstates one half and the precision matters,
+because the two halves need different remedies:
+
+- **Frozen phase list — genuinely unfixed.** `build-ticket.js:1258` is still
+  `for (const currentPhase of neededPhases)` over a list computed once before any phase runs.
+  No AC covers it: `BO-3700`'s criteria name `build-feature.js` explicitly.
+- **Handoff routing — present, but a generation behind.** The twin DOES have a handoff branch
+  and DOES read `handoff_target`; that arrived with `BO-3000`, whose test file already drives
+  this driver. What it lacks is everything `BO-3000a` added: `handoff_target` declared in
+  `PHASE_RESULT_SCHEMA`, the conditional `if`/`then` requirement, and the two-case diagnosable
+  refusal. So this half is a divergence between twins rather than an absent guard.
+
+That second half is already covered by an acceptance criterion, and the criterion is now
+false. `BO-3000` requires:
+
+> Then build-ticket.js MUST apply the same handoff routing behaviour as build-feature.js, so
+> the two drivers cannot diverge
+
+The drivers diverged the moment `BO-3000a` landed on one of them. `BO-3000` still reads
+`work_status: todo`, so nothing has to be authored to justify fixing this half — the
+requirement exists and is violated.
+
+Its handoff refusal still reads, verbatim, the pre-fix wording:
+
+```text
+named no recognizable handoff_target ('undefined')
+```
+
+Its `PHASE_RESULT_SCHEMA` has no `handoff_target` property and no conditional requirement, and
+its phase loop is still `for (const currentPhase of neededPhases)` over a list computed once
+before any phase runs.
+
+**Why this is a register entry rather than a TODO.** The two files declare themselves twins.
+`build-feature.js`'s own header says so:
+
+> TWIN: The phaseOrder array and per-ticket phase loop below are the canonical twin of
+> build-ticket.js Phase 1–3. Keep them in sync manually — any change to build-ticket.js
+> phaseOrder or the retry/adjudication logic must be mirrored here.
+
+"Keep them in sync manually" is the whole mechanism. There is no test asserting the twins agree,
+so divergence is invisible until someone runs the neglected one. PR #687 widened the gap
+deliberately and said so in both AC records — the reason given (no red baseline for
+build-ticket.js in that pass, and widening a fix to a second driver without one turns a fix into
+a rewrite) is sound, but it is a reason to file this, not a reason to forget it.
+
+**Who is exposed — and the two halves differ, which changes the triage order.** The first
+version of this entry said "anyone running `/build-ticket`". That is true of the HANDOFF half
+and over-general for the other:
+
+- **Handoff divergence — reachable on every drive.** Any coder that hands off to test-writer
+  hits it, and that is a routine, template-mandated path. This is the half an operator meets
+  first.
+- **Frozen phase list — reachable only when the drive contains a promoting phase.** The
+  promotion comes from `architect-review`, so a standalone ticket that never schedules
+  `architect-review` cannot hit it at all.
+
+Severity is unchanged — `BO-3700`'s field evidence was 2 of 4 tickets in a single batch — but
+the handoff half is the more reachable one and should be fixed first. The original wording
+would have led a triager to the opposite order.
+
+The "0 occurrences" figure is therefore partly sampling and partly a real difference in reach:
+the incidents that motivated #687 all came from an epic drive, which uses `build-feature.js`.
+
+**The templates already assume the fix is universal.** `python-coder.md` and `test-writer.md`
+now instruct agents to return `handoff_target` unconditionally, without reference to which
+driver dispatched them. Checked: `build-ticket.js`'s schema sets no `additionalProperties:
+false`, so the extra field is ignored rather than rejected — harmless, but it means an agent
+correctly emitting the field under this driver still gets refused, which is the worst
+combination for diagnosis. The operator sees a conformant agent rejected for non-conformance.
+
+This paragraph belongs entirely to the HANDOFF half, i.e. to `BO-3000`. Nothing in `BO-3701`
+covers it. A reader who lands `BO-3701` and closes this entry on that basis will leave the
+more reachable of the two defects in place.
+
+**Countermeasure — now two independently schedulable pieces, not one pass.** The first version
+of this entry said "mirror both changes in the same pass". That framing is stale, and it is
+worth correcting precisely because it is the framing that produced the divergence in reverse:
+
+- **Handoff half** — covered by `BO-3000`'s existing twin criterion, still `work_status: todo`.
+  Nothing to author.
+- **Frozen-list half** — covered by `BO-3701` (authored 2026-09-07), a top-level L2 rather than
+  a child of `BO-3700`, because `BO-3700` is now `done` and hanging a `todo` child under it
+  would recreate the done-parent-with-unfinished-children drift this repo swept for.
+
+Either can land alone without leaving the other unrecorded. Doing both in one branch is an
+efficiency, not a constraint.
+
+A NAIVE MIRROR WOULD INTRODUCE A BUG. `build-ticket.js` is not a copy of its twin, and two of
+`BO-3701`'s criteria exist because of that:
+
+- Its `canonicalPriority` (`:251-264`) deliberately does NOT throw on a name outside
+  `phaseOrder` — it returns `phaseOrder.length` and warns. So an unknown promoted name fed into
+  a re-derived pending set does not get ignored; it sorts LAST and runs *after commit and
+  pull-request*. `BO-3700`'s wording ("ignored rather than dispatched") is adequate for
+  `build-feature.js` and under-specified here.
+- The driver sets `lastRecord = null` on an unreadable read-back (`:1358-1363`). Once the
+  pending set is derived FROM that reply, "unreadable" silently becomes "nothing left to run"
+  unless the criterion forbids it — a failure mode the fix itself creates.
+
+**What would have caught the divergence.** A test asserting the two drivers agree. `BO-3701`
+takes the cheap half: its promotion cases must be asserted over every entry in
+`H.TWIN_DRIVERS`, which the harness already exposes and which at least seven existing test
+files already loop over. The general parity gate — asserting the two `phaseOrder` arrays and
+handoff branches agree — is deliberately NOT in `BO-3701`: it also serves `BO-3000`'s half, so
+parking it there would make one record's `done` depend on work two records need, and it carries
+a real design question (assert the arrays literally equal, or the observable orderings equal?).
+It wants its own id.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a duplicated implementation kept
+consistent by a comment. The comment is not a mechanism.
+
+**Related.** `KI-BO-20260901-1000` and `KI-BO-20260901-1052` (the two defects, as observed and
+fixed on the other twin). `KI-BO-20260901-0920` (a third control ADR-006's flattening dropped —
+the same refactor is upstream of all of these).
+
+---
+
+### KI-BO-20260907-0851 — Two agent templates use `(status: handoff)` to mean "stop, I need human authorization", so a deliberate halt is reported to the operator as a malformed result
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 2 sites, found by 3 independent agents in one session
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/agents/python-coder.md` §Contract-Shrinkage Guard step 2 ·
+  `templates/agents/test-writer.md` Rule 2
+
+**Symptom.** Both sites instruct the agent to emit `(status: handoff)` and stop, meaning
+"blocked, do not proceed without explicit user authorization". Neither names a receiving agent,
+because neither wants one:
+
+```text
+if any consumer reads a field the proposed change would remove, the change is blocked.
+Emit `(status: handoff)` and stop. Do not proceed without explicit user authorization
+(`allow_contract_shrinkage: true` in the ticket body).
+```
+
+`signoff` SKILL.md's own definition of `handoff` is "another agent must act before I can
+proceed", and requires the recipient to be named. A halt pending *human* authorization is what
+`blocker` and `question` exist for.
+
+**The consequence is a misdiagnosis, not a malfunction.** Under `BO-3000a` the driver refuses a
+targetless handoff and stops the ticket — which is the correct outcome for these two sites, by
+luck rather than design. But the message the operator gets says the agent's result *named no
+handoff target*, i.e. it reports a conformance defect. The agent did exactly what its template
+told it to. So the operator is pointed at the emitter when the actual next step is to grant
+authorization, and the two situations — "an agent forgot the field" and "an agent is asking you
+for permission" — are indistinguishable in the run output.
+
+**Why it was not fixed alongside the handoff contract.** Reclassifying which status value a
+site emits is a behavioural change to the adjudication path: `question` is
+terminal-until-user-reply and `blocker` enters the retry ladder, so the choice changes what the
+driver does next, not merely what it prints. That belongs in its own change with its own tests,
+not folded into a field-naming fix. Recorded here so the decision is visible rather than
+implicit.
+
+**Countermeasure.** Decide which status each site should emit — `question` fits "waiting for a
+human decision" and `blocker` fits "cannot proceed, escalate" — then update the two templates
+and confirm the driver's routing for that status produces a sensible operator message. Note
+`building-epics` §5.0's warning while doing so: a `question` from a phase agent mid-drive
+deadlocks, because no reply channel exists during a supervisor run. That constraint is probably
+why `handoff` was reached for in the first place, and it means the honest fix may require
+giving the drive a way to surface an authorization request, not just relabelling the status.
+
+**Pattern:** an enum value borrowed for a meaning it does not carry, because the value that
+does carry it has an unrelated cost.
+
+**Related.** `KI-BO-20260901-1052` (the handoff contract these sites sit inside).
+`KI-BO-20260907-0850` (the twin driver, where the same two sites produce the OLD undiagnosable
+message rather than the new one).
+
+---
+
 ### KI-BO-20260901-1450 — UNDER INVESTIGATION: the fast lane isolates its worktree but not the process-level state around it, and three shared surfaces already misfired with only ONE lane running
 
 - **Severity:** unknown — under investigation, see "What we are asking for" below

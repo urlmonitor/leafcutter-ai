@@ -53,7 +53,8 @@ criteria: |
   And the bug symptom ("a `handoff` result is silently recorded as a SUCCESSFUL
     phase and the driver advances to the next phase while the named agent is
     never re-dispatched") must not occur
-covered_by: []
+covered_by:
+  - BO-3000a
 implemented_by: []
 notes: |
   Authored by /quick-fix.
