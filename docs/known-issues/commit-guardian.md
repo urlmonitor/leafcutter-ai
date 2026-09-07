@@ -847,8 +847,8 @@ whether it moves the other two.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 4
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
+- **Occurrences:** 5
+- **First seen:** 2026-08-25 · **Last seen:** 2026-09-07
 - **Where:** `templates/scripts/commit_guardian/check_ac_schema.py` — `main()` (`root = Path(os.environ.get("HOOK_ROOT", str(Path.cwd())))`, `:673`), `_get_staged_ac_paths()` (`:307`, fail-open documented in its own docstring), the `if not staged_files:` branch (`:685`), and `_find_project_root()` (`:99`)
 
 **Fourth occurrence, 2026-08-26 — and it came wearing a disguise worth knowing about.** A run
@@ -916,6 +916,18 @@ clean exit reachable without any file being checked:
 The schema fallback is **not** the whole story. `validate_declares_side_effect` is called
 unconditionally at `:625`, independent of whether the schema loaded, so a missing schema
 alone would still have caught the mutation. What silences the hook is Phase 1 not running.
+
+**Fifth occurrence, 2026-09-07.** Invoking the deployed hook via `run_hook.py`
+(`templates/scripts/commit_guardian/run_hook.py`, deployed to
+`.leafcutter/scripts/commit_guardian/run_hook.py`) with cwd resolving to a directory
+**outside** the worktree printed the identical WARNING seen in the fourth occurrence —
+`WARNING: config/ac_store_schema.json not found at /home/henzeh/projects/leafcutter; falling
+back to manual field validation` — and exited 0. Running the same invocation with cwd
+**inside** the worktree, against the same staged files, validated properly. This reproduces
+exactly the "wrong-root run" mechanism already described above in this same entry (mechanism
+1 in "Root cause, as far as the source states it": `main()`'s CWD-derived root at `:673`) — a
+fifth independent confirmation of the same failure mode, now via `run_hook.py` specifically
+rather than a direct invocation of `check_ac_schema.py` or `pre-commit run check-ac-schema`.
 
 **Honest limit of this report.** The `pre-commit run` invocation was not isolated to a
 single mechanism — cwd was inside the worktree for that run, so (1) and (2) do not

@@ -194,6 +194,7 @@ class RatchetFixtureTestCase(unittest.TestCase):
 class TestOversizedFileGrownByOneLineIsRefused(RatchetFixtureTestCase):
     def test_ge_127b_1_an_oversized_file_made_one_line_longer_is_refused_naming_both_lengths(self):
         # covers: GE-127b-1
+        # covers: GE-127b
         # angle: criterion
         """THE MANDATORY NEGATIVE ARM. An already-oversized covered file
         (410 lines, permitted length 400) committed to HEAD, then staged one
@@ -247,6 +248,7 @@ class TestOversizedFileGrownByOneLineIsRefused(RatchetFixtureTestCase):
 class TestOversizedFileShrunkCommitsCleanly(RatchetFixtureTestCase):
     def test_ge_127b_1_an_oversized_file_made_shorter_commits_and_is_not_refused_for_still_being_over(self):
         # covers: GE-127b-1
+        # covers: GE-127b
         # angle: criterion
         """A change leaving an already-oversized covered file SHORTER than
         it stood before, while still above its permitted length, must
