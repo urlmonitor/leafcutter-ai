@@ -1727,6 +1727,13 @@ flowchart TD
 - GE-126e-2: The census says how many checks it examined beside how many it found
 - GE-126e-2-i: A list too long to act on in one pass is a successful run and never a blocked commit
 - GE-126e-3: A new check joins the census by being registered rather than by being remembered
+- GE-127a-1: The change that takes a file past its permitted length is refused at the moment it is committed
+- GE-127a-1-i: A file whose length cannot be established is refused and named, never reported as within its permitted length
+- GE-127b-1: A change that leaves an already-oversized file longer than it was is refused; one that leaves it the same or shorter is allowed
+- GE-127b-1-i: A run that could not establish any previous length says which situation it is in and refuses, and a clean run states how many files it compared
+- GE-127c-1: The outcome states which kinds of file it measured, so a kind that was never measured is not read as having passed
+- GE-127d-1: The published rule and the enforced rule are checked against each other, and no fact the standard accepts about a change is left without effect on its verdict
+- GE-127d-2: The length a file is quoted at is one the author can arrive at themselves by following a published measurement rule
 - INF-1000a-1: Detect stale fixtures when a required field is added to a schema
 - INF-1000a-1-i: Schema file with no required-field changes passes without scanning fixtures
 - INF-1000a-1-ii: Fixture files that already contain the new field are not flagged
@@ -1961,6 +1968,7 @@ flowchart TD
 - TKT-500g-4-i: An empty demand is not a way to say "no proof needed" — it is refused by name
 - TKT-500g-5: The readiness report never calls a demanded proof unnecessary
 - TKT-600a-1: Generated files_touched excludes prose-illustration paths; depends_on is guard-valid
+- TKT-600a-2: A path the record itself declares as non-edit-surface is not harvested from its own prose
 - TKT-600b-1: The generated phase record names exactly the phases the drive will dispatch for that ticket's location
 - TKT-600b-1-i: Generation refuses rather than guesses when the ticket's final location is not yet settled
 - TKT-600b-1-ii: A phase the drive will not run is recorded as excluded, never left out of the record
