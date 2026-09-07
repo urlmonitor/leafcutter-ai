@@ -253,9 +253,50 @@ is also easy to mistake for another author's work. Restore with
 > occurrence of the same shape; see KI-BP-018. Unblock adopters that way if you must, but
 > the entry closes with BP-900g-8.
 
-- **Severity:** blocker.
-- **Status:** **OPEN. Reopened 2026-09-01 — the 2026-08-31 closure was wrong, and the way
-  it was wrong is the more useful half of this entry.**
+- **Severity:** was blocker.
+- **Status:** **RESOLVED 2026-09-07 — and this time the evidence is a run, not a reading.**
+
+  > Fixed by two merged changes, deliberately split because they fail independently:
+  > **PR #694** (`078b862b`) widened the deployed-dependency closure so a non-code file a
+  > deployed script READS is a dependency on the same terms as a module it imports, and
+  > **PR #708** (`0b765b3c`) added the consumer-simulation inspection that proves, in a
+  > real adopter-layout install, that the declaring files actually arrived.
+  >
+  > **The evidence, stated as commands and outputs rather than as a conclusion** — because
+  > the previous closure of this entry argued from source and was wrong:
+  >
+  > - A clean `python scripts/build.py --target-dir /tmp/<scratch>` exits 0 and
+  >   `.leafcutter/config/` now contains `doc_types.json` alongside `diagram_types.json`,
+  >   `skill_registry.json`, `agent_registry.json`, `guardrail_gates.yaml`, `paths.json`,
+  >   `phase_deferral.yaml` and `ac_store_schema.json`. Before this it held three files.
+  > - `env -u PYTHONPATH python <scratch>/.leafcutter/scripts/commit_guardian/check_doc_frontmatter.py <doc>.md`
+  >   runs clean. That is the adopter's exact reproduction, executed from the deployed
+  >   tree, and it no longer raises `FileNotFoundError`.
+  > - CI on both PRs is green, including `Consumer install simulation (BP-900h-1)`.
+  >
+  > **What the fix was NOT.** Deploying `doc_types.json` alone would have closed the
+  > symptom and left the mechanism — that is what this entry warned against for four
+  > occurrences. The closure guard is now derived: it reads what deployed guardrails
+  > actually read. Turning it on surfaced five further undeclared dependencies nobody had
+  > noticed — `config/diagram_types.json`, `config/skill_registry.json` (present in source,
+  > deployed nowhere), `docs/components.json`, `docs/roadmap.json`, and
+  > `config/phase_deferral.yaml` (deployed by TKT-600b but never declared). Each was fixed,
+  > none by hand-listing.
+  >
+  > **A defect it caught on contact.** Merging `origin/main` into the fix branch made the
+  > build abort on `config/phase_deferral.yaml` — shipped but undeclared. The guard found
+  > a real gap in main the first time it met one, which is the behaviour this entry has
+  > wanted since 2026-08-18.
+  >
+  > **Residual, so this closure is not read as wider than it is.** A clean build emits
+  > ~409 `unresolvable data-file read` warnings. Those are the guard's blind spots made
+  > visible, which the AC requires — but each is a dependency static analysis cannot see.
+  > `submit_feedback.py` reaching `config/feedback_categories.yaml` through
+  > `_find_config_root()` is the same shape as the defect fixed here and remains
+  > underivable. Tracked as `KI-BP-20260907-1120` and `KI-BP-20260907-1125` below, not
+  > folded into this closure.
+  > `diagram_type_validators`'s silent fallback to a built-in constant (KI-CG-002) is also
+  > untouched: shipping the file fixes the symptom, not the silence.
 
   > **THE FALSE CLOSURE, recorded rather than deleted.** From 2026-08-31 to 2026-09-01 this
   > entry read `RESOLVED — verified 2026-08-31`. The closure argued that
@@ -3799,3 +3840,141 @@ defect in the code under test, not in the fixture.
 **Related.** User-memory `feedback_test_isolation_pitfalls` and `KI-TQ-012` (a fixture that
 sandboxes the filesystem while leaking into shared state) are the same family: tests here
 treat the runner's environment as private scratch space with weaker guarantees than assumed.
+
+---
+
+### KI-BP-20260907-0940 — There is no orphan sweep, and the step called "Stale file cleanup" says "no stale files found" while one sits in the tree
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build.py:1844` (`_cleanup_stale_paths`) and its fixed input list
+  `_PRE_CONSOLIDATION_PATHS` at `scripts/build.py:1769`
+
+**A deployed file whose source template no longer exists is never removed, and never
+reported.** `build.py` prints a `Stale file cleanup` heading and, on a tree containing an
+orphan, printed `(no stale files found)`. That reads as "I looked and the tree is clean".
+It is not what happened.
+
+`_cleanup_stale_paths` iterates `_PRE_CONSOLIDATION_PATHS` — a hardcoded list of **eleven**
+paths (`.claude/agents`, `.claude/skills`, `.claude/commands`, `.claude/hooks`,
+`.claude/settings.json`, `.pre-commit-config.yaml`, `.gemini`, `scripts/commit_guardian`,
+`scripts/doc_compliance`, `scripts/feedback`, `scripts/sync_platforms`). It is a **one-time
+migration helper** for a historical layout change, not a sweep. Nothing in the build compares
+the deployed tree against the set of files the build can currently produce, so an output
+whose template was deleted survives every subsequent build indefinitely.
+
+**Observed.** A worktree created by the fast-lane workflow carried
+`.leafcutter/workflows/fast-lane-build.js`, for which no template exists on `main` —
+`templates/workflows-js/` holds eight files and that is not one of them. A worktree I created
+myself minutes earlier from the same ref had eight deployed workflows; the fast-lane-created
+one had nine. `build.py --force` reported `(no stale files found)` against it. The orphan was
+caught only by `check-output-drift` at commit time, which refused the commit with
+`GAP .claude/workflows/fast-lane-build.js action=run build.py to register it` — advice that
+cannot work, because running `build.py` is exactly what does not remove it.
+
+**Why it matters beyond tidiness.** A stale deployed script is executable and reachable. A
+consumer install that once shipped a command keeps shipping it after the package drops it,
+and an agent or workflow that resolves by name can bind to the dead copy — the shape already
+recorded in `project_workflow_name_cache_stale` (a by-name workflow invocation running a
+stale session-cached script). It also means `check-output-drift` is doing the build's job at
+a later, more expensive point: the failure surfaces as a blocked commit rather than a build
+that cleaned up after itself.
+
+**Fix direction.** Derive the removable set rather than extending the list — the same
+correction `BP-900g-8-ii` just applied to the deploy side. The build already computes what it
+produces (`.build_manifest.json` carries 174 template + 481 output_mappings entries); a
+deployed path under the output root that is in neither, and is not a shim symlink, is an
+orphan. Report every one and remove or explicitly retain it. Keep `_PRE_CONSOLIDATION_PATHS`
+as the migration list it is, and stop calling the step "stale file cleanup" while it only
+covers eleven historical paths — the name is what made the message trustworthy.
+
+**Trap.** Do not simply add `workflows/` to the hardcoded list. That fixes the instance and
+leaves the mechanism, which is the failure `KI-BP-018` records for this exact class and which
+this register has now watched play out five times on the deploy side before it was fixed
+properly.
+
+**Pattern:** a maintenance step whose name promises a sweep and whose implementation is a
+fixed migration list — so its clean report is indistinguishable from a clean tree. Same shape
+as the bare-directory AC validator and the stale-ref merge audit recorded in `CLAUDE.md`: a
+check that examined nothing must not look like a check that found nothing.
+
+---
+
+### KI-BP-20260907-1120 — 409 reads the closure guard cannot resolve statically, none of them triaged, each one a potential KI-BP-003
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build_referential_integrity.py` (the data-read detectors added by
+  BP-900g-8-ii), surfaced on every `build.py` run
+
+BP-900g-8-ii widened the deployed-dependency closure to see non-code reads, and correctly
+reports what it **cannot** resolve rather than dropping it — a closure that silently omits
+what it could not derive is indistinguishable from one that found nothing to complain about.
+A clean build emits about **409** such `unresolvable data-file read` lines.
+
+**That disclosure is the AC working. The 409 unexamined entries behind it are the issue.**
+Each is a call site where a deployed script reads a path static analysis could not reduce, so
+each is a place where the guard cannot tell whether the file ships. That is precisely the
+condition that hid KI-BP-003 through five occurrences and an adopter-blocking failure.
+
+**One is already named and is the same shape.** `submit_feedback.py` reaches
+`config/feedback_categories.yaml` through an indirected `_find_config_root()` walk — an
+ancestor walk resolved at runtime, exactly like the `doc_types.json` reader whose declaring
+file turned out never to be deployed. It sits adjacent to the already-open KI-BP-017 (feedback
+scripts not provisioned into a worktree), which suggests the pair has a common cause worth
+establishing before either is fixed.
+
+**Nothing enumerates or triages the set.** There is no list, no owner, and no way to tell a
+resolved-and-fine read from a not-yet-looked-at one. The AC required the underivable set be
+*visible*; visibility without triage is where this stops.
+
+**Fix direction.** Produce the inventory as data rather than as log lines — path, reading
+script, why it could not be resolved — then triage each into: genuinely external (exclude
+with a reason), resolvable with a better detector (extend the derivation), or a real
+undeclared dependency (deploy it). Expect the third bucket to be non-empty; KI-BP-003 was in
+it. Do this before adding detectors, so the detector work is aimed at measured cases rather
+than guessed ones.
+
+**Pattern:** a guard that correctly reports its own blind spots, in a form nobody can act on
+— so the disclosure discharges the obligation without reducing the risk.
+
+---
+
+### KI-BP-20260907-1125 — a warning that fires 409 times on a green build is not a warning, and the 410th is the one that matters
+
+- **Severity:** medium — and the more dangerous half of the pair above
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build_referential_integrity.py:1207` (per-read WARNING), with the
+  author's own measurement at `:1183-1191`
+
+The unresolvable-read disclosure logs **one WARNING per call site, per build, unaggregated**.
+On a clean, fully-green build that is ~409 lines of warning output. A signal at that volume
+is not a signal — it is texture, and the operator learns to scroll past the block. The next
+genuinely new unresolvable read appears as line 410 of an already-ignored wall.
+
+**The volume was known and traded away deliberately**, which is why this is filed as its own
+entry rather than as a grumble. The code comment at `:1183-1191` records that the author
+measured "400+ warnings ... none of which named an actual intra-package dependency" and
+shipped anyway, because the AC required underivable reads to be disclosed rather than
+dropped. That was the right call against the AC as written; it leaves the disclosure
+technically satisfied and practically inert.
+
+**Fix direction.** Aggregate: one RESULT line carrying the count, the full list behind a flag
+or an artifact file, and a **ratchet** so the number can only fall — a build that increases it
+says so loudly. That converts a constant into a trend, which is the only form in which this
+information can be acted on. It also makes the triage in `KI-BP-20260907-1120` measurable
+instead of open-ended.
+
+**Do not fix this by lowering the log level or dropping the reads.** The disclosure exists
+because BP-900g-8-ii forbids silently omitting what the derivation could not resolve, and
+demoting it to DEBUG is that omission wearing a different hat.
+
+**Pattern:** a correct disclosure emitted at a volume that guarantees it is unread — noise
+generated by a guard, which is worse than noise generated by nothing, because it trains the
+operator to ignore the one channel that will eventually carry a real finding.
