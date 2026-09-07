@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: reviewed
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a ticket whose own record names nine phases as needed,
@@ -60,12 +60,78 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The refusal this criterion feeds. RATIFIED, not amended and not narrowed -- its rule is exactly right and stays untouched."
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+    relevance: "Why the two workflow drivers, and not ticket-supervisor, are the surface that reaches the completion write. Read before deciding where the demanded-step derivation belongs."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component document for the drivers and the status script -- the boundary this change stays inside."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The dispatch topology the close sits at the end of. The close-path sequence BO-400e-5 adds lands in this document."
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the completion-write step in build-feature.js and the twin step in build-ticket.js. Both derive the demanded-step set, both must derive it the same way, and both must change in the same commit."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_bo_400e_1.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_ticket_done_recording.py"
+  constraints:
+    - "VERIFY BY EXECUTION, NEVER BY GREP. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep': the phase-list code, the completion prompt and the parity check are ALL already present in the source today, so a test that searches for any of them passes unchanged on the broken driver. Every test covering this record must load and run the real workflow script through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and assert on what the run wrote to the ticket record."
+    - "THE DEMANDED SET HAS EXACTLY ONE SOURCE. No parameter, prompt field, request payload, environment value or configuration key may add to or subtract from the set derived from the ticket's own record. In particular the guarded script must NOT gain an exclusion parameter -- its absence today is load-bearing, and adding one satisfies the visible symptom by deleting the guard."
+    - "DO NOT INTERSECT, DO NOT UNION, DO NOT FALL BACK. The three attempts in the criteria each close one reconciliation strategy: the narrowed list closes 'intersect the caller's list with the record's', the widened list closes 'union them', the absent list closes 'read the record only when no list was offered'. Any implementation that consults the caller's list at all fails at least one; the only implementation that passes all three never reads it."
+    - "BO-400a-2-i AND BO-400a-2-ii ARE RATIFIED, NOT NARROWED. Neither the refusal rule nor its trigger may be relaxed, bounded, or given an exception to make this change fit. If the change appears to require softening either, the change is wrong."
+    - "BOTH TWINS IN ONE CHANGE. build-feature.js and build-ticket.js declare each other twins in their own headers (BO-400a-2-ii's standing constraint). A landing in one alone produces a store in which epic drives and single-ticket drives disagree about which steps a close is checked against -- which is the same defect this record closes, relocated."
+    - "THE DECISION MUST BE OBSERVABLE PER TICKET. The run must record, for each ticket it closes or refuses, which demanded-step set it decided against and which step was unaccounted for. Without that, the next divergent outcome is again indistinguishable from agent caprice, which is what made the original defect take two readers and a day to characterise."
+    - "TEMPLATES ARE BUILD SOURCES, NOT THE RUNNING ARTEFACT. templates/workflows-js/*.js is deployed by the build into the workflow directory that actually executes. A change confirmed only against the source tree is not confirmed against what runs; keep the deployed copy in step (check-build-drift is the gate) and confirm the behaviour through the deployed layout before sign-off."
 delivers_to:
   agent: python-coder
   contract: "A completion decision whose set of demanded steps is derived solely from the ticket's own record, with no parameter, prompt field, or request payload by which a caller can add to or subtract from it"
 expects_from: null
+test_spec:
+  - name: test_caller_narrowed_list_does_not_remove_the_unaccounted_phase
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive the close of a ticket whose record names nine phases as needed with a caller-supplied list of the other eight plus a claim that the ninth is excluded from this run. Assert the close is refused, that the refusal names the ninth phase, and that the recorded state is unchanged -- proving the caller's list cannot narrow the demanded set."
+  - name: test_caller_widened_list_does_not_add_phases_the_record_never_names
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Drive the same close with a caller-supplied list of ten -- the eight plus two phases the ticket's record never names. Assert the two extra phases are treated as demanded in neither the decision nor the refusal message, and that the refusal still names only the ninth -- proving the caller's list cannot widen the demanded set either."
+  - name: test_close_with_no_caller_list_reads_the_record_and_refuses_identically
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive the same close with no caller-supplied list at all and assert the answer is byte-identical to the narrowed and widened attempts -- closing the 'fall back to the record only when no list is offered' implementation, which passes the other two attempts and fails this one."
+  - name: test_all_three_attempts_leave_the_ticket_record_unchanged
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Re-read the ticket record after all three attempts and assert it is exactly as found: still nine phases named needed, still no sign-off for the ninth, no lifecycle state written. A refusal that edits the record while refusing is not a refusal."
+  - name: test_both_drivers_derive_the_same_demanded_set_for_the_same_record
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Run the same ticket record through the epic driver and through the single-ticket driver and assert both decided against the same demanded-step set and produced the same answer -- the seam BO-400a-2-ii's twin constraint exists to hold closed."
+  - name: test_demanded_set_derivation_is_reachable_from_a_real_workflow_run
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "REQUIRED -- invoke the production entry point: load and execute the real workflow script via unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and assert the derivation actually runs during a close. Do NOT satisfy this by importing a helper directly, and do NOT satisfy it by asserting the derivation code is present in the source: the broken driver contains phase-list code too."
 origin_agent: business-analyst
 created: 2026-09-07
 amended_by: []

@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: reviewed
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a ticket whose record names a phase as needed and carries no sign-off for it,
@@ -60,12 +60,81 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "KI-BO-20260831-1932 records that the refusing path is the correct one and that unification must be toward the refusal. KI-BO-20260831-1930 records the operational cost of that -- 316 tickets that will now halt reliably."
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+    relevance: "Why the two workflow drivers, and not ticket-supervisor, are the surface that must reach the refusal."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component document for the drivers and the status script -- the boundary this change stays inside."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The dispatch topology the refused close sits at the end of, and where BO-400e-5's close-path sequence will draw the refusal as its own terminal state."
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the completion-write step in build-feature.js and the twin step in build-ticket.js. Both must reach the same refusal, and both must change in the same commit."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_bo_400e_2.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_ticket_done_recording.py"
+  constraints:
+    - "VERIFY BY EXECUTION, NEVER BY GREP. The parity check already exists in the source, so a test that finds it there passes on the broken driver -- the defect is that nothing routes to it. Drive both the refused ticket and the control ticket through the real workflow via unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and assert on the records the run wrote."
+    - "THE REFUSAL IS ROUTED TO, NOT RE-IMPLEMENTED. BO-400a-2-i already specifies this refusal for the guarded writer, down to the message string, and is ratified. Do not restate it, do not duplicate it in the drivers, and do not add a second implementation of the same rule -- a second refusal implementation is a second door under another name."
+    - "A REFUSAL MUST NOT MUTATE THE RECORD. Refusing is a read-only outcome. The ticket's record must come back exactly as it was found, with the outstanding step still named as needed -- not reclassified to not-needed, not marked excluded, not marked already satisfied, and not annotated as a side effect of having been refused. Rewriting the demand away is the failure mode this clause exists to catch."
+    - "THE CONTROL CASE IS PART OF THE CONTRACT, NOT A TESTING STYLE. Every demonstration that the mechanism refuses must be accompanied, in the same run, by a ticket that IS written finished. BO-400a-2-iii established this the hard way: a driver reverted to never writing at all satisfies every refusal clause and looks correct."
+    - "NO TOLERANCE, THRESHOLD OR GRACE PERIOD. The measured consequence is more halts -- roughly 316 tickets whose records demand a step they never got will now be refused reliably. That is the correct outcome and it must not be softened by a warn-only mode, a percentage allowance, a per-epic opt-out, or an escalating retry that eventually writes anyway. The remedy for a record that asks for the wrong thing is to correct the record."
+    - "NO OVERRIDE-SHAPED ESCAPE. The blanket override also switches off the allowed-transition rules and is not a surgical exception; routing the refused close through it converges the two answers on the permissive one and satisfies nothing here."
+    - "BOTH TWINS IN ONE CHANGE, per BO-400a-2-ii's standing constraint."
+    - "TEMPLATES ARE BUILD SOURCES, NOT THE RUNNING ARTEFACT. Keep the deployed copy of the drivers in step (check-build-drift is the gate) and confirm the refusal through the deployed layout before sign-off."
+delivers_to:
+  agent: python-coder
+  contract: "A refusal that is a read-only decision -- while any demanded step is unaccounted for no finished state is written, the ticket's record comes back exactly as found with that step still named as needed, and the refusal message names it; paired with a same-run control ticket that IS written finished, so the refusal is attributable to the missing sign-off and not to a writer that has stopped"
 expects_from:
   ac_id: BO-400e-1
   contract: "The set of demanded steps, read from the ticket's own record rather than from the party asking for the close -- the input this refusal is taken against"
+test_spec:
+  - name: test_unaccounted_demanded_phase_blocks_the_finished_state
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive the close of a ticket whose record names a phase as needed with no sign-off for it, every other needed phase signed off. Re-read the record and assert no finished lifecycle state was written."
+  - name: test_refusal_message_names_the_outstanding_phase
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Assert the refusal surfaced by the run identifies the specific phase that is unaccounted for, not merely that a close was refused -- an unnamed refusal is what made the original split outcome unreadable."
+  - name: test_refused_ticket_still_names_the_phase_as_needed_afterwards
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Re-read the refused ticket's record and assert it is byte-identical to the state it was found in: the outstanding phase still named as needed, and NOT reclassified to not-needed, excluded, or already-satisfied as a side effect of the refusal. This is the behavioural form of 'correct the record, never soften the reader'."
+  - name: test_control_ticket_in_the_same_run_is_written_finished
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Carry a second ticket in the SAME run whose record names the same phases as needed and carries a sign-off for every one, and assert its finished state IS written. Without this contrast a driver that has simply stopped writing passes every refusal assertion above -- the failure mode BO-400a-2-iii already hit once."
+  - name: test_both_drivers_refuse_the_same_record_identically
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Drive the same unaccounted-for ticket through the epic driver and through the single-ticket driver and assert both refuse, name the same phase, and leave the same unchanged record -- the twin seam BO-400a-2-ii's standing constraint holds closed."
+  - name: test_refusal_is_reachable_from_a_real_workflow_run
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "REQUIRED -- invoke the production entry point: load and execute the real workflow script via unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and assert the guarded refusal is actually reached during a close. Do NOT satisfy this by invoking the status script directly or by importing a helper: the defect is precisely that the driver never reaches the guarded path, and the guarded path passes its own unit tests today."
 origin_agent: business-analyst
 created: 2026-09-07
 amended_by: []

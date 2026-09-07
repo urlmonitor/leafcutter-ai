@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: reviewed
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a ticket that a drive is about to close,
@@ -64,15 +64,87 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Behavioral harness. The load-bearing case -- make the checking mechanism refuse and assert no finished state appears by any other route -- can only be observed by running the real workflow and reading back what it wrote."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-20260831-1932 -- the split outcome this record closes. Its Fix direction is the one the criteria state; the register entry also records that two readers drew opposite conclusions from it on one day."
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+    relevance: "Why the two workflow drivers, and not ticket-supervisor, own the completion write -- and therefore where the second door actually lives."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component document for the drivers, the status script and the closing agent -- the boundary this change stays inside."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The dispatch topology in which the closing party is dispatched. BO-400e-5's close-path sequence, which depicts the single door this record establishes, lands in this document."
 assigned_agent: python-coder
 estimated_complexity: L
 declares_side_effect: true
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "4 -- the completion-write step in build-feature.js, the twin step in build-ticket.js, the closing protocol in templates/agents/status-checker.md, and the guarded door itself in scripts/set_ticket_status.py. All four are one change: closing the direct-edit route in the two drivers while the agent template still describes a frontmatter edit leaves the second door open at the surface that actually performs the write."
+  required_skills:
+    - python-coder
+    - llm-expert
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_bo_400e_3.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_ticket_done_recording.py"
+  constraints:
+    - "MIXED SURFACE -- THE AGENT TEMPLATE IS PART OF THIS CHANGE AND IS NOT python-coder'S FILE TYPE. The declared surface spans .js drivers and a .py script (python-coder) AND templates/agents/status-checker.md, a prompt surface owned by llm-expert. The AC could not be split into siblings -- BO-400e is at its five-child cap -- so both surfaces must land inside this one work item: hand the agent template to llm-expert within the same ticket rather than letting a python-coder edit it or, worse, leaving it unedited. An unedited status-checker.md keeps the direct-edit instruction alive at the exact participant that performs the write."
+    - "ONE WRITER, ENFORCED STRUCTURALLY -- BETTER WORDING IS NOT THE FIX. The criteria's instruction clause (the close names the checking mechanism and does not describe editing the recorded state directly) is real but it is the WEAKER half, and it is also the only clause a source-reading test can see. It must not be the whole implementation: a fix that is only prompt wording is reopened by the next prompt edit. The route that bypasses the check must be unavailable, not discouraged."
+    - "THE LOAD-BEARING PROOF IS THE REFUSING-MECHANISM CASE. Make the checking mechanism refuse, drive the close, and assert nothing was written by any route. That single observation is the only one that distinguishes 'the second door is closed' from 'the second door exists and was not taken this time'. A test suite for this record that omits it proves nothing, however many other assertions it carries."
+    - "THE BLANKET OVERRIDE IS NOT THE CONVERGENCE MECHANISM. A close that succeeds only because the override was passed does not satisfy this record. The override also switches off the allowed-transition rules, so it is not a surgical exception. Nor may a narrower override be introduced in its place -- that is the exclusion parameter BO-400e-1 forbids, wearing a different name."
+    - "A REFUSED CLOSE MUST SURFACE AS NOT-CLOSED. When the mechanism refuses, the run must report that ticket as not closed rather than reporting success, retrying by another route, or continuing silently. A run whose report and whose store disagree is the phantom-done shape this whole family exists to remove."
+    - "VERIFY BY EXECUTION, NEVER BY GREP. The completion code, the prompt and the parity check are all present in the source today; a structural test passes on the broken driver. Drive the real workflow through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and assert on the records the run wrote."
+    - "BOTH TWINS IN ONE CHANGE. Here the twin clause is in the criteria itself: a one-sided landing produces a system in which the single-ticket driver closes through the door and the epic driver does not -- two doors again, one level up."
+    - "TEMPLATES ARE BUILD SOURCES, NOT THE RUNNING ARTEFACT. Both the workflow drivers and the agent template are deployed by the build. Keep the deployed copies in step (check-build-drift is the gate) and confirm the single-door behaviour through the deployed layout before sign-off."
 delivers_to:
   agent: python-coder
   contract: "A single write path to the finished state: the checking mechanism, invoked identically by both drivers, with no direct-edit instruction anywhere in the close and no override on the ordinary close path"
 expects_from:
   ac_id: BO-400e-2
   contract: "A checking mechanism that refuses while any demanded step is unaccounted for -- the behaviour that makes routing every close through it worth doing"
+test_spec:
+  - name: test_finished_state_is_written_by_the_checking_mechanism_and_by_nothing_else
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive a closable ticket to completion and assert the finished lifecycle state in its record was produced by the checking mechanism -- observed by attributing the write, not by asserting a state value that either route would produce."
+  - name: test_no_finished_state_appears_by_any_route_when_the_mechanism_refuses
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "THE LOAD-BEARING CASE. Make the checking mechanism refuse, drive the close through the real workflow, and assert the ticket's recorded state is unchanged and that the run reports the ticket as not closed. This is the only observation that distinguishes a closed second door from a second door that merely was not taken on this run; a suite without it passes on the broken driver."
+  - name: test_close_instruction_names_the_mechanism_and_carries_no_direct_edit_route
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Assert the instruction the closing party is dispatched with names the checking mechanism as the route and contains no instruction to edit the recorded state directly. THE WEAKER HALF, and the only clause a source-reading test can see -- it is valid only alongside the refusing-mechanism test above and must never stand in for it."
+  - name: test_ordinary_close_path_does_not_pass_the_blanket_override
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Drive an ordinary successful close and assert the blanket override was not used. Then drive a close that would succeed ONLY with the override and assert it does not satisfy the close path -- the override switches off the allowed-transition rules as well as the check, so a writer that always passes it has recreated the lenient branch with a flag on it."
+  - name: test_single_ticket_driver_closes_through_the_same_mechanism
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Carry the same ticket with the single-ticket driver rather than the epic driver and assert the close goes through the same mechanism and produces the same recorded state -- the twin seam whose divergence would restore two doors at the driver level."
+  - name: test_close_route_is_reachable_from_a_real_workflow_run
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "REQUIRED -- invoke the production entry point: load and execute the real workflow script via unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and assert the checking mechanism is actually invoked during a close. Do NOT satisfy this by importing or calling the status script directly: the defect on origin/main is that the epic driver never names that mechanism at all, and the mechanism's own tests are green today."
 origin_agent: business-analyst
 created: 2026-09-07
 amended_by: []
