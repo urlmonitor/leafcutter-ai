@@ -93,7 +93,7 @@ def _write_ac(ac_root: Path, ac_id: str) -> Path:
     subdir = ac_root / "test-component"
     subdir.mkdir(parents=True, exist_ok=True)
     path = subdir / f"{ac_id}.yaml"
-    data = {
+    data: dict[str, object] = {
         "id": ac_id,
         "title": f"Synthetic AC {ac_id}",
         "component": "ac-store",
