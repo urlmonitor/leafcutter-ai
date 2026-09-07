@@ -3462,6 +3462,18 @@ AGENT_SUPPORT_SCRIPT_FILES: tuple[str, ...] = (
     # are stdlib only (argparse, json, logging, sys, pathlib, typing) — no
     # sibling module to co-deploy.
     "injection_builders.py",
+    # ACD-2100b-5: templates/skills/plan-feature/SKILL.md's pre-flight
+    # invokes this script (by its deployed path) before the plan-feature
+    # workflow starts. No deploy phase shipped scripts/worktree/ before this,
+    # so the deployed skill would have found nothing there. Listed as a
+    # single file (not the whole scripts/worktree/ directory) because its
+    # sibling sweep_processes.py/__init__.py import scripts/config_loader.py,
+    # which no phase deploys — pulling in the whole directory here would trip
+    # the intra-package closure guard (AC BP-900g-8) over an unrelated,
+    # pre-existing gap. This script's own module-scope imports are stdlib
+    # only (argparse, json, logging, subprocess, sys, pathlib) — no sibling
+    # module to co-deploy.
+    "worktree/check_workspace_setup_permission.py",
 )
 
 
@@ -4196,4 +4208,14 @@ def clean_stale_artifacts(
 #   test_bp_900g_9_build_orchestration_and_fast_lane_dependency_both_named_in_one_run
 #   to unit_tests/test_bp_900g_9.py; confirmed it fails on the pre-fix code
 #   via a `git stash` of this file. (#BP-900g-9)
+# - 2026-09-07 [python-coder]: Added
+#   scripts/worktree/check_workspace_setup_permission.py to
+#   AGENT_SUPPORT_SCRIPT_FILES (as a single file, not the whole
+#   scripts/worktree/ directory -- its siblings sweep_processes.py and
+#   __init__.py import scripts/config_loader.py, which no phase deploys, and
+#   pulling in the whole directory here would trip the intra-package closure
+#   guard over that unrelated, pre-existing gap). The deployed plan-feature
+#   skill invokes this new pre-flight script by its deployed path before the
+#   workflow starts (ACD-2100b-5); no phase shipped scripts/worktree/ at all
+#   before this. (#EPIC-StartingNewWorkTheProperWayAlways/12)
 # ====================================================================

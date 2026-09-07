@@ -2030,180 +2030,15 @@ function buildRepoAnchoredResolutionCommand(relPath) {
   );
 }
 
-/**
- * Build the single-line POSIX-sh command dispatched to a status-checker
- * agent to READ THE CONTENTS of a support file installed under
- * `.leafcutter/<relPath>`, resolved via the SAME
- * _buildRepoRootResolutionSnippet() as buildRepoAnchoredResolutionCommand()
- * above — never a second, independent resolver (ACD-2100a-3's implementation
- * notes: two resolvers on one startup path is how KI-ACD-009's five sites
- * came to disagree in the first place).
- *
- * Prints the file's raw bytes to stdout on success. On failure, prints a
- * diagnostic naming the unresolved location to stderr and exits non-zero —
- * never a silent fallback to a cwd-relative read that could report a false
- * "missing"/"denied" verdict for a registry that genuinely exists in the
- * repository being operated on (KI-ACD-009 cause 1).
- *
- * @param {string} relPath - Path under the repo's `.leafcutter/` support
- *                            directory, e.g. "config/agent_registry.json".
- * @returns {string} A single-line POSIX shell command.
- */
-function buildRepoAnchoredReadCommand(relPath) {
-  const target = ".leafcutter/" + relPath;
-  return (
-    _buildRepoRootResolutionSnippet(target) +
-    "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
-    // Two DISTINCT unreadable-file causes, each tagged with its own `reason=`
-    // token and the exact resolved `location=` that was tried (ACD-2100b-1:
-    // "no file at that location" and "permission refused" have different
-    // remedies and must not collapse into one report). The tag is a fixed,
-    // errno-style CODE (never an English phrase) rather than the free-text
-    // OS-specific `cat` error — both because it must not depend on
-    // locale/OS wording, AND because this command's own literal source text
-    // is dispatched as part of the agent() prompt on every run regardless
-    // of which branch executes, so an English reason word from ONE branch
-    // would otherwise leak into the observable report of every OTHER
-    // branch's run too. The reason CODE is translated to human-readable
-    // text only downstream, from the branch that actually executed (see
-    // _parseRegistryUnreadableDiagnostic()).
-    "if [ ! -f \"$SCRIPT\" ]; then " +
-    "echo \"REGISTRYREADFAIL reason=ENOENT location=$SCRIPT\" >&2; " +
-    "exit 1; " +
-    "fi; " +
-    "if [ ! -r \"$SCRIPT\" ]; then " +
-    "echo \"REGISTRYREADFAIL reason=EACCES location=$SCRIPT\" >&2; " +
-    "exit 1; " +
-    "fi; " +
-    "cat \"$SCRIPT\""
-  );
-}
-
-/**
- * Parse the `REGISTRYREADFAIL reason=<CODE> location=<path>` diagnostic that
- * buildRepoAnchoredReadCommand() (and its shared _buildRepoRootResolutionSnippet())
- * emit to stderr on any of their unreadable-file causes (missing file /
- * permission refused / no repository resolves), and turn it into a
- * human-readable, permission-verdict-free report of what was tried and why
- * it failed (ACD-2100b-1). The English reason text is produced HERE, from
- * whichever CODE the branch that actually ran emitted — never baked into
- * the shell command's own literal source, which is dispatched as part of
- * every run's agent() prompt regardless of which branch executes. The tag
- * itself is deliberately named without the substring "unreadable": this same
- * static command text is also dispatched, unconditionally, on runs where the
- * registry IS read successfully but its contents cannot be interpreted
- * (ACD-2100b-2), so a tag containing that word would leak into — and
- * collapse the wording of — that other, distinct outcome's report too.
- *
- * Never falls back to a canned/constant location or a shared reason string
- * for multiple causes — an unrecognised diagnostic (a failure this function
- * does not tag) still fails closed, but says so honestly rather than
- * reusing any of the specific reasons above.
- *
- * @param {string} diagnosticText - Combined stderr+stdout of the failed
- *                                   registry-read dispatch.
- * @returns {{location: string, reasonText: string}}
- */
-function _parseRegistryUnreadableDiagnostic(diagnosticText) {
-  const text = typeof diagnosticText === "string" ? diagnosticText : "";
-  const match = text.match(/REGISTRYREADFAIL reason=(\S+) location=(\S+)/);
-  if (match) {
-    const reason = match[1];
-    const location = match[2];
-    const reasonText = reason === "EACCES"
-      ? "The process was refused permission to open it (permission denied)."
-      : reason === "ENOREPO"
-        ? "No repository could be resolved to anchor that location from the current directory."
-        : "No file exists at that location.";
-    return { location: location, reasonText: reasonText };
-  }
-  return {
-    location: "config/agent_registry.json (its repository-anchored location could not be resolved)",
-    reasonText: "The read failed before resolving to a specific file location; see the run's own diagnostic output for detail.",
-  };
-}
-
-/**
- * Turn a JSON.parse() failure on registry contents that WERE read
- * successfully (the file exists and was opened — a truncated or otherwise
- * partial write, never an I/O failure) into a human-readable report that
- * names WHERE within the contents interpretation failed. A bare "could not
- * interpret the registry" with no position sends the operator to read the
- * whole file by eye (ACD-2100b-2 implementation notes), so this always
- * reports the character offset interpretation reached, the corresponding
- * line, and the minimal trailing fragment needed to locate the failure —
- * never the file's full contents, since the registry can carry project
- * configuration. This is deliberately silent about agent permission: it
- * describes only where reading the CONTENTS stopped, never anything about
- * what any agent is or is not allowed to run (ACD-2100b-1's unreadable-
- * registry outcome and this uninterpretable-registry outcome are the only
- * two callers that may reach this file's registry-read failure paths, and
- * neither renders a permission verdict).
- *
- * @param {string} rawContent - The exact bytes read from the registry file.
- * @param {Error} parseError - The SyntaxError JSON.parse() threw.
- * @returns {{position: number, line: number, fragment: string, reasonText: string}}
- */
-function _describeRegistryInterpretationFailure(rawContent, parseError) {
-  const content = typeof rawContent === "string" ? rawContent : "";
-  // JSON.parse() failed while consuming `content` in full, so the point at
-  // which interpretation stopped making sense of the input is the end of
-  // what was actually read — i.e. the length of the content itself. This is
-  // computed from the real, on-disk bytes rather than parsed out of the
-  // engine's own SyntaxError message, whose wording/position semantics vary
-  // by JS engine and are not guaranteed to include a position at all (e.g.
-  // "Unexpected end of JSON input" carries none).
-  const position = content.length;
-  const line = content.slice(0, position).split("\n").length;
-  const fragment = content.length > 20 ? content.slice(-20) : content;
-  return {
-    position: position,
-    line: line,
-    fragment: fragment,
-    reasonText: (parseError && parseError.message)
-      ? parseError.message
-      : "The content did not parse as JSON.",
-  };
-}
-
-/**
- * Resolve the workspace-setup agent's entry in the registry's `agents`
- * collection into one of FOUR distinct, representable states — never
- * collapsing any of them into another:
- *
- *   - "permitted"           entry present, permits_shell === true.
- *   - "denied"               entry present, permits_shell !== true (missing
- *                            field or explicit false — both are "the entry
- *                            exists and does not grant permission").
- *   - "absent"               `agents` is a real array, but no entry in it has
- *                            this id — the fact is "not listed", never a
- *                            permission verdict about a nonexistent entry.
- *   - "no_entries_collection" `registryJson.agents` is not an array at all
- *                            (e.g. missing key, wrong type) — a distinct,
- *                            representable fact rather than being silently
- *                            folded into "absent" (ACD-2100b-3 Delivers-To
- *                            contract to python-coder).
- *
- * This is the single seam that used to collapse "entry absent" and "entry
- * present and denied" into the SAME `permitsShell = false` outcome
- * (KI-ACD-009 outcome 3 / ACD-2100b-3): callers must switch on `.state`
- * rather than re-deriving a boolean, so the absence-vs-denial distinction
- * this ticket exists to establish cannot be lost again downstream.
- *
- * @param {*} registryJson - The parsed registry JSON (or null/undefined).
- * @param {string} agentId - The workspace-setup agent id to look up.
- * @returns {{state: "permitted"|"denied"|"absent"|"no_entries_collection"}}
- */
-function _resolveWorkspaceSetupAgentEntryState(registryJson, agentId) {
-  if (!registryJson || !Array.isArray(registryJson.agents)) {
-    return { state: "no_entries_collection" };
-  }
-  const match = registryJson.agents.find((e) => e && e.id === agentId);
-  if (!match) {
-    return { state: "absent" };
-  }
-  return { state: match.permits_shell === true ? "permitted" : "denied" };
-}
+// buildRepoAnchoredReadCommand(), _parseRegistryUnreadableDiagnostic(),
+// _describeRegistryInterpretationFailure(), and
+// _resolveWorkspaceSetupAgentEntryState() used to live here, supporting the
+// Pre-Stage-0 workspace-setup permission dispatch above. ACD-2100b-5 removed
+// that dispatch (the registry read now happens locally, in
+// scripts/worktree/check_workspace_setup_permission.py, invoked by the
+// plan-feature skill before this workflow runs — see that section's own
+// comment) and these four helpers had no other caller, so they were removed
+// with it rather than left as dead code.
 
 /**
  * Build the single-line POSIX-sh command that resolves BOTH the
@@ -2375,272 +2210,98 @@ const sessionSlug = component
   : null;
 
 // -------------------------------------------------------------------------
-// Pre-Stage-0 — Workspace-Setup Dispatch Permission Gate (AC BO-1500f-1).
+// Pre-Stage-0 — Workspace-Setup Permission Gate (ACD-2100b-5).
 // -------------------------------------------------------------------------
 // The isolated-workspace setup step below runs repository-mutating commands
 // (fetch, branch-create, worktree-add via setup_ticket_worktree.py). It must
 // be dispatched only to an agent whose registered charter (config/agent_registry.json)
-// permits running repository/shell commands — resolved from the registry
-// itself, never from a hardcoded agent name, so the guarantee survives an
-// agent rename (and so a read-only reporting agent like status-checker,
-// the mis-assigned target of the original incident, can never receive it).
+// permits running repository/shell commands.
+//
+// ACD-2100b-5 moved the registry read OUT of this workflow body. The E2
+// engine (ADR-030) contextifies this body with EXACTLY agent, parallel,
+// pipeline, phase, log, args, workflow, budget — no module loader and no
+// filesystem primitive of any kind (canonical statement: unit_tests/
+// _workflow_engine_harness.py docstring, "ENGINE FIDELITY" section) — so
+// this workflow physically cannot read config/agent_registry.json itself.
+// The agent()-dispatch round-trip this section used to make existed only to
+// work around that sandbox; it is gone. The plan-feature SKILL now runs a
+// LOCAL pre-flight script (scripts/worktree/check_workspace_setup_permission.py)
+// BEFORE invoking this workflow — the skill runs in the main agent loop,
+// which has real Bash/Read access — and passes that script's verdict through
+// `args.workspace_setup_permission`, the only injected global that carries
+// caller-supplied data. This workflow makes NO agent() dispatch and touches
+// no filesystem for this check at all; it only consumes the pre-computed
+// verdict, and fails closed whenever one does not reach it.
 const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "worktree-agent";
-const AGENT_REGISTRY_PATH = "{{config.output_root}}/config/agent_registry.json";
+const workspaceSetupPermission = args && args.workspace_setup_permission;
 
-// Read the registry through the shared repository-anchored resolution
-// (ACD-2100a-1's buildRepoAnchoredReadCommand(), not a second, independent
-// `{{config.output_root}}`-relative `cat`) so this check reaches the
-// project's real registry even when the run is started from inside a linked
-// git worktree that holds no `.leafcutter/` of its own (ACD-2100a-3 /
-// KI-ACD-009 cause 1).
-let permissionResult;
-try {
-  permissionResult = await agent(
-    "Run the following command and return ONLY the raw stdout output:\n" +
-    buildRepoAnchoredReadCommand("config/agent_registry.json") + "\n" +
-    "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number>, \"stderr\": \"<raw stderr, or empty>\" }",
-    { agentType: "status-checker", label: "resolve-workspace-setup-permission" }
-  );
-} catch (permErr) {
-  // External I/O failure dispatching the registry-read check itself (as
-  // opposed to the registry read succeeding but returning a non-zero exit
-  // code, which is handled below as `registryUnreadable`). Logged at
-  // WARNING per this repo's error-handling policy so the failure is never
-  // silently discarded; the fail-closed halt is unaffected either way —
-  // permissionResult stays null and the checks below fall through to the
-  // same "registry unreadable"-shaped or "not permitted"-shaped halt.
-  log(
-    "[plan-feature][WARNING] Dispatching the workspace-setup registry-read " +
-    "check failed: " + (permErr && permErr.message ? permErr.message : permErr)
-  );
-  permissionResult = null;
+// Fail closed when NO pre-flight verdict reaches this workflow at all. A
+// caller that invokes this workflow directly — e.g. Workflow({ scriptPath:
+// '.leafcutter/workflows/plan-feature.js' }), a real, currently-used
+// invocation path that bypasses the skill's own pre-flight step entirely —
+// supplies no such verdict. This is a DISTINCT fact from "the pre-flight ran
+// and denied permission" (handled below): the report here must name the
+// MISSING pre-flight itself, never assert a permission cause this run never
+// established (ACD-2100b-5 it_requirements; this is a new outcome of the
+// startup path and must not be worded as any of ACD-2100b-1/-2/-3's outcomes).
+if (!workspaceSetupPermission || typeof workspaceSetupPermission !== "object") {
+  const missingPreflightMessage =
+    "No workspace-setup permission pre-flight verdict was supplied in args " +
+    "(args.workspace_setup_permission). This workflow no longer resolves the " +
+    "workspace-setup permission itself: the plan-feature skill's pre-flight " +
+    "(scripts/worktree/check_workspace_setup_permission.py) must run BEFORE " +
+    "this workflow is invoked and pass its verdict through args. This is a " +
+    "MISSING pre-flight, not a permission denial — halting before any " +
+    "authoring agent is dispatched.";
+  log("[plan-feature][WARNING] " + missingPreflightMessage);
+  return { status: "error", message: missingPreflightMessage };
 }
 
-let permitsShell = false; // fail closed — missing/false/unresolvable all deny.
-// Set only when the registry READ ITSELF failed (I/O: no file, or read
-// permission refused) — a DIFFERENT fact than a successfully-read registry
-// that denies this agent shell access, and one that must produce a
-// DIFFERENT, permission-verdict-free report (ACD-2100b-1 / KI-ACD-009: the
-// two causes were previously collapsed into one misleading message).
-let registryUnreadable = null;
-// Set only when the registry was read successfully (exit_code 0, output is
-// a string) but that output does not parse as JSON — a THIRD, distinct fact
-// from both of the above: the file exists and was opened, but its contents
-// cannot be interpreted as a registry (e.g. a truncated/partial write).
-// Must never fall through to the permission-mis-assignment branch below,
-// which would assert a permission cause this check never established
-// (ACD-2100b-2 / KI-ACD-009 outcome 2).
-let registryUninterpretable = null;
-// Set to the four-state result of _resolveWorkspaceSetupAgentEntryState()
-// once the registry has been read and interpreted — distinguishes "entry
-// present and denied" from "entry absent" (and the entries-collection-
-// missing fourth state), so the halt report below can state the correct,
-// specific fact rather than a single collapsed permission verdict
-// (ACD-2100b-3 / KI-ACD-009 outcome 3).
-let workspaceSetupAgentEntryState = null;
-// Captures WHAT was found in the registry where the `agents` entries
-// collection was expected, whenever workspaceSetupAgentEntryState.state ===
-// "no_entries_collection" — so the halt report below can name it (its value
-// and its type) rather than assert an absence or denial verdict this check
-// never established (ACD-2100b-3-i).
-let noEntriesCollectionFoundValue;
-let noEntriesCollectionFound = false;
-try {
-  const registryParsed = parseAgentJson(
-    permissionResult,
-    { stage: "resolve-workspace-setup-permission", agent: "status-checker" }
-  );
-  const rawExitCode = registryParsed ? registryParsed.exit_code : undefined;
-  const readExitCode = (typeof rawExitCode === "number")
-    ? rawExitCode
-    : (typeof rawExitCode === "string" && rawExitCode.trim() !== "" && !isNaN(Number(rawExitCode)))
-      ? Number(rawExitCode)
-      : null;
-  if (readExitCode !== null && readExitCode !== 0) {
-    const diagnosticText =
-      (typeof registryParsed.stderr === "string" ? registryParsed.stderr : "") +
-      "\n" +
-      (typeof registryParsed.output === "string" ? registryParsed.output : "");
-    registryUnreadable = _parseRegistryUnreadableDiagnostic(diagnosticText);
-  } else if (registryParsed && typeof registryParsed.output === "string") {
-    let registryJson = null;
-    try {
-      registryJson = JSON.parse(registryParsed.output);
-    } catch (interpretErr) {
-      // Caught by type (SyntaxError from JSON.parse) and logged at WARNING
-      // before the halt below, per this repo's error-handling policy — this
-      // must never propagate as an unhandled failure, and must never be
-      // allowed to silently fall through to the permitsShell=false path,
-      // which would render the SAME report as a genuine permission denial.
-      registryUninterpretable = _describeRegistryInterpretationFailure(
-        registryParsed.output, interpretErr
-      );
-    }
-    if (!registryUninterpretable) {
-      workspaceSetupAgentEntryState = _resolveWorkspaceSetupAgentEntryState(
-        registryJson, workspaceSetupAgentId
-      );
-      permitsShell = workspaceSetupAgentEntryState.state === "permitted";
-      if (workspaceSetupAgentEntryState.state === "no_entries_collection") {
-        // Record WHAT was found in place of the `agents` collection — the
-        // registry parsed cleanly as JSON (registryJson is truthy) but its
-        // `agents` field is not an array — so the halt report can name the
-        // value/type an operator can use to tell a wrong file from a
-        // structurally changed one (ACD-2100b-3-i).
-        noEntriesCollectionFound = true;
-        noEntriesCollectionFoundValue = registryJson ? registryJson.agents : undefined;
-      }
-    }
-  }
-} catch (registryInterpretErr) {
-  // Unexpected failure anywhere in the registry-interpretation block above
-  // (distinct from the two named, already-reported facts `registryUnreadable`
-  // and `registryUninterpretable`, which this catch must never mask — those
-  // are set and returned as their own halt branches before this one is ever
-  // consulted). Logged at WARNING per this repo's error-handling policy so
-  // the failure is never silently discarded. Fail closed regardless:
-  // permitsShell stays false and the run halts via the "not permitted"
-  // branch below.
-  log(
-    "[plan-feature][WARNING] Unexpected error while resolving the " +
-    "workspace-setup permission from the agent registry: " +
-    (registryInterpretErr && registryInterpretErr.message ? registryInterpretErr.message : registryInterpretErr)
-  );
-  permitsShell = false; // fail closed on any parse error
-}
-
-if (registryUninterpretable) {
-  // The registry was read successfully but its contents could not be
-  // interpreted as JSON (e.g. a truncated/partial write) — a distinct fact
-  // from both "the registry could not be read at all" (below) and "this
-  // agent is denied shell access" (further below), and one that must never
-  // be worded as either. Fail closed: the run still stops; only the
-  // diagnosis changes.
-  const uninterpretableMessage =
-    "The agent registry was read successfully but its contents could not be " +
-    "interpreted as valid JSON. Interpretation stopped at position " +
-    registryUninterpretable.position + " (line " + registryUninterpretable.line +
-    "), near: \"" + registryUninterpretable.fragment + "\". Reason: " +
-    registryUninterpretable.reasonText + " Halting before any authoring agent " +
-    "is dispatched.";
-  log("[plan-feature][WARNING] " + uninterpretableMessage);
-  await agent(
-    uninterpretableMessage,
-    { agentType: "status-checker", label: "workspace-setup-registry-uninterpretable" }
-  );
-  return { status: "error", message: uninterpretableMessage };
-}
-
-if (registryUnreadable) {
-  // External I/O failure (the registry read command itself failed) —
-  // logged at WARNING before the halt, per this repo's error-handling
-  // policy. Fail closed: the run still stops; only the diagnosis changes.
-  const unreadableMessage =
-    "The agent registry could not be read. Location tried: " + registryUnreadable.location +
-    ". Reason: " + registryUnreadable.reasonText +
-    " Halting before any authoring agent is dispatched.";
-  log("[plan-feature][WARNING] " + unreadableMessage);
-  await agent(
-    unreadableMessage,
-    { agentType: "status-checker", label: "workspace-setup-registry-unreadable" }
-  );
-  return { status: "error", message: unreadableMessage };
-}
-
-if (!permitsShell) {
-  // Three distinct facts about the registry's own contents, and only ONE of
-  // them may be reported as a permission verdict (ACD-2100b-3 / KI-ACD-009
-  // outcome 3): the entry EXISTS and withholds permission ("denied"), the
-  // entry does not exist in a real entries collection ("absent" — "not
-  // listed", never a permission verdict about a nonexistent entry), or the
-  // entries collection itself is not there at all ("no_entries_collection" —
-  // a registry that parses but cannot be used, not a synonym for "absent"
-  // and never reported as one, ACD-2100b-3-i). Every halt fails closed
-  // identically (the run stops before any authoring agent is dispatched);
-  // only the diagnosis differs, and naming the permission setting is
-  // reserved for the case where a permission fact was actually established.
-  const agentIsListedAndDenied =
-    !!workspaceSetupAgentEntryState && workspaceSetupAgentEntryState.state === "denied";
-  const registryHasNoEntriesCollection =
-    !!workspaceSetupAgentEntryState &&
-    workspaceSetupAgentEntryState.state === "no_entries_collection";
-
-  if (agentIsListedAndDenied) {
-    const deniedMessage =
+if (workspaceSetupPermission.permits !== true) {
+  // The pre-flight's own `outcome` field distinguishes the same facts
+  // ACD-2100b-1 (registry unreadable), ACD-2100b-2 (registry
+  // uninterpretable), and ACD-2100b-3 (denied vs. absent vs. no entries
+  // collection, ACD-2100b-3-i) used to distinguish via separate
+  // dispatch/interpretation branches in this file. Switching on that field
+  // (rather than collapsing to a single boolean) is what keeps those
+  // outcomes distinguishable from one another (it_requirements) — the
+  // report below states the exact fact the pre-flight established, and
+  // never a fact it did not (e.g. "not found" is never worded as "denied").
+  const outcome = typeof workspaceSetupPermission.outcome === "string"
+    ? workspaceSetupPermission.outcome
+    : "unknown";
+  const outcomeMessages = {
+    read_failure:
+      "The workspace-setup permission pre-flight could not read the agent registry " +
+      "(config/agent_registry.json). Halting before any authoring agent is dispatched.",
+    parse_failure:
+      "The workspace-setup permission pre-flight read the agent registry successfully " +
+      "but its contents could not be interpreted as valid JSON. Halting before any " +
+      "authoring agent is dispatched.",
+    agent_not_found:
+      "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
+      workspaceSetupAgentId + "', but that agent was not found in the registry " +
+      "(config/agent_registry.json). Halting before any authoring agent is dispatched. " +
+      "Report this mis-assignment to the operator: step='worktree-setup', agent='" +
+      workspaceSetupAgentId + "'.",
+    no_entries_collection:
+      "The agent registry (config/agent_registry.json) could not be used: its 'agents' field is " +
+      "not a list of agent entries. Halting before any authoring agent is dispatched. Fix " +
+      "config/agent_registry.json so that 'agents' is a list of agent entries.",
+    permission_denied:
       "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
       workspaceSetupAgentId + "', which is listed in the agent registry (config/agent_registry.json) " +
       "but is not permitted to run repository-mutating shell commands. Halting before any authoring " +
       "agent is dispatched. Report this mis-assignment to the operator: step='worktree-setup', " +
-      "agent='" + workspaceSetupAgentId + "'.";
-    log("[plan-feature][WARNING] " + deniedMessage);
-    await agent(
-      deniedMessage,
-      { agentType: "status-checker", label: "workspace-setup-mis-assignment" }
-    );
-    return {
-      status: "error",
-      message:
-        "Workspace-setup step 'worktree-setup' is configured to dispatch to agent '" +
-        workspaceSetupAgentId + "', which is listed in config/agent_registry.json but denies " +
-        "running repository/shell commands. Halting before any authoring agent is dispatched. " +
-        "Fix config/agent_registry.json's permits_shell field for that agent.",
-    };
-  }
-
-  if (registryHasNoEntriesCollection) {
-    // The registry parsed cleanly as JSON, but its `agents` field is not a
-    // list of agent entries at all — the check never got as far as looking
-    // for this agent's id inside a collection, because there was no
-    // collection to search. This is a THIRD distinct fact about the
-    // registry's contents, not a synonym for "absent" (which would assert an
-    // absence verdict this check never established) nor for "denied" (which
-    // would assert a permission fact this check never established). Name
-    // WHAT was found where the agent entries were expected, so the operator
-    // can tell a wrong file from a structurally changed one (ACD-2100b-3-i).
-    const foundValue = noEntriesCollectionFound ? noEntriesCollectionFoundValue : undefined;
-    const foundTypeText = typeof foundValue;
-    let foundValueText;
-    try {
-      foundValueText = JSON.stringify(foundValue);
-    } catch (_stringifyErr) {
-      foundValueText = String(foundValue);
-    }
-    const noEntriesCollectionMessage =
-      "The agent registry (config/agent_registry.json) could not be used: its 'agents' field is " +
-      "not a list of agent entries. Found " + foundTypeText + " " + foundValueText + " where the " +
-      "agent entries collection was expected. Halting before any authoring agent is dispatched. " +
-      "Fix config/agent_registry.json so that 'agents' is a list of agent entries.";
-    log("[plan-feature][WARNING] " + noEntriesCollectionMessage);
-    await agent(
-      noEntriesCollectionMessage,
-      { agentType: "status-checker", label: "workspace-setup-registry-no-entries-collection" }
-    );
-    return { status: "error", message: noEntriesCollectionMessage };
-  }
-
-  // The entry does not exist in the registry at all — no permission fact was
-  // ever established, so this report must never name a permission setting;
-  // doing so would send the operator to audit an agent entry that does not
-  // exist (this is the defect ACD-2100b-3 removes).
-  const notFoundMessage =
-    "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
-    workspaceSetupAgentId + "', but that agent was not found in the registry " +
-    "(config/agent_registry.json). Halting before any authoring agent is dispatched. " +
-    "Report this mis-assignment to the operator: step='worktree-setup', agent='" +
-    workspaceSetupAgentId + "'.";
-  log("[plan-feature][WARNING] " + notFoundMessage);
-  await agent(
-    notFoundMessage,
-    { agentType: "status-checker", label: "workspace-setup-agent-not-found" }
-  );
-  return {
-    status: "error",
-    message:
-      "Workspace-setup step 'worktree-setup' is configured to dispatch to agent '" +
-      workspaceSetupAgentId + "', which was not found in the registry. Halting before any " +
-      "authoring agent is dispatched. Add an entry for that agent to config/agent_registry.json, " +
-      "or fix the workspace_setup_agent configuration to point at an agent that is listed.",
+      "agent='" + workspaceSetupAgentId + "'.",
   };
+  const deniedMessage = outcomeMessages[outcome] || (
+    "The workspace-setup permission pre-flight denied permission for agent '" +
+    workspaceSetupAgentId + "' (outcome='" + outcome + "'). Halting before any authoring " +
+    "agent is dispatched."
+  );
+  log("[plan-feature][WARNING] " + deniedMessage);
+  return { status: "error", message: deniedMessage };
 }
 
 let authoringWorktreePath = null;

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-31
+last_updated: 2026-09-07
 components:
   - ac_driven_dev
 related_docs:
@@ -565,7 +565,10 @@ gate green.
 ### KI-ACD-009 — `/plan-feature` halts before any authoring agent and blames a registry field that is correct
 
 - **Severity:** blocker
-- **Status:** open
+- **Status:** fixed for the round-trip-removal site (2026-09-07 — landed via
+  `ACD-2100b-5`). See "Fix landed" below — the dispatch this entry's cause 2 names no
+  longer exists, but sibling outcome-distinction coverage still tests the retired
+  mechanism and needs re-pointing before this entry closes.
 - **Occurrences:** 1
 - **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
 - **Where:** `templates/workflows-js/plan-feature.js:1745-1790` — the `resolve-workspace-setup-permission` step and the `permitsShell` fail-closed branch
@@ -644,6 +647,50 @@ all new work (`CLAUDE.md`, "New Work Goes Through ACs"). While this holds, that 
 closed from any worktree, and the only way to author ACs is to dispatch the PO/BA/IT-PO
 agents by hand — which skips the triage, the gates, and the staged-commit invariant the
 workflow exists to enforce.
+
+**Fix landed 2026-09-07 (`ACD-2100b-5`).** All three "Fix direction" bullets above are
+addressed by removing the round-trip entirely rather than by improving its failure
+reporting:
+
+- **Cause 2 (`API Error: Connection lost mid-response`) can no longer occur for this
+  check.** There is no `resolve-workspace-setup-permission` agent dispatch left to fail.
+  The startup check is now a local read performed by `/plan-feature`'s own pre-flight —
+  `scripts/worktree/check_workspace_setup_permission.py` — invoked from §WSP
+  (`templates/skills/plan-feature/SKILL.md`) BEFORE the workflow is invoked, not by a
+  dispatch the workflow body makes. An operator who previously saw this message as a
+  transport error now knows it is not this check: the E2 engine (ADR-030) contextifies
+  the workflow body with no filesystem primitive at all, so the workflow physically could
+  not have made this read itself, and no longer tries to reach it through an agent
+  round-trip either. The verdict crosses from the pre-flight into
+  `templates/workflows-js/plan-feature.js` through `args.workspace_setup_permission`,
+  the only injected global that carries caller-supplied data.
+- **"Distinguish the four outcomes" is implemented.** The script's verdict carries an
+  `outcome` field distinguishing `granted`, `read_failure`, `parse_failure`,
+  `agent_not_found`, `no_entries_collection`, and `permission_denied` — the causes named
+  above are now reported apart from one another rather than collapsed into one
+  permissions message.
+- **"Resolve the registry path, do not hardcode a relative one" is implemented.** The
+  script resolves the registry the same repository-anchored way `ACD-2100a-1` /
+  `ACD-2100a-3` already established for the sibling sites named in `KI-ACD-004` — so it
+  reaches the project's real registry from inside a linked git worktree that holds no
+  `.leafcutter/` of its own, which is cause 1 above (the missing-path failure) closed the
+  same way.
+
+Covered by `unit_tests/ac_driven_dev/test_acd_2100b_5.py` and
+`unit_tests/workflows/test_acd_2100b_5.py`. **This entry is not fully closed.** Landing
+the surface change makes the pre-existing dispatch-based coverage for the sibling
+outcome-distinction records (`ACD-2100b-1` through `-3`, `-3-i`, `-4`, plus
+`ACD-2100a-1` / `-4` and `BO-1500f-1`'s own tests, all of which stub the retired
+`resolve-workspace-setup-permission` label to get past this gate) fail — tracked in
+`ACD-2100b-5`'s own ticket under its `### test-writer` Implementation Tasks section.
+Leave `Status` above at partial until that remediation lands and those records' coverage
+is re-pointed at the script's own outcome vocabulary directly, mirroring
+`unit_tests/ac_driven_dev/test_acd_2100b_5.py`.
+
+A standing reference page for `/plan-feature`'s layout and startup-time checks
+(`docs/reference/plan-feature-layout-and-startup-checks.md`, planned per `ACD-2100d-4`,
+not yet authored as of this entry — see `KI-ACD-004` above) should state this fix and
+cross-link back here rather than duplicating this narrative once it exists.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M8, inverted — not a check
 reporting success it did not establish, but a check reporting a *specific failure cause*
