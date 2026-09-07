@@ -1,0 +1,87 @@
+id: UXP-700b-2
+title: "Every check states how many records it read, and the figure moves with the record"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - precommit_hooks
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project record holding a known number of artifacts of each type,
+  When the record's checker runs,
+  Then its report states, for each check it performed, how many records that check read,
+  And adding one further artifact of a type a check reads raises that check's stated figure by
+    exactly one on the next run,
+  And removing one lowers that check's stated figure by exactly one on the next run,
+  And no stated figure is carried over from an earlier run.
+depends_on:
+  - UXP-700b
+  - UXP-700b-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Per-check examined counts that UXP-700b-3 and UXP-514-5 read to decide whether a check was exercised."
+expects_from:
+  ac_id: UXP-700b-1
+  contract: "The outcome vocabulary these figures qualify."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by:
+  - UXP-700b-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  A stated count on its own is satisfiable by a hardcoded number, and a test that asserts the
+  count equals a literal is satisfied by the same hardcoded number. The only assertion no
+  literal-carrying implementation can satisfy is a varying-population one: change the record,
+  the stated figure must change by the matching amount. Both directions are needed, because an
+  implementation that counts files found but never re-reads the directory passes the add case
+  by accident on a cold cache.
+test_spec:
+  - name: test_each_check_states_the_number_of_records_it_read
+    target_dir: unit_tests/product_truth/
+    description: "The report carries a per-check examined figure for every check performed."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_adding_one_artifact_raises_the_stated_figure_by_exactly_one
+    target_dir: unit_tests/product_truth/
+    description: "Adding one journey raises the journey check's stated figure from N to N+1."
+    type: integration
+    angle: seam
+    framework: unittest
+  - name: test_removing_one_artifact_lowers_the_stated_figure_by_exactly_one
+    target_dir: unit_tests/product_truth/
+    description: "Removing one journey lowers the journey check's stated figure from N to N-1."
+    type: integration
+    angle: seam
+    framework: unittest
+  - name: test_stated_figures_are_not_carried_over_between_runs
+    target_dir: unit_tests/product_truth/
+    description: "Emptying the store between runs yields zero, not the previous run's figure."
+    type: integration
+    angle: boundary
+    framework: unittest
+notes: |
+  House style copied from BP-100n-4 per the BA memory note: state the measured populations in
+  the Given and close with a varying-population clause. This is the record that makes UXP-700b-1
+  falsifiable - without per-check figures, "it examined something" is an assertion the checker
+  makes about itself with nothing behind it.

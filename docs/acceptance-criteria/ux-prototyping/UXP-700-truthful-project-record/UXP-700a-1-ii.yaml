@@ -1,0 +1,70 @@
+id: UXP-700a-1-ii
+title: "Re-installing over a populated record never replaces what is already there"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - build_pipeline
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project whose record already holds at least one journey, one example dataset and one
+    screen, all authored by that project,
+  When the tooling is installed into the same project a second time,
+  Then every pre-existing artifact has the same content after the install as before it,
+  And the store index still lists exactly the artifacts it listed before the install,
+  And any scaffold the install would otherwise write is left untouched wherever a file of that
+    name already exists.
+depends_on:
+  - UXP-700a-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700a-1.yaml"
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700a-1
+  contract: "The scaffold-writing behaviour whose overwrite semantics this constrains."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  Destructive-overwrite defects only appear on the second run, so a single-run test cannot
+  catch them. The test must populate a store, install again, and compare content: a
+  file-existence assertion would pass even if every file had been truncated and rewritten.
+test_spec:
+  - name: test_reinstall_leaves_existing_artifacts_byte_identical
+    target_dir: unit_tests/product_truth/
+    description: "Content hashes of a populated store's artifacts are unchanged after a second install."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_reinstall_does_not_reset_the_store_index
+    target_dir: unit_tests/product_truth/
+    description: "The index still lists the same artifact ids after a second install."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+notes: |
+  Not observed as a live defect - authored as the edge case implied by UXP-700a-1 writing
+  scaffold files into a directory the tooling does not own. An install that unconditionally
+  writes the scaffold would satisfy UXP-700a-1 in full while destroying an adopter's record on
+  upgrade, which is the failure UXP-700 exists to prevent, arriving from the tooling itself.

@@ -139,7 +139,7 @@ behavioral_patterns:
     related_agent: research-agent
   - name: Test Delegation
     trigger: "Implementation requires new or updated unit tests"
-    behavior: "Adds tasks to ### test-writer section and uses (status: handoff) instead of (status: ok)"
+    behavior: "Adds tasks to ### test-writer section, uses (status: handoff) instead of (status: ok), and returns handoff_target: \"test-writer\" in the JSON result"
     related_agent: test-writer
   - name: File-Size Limit
     trigger: "New .py file would exceed {{config.file_size_limit_py}} lines"
@@ -454,8 +454,8 @@ or if `doc-enforcer` / `complexity-reduction` rows are absent.
 You MUST NOT write or modify unit test files directly.
 
 When your implementation requires new or updated tests:
-1. Add task items under the `### test-writer` section of `## Implementation Tasks` describing what needs testing.
-2. When signing off, use `(status: handoff)` instead of `(status: ok)` to signal that test-writer must run next.
+1. Add task items under the `### test-writer` section of `## Implementation Tasks` describing what needs testing. This is how **test-writer** learns WHAT to do — it reads its own subsection for the work list.
+2. When signing off, use `(status: handoff)` instead of `(status: ok)`, AND return `handoff_target: "test-writer"` in your JSON result. This is how the **driver** (build-feature.js / build-ticket.js) learns WHO to re-dispatch — it routes on this field, not on ticket prose. Step 1 and this field answer different questions for different readers (the next agent vs. the driver); naming one without the other leaves its reader with nothing to act on, so never drop either one to "simplify" the protocol.
 3. Do NOT create files under `unit_tests/` or any test directory.
 
 When delegating test authoring: remind test-writer that any dict with >5 keys
@@ -598,7 +598,9 @@ dictionary structure, you MUST:
    `(classification: test_drift | production_drift | consumer_drift)`.
 
    If the classification is `test_drift`, do NOT change production — emit
-   `(status: handoff)` to test-writer for the assertion-only fix.
+   `(status: handoff)` to test-writer for the assertion-only fix, and return
+   `handoff_target: "test-writer"` in your JSON result (see Test Delegation
+   above — the field is how the driver learns WHO, not just the comment prose).
 
 See [ADR-003](../../../docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md)
 for the full policy rationale.

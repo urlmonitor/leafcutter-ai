@@ -1,0 +1,85 @@
+id: UXP-700e-1
+title: "The record declares a reviewable size for each thing it holds, and reports what exceeds it"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the shapes the record allows for a journey, an example dataset and a screen,
+  When a bound is declared for one of their fields - a longest permitted description, a largest
+    permitted number of steps,
+  Then an artifact exceeding a bound is reported naming the artifact, the field, the measured
+    size and the bound,
+  And an artifact within every bound is not reported,
+  And the report states, for each bound, how many artifacts were measured against it, so a
+    bound that measured nothing is distinguishable from a bound nothing exceeded.
+depends_on:
+  - UXP-700e
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700e.yaml"
+doc_links:
+  - path: docs/product-truth/schemas/flow.schema.json
+    relationship: specifies
+    status: exists
+    relevance: "The shape that gains the bounds. Today summary has no maxLength and steps has no maxItems."
+  - path: docs/product-truth/README.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A per-bound measurement report the transition rules in UXP-700e-1-i and UXP-700e-1-ii gate on."
+expects_from:
+  ac_id: UXP-700b-2
+  contract: "The per-check measured-population convention these bound counts follow."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by:
+  - UXP-700e-1-i
+  - UXP-700e-1-ii
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: internal
+test_required: true
+test_rationale: |
+  A bound expressed only in a schema is enforced by whatever validator happens to load that
+  schema, and this repository has an observed history of schema validation silently degrading
+  to a weaker manual path. So the assertion has to be on the report the checker produces, not
+  on the schema document. The measured-count clause is what stops a bound that is never applied
+  from looking identical to a bound nothing violates.
+test_spec:
+  - name: test_artifact_exceeding_a_bound_is_reported_with_field_size_and_bound
+    target_dir: unit_tests/product_truth/
+    description: "A journey whose description exceeds the declared bound is reported naming the journey, the field, its measured length and the limit."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_artifact_within_every_bound_is_not_reported
+    target_dir: unit_tests/product_truth/
+    description: "A journey inside all bounds produces no size finding."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_each_bound_states_how_many_artifacts_it_measured
+    target_dir: unit_tests/product_truth/
+    description: "The report carries a measured count per bound, and it rises by one when an artifact is added."
+    type: integration
+    angle: seam
+    framework: unittest
+notes: |
+  MEASURED 2026-09-07: no size limits exist anywhere in the artifact shapes. summary has no
+  maxLength, steps has no maxItems, tags has no pattern, component is free text. This AC
+  introduces the measurement; the transition rules that stop it breaking the store on day one
+  are UXP-700e-1-i and UXP-700e-1-ii and must land in the same piece of work.

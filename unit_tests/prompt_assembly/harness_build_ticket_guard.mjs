@@ -285,6 +285,50 @@ function parseRecord(path) {
     if (m) signoffs.push({ agent: m[1], status: m[2] });
   }
 
+  // implementation_task_agents (BO-3000a) — the `### <agent>` subsection
+  // headings under `## Implementation Tasks`, and ONLY under that section.
+  //
+  // Scoping is the whole point. A real ticket also carries `## Agent Contracts`
+  // with its own `### <agent>` subsections (`### documentation-expert` is
+  // routine), and those declare documentation obligations rather than work
+  // handed off to another phase. A scan over every `### <agent>` heading in the
+  // file therefore resolves the WRONG agent on an ordinary ticket — verified
+  // against the real on-disk record for GE-122d-1, which carries exactly one
+  // `### test-writer` under Implementation Tasks and one
+  // `### documentation-expert` under Agent Contracts.
+  // Sliced explicitly rather than matched with a `(?=^## |\Z)` lookahead.
+  // JavaScript has NO `\Z` escape — it is a literal "Z" — which is the same
+  // trap already documented for the agents: block above. With the section last
+  // in the file (the shape appendImplementationTask produces, and the shape a
+  // coder appending to a real ticket produces) there is no following `## `
+  // heading, so a `\Z`-terminated lookahead fails to match ANYTHING and the
+  // handoff target silently resolves to nothing. Written the first time with
+  // exactly that bug; the reachability test is what caught it.
+  //
+  // HEADING SHAPE (BO-3000a finding F4). Real tickets do not write a bare
+  // `### <agent>` heading — they write `### <agent> — <short description>`
+  // (see e.g. tickets/99_done/TICKET-20260603-FeedbackAnalysisPipeline.md:
+  // `### python-coder — create trend_report.py`). The production driver reads
+  // this heading through an LLM instructed to report "the agent names
+  // verbatim", which trivially tolerates a trailing description. This regex
+  // is mechanical, so it must accept the same trailing separator/description
+  // explicitly or it silently disagrees with production on every real ticket
+  // shape, making the real_artifact-angle test below exercise a fixture
+  // production would never actually see.
+  const implementationTaskAgents = [];
+  const tasksHeading = text.match(/^##[ \t]+Implementation Tasks[ \t]*$/m);
+  if (tasksHeading) {
+    const rest = text.slice(tasksHeading.index + tasksHeading[0].length);
+    const nextSection = rest.match(/^##[ \t]+/m);
+    const section = nextSection ? rest.slice(0, nextSection.index) : rest;
+    for (const line of section.split("\n")) {
+      const m = line.match(/^###[ \t]+([A-Za-z0-9_-]+)(?:[ \t]+[—–-].*)?[ \t]*$/);
+      if (m && !implementationTaskAgents.includes(m[1])) {
+        implementationTaskAgents.push(m[1]);
+      }
+    }
+  }
+
   return {
     readable: true,
     ticket_path: path,
@@ -292,6 +336,7 @@ function parseRecord(path) {
     agents,
     needed_phases: Object.keys(agents).filter((a) => agents[a] === "needed"),
     depends_on: dependsOn,
+    implementation_task_agents: implementationTaskAgents,
     signoffs,
     signed_off_agents: signoffs.map((s) => s.agent),
   };
@@ -305,6 +350,66 @@ function appendSignoff(path, agentName, status) {
     `\n### ${stamp} — ${agentName} (status: ${status})\n` +
     `harness-simulated phase agent sign-off\n`;
   writeFileSync(path, readFileSync(path, "utf8") + block, "utf8");
+  return true;
+}
+
+/**
+ * Promote an agent to `needed` in the record's frontmatter agents map — what
+ * architect-review really does when it concludes an ADR or diagram is required
+ * (BO-3700). Adds the key when absent, flips it when present.
+ */
+function promoteAgentToNeeded(path, agentName) {
+  if (!existsSync(path)) return false;
+  const text = readFileSync(path, "utf8");
+  const fmMatch = text.match(/^---\n([\s\S]*?)\n---/);
+  if (!fmMatch) return false;
+  let fm = fmMatch[1];
+  const existing = new RegExp(`^(\\s+)${agentName}:\\s*\\S+\\s*$`, "m");
+  if (existing.test(fm)) {
+    fm = fm.replace(existing, `$1${agentName}: needed`);
+  } else if (/^agents:\n/m.test(fm)) {
+    fm = fm.replace(/^agents:\n/m, `agents:\n  ${agentName}: needed\n`);
+  } else {
+    return false;
+  }
+  writeFileSync(path, text.replace(fmMatch[0], `---\n${fm}\n---`), "utf8");
+  return true;
+}
+
+/**
+ * Append an `## Implementation Tasks` / `### <agent>` block — the channel
+ * templates/agents/python-coder.md §"Test Delegation" tells a coder to use when
+ * handing work to another phase (BO-3000a). Reuses the section when it already
+ * exists so two calls do not produce two `## Implementation Tasks` headings.
+ *
+ * INSERTS INTO THE SECTION (BO-3000a finding F5), not at end-of-file. A real
+ * ticket's `## Implementation Tasks` section is very often NOT the last
+ * section in the file — `## Agent Contracts` routinely follows it (see e.g.
+ * tickets/99_done/TICKET-20260603-FeedbackAnalysisPipeline.md, where
+ * `## Implementation Tasks` precedes `## Risk & Safety`). Appending at EOF put
+ * the new `### <agent>` heading AFTER any such later section, so parseRecord's
+ * section-slice (which stops at the next `## ` heading) never saw it — a
+ * fixture built with that realistic ordering silently exercised a target that
+ * was never actually resolvable, passing (or failing) for the wrong reason.
+ */
+function appendImplementationTask(path, agentName) {
+  if (!existsSync(path)) return false;
+  const text = readFileSync(path, "utf8");
+  const entry = `### ${agentName}\n\n- [ ] harness-simulated handoff task\n`;
+  const headingMatch = text.match(/^##[ \t]+Implementation Tasks[ \t]*$/m);
+  if (headingMatch) {
+    const afterHeadingIdx = headingMatch.index + headingMatch[0].length;
+    const rest = text.slice(afterHeadingIdx);
+    const nextSectionMatch = rest.match(/^##[ \t]+/m);
+    const insertOffset = nextSectionMatch
+      ? afterHeadingIdx + nextSectionMatch.index
+      : text.length;
+    const before = text.slice(0, insertOffset).replace(/\n*$/, "\n\n");
+    const after = text.slice(insertOffset);
+    writeFileSync(path, `${before}${entry}\n${after}`, "utf8");
+  } else {
+    writeFileSync(path, `${text}\n## Implementation Tasks\n\n${entry}`, "utf8");
+  }
   return true;
 }
 
@@ -519,6 +624,10 @@ async function agent(prompt, opts = {}) {
       // still names as needed. Recorded so a test can show the required set it
       // is reasoning about was really non-empty, rather than assume it.
       needed_phases: record.needed_phases || [],
+      // Observation only (BO-3000a): the `### <agent>` subsections the record
+      // carries under `## Implementation Tasks`. Recorded so a test can show
+      // the driver was HANDED a resolvable target before asserting it used one.
+      implementation_task_agents: record.implementation_task_agents || [],
       prompt_excerpt: String(prompt).slice(0, 300),
     });
     return record;
@@ -653,6 +762,20 @@ async function agent(prompt, opts = {}) {
     appendSignoff(ticketPath, label, status);
   }
 
+  // BO-3700: a running phase promoting another agent to `needed` in the real
+  // on-disk record — what architect-review does when it decides an ADR is
+  // required. Written to the record, not just reported, so the driver can only
+  // learn about it the way it learns about everything else: by reading back.
+  if (Array.isArray(spec.promotes) && ticketPath) {
+    for (const promoted of spec.promotes) promoteAgentToNeeded(ticketPath, promoted);
+  }
+
+  // BO-3000a: the coder's prescribed handoff channel — a `### <agent>` block
+  // under `## Implementation Tasks` in the record itself.
+  if (typeof spec.adds_implementation_task === "string" && ticketPath) {
+    appendImplementationTask(ticketPath, spec.adds_implementation_task);
+  }
+
   if (cfg.delete_record_after_phase === label && ticketPath) {
     deleteRecord(ticketPath);
   }
@@ -663,6 +786,9 @@ async function agent(prompt, opts = {}) {
     reply.red_baseline_verified = spec.red_baseline_verified;
   }
   if (spec.message !== undefined) reply.message = spec.message;
+  // Passed through only when the scenario sets it, so a handoff spec that omits
+  // it reproduces the real defect shape: `status: handoff` with no target field.
+  if (spec.handoff_target !== undefined) reply.handoff_target = spec.handoff_target;
   return reply;
 }
 

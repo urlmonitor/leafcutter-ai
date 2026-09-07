@@ -4,7 +4,7 @@ description: "Index of open, reproducible defects in this package that are not y
 type: reference
 status: active
 created: 2026-08-19
-last_updated: 2026-08-19
+last_updated: 2026-09-07
 components:
   - infrastructure
 related_docs:
@@ -51,14 +51,22 @@ same-day PRs each appended entries without touching this table. Every count here
 this table and it matters, re-run the count rather than trusting the number. The drift is not
 a one-off; a table maintained by hand beside files appended by many agents will always lag.
 
+Recounted 2026-09-07 at merge time by `grep -c '^### KI-'` over every file in this
+directory. **Two concurrent branches each recounted this table and both were already
+wrong by the time they merged** — one said 224, the other 237, and the true figure at the
+moment they met was 239. Neither was careless: each counted correctly, and then the other
+landed. That is the failure mode this table has, and no recount fixes it, because the
+defect is that a hand-maintained total races every append. Re-run the count; do not read
+the number.
+
 | Component | File | Open entries |
 |---|---|---|
-| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 48 |
-| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 42 |
-| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 36 |
+| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 53 |
+| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 49 |
+| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 43 |
 | `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 25 |
-| `ac_store` | [ac-store.md](ac-store.md) | 19 |
-| `testing_quality` | [testing-quality.md](testing-quality.md) | 16 |
+| `ac_store` | [ac-store.md](ac-store.md) | 21 |
+| `testing_quality` | [testing-quality.md](testing-quality.md) | 18 |
 | `knowledge_management` | [knowledge-management.md](knowledge-management.md) | 12 |
 | `supervisor_system` | [supervisor-system.md](supervisor-system.md) | 6 |
 | `agent_registry` | [agent-registry.md](agent-registry.md) | 3 |
@@ -66,7 +74,7 @@ a one-off; a table maintained by hand beside files appended by many agents will 
 | `feedback_collector` | [feedback-collector.md](feedback-collector.md) | 3 |
 | `changelog` | [changelog.md](changelog.md) | 2 |
 | `security_scanner` | [security-scanner.md](security-scanner.md) | 1 |
-| | **total** | **216** |
+| | **total** | **239** |
 
 Two id conventions are in use — `KI-CG-035` and `KI-CG-20260826-1612`. A count that
 matches only the first undercounts; the date form is the newer of the two and is the

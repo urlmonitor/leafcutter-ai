@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-31
+last_updated: 2026-09-07
 components:
   - testing_quality
 related_docs:
@@ -588,10 +588,25 @@ cannot see, where the absence of the check is documented as correct.
 
 ### KI-TQ-012 — A fixture that sandboxes with `git worktree add` sets its identity in the *real* repository's config, and every worktree and every session inherits it
 
+> **DUPLICATE ID.** A second, independently-filed `KI-TQ-012` exists further down this
+> file ("A test fixture reassigns the real repository's commit identity…"). Same defect,
+> same two files, filed twice on different days without either author seeing the other.
+> Both are closed by the same fix. Neither is renumbered: both are cited by id elsewhere,
+> and this register already carries an unrepaired `KI-CG-012` collision for the same reason.
+> That two people could file the same high-severity defect a week apart is itself the
+> finding — the register is long enough that filing is cheaper than searching.
+
 - **Severity:** high
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Status:** **RESOLVED 2026-09-07.** The identity now comes from `GIT_AUTHOR_*` /
+  `GIT_COMMITTER_*` in `_GIT_ENV_OVERRIDES`, and every `git config user.*` call is gone
+  from both fixtures. Environment variables live and die with the subprocess, so no
+  configuration file is written and nothing can outlive the run.
+  **Proven, not asserted:** the repository identity was set to a known value, both suites
+  were run (10 passed), and the identity was re-read afterwards — unchanged. Before the fix
+  the same run guaranteed a poisoned config.
+- **Occurrences:** **10** misattributed commits in a single session on 2026-09-07, several
+  on open pull requests, across worktrees these tests have never heard of
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07 · **Closed:** 2026-09-07
 - **Where:** `unit_tests/portability/test_ge_120e_1_i.py` — the merge fixture's `build()`
   (`git worktree add` at ~L264, `git config user.*` at L270-271) and its `tearDownClass`
   (`git worktree remove --force`, ~L338)
@@ -839,10 +854,32 @@ does not load — where the failure mode is silence, and silence is the result t
 
 ### KI-TQ-012 — A test fixture reassigns the real repository's commit identity, and every commit made afterwards is authored by the fixture
 
+> **DUPLICATE ID** — see the note on the other `KI-TQ-012` earlier in this file. Same
+> defect, filed twice a week apart; both closed by the same fix; neither renumbered,
+> because both are cited by id.
+
 - **Severity:** high
-- **Status:** open — recurs on every run of the suite; a config repair does not hold
-- **Occurrences:** 3 observed the same day, from three different worktrees — and the offending code is **two** files with **six** call sites, not four in one: a third commit landed authored `GE-120e-1-i fixture`, which is a *different* fixture, so `unit_tests/portability/test_ge_120e_1_i.py` carries the identical defect at 2 further sites
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Status:** **RESOLVED 2026-09-07** — identity now supplied via `GIT_AUTHOR_*` /
+  `GIT_COMMITTER_*` in `_GIT_ENV_OVERRIDES`; every `git config user.*` call removed from
+  both fixtures. Verified by setting the repository identity to a known value, running both
+  suites (10 passed), and re-reading it: **unchanged**.
+- **Occurrences:** **10** misattributed commits in one session (2026-09-07), several on open
+  pull requests. **The count in this line was wrong twice before it was measured** — filed as
+  "four sites in one file", corrected to "two files, six sites", and the real figure is
+  **two files, TEN sites** (8 in `test_ge_120e_1.py`, 2 in `test_ge_120e_1_i.py`). Both
+  earlier counts came from reading the commits that happened to be misattributed rather than
+  from grepping the fixtures.
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07 · **Closed:** 2026-09-07
+- **Scope check, so nobody re-audits it:** a repo-wide sweep found ~40 test files setting
+  `git config user.*`. Only these two leak. The rest set identity inside a throwaway
+  `git init` repository, which has its own config and cannot escape. The discriminator is
+  `git worktree add` against the *real* repository root, not the presence of a `git config`
+  call. One file, `test_check_doc_frontmatter_worktree_pathbase.py`, looks leaky to a naive
+  grep and is not — it worktrees a temp repo it created itself.
+- **Why not `git config --worktree`:** it scopes correctly but requires
+  `extensions.worktreeConfig`, which lives in untracked `.git/config`. This repository has it
+  enabled locally; a fresh CI clone does not, so that fix would pass here and fail in CI. The
+  environment works everywhere and writes nothing.
 - **Where:** `unit_tests/portability/test_ge_120e_1.py` — lines 234, 300, 344, 543 — **and
   `unit_tests/portability/test_ge_120e_1_i.py`**, 2 more sites (found by grepping
   `fixture@example.com` across the branch after a third misattributed commit; the entry
@@ -952,10 +989,42 @@ is convincing and the invisible half leaks permanently.
 
 ### KI-TQ-20260901-1310 — The red-baseline gate's 60-second pytest budget silently negotiates the AC's required test shape down to whatever fits
 
-- **Severity:** high
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Severity:** was high.
+- **Status:** **RESOLVED 2026-09-07, on CI evidence rather than on the fix landing.**
+
+  > Fixed by **PR #706** (`fde1e75b`). This entry was deliberately held open after that
+  > merge: its claim was that a subprocess-level AC could now clear the gate, and a merged
+  > fix is not that claim's evidence — a green CI run is. Both arrived:
+  >
+  > | PR | `Proof-of-done coverage check (BO-2500b)` |
+  > |---|---|
+  > | #708 | **pass, 2m03s** |
+  > | #694 | **pass, 2m51s** |
+  >
+  > Neither could have completed under the old 60-second ceiling; #694 is the very PR whose
+  > `pytest timed out after 60 s` produced this entry.
+  >
+  > **The budget is composed, not raised** — a 30 s collection floor charged ONCE, plus
+  > 300 s per linked test file. A single larger constant would still ignore the AC's own
+  > size and reproduce this defect one notch up, which is what the fix direction above
+  > warned against; a test pins that ten files get strictly more than one. A timeout is
+  > now also distinguishable from an absent test: a non-nodeid-shaped sentinel is threaded
+  > through `verify_done_eligible` and `_verify_composite_eligible` so the reason names the
+  > budget and the command instead of reading as "these tests do not exist".
+  >
+  > The per-file figure is deliberately ~2x the measured worst case. The ~142 s that
+  > exposed this was measured on a workstation, and a hosted runner is materially slower
+  > for subprocess-heavy work — a value chosen to just clear the local number would have
+  > reproduced this defect in CI while looking fixed locally.
+  >
+  > **A second occurrence, recorded before the fix landed and worth keeping.** Building
+  > BP-900h-4 the same budget forced its author to optimise the declaring-file inspector
+  > from ~7.1 s to ~1.7 s per invocation to fit. That is a genuine improvement, but the
+  > prompt was a gate budget rather than a profiler — the first time this pressure produced
+  > an optimisation instead of deleted coverage. Two ACs in one day had their test design
+  > bent by this number.
+- **Occurrences:** 2
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-07
 - **Where:** `scripts/ac_store/done_proof.py:896-908` (`_run_pytest_and_parse`, `timeout=60`),
   consumed by `scripts/build_orchestration/fast_lane.py:1482` (`verify_red_baseline`)
 
@@ -1213,3 +1282,76 @@ repository) is the same *file family* mishandling git state, though a different 
 
 **Pattern:** a fixture that treats a subprocess as finished when it returns, while the tool it
 invoked has deliberately left work running behind it.
+
+---
+
+### KI-TQ-20260907-0940 — A reachability fixture symlinks the package into its scratch workspace where the real consumer layout is a directory
+
+- **Severity:** low — recorded so it is not rediagnosed, **not** worth a fix of its own. See
+  "Do not action this on its own" below.
+- **Status:** open — no AC, and none wanted
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `unit_tests/portability/test_bp_900h6ii.py:581`
+
+**What it is.** `TestBp900h6iiReachability` builds a scratch workspace and places the package
+into it as a **symlink** rather than a copy:
+
+```python
+(workspace_dir / "leafcutter-ai").symlink_to(_WORKTREE_ROOT)
+```
+
+The real layout is a real directory, on both authorities. `CLAUDE.md:66` — *"this repo is
+cloned into a subdirectory (e.g. `my-project/leafcutter-ai/`)"*. And `.github/workflows/ci.yml`
+`:443-445`, the very command this test extracts and runs:
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    path: leafcutter-ai
+```
+
+`actions/checkout` writes a directory. So the fixture's workspace differs from the layout it
+exists to simulate, in a test whose declared angle is `reachability`. All line numbers and
+quotations verified 2026-09-07 at `origin/main` (`e2b1eb7ea`).
+
+The motive is legitimate: a `copytree` of the package is expensive. (Measured in this worktree
+2026-09-07: 67 MB excluding `.git`; a build tree with `__pycache__` and deploy outputs runs
+higher, ~76 MB observed.) The symlink is a reasonable thing to have reached for.
+
+**Do not action this on its own.** It accounts for **1 of the 18** regressed outcomes in
+`KI-BO-20260831-1520`'s second occurrence — the other 17 have nothing to do with it. And
+re-anchoring the harness under `BP-1500d-1`, which is already the plan, **subsumes it**: that
+work builds a real out-of-package scratch project with a real package directory at
+`<scratch>/leafcutter-ai/`, which is this fixture's fix by construction. Doing both means
+writing the same fix twice. The entry exists so the next person to hit this recognises it in
+one minute instead of re-deriving it; that is the whole of its value.
+
+> **The misdirection, which is the actually useful part of this entry.** The instinct on
+> seeing a symlink-vs-directory discrepancy is to make the code resolve symlinks. **It already
+> does, and resolving harder cannot fix this.** Verified 2026-09-07:
+>
+> ```text
+> build.py:1618   package_root = Path(__file__).resolve().parent.parent
+> build.py:1899   target_root  = Path(args.target_dir).resolve() if args.target_dir else Path.cwd()
+> ```
+>
+> Both ends of the comparison are `.resolve()`d — which is *why* the symlink case behaves
+> differently: resolution collapses `<scratch>/leafcutter-ai` back onto the real worktree path,
+> so the package and the target no longer sit in the relationship the layout implies. More
+> resolution moves it further from the real layout, not closer. **The fixture has to hold a
+> real directory; there is no path-normalisation fix.** This cost one investigation cycle on
+> 2026-09-07.
+
+**Fix direction (only as part of the `BP-1500d-1` harness work).** Materialise a real
+directory. If copy cost is the objection, the harness does not need the whole package — a
+`copytree` with an ignore predicate dropping `.git/`, `__pycache__/`, `leafcutter-web/` and
+`changelogs/` is small, and closer to a consumer's install than a full mirror is.
+
+**Related.** `KI-BO-20260831-1520` (second occurrence — the regression this was 1 of 18 of).
+`KI-ACS-014` and `KI-TQ-004` are the same family from other angles: a symlinked build output
+standing in for a source tree, and a test consequently measuring something other than what it
+names.
+
+**Pattern:** a fixture whose shortcut is invisible in its own result — the test passes, and
+nothing in its output says the workspace it built is not the workspace it is named after.

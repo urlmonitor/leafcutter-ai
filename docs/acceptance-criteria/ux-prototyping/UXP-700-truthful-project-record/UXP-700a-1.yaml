@@ -1,0 +1,104 @@
+id: UXP-700a-1
+title: "Installing the tooling lays down a complete, runnable, empty record"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - build_pipeline
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project that has never used the tooling and holds no project record of any kind,
+  When the tooling is installed into that project,
+  Then a record is written into that project with a place for each artifact type the tooling
+    supports (journeys, example data, screens), each of those places present and empty,
+  And a store index is written that declares zero artifacts and holds an entry for every
+    derived lookup the index maintains, each of those entries empty,
+  And every input the checker reads before it begins checking is written into that project,
+    so the checker reaches a stated verdict without an unhandled failure,
+  And an introduction is written into that project stating that the record is empty, naming
+    each artifact type and where it lives, and naming the first thing a person should author.
+depends_on:
+  - UXP-700a
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700a.yaml"
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/authoring-product-truth-artifacts.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A deployed, empty-but-runnable record that UXP-700a-2 can regenerate and UXP-700a-4 can smoke-test."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by:
+  - UXP-700a-1-i
+  - UXP-700a-1-ii
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+declares_side_effect: true
+test_required: true
+test_rationale: |
+  A direct unit test of the deploy function would assert the function was called, not that a
+  consumer project ends up with a working record, which is the exact failure this AC exists to
+  close. The contract therefore has to be exercised against a real deployment into a throwaway
+  directory (real_artifact), and the start-up-input clause has to be proved at the seam between
+  what the install writes and what the checker reads, because that is where the observed gap
+  sits.
+test_spec:
+  - name: test_fresh_install_creates_every_artifact_place_and_an_empty_index
+    target_dir: unit_tests/product_truth/
+    description: "Deploying into an empty temp project yields the three artifact directories and an index declaring zero artifacts with every derived lookup present and empty."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_fresh_install_record_reaches_a_verdict_from_its_own_checker
+    target_dir: unit_tests/product_truth/
+    description: "Running the record's checker against the freshly deployed record terminates with a stated verdict and raises no unhandled exception."
+    type: integration
+    angle: deployed
+    framework: unittest
+  - name: test_every_startup_input_the_checker_reads_is_present_after_install
+    target_dir: unit_tests/product_truth/
+    description: "Each input the checker opens before checking begins resolves in the deployed record."
+    type: integration
+    angle: seam
+    framework: unittest
+  - name: test_fresh_install_record_carries_a_written_introduction
+    target_dir: unit_tests/product_truth/
+    description: "The deployed record contains an introduction naming each artifact type, its location, and the first artifact to author."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+notes: |
+  EVIDENCE (supplied verified, 2026-09-07). The build phase that deploys the product-truth
+  store (build_product_truth(), scripts/build_phases.py:3548) deploys only scripts/*.py and
+  schemas/*.json. No README, no index.json and no directory scaffold reach a consumer, so a
+  freshly installed project has scripts but nothing for them to operate on. That build phase
+  currently has no AC referencing it at all - this AC is the first.
+
+  The concrete start-up input observed missing is docs/product-truth/classifier/eval.jsonl;
+  the crash it caused is recorded as UXP-700a-1-i. Implementation paths are deliberately kept
+  out of criteria and named here and in test_spec instead.
+
+  BOUNDARY WITH UXP-700b. This AC owns "the empty record exists and runs". It says nothing
+  about what verdict the checker should reach on an empty record - that is UXP-700b-1. The
+  last clause of UXP-700a-1-i ("not the clean-pass verdict") is the single deliberate seam
+  between the two and is stated there as a constraint, not as this AC's own subject.
