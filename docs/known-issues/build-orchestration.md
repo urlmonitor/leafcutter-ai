@@ -2869,6 +2869,72 @@ and is believed).
 
 ---
 
+### KI-BO-20260907-resume-replays-cached-resolver — `resumeFromRunId` replays the resolve step's cached `agent()` result instead of re-running it, and the fresh-run alternative is itself blocked by the failed run's leftover worktree
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** this is a runtime/harness-behaviour defect (the Workflow tool's
+  `resumeFromRunId` semantics), not a repo-file defect — evidenced by run ids
+  (`wf_65c0de2c-f42`) rather than file:line, the way the register's existing fast-lane
+  run-behaviour entries above do. The repo artifact it is structured against is
+  `templates/workflows-js/fast-lane-ship.js`: its resolve step is an `agent()` call
+  (`resolverResult = await agent(...)` at `:656-671`, `agentType: "status-checker"`,
+  `label: "resolve-connected"` at `:666-668`) — which is why its result is cached across a
+  resume. This is a defect in how the workflow is *structured* against resume semantics (an
+  agent-call step is memoized), not a bug in the harness being wrong to cache agent results.
+
+**Symptom.** After fixing `KI-BP-20260907-bootstrap-swallows-build-failure`'s deploy gap by
+hand (running `build.py` manually so `.leafcutter/scripts/build_orchestration/` was fully
+populated), resuming the halted run via
+`Workflow({scriptPath: 'templates/workflows-js/fast-lane-ship.js', resumeFromRunId:
+'wf_65c0de2c-f42', args: {ac: 'GE-127b-1'}})` returned the identical error in 79ms with 0
+`tool_uses` and 0 `subagent_tokens` — it replayed the stored failure from the resolve step
+and never re-ran the resolver against the now-correctly-deployed tree. A fresh run (no
+`resumeFromRunId`) was required instead.
+
+That fresh run then itself failed at the worktree-creation phase, because the *previous*
+(failed) run's worktree and branch still existed on disk and in git — full recovery required
+`git worktree remove --force` plus `git branch -D` on the leftovers before the fresh run
+could proceed.
+
+**Why this is two defects, not one.** Fixing only the replay half still leaves an operator
+stuck on the leftover-state half, and vice versa:
+
+1. **The documented recovery path (resume) is a no-op for an environmental failure.** The
+   resolve step is an `agent()` call, and its result is cached/memoized by run id. When the
+   underlying failure was environmental (an incomplete deploy, now fixed) rather than a bad
+   AC id or a genuinely-empty build set, resuming cannot help — it does not re-run resolution,
+   it replays the resolution that failed before the fix was applied.
+2. **The real recovery (a fresh run) collides with the failed run's own leftovers.** A fresh
+   run does not detect or clean up the previous run's worktree/branch; it errors on the
+   collision instead, so the operator must manually locate and remove the stale worktree and
+   branch before a fresh run can even start.
+
+**Distinct from KI-BO-20260831-1331.** That entry is about a worktree that never registered
+with `git worktree list` at all — invisible, uncleanable via any documented git command. This
+entry's worktree and branch *did* register normally (the prior run had completed enough of
+worktree creation to produce a real, listed worktree) — the problem here is that the leftover
+artifacts from that failed run collide with the fresh run that recovery requires. The two
+share a family (worktree-lifecycle state surviving a failed fast-lane run in a form later
+tooling cannot handle) but are separate failure points: one is "not visible to the cleanup
+tool," the other is "visible, but blocks the retry path instead of being reused or cleared."
+
+**Fix direction.** Either (a) restructure the resolve step so it is not a cached `agent()`
+call on resume — re-run resolution unconditionally on resume, or invalidate the cached result
+when the underlying environment/deploy state has changed since the original run — and/or (b)
+have a fresh run detect and clean up a previous failed run's worktree/branch automatically
+(mirroring the atomic/self-cleaning suggestion in KI-BO-20260831-1331's fix direction) rather
+than erroring on collision. Both are needed: (a) alone still leaves a fresh run blocked by
+leftovers; (b) alone still leaves resume silently useless for any environmental failure.
+
+**Pattern:** a documented recovery path (resume) that is structurally incapable of re-running
+the step whose result changed, paired with a fallback recovery path (fresh run) that a
+different piece of leftover state blocks — so neither path recovers alone.
+
+---
+
 ### KI-BO-20260831-1332 — The fast lane's roster is python-coder + test-writer, so it refuses a third of the ready queue with no upstream signal
 
 - **Severity:** medium
@@ -3341,6 +3407,194 @@ than against an observable side effect — the same substitution of a proxy for 
 
 ---
 
+### KI-BO-20260907-0850 — `build-ticket.js` is the declared twin of the driver just fixed: one defect is unfixed there and the other handler is a generation behind, so `/build-ticket` still loses the ticket in ways `/build-feature` no longer does
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 0 observed on this path; the twin defect was observed 3× on `build-feature.js`
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/workflows-js/build-ticket.js` — the per-ticket phase loop at `:1258`
+  (`for (const currentPhase of neededPhases)`) and the handoff branch · twin of
+  `templates/workflows-js/build-feature.js`
+  <br>The handoff branch is deliberately cited without a line number: it moves whenever either
+  half is edited, so a number there rots. The loop line is stable and is the one to grep.
+
+**Symptom.** PR #687 fixed two dispatch defects in `build-feature.js`: the frozen phase list
+(`BO-3700`) and the handoff contract (`BO-3000a`). `build-ticket.js` received neither.
+
+**Corrected 2026-09-07, same day as filing.** The first version of this entry said the twin
+"carries **both** defects unchanged". That overstates one half and the precision matters,
+because the two halves need different remedies:
+
+- **Frozen phase list — genuinely unfixed.** `build-ticket.js:1258` is still
+  `for (const currentPhase of neededPhases)` over a list computed once before any phase runs.
+  No AC covers it: `BO-3700`'s criteria name `build-feature.js` explicitly.
+- **Handoff routing — present, but a generation behind.** The twin DOES have a handoff branch
+  and DOES read `handoff_target`; that arrived with `BO-3000`, whose test file already drives
+  this driver. What it lacks is everything `BO-3000a` added: `handoff_target` declared in
+  `PHASE_RESULT_SCHEMA`, the conditional `if`/`then` requirement, and the two-case diagnosable
+  refusal. So this half is a divergence between twins rather than an absent guard.
+
+That second half is already covered by an acceptance criterion, and the criterion is now
+false. `BO-3000` requires:
+
+> Then build-ticket.js MUST apply the same handoff routing behaviour as build-feature.js, so
+> the two drivers cannot diverge
+
+The drivers diverged the moment `BO-3000a` landed on one of them. `BO-3000` still reads
+`work_status: todo`, so nothing has to be authored to justify fixing this half — the
+requirement exists and is violated.
+
+Its handoff refusal still reads, verbatim, the pre-fix wording:
+
+```text
+named no recognizable handoff_target ('undefined')
+```
+
+Its `PHASE_RESULT_SCHEMA` has no `handoff_target` property and no conditional requirement, and
+its phase loop is still `for (const currentPhase of neededPhases)` over a list computed once
+before any phase runs.
+
+**Why this is a register entry rather than a TODO.** The two files declare themselves twins.
+`build-feature.js`'s own header says so:
+
+> TWIN: The phaseOrder array and per-ticket phase loop below are the canonical twin of
+> build-ticket.js Phase 1–3. Keep them in sync manually — any change to build-ticket.js
+> phaseOrder or the retry/adjudication logic must be mirrored here.
+
+"Keep them in sync manually" is the whole mechanism. There is no test asserting the twins agree,
+so divergence is invisible until someone runs the neglected one. PR #687 widened the gap
+deliberately and said so in both AC records — the reason given (no red baseline for
+build-ticket.js in that pass, and widening a fix to a second driver without one turns a fix into
+a rewrite) is sound, but it is a reason to file this, not a reason to forget it.
+
+**Who is exposed — and the two halves differ, which changes the triage order.** The first
+version of this entry said "anyone running `/build-ticket`". That is true of the HANDOFF half
+and over-general for the other:
+
+- **Handoff divergence — reachable on every drive.** Any coder that hands off to test-writer
+  hits it, and that is a routine, template-mandated path. This is the half an operator meets
+  first.
+- **Frozen phase list — reachable only when the drive contains a promoting phase.** The
+  promotion comes from `architect-review`, so a standalone ticket that never schedules
+  `architect-review` cannot hit it at all.
+
+Severity is unchanged — `BO-3700`'s field evidence was 2 of 4 tickets in a single batch — but
+the handoff half is the more reachable one and should be fixed first. The original wording
+would have led a triager to the opposite order.
+
+The "0 occurrences" figure is therefore partly sampling and partly a real difference in reach:
+the incidents that motivated #687 all came from an epic drive, which uses `build-feature.js`.
+
+**The templates already assume the fix is universal.** `python-coder.md` and `test-writer.md`
+now instruct agents to return `handoff_target` unconditionally, without reference to which
+driver dispatched them. Checked: `build-ticket.js`'s schema sets no `additionalProperties:
+false`, so the extra field is ignored rather than rejected — harmless, but it means an agent
+correctly emitting the field under this driver still gets refused, which is the worst
+combination for diagnosis. The operator sees a conformant agent rejected for non-conformance.
+
+This paragraph belongs entirely to the HANDOFF half, i.e. to `BO-3000`. Nothing in `BO-3701`
+covers it. A reader who lands `BO-3701` and closes this entry on that basis will leave the
+more reachable of the two defects in place.
+
+**Countermeasure — now two independently schedulable pieces, not one pass.** The first version
+of this entry said "mirror both changes in the same pass". That framing is stale, and it is
+worth correcting precisely because it is the framing that produced the divergence in reverse:
+
+- **Handoff half** — covered by `BO-3000`'s existing twin criterion, still `work_status: todo`.
+  Nothing to author.
+- **Frozen-list half** — covered by `BO-3701` (authored 2026-09-07), a top-level L2 rather than
+  a child of `BO-3700`, because `BO-3700` is now `done` and hanging a `todo` child under it
+  would recreate the done-parent-with-unfinished-children drift this repo swept for.
+
+Either can land alone without leaving the other unrecorded. Doing both in one branch is an
+efficiency, not a constraint.
+
+A NAIVE MIRROR WOULD INTRODUCE A BUG. `build-ticket.js` is not a copy of its twin, and two of
+`BO-3701`'s criteria exist because of that:
+
+- Its `canonicalPriority` (`:251-264`) deliberately does NOT throw on a name outside
+  `phaseOrder` — it returns `phaseOrder.length` and warns. So an unknown promoted name fed into
+  a re-derived pending set does not get ignored; it sorts LAST and runs *after commit and
+  pull-request*. `BO-3700`'s wording ("ignored rather than dispatched") is adequate for
+  `build-feature.js` and under-specified here.
+- The driver sets `lastRecord = null` on an unreadable read-back (`:1358-1363`). Once the
+  pending set is derived FROM that reply, "unreadable" silently becomes "nothing left to run"
+  unless the criterion forbids it — a failure mode the fix itself creates.
+
+**What would have caught the divergence.** A test asserting the two drivers agree. `BO-3701`
+takes the cheap half: its promotion cases must be asserted over every entry in
+`H.TWIN_DRIVERS`, which the harness already exposes and which at least seven existing test
+files already loop over. The general parity gate — asserting the two `phaseOrder` arrays and
+handoff branches agree — is deliberately NOT in `BO-3701`: it also serves `BO-3000`'s half, so
+parking it there would make one record's `done` depend on work two records need, and it carries
+a real design question (assert the arrays literally equal, or the observable orderings equal?).
+It wants its own id.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a duplicated implementation kept
+consistent by a comment. The comment is not a mechanism.
+
+**Related.** `KI-BO-20260901-1000` and `KI-BO-20260901-1052` (the two defects, as observed and
+fixed on the other twin). `KI-BO-20260901-0920` (a third control ADR-006's flattening dropped —
+the same refactor is upstream of all of these).
+
+---
+
+### KI-BO-20260907-0851 — Two agent templates use `(status: handoff)` to mean "stop, I need human authorization", so a deliberate halt is reported to the operator as a malformed result
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 2 sites, found by 3 independent agents in one session
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/agents/python-coder.md` §Contract-Shrinkage Guard step 2 ·
+  `templates/agents/test-writer.md` Rule 2
+
+**Symptom.** Both sites instruct the agent to emit `(status: handoff)` and stop, meaning
+"blocked, do not proceed without explicit user authorization". Neither names a receiving agent,
+because neither wants one:
+
+```text
+if any consumer reads a field the proposed change would remove, the change is blocked.
+Emit `(status: handoff)` and stop. Do not proceed without explicit user authorization
+(`allow_contract_shrinkage: true` in the ticket body).
+```
+
+`signoff` SKILL.md's own definition of `handoff` is "another agent must act before I can
+proceed", and requires the recipient to be named. A halt pending *human* authorization is what
+`blocker` and `question` exist for.
+
+**The consequence is a misdiagnosis, not a malfunction.** Under `BO-3000a` the driver refuses a
+targetless handoff and stops the ticket — which is the correct outcome for these two sites, by
+luck rather than design. But the message the operator gets says the agent's result *named no
+handoff target*, i.e. it reports a conformance defect. The agent did exactly what its template
+told it to. So the operator is pointed at the emitter when the actual next step is to grant
+authorization, and the two situations — "an agent forgot the field" and "an agent is asking you
+for permission" — are indistinguishable in the run output.
+
+**Why it was not fixed alongside the handoff contract.** Reclassifying which status value a
+site emits is a behavioural change to the adjudication path: `question` is
+terminal-until-user-reply and `blocker` enters the retry ladder, so the choice changes what the
+driver does next, not merely what it prints. That belongs in its own change with its own tests,
+not folded into a field-naming fix. Recorded here so the decision is visible rather than
+implicit.
+
+**Countermeasure.** Decide which status each site should emit — `question` fits "waiting for a
+human decision" and `blocker` fits "cannot proceed, escalate" — then update the two templates
+and confirm the driver's routing for that status produces a sensible operator message. Note
+`building-epics` §5.0's warning while doing so: a `question` from a phase agent mid-drive
+deadlocks, because no reply channel exists during a supervisor run. That constraint is probably
+why `handoff` was reached for in the first place, and it means the honest fix may require
+giving the drive a way to surface an authorization request, not just relabelling the status.
+
+**Pattern:** an enum value borrowed for a meaning it does not carry, because the value that
+does carry it has an unrelated cost.
+
+**Related.** `KI-BO-20260901-1052` (the handoff contract these sites sit inside).
+`KI-BO-20260907-0850` (the twin driver, where the same two sites produce the OLD undiagnosable
+message rather than the new one).
+
+---
+
 ### KI-BO-20260901-1450 — UNDER INVESTIGATION: the fast lane isolates its worktree but not the process-level state around it, and three shared surfaces already misfired with only ONE lane running
 
 - **Severity:** unknown — under investigation, see "What we are asking for" below
@@ -3511,3 +3765,69 @@ is the mechanism that entry's parallel-safety question depends on).
 **Pattern:** a permission field with a documented tri-state, no enforcement, and two of ~40
 records populated — so the first person to consult it reasoned from the populated cases and got
 the default backwards, in a comment that now teaches the error.
+
+---
+
+### KI-BO-20260907-0955 — The fast lane cannot complete any AC whose tests build a real clone, because its green gate runs before its commit phase
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/workflows-js/fast-lane-ship.js` phase order (green gate before commit)
+  vs. `unit_tests/portability/_bp900h4_layout_helpers.py` (`git clone --local`,
+  `git worktree add --detach <dest> HEAD`)
+
+**Not a flaky run and not a code defect — a structural impossibility.** The fast lane runs
+`verify_green_and_coverage` before its commit phase. `BP-900h-4-i`'s fixtures build their four
+adopter layouts with a real `git clone --local` and a real `git worktree add --detach <dest>
+HEAD`, because the AC explicitly requires a real worktree rather than a copy (a copy
+reproduces neither the trigger nor the defect it exists to catch). **Both git operations see
+only COMMITTED state.**
+
+So a change to `scripts/build_phases.py` is invisible inside every cloned layout until it is
+committed, the layouts are built from the pre-change tree, and the green gate fails. Red then
+green inside one working tree is impossible for such an AC. Retrying the gate cannot help,
+because nothing about the retry changes what `HEAD` contains.
+
+**Observed.** Driving `BP-900h-4` on 2026-09-07, the lane halted at `python-coder` with
+`green:false` and released both ACs back to `todo`, having reproduced the same result across
+three gate runs. The diagnosis was confirmed by reading the fixture and then causally: the
+implementation was committed by hand and the identical test command returned **9/9 green**.
+Nothing else changed.
+
+**Why this is not "just commit first".** Committing before green means committing unverified
+work, which is the order the lane exists to prevent. It was acceptable in that instance only
+because the sibling `BP-900h-4` had five tests already green against the live worktree, so the
+uncommitted change was not unverified — merely unverifiable *by the child AC*. That reasoning
+does not generalise; an AC with only clone-based tests has no such fallback.
+
+**It will recur.** Nothing marks an AC as clone-based, so the next one lands the same way:
+the lane halts with `green:false`, the payload blames the coder phase, and the real cause is
+one phase boundary away. The failure names the wrong culprit, which is what makes it worth an
+entry rather than a comment.
+
+**Fix direction, in preference order.**
+
+1. Let the lane detect this rather than the human. A test that shells out to `git clone` or
+   `git worktree add` against the repo under test is statically recognisable; when the build
+   set contains one, the lane should say so and route it rather than reporting a coder
+   blocker.
+2. Give clone-based fixtures a committed-state source that is not `HEAD` — e.g. build the
+   layouts from a temporary commit or a stash-free `git stash create` tree object, so the
+   working tree's changes are visible without altering branch history.
+3. Failing both, permit an explicitly-marked AC to run its green gate after a provisional
+   commit on the lane's own branch, which is reversible and never reaches `main`.
+
+**Do NOT "fix" this by relaxing the AC to use a copied tree.** `BP-900h-4-i` requires a real
+worktree precisely because the KI-BP-003 trigger — a submodule directory unpopulated in a
+worktree — cannot be reproduced by copying. Weakening the fixture would make the lane green
+and the coverage worthless.
+
+**Related.** `KI-BO-20260901-1450` (the fast lane's isolation stops at the worktree boundary)
+is the same seam from the other side. `KI-TQ-20260901-1310` is the sibling case of a lane gate
+shaping the work rather than judging it.
+
+**Pattern:** a pipeline whose verification step reads committed state while its commit step
+runs later — so any test that consults git history can never be satisfied by the pipeline that
+is supposed to satisfy it, and the resulting failure is attributed to the last agent that ran.

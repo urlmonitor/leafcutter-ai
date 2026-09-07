@@ -1,6 +1,7 @@
 id: INF-400c-4-iii
 components:
   - infrastructure
+  - knowledge_system
 title: "Phase telemetry and knowledge emissions are separate streams, and the harvester drains only its own"
 component: infrastructure
 level: L3
@@ -8,30 +9,53 @@ status: active
 req_status: active
 work_status: todo
 priority: high
-readiness: draft
+readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
 criteria: |
-  Given two record shapes exist in this system: a phase-telemetry record
-    carrying event_type, timestamp, ticket_path, agent_name and payload
-    (the shape INF-400g-2 pins for the drive-telemetry emitter), and a
-    knowledge-capture record carrying event, timestamp, agent, component,
-    destination and entry_kind,
-  And they have different lifecycles — telemetry is appended and aggregated
-    for trend analysis and is never consumed, while a knowledge emission is
-    drained exactly once and then watermarked,
-  When a drive writes both kinds of record,
-  Then the phase-telemetry records are written to the telemetry sink and the
-    knowledge-capture records are written to the knowledge-emission sink, and
-    neither file receives the other kind,
-  And the harvester reads only the knowledge-emission sink, so a run over a
-    corpus containing no knowledge records drains nothing and reports zero
-    records read rather than zero records recognised,
-  And the aggregation surface that reads the telemetry sink returns the same
-    results before and after the split, because no telemetry record moved,
-  And the split is recorded in the architecture documentation as the reason a
-    single sink with a type discriminator was not chosen: one file drained by
-    a watermark and simultaneously appended for aggregation makes an unrouted
-    record and an unaggregatable record indistinguishable.
+  Given the operational stream at debugging/logs/agent_telemetry.jsonl is
+    shared and is not a knowledge file: at 2026-09-07 its 33 lines are 28
+    knowledge-capture records, 4 pre-drive writability probes carrying no
+    `event` key, and 1 line that is not JSON, and further shapes are expected
+    from the drive-telemetry emitter and from the capture-attempt ledger,
+  And a knowledge record and an operational record have different lifecycles —
+    an operational record is appended and aggregated indefinitely and is never
+    consumed, while a knowledge record is drained exactly once and then
+    watermarked,
+  When an agent emits a knowledge record and a drive emits an operational
+    record in the same run,
+  Then the knowledge record is appended to the declared knowledge-emission
+    sink and the operational record to the operational stream, and neither
+    file receives the other kind,
+  And both streams are declared the same way INF-400c-4 requires — an absolute
+    path fixed when the package was built into the project, not a name each
+    process finishes resolving — so an install holds ONE of each rather than
+    one pair per working directory: an operational record emitted from inside
+    an isolated working directory is written to the same file as one emitted
+    from the project root, and that file still holds it after that working
+    directory has been removed. Two streams is the outcome here, not two
+    streams in every place work happened. A stream that fragments per working
+    directory satisfies the neither-receives-the-other clause above while
+    making the operational stream unaggregatable for the three consumers that
+    read it, which is the argument the whole separation rests on,
+  And the reader of knowledge records opens only the declared
+    knowledge-emission sink: pointed at a sink holding no knowledge records it
+    reports zero records read, and it does not fall back to, widen into, or
+    otherwise open the operational stream when its own sink is absent or
+    empty,
+  And the operational stream is byte-identical before and after a run of the
+    reader of knowledge records — the reader never opens it, so no run of it
+    may leave a mark on it, and in particular no drain, no watermark and no
+    rewrite reaches it,
+  And no step of the work that separates the two streams moves records out of
+    it, filters it, rotates it, archives it or rewrites it: the separation is
+    achieved entirely on the producing side, and the operational stream is not
+    touched at all,
+  And every existing reader of the operational stream returns identical
+    results over it before and after that change,
+  And the separation is recorded in the architecture documentation as the
+    reason one sink with a type discriminator was not chosen: a single file
+    drained by a watermark and simultaneously appended for aggregation makes
+    an unrouted record and an unaggregatable record indistinguishable.
 depends_on: [INF-400c-4]
 doc_links:
   - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
@@ -48,7 +72,14 @@ estimated_complexity: M
 declares_side_effect: true
 it_requirements:
   - "The drive-telemetry emitter's existing record shape is pinned by INF-400g-2 and must not change to accommodate the split"
-  - "The harvester must not be given a fallback that reads the telemetry sink when its own sink is absent — an absent sink reports zero records, it does not widen the search"
+  - "The harvester must not be given a fallback that reads the telemetry sink when its own sink is absent — an absent sink reports zero records, it does not widen the search. The no-work outcome that fallback would otherwise be papering over is specified by INF-400c-4-iv."
+  - "DO NOT LOOK FOR TELEMETRY RECORDS TO LEAVE BEHIND — THERE ARE NONE YET. INF-400g-2 (emit_event.py) is work_status todo and no record of the event_type/ticket_path/agent_name/payload shape has ever been written to debugging/logs/agent_telemetry.jsonl. A builder who reads the separation as 'move the knowledge records out of a mixed file' will find nothing to separate and may conclude the AC is vacuous. It is not: the separation is achieved on the PRODUCER side by INF-400c-4-i repointing the four emit surfaces, and this AC's job is that the reader never reaches across afterwards. The operational stream is not touched at all."
+  - "'EVERY EXISTING READER RETURNS IDENTICAL RESULTS' IS NOT VACUOUS, but it is not about the drive-telemetry aggregator either. The readers that exist are ADR-011's named consumers (retrospective-agent, feedback-analyst) and, once built, INF-700b-3's capture-health report — which explicitly reads the mixed stream and is required to skip lines it does not recognise. That report is where filtering the shared file lives; it does not live here, because the knowledge reader never opens the shared file."
+  - "DO NOT BUILD IT_REQUIREMENTS ON A MIXING THAT HAS NOT HAPPENED. INF-400g-2's telemetry emitter has never run, so debugging/logs/agent_telemetry.jsonl is today a knowledge-only file with debris in it, not a mixed stream. The load-bearing arguments for two streams are the TWO LIFECYCLES (drain-once-and-watermark versus append-and-aggregate-forever) and the THREE NAMED CONSUMERS (ADR-011's retrospective-agent and feedback-analyst, plus INF-700b-3's capture-health report). Anyone who argues the separation from present-day mixing will find the argument collapses on inspection and may reopen the settlement on a false premise."
+  - "THE NO-OTHER-FILE CLAUSE NEEDS A TEST THAT CANNOT PASS ON A FALLBACK THAT IS NEVER TAKEN. Assert it by making the operational stream UNOPENABLE (mode 000, or a directory in its place) while the declared sink is present and populated, and requiring the run to succeed unchanged. A reader that reaches across fails; a reader that does not, passes. An assertion over log lines or over source text proves nothing about which file was opened."
+  - "THE ONE-ANCHOR CLAUSE ADDS A SECOND CALL SITE, AND IT IS IN A DIFFERENT SCRIPT FROM THE SINK'S. INF-400c-4 fixes the knowledge sink at build time; this AC's added clause extends the same treatment to the operational stream. Both must read the SAME build-generated declaration rather than two independently correct ones, because two declarations drift and the drift is invisible — each stream resolves fine on its own and only the pairing is wrong. The observable this AC's own descriptor asserts is a FILE COUNT, so the constraint is: exactly one of each stream per install, both named by one artefact, and no code path that constructs either name by joining a bare relative name onto a directory it computed itself."
+  - "A THIRD RELATIVE PATH EXISTS AND THIS AC IS THE RECORD THAT NOTICES IT — RAISED, NOT SETTLED HERE. scripts/knowledge/harvest_learnings.py takes --state with a default of debugging/logs/harvest_state.json, a bare relative name, and it sits under the same excluded directory as the two streams this AC separates. It is neither of them, so no clause here or in INF-400c-4 declares it, and it would be left resolving against each process's current directory after both streams stop doing so. That is not a cosmetic asymmetry: the state file is the drain watermark, so one copy per working directory means every fresh working directory re-routes the whole sink and duplicates every learning. Decide its declaration home together with the two streams', not afterwards. Its concurrency behaviour is INF-700a-5-iii's and is not this AC's."
+  - "THE ARCHITECTURE-DOCUMENTATION CLAUSE LANDS ON A FOUR-WAY COLLISION SURFACE. docs/architecture/agent_knowledge_system.md is amended by INF-700b-4, INF-700b-5, INF-700c-3 and INF-700a-4, each owning a different section. The paragraph this AC owes is the two-stream rationale (why one sink with a type discriminator was rejected) and it belongs in the section INF-700c-3 opens, referenced not restated. Agree the section boundaries before writing. The assigned agent is python-coder and cannot dispatch documentation-expert; raise the doc paragraph as a hand-off rather than writing a second version of a section another AC owns."
   - "Must handle errors gracefully per the project error handling policy"
 delivers_to:
   agent: architecture-diagram-author
@@ -58,9 +89,75 @@ expects_from:
   contract: "The declared knowledge-emission sink path, distinct from the telemetry sink path"
 origin_agent: BrainCandy
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - reason: "BA refresh, 2026-09-07. Three stale premises corrected against the live artefact. (1) 'Given two record shapes exist in this system ... when a drive writes both kinds of record' — no record of the INF-400g-2 phase-telemetry shape has ever been written to debugging/logs/agent_telemetry.jsonl; its 33 lines are 28 knowledge records, 4 probes and 1 non-JSON fragment, and INF-400g-2 is still work_status todo. The Given now describes the file as it is. (2) 'the aggregation surface returns the same results before and after the split, because no telemetry record moved' was vacuously true (there is nothing to aggregate) and therefore untestable. Replaced with the stronger and checkable invariant that the operational stream is byte-identical, which also aligns with INF-700c-2's hard constraint that the shared file must not be mutated. (3) Added the explicit no-fallback clause to the criteria; it existed only in it_requirements, where it did not have to be proven."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA correction, 2026-09-07, on an IT PO finding that the byte-identity clause was vacuous as written. It required the operational stream to be byte-identical 'before and after the change that separates the two'. The stream is a runtime file under a version-control-excluded directory, so it is not carried by any commit and a comparison across a CODE change is not a comparison of anything — a gitignored file is trivially unchanged by editing source, and the clause could not fail. The meaningful invariant, and the one this AC's own third test descriptor was already written against, is byte-identity across a RUN OF THE READER: the reader must never open the operational stream, so no drain, watermark or rewrite may reach it, and that is exercisable in a temp tree with the real 33-line artefact. IT PO's reading confirmed and adopted. The change-time obligation is not discarded, only demoted and restated as what it actually is — an obligation on the separation work not to migrate, filter, rotate, archive or rewrite the stream — rather than as a byte comparison across a code edit. Criteria only; the mechanism, the no-fallback rule and the test descriptors are unchanged."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA amendment, 2026-09-07, following INF-400c-4's rewrite around the approved repository-anchored resolution rule. ONE CLAUSE ADDED, nothing removed or reworded. WHY: this AC's separation clauses are about which KIND of record lands in which file and are all satisfied when each stream fragments into one copy per working directory — a tree where the knowledge sink is anchored on the repository and the operational stream is still resolved against each process's own directory passes every clause here while quietly breaking the argument the separation rests on. That argument is the three named consumers (retrospective-agent, feedback-analyst, INF-700b-3's capture-health report), all of which aggregate the operational stream over time; a stream that exists once per isolated working directory and is reclaimed with it cannot be aggregated by any of them. The byte-identity invariant is also weaker under fragmentation, because the file the reader might reach across to is no longer the file the consumers read. The added clause requires both streams to be reached by the one rule, and the added test descriptor asserts the FILE COUNT as well as the contents, because contents alone cannot distinguish two files from four. The two-lifecycles argument, the no-fallback rule, the byte-identity clause and the do-not-touch-the-operational-stream obligation are unchanged."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA revision, 2026-09-07, same day. Wording only, no change of substance: the one-of-each-per-install clause added in the entry above was written against a repository-anchored rule, and the anchor has since been re-settled as a build-time absolute path in the deployed configuration. The clause now says both streams are declared that way, and reads 'install' and 'project root' where it previously read 'repository' and 'main checkout'. The obligation is identical and so is the test descriptor's assertion: exactly two stream files, not two per working directory. The reason the clause exists is also unchanged and is restated in it — the three named consumers aggregate the operational stream over time, and a stream reclaimed with each working directory cannot be aggregated by any of them."
+    by: business-analyst
+    at: 2026-09-07
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_harvester_reports_zero_when_its_own_sink_is_empty_and_the_operational_stream_is_full
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python scripts/knowledge/harvest_learnings.py run through subprocess with no --sink override"
+    description: "In a temp tree where debugging/logs/agent_telemetry.jsonl holds the real 28 knowledge records and the declared sink exists and is empty, run the harvester through its CLI; assert it reports zero records read and writes to no destination."
+  - name: test_harvester_succeeds_while_the_operational_stream_is_unopenable
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The no-widening proof that cannot pass on an untaken fallback. Populate the declared sink with one routable record, make debugging/logs/agent_telemetry.jsonl unopenable (mode 000 or a directory in its place), run the harvester; assert it completes and writes the record. A reader that opens the operational stream at any point fails this test."
+  - name: test_operational_stream_is_byte_identical_before_and_after_a_harvest_run
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Copy the actual on-disk debugging/logs/agent_telemetry.jsonl (33 lines: 28 records, 4 probes with no event key, 1 non-JSON fragment) into a temp tree, hash it, run a full harvest, hash again; assert the digests are equal. Nothing is moved, filtered, rotated, archived or rewritten to achieve the separation."
+  - name: test_a_knowledge_record_and_an_operational_record_land_in_different_files
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Emit one knowledge record through the declared emission path and one operational record through emit_event, in the same run; assert each file contains only its own kind and neither contains the other."
+  - name: test_two_streams_per_repository_not_two_streams_per_working_directory
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "In a temp project with an isolated working directory added, emit one operational record and one knowledge record from a process inside the isolated working directory and one of each from the project root; remove the isolated working directory. Assert exactly two stream files exist in the whole project, that each holds both of its own records, and that neither holds the other kind. A per-working-directory declaration produces four files and passes the neither-receives-the-other assertion, which is why the file count is asserted too."
+test_rationale: |
+  The second test is the one that matters. The AC's central obligation is
+  negative — the reader must never open the operational stream — and a negative
+  cannot be proved by asserting the fallback branch was not logged, because a
+  fallback that exists and is not taken in the fixture looks identical to a
+  fallback that does not exist. Making the operational stream unopenable turns
+  the negative into an observable: a reader that reaches across crashes. The
+  byte-identity test uses the real 33-line artefact rather than a synthetic
+  fixture because the probe lines and the non-JSON fragment are exactly the
+  shapes a hand-typed fixture would omit, and they are the shapes most likely
+  to tempt a filtering rewrite.
+notes: |
+  Boundary against the shared-file filtering question. This AC does NOT give the
+  knowledge reader a filter over debugging/logs/agent_telemetry.jsonl, because
+  after INF-400c-4-i the knowledge reader never opens that file. Filtering the
+  shared file is the obligation of the surfaces that legitimately read it —
+  INF-700b-3's capture-health report most of all, which is already required to
+  skip unrecognised lines and count them separately.
+
+  Boundary against the retained 28. They stay in the operational stream. They
+  are not moved here and are not counted as outstanding anywhere, by INF-700c-2's
+  eligibility rule. The byte-identity clause above is what makes that stick.
 change_target: code
 risk_surface: contract_boundary
