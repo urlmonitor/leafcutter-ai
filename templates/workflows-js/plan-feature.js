@@ -1732,9 +1732,19 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
  *      workspace parent, and the repository lives one level down as one of
  *      its immediate child directories), probe immediate non-dot children
  *      the same way.
- *   3. If neither resolves, print a diagnostic naming what could not be
- *      found to stderr and exit non-zero — NEVER fall back to a cwd-relative
- *      guess that could silently select the wrong physical copy.
+ *   3. Otherwise (cwd is itself a directory with no filesystem relationship
+ *      to the repository at all — ACD-2100a-5: a scratch/notes/unrelated
+ *      directory that merely happens to share the SAME workspace parent as
+ *      the repository, e.g. a sibling of the ADR-001 workspace parent's
+ *      child directories), probe the immediate children of cwd's OWN parent
+ *      directory (i.e. cwd's siblings) the same way. This is the identical
+ *      child-probe mechanism as step 2, anchored one directory higher, so it
+ *      is still a single bounded `ls`-equivalent — never an unbounded
+ *      filesystem search — keeping the startup path inside its 2-second
+ *      budget (ACD-2100a-5 it_requirement).
+ *   4. If none of the above resolves, print a diagnostic naming what could
+ *      not be found to stderr and exit non-zero — NEVER fall back to a
+ *      cwd-relative guess that could silently select the wrong physical copy.
  *
  * Kept to single-line statements (no embedded newlines) so any command built
  * from it survives this file's existing
@@ -1752,6 +1762,12 @@ function _buildRepoRootResolutionSnippet(targetDescription) {
     "if [ -n \"$GC\" ]; then (cd \"$(dirname \"$GC\")\" 2>/dev/null && pwd); fi); " +
     "if [ -z \"$REPO_ROOT\" ]; then " +
     "REPO_ROOT=$(for d in */; do " +
+    "gc=$(git -C \"$d\" rev-parse --git-common-dir 2>/dev/null); " +
+    "if [ -n \"$gc\" ]; then (cd \"$d\" && cd \"$(dirname \"$gc\")\" 2>/dev/null && pwd); fi; " +
+    "done | sort -u | head -n1); " +
+    "fi; " +
+    "if [ -z \"$REPO_ROOT\" ]; then " +
+    "REPO_ROOT=$(for d in ../*/; do " +
     "gc=$(git -C \"$d\" rev-parse --git-common-dir 2>/dev/null); " +
     "if [ -n \"$gc\" ]; then (cd \"$d\" && cd \"$(dirname \"$gc\")\" 2>/dev/null && pwd); fi; " +
     "done | sort -u | head -n1); " +
