@@ -65,12 +65,12 @@ class TestSection7EmissionShapeDeclaresALearningTextField(unittest.TestCase):
         # covers: INF-700b-1
         # angle: criterion
         match = _REQUIRED_OF_PRODUCER_RE.search(self.skill_text)
-        self.assertIsNotNone(
-            match,
-            "could not locate the 'Required of every producer:' declaration in "
-            f"{self.skill_path} — the normative field-requiredness statement "
-            "itself is missing",
-        )
+        if match is None:
+            self.fail(
+                "could not locate the 'Required of every producer:' declaration in "
+                f"{self.skill_path} — the normative field-requiredness statement "
+                "itself is missing",
+            )
         required_line = match.group(1)
         self.assertIn(
             "`text`",
