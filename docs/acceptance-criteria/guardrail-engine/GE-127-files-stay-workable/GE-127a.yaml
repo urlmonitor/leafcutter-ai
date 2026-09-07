@@ -1,0 +1,78 @@
+id: GE-127a
+title: "You find out a file is too big while it is still one change to undo"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Told the moment a file crosses the line, not months later.
+
+  The change that takes a file past a workable size is the change you hear
+  about it on, while the work is still fresh and undoing it is one decision.
+  A file never crosses that line silently and turns up oversized later, when
+  splitting it means unpicking everything that has been layered on since.
+depends_on:
+  - GE-127
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE. "At the moment it happens" presupposes the guard
+      is actually invoked at commit time; it is not today, and registering it is
+      BP-100n-4's day-one triage, not this criterion's work. Take reachability as
+      given and specify the behaviour that runs once it is. Do not restate the
+      census.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-127a-1
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY TIMING IS ITS OWN L1 AND NOT A DETAIL OF THE RATCHET. GE-127b governs a
+  file that is ALREADY over the line. This one governs the single change that
+  takes a file from under to over — the crossing event. They are different
+  populations and different implementations: a ratchet comparing a file to its
+  own previous size says nothing at all about a file that has never been over
+  before, and a threshold check on the crossing says nothing about a file that
+  was over before the check existed. Both are needed and neither implies the
+  other.
+
+  THE VALUE BEING CLAIMED IS ECONOMIC, AND IT IS WHAT THE DECOMPOSITION MUST
+  PRESERVE. The cost of splitting a file rises with everything that accumulates
+  on top of it after it grew too large. Being told at the crossing is worth
+  something specific: at that instant the work to undo is one change by one
+  author with the reasoning still in memory. An implementation that reports the
+  same fact later — in a periodic sweep, a report, a review comment days after
+  the fact — satisfies the words and destroys the value. Bind the acceptance to
+  the moment of the change.
+
+  THE BOUNDARY WITH GE-127d. This L1 is about WHEN you are told, not about
+  whether the number you are told is the right one or reproducible. Do not
+  specify counting rules here; that is GE-127d's subject and specifying it in
+  two places produces two rules.
+
+  AN ARM THAT IS EASY TO OMIT AND SHOULD NOT BE. A file that stays comfortably
+  under the line must produce no interruption at all. Without that arm the
+  criterion is satisfiable by warning on everything, which is the same as warning
+  on nothing.

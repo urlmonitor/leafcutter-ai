@@ -34,17 +34,33 @@ ARCHITECTURE: Pure comparison over two authored declarations only.
         find_unmatched_promises(promises, claims) -> list[dict]
         format_refusal(violations) -> str
 
+    Lifecycle side (BP-1100g-4-ii, no I/O beyond the caller-supplied ticket
+    text):
+        _read_ticket_lifecycle_status(ticket_content) -> str | None
+            Reads a ticket's own ``status:`` frontmatter value. ``main()``
+            uses this to pass over a ticket still declared ``status: todo``
+            (a plan, not yet offered for hand-off) rather than comparing it —
+            it has not yet reached the point at which a claim falls due.
+            Every other declared state, and any state that cannot be
+            established (missing frontmatter, missing ``status:`` key, or
+            unparseable YAML), remains fully subject to the comparison
+            (fail-closed). This decides WHICH tickets are compared; it never
+            changes what counts as a promise or a claim.
+
     CLI entry point (I/O boundary — the only place this module reads files or
     scans a directory tree):
         main(argv) -> int
             ``argv`` is the staged ticket ``.md`` paths (pre-commit's
             "pass_filenames" convention). Reads each ticket, extracts its
-            promised kinds, scans the project's test tree via
-            ``done_proof.collect_test_tag_records`` for the claim side, and
-            prints ``format_refusal()``'s output. A ticket that cannot be read
-            is reported as a distinct read failure — never folded into "a
-            promise had no claim", which would misdirect the fix (BP-1100g-4's
-            fail-closed distinction).
+            promised kinds, exempts any ticket still declared ``status: todo``
+            via the lifecycle side above, scans the project's test tree via
+            ``done_proof.collect_test_tag_records`` for the claim side over
+            the remaining (non-exempt) promises, and prints
+            ``format_refusal()``'s output plus a distinct "PASSED OVER" line
+            per exempted promise. A ticket that cannot be read is reported as
+            a distinct read failure — never folded into "a promise had no
+            claim", which would misdirect the fix (BP-1100g-4's fail-closed
+            distinction).
 
     Import resolution mirrors ``check_done_proof.py``'s existing pattern: the
     sibling ``scripts/ac_store/`` directory (source layout) or
@@ -125,6 +141,17 @@ _TEST_REQUIREMENTS_BLOCK_RE = re.compile(
 # own output must never regress to it (BP-1100g-4's Wording section).
 _PLACEHOLDER_WORDING = "proof requirements not met"
 
+# Locates a leading YAML frontmatter block (the ticket's own ``---``-delimited
+# header) so main() can read its declared ``status:`` without touching the
+# promise/claim parsing paths at all (BP-1100g-4-ii).
+_FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*", re.DOTALL)
+
+# The ONLY lifecycle state exempt from the promise-versus-claim comparison.
+# Every other state — started, offered for hand-off, blocked, deferred, or
+# unrecognised — remains subject to the check exactly as before, and a state
+# that cannot be read is never treated as this one (fail-closed).
+_STILL_PLANNED_STATUS = "todo"
+
 
 # ---------------------------------------------------------------------------
 # Promise side — pure parsing of the caller-supplied ticket text.
@@ -195,6 +222,54 @@ def extract_promised_kinds(ticket_content: str) -> list[dict]:
                 {"ac_id": str(ac_id), "angle": str(angle), "behaviour": behaviour}
             )
     return promises
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle side — pure parsing of the caller-supplied ticket text, mirroring
+# extract_promised_kinds's own posture (BP-1100g-4-ii). Reads only the
+# ticket's OWN declared status; never touches the promise or claim sides.
+# ---------------------------------------------------------------------------
+
+
+def _read_ticket_lifecycle_status(ticket_content: str) -> str | None:
+    """Extract a ticket's declared ``status:`` value from its frontmatter.
+
+    Used solely to decide WHICH staged tickets are subject to the
+    promise-versus-claim comparison (BP-1100g-4-ii) — never to change what
+    counts as a promise or a claim. Only an explicitly readable status is
+    ever returned; every other shape (no frontmatter, no ``status:`` key,
+    or frontmatter that cannot be parsed as YAML) returns ``None`` so the
+    caller fails closed and treats the ticket as subject to the check, per
+    BP-1100g-4-ii's "a state that cannot be read is not evidence of being
+    early" clause.
+
+    Args:
+        ticket_content: Full text of a ticket markdown file.
+
+    Returns:
+        The lower-cased, stripped ``status:`` value when the frontmatter is
+        present and parses as a YAML mapping with a string ``status`` key;
+        ``None`` in every other case.
+    """
+    match = _FRONTMATTER_RE.match(ticket_content)
+    if match is None:
+        return None
+    frontmatter_yaml = match.group(1)
+    try:
+        parsed = yaml.safe_load(frontmatter_yaml)
+    except yaml.YAMLError as exc:
+        print(
+            f"WARNING: check_proof_promise_claim: cannot parse ticket "
+            f"frontmatter status (failing closed, ticket will be examined): {exc}",
+            file=sys.stderr,
+        )
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    status = parsed.get("status")
+    if not isinstance(status, str):
+        return None
+    return status.strip().lower()
 
 
 # ---------------------------------------------------------------------------
@@ -318,19 +393,32 @@ def main(argv: list[str] | None = None) -> int:
     fail-closed on inputs the check cannot account for, without misdirecting
     the fix toward writing a test that was never actually promised.
 
+    A ticket whose own frontmatter declares ``status: todo`` — still only
+    planned, not started, not offered for hand-off — is passed over rather
+    than compared: it has not yet reached the point at which a claim falls
+    due (BP-1100g-4-ii; BP-1100g-4's own criteria already say the refusal
+    belongs "when the work is offered for hand-off"). Every other declared
+    state, and any ticket whose state cannot be established at all (no
+    frontmatter, no ``status:`` key, or unparseable frontmatter), remains
+    fully subject to the comparison — an unreadable state is never evidence
+    of being early. Being passed over is stated explicitly in the output so
+    it is never confused with having been examined and found complete.
+
     Args:
         argv: Staged ticket ``.md`` file paths (the pre-commit
             "pass_filenames" convention). Defaults to ``sys.argv[1:]``.
 
     Returns:
-        0 when every promised kind has a matching claim (or no ticket
-        promises anything); 1 when at least one promise has no matching
-        claim, or at least one ticket could not be read.
+        0 when every non-exempt promised kind has a matching claim (or no
+        ticket promises anything subject to the check); 1 when at least one
+        promise has no matching claim, or at least one ticket could not be
+        read.
     """
     if argv is None:
         argv = sys.argv[1:]
 
     all_promises: list[dict] = []
+    passed_over: list[dict] = []
     unreadable: list[tuple[str, str]] = []
     for ticket_path_str in argv:
         ticket_path = Path(ticket_path_str)
@@ -339,12 +427,28 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as exc:
             unreadable.append((str(ticket_path), str(exc)))
             continue
-        all_promises.extend(extract_promised_kinds(content))
+        promises = extract_promised_kinds(content)
+        status = _read_ticket_lifecycle_status(content)
+        if status == _STILL_PLANNED_STATUS:
+            for promise in promises:
+                passed_over.append({**promise, "ticket_path": str(ticket_path)})
+            continue
+        all_promises.extend(promises)
 
     for path_str, err in unreadable:
         print(
             f"[check-proof-promise-claim] COULD NOT READ the promise in "
             f"{path_str}: {err} (a read failure, not a missing claim)",
+            file=sys.stderr,
+        )
+
+    for item in passed_over:
+        print(
+            f"[check-proof-promise-claim] PASSED OVER {item['ac_id']}: "
+            f"promised '{item['angle']}' proof for \"{item['behaviour']}\" in "
+            f"{item['ticket_path']} — still declared status: "
+            f"{_STILL_PLANNED_STATUS} (a plan, not yet offered for "
+            f"hand-off), so no claim is due yet",
             file=sys.stderr,
         )
 
@@ -384,3 +488,19 @@ if __name__ == "__main__":
 #   by BP-1100g-3, so this module's import chain already resolves in the
 #   deployed layout — verified by running the deployed hook via run_hook.py
 #   after a fresh build.py pass. (#TICKET-20260826-BP-1100g-4)
+# - 2026-09-07 [python-coder]: Fixed main() refusing every staged ticket
+#   identically regardless of its own declared lifecycle state, which made a
+#   freshly /build-ac-generated ticket (status: todo, no implementation yet)
+#   indistinguishable from one offered for hand-off with a broken promise —
+#   blocking the documented ADR-012 /plan-feature -> /build-ac path outright
+#   (BP-1100g-4-ii). Added _read_ticket_lifecycle_status(), a pure frontmatter
+#   parse mirroring extract_promised_kinds's own posture, and used it in
+#   main() to exempt ONLY status: todo from the comparison — started,
+#   offered-for-hand-off (done), blocked, deferred, and any unrecognised or
+#   unreadable state (missing frontmatter, missing status: key, unparseable
+#   YAML) all remain fully subject to the check, fail-closed. A ticket passed
+#   over this way is reported by name via a distinct "PASSED OVER" line so
+#   the outcome is never confused with "examined and found complete".
+#   extract_promised_kinds, build_claim_index, find_unmatched_promises, and
+#   format_refusal were not touched — only the decision about which staged
+#   tickets are subject to the comparison changed. (#BP-1100g-4-ii)

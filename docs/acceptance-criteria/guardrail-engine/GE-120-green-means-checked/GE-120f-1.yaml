@@ -1,0 +1,188 @@
+id: GE-120f-1
+title: "A check's refusal is established by putting its declared known-bad input through the entry point the protected surface uses, and the record says what was observed rather than what was declared"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given every protective check declares one known-bad input it must reject together
+    with the observable rejection that input must produce, held where the check is
+    registered and read by machine rather than by a person reading prose,
+  And the record of what happened when that input was last put through the check can
+    say that the rejection was observed, that it was not observed, that the attempt
+    could not be run to a verdict, or that the attempt has never been made,
+  When the liveness run examines a check,
+  Then it puts the declared input through the entry point the surface that check
+    protects uses to invoke it, observes what the check then does, and writes that
+    check's record from that observation,
+  And no part of the record is taken from the declaration: a check whose declared input
+    has not been put through it carries the value that the attempt has never been made,
+    however completely and however well-formed its declaration is written,
+  And given a check whose record says the rejection was observed is altered so that the
+    declared input no longer produces the declared rejection, while its declaration is
+    left exactly as written,
+  When the run repeats,
+  Then that check's record says the rejection was not observed,
+  And given the alteration is reverted and nothing else in the repository changes,
+  When the run repeats again,
+  Then that check's record says the rejection was observed.
+depends_on:
+  - GE-120f
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml"
+    relationship: parent
+    status: exists
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE VOCABULARY TO REUSE, NEVER TO DUPLICATE. It already models the declared known-bad
+      input as a negative control with an input and an expected result, already states the
+      rule this record enforces — "The known-bad input that MUST be rejected. A check without
+      one can pass on dead code" — already requires the control to carry its own observed
+      state, and already names the four values in its state enum, including the honest
+      unverified placeholder for an attempt never made. It has no code reader, which is why
+      this regime exists. Build the reader against these names.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING AND UPSTREAM, NOT A DUPLICATE. GE-126b-5 supplies the per-check datum
+      and the four-value vocabulary, and requires a check to CARRY and REPORT that record on
+      the interrogation surface. It does not say where the value comes from. This record says
+      the value is produced by execution and may come from nowhere else. Do not restate its
+      clauses here and do not fold this one into it.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126c-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ADJACENT AXIS, AND THE BOUNDARY. GE-126c-5 owns WHICH COPY of a guard a verifying
+      process loaded, and refuses an alteration the loaded copy never saw. This record owns
+      WHICH ENTRY POINT the input travelled through. Both are needed and neither implies the
+      other: an alteration can land in the loaded copy and still be exercised through a way in
+      that the protected surface never uses. The alter-and-revert clause here is the point at
+      which the two meet — apply it to the copy the run loads, which is GE-126c-5's subject.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The existing harness that executes deployed checks out of process from a real separate
+      working copy. Putting a known-bad input through a real entry point needs exactly that
+      machinery; extend it rather than growing a second one.
+  - path: templates/hooks/readme_read_guard.py
+    relationship: related
+    status: exists
+    relevance: >-
+      The worked example. Registered, invoked on every edit, reachable, and unable to refuse:
+      its gated prefixes resolve out from under themselves through links, and the one that
+      does not names a directory this repository has never had. Under this record it carries
+      the value that the attempt has never been made until something is put through it, and
+      then the value that the rejection was not observed. Nothing in the system today can
+      tell it apart from a check that refuses correctly.
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING, THE DECLARATION-VERSUS-REALITY HALF. BP-100n-5 owns a declaration
+      that contradicts the file it describes. This record owns a declaration that is never
+      put to the test at all. Same family, different failure: theirs is a statement checked
+      against a document, this is a statement checked against behaviour.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-120f-2
+    contract: >-
+      The per-check record written from observation — which of the four values, the entry
+      point used, the declared input, and the declared rejection — from which GE-120f-2
+      builds the named failing classes and the run's outcome.
+expects_from:
+  - ac_id: GE-126b-5
+    contract: >-
+      The per-check declaration of one known-bad input and its observable rejection, held
+      where the check is registered, and the four-value vocabulary the record is written in.
+      This record produces the value; GE-126b-5 defines what the values are and requires
+      them to be carried and distinguishable.
+  - ac_id: GE-126c-5
+    contract: >-
+      The statement of which copy the running process actually loaded. The alter-and-revert
+      clause here is only evidence if the alteration reached the copy the run loads.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120f-1-i
+  - GE-120f-1-ii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHAT THIS RECORD OWNS THAT ITS SIBLINGS DO NOT. GE-126b-5 requires the datum to exist,
+  to be carried, and to be reported with four distinguishable values. It is silent on
+  where the value comes from, and a well-formed declaration read back as its own answer
+  satisfies every clause it states. This record closes that: the value is produced by
+  putting the declared input through the check and watching, and a declaration standing
+  alone yields the never-attempted value and nothing better.
+
+  ANTI-GREP IS THE WHOLE SUBJECT, AND HERE IS THE PRECISE TRAP. A criterion satisfied by
+  asserting that a declaration is present, that it parses, or that a field is populated
+  reproduces this defect one level up — the declaration becomes the new thing nobody
+  checks. The discriminator is the alter-and-revert pair: the declaration is held constant
+  and the check's behaviour is changed, so the recorded value must MOVE. No implementation
+  that reads the declaration can pass it, because the declaration never changes.
+
+  ALSO NOTE, BEFORE THE ALTERATION IS PERFORMED: the canonical guard sources and the copies
+  a run loads are not the same files here, and one is reached through a link. An alteration
+  applied to a copy the run does not load fails GREEN, which is instance one of this same
+  family — that is GE-126c-5's subject and it is a precondition of this clause being
+  evidence rather than theatre.
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "No part of the record is taken from the
+  declaration; a check whose declared input has not been put through it carries the value
+  that the attempt has never been made." ARRIVAL COLOUR: GREEN, vacuously — today no record
+  is written for any check, so no check is wrongly recorded as demonstrated. INJECTION:
+  write the record from the declaration — treat a well-formed declaration naming an input
+  and a rejection as the rejection having been observed. This is the efficiency a hasty
+  implementation reaches for precisely because it makes the first run quiet. Under that
+  injection every check carrying a declaration reads as demonstrated, the never-attempted
+  class empties, and this clause must go RED naming at least one check that was never fed
+  anything; revert must restore it.
+
+  ARRIVAL COLOURS FOR THE REMAINING CLAUSES, stated so a green is not mistaken for progress.
+  The Then that requires the input to be put through the entry point is RED on arrival —
+  nothing puts anything through anything today. The alter-and-revert pair is RED on arrival
+  for the same reason. Only the absence-asserting clause above starts green, and only
+  because nothing is reported at all.
+
+  DAY-ONE BLAST RADIUS IS THE CORRECT OUTCOME. On the commit that lands this, most checks
+  will carry the value that the attempt has never been made, because it has not been made.
+  That is the true state of the repository and must not be pre-suppressed by seeding
+  records or by writing exemptions ahead of the first run. The natural remedy for the
+  resulting noise — weakening the rule until it goes quiet — is the failure mode to design
+  against.
+
+  NO COUNT OF INSTANCES IS STATED OR IMPLIED IN THIS RECORD, DELIBERATELY. Records authored
+  the same day disagree about how many instances of this shape exist, and the parent records
+  the figure as disputed and forbids one below it. The population is what a census measures,
+  not what a criterion asserts.
+
+  BOUNDARIES — four adjacent owners, none of them sufficient. Enumeration (which guards are
+  in the set at all) is BP-100n-4's. Reachability of a registered gate whose trigger can
+  never match is BP-100k-4's. A deployed guard that nothing invokes is GE-120c-6's.
+  Falsifiability of TESTS is TQ-500's; this tree owns falsifiability of GUARDS. The worked
+  example passes all four and still cannot refuse, which is why none of them may be closed
+  as a duplicate of this tree, nor the reverse.

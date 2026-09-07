@@ -56,8 +56,8 @@
         },
         "type": {
           "type": "string",
-          "enum": ["unit", "integration", "e2e", "behavioral"],
-          "description": "Test level. Guides where the test runs and how heavy its fixtures are. Orthogonal to 'angle' (the kind-of-proof axis) and NOT part of the BO-2900g-3 reconciliation — mirrors config/ac_store_schema.json's test_spec[].type enum, which generate_ticket_from_ac.py copies through verbatim onto this key."
+          "enum": ["unit", "integration", "e2e", "behavioral", "component"],
+          "description": "Test level. Guides where the test runs and how heavy its fixtures are. Orthogonal to 'angle' (the kind-of-proof axis) and NOT part of the BO-2900g-3 reconciliation — mirrors config/ac_store_schema.json's test_spec[].type enum, which generate_ticket_from_ac.py copies through verbatim onto this key. `component` is a rendered-in-isolation UI test, neither unit nor end-to-end."
         },
         "description": {
           "type": "string",
@@ -71,7 +71,8 @@
         },
         "framework": {
           "type": "string",
-          "enum": ["unittest", "pytest"]
+          "enum": ["unittest", "pytest", "vitest", "playwright"],
+          "description": "Test framework, copied through verbatim from config/ac_store_schema.json's test_spec[].framework by generate_ticket_from_ac.py. MUST be kept identical to that enum: a value legal there and not here produces a generated ticket that violates its own schema, and because nothing enforces this schema that failure would be silent rather than loud. unit_tests/ac_store/test_test_spec_framework_vocabulary.py holds the two in step."
         },
         "requires_db": {
           "type": "boolean"

@@ -45,6 +45,7 @@ covered_by:
   - GE-126b-2
   - GE-126b-3
   - GE-126b-4
+  - GE-126b-5
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

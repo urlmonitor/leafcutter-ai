@@ -34,7 +34,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
   sql-coder: not_needed
 ---
 
@@ -69,7 +69,6 @@ And after merge, all 9 files are live on github.com/urlmonitor/leafcutter-ai
 
 - [ ] pr-reviewer
 - [ ] commit
-- [ ] pull-request
 
 ## Comments
 

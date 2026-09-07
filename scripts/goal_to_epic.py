@@ -545,6 +545,15 @@ def _call_generate_ticket_from_ac(
                 str(ac_root),
                 "--tickets-root",
                 str(tickets_root),
+                # TKT-600b-1-i: the generator refuses rather than guess when
+                # the phase-deferral declaration is location-dependent. This
+                # caller builds epic MEMBERS by construction — every ticket it
+                # emits is assembled into an epic folder below — so it declares
+                # that kind rather than passing a path it does not yet know.
+                # --tickets-root is explicitly not accepted as a substitute,
+                # and must not be reached for here.
+                "--location-kind",
+                "epic_member",
             ],
             capture_output=True,
             text=True,

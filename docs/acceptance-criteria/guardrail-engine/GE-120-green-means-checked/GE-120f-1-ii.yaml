@@ -1,0 +1,138 @@
+id: GE-120f-1-ii
+title: "A check that also refuses the work it is meant to accept has demonstrated nothing — refusing everything is as inert as refusing nothing, and is reported under its own wording"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a check declares, beside the known-bad input it must reject, an input of the same
+    kind that it is required to accept,
+  When the liveness run examines that check,
+  Then it puts both declared inputs through the entry point the protected surface invokes,
+  And that check's record says the rejection was observed only when the declared bad input
+    produced the declared rejection and the declared acceptable input did not,
+  And a check that produced the declared rejection for both inputs is named as a check that
+    refuses without discriminating, its record does not say the rejection was observed, and
+    the run fails,
+  And a check whose two declared inputs are the same, or differ in no way the check can act
+    on, is named as a check whose pair cannot discriminate, and the run fails,
+  And a check that produced the declared rejection for neither input is reported as a check
+    whose declared rejection was not observed, under different wording from a check that
+    refused both — the first has a refusal that never fires, the second has one that never
+    stops firing, and they are repaired differently.
+depends_on:
+  - GE-120f-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1.yaml"
+    relationship: parent
+    status: exists
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      READ BEFORE DECIDING WHERE THE ACCEPTABLE INPUT LIVES. The schema already carries both
+      sides: each check has a command and an observable pass criterion for the ordinary case,
+      and a negative control carrying the known-bad input and its expected rejection. The
+      acceptable input this record requires may therefore already be modelled as the check's
+      ordinary case rather than as a new field — that choice belongs to the IT PO, and either
+      way it is one datum in one place, never a second declaration store beside the first.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING AND UPSTREAM. GE-126b-5 establishes the per-check datum as ONE
+      known-bad input and its observable rejection. This record requires the pair to
+      discriminate, which means the acceptable side must be reachable by the run. Extend that
+      datum where it lives; do not create a second record type beside it, or the two will
+      disagree about which checks are enrolled.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5-i.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE BOUNDARY WITH THE EXEMPTION RULE. A check that counts or measures rather than
+      accepts or rejects has no acceptable-versus-unacceptable pair at all, and is handled by
+      that record's grounded exemption. This record is about a check that DOES accept and
+      reject and whose pair fails to tell the two apart; it must not be used to force a pair
+      onto a census-shaped check, and the exemption must not be used to escape a pair that
+      simply does not discriminate.
+  - path: templates/hooks/readme_read_guard.py
+    relationship: related
+    status: exists
+    relevance: >-
+      The mirror image of this record's subject, and the reason both directions need naming.
+      That guard refuses nothing. The cheapest way to make a guard in that state satisfy the
+      parent record is to widen it until it refuses everything, which reports as a
+      demonstrated refusal and protects less than before.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-120f-1
+  contract: >-
+    The observation of what the check did with its declared known-bad input, taken from the
+    protected surface's entry point. This record adds the second observation — the same entry
+    point on work the check is required to accept — and makes the record's observed value
+    conditional on the two differing.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE REGIME'S OWN OFF SWITCH AND IT IS WHY THIS RECORD EXISTS. On the commit that
+  lands the parent, a large part of the family reports that no refusal has ever been
+  observed. There are two ways to make that report quiet. One is to repair the guards. The
+  other is to make each guard refuse something — and the cheapest refusal to arrange is one
+  that fires on everything, because it needs no understanding of what the guard was for. A
+  guard that refuses everything satisfies every clause of the parent, records a demonstrated
+  refusal, and is worse than the guard it replaced: it will be switched off within a day and
+  the family will be back where it started with a demonstration on file.
+
+  WHY IT IS A SEPARATE FILE. The parent is satisfied by one observation. This record requires
+  two and makes the parent's observed value conditional on their difference. An
+  implementation can satisfy the parent completely while never once putting acceptable work
+  through a check, and the resulting regime cannot tell a discriminating guard from an
+  indiscriminate one — the same collapse GE-126b-5 forbids between never-attempted and
+  observed, one axis over.
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "A check that produced the declared
+  rejection for both inputs does not have its record say the rejection was observed."
+  ARRIVAL COLOUR: GREEN, vacuously — no record is written for any check today, so no
+  indiscriminate check is currently certified. INJECTION: record the rejection as observed as
+  soon as the declared bad input produces the declared rejection, without putting the
+  acceptable input through at all. This is the obvious efficiency — one invocation instead of
+  two — and it is the whole defect. Under that injection a fixture check that refuses every
+  input records a demonstrated refusal; this clause must go RED naming it, and must return to
+  green on revert.
+
+  SECOND NAMED MUTATION, FOR THE DIFFERENT-WORDING CLAUSE. INJECTION: report a check that
+  refuses both inputs and a check that refuses neither under one shared wording. Under that
+  injection the run still fails in both cases, so the parent's clauses and this record's
+  earlier clauses stay green, and only the final clause goes RED. That asymmetry is what
+  stops an implementer discharging both findings with one message whose two remedies are
+  opposite: widen the guard, or narrow it.
+
+  ARRIVAL COLOURS FOR THE REMAINING CLAUSES. Every Then that requires an invocation or a
+  named report is RED on arrival — nothing is put through anything and nothing is reported.
+  Only the two absence-asserting clauses above start green.
+
+  A PAIR THAT DOES NOT DISCRIMINATE IS ITS OWN FINDING, NOT AN ERROR IN THE RUN. Declaring
+  the same input twice, or two inputs the check cannot tell apart, is the paperwork form of
+  the same evasion, and it must be reported rather than rejected as malformed input — a run
+  that refuses to proceed on a bad declaration leaves the check unexamined, which is the
+  never-attempted state wearing an error message.
+
+  NO COUNT OF INSTANCES IS STATED OR IMPLIED HERE, per the parent's disputed-count rule.

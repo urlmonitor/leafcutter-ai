@@ -265,6 +265,7 @@ flowchart TD
 - GE-120b-5: The manual link-the-layout workaround is deleted, not left standing beside the fix
 - GE-120d-5: The how-to states what a prepared working copy guarantees and how to confirm it
 - GE-120e-5: The attribution rule is written where the next check author decides how to get their diff
+- GE-120f-5: The rule is written where the next check author is already looking, in the vocabulary the machine reads, and the written procedure and the enforced procedure say the same thing
 - GE-122a-3: The numbering rules for all four namespaces are written down in one place
 - GE-122b-3: An author with no prior knowledge can find out how to get a number
 - GE-122b-4: Which locations must carry a number, and which need not, is written down

@@ -18,7 +18,7 @@ agents:
   documentation-expert: needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
   sql-coder: not_needed
 ---
 
@@ -52,7 +52,6 @@ And CODEOWNERS contains "* @urlmonitor" (or the verified handle)
 - [ ] documentation-expert
 - [ ] pr-reviewer
 - [ ] commit
-- [ ] pull-request
 
 ## Comments
 

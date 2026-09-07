@@ -37,7 +37,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 change_target: code
 risk_surface: internal
 ---
@@ -127,7 +127,6 @@ tests:
 - [ ] test-runner
 - [ ] pr-reviewer
 - [ ] commit
-- [ ] pull-request
 
 ## Comments
 
