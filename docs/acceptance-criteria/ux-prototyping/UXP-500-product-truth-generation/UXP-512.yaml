@@ -1,7 +1,7 @@
 id: UXP-512
 components:
   - ux_prototyping
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Generator writes the product_truth back-ref onto each AC (many-to-many, wholesale)"
 component: ux-prototyping
@@ -33,7 +33,11 @@ expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
 amended_by:
-  - reason: "2026-09-07 business-analyst: recorded that the existing fixture never exercises the write path, and authored the test_spec that would."
+- reason: '2026-09-07 business-analyst: recorded that the existing fixture never exercises
+    the write path, and authored the test_spec that would.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by:

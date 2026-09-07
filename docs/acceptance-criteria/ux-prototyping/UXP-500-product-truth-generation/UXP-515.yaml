@@ -1,5 +1,5 @@
 id: UXP-515
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Mockup is a first-class artifact type whose screen resolves from flow steps"
 component: ux-prototyping
@@ -45,7 +45,15 @@ expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
 amended_by:
-  - reason: "2026-09-07 business-analyst: re-scoped to resolve a direct conflict with UXP-700d. The gold-reference clause named a fern-and-fig mockup inside the real store, which made example content the reference screen for the project's own record. The clause now requires the fully drawn reference to be example content held under the example product root. Nothing is deleted; ADR-022 and UXP-550/UXP-593 continue to depend on plant-listing existing and remaining referenceable."
+- reason: '2026-09-07 business-analyst: re-scoped to resolve a direct conflict with
+    UXP-700d. The gold-reference clause named a fern-and-fig mockup inside the real
+    store, which made example content the reference screen for the project''s own
+    record. The clause now requires the fully drawn reference to be example content
+    held under the example product root. Nothing is deleted; ADR-022 and UXP-550/UXP-593
+    continue to depend on plant-listing existing and remaining referenceable.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by:

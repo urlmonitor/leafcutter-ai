@@ -1,13 +1,13 @@
 id: UXP-800
 components:
   - ux_prototyping
-readiness: draft
+readiness: approved
 priority: medium
 title: "The product-truth record is produced and kept truthful by the system, not maintained by hand"
 component: ux-prototyping
 level: L0
 status: active
-req_status: active
+req_status: approved
 work_status: in_progress
 criteria: |
   As a product owner, I want the product-truth record to be produced and maintained by
@@ -42,7 +42,15 @@ expects_from: {}
 origin_agent: business-analyst
 created: 2026-09-07
 amended_by:
-  - reason: "2026-09-07 business-analyst: created by a horizontal split (ac-tree-split Pattern A) of UXP-490, which had accumulated nine L1 children against the documented 3-7 rule. UXP-493, UXP-590, UXP-592 and UXP-594 moved here; UXP-491, UXP-492, UXP-591, UXP-596 and UXP-611 stayed. No AC ids were renamed. Title and criteria are BA-drafted and need PO review — readiness is draft for that reason, even though every child is already reviewed or approved."
+- reason: '2026-09-07 business-analyst: created by a horizontal split (ac-tree-split
+    Pattern A) of UXP-490, which had accumulated nine L1 children against the documented
+    3-7 rule. UXP-493, UXP-590, UXP-592 and UXP-594 moved here; UXP-491, UXP-492,
+    UXP-591, UXP-596 and UXP-611 stayed. No AC ids were renamed. Title and criteria
+    are BA-drafted and need PO review — readiness is draft for that reason, even though
+    every child is already reviewed or approved.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by:
   - UXP-493

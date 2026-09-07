@@ -6,9 +6,9 @@ components:
   - ux_prototyping
 level: L3
 status: active
-req_status: draft
+req_status: approved
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -41,7 +41,10 @@ expects_from:
   contract: "The set-aside classification whose effect on the live store this record measures."
 origin_agent: business-analyst
 created: 2026-09-07
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by: []

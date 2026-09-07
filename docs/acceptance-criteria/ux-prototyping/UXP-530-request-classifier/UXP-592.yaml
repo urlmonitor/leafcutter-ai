@@ -1,5 +1,5 @@
 id: UXP-592
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "The system decides which product-truth artifacts a request needs"
 component: ux-prototyping
@@ -25,7 +25,13 @@ expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
 amended_by:
-  - reason: "2026-09-07 business-analyst: reparented from UXP-490 to UXP-800 by a horizontal split (ac-tree-split Pattern A). UXP-490 had nine L1 children against a 3-7 rule; deciding which product-truth artifacts a request warrants is production machinery, not the review-and-see axis UXP-490 keeps. Id unchanged."
+- reason: '2026-09-07 business-analyst: reparented from UXP-490 to UXP-800 by a horizontal
+    split (ac-tree-split Pattern A). UXP-490 had nine L1 children against a 3-7 rule;
+    deciding which product-truth artifacts a request warrants is production machinery,
+    not the review-and-see axis UXP-490 keeps. Id unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by:
   - UXP-530

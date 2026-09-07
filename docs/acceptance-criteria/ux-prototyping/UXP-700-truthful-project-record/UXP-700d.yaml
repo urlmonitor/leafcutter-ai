@@ -6,9 +6,9 @@ components:
   - ac_store
 level: L1
 status: active
-req_status: draft
+req_status: approved
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -35,7 +35,10 @@ documentation_triggers:
   - reference-doc
 origin_agent: BrainCandy
 created: 2026-09-07
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by:
   - UXP-700d-1

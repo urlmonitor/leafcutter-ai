@@ -1,5 +1,5 @@
 id: UXP-590
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Product-truth links are generated and kept truthful automatically"
 component: ux-prototyping
@@ -26,8 +26,19 @@ expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
 amended_by:
-  - reason: "2026-09-07 business-analyst: covered_by drift repair. UXP-516 declares depends_on [UXP-590] but was absent from this list, so it was a child by one edge and an orphan by the other."
-  - reason: "2026-09-07 business-analyst: reparented from UXP-490 to UXP-800 by a horizontal split (ac-tree-split Pattern A). Moving this L1 under UXP-700 was considered and explicitly rejected: UXP-590 is the internal-consistency axis (the derived flow-to-AC links agree with the AC store they are computed from) while UXP-700c is the correspondence-with-code axis, and merging the two was ruled out on review. UXP-800 is the production side of product truth, which is where the single writer of those links belongs. Id unchanged."
+- reason: '2026-09-07 business-analyst: covered_by drift repair. UXP-516 declares
+    depends_on [UXP-590] but was absent from this list, so it was a child by one edge
+    and an orphan by the other.'
+- reason: '2026-09-07 business-analyst: reparented from UXP-490 to UXP-800 by a horizontal
+    split (ac-tree-split Pattern A). Moving this L1 under UXP-700 was considered and
+    explicitly rejected: UXP-590 is the internal-consistency axis (the derived flow-to-AC
+    links agree with the AC store they are computed from) while UXP-700c is the correspondence-with-code
+    axis, and merging the two was ruled out on review. UXP-800 is the production side
+    of product truth, which is where the single writer of those links belongs. Id
+    unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by:
   - UXP-510

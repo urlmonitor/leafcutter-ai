@@ -6,9 +6,9 @@ components:
   - ac_store
 level: L2
 status: active
-req_status: draft
+req_status: approved
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -42,7 +42,10 @@ expects_from:
   contract: "The product-root ownership predicate this declaration is cross-checked against."
 origin_agent: business-analyst
 created: 2026-09-07
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by: []

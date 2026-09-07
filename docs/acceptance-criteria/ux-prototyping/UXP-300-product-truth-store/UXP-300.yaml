@@ -1,5 +1,5 @@
 id: UXP-300
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Product-truth artifacts live in docs/product-truth with one canonical dataset per entity per component"
 component: ux-prototyping
@@ -35,7 +35,10 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-10
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by: []

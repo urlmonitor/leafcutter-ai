@@ -5,9 +5,9 @@ components:
   - ux_prototyping
 level: L3
 status: active
-req_status: draft
+req_status: approved
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a journey whose authoritative description is 938 characters long,
@@ -33,7 +33,10 @@ expects_from:
   contract: "The derivation this record constrains."
 origin_agent: business-analyst
 created: 2026-09-07
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by: []

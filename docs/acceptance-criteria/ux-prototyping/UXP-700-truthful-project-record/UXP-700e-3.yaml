@@ -5,9 +5,9 @@ components:
   - ux_prototyping
 level: L2
 status: active
-req_status: draft
+req_status: approved
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the labels a journey carries - the component it belongs to, and the tags it is filed
@@ -40,7 +40,10 @@ expects_from:
   contract: "The declared-shape mechanism the tag pattern is expressed through."
 origin_agent: business-analyst
 created: 2026-09-07
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by:
   - UXP-700e-3-i

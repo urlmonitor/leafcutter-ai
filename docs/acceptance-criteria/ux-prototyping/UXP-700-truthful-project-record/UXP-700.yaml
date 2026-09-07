@@ -5,9 +5,9 @@ components:
   - ux_prototyping
 level: L0
 status: active
-req_status: draft
+req_status: approved
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   A record of your project you can rely on — at any size, in any project.
@@ -37,7 +37,10 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-07
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by:
   - UXP-700a

@@ -5,9 +5,9 @@ components:
   - ux_prototyping
 level: L1
 status: active
-req_status: draft
+req_status: approved
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   One canonical record per thing — it grows by extension, never by duplication.
@@ -28,7 +28,10 @@ documentation_triggers:
   - reference-doc
 origin_agent: BrainCandy
 created: 2026-09-07
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by:
   - UXP-300

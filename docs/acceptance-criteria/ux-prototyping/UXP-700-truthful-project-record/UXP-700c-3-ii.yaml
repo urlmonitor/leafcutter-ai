@@ -6,9 +6,9 @@ components:
   - precommit_hooks
 level: L3
 status: active
-req_status: draft
+req_status: approved
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the record's checker is registered among the project's automatic checks,
@@ -34,7 +34,10 @@ expects_from:
   contract: "The registration this record makes observable when it fails to fire."
 origin_agent: business-analyst
 created: 2026-09-07
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by: []

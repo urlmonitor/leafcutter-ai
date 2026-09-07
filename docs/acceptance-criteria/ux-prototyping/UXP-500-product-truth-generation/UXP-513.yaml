@@ -1,7 +1,7 @@
 id: UXP-513
 components:
   - ux_prototyping
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Generator is idempotent and offers --check for CI"
 component: ux-prototyping
@@ -33,7 +33,12 @@ expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
 amended_by:
-  - reason: "2026-09-07 business-analyst: linked the one genuinely covering test for the idempotency clause; recorded the --check CLI contract as uncovered and authored its test_spec."
+- reason: '2026-09-07 business-analyst: linked the one genuinely covering test for
+    the idempotency clause; recorded the --check CLI contract as uncovered and authored
+    its test_spec.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by:
   - "unit_tests/test_generate_product_truth_idempotency.py::test_second_regen_produces_no_file_change"

@@ -5,9 +5,9 @@ components:
   - ux_prototyping
 level: L3
 status: active
-req_status: draft
+req_status: approved
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a record in which the input set for one of the four drift checks is empty - no journey
@@ -39,7 +39,10 @@ expects_from:
   contract: "The umbrella drift check this record is one of the four named parts of."
 origin_agent: business-analyst
 created: 2026-09-07
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by:
