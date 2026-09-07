@@ -12,8 +12,11 @@ roadmap_phase: phase_1
 work_status: done
 criteria: |
   Given a real build aimed at a project outside the producing package's own parent
-    folder, under a condition in which the record of what the build put there cannot
-    be produced,
+    folder -- the venue in which every child of this feature must be proved, and no
+    longer by itself a failing condition -- and given that build is asked to place one
+    of the files it manages somewhere outside the very project it is aimed at, so that
+    no truthful account of that file, expressed as a position inside that project,
+    exists to put in the record,
   When the build runs to completion and its report and outcome are inspected,
   Then the build reports failure,
   And the outcome an automated caller observes is unsuccessful, so a script, a
@@ -21,18 +24,24 @@ criteria: |
     not finish its job,
   And the report names the record that could not be produced and the project the build
     was aimed at, so the reader knows which install is unprotected,
+  And that report is distinguishable from the report of a build that DID produce the
+    record: a reader must not have to arrive at the failure by reading past a line
+    announcing that the record was written,
   And a single warning line accompanied by a successful outcome does not satisfy this,
     because the build's own report is the last place this failure currently shows up,
-  And the identical build, run once the record can be produced for that same
-    out-of-package project, reports success and leaves the record file written to disk
-    in that project -- so the failure verdict is attributable to the unproducible
-    record and not to a build that refuses every target outside its own parent folder,
+  And the identical build, run against that same out-of-package project once every
+    file it manages is again placed inside that project, reports success and leaves the
+    record file written to disk in that project with an account of what it put there --
+    so the failure verdict is attributable to the unproducible record, and not to a
+    build that refuses every target outside its own parent folder, and not to one that
+    refuses any project whose configuration it merely dislikes,
   And both verdicts are taken from running the real build against a real project
     outside the producing package's own parent folder and inspecting its reported
     outcome and the resulting tree, never from reading the build's own source for the
     presence of a failure path.
 depends_on:
   - BP-1500d
+  - BP-1500d-1
 doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d.yaml"
     relationship: parent
@@ -40,15 +49,19 @@ doc_links:
   - path: docs/known-issues/build-pipeline.md
     relationship: describes
     status: exists
-    relevance: "IT-PO CORRECTION 2026-08-25: the BA recorded that no entry covers this defect. KI-BP-011 now does, and its third evidence block is this child verbatim -- the ValueError from an out-of-package target is caught, downgraded to '[WARNING] could not compute output_mappings ... Direction B detection will be unavailable until next build', and the build then reports success and exits 0. KI-BP-008 is the same fail-open shape already catalogued in this file; read both."
+    relevance: "BA CORRECTION 2026-09-07 -- THE CITED EVIDENCE IS STALE AND THE ENTRY ITSELF IS NOW WRONG. The prior text (kept here so the change is visible) read: 'KI-BP-011 ... its third evidence block is this child verbatim -- the ValueError from an out-of-package target is caught, downgraded to [WARNING] could not compute output_mappings, and the build then reports success and exits 0.' Both halves have since been falsified. KI-BP-011's Symptom paragraph still states `manifest_path = package_root / \".build_manifest.json\"` -- 'always the package's own directory, never --target-dir'; the current build computes the manifest's directory from the target when one is supplied, and a real out-of-package build measured 2026-09-07 wrote the record into the RECEIVING project. That entry needs re-opening or amending by its owner -- outside this AC's write scope, reported instead of edited. What remains usable in KI-BP-011 is the SHAPE (warn once, empty record, exit 0), not any of its located evidence. KI-BP-008 is the same fail-open shape and is unaffected."
   - path: scripts/build.py
     relationship: describes
     status: exists
-    relevance: "The build whose reported outcome this AC constrains. Read for context only -- this AC is provable only from a real run's outcome and tree. Its exit-status path is the load-bearing surface: the record-writing step's outcome must reach it."
+    relevance: "BA CORRECTION 2026-09-07. The build whose reported outcome this AC constrains, and the exit-status path is no longer merely 'the load-bearing surface to build' -- it EXISTS. The record-writing step's outcome now reaches it: the call site turns a non-empty record-failure return into a printed failure naming the record and the target project, and then a non-zero exit. This AC's outcome clause is therefore about KEEPING that path load-bearing under a trigger that is still reachable, not about creating it. Read for context only -- this AC is provable only from a real run's outcome and tree."
   - path: scripts/build_helpers.py
     relationship: describes
     status: exists
-    relevance: "IT-PO ADDITION. The exact fail-open site. Lines ~201-213: a broad `except Exception` around _compute_output_mappings issues warnings.warn plus a _warn print and then falls through, so the manifest is written with an empty output_mappings section and the build continues to a successful outcome. This handler is the thing to change; changing only its message satisfies the report clause and leaves the outcome clause untouched, which is the failure mode this AC exists against."
+    relevance: "BA CORRECTION 2026-09-07 -- LINE NUMBERS AND BEHAVIOUR BOTH STALE. The prior text read 'Lines ~201-213: a broad `except Exception` around _compute_output_mappings ... falls through, so the manifest is written with an empty output_mappings section and the build continues to a successful outcome.' The handler is real but sits roughly a thousand lines further down than cited, and it no longer falls through to a successful outcome: the record-writer now RETURNS the failure to its caller, which is what makes the outcome clause satisfiable. What is still true, and is what this AC now guards: the handler still swallows the exception locally, still writes a manifest carrying an empty record, and still prints a success line for that manifest immediately before the failure is reported -- which is why this AC's criteria now demand the failure report be distinguishable from a successful one. Read for context only; no verdict here may be taken from reading it."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-1.yaml"
+    relationship: related
+    status: exists
+    relevance: "BA ADDITION 2026-09-07. The sibling whose landing obsoleted this AC's original trigger, and now a hard depends_on. Read it to understand WHY 'the package is outside the target' is no longer a failing condition: -1 made that layout produce a correct record. NOTE FOR ITS OWNER, NOT EDITED HERE: -1's own doc_links carry the same stale claim corrected above ('manifest_path = package_root / .build_manifest.json -- always the package, never --target-dir'), and its work_status is still todo although its behaviour is demonstrably live in a real out-of-package build."
   - path: docs/reference/false-green-mechanisms.md
     relationship: describes
     status: exists
@@ -56,11 +69,11 @@ doc_links:
   - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
     relationship: describes
     status: exists
-    relevance: "Why an out-of-package target is the only layout in which this failure appears at all."
+    relevance: "BA CORRECTION 2026-09-07. The prior text -- 'why an out-of-package target is the only layout in which this failure appears at all' -- is precisely the claim BP-1500d-1 falsified: the failure no longer appears in that layout. Read this ADR now for what it actually settles: why the out-of-package layout is the VENUE every child of BP-1500d must be proved in, and why the self-host layout hides defects of this family. It says nothing about which condition makes the record unproducible, and must not be cited for one."
   - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-1.yaml"
     relationship: related
     status: exists
-    relevance: "IT-PO CORRECTION 2026-08-25 -- A SPEC, NOT PRIOR ART. BP-900h-1 describes invoking the real build against an out-of-package scratch project and asserting on its reported outcome, but it is work_status not_started with zero implementation anywhere in the workspace and no consumer-simulation job in ci.yml. The harness comes from BP-1500d-1; this AC drives it into a failing and then a succeeding state. Read h-1 as the specification the shared harness conforms to."
+    relevance: "BA CORRECTION 2026-09-07 -- NO LONGER AN UNMET SPEC. The prior text called BP-900h-1 'work_status not_started with zero implementation anywhere in the workspace and no consumer-simulation job in ci.yml'. It now reads readiness approved, work_status done. Read it as SHIPPED prior art for invoking a real build against an out-of-package scratch project, alongside the harness BP-1500d-1 built; this AC drives that harness into a failing and then a succeeding state."
   - path: docs/testing/test-angles.md
     relationship: describes
     status: exists
@@ -70,13 +83,16 @@ estimated_complexity: M
 declares_side_effect: true
 it_requirements:
   - "THE PROCESS EXIT STATUS IS THE LOAD-BEARING SIGNAL, NOT THE PRINTED REPORT. Both must change. A loud, well-worded failure message accompanied by a successful exit status leaves every automated caller exactly where it is today, and is the single most likely way for this AC to be closed without being satisfied. The report clause and the outcome clause are separate in the criteria on purpose; neither substitutes for the other."
-  - "NAME EVERY ENFORCEMENT POINT AT WHICH THE RECORD STEP'S OUTCOME IS SURFACED, AND STATE WHICH ONE ACTUALLY GATES THE EXIT STATUS. Today the outcome is surfaced three ways -- a warnings.warn, a _warn print, and an empty output_mappings section in the written manifest -- and NONE of them is load-bearing, because all three sit inside a handler that falls through to a successful build. A change applied only to the message, or only to the warning category, is a no-op with a report attached. Identify the path from the record step to the build's return value and state it explicitly in sign-off."
+  - "NAME EVERY ENFORCEMENT POINT AT WHICH THE RECORD STEP'S OUTCOME IS SURFACED, AND STATE WHICH ONE ACTUALLY GATES THE EXIT STATUS. CORRECTED 2026-09-07 -- THE PRIOR COUNT WAS AN OVERSTATEMENT AND MUST NOT BE RE-DERIVED. It read: 'the outcome is surfaced three ways -- a warnings.warn, a _warn print, and an empty output_mappings section in the written manifest -- and NONE of them is load-bearing, because all three sit inside a handler that falls through to a successful build.' The outcome now reaches FOUR surfaces and exactly ONE of them is load-bearing. Not load-bearing, and all three still present: the warnings.warn, the _warn print, and the empty output_mappings section in a manifest that is still written and still announced as written. Load-bearing: the record-writer RETURNS the failure to its caller, and the build's exit path consumes that return into a printed failure naming the record and the target, then a non-zero exit. The obligation is therefore to KEEP that one path load-bearing under the rebased trigger, not to create it -- prove from a real run that the record step's failure still reaches the build's return value when the trigger is an out-of-target managed-file destination rather than an out-of-package package root. A change applied only to the message, or only to the warning category, remains a no-op with a report attached. Name all four surfaces and identify the gating one explicitly in sign-off."
   - "MUST NOT REFUSE OUT-OF-PACKAGE TARGETS WHOLESALE. A build that fails for every target outside the producing package's parent satisfies the failure clause and is a regression dressed as a fix. The paired success run is the guard against it and must not be dropped, weakened, or replaced by an assertion about the message."
   - "The failure must be attributable from the report alone: it must name the record that could not be produced AND the project the build was aimed at, so a reader knows which install is unprotected without re-running anything."
+  - "THE FAILURE REPORT MUST NOT BE REACHABLE ONLY BY READING PAST A SUCCESS LINE FOR THE SAME RECORD. Added 2026-09-07 for the criteria clause added in the same pass. Measured on the failing run: the build prints a per-artifact success tick for the manifest -- 'build manifest (175 template + 0 output_mappings entries)' -- immediately BEFORE the failure line, so a reader who stops at the first statement the build makes about the record is told it was written. The report must not announce as written a record whose content could not be produced: either suppress or negate that tick for the failed record, or place the failure verdict where it is reached without reading past a contradicting success claim about the same artifact. The constraint is DIFFERENTIAL and must be provable as such -- the report of a build that could not produce the record must carry a signal the report of a build that DID produce it does not also carry. A message assertion that both reports satisfy is not a fix, it is the vacuity this clause exists to close."
+  - "DO NOT REMOVE THE TRIGGER INSTEAD OF THE FAIL-OPEN. Added 2026-09-07. The rebased trigger is a managed file whose configured destination is an absolute path outside --target-dir; there is genuinely no truthful in-project position for such a file, so the correct outcome is a failed build and not a coerced key. Do not give the record's output-key relativization a not-inside-the-project fallback, do not substitute the absolute path as its own key, and do not silently drop the offending entry and continue. Each of those converts a build that cannot produce the record into a build that produces an UNTRUTHFUL one -- a different and worse defect -- and each would leave this AC's verdict unreachable and its tests unfalsifiable. BP-1500d-1's fallback is on the diagnostic-only template key, a different field, and is not precedent for the output keys the drift readers resolve files against."
+  - "OUT OF SCOPE AND NOT A SUBSTITUTE -- THE RELATIVE FORM OF THE SAME ESCAPE. Written relatively ('../elsewhere/<file>') the escape does NOT fail: measured exit 0, a full 472-entry record, and an empty failure field, because the path library does not normalise '..' so the relativization succeeds and writes a key pointing outside the project it claims to describe. That is a produced-but-untruthful record, a different guarantee, and belongs to a sibling -- file it separately rather than folding it into this AC. If an implementation incidentally normalises paths so the relative form starts failing too, that is acceptable ONLY if the paired-success run still passes unchanged; a normalisation that turns more layouts into refusals is the wholesale-refusal regression under another name."
   - "Must be fail-closed by construction rather than by a caller remembering to check. Audit every caller of the build inside this repo -- CI jobs, build-self.sh, the worktree bootstrap path, and any workflow that shells out to build.py -- and name each one in sign-off together with whether it currently propagates the build's exit status. A build that starts failing correctly while a caller discards its status changes nothing at that caller."
   - "Must not change the build's command-line contract. The same invocation that succeeds today for the package's own workspace must still succeed, with the same arguments and the same output root."
   - "Must follow the project error handling policy at the record-writing boundary: the existing broad `except Exception` that downgrades a real failure to a warning must not be duplicated, and whatever replaces it must either re-raise or produce a typed failure that the build's exit path consumes."
-  - "SCOPE BOUND -- this AC governs the build's verdict when the record cannot be produced. It does not govern where the record is written (BP-1500d-1), what form its entries take (BP-1500d-2), or what a reader does when it finds no record (BP-1500d-4). In particular, do not satisfy this AC by making the record always producible; that is -1's work and would leave this enforcement floor untested."
+  - "SCOPE BOUND -- this AC governs the build's verdict when the record cannot be produced. It does not govern where the record is written (BP-1500d-1), what form its entries take (BP-1500d-2), or what a reader does when it finds no record (BP-1500d-4). In particular, do not satisfy this AC by making the record always producible; that is -1's work and would leave this enforcement floor untested. KEPT DELIBERATELY 2026-09-07, AND NO LONGER A TRAP. When this bound was first written BP-1500d-1 had not landed, so it barred the only honest remedy for the then-current trigger and left a wholesale refusal as the only move available -- which is exactly what shipped and regressed 18 outcomes across 6 files. BP-1500d-1 is now work_status done and the out-of-package layout produces a correct record, so in this order the bound does the job it was written for: it prevents re-solving -1, and together with 'MUST NOT REFUSE OUT-OF-PACKAGE TARGETS WHOLESALE' it is now jointly satisfiable, with the paired-success run as the proof. Read the two side by side before choosing an approach."
 delivers_to:
   - agent: python-coder
     ac_id: BP-1500d-1
@@ -92,60 +108,102 @@ delivers_to:
     contract: "The observable form of the build's failure -- the exit status an automated caller sees and the text that names the record and the project -- which BP-1500d-5's reference must document so a reader can recognise it in their own output."
 expects_from:
   - ac_id: BP-1500d-1
-    contract: "The out-of-package consumer-simulation harness (scratch project under a system temp root, realpath asserted NOT under package_root.parent, package copy at <scratch>/leafcutter-ai/, target otherwise empty apart from a minimal skills_config.json), plus the ability to place that harness in a state where the record CAN be produced. The second half is what makes this AC's paired success run possible; without it only the failure verdict is observable and the AC can be satisfied by a build that refuses every out-of-package target."
+    contract: "SATISFIED 2026-09-07 -- BP-1500d-1 is readiness approved, work_status done, and its behaviour is demonstrably live on this branch. The out-of-package consumer-simulation harness (scratch project under a system temp root, realpath asserted NOT under package_root.parent, package copy at <scratch>/leafcutter-ai/, target otherwise empty apart from a minimal config), plus the ability to place that harness in a state where the record CAN be produced. The second half is what makes this AC's paired success run possible; without it only the failure verdict is observable and the AC can be satisfied by a build that refuses every out-of-package target -- which is precisely what happened when -3 was built first. It is now delivered and measured: a plain out-of-package build exits 0 and writes 472 output mappings into the RECEIVING project, which is also why this AC's trigger had to be rebased off that layout. CONFIG PATH, CORRECTED: the harness's config is read from <target>/.claude/skills_config.json, NOT <target>/skills_config.json. The prior wording said only 'a minimal skills_config.json' and a probe acting on it wrote the top-level path, configured nothing, and returned a false green. LAYOUT, MADE EXPLICIT BECAUSE THE PRIOR WORDING WAS AMBIGUOUS AND THE AMBIGUITY IS ITSELF A FALSE-GREEN VECTOR: the package copy and the receiving project are SIBLING directories under the temp root -- package at <scratch>/leafcutter-ai/, target at <scratch>/project/, invoked as --target-dir <scratch>/project. The prior text paired 'package copy at <scratch>/leafcutter-ai/' with a surface_invoked of '--target-dir <scratch>', which makes the target EQUAL to package_root.parent -- that is the self-host layout ADR-001 says hides this family of defect, not the out-of-package venue the L1 mandates, and it also contradicts the same sentence's own 'realpath asserted NOT under package_root.parent'. Every test_spec entry's surface_invoked has been corrected to the sibling form."
   - ac_id: BP-900h-1
-    contract: "NOT SATISFIED, AND DELIBERATELY NOT A depends_on. BP-900h-1 specifies the real-build-against-a-scratch-project invocation this AC asserts on, but is work_status not_started with zero implementation. The harness is constructed by BP-1500d-1 instead. Recorded here as an unmet specification to conform to, not as a satisfied dependency."
+    contract: "CORRECTED 2026-09-07 -- NOW SATISFIED. The prior text read 'NOT SATISFIED ... work_status not_started with zero implementation'; BP-900h-1 is now readiness approved, work_status done. It specifies the real-build-against-an-out-of-package-scratch-project invocation this AC asserts on, and is therefore shipped prior art for that invocation rather than an unmet specification to conform to. Still deliberately NOT a depends_on: the harness this AC drives is constructed by BP-1500d-1, which IS a depends_on; h-1 is read for the invocation shape only."
 test_spec:
   - name: test_bp_1500d_3_build_exits_nonzero_when_the_record_cannot_be_produced_for_an_out_of_package_target
     target_dir: unit_tests/portability/
     framework: pytest
     type: behavioral
     angle: criterion
-    description: "THE PRIMARY ASSERTION, AND IT IS ON THE EXIT CODE. Run the real build against the harness target in the condition where the record cannot be produced, and assert the process exit status is NON-ZERO. This entry is expected RED today and that is the point: measured 2026-08-25, this exact run emits '[WARNING] could not compute output_mappings ... is not in the subpath of ...', writes a manifest with output_mappings {} (154 entries to 0), and exits 0. Do NOT retarget this assertion onto the warning string or the mapping count because the exit code is currently 0 -- exit-0-on-failure IS the defect, it is guarantee (d) of BP-1500d which the L1 states must not be dropped, and an assertion on the warning is satisfied by today's broken build. The mapping count and the warning may be asserted as SUPPORTING signals only, never as the primary one."
+    surface_invoked: "python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>/project"
+    description: "THE PRIMARY ASSERTION, AND IT IS ON THE EXIT CODE. Run the real build as an out-of-process subprocess against the out-of-package harness with the record made unproducible, and assert the process exit status is NON-ZERO. TRIGGER REBASED 2026-09-07 -- the condition this entry previously named is dead. Its old description read 'measured 2026-08-25, this exact run emits [WARNING] could not compute output_mappings ... is not in the subpath of ..., writes a manifest with output_mappings {} (154 entries to 0), and exits 0', and every one of those located facts described the package sitting outside --target-dir. BP-1500d-1 has made that layout a SUCCESS case: it now exits 0 with 472 output mappings, 175 template entries and an empty failure field, so a fixture keyed to it can be made red only by re-breaking -1. THE TRIGGER TO USE, verified by three real subprocess builds rather than asserted: write <target>/.claude/skills_config.json with precommit_autofix_config_path set to an ABSOLUTE path outside --target-dir (changelog_categories_path behaves identically -- pin one, do not use both). Measured on this branch: the record computation raises, every mapping is discarded, the manifest is written with zero mappings and a non-empty failure field reading 'ValueError: <outside path> is not in the subpath of <target>', the pre-existing fail-open warning is printed verbatim, and the build exits 1. Measured on origin/main: the identical state exits 0 -- the red baseline this entry needs is intact. CONFIG-DISCOVERY TRAP, DO NOT SKIP IT: the config is read from <target>/.claude/skills_config.json, NOT <target>/skills_config.json. A fixture that writes the latter configures nothing, the build succeeds with a full record, and the result is a false green shaped exactly like a legitimate pass. THIS ENTRY MUST THEREFORE PROVE THE CONFIG WAS READ: assert the build's record-failure text names the exact out-of-target absolute path the fixture wrote into the config -- a fixture-unique string that cannot appear in the output unless the config was consumed. Do NOT use the relative '../' form of the escape; it does not fail (see it_requirements). THE TWO 'SETUP SANITY' ASSERTIONS ARE KEPT: output_mappings == {} and a non-empty output_mappings_error were INVERTED against the post--1 world -- 472 mappings and an empty failure field are what a healthy out-of-package build now produces, so the old pair pinned -1 as broken -- but under this trigger the record genuinely IS emptied, so both become valid again and should be kept, as SUPPORTING signals only. Do NOT retarget the primary assertion onto the warning string or the mapping count: exit-0-on-failure IS the defect, it is guarantee (d) of BP-1500d which the L1 states must not be dropped, and a warning-based assertion is satisfied by the unpatched build."
   - name: test_bp_1500d_3_the_verdict_is_taken_from_the_real_build_command_line_and_reaches_an_automated_caller
     target_dir: unit_tests/portability/
     framework: pytest
     type: behavioral
     angle: reachability
-    surface_invoked: "python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>"
-    description: "PRODUCTION ENTRY POINT, and the consumption half. Invoke the build as a SUBPROCESS through the command line a consumer or a CI step runs -- never by importing write_build_manifest or calling an internal step -- and read returncode from the child process, because that is the only thing an automated caller sees. Then assert the consumption half at every in-repo caller: parse the CI workflow as YAML and assert the step invoking the build neither carries continue-on-error true nor pipes the build into a command that masks its status. A grep for the script name is green on a step that ignores the exit code, which is the defect one level up."
+    surface_invoked: "python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>/project"
+    description: "PRODUCTION ENTRY POINT, and the consumption half. Invoke the build as a SUBPROCESS through the command line a consumer or a CI step runs -- never by importing write_build_manifest or calling an internal step -- and read returncode from the child process, because that is the only thing an automated caller sees. TRIGGER REBASED 2026-09-07: the exit-code assertion is invalid AS TRIGGERED, not as written -- keep the assertion verbatim and re-point the fixture onto entry 1's rebased trigger (an ABSOLUTE out-of-target precommit_autofix_config_path written into <target>/.claude/skills_config.json, NOT <target>/skills_config.json), carrying entry 1's config-was-read proof so a silently-unconfigured build cannot masquerade as a pass. THE SECOND HALF IS TRIGGER-INDEPENDENT AND MUST SURVIVE UNTOUCHED: parse the CI workflow as YAML and assert the step invoking the build neither carries continue-on-error true nor pipes the build into a command that masks its status. A grep for the script name is green on a step that ignores the exit code, which is the defect one level up. Minor and non-blocking, while in the file: the existing check that run_cmd contains neither a single pipe nor a double pipe is redundant in its second clause -- any double pipe already contains a single one."
   - name: test_bp_1500d_3_the_failure_report_names_the_record_and_the_project_the_build_was_aimed_at
     target_dir: unit_tests/portability/
     framework: pytest
     type: behavioral
     angle: criterion
-    description: "The report clause, asserted separately from the outcome clause because the criteria separate them and because a build can satisfy either alone. Capture the failing build's combined output and assert it names BOTH the record that could not be produced AND the target project path. Assert on the presence of the target path specifically -- a message that says only 'could not compute output_mappings' tells a reader nothing about which install is unprotected, and that is the message today."
+    surface_invoked: "python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>/project"
+    description: "THE REPORT CLAUSE -- AND THIS ENTRY IS VACUOUS TODAY, WHICH IS THE FINDING, NOT A REPRIEVE. Measured 2026-09-07: it PASSES, and it passes for the wrong reason. Both strings it searches for -- the record's name and the target project path -- appear in the SUCCESS line of a build that produced the record perfectly, so a substring search over the whole capture cannot distinguish the report this entry exists to check from that report's exact opposite. A green test that cannot fail is worse than a red one, and re-pointing the trigger alone would NOT fix it: the rebased fixture would still be searched with a predicate a healthy build satisfies. THREE CHANGES, ALL REQUIRED, IN THIS ORDER. (1) RE-POINT: use entry 1's rebased trigger -- an ABSOLUTE out-of-target precommit_autofix_config_path written to <target>/.claude/skills_config.json, NOT <target>/skills_config.json -- and carry entry 1's config-was-read proof. (2) SCOPE THE NAMING ASSERTIONS TO THE FAILURE REPORT ITSELF rather than to the whole capture: the line or contiguous block that carries the failure must ITSELF name BOTH the record that could not be produced AND the target project path, so neither match can be donated by an unrelated success line elsewhere in the output. A message that says only 'could not compute output_mappings' still tells a reader nothing about which install is unprotected, and that is the message today. (3) MAKE THE ASSERTION DIFFERENTIAL -- this is what discharges the criteria clause added 2026-09-07 and what makes the test capable of failing at all: in the SAME test, also capture the output of the paired-success run (entry 4's run 2 -- same command line, same out-of-package venue, the managed file placed back inside the project) and assert that the failure-report signal found in the failing capture is ABSENT from the succeeding capture. If the same predicate matches both captures the test has distinguished nothing and MUST fail; that inversion is the anti-vacuity guard and may not be dropped. ONE MEASURED FACT TO ASSERT ON WHILE DOING THIS: the failing run prints a per-artifact manifest success tick -- 'build manifest (175 template + 0 output_mappings entries)' -- immediately BEFORE the failure line. A reader must not have to read past a success claim about the same record to reach the failure, so assert the report does not present that tick as its verdict for the record it could not produce."
   - name: test_bp_1500d_3_the_identical_build_succeeds_and_leaves_the_record_in_place_once_it_can_be_produced
     target_dir: unit_tests/portability/
     framework: pytest
     type: behavioral
     angle: failure
-    description: "THE ATTRIBUTION CONTROL, and the guard against a regression dressed as a fix. Three runs of the SAME build command line against the SAME out-of-package harness: (1) record unproducible -- non-zero exit; (2) the condition resolved so the record can be produced -- exit 0 AND the record is present in the target with a non-empty entry set; (3) the condition reintroduced -- non-zero again. Run 2 is load-bearing: without it, a build that simply refuses every target outside its own parent folder passes runs 1 and 3 perfectly while being strictly worse than today. Assert the record's presence in run 2, not merely exit 0, so a build that succeeds by skipping the record cannot pass."
+    surface_invoked: "python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>/project"
+    description: "THE ATTRIBUTION CONTROL, and the guard against a regression dressed as a fix. Three runs of the SAME build command line against the SAME out-of-package harness. MECHANISM REBASED 2026-09-07 -- the three-run structure and the reason run 2 exists are UNCHANGED; only how the condition is set and resolved changes. (1) Record unproducible: <target>/.claude/skills_config.json sets precommit_autofix_config_path to an ABSOLUTE path outside --target-dir -- assert non-zero exit. The old mechanism for this run, the package sitting outside the target, is dead: that layout now succeeds on its own. (2) The condition resolved by placing that managed file back INSIDE the project -- NOT by re-nesting the package inside the target, which is now a no-op because run 1's layout already succeeds. Run 2's three assertions are CORRECT AND KEPT VERBATIM: exit 0, a non-empty record present on disk in the target, and an empty record-failure field. ONE ASSERTION IS ADDED, and it is the config-was-read proof for the whole entry: set precommit_autofix_config_path to a NON-DEFAULT path inside the target (not the shipped default .claude/precommit-autofix.json) and assert the written record contains a mapping for THAT path. If it does not, the fixture's config was never consumed, and runs 1 and 3 prove nothing while looking green -- this is the exact false green a probe hit by writing <target>/skills_config.json instead of <target>/.claude/skills_config.json. (3) The condition reintroduced -- non-zero again. Run 2 remains load-bearing: without it a build that simply refuses every target outside its own parent folder passes runs 1 and 3 perfectly while being strictly worse than today, which is not hypothetical -- it is what shipped when this AC was built ahead of BP-1500d-1 and regressed 18 outcomes across 6 files. Assert the record's presence in run 2, not merely exit 0, so a build that succeeds by skipping the record cannot pass."
 test_rationale: |
   This child is the enforcement floor for its three siblings, not an extra. BP-1500d's
   notes say it outright: (a) through (c) implemented over a build that still exits zero
   when it gives up leaves the whole family unenforceable, silently, exactly as today.
   So the contract is written to make the exit status impossible to skip.
 
-  Entry 1 asserts on the exit code and must stay that way. A probe of the current
-  build correctly observed that the ValueError is swallowed at build_helpers.py
-  ~201-213 and the process exits 0, and drew the wrong conclusion from it -- that an
-  AC asserting build failure is false as written and the assertion should move to the
-  mapping count or the warning string. Adopting that would bake the defect into the
-  spec. The red is the finding. A warning-only assertion is satisfied by today's
-  broken build, which is the definition of a test that cannot fail for the right
-  reason. The mapping count is a useful supporting signal and nothing more.
+  RE-BASED 2026-09-07, SECOND IT-PO PASS. What changed in this contract is the
+  TRIGGER every entry fires on, and nothing else. The verdict, the separation of the
+  outcome clause from the message clause, the attribution control's three-run shape
+  and the exit-code primacy are all unchanged. BP-1500d-1 landed and turned the old
+  trigger -- the package sitting outside --target-dir -- into a success case, so four
+  entries were describing a condition that no longer exists. Every assertion below was
+  invalid AS TRIGGERED, not as written; the fixtures move, the assertions do not.
+
+  Entry 1 asserts on the exit code and must stay that way. A probe of the pre--1
+  build correctly observed that the ValueError was swallowed and the process exited 0,
+  and drew the wrong conclusion from it -- that an AC asserting build failure is false
+  as written and the assertion should move to the mapping count or the warning string.
+  Adopting that would bake the defect into the spec. The red is the finding. A
+  warning-only assertion is satisfied by the unpatched build, which is the definition
+  of a test that cannot fail for the right reason. The mapping count is a useful
+  supporting signal and nothing more. Its two 'setup sanity' assertions were briefly
+  worse than invalid -- INVERTED, pinning -1 as broken by demanding the empty record
+  and non-empty failure field that -1 exists to eliminate. Under the rebased trigger
+  the record genuinely is emptied again, so they are valid once more and are kept.
+
+  THE FALSE-GREEN RISK IS NOW THE DOMINANT ONE IN THIS CONTRACT, AND IT IS WHY EVERY
+  ENTRY CARRIES A CONFIG-WAS-READ PROOF. The rebased trigger is delivered through a
+  config file, and the build reads it from <target>/.claude/skills_config.json rather
+  than <target>/skills_config.json. A fixture that writes the top-level path
+  configures nothing at all: the build succeeds with a full record and the test's
+  red baseline evaporates while looking exactly like a legitimate pass. This is not a
+  hypothetical -- the BA's first probe hit it. Every entry that stands up this fixture
+  must assert on a fixture-unique consequence of the config having been read (the
+  out-of-target absolute path appearing in the failure text; the non-default inside
+  path appearing in the record) or it proves nothing.
 
   Entries 1 and 3 are deliberately separate because the criteria separate the outcome
   clause from the message clause, and a build can satisfy either one alone. The
   realistic partial fix here is a louder warning -- it reads like progress, passes a
   message assertion, and leaves every automated caller exactly where it is.
 
+  ENTRY 3 NEEDED MORE THAN A RE-POINT, AND THIS IS THE MOST IMPORTANT CHANGE IN THE
+  PASS. It passes today, vacuously: both strings it searches for appear in the success
+  line of a healthy build, so its predicate is satisfied by the exact report it exists
+  to rule out. Moving the fixture would have left a green test that still cannot fail.
+  The cure is structural rather than textual. The naming assertions are scoped to the
+  failure report itself so no match can be donated by a success line elsewhere in the
+  capture, and the entry becomes DIFFERENTIAL: it captures the paired-success run in
+  the same test and requires the failure signal to be absent there. A predicate that
+  matches both captures now fails the test rather than passing it. That inversion is
+  also how the criteria clause added in the same pass -- the failure report must be
+  distinguishable from a successful one -- is made testable rather than asserted.
+
   Entry 4 is the attribution control and its second run is the part that will be
   tempting to drop. Runs 1 and 3 alone are passed perfectly by a build that refuses
-  every out-of-package target, which would be a regression that closes the AC. Run 2
-  additionally asserts the record is present rather than only that the build exited 0,
-  so a build that succeeds by skipping the record cannot pass either.
+  every out-of-package target, which would be a regression that closes the AC -- and
+  that is precisely what shipped in the -3-first order, at a cost of 18 regressed
+  outcomes across 6 files. Run 2 additionally asserts the record is present rather
+  than only that the build exited 0, so a build that succeeds by skipping the record
+  cannot pass either. Run 2's mechanism is the one thing that moves: it resolves the
+  condition by putting the escaped managed file back inside the project, and it now
+  doubles as the contract's config-was-read proof by using a non-default inside path
+  and asserting that path appears in the record.
 
   Entry 2 carries the consumption half because a correct exit status is worth nothing
   at a caller that discards it. This repo has already shipped that exact shape --
@@ -199,6 +257,203 @@ amended_by:
       the durable effect. The failure clauses, the outcome clause, the message clause
       and the scope bound are untouched, declares_side_effect stays true, and no
       it-po field was modified.
+  - reason: record-correction
+    by: business-analyst
+    at: 2026-09-07
+    note: >-
+      TWO FIELDS CORRECTED, NO CRITERIA CHANGE. (1) work_status done -> todo.
+      (2) BP-1500d-1 added to depends_on. Nothing else was touched: criteria,
+      it_requirements, test_spec and readiness are exactly as their owners left
+      them.
+
+      THIS IS NOT A DEMOTION OF AN ESTABLISHED RECORD. The done flag was set by
+      a one-line flip in 62b13bf04 on the unmerged branch fast-lane/bp-1500d-3,
+      which has never been merged (PR #689, deliberately held). What is being
+      corrected is an unmerged branch's claim about its own work, made minutes
+      after that work was written. Do not read this as a TQ-400b-style
+      demotion of a long-standing done.
+
+      WHY THE FLIP WAS FALSE. Measured both sides with the same command,
+      unit_tests/portability/ -- control (origin/main plus unrelated commits)
+      70 passed 0 failed; with the change 7 failed, 11 errors, 56 passed. That
+      is 18 regressed outcomes across 6 files, including
+      test_consumer_simulation.py, this repo's own consumer-install harness.
+      The build made honest by that commit is a build that refuses every
+      out-of-package target -- precisely the outcome this AC's own
+      it_requirements forbid ("MUST NOT REFUSE OUT-OF-PACKAGE TARGETS
+      WHOLESALE ... a regression dressed as a fix") and the opposite of the
+      L1's guarantee. So the AC is not satisfied.
+
+      WHY -1 IS NOW A HARD DEPENDENCY, AGAINST THIS RECORD'S OWN PRIOR
+      REASONING. The record contained a direct contradiction between two of its
+      own fields and nothing compares them. The IT-PO note in notes concluded
+      "Neither edge went into depends_on, so no cycle exists between -1 and -3;
+      they can land in either order." But this AC's own expects_from BP-1500d-1
+      block, three clauses earlier, already predicted the failure verbatim:
+      "... plus the ability to place that harness in a state where the record
+      CAN be produced. The second half is what makes this AC's paired success
+      run possible; without it only the failure verdict is observable and the
+      AC can be satisfied by a build that refuses every out-of-package target."
+      That is exactly what shipped. The "either order" analysis examined only
+      the -1-first case -- BP-1500d-1.yaml's reciprocal contract says so in as
+      many words ("if -1 lands first its fixture must assert the record's
+      presence directly rather than inferring it from exit 0") -- and the
+      -3-first case, the broken one, was never analysed at all. depends_on now
+      records the real edge so no future run can pick the unanalysed order.
+
+      The root cause is not the one first suspected. The record is not
+      unproducible; it is MIS-ANCHORED. build_helpers.py sets
+      repo_root = target_root and then keys mappings via
+      template_path.relative_to(repo_root), which is purely lexical. Output
+      keys are legitimately target-relative, but TEMPLATE keys have no
+      target-relative expression when the package lives outside the target.
+      Making the record producible is BP-1500d-1's chartered job, and -1 is
+      work_status todo -- unbuilt.
+  - reason: criteria-precision
+    by: business-analyst
+    at: 2026-09-07
+    note: >-
+      TRIGGER REBASED. The verdict, the outcome clause, the message clause, the
+      paired-success clause and the scope bound are all unchanged in substance;
+      the CONDITION they fire on is replaced, because BP-1500d-1 landed and made
+      the old one a success case. Old trigger: "the package is outside the target
+      directory". New trigger: "the build is asked to place one of the files it
+      manages outside the project it is aimed at, so no account of that file
+      expressed as a position inside that project exists." The out-of-package
+      target survives as the VENUE the L1 mandates for every child, explicitly
+      demoted from being a failing condition in its own right.
+
+      WHY THE OLD TRIGGER HAD TO GO, MEASURED NOT ASSUMED. A real build of this
+      branch's HEAD into a sibling out-of-package project (package copy and
+      receiving project as independent directories under a system temp root)
+      now exits 0, writes the record into the RECEIVING project, and records 472
+      output mappings, 175 template entries, package_root "../leafcutter-ai" and
+      an empty record-failure field. The old trigger cannot produce a failure at
+      all, so a criterion keyed to it is unsatisfiable except by re-breaking -1.
+
+      THE NEW TRIGGER IS VERIFIED REACHABLE, NOT PRESUMED. Same harness, same
+      command line, with the build additionally configured to place one managed
+      file at an absolute location outside the receiving project: the record
+      computation raises, the whole record is discarded, the manifest is written
+      carrying zero mappings and a non-empty failure field, and the exact
+      pre-existing fail-open text is emitted ("[WARNING] could not compute
+      output_mappings: ... is not in the subpath of ..."). This is the same
+      fail-open SHAPE the AC was written against -- warn once, empty record --
+      reached from a condition -1 does not and should not resolve. On this branch
+      the exit path then reports and exits 1; on origin/main the identical state
+      exits 0, so the red baseline this AC needs is intact.
+
+      ONE CLAUSE ADDED, AND WHY. "That report is distinguishable from the report
+      of a build that DID produce the record." Measured on the failing run: the
+      build prints a success tick for the manifest ("build manifest (175 template
+      + 0 output_mappings entries)") immediately BEFORE the failure line. Without
+      this clause the message clause is satisfiable by a successful build, and in
+      fact already is -- see notes, where the report-clause test is shown to pass
+      vacuously today. Adding it makes an existing clause testable rather than
+      widening the AC.
+
+      NOT TOUCHED, DELIBERATELY: it_requirements, test_spec, test_rationale,
+      readiness, work_status, priority, level, assigned_agent, delivers_to,
+      expects_from, declares_side_effect, depends_on. doc_links relevance strings
+      were corrected against the current source and store (see each entry) and one
+      link to BP-1500d-1 was added.
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-07
+    note: >-
+      RE-ENRICHMENT AFTER THE TRIGGER REBASE. Answers the six items the BA left under
+      "WHAT THIS RECORD NEEDS FROM THE IT PO". Fields changed: test_spec (all four
+      descriptions, plus surface_invoked added to entries 1, 3 and 4 so every entry
+      names the real out-of-process command line), test_rationale, it_requirements
+      (one corrected, three added, one annotated), expects_from (both contracts
+      corrected). NOT TOUCHED: criteria, notes, doc_links, readiness, work_status,
+      priority, level, status, req_status, depends_on, component, components,
+      assigned_agent, estimated_complexity, declares_side_effect, delivers_to,
+      change_target, risk_surface.
+
+      1. TRIGGER RE-POINTED IN ALL FOUR test_spec DESCRIPTIONS. They cited the dead
+      condition ("154 entries to 0 ... exits 0" for a package outside --target-dir),
+      which BP-1500d-1 turned into a success case measuring 472 mappings and an empty
+      failure field. Every description now names the BA's verified trigger --
+      precommit_autofix_config_path set to an ABSOLUTE path outside --target-dir --
+      together with its red baseline (exit 1 on this branch, exit 0 on origin/main).
+      The assertions themselves are unchanged: each was invalid AS TRIGGERED, not as
+      written. Entry 1's two "setup sanity" assertions are kept, because the new
+      trigger genuinely re-empties the record.
+
+      2. THE CONFIG-DISCOVERY TRAP IS NOW AN ASSERTION OBLIGATION, NOT A WARNING. The
+      config is read from <target>/.claude/skills_config.json, not <target>/
+      skills_config.json, and a fixture writing the latter configures nothing and
+      returns a false green indistinguishable from a real pass. Rather than only
+      documenting the path, every entry that stands up the fixture must now assert a
+      fixture-unique consequence of the config having been read: entries 1, 2 and 3
+      assert the out-of-target absolute path appears in the failure text; entry 4's
+      run 2 points the key at a NON-DEFAULT path INSIDE the target and asserts that
+      path appears in the written record. Run 2 therefore doubles as the config-read
+      proof for the whole entry, which is why that one assertion was added to an
+      otherwise untouched run.
+
+      3. ENTRY 3'S VACUITY IS FIXED STRUCTURALLY, NOT BY RE-POINTING. It passes today
+      because both strings it searches for appear in the success line of a healthy
+      build, so a fixture move alone would leave a green test that still cannot fail.
+      Three changes: re-point; scope the naming assertions to the failure report
+      itself so no match can be donated by a success line elsewhere in the capture;
+      and make the entry DIFFERENTIAL -- capture the paired-success run in the same
+      test and require the failure signal to be ABSENT there, failing the test if one
+      predicate matches both captures. That inversion is the anti-vacuity guard and is
+      also how the BA's newly added criteria clause is made testable.
+
+      4. it_requirements #2 CORRECTED. It claimed the record step's outcome "reaches
+      NONE of three enforcement points". It reaches one: the record-writer returns the
+      failure and the build's exit path consumes it. Re-worded to four surfaces with
+      exactly one load-bearing, and to demand that path STAY load-bearing under the
+      rebased trigger rather than be created.
+
+      5. THE SCOPE BOUND IS KEPT AND ANNOTATED, per the BA's item 3. With -1 landed it
+      no longer bars the only honest remedy, so it now does the job it was written for
+      -- preventing a re-solve of -1 -- and is jointly satisfiable with "MUST NOT
+      REFUSE OUT-OF-PACKAGE TARGETS WHOLESALE", which it was not in the -3-first order.
+
+      6. THREE it_requirements ADDED. (a) For the BA's new criteria clause: the failure
+      report must not be reachable only by reading past a success line for the same
+      record, stated as a differential obligation because a textual one is what went
+      vacuous. (b) Do not remove the trigger instead of the fail-open -- no
+      not-inside-the-project fallback on the record's output keys, no absolute path as
+      its own key, no silently dropping the offending entry; each converts an
+      unproducible record into an untruthful one. (c) The relative "../" form of the
+      same escape is out of scope and not a substitute, with the condition under which
+      an incidental normalisation is acceptable.
+
+      7. BOTH expects_from CONTRACTS CORRECTED. BP-900h-1 no longer reads "NOT
+      SATISFIED ... not_started with zero implementation" -- it is approved/done and is
+      now recorded as shipped prior art for the invocation shape, still deliberately
+      not a depends_on. BP-1500d-1's contract is marked satisfied, its delivered
+      capability measured, and its "a minimal skills_config.json" corrected to name
+      the .claude/ path that the probe's false green turned on.
+
+      8. FOUND WHILE ENRICHING, NOT REPORTED BY THE BA -- THE ONE PRE-EXISTING
+      surface_invoked NAMED THE WRONG LAYOUT. Entry 2 carried
+      "--target-dir <scratch>" alongside a harness whose package copy sits at
+      "<scratch>/leafcutter-ai/". That makes the target EQUAL to package_root.parent,
+      which is the self-host layout ADR-001 says hides this family of defect -- not
+      the out-of-package venue the L1 mandates, and a direct contradiction of the same
+      expects_from sentence's "realpath asserted NOT under package_root.parent". A
+      fixture built to it would have proved the wrong thing while looking correct.
+      All four entries now carry the sibling form the BA actually measured
+      ("--target-dir <scratch>/project", package at "<scratch>/leafcutter-ai/"), and
+      the layout is spelled out in the BP-1500d-1 expects_from so the ambiguity cannot
+      be re-derived.
+
+      REJECTED CANDIDATE RECORDED SO IT IS NOT REINTRODUCED: a manifest destination
+      pre-occupied by a directory reaches the record step but already exits non-zero on
+      origin/main via an uncaught IsADirectoryError, so a test against it would be
+      green on unpatched code and could not distinguish this AC's fix from its absence.
+
+      NOT DONE, AND WHY: no doc_link was added for
+      docs/reference/skills-config-fields.md, which documents
+      precommit_autofix_config_path and its .claude/ default and is now the reference
+      a reader needs to understand the trigger. doc_links are the BA's this pass and
+      were explicitly out of write scope; recommended to whoever amends next.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -236,6 +491,222 @@ notes: |
   expects_from on -1 covers only the harness and the producible-record state this
   AC's paired success run needs. Neither edge went into depends_on, so no cycle
   exists between -1 and -3; they can land in either order.
+
+  SUPERSEDED 2026-09-07 -- "EITHER ORDER" WAS WRONG, AND THIS RECORD ALREADY SAID
+  SO. Read the paragraph above only as history. BP-1500d-1 is now in depends_on.
+  The "either order" conclusion analysed one of the two orders: BP-1500d-1.yaml's
+  reciprocal contract spells out the -1-first case ("if -1 lands first its fixture
+  must assert the record's presence directly rather than inferring it from exit
+  0") and says nothing about the -3-first case, which is the broken one. Meanwhile
+  this AC's own expects_from BP-1500d-1 block, three clauses above the paragraph it
+  contradicts, already stated the outcome: "without it only the failure verdict is
+  observable and the AC can be satisfied by a build that refuses every
+  out-of-package target." Two fields of one record disagreed for thirteen days,
+  the wrong one was acted on, and nothing in the store compares fields against each
+  other. When an expects_from names a capability as load-bearing, an ordering
+  conclusion that does not address it is incomplete, whatever depends_on says.
+
+  TRIGGER REBASED 2026-09-07 -- READ THIS BEFORE THE FOUR PARAGRAPHS BELOW, WHICH
+  ARE NOW HISTORY. Everything below about "the package is outside the target" being
+  the failing condition is superseded. That layout is now a SUCCESS case and is
+  retained only as the venue the L1 mandates. What is unchanged and remains the
+  whole point of this AC: a build that cannot produce the record must report failure
+  and exit non-zero, and must not warn once and report success.
+
+  THE NEW TRIGGER, AND THE EVIDENCE IT IS GENUINELY REACHABLE. The record is an
+  account, expressed as positions INSIDE the receiving project, of the files this
+  build put there. It is unproducible exactly when a file the build manages has no
+  such position -- when the build is configured to place that file somewhere outside
+  the project it is aimed at. Verified live on this branch's HEAD, three real
+  subprocess builds through the ordinary command line into a sibling out-of-package
+  scratch project under a system temp root:
+
+    (1) BASELINE, nothing unusual: exit 0, record written into the RECEIVING project,
+        472 output mappings, 175 template entries, package_root "../leafcutter-ai",
+        empty failure field. This is what BP-1500d-1 bought and it is why the old
+        trigger is dead.
+    (2) NEW TRIGGER, one managed file configured to an ABSOLUTE location outside the
+        receiving project (the config key is named for the it-po below, deliberately
+        not in the criteria): the record computation raises, EVERY mapping is
+        discarded, the manifest is written with zero mappings and a non-empty failure
+        field reading "ValueError: '<outside path>' is not in the subpath of
+        '<target>'", and the build prints the original fail-open warning verbatim.
+        This is the same fail-open shape the AC was written against, reached from a
+        condition -1 does not resolve -- and must not: giving the record's own lookup
+        keys a not-inside-the-project fallback would poison the very base the drift
+        readers resolve files against. (-1's fallback is on the diagnostic-only
+        template key, a different field.)
+    (3) PAIRED SUCCESS, identical command line and identical out-of-package venue with
+        that one file placed back inside the project: exit 0 and the record present on
+        disk with a full mapping set. The attribution control survives intact.
+
+  CANDIDATES EXAMINED AND REJECTED, so nobody re-walks them. An unreadable package
+  registry fails the build long before the record step (traceback, no record verdict
+  at all) -- not a record trigger. A manifest destination pre-occupied by a directory
+  does reach the record step and does exit non-zero, but by uncaught traceback, and it
+  ALREADY exits non-zero on origin/main -- so it cannot distinguish this AC's fix from
+  its absence and would give a green test against unpatched code. An unreadable
+  template tree and a target that vanishes mid-build both require mutating state
+  between the deploy phases and the record step, which no caller can do deterministically.
+
+  A SECOND FAIL-OPEN FOUND WHILE PROBING, NOT COVERED BY THIS AC, FILE IT SEPARATELY.
+  The same escape expressed RELATIVELY ("../elsewhere/<file>") does NOT fail: measured
+  exit 0 with a full 472-entry record and an empty failure field, because the path
+  library does not normalise ".." and the relativization therefore succeeds, writing a
+  record key that points outside the project it claims to describe. That is a record
+  that is produced and untruthful rather than one that could not be produced, so it is
+  a different guarantee from this AC's and belongs to a sibling. This AC's trigger is
+  deliberately specified on the absolute form, which is verified unproducible.
+
+  THE TESTS SHIPPED WITH -3 ARE A REGRESSION LOCK AGAINST -1, NOT A COVERAGE ASSET.
+  Whoever builds BP-1500d-1: test_bp_1500d_3_build_exits_nonzero_when_the_record_
+  cannot_be_produced_for_an_out_of_package_target asserts, in one test, all three of
+  returncode != 0, output_mappings == {}, and a non-empty output_mappings_error --
+  the latter two labelled "setup sanity" but hard asserts all the same. Every one of
+  the three goes red the moment -1 makes the record producible for an out-of-package
+  target, because that is what -1 IS. The paired-success test
+  (..._the_identical_build_succeeds_and_leaves_the_record_in_place_once_it_can_be_
+  produced) reintroduces the unproducible condition in its run 3 and asserts non-zero
+  again, so it locks the same shape a second time. These must be RE-BASED onto the
+  post--1 world, not "fixed" one assertion at a time -- their trigger condition, not
+  their verdict, is what was wrong. The exit-code verdict this AC specifies survives
+  intact; re-basing the trigger is a separate decision that HAS NOW BEEN TAKEN -- see
+  the rebase paragraphs above and the assertion-by-assertion inventory below.
+
+  WHICH ASSERTIONS ARE NOW INVALID, NAMED ONE BY ONE. The four tests in
+  unit_tests/portability/test_bp_1500d_3_build_manifest_failure_verdict.py are
+  test-writer's to change, not this record's; this is the specification of WHAT is
+  wrong with them, not an edit. Measured on this branch: 92 passed, 3 xfailed (the
+  three are masked only because this record was corrected back to work_status todo;
+  under strict enforcement they are three real failures). The 18 outcomes across 6
+  files that the original -3 implementation regressed are gone.
+
+    Test 1 (exits non-zero when the record cannot be produced). Its exit-code
+    assertion is invalid AS TRIGGERED -- the out-of-package build it fires on now
+    correctly succeeds. Re-point the fixture, keep the assertion verbatim. Its two
+    "setup sanity" assertions are worse than invalid, they are INVERTED, and they are
+    the regression lock proper: an empty output mapping set and a non-empty
+    record-failure field are no longer the defect being reproduced, they are the
+    FIXED state's opposite -- 472 mappings and an empty failure field are what a
+    healthy out-of-package build now produces. Asserting the old pair pins -1 as
+    broken. Under the new trigger those same two assertions become valid again and
+    should be kept, because the new trigger genuinely does empty the record.
+
+    Test 2 (the verdict reaches an automated caller). Its exit-code assertion is
+    invalid AS TRIGGERED, same fix as test 1. Its second half -- parsing the CI
+    workflow as YAML and asserting no build step carries continue-on-error and none
+    pipes the build into another command -- is trigger-independent and must survive
+    untouched. Minor, non-blocking: its `"|" not in run_cmd and "||" not in run_cmd`
+    check is redundant in its second half, since any "||" is already a "|".
+
+    Test 3 (the report names the record and the project). It currently PASSES, and
+    that is the finding, not a reprieve: it passes VACUOUSLY. Both strings it looks
+    for -- the record's name and the target path -- appear in the SUCCESS line of a
+    build that produced the record perfectly. It cannot presently distinguish the
+    report it exists to check from its opposite. Re-point it onto the new trigger AND
+    give it the new criteria clause: the report must be distinguishable from a
+    successful one. Note while doing so that the failing run prints a manifest
+    success tick immediately before the failure line.
+
+    Test 4 (the attribution control). Run 1 and run 3's non-zero assertions are
+    invalid AS TRIGGERED. Run 2's three assertions -- exit 0, a non-empty record on
+    disk, an empty failure field -- are correct and must be kept; only the MECHANISM
+    by which run 2 "resolves the condition" changes, from re-nesting the package
+    inside the target (now a no-op, since run 1's layout already succeeds) to placing
+    the escaped managed file back inside the project. The three-run structure, and
+    the reason run 2 exists at all, are unchanged.
+
+  WHAT THIS RECORD NEEDS FROM THE IT PO, WHO OWNS it_requirements AND test_spec AND
+  IS EXPECTED TO RE-PASS AFTER THIS. None of the following was changed here.
+    1. test_spec's four entries still describe the old trigger in their descriptions
+       ("this exact run emits '... is not in the subpath of ...', writes a manifest
+       with output_mappings {} (154 entries to 0), and exits 0"). Every one of those
+       located facts is now false for the layout named. Re-point the descriptions, do
+       not relax the assertions.
+    2. The concrete reachable trigger, for the test_spec description: the build's
+       config key `precommit_autofix_config_path` (equally
+       `changelog_categories_path`) set to an ABSOLUTE path outside --target-dir.
+       Config is read from <target>/.claude/skills_config.json, NOT <target>/
+       skills_config.json -- a probe that writes the latter silently configures
+       nothing and returns a false green. Use the absolute form; the relative
+       "../" form is a different, non-failing defect (see above).
+    3. The scope bound in it_requirements ("do not satisfy this AC by making the
+       record always producible; that is -1's work") is now SAFE to keep and should
+       be kept -- with -1 landed, it no longer forbids the only available remedy. It
+       was the trap that produced the regression; it stops being one in this order.
+    4. it_requirements #2 still describes the outcome as reaching NONE of three
+       enforcement points. It now reaches one: the record-writer returns the failure
+       and the build's exit path consumes it. Re-word to demand that path stay
+       load-bearing under the new trigger rather than be created.
+    5. expects_from BP-900h-1 still reads "NOT SATISFIED ... work_status not_started
+       with zero implementation". BP-900h-1 is now readiness approved, work_status
+       done. Left unedited here because the contract fields are the it-po's.
+    6. A new it_requirement is warranted for the added criteria clause: the failure
+       report must not be reachable only by reading past a success line for the same
+       record.
+
+  DOC_LINKS VERDICT, 2026-09-07 -- FOUR OF EIGHT WERE STALE, ALL FOUR CORRECTED IN
+  PLACE WITH THE OLD TEXT QUOTED SO THE CHANGE IS AUDITABLE. build_helpers.py (line
+  numbers off by roughly a thousand, and "falls through to a successful outcome" no
+  longer true); build.py (its exit-status path now exists rather than being the
+  surface to build); ADR-001 (its stated claim, "an out-of-package target is the only
+  layout in which this failure appears", is exactly what -1 falsified); BP-900h-1
+  (called unstarted with zero implementation, is now approved and done). One link
+  added, to BP-1500d-1.
+
+  THE MANIFEST-PATH CLAIM IS STALE IN TWO PLACES THIS RECORD MAY NOT EDIT, BOTH
+  REPORTED RATHER THAN FIXED. The claim is "manifest_path = package_root /
+  '.build_manifest.json' -- always the package, never --target-dir". Current source
+  resolves the manifest's directory from the target whenever one is supplied, and a
+  real out-of-package build measured 2026-09-07 wrote the record into the receiving
+  project, not the package. The claim survives verbatim in (a) BP-1500d-1.yaml's own
+  doc_links, and (b) docs/known-issues/build-pipeline.md's KI-BP-011 Symptom
+  paragraph, which also still carries the pre-fix line references for the manifest
+  write target and the key relativization. KI-BP-011 is filed against BP-1500d as a
+  whole and reads "open"; its owner should re-open or amend it, since a large part of
+  what it documents has been fixed underneath it.
+
+  THE L1 INHERITS THE SAME STALENESS -- BP-1500d.yaml, FOR THE PRODUCT OWNER. Its
+  VERIFIED EVIDENCE block is a 2026-08-25 snapshot and three of its four points are
+  now false: point 1 ("the record is written into the package that produced the
+  build, never into the project the build was aimed at") and point 3 ("the record's
+  entries are keyed by where the producing package happened to sit on disk") were
+  both fixed by BP-1500d-1; point 4 ("prints one warning line and exits zero") is
+  false for the layout it names and, for the remaining reachable trigger, is closed
+  on this branch. Its doc_links are stale too: the known-issues entry says "NO entry
+  covers this defect yet", when KI-BP-011 does, and the build.py entry describes a
+  step that "gives up ... before exiting successfully". Only the guarantee (a)-(d),
+  the mandated proof shape and the BP-1500c/BP-1500a boundaries are still sound --
+  and (d), this child's charter, is untouched by any of it. Not edited here: an L1's
+  evidence is the product owner's, and this agent works at L2/L3.
+
+  ORDERING HAZARD STILL OPEN -- THE SHAPE THAT CAUSED ALL OF THIS IS UNCHANGED FOR
+  TWO SIBLINGS. BP-1500d-2 and BP-1500d-4 are both readiness approved, work_status
+  todo, and both carry depends_on: [BP-1500d] and nothing else. Nothing therefore
+  stops a scanner dispatching either of them ahead of a baseline it needs -- which is
+  precisely the shape that let -3 be built before -1 and cost 18 regressed outcomes.
+  Both siblings assert on a project that "received a real build and carries its own
+  record", a state only -1 produces, so both have the same unrecorded prerequisite -3
+  had. This record may not add depends_on to files outside its own scope, so it is
+  recorded here for whoever sequences this family next: give -2 and -4 an explicit
+  edge on BP-1500d-1 before dispatching either. A related tell in the same direction:
+  BP-1500d-1 itself is still work_status todo while its behaviour is demonstrably
+  live in a real build, so a scanner reading work_status alone cannot tell that the
+  prerequisite is already met.
+
+
+  THE SCOPE BOUND FORBADE THE ONLY HONEST FIX -- THIS IS A SPECIFICATION TRAP, NOT A
+  CODER ERROR. The last it_requirement reads "do not satisfy this AC by making the
+  record always producible; that is -1's work and would leave this enforcement floor
+  untested." Correct in isolation, and correct if -1 had landed first. Built before
+  -1, it barred the coder from the one remedy that resolves the condition and left
+  only its opposite available: implement a refusal keyed on a condition that is
+  itself the defect. The instructions were followed and the result regressed 18
+  outcomes across 6 files. Whoever re-lands this should see that the failure sits in
+  the specification's sequencing, not in the implementation, and should re-read this
+  bound alongside the it_requirement it sits next to -- "MUST NOT REFUSE
+  OUT-OF-PACKAGE TARGETS WHOLESALE" -- which the two of them together made
+  unsatisfiable in the -3-first order.
 
   THE EXIT CODE IS THE ASSERTION AND IT IS SUPPOSED TO BE RED. Measured 2026-08-25,
   a real build into a temp-root target prints the could-not-compute warning, writes
