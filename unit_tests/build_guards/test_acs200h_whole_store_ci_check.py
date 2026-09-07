@@ -335,6 +335,136 @@ class TestAcs200hWholeStoreCiCheck(unittest.TestCase):
                 "whole-store job cannot inspect what its hooks cannot see.",
             )
 
+    def test_empty_base_commit_works_without_a_configured_git_identity(self) -> None:
+        # covers: ACS-200h
+        # angle: deployed
+        """The staging step must work on a runner with NO git identity.
+
+        This is a real production failure, not a hypothetical. The first push
+        of this job to main died here:
+
+            fatal: empty ident name (for <runner@...cloudapp.net>) not allowed
+            fatal: ambiguous argument '': unknown revision or path not in the
+                   working tree
+            Process completed with exit code 128
+
+        `git commit-tree` WRITES a commit, so it needs a committer identity. A
+        developer machine has one configured globally and a GitHub runner does
+        not — so this passed every local check and failed on the first real
+        run. The second error is the misleading one: commit-tree substituted
+        empty into the reset, and the reset reported the empty argument rather
+        than the missing identity.
+
+        Asserted BOTH ways round, because only the pair proves the fix is what
+        makes the difference: the bare form must still fail without an
+        identity, and the `-c` form the workflow uses must succeed.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "seed.txt").write_text("x\\n", encoding="utf-8")
+            subprocess.run(  # noqa: S603
+                ["git", "-C", str(repo), "init", "-q"], check=True
+            )
+            subprocess.run(  # noqa: S603
+                ["git", "-C", str(repo), "add", "-A"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(  # noqa: S603
+                [
+                    "git", "-C", str(repo),
+                    "-c", "user.name=seed", "-c", "user.email=seed@localhost",
+                    "commit", "-q", "-m", "seed",
+                ],
+                check=True,
+                capture_output=True,
+            )
+
+            # Strip every identity source, reproducing a bare CI runner.
+            bare = dict(os.environ)
+            bare["GIT_CONFIG_GLOBAL"] = os.devnull
+            bare["GIT_CONFIG_SYSTEM"] = os.devnull
+            for var in (
+                "GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL",
+                "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL",
+                "EMAIL",
+            ):
+                bare.pop(var, None)
+
+            empty_tree = subprocess.run(  # noqa: S603
+                ["git", "-C", str(repo), "hash-object", "-t", "tree", os.devnull],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+
+            without_identity = subprocess.run(  # noqa: S603
+                ["git", "-C", str(repo), "commit-tree", empty_tree, "-m", "base"],
+                capture_output=True,
+                text=True,
+                env=bare,
+            )
+            self.assertNotEqual(
+                0,
+                without_identity.returncode,
+                "Expected `git commit-tree` to FAIL with no identity "
+                "configured — that is the CI failure this guard exists for. "
+                "If git no longer requires one, the workflow's -c flags are "
+                "harmless but this test should be retired deliberately.",
+            )
+
+            with_identity = subprocess.run(  # noqa: S603
+                [
+                    "git", "-C", str(repo),
+                    "-c", "user.name=ci", "-c", "user.email=ci@localhost",
+                    "commit-tree", empty_tree, "-m", "base",
+                ],
+                capture_output=True,
+                text=True,
+                env=bare,
+            )
+            self.assertEqual(
+                0,
+                with_identity.returncode,
+                "The inline-identity form the workflow uses must succeed on a "
+                f"runner with no git config; stderr={with_identity.stderr!r}",
+            )
+            self.assertTrue(
+                with_identity.stdout.strip(),
+                "commit-tree returned an EMPTY sha while reporting success. "
+                "An empty sha is what previously reached `git reset --soft` "
+                "and produced the misleading 'ambiguous argument' error.",
+            )
+
+    def test_workflow_staging_step_supplies_a_committer_identity(self) -> None:
+        # covers: ACS-200h
+        # angle: deployed
+        """The shipped workflow must actually pass the identity flags.
+
+        The test above proves the mechanism; this proves the workflow uses it.
+        Without both, the recipe could be correct in a test and absent from the
+        job that runs it — which is exactly how this reached main the first
+        time.
+        """
+        workflow = _load_workflow()
+        job_name, job = _find_whole_store_job(workflow)
+        self.assertIsNotNone(job_name, "No whole-store CI job exists.")
+        run_bodies = " \\n".join(
+            step["run"] for step in job.get("steps", []) if isinstance(step.get("run"), str)
+        )
+        self.assertIn(
+            "commit-tree",
+            run_bodies,
+            f"Job {job_name!r} no longer creates an empty base commit.",
+        )
+        self.assertIn(
+            "user.email=",
+            run_bodies,
+            f"Job {job_name!r} calls `git commit-tree` without supplying a "
+            "committer identity. On a GitHub runner that fails with 'empty "
+            "ident name' and the job dies before inspecting a single record.",
+        )
+
     def test_git_add_alone_does_not_make_the_store_visible(self) -> None:
         # covers: ACS-200h
         # angle: failure

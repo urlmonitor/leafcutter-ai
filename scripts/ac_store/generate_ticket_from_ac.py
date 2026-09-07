@@ -628,6 +628,49 @@ def _is_real_prose_path(token: str, worktree_root: "Path | None") -> bool:
     return (worktree_root / token).is_file()
 
 
+def _paths_declared_non_edit_surface_only(doc_links: list[Any]) -> frozenset[str]:
+    """Return paths the record declares ONLY at non-edit-surface relationships.
+
+    TKT-600a-2: a record's ``doc_links`` is a structured, authored declaration
+    of what each linked path IS to this work. When a path is declared at a
+    relationship outside ``_EDIT_SURFACE_RELATIONSHIPS`` (e.g. ``related``,
+    ``describes``) and is declared NOWHERE ELSE in the same record at an
+    edit-surface relationship, the record has already stated that this path is
+    context, not a surface — a prose bullet that happens to also name the same
+    path must not override that self-declaration (Source 1 in
+    :func:`_build_files_touched`).
+
+    Only dict-shaped ``doc_links`` entries carry a ``relationship`` field, so
+    plain-string entries are not considered here — there is nothing for them
+    to declare. A path declared at an edit-surface relationship ANYWHERE in
+    the record is never suppressed, even if the same path also carries a
+    non-edit-surface declaration elsewhere (scenario 5 — the edit-surface
+    declaration wins).
+
+    Args:
+        doc_links: The AC record's ``doc_links`` list (or None/empty).
+
+    Returns:
+        Frozenset of path strings declared at a non-edit-surface relationship
+        and never declared at an edit-surface relationship.
+    """
+    if not doc_links:
+        return frozenset()
+    relationships_by_path: dict[str, set[str]] = {}
+    for link in doc_links:
+        if not isinstance(link, dict):
+            continue
+        path_val = link.get("path", "")
+        rel = link.get("relationship", "")
+        if isinstance(path_val, str) and path_val:
+            relationships_by_path.setdefault(path_val, set()).add(rel)
+    return frozenset(
+        path
+        for path, rels in relationships_by_path.items()
+        if not (rels & _EDIT_SURFACE_RELATIONSHIPS)
+    )
+
+
 def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     """Build the sorted, de-duplicated ``files_touched`` list for a generated ticket.
 
@@ -640,7 +683,10 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
        paths quoted only to describe a scenario (e.g. ``src/foo.py`` in prose
        that never touches a real ``src/`` tree) do not exist on disk and are
        excluded, while a real edit-surface path named in a bullet (e.g.
-       ``scripts/goal_to_epic.py``) survives.
+       ``scripts/goal_to_epic.py``) survives — AND further filtered to exclude
+       any token the record's own ``doc_links`` has already declared as
+       non-edit-surface and nowhere as an edit surface (TKT-600a-2): the
+       record's structured self-declaration wins over a prose repetition.
     2. Paths from ``doc_links`` whose ``relationship`` is one of the edit-surface
        relationships defined in ``_EDIT_SURFACE_RELATIONSHIPS`` (``constrains``,
        ``creates``, ``implements``, ``modifies``, ``specifies``).
@@ -658,15 +704,20 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
         Sorted list of unique local path strings (may be empty).
     """
     paths: set[str] = set()
+    doc_links = ac.get("doc_links") or []
+    suppressed = _paths_declared_non_edit_surface_only(doc_links)
 
     # Source 1 — it_requirements edit surface.
     # Structured form: a dict with an explicit reference_file_path key. This
     # form is trusted verbatim — it is an authored, structured field, not a
-    # prose token, so the existence gate below does not apply to it.
+    # prose token, so neither the existence gate nor the suppression rule
+    # below applies to it.
     # List form (TKT-500f-8-i): a list of prose bullet strings; each bullet is
     # scanned for file path tokens via _extract_paths_from_prose, then each
-    # candidate token is gated on on-disk existence (TKT-600a-1) so
-    # illustrative example paths never leak into files_touched.
+    # candidate token is gated on on-disk existence (TKT-600a-1) and on NOT
+    # being a path the record's own doc_links already declared non-edit-surface
+    # (TKT-600a-2) so illustrative example paths and self-contradicted paths
+    # never leak into files_touched.
     it_req = ac.get("it_requirements")
     if isinstance(it_req, dict):
         ref_path = it_req.get("reference_file_path", "")
@@ -677,11 +728,12 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
         for bullet in it_req:
             if isinstance(bullet, str):
                 for path_token in _extract_paths_from_prose(bullet):
+                    if path_token in suppressed:
+                        continue
                     if _is_real_prose_path(path_token, worktree_root):
                         paths.add(path_token)
 
     # Source 2 — doc_links edit-surface entries
-    doc_links = ac.get("doc_links") or []
     for path_val in _extract_local_paths(
         doc_links, relationships=_EDIT_SURFACE_RELATIONSHIPS
     ):
@@ -3956,5 +4008,20 @@ DECISION HISTORY
   that call main() without the new flag — each needs a one-line
   --resolved-destination addition. (#TKT-600b-1) (#TKT-600b-1-i) (#TKT-600b-1-ii)
   (#TKT-600b-2) (#TKT-600b-3)
+- 2026-09-07 [python-coder]: Added TKT-600a-2's structured-declaration
+  suppression rule to _build_files_touched. New helper
+  _paths_declared_non_edit_surface_only(doc_links) maps each dict-shaped
+  doc_links path to the set of relationships it is declared under; a path
+  declared ONLY at relationships outside _EDIT_SURFACE_RELATIONSHIPS (e.g.
+  related, describes) and never at an edit-surface relationship is now
+  excluded from Source 1's prose harvest, even when the same path is also
+  named in a prose it_requirements bullet and exists on disk. A path
+  declared at an edit-surface relationship anywhere in the record is never
+  suppressed (the edit-surface declaration wins over a co-existing
+  non-edit-surface declaration of the same path). This is a second,
+  independent filter in front of TKT-600a-1's on-disk existence gate — it
+  reads the record's own structured doc_links relationship enum, not
+  English prose cues, and does not touch _is_real_prose_path or
+  _extract_paths_from_prose. (#TKT-600a-2)
 ====================================================================
 """

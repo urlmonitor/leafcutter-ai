@@ -688,7 +688,7 @@
                 "pass_filenames": false,
                 "change_set_source": "handed_by_commit_path",
                 "enabled": false,
-                "_comment": "Start disabled until the rename sweep ticket migrates legacy diagram filenames to c{level}-{seq:03d}-{slug}.md convention."
+                "_comment": "Start disabled until the rename sweep ticket migrates legacy diagram filenames to the c<level>-<seq>-<slug>.md convention. Angle brackets are deliberate: written with curly braces, the placeholder scan reads those field names as unfilled template tokens and fail-closes any documentation check whose required-doc contract names this manifest. Do not restore braces here, and do not restate this rule using them."
             },
             {
                 "id": "check-paths-integrity",
