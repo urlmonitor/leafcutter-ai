@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -354,8 +354,11 @@ amended_by:
   agent: approve_acs
   date: '2026-08-31'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_bp_100n_4_ii.py
+implemented_by:
+  - templates/scripts/commit_guardian/_hook_trigger_census.py
+  - templates/scripts/commit_guardian/check_hook_trigger_reachability.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: >-

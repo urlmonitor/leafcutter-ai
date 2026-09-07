@@ -246,8 +246,13 @@ def _check_hook_script_integrity(
 
     Iterates the raw (pre-template-var-substitution) ``hooks`` list from
     ``hooks_manifest.hooks``.  For each entry, the script filename is the
-    last whitespace-delimited token of the ``entry`` field; ``Path(...).name``
-    strips any path prefix (including ``{{config.output_root}}``).
+    LAST TOKEN THAT ENDS IN ``.py`` (never the last whitespace-delimited
+    token, which misreads a trailing flag as the invoked script for any
+    entry that carries arguments after its script — e.g. check-done-proof's
+    ``check_done_proof.py --test-root .`` — and would falsely warn that a
+    registered, invoked, required gate's script is missing;
+    BP-100n-4 it_requirements). ``Path(...).name`` strips any path prefix
+    (including ``{{config.output_root}}``).
 
     Emits a ``_log.warning`` for each missing script; does **not** raise or
     return an error — the build continues normally.  When all scripts are
@@ -259,11 +264,11 @@ def _check_hook_script_integrity(
     """
     for hook in hooks:
         entry = hook.get("entry", "")
-        tokens = entry.split()
-        if not tokens:
+        py_tokens = [t for t in entry.split() if t.endswith(".py")]
+        if not py_tokens:
             continue
-        script_name = Path(tokens[-1]).name
-        if script_name.endswith(".py") and not (cg_dir / script_name).exists():
+        script_name = Path(py_tokens[-1]).name
+        if not (cg_dir / script_name).exists():
             _log.warning(
                 "Hook '%s': script '%s' not found at canonical path %s",
                 hook.get("id", "?"),

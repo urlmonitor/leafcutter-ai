@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -525,6 +525,36 @@ expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-31
 amended_by:
+- reason: implementation
+  by: BrainCandy
+  at: 2026-09-07
+  note: >-
+    work_status set to done on measured evidence. The census, path-identity,
+    declared-non-gate register and unreadable-vs-unparseable distinction are
+    implemented and covered by unit_tests/commit_guardian/test_bp_100n_4*.py
+    (22 passed under AC_ENFORCE_STRICT=1; full unit_tests/commit_guardian:
+    1425 passed, 4 skipped, 1 xfailed).
+    THE DAY-ONE TRIAGE WAS CORRECTED BEFORE IT SHIPPED, and that correction is
+    the part worth reading. The first implementation registered all 19
+    previously-unwired scripts as live gates, taking hooks_manifest 61 -> 80
+    with 0 unreferenced. Probing each one the way pre-commit actually invokes
+    it — positional staged filenames, since all were wired files:null with no
+    always_run — showed SIX could not be invoked at all: check_ac_coverage,
+    check_debug_scripts, check_docstrings, check_documentation and
+    check_v2_ac_store_alignment reject positional arguments (exit 2), and
+    check_doc_coverage raises NameError at argparse setup (exit 1). Any one of
+    them blocks every commit in this repository and in every consumer install
+    — reproducing KI-CG-20260831-0713 inside the change meant to close its
+    sibling. The census was right that nothing invokes these scripts; the
+    inference that they should therefore be switched on was wrong, because for
+    these six the reason nothing invokes them is that they cannot be invoked.
+    Final state: 13 registered as real gates (61 -> 74), all verified exit 0
+    under real invocation; the six recorded in the declared-non-gate register
+    as BROKEN AND TRACKED, each ground naming its actual failure and stating
+    it is intended to become a gate once fixed. ACs are being authored to fix
+    and register them. The register must not become a place where broken
+    things are parked to make a number reach zero, so the grounds distinguish
+    "deliberately not a gate" from "broken, tracked" explicitly.
 - reason: technical-enrichment
   by: it-po
   at: 2026-08-31
@@ -655,7 +685,12 @@ superseded_by: null
 covered_by:
   - BP-100n-4-i
   - BP-100n-4-ii
-implemented_by: []
+  - unit_tests/commit_guardian/test_bp_100n_4.py
+implemented_by:
+  - templates/scripts/commit_guardian/_hook_trigger_census.py
+  - templates/scripts/commit_guardian/check_hook_trigger_reachability.py
+  - templates/scripts/commit_guardian/commit_guardian.json
+  - scripts/build_precommit.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: >-
