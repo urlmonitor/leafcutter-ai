@@ -3427,11 +3427,40 @@ touches that template, because only then does `check-build-drift` force a `build
 put the deployed surface in scope. `templates/ticket-lifecycle/README.md` is rarely edited; the
 commit that finally did (PR #687, a handoff-contract fix) was the first to meet it.
 
-**The trap in the remediation.** The obvious way to make the gate quiet is to delete
-`.claude/tickets/README.md` — the gap disappears and the commit proceeds. That is wrong: the
-file belongs in a consumer install, and deleting it locally to pass a local gate would leave
-the next build to silently re-create it, converting a reported gap into an unreported one. The
-manifest is what is incomplete. Skipping the hook with a stated cause is the honest interim.
+**THE GATE WAS RIGHT AND WAS SKIPPED THREE TIMES ON A WRONG PREMISE — the most useful part of
+this entry.** Acting on the original mis-diagnosis, `check-output-drift` was skipped with a
+written "cause" on three consecutive commits, each stating that the manifest was incomplete and
+that the gap was pre-existing and not caused by the change. Both claims were false. The gap was
+introduced BY those commits — specifically by the template edit in the first of them — and the
+gate was reporting a real, current, self-inflicted desync every single time.
+
+The final repair needed no skip at all. Once the two tracked copies agreed and `build.py` was
+re-run so the registration was recomputed, the gate passed on its own:
+
+```text
+grep -c "tickets/README.md" .build_manifest.json    ->  0   (before, released)
+grep -c "tickets/README.md" .build_manifest.json    ->  1   (after, re-registered)
+```
+
+Note the ORDER, because it is the part that is easy to get wrong: bringing the files into
+agreement is not enough on its own. The registration decision is taken during the build, so a
+`build.py` run is required AFTER the copies are resynced. Fixing the files and committing
+without rebuilding leaves the manifest still recording the release, and the gate still
+correctly reporting a gap.
+
+A written cause on a skip is not the same as a correct one. Three sequential commits carried a
+confident, specific, evidence-citing justification for bypassing a gate that was accurately
+describing a defect the same commits had created. The evidence cited (`grep -c ... -> 0`) was
+even true — it was simply not the cause. Prose quality is not a proxy for being right, and a
+skip that recurs on consecutive commits should be read as the gate insisting rather than the
+gate malfunctioning.
+
+**A trap worth naming separately.** The obvious way to silence the gap is to delete
+`.claude/tickets/README.md`. That is wrong for a different reason than the skip was: the file
+belongs in a consumer install, and deleting it to pass a local gate converts a reported gap
+into an unreported one. (Deleting it and rebuilding was tried during diagnosis and did not
+regenerate it — the scaffold is write-if-absent and did not fire in this layout, so the
+deletion simply stands.)
 
 **A second, unrelated artifact was reported in the same run and is genuinely disposable:**
 `.claude/.cache/readme_markers/fallback-<pid>.json`. It is a per-run cache file with a
