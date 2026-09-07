@@ -8,7 +8,7 @@ component: ux-prototyping
 level: L2
 status: active
 req_status: approved
-work_status: done
+work_status: in_progress
 criteria: |
   Given the product-truth store,
   When generate_product_truth.py runs a second time with no source change,
@@ -33,6 +33,7 @@ expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
 amended_by:
+- reason: '2026-09-07: demoted from work_status done to in_progress. BO-2500b requires a covers-tagged passing test before an AC may be done, and no test in the tree carries a covers tag for this id (3828 such tags exist elsewhere, so the convention is established, not absent). The record claimed done without proof. Coverage was audited: UXP-511 and UXP-513 each have exactly one real test proving one clause of a two-clause criterion, linked in covered_by as partial evidence and deliberately NOT tagged as covers, since a tag would make the gate green while half the criterion stays unproven. UXP-510, UXP-512 and UXP-514 have no test at all. The remaining work is carried in each record''s test_spec.'
 - reason: '2026-09-07 business-analyst: linked the one genuinely covering test for
     the idempotency clause; recorded the --check CLI contract as uncovered and authored
     its test_spec.'
