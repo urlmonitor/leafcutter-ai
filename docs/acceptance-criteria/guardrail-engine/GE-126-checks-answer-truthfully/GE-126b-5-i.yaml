@@ -1,0 +1,126 @@
+id: GE-126b-5-i
+title: "A check with nothing it could be asked to refuse says why, and a claimed exemption whose ground is that the demonstration has not been done is refused like one with no ground at all"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a check whose work is to count or to measure rather than to accept or reject,
+    so that no input exists which it could be required to refuse,
+  And that check declares itself exempt from carrying a known-bad input, together with
+    a stated ground for the exemption,
+  When the run reports,
+  Then that check is reported as exempt with its stated ground shown, is counted under
+    a figure of its own that is stated alongside the other figures, is not counted among
+    the checks whose refusal has not been demonstrated, and does not by itself cause the
+    run to fail,
+  And a check declaring itself exempt while stating no ground is reported by name as an
+    exemption without a ground, is counted among the checks whose refusal has not been
+    demonstrated, and the run fails,
+  And a check whose stated ground is that the demonstration has not been done yet, is
+    deferred, is planned, or is pending, is reported in exactly the same way as one that
+    states no ground at all — a postponement is not a ground,
+  And given a check that genuinely accepts or rejects declares itself exempt with a
+    ground, when its known-bad input is fed through its real entry point and the stated
+    rejection is observed, then the exemption is reported as contradicted by that
+    observation and the run fails.
+depends_on:
+  - GE-126b-5
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5.yaml"
+    relationship: parent
+    status: exists
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The escape hatch is already modelled: negative_control accepts the alternative form
+      {not_applicable: true, reason: <string>}, and its own description limits it to
+      "genuinely non-falsifiable checks (pure census/measurement)" that "must justify it".
+      Reuse that shape. Note what the schema does NOT do and this AC must: it requires a
+      reason of minLength 1, which a postponement satisfies.
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-i.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECEDENT TO COPY, INCLUDING ITS EXACT WORDING. BP-100n-4-i already establishes
+      the same three-part shape for a neighbouring register: a stated ground is honoured,
+      a record with no ground is itself refused and the script it names stays reported,
+      and its parent's constraints state that "a register ground that says only that
+      triage or registration is deferred is a suppression under another name, not a
+      ground." Do not invent a second exemption vocabulary; the two registers should read
+      alike even if they stay separate.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126e-2.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The exempt figure is one of the figures GE-126e-2's census reports beside the count
+      examined. Keep them the same figures rather than two parallel tallies.
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  ac_id: GE-126b-5
+  contract: >-
+    The four-value record and its stated figures. This AC adds a fifth disposition —
+    exempt — and the rule by which a claimed exemption falls back into the
+    not-demonstrated figure.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: >-
+  WHY THE ESCAPE HATCH IS MANDATORY AND WHY IT MUST BITE. Some checks are genuine census
+  or measurement and have no input they could be asked to refuse; a regime with no honest
+  exemption gets switched off the first time it is right about something inconvenient.
+  That is not a hypothetical here — KI-CG-017 records a detector that already existed,
+  reported five unreachable checks, and was skipped rather than acted on because its
+  verdict arrived as a commit blocker. So the hatch exists. But an unjustified exemption
+  is the whole regime's off switch, which is why a groundless one is reported and fails,
+  and why a postponement is treated as groundless. Those two rules are what stop the hatch
+  from being the answer to every day-one finding.
+
+
+  THE CONTRADICTED-EXEMPTION CLAUSE IS THE ONE THAT MAKES THIS MORE THAN PAPERWORK. An
+  exemption is a claim about the check — that it has no refusal to demonstrate. That claim
+  is falsifiable: feed the check a known-bad input and watch it refuse. Without this clause
+  the exemption is self-certified, and a self-certified exemption is exactly the
+  well-formed declaration nobody checked against reality that this bleed's fifth instance
+  consists of.
+
+
+  NAMED MUTATION FOR THE FIRST ABSENCE-ASSERTING CLAUSE. "A grounded exemption is not
+  counted among the checks whose refusal has not been demonstrated, and does not by itself
+  cause the run to fail" is green on arrival. INJECTION: drop the exempt disposition and
+  treat any check without an observed rejection as not-demonstrated. Under that injection
+  every census-shaped check appears as never-demonstrated and the run fails on them; this
+  clause must go RED naming those checks, and return to green on revert. This is the
+  false-alarms-on-day-one scenario, whose one natural remedy is weakening the check until
+  the alarms stop — so run the mutation rather than describing it.
+
+
+  NAMED MUTATION FOR THE POSTPONEMENT CLAUSE. INJECTION: accept any non-empty ground
+  string, which is what the schema's own minLength: 1 permits today. Under that injection
+  a ground reading "deferred" is honoured and the check disappears from every failing
+  class; this clause must go RED, and return to green on revert. Write the postponement
+  vocabulary as data the fixture can extend, not as a literal set the test also hardcodes,
+  or the test and the implementation will agree with each other and with nothing else.
+
+
+  NAMED MUTATION FOR THE CONTRADICTED-EXEMPTION CLAUSE. INJECTION: skip feeding the
+  known-bad input to any check that declares itself exempt — the obvious efficiency, and
+  the one that makes the exemption unfalsifiable. Under that injection a check that
+  demonstrably refuses keeps its exemption and this clause must go RED. This mutation is
+  the reason the exemption must not short-circuit the run.

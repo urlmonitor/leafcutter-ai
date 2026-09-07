@@ -272,12 +272,149 @@ authoring with an empty block. If you nonetheless encounter a code ticket whose
    does NOT satisfy it. Then-clauses on their own only ever assert the AC
    literal, which is how code ships unit-tested but wired into nothing; this is
    the same floor `generate_ticket_from_ac.py` appends to every criteria-derived
-   contract, so a hand-derived contract must not be weaker.
+   contract, so a hand-derived contract must not be weaker. See "Reachability
+   Entry-Point Resolution" below for the procedure to choose which of these
+   surfaces applies, and the record you must leave once you have.
 3. If the AC itself has neither a usable `test_spec` nor `criteria`, append a
    `(status: blocker)` comment naming the AC and stop — do not fabricate tests.
 
 Do NOT append any `red_baseline` block when a non-code skip applies — the block
 is only meaningful when tests were actually written.
+
+## Reachability Entry-Point Resolution (BP-1100g-2)
+
+The `reachability` angle in the Test Angles taught set above tells you what a
+reachability test must do: invoke the real production entry point and assert
+the behaviour occurred and was consumed. It does not tell you WHICH entry
+point that is for a given piece of work — and for the roughly 80% of work
+that arrives with no authored plan, nothing upstream can name one for you;
+BO-2900g-4 makes that an explicit, conforming state (its "unresolved
+sentinel") rather than something you have to infer from silence. This section
+is the procedure for resolving one, and the record you must leave once you
+have.
+
+**When this applies.** Any time you write, or are about to write, a test
+tagged `# angle: reachability` — whether the request came from a `## Test
+Requirements` table entry, from the AC-derived fallback above, or from any
+other source — resolve the entry point using the steps below before writing
+the test.
+
+### Step 0 — an entry point already named in the request is never replaced
+
+If the request already names a real entry point (a non-sentinel value on the
+request's entry-point field — e.g. `surface_invoked` on a `## Test
+Requirements` reachability descriptor per BO-2900g-4), copy that value
+through **verbatim** into the hand-off record below. Do not substitute a
+different entry point you found yourself, and do not overwrite a named entry
+point with the unresolved sentinel or with your own guess — the request
+already made the judgement; your job is to honour it, not repeat it.
+
+Only proceed to Step 1 when the request carries the unresolved sentinel, or
+carries no entry-point field at all (the AC-derived fallback path never
+carries one).
+
+### Step 1 — resolve one, in this order, against the real code
+
+Examine the actual unit under proof — the module, function, or script the AC
+names — and check each of the following, in order, stopping at the first that
+genuinely applies. Verify against the real file (via `Bash`/`Read`, or by
+spawning `research-agent`); do not guess:
+
+1. **CLI script.** The unit is invoked by a script with a `main()` guarded by
+   `if __name__ == "__main__":` and argument parsing, typically under
+   `scripts/`. Resolve to a subprocess invocation of that script with
+   representative arguments, e.g. `python scripts/ac_store/done_proof.py --ac
+   <id>`.
+2. **Pre-commit hook.** The unit backs a hook registered in
+   `.pre-commit-config.yaml` or `config/commit_guardian.json`. Resolve to that
+   hook's own runner, e.g. `python scripts/commit_guardian/run_hook.py
+   <hook-name>` — never a direct call to the hook's Python function.
+3. **Slash command.** The unit backs a command under
+   `templates/commands/*.md` or `.claude/commands/*.md`. Resolve to the
+   command's real dispatch point — the script or workflow the command
+   template actually invokes — not the markdown file itself, which is prose,
+   not an entry point.
+4. **Workflow dispatch.** The unit is invoked as a step in a
+   `.leafcutter/workflows/*.js` workflow spec. Resolve to that workflow's own
+   runner invoking the named step.
+5. **`main()` with real argv.** The unit exposes a module-level `main(argv)`
+   or equivalent that is a real caller's entry, even without a CLI wrapper.
+   Resolve to a call of that `main()` with a real argv list — not a call to an
+   inner helper function.
+
+If your search through 1–5 finds no genuine invocation surface — you checked
+each and none applies — that is a valid outcome. Do not force one of the five
+onto a unit that has none; proceed to Step 3.
+
+### Step 2 — what does NOT count (restated from the Test Angles taught set)
+
+None of the following satisfy resolution, even though each superficially
+resembles it. If the best you can produce is one of these, you have NOT
+resolved an entry point — return to Step 1 or fall through to Step 3:
+
+- **Importing the module** and calling the function directly, however deep the
+  import chain.
+- **Asserting a symbol exists** (`hasattr`, `getattr`,
+  `assertTrue(callable(...))`).
+- **`assertIn('name', registry_json)`** or any membership check against a
+  registry, manifest, or config file that merely lists the unit's name.
+- **Asserting a value was passed as an argument** — inspecting `call_args`, a
+  mock's recorded arguments, or a dict a dispatcher built. This is dispatch
+  topology: it proves the caller intended to invoke something, not that
+  anything ran.
+
+### Step 3 — the honest negative
+
+When Step 1 genuinely finds no entry point, record that — do not fabricate one
+to avoid writing a negative result. This is a first-class, conforming answer
+(see the shapes below), not a failed checklist item.
+
+### The hand-off record — `reachability_entry_point_answer`
+
+The fixed key token is `reachability_entry_point_answer`. It is declared
+**once, in `signoff` skill §2b.3**, and used **verbatim** here. Do not
+introduce a second spelling; that is precisely the drift this record exists
+to prevent (the same discipline `cross_layer_seam_answer`, BP-1100g-5, already
+established for the sibling seam-declaration key).
+
+It rides the same `completion_manifest:` block every phase agent already
+writes (`signoff` skill §2b) — placed alongside `cross_layer_seam_answer` and
+every other item, never in a second artifact.
+
+**Two conforming shapes** (full definition: `signoff` skill §2b.3):
+
+```yaml
+completion_manifest:
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "python scripts/ac_store/done_proof.py --ac BP-1100g-2 (CLI via subprocess)"
+```
+
+```yaml
+completion_manifest:
+  reachability_entry_point_answer:
+    result: not_found
+    reason: "Checked: no CLI wrapper, not a registered pre-commit hook, no slash command, no workflow step, and the only callable is an inner helper with no main(argv) — see Step 1 above."
+    remediation: "Escalate to ticket-supervisor for a BO-2900d exemption review; this unit may have no runtime way in."
+```
+
+Like `cross_layer_seam_answer`, this item is **always** a nested object — the
+`resolved` (pass-like) case included — because a bare string or bare `true`
+cannot carry the entry point's identity, and the `not_found` case must never
+be written as the bare literal `false` (the §2b Bare-False Rule's automatic
+supervisor retry exists to correct broken checklist items; an honest,
+reasoned "no way in" is not one).
+
+### This is a declaration, not evidence
+
+`reachability_entry_point_answer` is a statement you write about your own
+resolution. It is not proof that the test you wrote actually entered the
+named entry point while it ran — nothing in this template, in the `signoff`
+skill, or anywhere in this AC's boundary inspects the test to check that.
+That question belongs exclusively to BO-2900a's execution observer
+(BO-2900a-2), which decides reachability by watching the run, never by
+reading this record or the test's source text. Writing `result: resolved`
+here contributes to no done, pass, or eligibility decision.
 
 ## Source-of-Truth Discipline
 
@@ -864,9 +1001,21 @@ Your sign-off comment MUST include a `completion_manifest:` block immediately af
   items above, this item is **always** a nested object — even the covered
   (pass-like) case — because a bare `true` cannot name the two sides a
   reader needs.
+- `reachability_entry_point_answer` — the Reachability Entry-Point Resolution
+  hand-off record (see "Reachability Entry-Point Resolution (BP-1100g-2)"
+  above, and `signoff` skill §2b.3 for the full shape). Required whenever this
+  sign-off contains a test tagged `# angle: reachability`. Every such sign-off
+  carries **exactly one** of the two conforming shapes:
+  `{result: resolved, entry_point}` or
+  `{result: not_found, reason, remediation}`. Like `cross_layer_seam_answer`,
+  this item is **always** a nested object — even the resolved (pass-like)
+  case — because a bare string cannot be distinguished from a bare-`true`
+  item, and the `not_found` case must never be written as the bare literal
+  `false`.
 
-Example completion manifest for a test-writer sign-off that covered two ACs
-and found a real cross-layer seam:
+Example completion manifest for a test-writer sign-off that covered two ACs,
+found a real cross-layer seam, and resolved a reachability entry point that
+was already named in the request:
 
 ```yaml
 completion_manifest:
@@ -878,9 +1027,13 @@ completion_manifest:
     result: covered
     producing_side: "candle_horizon.populate_features (SQL procedure output)"
     consuming_side: "live_trader.feature_reader.load_latest_row (ORM read)"
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "python scripts/ac_store/done_proof.py --ac FIN-001 (CLI via subprocess)"
 ```
 
-Example when AC store was absent (fallback path) and no seam applies:
+Example when AC store was absent (fallback path), no seam applies, and the
+decision procedure found no runtime way in:
 
 ```yaml
 completion_manifest:
@@ -892,6 +1045,10 @@ completion_manifest:
     result: not_applicable
     reason: "Pure function with no consumer outside its own module — no layer boundary is crossed."
     remediation: "n/a — not_applicable is a first-class outcome, not a defect."
+  reachability_entry_point_answer:
+    result: not_found
+    reason: "Checked: no CLI wrapper, not a registered pre-commit hook, no slash command, no workflow step, and the only callable is an inner helper with no main(argv)."
+    remediation: "Escalate to ticket-supervisor for a BO-2900d exemption review; this unit may have no runtime way in."
 ```
 
 ## Architectural Context Enforcement

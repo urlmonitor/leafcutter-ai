@@ -1,0 +1,197 @@
+id: TKT-600b-3
+title: "A ticket generated outside an epic keeps its own pull-request phase and cannot finish without it"
+component: ticket-creation
+components:
+  - ticket_creation_pipeline
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical   # owner decision at the approval gate, 2026-09-01
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance criterion whose generated ticket will be written to a standalone
+    location outside any epic folder,
+  And the drive dispatches the pull-request phase for a ticket in that location, because
+    no epic-level pull request covers it,
+  When the ticket is generated,
+  Then the pull-request agent's entry in the record reads "required",
+  And the pull-request agent has a row in the ticket's sign-off checklist,
+  And no phase is marked excluded that the drive would dispatch for that location,
+  And driving that ticket dispatches the pull-request phase and records its sign-off,
+  And the ticket cannot be recorded complete while that phase is still outstanding.
+
+  Given a change that makes the record mark the pull-request phase excluded for every
+    location,
+  When a standalone ticket is generated and driven,
+  Then that is a failure of this criterion, observable as a standalone ticket reaching
+    done with no pull request opened for it.
+depends_on: [TKT-600b]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-20260831-1930 — the epic-side blocker whose cheapest fix would break this side."
+  - path: templates/workflows-js/build-feature.js
+    relationship: related
+    status: exists
+    relevance: "The single-ticket call site, which does not opt into deferral (see BO-2700a-4)."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The single-ticket dispatch path, whose behaviour must be unchanged by this work."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy the test_spec entries below are drawn from."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: >-
+      The non-deferring location's entry in the shared declaration. It exists and
+      is empty. An empty deferral set is a positive statement — this location defers
+      nothing — and is what makes the standalone answer derive from data rather than
+      from the absence of a rule.
+    properties:
+      standalone:
+        type: array
+        maxItems: 0
+    required:
+      - standalone
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: >-
+    1 on the drive side, already correct and to be kept correct:
+    selectDispatchPhases returns the list unchanged when isEpicMember is false
+    (:403-404), and deferredPhases is the empty array for that case (:1384). This
+    AC's obligation is that the generator's new location-dependent path produce the
+    matching answer for the same location, and that neither point acquire an
+    unconditional exclusion.
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - python -m pytest unit_tests/ac_store/ -q
+    - python -m pytest unit_tests/workflows/ -q
+  constraints:
+    - >-
+      The two locations must produce DIFFERENT phase sets from the same AC. An
+      implementation that suppresses the phase everywhere passes every epic-side
+      test and silently removes the pull request from every standalone ticket the
+      project builds — a larger regression than the blocker it clears, and one that
+      surfaces as work never reaching review rather than as a halt.
+    - >-
+      The standalone answer must be derived from the declaration's empty deferral
+      set for that location, never from a fallback taken when no epic is detected.
+      A fallback is untested by construction and re-establishes the second copy of
+      the rule.
+    - >-
+      Single-ticket drive behaviour must be observably unchanged. This is the
+      generated-record mirror of the dispatch guarantee BO-2700a-3 and BO-2700a-4
+      already established on the driver side, so the two sides are protected
+      symmetrically rather than one being trusted to stay correct while the other
+      moves.
+    - >-
+      The completion gate must still refuse a standalone ticket whose pull-request
+      phase is outstanding. This AC must not, in protecting the phase's presence,
+      make its absence forgivable.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A generated standalone ticket whose record requires the pull-request phase and
+    carries its ## Sign-offs row, and which the drive dispatches and the completion
+    gate holds open until that phase signs off. The observable contract is the
+    DIFFERENCE between this record and the epic record generated from the same AC.
+expects_from:
+  ac_id: TKT-600b-1
+  contract: >-
+    The location-keyed deferral declaration, exercised here on the entry whose
+    deferred set is empty.
+test_spec:
+  - name: test_standalone_record_requires_the_pull_request_phase
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      For a resolved standalone destination the pull-request entry reads needed, it
+      has a ## Sign-offs row, and no phase the drive would dispatch for that location
+      is marked excluded.
+  - name: test_epic_and_standalone_phase_sets_differ_for_the_same_ac
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Generate the same AC twice, once per location, and assert the two phase sets
+      are NOT equal and differ exactly by the declared deferral set. This is the
+      entry that goes red against a fix that suppresses the phase everywhere — such a
+      fix makes the two sets identical while passing every epic-only assertion.
+  - name: test_drive_dispatches_all_phases_for_a_standalone_ticket
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Execute the real selectDispatchPhases with isEpicMember false through the node
+      harness and assert the phase list is returned unchanged, and that the deferred
+      set consumed by the completion path is empty for that case. Asserts the
+      standalone path is genuinely untouched rather than merely unmentioned.
+  - name: test_standalone_ticket_cannot_reach_done_with_the_phase_outstanding
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Drive a standalone ticket to the point where every phase but pull-request has
+      signed off, and assert the completion write refuses. The failure this AC exists
+      to prevent is observable as a standalone ticket reaching done with no pull
+      request opened, so it is asserted directly rather than inferred from the record.
+test_rationale: >-
+  The reported defect is only ever seen on epic tickets, so a fix and its tests will
+  naturally be written against epic tickets, and suppress-everywhere passes all of
+  them. The differential entry is therefore the load-bearing one: it makes the two
+  locations argue with each other in a single assertion, and no single-location test
+  can substitute for it. The final entry asserts the observable outcome — a ticket
+  reaching done with no PR — rather than a property of the record, because that is
+  the shape the regression would actually take in production, and it would otherwise
+  surface as work quietly never reaching review rather than as a halt.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-01
+    note: >-
+      Added it_requirements, test_spec, test_rationale and contracts. Pinned the
+      standalone answer to an explicitly EMPTY deferral entry in the shared
+      declaration rather than to a no-epic-detected fallback, so the non-deferring
+      case is data-driven and covered. Criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS EXISTS BECAUSE THE CHEAPEST FIX IS BLIND TO IT. The reported defect is only ever
+  observed on epic tickets, so a fix and its tests will naturally be written against
+  epic tickets. Suppressing the pull-request phase unconditionally passes every such
+  test while silently removing the pull request from every standalone ticket the project
+  builds — a much larger regression than the blocker it clears, and one that surfaces as
+  work quietly never reaching review rather than as a halt.
+
+  IT IS THE MIRROR OF AN ALREADY-DELIVERED CRITERION ON THE DRIVER SIDE. BO-2700a-3 and
+  BO-2700a-4 established the same asymmetry for dispatch: the epic call site opts into
+  deferral, the single-ticket call site does not, and single-ticket behaviour is
+  unchanged. This is that guarantee restated for the generated record, so the two sides
+  are protected symmetrically rather than one of them being trusted to stay correct
+  while the other moves.
+
+  THE SECOND SCENARIO IS DELIBERATELY WRITTEN AS AN OBSERVABLE OUTCOME, not as a rule
+  about the code, so it can be tested by generating and driving rather than by reading
+  the change.

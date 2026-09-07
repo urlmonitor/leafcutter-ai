@@ -1,0 +1,103 @@
+id: ACS-1300b-1-i
+components:
+  - ac_store
+  - build_orchestration
+title: "A path that legitimately records no link is a stated exemption, never an omission"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a delivery path that completes work which names no requirement at all, and so
+    has no link to record,
+  When the enumeration is produced,
+  Then that path is present in the enumeration, classified as exempt, and carries the
+    stated reason for its exemption,
+  And a bypassing path that carries no such stated reason is classified as unresolved
+    rather than as exempt, so silence is never read as a justification,
+  And a stated exemption naming a delivery path that is no longer in the repository is
+    reported as stale rather than carried forward,
+  And in the same run at least one path is classified as bypassing, so the exemption
+    branch is one outcome among several rather than the classification everything
+    reaches.
+depends_on:
+  - ACS-1300b-1
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "RECOGNITION, NOT SUPPRESSION — the precedent for this AC's shape, in this component. ACS-1200a's notes state the rule directly: an exemption must key off a positive, deliberate signal and never off the ABSENCE of something, because absence is also exactly what a half-broken tree looks like, and an absence-keyed exemption silences real breakage. The second clause here is that rule applied to delivery paths."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-5.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The adjacent tree's honoured-exemption record — an exemption that stays settled instead of being re-raised every cycle. Read it before choosing where the stated reason lives, so the two trees do not invent two exemption formats for the same kind of declaration."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "AN EXEMPTION KEYS OFF A POSITIVE, DELIBERATE DECLARATION — NEVER OFF AN ABSENCE. This is ACS-1200a's standing rule in this component, applied to delivery paths: absence is also exactly what a half-broken path looks like, so an absence-keyed exemption silences real breakage. A bypassing path carrying no declaration is `unresolved`, which is a third outcome distinct from both `bypassing` and `exempt`."
+  - "REUSE THE ADJACENT TREE'S EXEMPTION REPRESENTATION RATHER THAN INVENTING A SECOND. `TQ-400e-5` already defines an honoured-exemption declaration in this repository. Read it before choosing where a delivery path's stated reason lives; two exemption formats for one concept is the drift this tree's anti-duplication rule exists to prevent, and it is cheapest to avoid before either is written."
+  - "A DECLARATION NAMING A PATH THAT IS NO LONGER IN THE REPOSITORY IS REPORTED AS STALE AND IS NOT HONOURED. An exemption with no subject is a permission that quietly widens to whatever path later takes a similar name. Staleness must be derived by resolving the declared subject against the repository, not by an expiry date somebody has to maintain."
+  - "THE ENUMERATION IS READ-ONLY WITH RESPECT TO THE AC STORE AND WRITES NO `work_status`. The tree-wide refusal applies."
+  - "Must handle errors gracefully per the project error handling policy and must fail toward `unresolved`: a declaration the enumerator cannot parse produces an unresolved classification and a report line, never an honoured exemption. Failing open here converts the whole enumeration into a permanent clean result."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300b-1
+  contract: "The enumeration whose third classification this AC constrains."
+test_spec:
+  - name: test_acs_1300b_1_i_a_declared_exempt_path_is_present_classified_exempt_with_its_reason
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A delivery path completing work that names no requirement, carrying a stated exemption, appears IN the enumeration as exempt with the reason text attached. Assert presence: an exempt path omitted from the enumeration is indistinguishable from a path never examined."
+  - name: test_acs_1300b_1_i_a_bypassing_path_with_no_stated_reason_is_unresolved_not_exempt
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE ABSENCE-KEYED-EXEMPTION GUARD. A bypassing path carrying no declaration classifies as unresolved. Silence is never a justification — otherwise the cheapest way to a clean enumeration is to state no reasons at all."
+  - name: test_acs_1300b_1_i_an_exemption_naming_a_deleted_path_is_reported_stale
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Declare an exemption for a path, delete that path from the repository copy, re-run, and assert the declaration is reported as stale rather than carried forward or silently dropped. Assert it does not transfer to any similarly-named path."
+  - name: test_acs_1300b_1_i_at_least_one_path_is_classified_bypassing_in_the_same_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "THE ANTI-NO-OP PAIRING, AND IT MUST STAY IN THE SAME INVOCATION AS THE CLAUSES ABOVE. Every other assertion in this AC is about something being classified benignly, and all of them are satisfied by an enumerator that classifies everything exempt. Assert that the SAME run that produced the exempt and stale classifications also produced at least one bypassing classification."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WITHOUT THE THIRD CLASSIFICATION THE ENUMERATION IS UNUSABLE IN PRACTICE. Some
+  delivery paths genuinely carry work that names no requirement; forcing them into
+  "bypassing" produces a permanent list of findings nobody can clear, and a list nobody
+  can clear is a list nobody reads. That is how the enumeration in ACS-1300b-1 dies.
+
+  BUT AN EXEMPTION IS THE EASIEST WAY TO MAKE THE WHOLE THING VACUOUS, which is why the
+  second clause refuses to infer one. If a bypassing path with no stated reason were
+  treated as exempt, the cheapest way to get a clean enumeration would be to state no
+  reasons at all.
+
+  THE STALE-EXEMPTION CLAUSE IS THE OTHER DIRECTION OF THE SAME RISK. An exemption
+  written for a path that has since been deleted is a permission with no subject; left
+  in place it quietly widens to whatever path later takes a similar name.
+
+  THE FINAL CLAUSE IS THE ANTI-NO-OP PAIRING. Every clause above it is about something
+  being classified benignly, and all of them are satisfied by an enumerator that
+  classifies everything exempt. Requiring a bypassing classification in the same run
+  makes that implementation fail.

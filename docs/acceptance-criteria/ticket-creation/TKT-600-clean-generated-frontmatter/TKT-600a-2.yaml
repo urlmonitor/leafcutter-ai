@@ -1,0 +1,154 @@
+id: TKT-600a-2
+title: "A path the record itself declares as non-edit-surface is not harvested from its own prose"
+component: ticket-creation
+components:
+  - ticket_creation_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an AC record whose doc_links declare
+    "templates/scripts/commit_guardian/check_secrets.py" at relationship modifies
+    and "docs/known-issues/commit-guardian.md" at relationship related,
+  And one of that same record's list-form it_requirements bullets also names
+    "docs/known-issues/commit-guardian.md" in its prose text,
+  When a ticket is generated from that record,
+  Then the generated ticket's files_touched is exactly
+    ["templates/scripts/commit_guardian/check_secrets.py"],
+  And "docs/known-issues/commit-guardian.md" is absent from files_touched,
+  Because the record has already stated, in its own structured declaration, what
+    that file is to this work — context, not a surface — and a prose repetition of
+    a path the record itself declared as non-edit-surface cannot promote it.
+
+  Given an AC record whose list-form it_requirements contains the bullet
+    "Modify scripts/goal_to_epic.py to ...",
+  And that record's doc_links contain no entry whose path is
+    "scripts/goal_to_epic.py" at any relationship,
+  When a ticket is generated from that record,
+  Then files_touched contains "scripts/goal_to_epic.py",
+  Because with no structured declaration to contradict it, a real source path
+    named in a prose bullet is still a real source path — this is the behaviour
+    TKT-500f-8-i requires and it must remain unchanged.
+
+  Given an AC record whose doc_links declare
+    "scripts/ac_store/generate_ticket_from_ac.py" at relationship modifies,
+  And one of that record's prose it_requirements bullets also names
+    "scripts/ac_store/generate_ticket_from_ac.py",
+  When a ticket is generated from that record,
+  Then files_touched contains "scripts/ac_store/generate_ticket_from_ac.py"
+    exactly once,
+  And no duplicate entry for that path appears.
+
+  Given an AC record whose doc_links declare
+    "docs/architecture/components/ticket-lifecycle.md" at relationship describes,
+  And one of that record's prose it_requirements bullets also names that path,
+  When a ticket is generated from that record,
+  Then "docs/architecture/components/ticket-lifecycle.md" is absent from
+    files_touched,
+  Because describes and related are both non-edit-surface relationships and the
+    suppression is decided by the relationship being outside the edit-surface set,
+    not by any single relationship value.
+
+  Given an AC record that declares the SAME path
+    "scripts/ac_store/generate_ticket_from_ac.py" twice in its doc_links — once at
+    relationship related and once at relationship modifies,
+  And one of that record's prose it_requirements bullets also names that path,
+  When a ticket is generated from that record,
+  Then files_touched contains "scripts/ac_store/generate_ticket_from_ac.py",
+  Because an explicit edit-surface declaration anywhere in the record wins over a
+    non-edit-surface declaration of the same path — the suppression applies only
+    to paths the record declares as non-edit-surface and declares nowhere as an
+    edit surface.
+depends_on:
+  - TKT-600a
+  - TKT-600a-1
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. The prose harvest happens in _build_files_touched (source 1, list-form branch) and the edit-surface relationship set _EDIT_SURFACE_RELATIONSHIPS it must now consult already lives in this module, so the rule is a join between two things this one file already holds."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the doc_links relationship vocabulary this rule reads. The edit-surface subset (constrains, creates, implements, modifies, specifies) versus the informational remainder (describes, related) is the distinction the rule turns on."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123d-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The observed failure. Before this rule, this record's generated files_touched was ['docs/known-issues/commit-guardian.md', 'templates/scripts/commit_guardian/check_secrets.py'] — a live document presented as a file to modify, by a record whose own requirements fence that document as out of scope."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TKT-600a-1
+  contract: "The on-disk is_file() gate on prose-harvested path tokens. This AC adds a second, independent filter in front of the same harvest — a structured-declaration check — and must not weaken the existence gate or the token-detection regex."
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS AC EXISTS. TKT-600a stays open with its only child done, and its
+  amended_by entry of 2026-09-01 names the two ways to close it: a new child
+  covering the remaining case with a mechanism that is not phrase-matching, or an
+  explicit decision to narrow the L1 too. This is that new child. The residual case
+  TKT-600a-1 deliberately excluded is an illustrative path that both carries a file
+  extension and exists on disk — the on-disk is_file() gate cannot see it, because
+  the path is real; what makes it wrong is what the record says the path is FOR.
+
+  THIS IS NOT THE REJECTED APPROACH, and the difference is the whole point of the
+  record. Two mechanisms were tried and rejected, both documented in TKT-600a-1's
+  amended_by of 2026-09-01:
+
+    (1) A nine-pattern English cue blocklist (_PROSE_CONTEXT_ONLY_CUES) matching
+        phrases like "do not edit" and "context only". Rejected on measurement: it
+        fired on no cue in the real bullet that broke the GE-123 epic, and it
+        silently dropped genuine edit surfaces elsewhere ("see scripts/goal_to_epic.py
+        for details" -> []). It guessed authorial intent from English phrasing.
+
+    (2) Dropping prose harvesting entirely. Rejected because it falsifies
+        TKT-500f-8-i, which is readiness approved, work_status done and priority
+        high, and whose criteria require that a real source path named only in a
+        prose bullet IS extracted.
+
+  The rule specified here reads NEITHER the English nor the filesystem. It reads the
+  record's own structured doc_links: if the record has already declared a path at a
+  relationship outside the edit-surface set, the record has said what that file is to
+  it, and a prose repetition cannot override that declaration. The input is a
+  relationship enum the author chose deliberately, in a structured field, for that
+  exact purpose. There is no phrase to match and no intent to infer, which is why a
+  future reader must not file this alongside approach (1) — the second and fourth
+  scenarios exist so the difference is testable rather than merely asserted.
+
+  WHAT THIS RULE DOES NOT CLAIM. It closes only the case where the record contradicts
+  itself. An illustrative path that exists on disk, has an extension, and is named
+  NOWHERE in the record's doc_links is still harvested — nothing in the record
+  declares it as anything, so there is no declaration to consult. That residual is
+  narrower than the one TKT-600a-1 left, and it is stated here rather than left for
+  someone to discover.
+
+  THE MOTIVATING FAILURE, measured. GE-123d-3 and GE-123d-4-i each generated
+  files_touched = ['docs/known-issues/commit-guardian.md',
+  'templates/scripts/commit_guardian/check_secrets.py']. Both records declare that
+  register at relationship related, on purpose, because their it_requirements fence
+  KI-CG-004 as explicitly out of scope; both also named the path in prose, so the
+  harvester took it. A record whose stated requirement is "do not touch this file"
+  produced a ticket naming that file as an edit surface. The two records were reworded
+  on 2026-09-01 to name the register rather than its path, which drops both surfaces
+  to the single real one — but that is a per-record workaround applied by hand, and it
+  will not survive the next author who writes the path out. This AC is the durable fix.
+
+  ON PROVING IT. TKT-600a-1 was reopened once as phantom-done because its covering
+  test passed identically against unfixed code — the fixture paths did not exist on
+  disk, so the pre-existing existence gate removed them and the test never exercised
+  the restriction it claimed. Do not repeat that shape here. Every fixture path in the
+  second, third and fifth scenarios must EXIST on disk as a file, so the existence
+  gate cannot satisfy the assertion by proxy, and the fix must be mutation-proved:
+  reverting the suppression must turn the first and fourth scenarios red while leaving
+  the second, third and fifth green.

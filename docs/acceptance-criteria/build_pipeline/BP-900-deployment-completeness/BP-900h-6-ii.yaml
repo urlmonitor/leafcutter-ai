@@ -1,0 +1,175 @@
+id: BP-900h-6-ii
+components:
+  - build_pipeline
+  - commit_guardian
+title: "The executed-guard record accounts for the guard population the adopter would face, and a narrowed run cannot report an unqualified pass"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-6.yaml"
+criteria: |
+  Given the use-the-install step's evidence that a plain install is wired is its record of
+    which guards executed during the adopter's first commit,
+  And the step may reduce the population of guards the commit path sees before that commit
+    is attempted, so the record can only ever name guards drawn from what survived the
+    reduction,
+
+  When the step runs and reports,
+  Then every guard the freshly built install deployed is accounted for in the report in
+    exactly one of three states — executed and passed, executed and failed, or withheld —
+    and the count of deployed guards is stated alongside the count that executed, so a
+    reader cannot mistake "the guards that ran, ran" for "the guards an adopter faces,
+    ran",
+  And every withheld guard is named individually, together with the recorded reason it was
+    withheld,
+
+  And when any guard was withheld, the verdict is a qualified one that is textually and
+    structurally distinct from the verdict of a run in which nothing was withheld — a
+    narrowed run never emits the unqualified pass,
+  And the step exits non-zero when any deployed guard is unaccounted for, or is withheld
+    without a recorded reason naming it, so silence about a narrowing is a failure rather
+    than a pass,
+
+  And given a run in which no guard was withheld and every deployed guard executed,
+  When the step reports,
+  Then it emits the unqualified pass and exits zero, so the qualification is a statement
+    about what was observed and not a permanent hedge every run carries.
+
+  REACHABILITY. The report clauses are asserted on what the job actually emits when the
+  consumer-install entry point is invoked as a subprocess with the use-the-install flag,
+  in a real built install, using the command the runner parses out of the workflow file —
+  not on the return value of a formatting helper. At the time this AC was written the
+  workflow's consumer-simulation step invoked that entry point WITHOUT the use-the-install
+  flag, so nothing in CI reached the record at all; a qualifier that exists in the module
+  but never appears in the job's output is not coverage.
+
+  Coverage note: behavioral only. Grepping the source for the word withheld, for a
+  qualified-verdict string, or for the deployed-count arithmetic passes on code no caller
+  reaches — and that is the state this step is in. The only honest coverage runs the step
+  twice against two real built installs, one narrowed and one not, and compares the two
+  outputs and the two exit statuses against each other.
+depends_on:
+  - BP-900h-6
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-6.yaml"
+    relationship: parent
+    status: exists
+    relevance: "BP-900h-6 requires the record to be captured rather than derived, and requires the empty record to fail. It does not require the record to state what it could never have contained, which is this AC."
+  - path: scripts/ci/_use_install_step.py
+    relationship: modifies
+    status: exists
+    relevance: "The live instance. The registry is narrowed to two hooks before the commit, so the executed-guard record is bounded by two and the blocked-adopter case the job exists to catch cannot appear in it."
+  - path: scripts/ci/check_consumer_install.py
+    relationship: modifies
+    status: exists
+    relevance: "The entry point the workflow step invokes and the surface the report must be observed on."
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: "Where the job's output is read by a human deciding whether the install is safe to ship."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-017 and siblings are the filed defects the current narrowing cites as its justification. This AC does not forbid the narrowing; it forbids the narrowing being invisible in the verdict."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BP-900h-6
+  contract: "The executed-guard record captured from the commit path, which this AC requires to be reported against the deployed guard population rather than on its own."
+test_spec:
+  - name: test_bp900h6ii_narrowed_run_names_every_withheld_guard_and_states_the_deployed_count
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Build a real install, count the guards its deployed pre-commit registry carries, and run the step through the consumer-install entry point as a subprocess in a configuration that withholds some of them. Parse the job's output and assert three things: the stated deployed count equals the count taken from the registry before the run; the union of executed and withheld names equals the deployed guard names, with no guard in neither set and none in both; and each withheld guard appears with a reason. Asserting only that the output mentions a number is not enough — the deployed count must be compared against the registry the install actually produced, since a count read back from the narrowed registry is self-consistent and wrong."
+  - name: test_bp900h6ii_a_narrowed_run_and_a_full_run_do_not_produce_the_same_verdict
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Run the same entry point twice as a subprocess: once where every deployed guard is active and passes, once where guards are withheld and the survivors pass. Both commits succeed, so exit status alone cannot separate them. Assert the two verdict lines differ, that only the second is qualified, and that only the first is the unqualified pass. This is the entry that fails on a step which prints its guard names but still signs off with the same pass line either way — the shape the current implementation would take if it merely added a line."
+  - name: test_bp900h6ii_a_silent_or_unaccounted_narrowing_fails_the_job
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Must-block case, and the entry that makes this criterion capable of failing. Drive the same entry point in a configuration where a deployed guard is withheld with no recorded reason, and in a second where a deployed guard appears in neither the executed nor the withheld list. Assert both runs exit non-zero and name the unaccounted guard. Without this, a narrowed run satisfies the criterion by staying quiet, which is exactly the current behaviour."
+  - name: test_bp900h6ii_the_verdict_is_read_from_the_output_of_the_command_the_workflow_runs
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Read the consumer-simulation step's command from the real on-disk .github/workflows/ci.yml and execute that exact command against a real built install, capturing its output. Assert the accounting appears there. Red today because that command does not invoke the use-the-install path at all, which is the point: a record that is perfect inside a module the job never calls tells an adopter nothing. Direct calls to the report-formatting function do not satisfy this entry."
+test_rationale: |
+  The job exists to catch an install whose guards are not wired. It currently narrows the
+  guard population to two before it observes anything, so the broken-guard case is
+  structurally outside what the record can express, and a green run means only that two
+  hooks ran. The criterion is therefore about accounting, not about forbidding the
+  narrowing — the narrowing has filed justifications and removing it is a different
+  decision.
+
+  Each entry kills a different way of appearing to satisfy that.
+
+  Printing the withheld names while keeping one pass line is green on entry 1 and dies on
+  entry 2, because the two runs would be indistinguishable at the verdict.
+
+  Qualifying every run unconditionally is green on entries 1 to 3 and dies on the
+  no-narrowing half of entry 2, which requires the unqualified pass to still exist.
+
+  Deriving the deployed count from the registry as it stands after narrowing is
+  self-consistent and green on any assertion that merely looks for a number; entry 1
+  compares it against the registry the install produced, before the step touched it.
+
+  Staying silent about the narrowing is green on everything except entry 3, which is why
+  entry 3 is a must-block rather than a diagnostic check.
+
+  Entry 4 is separate because none of the other three prove the adopter or the reviewer
+  ever sees any of this. On this branch the job's command does not reach the step, so a
+  module-level assertion is green while CI observes nothing at all.
+
+  Angles: criterion, boundary, failure, reachability — at the cap of four, with must_block
+  riding entry 3.
+origin_agent: BrainCandy
+created: 2026-08-31
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Found by an empirical read of scripts/ci/_use_install_step.py on this branch. The order
+  of operations is the defect: the registry is narrowed to the self-healing hook plus any
+  hook invoking the uniqueness check, and only then is the commit attempted and the
+  executed-guard record captured. The record is honest about what ran; it is silent about
+  what could never have run. BP-900h-6's own criteria are satisfied by that state — the
+  record is captured rather than derived, and it is non-empty — which is why this needs
+  its own criterion rather than an amendment.
+
+  WHY NOT SIMPLY FORBID THE NARROWING. Two judgment-tier hooks are documented as
+  misfiring against a scratch project that tracks only its own first commit, and those are
+  filed defects with their own records. Turning them on here would make the job red for a
+  reason that is not the job's subject and it would be switched off again. The property
+  worth enforcing is that the verdict cannot outrun the observation: withhold what must be
+  withheld, name it, and never let the result read as a clean adopter experience across a
+  population that was never faced.
+
+  WRONG FIXES TO EXPECT.
+  1. Add the withheld names to the output and leave the pass line alone. The reviewer
+     still sees a pass and the diagnostic is below the fold.
+  2. Report the deployed count by re-reading the registry after narrowing. Internally
+     consistent, always equal to the executed count, and green.
+  3. Qualify every run. Removes the distinction rather than making it, and within two
+     merges the qualifier is noise nobody reads.
+
+  SCOPE BOUNDARY. This AC does not say which guards may be withheld, and it does not
+  assert any guard's own behaviour — those belong to the guards' records. It also says
+  nothing about what the step is allowed to mutate; that is BP-900h-6-i.

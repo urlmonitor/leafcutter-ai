@@ -3,7 +3,7 @@ title: "ac-store — AC store context"
 description: Cross-agent conventions and standing notes for PO v3 / BA v3 / IT PO v3 authoring
   and decomposing ACs in the ac-store component (prefix ACS).
 created: '2026-08-14'
-last_updated: '2026-08-14'
+last_updated: '2026-09-01'
 type: tutorial
 status: active
 components:
@@ -197,3 +197,94 @@ claimed. Phase 1's exit criteria are about clean installs and build idempotency;
 store-convention health does not advance them. Either a phase claims this tree or
 it stays unphased backlog. No roadmap or vision file was modified while authoring
 it.
+
+## ACS-1300 trustworthy-coverage-links: framing note for the BA/IT-PO (2026-09-01, PO)
+
+ACS-1300 ("Trust the link between a requirement and the tests that prove it") is a
+NEW root L0 in ac-store, slug folder `ACS-1300-trustworthy-coverage-links/`, three
+L1 children ACS-1300a..c, origin_agent product-owner, readiness draft, priority
+medium, NO `roadmap_phase` claimed (same reasoning as ACS-1200 above). Subject: the
+`covered_by` record has decayed in two directions — forward rot (a passing test
+carries a `# covers:` tag the record does not list) and inverse rot (the record
+names a test file that no longer exists).
+
+READ THIS BEFORE DECOMPOSING — A STALE DIAGNOSIS IS IN CIRCULATION. A BA
+investigation reported BO-202 as the open root cause, claiming the in-drive
+auto-fix skips L3 and greps only `tests/`. That is STALE. Verified 2026-09-01 on
+branch fix/ac-coverage-backfill by reading `templates/agents/ac-fulfillment-gate.md`:
+§3c searches `tests/ unit_tests/` with an explicit warning about the tests/-only
+scoping, and §2f explicitly instructs NOT to skip the auto-fix eligibility check
+for L3. The agent's own changelog dates the fix 2026-08-26. The BA was quoting
+BO-202's `notes`, which describe the defect as filed on 2026-08-25. **Do not author
+or decompose anything premised on closing that leak — it is closed for work that
+flows through the ticket pipeline.** What remains is the historical backlog
+(ACS-1300a) and a residual: the gate is a ticket-phase agent conditional on
+`ac_traceability` frontmatter, so fast-lane and direct-commit paths still get no
+link written (ACS-1300b).
+
+GENERAL LESSON WORTH REUSING: an AC's `notes` field records the defect AS FILED. It
+is not a current diagnosis and it does not self-update when the fix ships. Verify
+against the implementing surface on the current branch before treating any `notes`
+paragraph as live. BO-202 is the standing illustration — it is still
+`work_status: todo` although its fix shipped, so the record that exists to keep
+coverage honest is itself mis-recorded.
+
+THE HARD CONSTRAINT, INHERITED BY EVERY DESCENDANT: **nothing in the ACS-1300 tree
+writes `work_status`, at any level.** REFUSED, NOT DEFERRED. Restoring an evidence
+link is not the same act as awarding a done badge; auto-promoting finished-state
+from derived evidence manufactures a done claim on the one field the whole
+phantom-done edifice rests on. Flipping the badge stays with `mark_ac_done.py` and
+its own evidence gate. TQ-400f was authored and then closed unbuilt on 2026-09-01
+partly for approaching this line. ACS-1300c makes the refusal falsifiable rather
+than merely written down.
+
+TWO PROPERTIES ESTABLISHED AT L0 SO CHILDREN INHERIT RATHER THAN RE-DERIVE:
+- BYTE STABILITY — a record with nothing to repair is never opened for writing.
+  NOT "written identically": a YAML load-and-dump round trip preserves every value
+  while reformatting quoting, key order and line wrapping, which at ~3,749 records
+  churns the whole store. TQ-400e-1 already owns this rule and its test shape
+  (raw-byte hash before/after + an anti-no-op control in the same run) — point at
+  it, do not restate it in a competing form.
+- ABSTENTION OVER ACTION — untrustworthy evidence produces a reported abstention,
+  never a silent skip and never a write.
+
+L1 SPLIT (decompose each into L2; do NOT re-cut at L1):
+- **ACS-1300a** — the one-off repair of the historical backlog, both directions of
+  rot in one pass, one report. THE JOIN IS EXACT AND MECHANICAL (`# covers:` tag,
+  id to id) — no text similarity, no keyword heuristics. That line is precisely why
+  ACD-800 was the wrong parent, so it must not drift back toward heuristics at L2.
+  documentation_triggers `[how-to]`.
+- **ACS-1300b** — records that never pass through the ticket pipeline. First L2
+  should be ENUMERATION of the bypassing delivery paths, derived from the repo, not
+  from a note; one unenumerated path is a permanent slow refill. Prefer routing
+  those paths to the existing link-writing behaviour over building a second writer.
+  documentation_triggers `[sequence-diagram]`.
+- **ACS-1300c** — the trust envelope (awards nothing / rewrites nothing already
+  correct / abstains out loud). Same shape as TQ-400e one tree over. Every one of
+  its three guarantees is satisfied by a tool that does nothing, so each L2 must
+  assert in the SAME run that records genuinely needing repair were repaired.
+  documentation_triggers `[reference-doc]` — the refusal belongs written down beside
+  the field it protects, because TQ-400f is the evidence that it gets re-derived.
+
+WHY A SIBLING L0 AND NOT A GRAFT (do not re-litigate): ACS-200 is structurally
+broken (no L0 file; ACS-200d depends on a nonexistent ACS-200b) and already carries
+a DO-NOT-HANG-HERE note in ACS-1100. ACS-1100 is adjacent but different — it governs
+whether an ANSWER states its denominator, not whether the stored LINK is true, and
+it is a `scope: standing` contract explicitly "not a home for" other surfaces; this
+tree INHERITS it (every figure states its denominator) rather than parenting under
+it. ACS-400b/e are the wrong subject and near cap. TQ-400d is the opposite direction
+(finished records that cannot be proven); TQ-400a/e are at or over the L2 cap.
+ACD-800 is the closest subject match but commits to heuristic discovery and to
+backfilling `work_status` — parenting there would require rewriting its goal.
+
+CAP ARITHMETIC: 3 L1s against the 7-cap. The BA's decomposition needed five L2s,
+which under a single L1 fills the 5-cap with zero room for a documentation AC and
+forces a later Pattern C split with mandatory ID renames. Across three L1s the same
+five redistribute to roughly 4/4/4 including each L1's doc AC. No
+`child_limit_override` is authored and none may be added.
+
+MEASUREMENTS ARE PROVISIONAL AND LIVE ONLY IN `notes`, NEVER IN A `criteria` BLOCK.
+Figures with their method and denominator are in ACS-1300's notes; an independent
+re-measurement was in flight when the tree was authored. A criterion pinned to a
+number is falsified by the next commit that changes it — the hand-typed "244 of 607"
+in the artifact map is the in-house example.

@@ -1,0 +1,140 @@
+id: ACS-100i-8-ii
+components:
+  - ac_store
+  - precommit_hooks
+title: "An entry a merge carries from a parent is not an entry the merge registers"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a merge commit being written, with two OR MORE parents — an octopus
+    merge's third and later named branches are parents of the merge exactly as
+    much as the first two,
+  And a package-registry entry that already exists on AT LEAST ONE of the
+    merge's parents (whichever one — including a parent named third or later
+    in an octopus merge) but is absent from HEAD,
+  When the change is evaluated at commit time,
+  Then the merge is allowed with no citation required,
+  Because the entry was registered by whichever commit first introduced it —
+    where its declaration was already demanded — and carrying it across a merge
+    registers nothing new, regardless of which parent carried it or how many
+    parents the merge has.
+
+  And given the same merge, plus an entry present in NONE of the merge's
+    parents and cited by no acceptance criterion declaring a package surface,
+  When it is evaluated,
+  Then the merge is refused, and the refusal names that entry —
+  so an undeclared registration cannot be smuggled in mid-merge alongside a
+    legitimately-carried one, on an octopus merge exactly as on a two-parent one.
+
+  And given an ordinary single-parent commit,
+  When it is evaluated,
+  Then the outcome is identical to before this criterion existed: an added entry
+    with a declaring citation is allowed, and one without is refused.
+depends_on: [ACS-100i-8]
+doc_links:
+  - path: templates/scripts/commit_guardian/check_package_surface_declaration.py
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-8
+  contract: "The registration-versus-declaration reconciliation whose notion of 'added entry' this criterion scopes to the commit's own parents."
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by:
+  - reason: "Original criteria said an entry is carried when it exists 'on one of the merge's parents but not on the other' — binary phrasing that only fits a two-parent merge. The implementation initially matched that scope: it detected a merge via `git rev-parse -q --verify MERGE_HEAD`, which resolves only the FIRST line of MERGE_HEAD, so an octopus merge's third and later parents were never consulted and a genuinely-carried entry from one of them was still wrongly refused. Fixed by reading MERGE_HEAD off disk in full (one SHA per line) and generalised the criteria wording to 'at least one of the merge's parents ... including a parent named third or later in an octopus merge' so the record no longer describes a narrower behaviour than the code implements."
+    agent: python-coder
+    date: '2026-09-01'
+superseded_by: null
+covered_by:
+  - unit_tests/ac_store/test_acs_100i_8_ii_merge_scope.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_package_surface_declaration.py
+change_target:
+  - code
+risk_surface: safety
+test_spec:
+  - name: test_merge_carrying_already_declared_entry_needs_no_citation
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    description: "A real merge (git merge --no-commit --no-ff, so MERGE_HEAD is genuinely present) whose only entry new relative to HEAD is already registered on the branch being merged in must be allowed with no citation. Uses a real git repository, not a mock — the defect is entirely about which revisions git is asked about."
+  - name: test_merge_introducing_a_genuinely_new_entry_is_still_refused
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    description: "THE NEGATIVE CONTROL, and the reason this criterion is safe. The same merge plus a second entry present in neither parent must still be refused, and the refusal must name that entry. Without this the fix is indistinguishable from switching the gate off during merges."
+  - name: test_ordinary_single_parent_commit_behaviour_is_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    description: "Pins that the single-parent path is untouched: an added entry with a declaring citation is still allowed."
+  - name: test_octopus_merge_carrying_entry_on_third_parent_only_needs_no_citation
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    description: "A real three-way octopus merge (git merge --no-commit --no-ff branch-a branch-b branch-c, asserted to leave 3 MERGE_HEAD lines) whose only carried entry is registered on the THIRD named branch only must be allowed with no citation. Reproduces the defect a first fix pass left open: git rev-parse -q --verify MERGE_HEAD resolves only the first MERGE_HEAD line and silently drops later parents."
+  - name: test_octopus_merge_introducing_a_genuinely_new_entry_is_still_refused
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    description: "Negative control for the octopus case: the same three-way merge plus a second entry absent from ALL parents must still be refused and named in the output, so octopus support cannot be achieved by exempting merges with 3+ parents from the check entirely."
+notes: |
+  WHY THIS EXISTS. ACS-100i-8 says a change adding a package-registry entry must
+  cite a criterion declaring the surface. It did not say what "adding" means when
+  a commit has two parents, and the implementation resolved that by diffing the
+  index against `HEAD`. For a merge, `HEAD` names only the FIRST parent, so every
+  entry the SECOND parent already carried read as new.
+
+  The consequence was not theoretical. `check-ticket-signoff-parity` landed on
+  main in 406375c88; from then on EVERY branch merging origin/main was refused
+  for an entry it never introduced. Observed and bypassed with an authorised SKIP
+  while merging PR #661, and filed as KI-BP-20260901-0812.
+
+  THE SHAPE OF THE DEFECT is worth keeping. The gate was not too weak and not too
+  strong — it was asking git the wrong question. Its notion of "new" was relative
+  to one branch rather than to the commit's own history, so the debt sat with
+  whoever merged next rather than with whoever created it. A gate that fires on
+  the wrong person still fires, which is why it went a while before anyone
+  treated it as a defect rather than an inconvenience.
+
+  DO NOT "SIMPLIFY" THIS by skipping the check during merges. That is the obvious
+  shortcut and it is wrong: scenario 2 above exists precisely because a merge is a
+  perfectly good place to introduce a genuinely new undeclared entry, and a
+  merge-exempt gate would wave it through. The correct rule is narrower — an entry
+  is added by this commit only if it is absent from EVERY parent.
+
+  There is a second, unfixed half to KI-BP-20260901-0812, recorded here so it is
+  not lost: the entry that triggered all this is on main declared by
+  BP-1100g-5-i, which carried no `package_surface` field at all. ACS-100i-8 should
+  have refused that registration when it landed and did not. How it got through is
+  unestablished — the likeliest candidates are the hook not being installed in that
+  worktree (KI-BP-004) or an unrecorded bypass. This criterion stops the symptom
+  spreading; it does not explain the original miss.
+
+  OCTOPUS GAP (found on review, fixed 2026-09-01, see `amended_by`). The first
+  implementation of this criterion detected "a merge is in progress" via `git
+  rev-parse -q --verify MERGE_HEAD`. That probe resolves only the FIRST line of
+  `MERGE_HEAD`; on a real octopus merge (`git merge --no-commit --no-ff branchA
+  branchB branchC`) `MERGE_HEAD` holds one line per named branch, and the probe
+  silently dropped everything after the first. Confirmed by direct reproduction:
+  a three-way merge left two lines in `MERGE_HEAD`, and the probe reported only
+  the first. This meant an entry genuinely carried by a merge's third-or-later
+  parent — exactly what this criterion says must be allowed with no citation —
+  was still refused, which directly contradicted the criterion's own "at least
+  one of the merge's parents" clause. Fixed by reading `MERGE_HEAD` off disk in
+  full (`git rev-parse --git-path MERGE_HEAD`, one SHA per non-blank line) rather
+  than resolving it as a single revision. The negative control extends
+  identically: an entry absent from every parent of an octopus merge must still
+  be refused, and is (see the two new octopus test cases).

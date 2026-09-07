@@ -72,10 +72,10 @@ retired here rather than reused, so the numbering gap is intentional.
 ### KI-BO-006 — `fast-lane-build.js` is deployed but orphaned
 
 - **Severity:** low
-- **Status:** open · AC **BO-2400c-1-v**
+- **Status:** **RESOLVED 2026-09-01** — the orphan is deleted; decision recorded below · AC **BO-2400c-1-v**
 - **Occurrences:** 1
-- **First seen:** 2026-08-14 · **Last seen:** 2026-08-18
-- **Where:** `templates/workflows-js/fast-lane-build.js`
+- **First seen:** 2026-08-14 · **Last seen:** 2026-08-18 · **Closed:** 2026-09-01
+- **Where:** `templates/workflows-js/fast-lane-build.js` (deleted)
 
 **Symptom.** Nothing invokes it. The only `Workflow("fast-lane...")` call anywhere is
 `fast-lane-ship`, and `/fast-lane-build` routes there. The orphan is still built,
@@ -118,6 +118,51 @@ over: `test_bo2400a_runner_wiring.py:401` asserts the literal string
 re-pointed at the live file — BO-2400c-1's proof now comes from the behavioural suite
 in `test_bo2400c_prompt_cache_wiring.py`, and re-pointing a name-presence grep would
 preserve, at a new address, exactly the test that let a dead reference read as alive.
+
+**RESOLUTION, 2026-09-01 — the decision this entry asked for, and how it was taken.**
+This entry explicitly asked for a *capability* decision: wire the prompt-caching layer
+into the running lane and delete the orphan, or delete both and say plainly that prompt
+caching is gone. **The first was taken.** `BO-2400c-1-iii` wired the layer into
+`fast-lane-ship.js`, and the orphan has now been deleted along with
+`test_bo2400a_runner_wiring.py`. No capability was retired.
+
+**The size estimate above was wrong in both directions, and the correction is the
+useful part.** It was written by reading the two test files. The real figure came from
+*deleting the orphan and running the full covering-test set*, which is a different
+activity and gave a different answer:
+
+- **Overstated.** The two files do not hold the sole proof for eight criteria. Per-id
+  audit: only `BO-2400a-1` and `BO-2400a-5` had sole proof there, both in
+  `test_bo2400a_runner_structure.py`. `test_bo2400a_runner_wiring.py` held **no**
+  criterion's sole proof and was simply deleted, as this entry's own prohibition
+  anticipated.
+- **Understated.** A third file was missed entirely — `test_bo2500d_gate_retirement.py`,
+  whose `_FAST_LANE_PATH` pointed at the orphan and which carried sole proof for
+  `BO-2500d-2` (`done`).
+
+So the true blast radius was **three** ACs, not eight, and it included one this entry
+never named.
+
+**A path swap would not have worked, and that is why the migration was its own change.**
+`fast-lane-ship.js` has ~20 non-comment `agent()` call sites against the orphan's
+exactly 2, so the "exactly two agent dispatches" assertion failed outright; and the
+gate-ordering assertion compared raw string positions, where a JSDoc mention of a coder
+type precedes the real gate call in the live lane (measured: `python-coder` at 832,
+`verify_red_baseline` at 952, while real control flow is 336 before 28512). The
+assertions were rebuilt to count the unique dispatch labels and to compare
+comment-stripped positions. `select_batch` does not exist in the live lane at all — it
+uses `fast_lane.py select_connected`.
+
+**Prohibitions honoured.** Nothing was kept alive by relaxing an assertion, marking it
+skipped or xfailed, or re-aiming it at a file that merely contains the same string. The
+`assemble_context_bundle` name-presence grep at `test_bo2400a_runner_wiring.py:401` was
+**deleted with its file**, not re-pointed. The `BO-2500d-1`/`-1-i`/`-3` tests were
+deliberately left pointing at the orphan's former path rather than re-aimed: they are
+`in_progress`, and `BO-2500d-1` asserts the fast lane has no LLM review agent, which the
+live lane deliberately contradicts by dispatching `pr-reviewer` at Phase 4.5 (PR #485).
+
+**Absorbed and closed with it:** the former `KI-BO-005` (the module had no command-line
+entry point), already noted above as fixed.
 
 ---
 
@@ -1188,7 +1233,15 @@ defect and refused to proceed.
 ### KI-BO-020 — The fast lane's release-on-failure path is dead: it dispatches `status-checker`, which refuses the role, so aborted runs strand their claims
 
 - **Severity:** high — silent, and it defeats a criterion believed to be working
-- **Status:** open
+- **Status:** **RESOLVED** (fix landed under `BO-2400f-10-i`; verified 2026-09-01) — **but read
+  the residual below, which is a different and still-open defect.**
+  `fast-lane-ship.js:490` now declares `const RELEASE_EXECUTOR_AGENT_TYPE = "python-coder";`
+  and all nine release sites route through that one constant rather than a per-site literal.
+  Confirmed live, not merely by reading: a `/fast-lane-build BO-2400c-1-v` run on 2026-09-01
+  halted at the coder phase and reported `Release: succeeded — BO-2400c-1-v returned to todo`.
+  This entry sat at `open` for a week after being fixed, and was recommended as the next thing
+  to build on 2026-09-01 before anyone checked the code — the second stale entry found in a
+  single review of this register.
 - **Occurrences:** 2 observed; every failing path that releases is affected
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/fast-lane-ship.js` — the release dispatches on the
@@ -1916,10 +1969,17 @@ instruction cannot be followed.
 
 ### KI-BO-20260826-1214 — The fast lane cannot complete: its context-bundle gate demands a 1359-line document inlined into a JSON field, and the agent returns a pointer instead
 
-- **Severity:** blocker
-- **Status:** open — no AC
-- **Occurrences:** 3 (three consecutive runs of the same AC, identical halt)
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Severity:** blocker → **low** (2026-09-01: not reproducing; see the update below for why
+  this is a mitigation rather than the structural fix this entry asked for)
+- **Status:** resolved-by-mitigation, 2026-09-01 — no AC. The lane ships again. The
+  inline-by-value contract that made this possible is unchanged, so the failure mode is
+  suppressed, not removed.
+- **Occurrences:** 4 — three consecutive runs of `BP-900g-9` on 2026-08-26 (identical halt),
+  then once more on a different AC six days later (`BP-1400c-1`, 2026-09-01 05:51, a
+  14,018-byte bundle — an order of magnitude smaller than the 141,933-byte bundle of
+  `KI-BO-019`, which rules out size alone as the trigger)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-09-01 · **Verified not reproducing:**
+  2026-09-01
 - **Where:** `templates/workflows-js/fast-lane-ship.js`, the `context-bundle` phase and its
   validation of the returned `bundle` field
 
@@ -1992,8 +2052,62 @@ path"*). It was observed here only because this worktree was built from an `orig
 predated the fix. Verified present in the merged file before this entry was written; it is not
 part of this issue.
 
+---
+
+**UPDATE 2026-09-01 — a fourth occurrence, then the lane started shipping. Neither fact means
+what it first looks like.**
+
+**The fourth occurrence, and what its artefact proves.** `/fast-lane-build BP-1400c-1` halted
+the same way at 05:51. Its bundle survives at `/tmp/bp-1400c-1-bundle.out` and was measured
+rather than assumed:
+
+```
+bytes                     14018
+CACHE_BREAKPOINT markers  1
+runs of 4+ newlines       0
+non-blank text after the marker   985 bytes
+```
+
+Every one of those is what a good bundle looks like. In particular the last two rule out
+`KI-BO-20260831` (`#634`, the blank-line-run false positive) as the cause: this bundle has no
+4-plus-newline run to trip it and a healthy suffix. Classification would return `usable` on
+this content. So the halt was the **reference** state — the agent again reported where the
+text was instead of returning it — which is precisely this entry's own defect, recurring on a
+different AC, at a tenth the size of `KI-BO-019`'s. Size is not the trigger, and this is not a
+duplicate of either neighbour.
+
+**Why "fixed" would be the wrong word.** The fix direction recorded above — pass the bundle by
+*path* and let the workflow read the artefact — **was never implemented**. The lane still
+requires the content inline in the `bundle` field, and `isContextBundleLocatorString` still
+*refuses* a locator rather than dereferencing it. What actually changed is the ask: `#605`
+(2026-08-26) added an explicit size expectation to the dispatch prompt ("roughly twenty
+kilobytes … small enough to return in full") and an explicit statement that a path, a preview,
+or a summary will be refused.
+
+**And that timing is the part worth keeping.** `#605` landed on 2026-08-26 at 13:39. The
+fourth occurrence was on 2026-09-01 at 05:51 — **six days after the fix was on `main`**. So
+the prompt change cannot by itself explain why the lane works now; something about that
+particular run was still running the old contract. The most probable explanation is a stale
+*deployed* copy (the run that finally succeeded came after an explicit `git pull` +
+`build.py`, and this workspace produced two independent stale-deploy findings the same day),
+but that was not captured at the time and is **not** proven here. It is written down as the
+open question it is, rather than rounded off into a fix narrative.
+
+**Evidence it is not reproducing.** The `GE-122d-1` fast-lane run later on 2026-09-01 cleared
+the context-bundle phase and carried a connected set all the way to a merged PR (`#682`,
+squash `8cc9fe3cf`). That is a completed run, which is the only evidence that counts here —
+three halts in a row were what opened this entry.
+
+**What would reopen it.** A single reference-state halt on a bundle whose artefact measures
+clean, as above. If that happens, do not re-file: reopen this entry, and treat the
+prompt-level mitigation as exhausted — at that point implement the pass-by-path contract,
+because the second failure of a behavioural instruction is evidence the instruction is not the
+right mechanism.
+
 **Pattern:** a gate whose only passing path requires an agent to do something agents do not
-reliably do — so the guard is sound and the workflow is still unpassable.
+reliably do — so the guard is sound and the workflow is still unpassable. The mitigation
+narrows *how often* the model declines the ask; it leaves intact the fact that the lane's
+correctness depends on it complying.
 
 ---
 
@@ -2204,6 +2318,337 @@ load-bearing — the individual-test form of the same mechanism). `KI-BO-2026082
 
 ---
 
+### KI-BO-20260901-0920 — The commit-phase serialization lock is specified, its helper script was never written, and the workflow that inherited the responsibility does not take a lock at all — so N tickets commit concurrently into one shared index
+
+- **Severity:** medium — **downgraded from high after the predicted failure did not occur.**
+  The lock is genuinely absent; a second, unrelated convention is currently preventing the
+  damage. See "Why nothing broke" below, which is the most useful part of this entry.
+- **Status:** open — no AC
+- **Occurrences:** 1 (found by inspection during the `EPIC-TheNumberingGuaranteeHoldsAtEveryStage` drive, then **observed directly in the same run** — see "Observed, not just reasoned about" below)
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `templates/workflows-js/build-feature.js` (batch dispatch, `BATCH_SIZE = 12`) ·
+  `templates/skills/building-epics/SKILL.md` §5 · `scripts/epic_lock.py` (absent)
+
+**Symptom.** `/build-feature` dispatches every ticket in a dependency batch through
+`parallel()` into **one shared worktree**, and each of those parallel ticket drives runs its
+own `commit` phase. Nothing serialises them. In the run that surfaced this, batch 1 held four
+tickets, so four `commit` agents were on course to `git add` and `git commit` against the same
+index concurrently.
+
+**The lock is absent in three independent places, which is why no single fix closes it.**
+
+1. **The spec describes it.** `building-epics` §5 defines a commit-phase serialization lock at
+   `<worktree_root>/.epic-commit-lock`, and opens with the correct reasoning: "The commit and
+   pull-request phases mutate the git index and `HEAD`; they cannot run concurrently across
+   sibling tickets in the same worktree."
+2. **The prescribed helper does not exist.** §5.2 says to acquire via
+   `python3 scripts/epic_lock.py --acquire ...`. That file is present in neither `scripts/`
+   nor `templates/scripts/`. It is named in approved criteria and has never been written.
+3. **The holder is no longer dispatched.** §5 assigns the lock to `ticket-supervisor`. ADR-006
+   flattened the chain, and `build-feature.js` now states plainly: "No ticket-supervisor is
+   dispatched here." Its inlined phase loop contains no lock of any kind — a grep for `lock`
+   across the file returns only the word `block`.
+
+So the responsibility was transferred without the mechanism, to a caller that never had one,
+backed by a helper that was never built. §5 still reads as though it is in force.
+
+**Observed, not just reasoned about.** This entry was opened from a code read, and the
+predicted state appeared in the same run minutes later. Mid-drive, with batch 1's four tickets
+in flight, the shared index held staged changes belonging to two different tickets driven by
+two different agents:
+
+```text
+$ git diff --cached --name-only          # first poll
+tickets/00_inbox/epics/EPIC-.../01_TICKET-20260825-GE-122d-1.md
+tickets/00_inbox/epics/EPIC-.../08_TICKET-20260825-GE-122e-2.md
+
+$ git diff --cached --name-only          # ~4 minutes later, still no commit
+tickets/00_inbox/epics/EPIC-.../01_TICKET-20260825-GE-122d-1.md
+tickets/00_inbox/epics/EPIC-.../03_TICKET-20260825-GE-122d-3.md
+tickets/00_inbox/epics/EPIC-.../08_TICKET-20260825-GE-122e-2.md
+```
+
+No agent had committed at either sample. The window is not theoretical and not narrow: it
+stayed open across two polls minutes apart, and it *widened* — the index accumulates staged
+work from each ticket as that ticket's sign-off phases run, so exposure grows with batch size
+rather than being a brief race at commit time. `BATCH_SIZE = 12` makes the worst case twelve
+tickets deep.
+
+What a commit landing in that window actually did is recorded under "Why nothing broke" below
+— the outcome was **clean**, for a reason unrelated to the lock.
+
+**Why the failure is silent rather than loud.** The obvious hazard — two `git commit`
+invocations colliding on `index.lock` — is the *safe* one: git fails that loudly and the phase
+reports an error. The damaging interleaving is quieter:
+
+```text
+agent A: git add <A's files>
+agent B: git add <B's files>
+agent A: git commit          <- commits A's files AND B's
+agent B: git commit          <- "nothing to commit", or commits a fragment
+```
+
+A's commit would then contain B's work under A's message. That would defeat the repo's
+commit-message-matches-diff rule mechanically rather than by author error, and strand B's
+ticket with its changes committed under someone else's traceability. `check-commit-scope` is
+**warn-only**, so it would observe this and not stop it.
+
+**Why nothing broke — and why that is not the same as being safe.** The run reached a commit
+with three *other* tickets' files sitting staged, and produced a clean single-file commit:
+
+```text
+$ git show --stat d6a7fe470
+ .../10_TICKET-20260825-BP-900h-6.md   | 477 +++++++++++++++-
+ 1 file changed, 458 insertions(+), 19 deletions(-)
+
+$ git status --short          # immediately after — the other three are STILL staged
+M  .../01_TICKET-20260825-GE-122d-1.md
+M  .../03_TICKET-20260825-GE-122d-3.md
+M  .../08_TICKET-20260825-GE-122e-2.md
+```
+
+The `commit` agent commits by explicit pathspec, so it took its own file and left the rest of
+the index alone. That is what saved the run, and it is worth recording plainly: **the
+prediction above did not come true, and the reason is a convention in a different component.**
+
+What that changes, and what it does not:
+
+- **It does not restore the guarantee.** `commit.md` §"Never run `git add -A` / `git add .`.
+  Stage by name" is prose in an agent template. Nothing enforces it, no test asserts it, and
+  the driver does not depend on it — it simply happens to hold. A single commit path that
+  omits the pathspec reintroduces the whole failure, and the autofix retry loop (`commit.md`
+  Step 5, "re-stage the changed files") is exactly the kind of place where that is easy to
+  get wrong.
+- **It narrows the severity but not the surface.** Two independent mechanisms would both have
+  to be correct forever for this to stay safe, and only one of them is written down as a
+  requirement. The lock exists precisely so correctness does not depend on every future
+  commit path remembering to scope itself.
+- **It makes the `pull-request` half untested.** §5 covers commit *and* pull-request. The
+  pull-request phase is deferred for epic members (`isEpicMember=true`), so this run never
+  exercised concurrent `HEAD`/branch mutation at all. The observation above says nothing
+  about that path.
+
+Recording the non-occurrence matters as much as the occurrence would have: an entry claiming
+a corruption that never materialises gets dismissed on the next read, and the real finding —
+a missing control masked by an unenforced convention — gets dismissed with it.
+
+**Why it has not been seen before.** The exposure needs a batch with two or more tickets whose
+`files_touched` are disjoint enough to pass the parallelism gate — which is exactly the case
+the gate is designed to *produce*. The better the batching works, the wider the window. Drives
+that happened to yield single-ticket batches were never at risk, so the absence of prior
+occurrences is not evidence of safety.
+
+**Detection.** After any multi-ticket batch, verify each commit against its ticket rather than
+trusting the drive's payload:
+
+```bash
+git -C <worktree> log --format="%h %s" --name-only <base>..HEAD
+```
+
+Every file in a commit must appear in that ticket's `files_touched`. A commit carrying a
+sibling ticket's files is this defect, already realised.
+
+**Countermeasure.** Two candidates, and the cheap one is worth taking first:
+
+- **Set `BATCH_SIZE = 1`** — costs the parallelism but restores serial commits with a
+  one-token change, and needs no new script. The dependency batching still does its work;
+  only the within-batch concurrency is given up.
+- **Write `scripts/epic_lock.py` and call it** from `driveTicketPhases` around the `commit`
+  and `pull-request` phases, per §5.2. This is the specified fix, and it also closes the
+  dangling reference in §5 that currently points at a non-existent file.
+
+Whichever is chosen, §5's own caveat should be honoured: it already warns that the lock
+"cannot be released after a child crash (lock-recovery requires user intervention)". A lock
+added without stale-lock recovery converts a silent corruption into a permanent deadlock.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a control specified in a runbook,
+absent in the code path that inherited the runbook's responsibility. The document asserting
+the guarantee is the reason nobody checks for it.
+
+**Related.** `KI-BO-030` (the fresh-install blocker set, which also turns on a gate that is
+registered but cannot run). The user-memory note "No parallel supervisors in shared worktree"
+records the same hazard observed from the opposite direction — git object-store corruption
+under concurrent supervisors — and predates this entry by months without the mechanism being
+traced to a missing lock.
+
+---
+
+### KI-BO-20260901-1000 — The per-ticket phase list is frozen before the first phase runs, so a phase that a later phase declares necessary can never be dispatched — and `architect-review`, whose job is to declare exactly that, is ordered after the phases it gates
+
+- **Severity:** blocker
+- **Status:** open — no AC
+- **Occurrences:** 1 run, **2 of 4 tickets in the batch** (`GE-122d-3`, `BP-900h-6`) — both halted, neither recoverable within the drive
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `templates/workflows-js/build-feature.js` — `driveTicketPhases()` Step 2/Step 3
+  (`neededPhases` computed once at ~:1345, iterated at ~:1430) · `phaseOrder` (~:305)
+
+**Symptom.** Two independent tickets in one batch halted with the same shape: `architect-review`
+ran, concluded an ADR was required, flipped `requires_adr: true` and set
+`agents.adr-author: needed` — and `adr-author` was then never dispatched. `python-coder`
+subsequently refused to write code against a contract that had not been recorded, which is the
+correct refusal, so the drive ends with two tickets stuck behind a phase the drive itself will
+never run.
+
+**Root cause — the list is a snapshot, not a queue.** Step 2 computes the phase list exactly
+once, from the planner's opening snapshot:
+
+```js
+const neededPhases = sortByCanonicalPriority(
+  selectDispatchPhases(orderedPhases.filter((p) => p.status === "needed"), isEpicMember)
+);
+```
+
+Step 3 then walks it:
+
+```js
+for (const currentPhase of neededPhases) {
+```
+
+`neededPhases` is never recomputed. A phase promoted to `needed` *during* the drive is
+invisible to the loop, because the loop is iterating a value captured before any phase ran.
+
+**Two orderings make this specifically unrecoverable rather than merely late.** `phaseOrder`
+puts `adr-author` at priority 2 and `architecture-diagram-author` at 3, but `architect-review`
+— the phase that decides whether either is needed — at 4. So even if the list *were*
+recomputed, a forward-only walk would already be past both slots by the time the decision is
+made. The gating phase runs after the phases it gates. Freezing the list and ordering the
+decider last are two independent bugs that happen to produce one symptom; fixing either alone
+leaves the other.
+
+**The signal is computed correctly and then discarded.** This is not a case of the system
+failing to notice. The driver re-reads the ticket record after each phase, and those re-reads
+returned the right answer — from this run's own journal, after `architect-review` signed off:
+
+```text
+"needed_phases":["ac-fulfillment-gate","ac-validator","adr-author","commit",
+                 "documentation-expert","documentation-verifier","pr-reviewer",
+                 "pull-request","python-coder","test-runner","test-writer"]
+```
+
+`adr-author` is right there, named, in a value the driver received and parsed. Nothing consumes
+it. The read-back exists to feed the *completion* decision, not the *dispatch* decision, and no
+code path connects the two. This is the fourth recorded instance in this register of a signal
+being derived accurately and then not wired into the control flow it was derived for.
+
+**Why the phase agents look worse than they are.** Both halts were well-reasoned and both were
+right. `python-coder` on `GE-122d-3` verified ADR-037's status on disk rather than from memory,
+found it `Proposed` with no amendment, noted six sibling ACs already consuming the
+`NamespaceVerdict` shape it would have had to narrow, and stopped. `python-coder` on
+`BP-900h-6` checked that `ADR-038` did not exist and cited architect-review's explicit
+sequencing instruction. `test-runner` then re-derived the same blocker independently and
+confirmed the red baseline was intact under `AC_ENFORCE_STRICT=1` (7 failed, matching
+test-writer's record) rather than reporting a regression. The adjudication ladder classified
+correctly at every step. The agents did their jobs; the driver had no way to act on the result.
+
+**Countermeasure.** Both halves need addressing:
+
+1. **Re-derive the pending set each iteration** instead of iterating a frozen array — drive
+   from the record's live `needed` set, so a phase promoted mid-drive is picked up. The
+   re-read already happens and already carries the answer; it needs connecting to dispatch.
+2. **Move `architect-review` ahead of the phases it gates** in `phaseOrder`, or give
+   `adr-author` and `architecture-diagram-author` a second slot after it. A decider that runs
+   after the phases conditioned on its decision cannot work under any forward-only walk.
+
+Until then, a ticket whose `requires_adr` is flipped by `architect-review` cannot be completed
+by `/build-feature` and must be finished by hand — author the ADR, then re-drive.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a correctly-computed signal with no
+consumer. Distinct from the phantom-done family: nothing here claims success. The drive halts
+honestly and reports the blocker; the defect is that the blocker is one the drive created for
+itself and cannot clear.
+
+**Related.** `KI-BO-20260901-0920` (filed the same run — the commit-phase lock, also a control
+that the runbook describes and the flattened driver does not implement; ADR-006's flattening
+dropped both). `KI-ACD-020` (a readiness gate dropping leaves silently — the same
+computed-then-discarded shape one layer up, in `goal_to_epic.py`).
+
+---
+
+### KI-BO-20260901-1052 — `python-coder` signals a test handoff exactly as its template prescribes, and the driver rejects it for omitting a field the template never mentions — so the documented delegation path dead-ends every ticket that uses it
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1 (the only ticket in the batch that produced working production code)
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `templates/agents/python-coder.md` §"Test Delegation" (~:454-460) ·
+  `templates/workflows-js/build-feature.js` (~:1595-1610)
+
+**Symptom.** `GE-122d-1` was the one ticket in batch 1 that got real work done — a verified
+77-line deploy-manifest fix in `scripts/build_phases.py`, checked against a live `build.py`
+run. The drive then discarded the ticket with:
+
+```text
+Phase 'python-coder' returned 'status: handoff' but named no recognizable
+handoff_target ('undefined'). Refusing to guess a re-dispatch target and refusing
+to advance to the next phase in phaseOrder.
+```
+
+**The two sides define "handoff" differently, and neither references the other.**
+
+`python-coder.md` §"Test Delegation" is unambiguous about the protocol, and the agent followed
+it to the letter:
+
+> 1. Add task items under the `### test-writer` section of `## Implementation Tasks`
+>    describing what needs testing.
+> 2. When signing off, use `(status: handoff)` instead of `(status: ok)` to signal that
+>    test-writer must run next.
+> 3. Do NOT create files under `unit_tests/` or any test directory.
+
+Three steps, all performed. The target is named — in the ticket body section and again in the
+returned `message` ("handed off to test-writer via a new `## Implementation Tasks` /
+`### test-writer` section with the exact fix"). What the template never asks for, anywhere, is
+a `handoff_target` key in the JSON return. The driver reads exactly that key and nothing else:
+
+```js
+const handoffTarget = phaseResult.handoff_target;   // undefined
+```
+
+So the agent communicated the target through the two channels its template defines — ticket
+body and prose — and the driver looked in a third channel it was never told to populate.
+
+**Why the driver's refusal is right and still produces the wrong outcome.** Refusing to guess
+a re-dispatch target is correct; guessing would be worse. The defect is upstream of the
+refusal: the contract the agent was given cannot produce the field the driver requires. A
+fail-closed check is only as good as the contract it closes against, and here it fails closed
+on conformant output.
+
+**This is the documented happy path, not an edge case.** §"Test Delegation" exists because
+`python-coder` is forbidden from writing tests: "You MUST NOT write or modify unit test files
+directly." Any coder run that discovers its tests need adjusting — which the same template
+makes *mandatory* for bug fixes ("every bug fix requires a regression test... add the test
+requirement to the `### test-writer` section") — is routed into `status: handoff`. So the
+prescribed route for a common, template-mandated situation terminates the ticket.
+
+**What it cost.** `GE-122d-1`'s fix was complete and verified; 4 of its 6 red-baseline tests
+remained red for a diagnosed test-fixture path bug (the fixture assumed a bare
+`<target>/hooks/`, contradicting ADR-004's shim design) that `python-coder` correctly
+classified as `test_drift` and correctly declined to fix itself. That is the system working
+as designed right up to the moment the handoff was dropped. The work survives only because it
+was left staged — nothing committed it, and nothing recorded that it exists.
+
+**Countermeasure.** Make the two ends agree, in whichever direction is cheaper:
+
+- **Have the driver accept the template's channel** — read the handoff target from the
+  ticket's `## Implementation Tasks` subsection heading when `handoff_target` is absent,
+  before refusing. The information is already on disk in a structured, parseable place.
+- **Or add the field to the template contract** — state in §"Test Delegation" that the JSON
+  return must carry `handoff_target: "test-writer"`, and add it to the result schema so a
+  missing value is caught at authoring time rather than at dispatch time.
+
+Either fixes it; doing neither leaves the delegation path unusable. The first is preferable
+because it makes the *record* authoritative, consistent with how every other phase decision
+in this driver is taken from the ticket read-back.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a contract split across two
+components with no shared definition and no test spanning both. The agent template and the
+workflow are versioned together and deployed together, and still disagree.
+
+**Related.** `KI-BO-20260901-1000` (same run, same driver, also a dispatch decision that
+ignores what the ticket record already says). Both are instances of the driver's dispatch
+logic and the ticket record having drifted apart; the record is right in both cases.
+
+---
+
 ### KI-BO-20260826-1900 — The done-proof gate collects parametrized pytest ids and then cannot match one, so a covers-tagged parametrized test reads as "not run" and blocks the merge
 
 - **Severity:** medium
@@ -2303,7 +2748,15 @@ that reported clean because it was invoked in a way that checked nothing).
 ### KI-BO-20260831-1330 — The fast lane invokes `assemble-bundle` with two flags that were deliberately deleted, so its context-bundle gate can never be satisfied
 
 - **Severity:** blocker
-- **Status:** open — no AC
+- **Status:** **RESOLVED 2026-09-01** — the two flags are gone from the lane. Verified:
+  `grep -c "conventions\|--acs" templates/workflows-js/fast-lane-ship.js` returns **0**, and a
+  live run reached its coder phase with a 20,645-byte bundle. Fixed as part of the `BO-2400c-1-vi`
+  bundle shrink (the layer set was reduced, which removed the two invocations along with the
+  layers they passed), so it was closed incidentally rather than deliberately — which is why it
+  sat here reading `blocker / open` after it had stopped being true.
+  **Left as a warning:** a stale blocker is not harmless. This entry was the top of the severity
+  list when the register was consulted on 2026-09-01 to decide what to build next, and it
+  displaced two real ones. Re-verify a blocker before planning against it.
 - **Occurrences:** 1
 - **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
 - **Where:** `templates/workflows-js/fast-lane-ship.js`, the `context-bundle` phase's Step 2
@@ -2502,10 +2955,13 @@ the phase is never dispatched, no sign-off is ever written, and the completion w
 reads the ticket rather than the driver's phase list — correctly refuses to mark done with a
 `needed` phase outstanding.
 
-**Why blocker.** It is not one ticket, it is every ticket in every epic. All 25 tickets in
-the observed epic carried it. The drive halts on whichever ticket finishes first, so fixing
-that one ticket by hand just moves the halt to the next, which is exactly what three
-consecutive drives did before the pattern was visible.
+**Why blocker.** It is not one ticket, it is every ticket in every epic. Measured on the
+current tree, `grep -rl "pull-request: needed" tickets/00_inbox/epics/` returns **333**
+tickets spanning **23** epic folders, **316** of which are not yet done. The observed epic
+contributed 25 of those 333 — it was the first to hit the halt, not the size of the problem.
+The drive halts on whichever ticket finishes first, so fixing that one ticket by hand just
+moves the halt to the next, which is exactly what three consecutive drives did before the
+pattern was visible.
 
 **It also cannot be diagnosed from the halt message.** The message names the ticket and the
 phase, so the natural reading is "this ticket is missing a sign-off" — and the natural
@@ -2519,10 +2975,28 @@ alternative — having the driver reconcile the frontmatter when it defers a pha
 it means an agent rewriting the record to match its own behaviour, which is the shape that
 makes a record stop being independent evidence.
 
-**Workaround in use.** All 25 tickets were set to `pull-request: not_needed` by hand
-(`9682d6adf`). This is a correction, not a suppression: `not_needed` means "explicitly
+**Workaround in use — on one unmerged branch, and nowhere else.** The 25 tickets of
+EPIC-StartingNewWorkTheProperWayAlways were set to `pull-request: not_needed` by hand
+(`9682d6adf`). That commit is reachable from exactly one branch:
+`git branch --contains 9682d6adf -a` returns `EPIC-StartingNewWorkTheProperWayAlways` and its
+remote, and nothing else. On `main` not one of those 25 is corrected and the other 308 were
+never touched, so anyone reading from `main` has the defect live in full. Do not read
+"workaround in use" as "the pain is handled" — it is handled on a branch that has not landed.
+
+The reasoning behind that hand-correction is worth preserving, and holds for the branch it was
+made on: it is a correction, not a suppression, because `not_needed` means "explicitly
 excluded from this ticket", which is precisely what the driver does. They were NOT set
 `signed_off` — no per-ticket PR phase ran, and saying one did would be false.
+
+**Sequencing warning — the 316 must be repaired BEFORE the completion guard is unified.** A
+fix is being specified that makes the completion guard consistent (`KI-BO-20260831-1932`).
+Today that guard has two doors and only one of them reads the ticket, so roughly two in three
+of these tickets slip past it into a phantom `done` instead of halting. That leniency is the
+only reason a population of 316 is survivable at all. Once the guard is consistent **all 316
+halt reliably** — which is the correct behaviour, and a large immediate operational cost that
+has to be paid deliberately rather than discovered. The mechanical repair of the 316 (fix the
+generator, then sweep the tickets that already exist) has to land first. Unify the guard first
+and the next drive halts on ticket one of 316, with 315 behind it.
 
 **Related.** `KI-BO-20260831-1931` (the sibling record-vs-driver disagreement, on comment
 status rather than phase membership).
@@ -2614,5 +3088,426 @@ state a different gate had to catch.
 the caller's request. Both observed paths had the same 8-item request; only one of them
 went and read the ticket for a ninth.
 
+**Why that direction, spelled out — it has already been read backwards.** Two agents read the
+paragraph above on the same day and drew opposite conclusions from it, so the reasoning
+belongs in the entry rather than in the reader.
+
+Taken literally and on its own, the direction unifies both paths onto the refusal. While the
+tickets still say `pull-request: needed`, that converts an intermittent blocker into a
+permanent and universal one — 316 tickets, per `KI-BO-20260831-1930`. An implementer can
+reasonably conclude from that alone that the direction is wrong. It is not wrong; it is
+mis-ordered if taken alone. See the sequencing warning on that entry for the order.
+
+The tempting alternative — have the completion writer trust the exclusion list its caller
+hands it — must be rejected, and rejected explicitly, because it is what the obvious fix looks
+like. The guard's refusal is worth something only while the record is authored by someone
+other than the party being checked. A writer that accepts the drive's word about which phases
+do not count has stopped checking the drive, which is the only thing it was ever for. It would
+fix today's symptom by removing the guard.
+
+The direction completes the fix only when paired with making the RECORD true — the generator
+emitting `pull-request: not_needed` for epic members, per `KI-BO-20260831-1930` — so that a
+writer reading the ticket gets the right answer. The two halves are a pair. Reading the ticket
+without correcting the ticket halts everything; correcting the ticket without reading it
+leaves a guard that trusts its caller. Neither works alone.
+
 **Related.** `KI-BO-20260831-1930` — the `pull-request: needed` entry that put all three
 tickets in this state.
+
+---
+
+### KI-BO-032 — `/fast-lane-build` silently builds a different batch when the AC you named is not `readiness: approved`
+
+- **Severity:** high — the failure is a green run against the wrong work, with no signal
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `templates/workflows-js/fast-lane-build.js` (hardcoded `select_batch`
+  invocation) against `fast_lane.py`'s `select_batch`, which filters on `_is_approved`
+
+**Symptom.** An operator says "fast-lane `TKT-600a-1`". `fast-lane-build.js` takes no AC
+argument at all — it hardcodes `select_batch --ac-root <root> --limit <N>`, which returns
+"the next N **approved** unimplemented ACs by priority". The named AC is never consulted.
+If it is not `readiness: approved`, the lane builds five unrelated ACs and reports success.
+
+Measured on the real store at `931b4beb4`:
+
+```
+select_batch    --limit 5        -> ["ACS-500g-6-i", "BP-900b-3", "BP-900g-10-i",
+                                     "BP-900g-10-ii", "BP-900g-8-ii"]
+select_connected --ac TKT-600a-1 -> ["TKT-600a-1"]
+```
+
+Zero overlap. Nothing in the run says the requested AC was dropped, because nothing in the
+run ever received it.
+
+**Why the readiness field cannot be relied on to prevent this.** `TKT-600a-1` has been
+`readiness: draft` for its entire history — including the whole period it was
+`work_status: done`. So "draft" here does not mean "not ready to build"; it means nobody
+ran the approval gate. Any AC that reached done outside `/plan-feature` is in the same
+state, and every one of them is invisible to `select_batch` while looking perfectly
+buildable to an operator reading the store.
+
+**Fix direction.** Two independent halves, both cheap:
+
+1. Give `fast-lane-build.js` the `ac` argument its sibling already has. `fast-lane-ship.js`
+   accepts `args.ac` and resolves via `select_connected` (dependency-ordered,
+   **readiness-agnostic**) — the correct behaviour already exists one file over.
+2. Failing that, make the silence impossible: when the caller names an AC that
+   `select_batch` did not return, refuse rather than substitute. A lane that cannot build
+   what was asked for should say so, not build something else and exit 0.
+
+**Workaround until fixed.** Use `/fast-lane-ship` with `{ac: "<ID>"}` for any targeted
+single-AC build, and confirm the resolution before dispatching:
+
+```
+python3 <root>/.leafcutter/scripts/build_orchestration/fast_lane.py select_connected --ac <ID> --ac-root <store>
+python3 <root>/.leafcutter/scripts/build_orchestration/fast_lane.py check_producibility --ac-ids <ID> --ac-root <store>
+```
+
+An empty `select_connected` result is a clean no-op in the lane, so checking first is the
+difference between a diagnosis and a wasted run.
+
+**Related.** `KI-BP-20260826-1331` — a different fast-lane false-green (install phase), not
+this one. The shared shape is worth naming: the fast lane's failure mode is consistently a
+**successful run against the wrong inputs**, which no gate downstream of input selection can
+detect.
+
+---
+
+### KI-BO-20260901-1045 — Every handoff halts the drive: the driver routes on a `handoff_target` field that no agent template tells any agent to emit
+
+- **Severity:** blocker
+- **Status:** open — no AC
+- **Occurrences:** 2 observed (ACD-2100a-1 on 2026-08-26, ACD-2100a-4 on 2026-09-01),
+  but the mechanism guarantees it for every handoff from every agent
+- **First seen:** 2026-08-26 · **Last seen:** 2026-09-01
+- **Where:** `templates/workflows-js/build-feature.js:1595`
+  (`const handoffTarget = phaseResult.handoff_target;`) and the refusal at `:1606`,
+  against `templates/agents/python-coder.md` — and against every other agent template
+
+**Symptom.** A phase returns `handoff` and the drive stops:
+
+```
+Phase 'python-coder' returned 'status: handoff' but named no recognizable
+handoff_target ('undefined'). Refusing to guess a re-dispatch target and
+refusing to advance to the next phase in phaseOrder.
+```
+
+**Cause, and it is not "the agent forgot".** The driver reads the target from a
+`handoff_target` key on the phase's returned payload. Grep the entire agent template
+directory:
+
+```
+grep -c handoff_target templates/agents/python-coder.md   -> 0
+templates/agents/ files mentioning handoff_target         -> 0
+```
+
+**No agent template anywhere names that field.** What `python-coder.md` actually documents
+is a *ticket-file* convention, in three places:
+
+- `:142` — "Adds tasks to `### test-writer` section and uses `(status: handoff)` instead of
+  `(status: ok)`"
+- `:458` — "When signing off, use `(status: handoff)` instead of `(status: ok)` to signal
+  that test-writer must run next."
+- `:601` — "`(status: handoff)` to test-writer for the assertion-only fix."
+
+So the protocol is specified as *write a section in the ticket and mark the comment*, and it
+is read as *set a key in the return value*. An agent that follows its template **exactly**
+produces a handoff the driver cannot route. This is not intermittent and not agent-dependent:
+it is every handoff, always.
+
+**Why blocker rather than high.** The handoff path is not an edge case — it is the mandated
+route for the Test Delegation rule, where a coder that needs a test changed must hand off
+rather than edit tests itself. So the one protocol the repo requires coders to use is the one
+that halts the drive, and the halt is unrecoverable by re-running: the cached phase result is
+byte-identical, so the same `undefined` comes back. Both observed instances required a human
+to read the prose and act on it.
+
+**The information is always present and always ignored.** In both observed cases the target
+was unambiguous in the record:
+
+- `ACD-2100a-1` — the coder's comment named test-writer and gave a full remediation manifest:
+  file, function, and the exact one-line edit.
+- `ACD-2100a-4` — the coder wrote an entire `## Implementation Tasks` → `### test-writer`
+  section, which is *precisely* what `python-coder.md:142` instructs it to do.
+
+The driver is right to refuse to guess. It is looking in the wrong place: the ticket says who
+the target is, in the structured heading its own template mandates.
+
+**Fix direction.** Resolve the target from the ticket rather than from the return payload —
+the `### <agent>` heading under `## Implementation Tasks` is already structured, already
+mandated, and already populated. If the return-payload contract is the one to keep instead,
+then every agent template that can emit `handoff` must be told to set `handoff_target`, and a
+`handoff` returned without it should be a template-conformance error named as such, not an
+`('undefined')` the reader has to decode. Do not do both halves independently — the two-sided
+contract with only one side documented is the defect.
+
+**Trap for whoever fixes it.** The refusal message reads as a per-ticket problem, so the
+natural response is to fix that ticket's comment by hand. That works, and it hides the
+defect: the drive then runs until the next handoff, which is how this reached two occurrences
+across two weeks before the pattern was visible. Check `grep -c handoff_target
+templates/agents/` before concluding an instance is a one-off.
+
+**Related.** `KI-BO-20260831-1930` (the driver defers a phase the generator marks needed) and
+`KI-BO-20260831-1931` (completeness read from the newest comment while the driver halts before
+dispatching) — the same family: a two-sided contract whose halves were specified separately
+and never reconciled, failing closed in a way that reads as a ticket defect.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse face: a gate that fails
+closed correctly, on a field the other side of its own contract was never told to provide.
+
+---
+
+### KI-BO-20260831-1520 — The fast lane's green gate runs only the AC's own tests, so a build that breaks 19 other tests reaches review reporting "gates green"
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Where:** `templates/workflows-js/fast-lane-ship.js` — the `greenCoverageInvocation`
+  string, and the absence of any full-suite step anywhere in the lane
+
+**Symptom.** A fast-lane build of `BO-100e-1` / `BO-100e-1-i` widened `build-feature.js`'s
+single planner dispatch into a multi-look loop. Its own new tests passed. The lane's payload
+reported the build complete with *"gates green (red-baseline, green+coverage, review)"*.
+
+The branch broke **19 pre-existing tests** in `unit_tests/prompt_assembly/` — every
+`build-feature.js` driver test that models an epic. None of them appear in the lane's own
+report.
+
+**Root cause — the gate is AC-scoped by construction, and nothing else is suite-scoped.**
+
+```js
+const greenCoverageInvocation =
+  `python3 ${gateScript} verify_green_and_coverage` +
+  ` --ac-ids ${batchIds} --test-root ${worktreePath} --ac-root ${acStoreRoot}`;
+```
+
+`--ac-ids` narrows the run to tests tagged for the ids being built. That is deliberate and is
+what makes the lane fast; the comment above it says so (*"inlined lean loop — scoped to the
+resolved ids"*). The defect is not the scoping. It is that **the lane runs nothing broader at
+any point**, and then reports the narrow result in language that reads as a verdict on the
+change.
+
+`pr-reviewer` does not close the gap either: it reads the working **diff**. The 19 broken
+tests are not in the diff — they are files the change breaks without touching. A reviewer
+looking only at what changed cannot see them by construction.
+
+**What this cost, concretely.** The review phase spent a full cycle on a branch whose suite was
+already red, and returned three high-confidence findings about the diff — good findings, all
+three real — while never mentioning that the branch did not build. Had those findings been
+clean, the lane would have committed and opened a PR with 19 failing tests.
+
+**The 19 tests were not the whole of it, and that is the part worth reading.** Repairing them
+took four more rounds and surfaced three further defects the lane's report said nothing about,
+including a regression against `BO-300a-5` — an ALREADY-COMPLETED criterion — and an unbounded
+loop with no cap and no operator-visible error. Six defects in total on a build the lane
+reported as `status: ok, gates green`. So the scoped gate does not merely miss "some other
+tests": it misses whether the change is correct at all, while its report reads as a verdict
+that it is. Treat the number 19 in this entry as the count that was VISIBLE at the time, not
+the count that existed.
+
+**Not undetected forever — detected late, behind a green.** `Test suite (pytest)` is a required
+CI check and runs the full suite, so the PR would have gone red. The damage is ordering and
+trust: the lane declares its own work sound before anything has checked that claim, and an
+operator reading `status: ok, gates green` has no signal that the assertion is scoped. This is
+the `docs/reference/false-green-mechanisms.md` shape where a **narrow check is reported in wide
+language** — the check did exactly what it says; the report does not say what it checked.
+
+**Why the AC-scoped gate cannot simply be widened.** Running the full suite per fast-lane build
+costs ~18 minutes locally (measured on this branch: `4538 passed` in 1098s), against a lane
+designed to be lean. Two shapes that keep the speed:
+
+1. **Run the full suite once, after the coder loop settles and before `pr-reviewer`.** One run
+   per build, not per gate iteration. It also stops wasting a review cycle on a branch that
+   does not build.
+2. **Keep the gate scoped but fix the report.** Have `verify_green_and_coverage` state the
+   scope it actually ran (`N tests matching ac-ids X, Y`), and have the lane's payload and PR
+   body carry that qualifier instead of an unqualified "gates green". Cheaper, and honest, but
+   it only stops the wrong belief — it does not stop the broken PR.
+
+These are not alternatives; (2) is the floor and holds whether or not (1) ships.
+
+**The repo already had this rule, for the other pipeline.** `CLAUDE.md` → *"Full test suite +
+ruff at epic-finalize (before merge)"* exists because per-ticket sign-offs run only that
+ticket's own tests and cross-cutting breakage slips through. That is this defect exactly, one
+pipeline over. The fast lane was built after that instruction and did not inherit it.
+
+**Pattern:** a check that is honest about what it did, reported in language that implies more.
+
+**Related.** `KI-BO-007` (a phase reported complete against the agent returning cleanly rather
+than against an observable side effect — the same substitution of a proxy for the thing).
+
+---
+
+### KI-BO-20260901-1450 — UNDER INVESTIGATION: the fast lane isolates its worktree but not the process-level state around it, and three shared surfaces already misfired with only ONE lane running
+
+- **Severity:** unknown — under investigation, see "What we are asking for" below
+- **Status:** **UNDER INVESTIGATION** — filed before the confirming experiment, deliberately.
+  Contributions wanted; this entry is a request for evidence as much as a record.
+- **Occurrences:** 3 distinct surfaces, each observed at least once on 2026-09-01, **all with a
+  single lane running**
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `$GIT_COMMON_DIR/config`; `<root>/.build_manifest.json`; the shared `.leafcutter`
+  install tree reached through each worktree's symlink
+
+**Why this is filed now, before the experiment.** The intended next step is to run two fast
+lanes concurrently on independent acceptance criteria and observe what actually breaks. That
+experiment has not been run. Filing first means the predictions are on record *before* the
+result, so they can be scored honestly rather than reconstructed afterwards to match whatever
+happened. If the experiment contradicts the entry, the entry is wrong and should say so.
+
+**The shape of the concern.** `/fast-lane-build` isolates the thing everyone thinks about — it
+opens a fresh worktree per run (`fast-lane/<slug>` off `origin/main`) and claims its ACs before
+building, so two lanes cannot take the same criterion. What it does **not** isolate is the
+process-level state that every worktree of the repository shares. Three such surfaces bit a
+single lane on 2026-09-01:
+
+| surface | what happened with ONE lane |
+|---|---|
+| `.git/config` | A test fixture set `user.name` / `user.email` inside a worktree it created. Worktrees share `$GIT_COMMON_DIR/config`, so the identity leaked to the whole repository family and **four** commits landed misattributed across three different worktrees. `KI-TQ-012`. |
+| `.build_manifest.json` | A build targeted at a worktree wrote a manifest with no usable `output_mappings`; a later commit **in a different tree** was then blocked by `check-build-drift` reporting 170 false gaps. `KI-BP-011`, `KI-CG-20260831-manifest-shadowing`. |
+| shared `.leafcutter` | Worktrees symlink to one install tree, so `build.py --target-dir <worktree>` deploys *through* the link and replaces the shared deployed package for every other tree. `KI-BP-016`. |
+
+**Why the existing coverage does not reach this.** `ACD-2000b-4` governs parallel safety at
+requirement grain, and its unit is the **acceptance criterion's file footprint** — which two
+criteria touch which repository files. That is a real and separate gap (its host was decided on
+2026-09-01: the claim path, `filter_already_claimed`). None of the three surfaces above is an AC
+footprint. They are process-level singletons that no criterion in the store currently mentions,
+so building `ACD-2000b-4` in full would leave all three untouched.
+
+**The hypothesis, stated so it can be falsified.** Each of these degrades with N lanes rather
+than improving, because each is a single shared resource written by every run:
+
+1. Concurrent commits misattributed, or attributed inconsistently within one lane's own history,
+   whenever any run executes a suite that writes git config.
+2. `check-build-drift` / `check-output-drift` blocking commits in lane B because lane A wrote the
+   manifest last — a cross-lane failure whose message names neither lane.
+3. A build in lane A changing the deployed package that lane B's hooks and agents are executing
+   from, mid-run.
+
+**What we are asking for.** This is filed deliberately incomplete. If you have seen any of the
+following, adding it here is more valuable than a fix right now:
+
+- **A parallel-lane run that went wrong**, especially one where the failure surfaced in a
+  different worktree from the one that caused it. Cross-tree symptoms are the hard part; the
+  message never names the culprit.
+- **A fourth shared surface** we have not listed. Candidates nobody has checked: the pre-commit
+  cache under `~/.cache/pre-commit`, `.security-allowlist` resolution through the symlink
+  (`KI-BP-017` touches this), the feedback sink `debugging/logs/feedback.jsonl`, and the AC
+  store's own claim records under concurrent writers.
+- **Evidence that a surface here is actually safe** under concurrency. A negative result is
+  worth as much as a positive one and will shorten the list.
+- **A severity judgement.** We have deliberately not assigned one. Whether this is a blocker on
+  running lanes in parallel, or an annoyance that a convention avoids, depends on how the three
+  behave together — which nobody has measured.
+
+**Explicitly NOT claimed.** That parallel lanes are unsafe. They may well be fine in practice;
+several of the observations above have known one-line mitigations (do not run `build.py` against
+a worktree; reset the git identity after any suite that writes it). The claim is narrower: the
+lane's isolation story stops at the worktree boundary, three surfaces past that boundary have
+already misfired at N=1, and nobody has checked what they do at N>1.
+
+**Related.** `KI-TQ-012` (the git-identity leak, and the only one of the three with a named
+root cause). `KI-BP-011` (the manifest is written to the package that ran the build rather than
+the install it describes). `KI-CG-20260831-manifest-shadowing` (the reader side of the same
+defect). `KI-BP-016` (`build.py --target-dir` against a worktree deploys over the shared tree).
+`KI-BO-020` (the release-on-failure path is dead, so an aborted lane strands its claims — the
+one lane-level defect that is unambiguously worse with more lanes).
+
+**Pattern (provisional):** isolation designed around the artifact people can see — the working
+tree — while the machinery underneath it stays global, so the blast radius of a single run is
+larger than the directory it was given.
+
+---
+
+### KI-BO-20260901-1620 — `permits_shell` is a three-state field read as two, so the fix for KI-BO-020 picked an agent the schema also calls read-only — and three shell dispatches still go to the one agent that explicitly forbids it
+
+- **Severity:** high — one live charter violation on the claim path, and the guard that should
+  catch it does not exist
+- **Status:** open — no AC
+- **Occurrences:** 1 systemic (4 dispatch sites, 3 still wrong)
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Where:** `config/agent_registry.json` (`permits_shell`, declared on exactly 2 of ~40 agents);
+  `config/agent_registry.schema.json:123-125`; `templates/workflows-js/fast-lane-ship.js:490`
+  (the fix) and lines **666**, **750**, **824** (the unfixed dispatches)
+
+**Symptom — the field has three states and the code reads two.** The schema is explicit:
+
+> `permits_shell` … True if this agent's registered charter permits running repository-mutating
+> shell commands … **False or absent means the agent must be treated as read-only** for
+> dispatch-permission gates.
+
+Measured across the registry, only **two** agents declare it at all:
+
+| agent | `permits_shell` | schema meaning |
+|---|---|---|
+| `status-checker` | `false` | read-only |
+| `worktree-agent` | `true` | may run repository-mutating shell |
+| everyone else, incl. `python-coder` | **absent** | read-only |
+
+`KI-BO-020`'s fix reasoned from the wrong predicate. Its comment at `fast-lane-ship.js:481-489`
+justifies the substitution as: *"dispatch an executor whose declared … entry does not explicitly
+forbid running shell commands (permits_shell !== false) … python-coder's entry declares no such
+restriction."* Under the schema's own definition, `absent` **is** the restriction. So the fix
+replaced an agent the schema calls read-only with another agent the schema also calls read-only,
+and the only agent actually chartered for this is `worktree-agent`.
+
+It works in practice — `python-coder` does not refuse, and a live run confirmed the release
+succeeds — so the *behaviour* is fixed. The *justification* is not, and it is written into the
+code as a comment future readers will copy.
+
+**The larger half: three dispatches were never fixed.** `KI-BO-020` was scoped to the release
+path, so only that one moved. These still send `status-checker` — the single agent that
+explicitly declares `permits_shell: false` — to run Bash:
+
+| line | dispatch | what the command does |
+|---|---|---|
+| 666 | resolve | reads the store |
+| 750 | producibility | reads the store |
+| **824** | **claim** | **flips `todo` → `in_progress` in the AC store** |
+
+Line 824 is the one that matters. Claiming *writes* to the store, which is repository-mutating
+by the schema's own wording, and it is dispatched to the agent that forbids exactly that. It is
+also the mechanism every parallel fast-lane run depends on for mutual exclusion.
+
+**Why it has not blown up yet, and why that is not reassurance.** `status-checker` refuses by
+*judgement*, not by mechanism — it reads its own charter and declines. It refused the release
+prompt twice (`KI-BO-020`) because that prompt opened `You are the release-phase agent`, an overt
+role reassignment. The claim prompt opens `You are the claim-phase agent for a fast-lane build`
+— the same shape. It has not refused **yet**. Nothing prevents it doing so on the next run, on a
+different model, or after a template edit, and if it refuses at the claim step the run loses its
+only exclusion guarantee.
+
+**Nothing enforces the field.** No hook, gate or test compares a workflow's `agentType`
+dispatches against `permits_shell`. The field is declared, documented, and consulted by exactly
+one hand-written comment. That is why a wrong reading of it survived review and shipped.
+
+**Suggested fix, and the ordering matters.**
+
+1. **Decide what the field means and make `absent` explicit.** Either backfill `permits_shell`
+   on every registry entry so there is no third state, or change the schema so absent means
+   "permitted" and `false` is the only restriction. The current "absent == false" reading is
+   defensible but nobody follows it, which is the evidence it is the wrong default.
+2. **Enforce it mechanically.** A check that walks each `templates/workflows-js/*.js` for
+   `agentType:` literals whose prompt contains a shell invocation, and fails when the named agent
+   is not `permits_shell: true`. Without this, step 1 is another field nobody reads.
+3. **Fix the three dispatches**, claim first. The honest options are the same two `KI-BO-020`
+   named: dispatch an agent whose charter actually covers it, or stop using an agent. Note that
+   the second is **not available** — the E2 engine gives the workflow body no filesystem or
+   subprocess access, so every side effect must go through an `agent()` call. That constraint
+   should be recorded wherever this is fixed, because "just call the CLI directly" is the
+   obvious suggestion and it cannot be done.
+4. **Consider whether a chartered executor agent should exist.** These four dispatches all do the
+   same thing: run one deterministic `fast_lane.py` subcommand and parse its JSON. That is not
+   `status-checker`'s job and it is not `python-coder`'s either. Authoring one is `llm-expert`'s
+   surface — the `KI-BO-020` fix comment says as much and explicitly defers it.
+
+**Related.** `KI-BO-020` (resolved — the release path; this entry is its residual).
+`KI-BO-20260901-1450` (the fast lane's isolation stops at the worktree boundary; the claim path
+is the mechanism that entry's parallel-safety question depends on).
+
+**Pattern:** a permission field with a documented tri-state, no enforcement, and two of ~40
+records populated — so the first person to consult it reasoned from the populated cases and got
+the default backwards, in a comment that now teaches the error.

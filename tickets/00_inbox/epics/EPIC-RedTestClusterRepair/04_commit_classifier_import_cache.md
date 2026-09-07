@@ -21,7 +21,7 @@ agents:
   test-runner: needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 04: Fix commit_classifier stale import-time cache

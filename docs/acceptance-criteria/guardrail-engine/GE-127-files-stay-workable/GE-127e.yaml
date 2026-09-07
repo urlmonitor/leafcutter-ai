@@ -1,0 +1,108 @@
+id: GE-127e
+title: "Being stopped tells you what to split and roughly where"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Stopped with a starting point, not just a verdict.
+
+  When a file is refused for being too large, you are told what is in it that
+  makes it too large and where a sensible division lies, so the next step is
+  obvious rather than a research task. Nobody is left choosing between a
+  half-hour of investigation and the quickest way to make the message go away.
+depends_on:
+  - GE-127
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE. A better refusal message means nothing while the
+      guard refuses nothing; that registration is BP-100n-4's day-one triage. Do
+      not restate the census.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Holds the incumbent refusal message, whose remediation advice is a pointer
+      to a refactoring helper plus an instruction not to strip content. That is
+      the baseline this criterion improves on, and its shape is the reason the
+      honesty warning in the notes is load-bearing.
+  - path: docs/acceptance-criteria/code-review/CR-100-refactoring-guidance/CR-100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE FENCE MATTERS MOST HERE. CR-100 owns advisory refactoring
+      guidance across a whole review — prioritised, weighable, and the natural
+      place for judgement about how code should be organised. This criterion owns
+      only the information attached to one refusal at the moment it happens. Reuse
+      whatever CR-100's work produces rather than growing a second body of
+      refactoring advice inside a commit gate, and do not widen CR-100 to absorb
+      this.
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. INF-800 owns performing a split safely once it is decided on. This
+      criterion stops at telling you where a split lies; it does not perform one
+      and must not be decomposed into doing so.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS IN THE GOAL AT ALL, RATHER THAN BEING POLISH. The pressure that
+  destroys a size standard is the cost of complying with it at the moment you are
+  blocked. Faced with a bare verdict and a deadline, the cheap responses are to
+  strip content until the number falls, to raise the limit, or to switch the gate
+  off — and the guard's own message already anticipates the first of these by
+  telling authors not to do it. Telling people not to take the cheap path is
+  weaker than making the expensive path cheap. This criterion is what keeps the
+  other four from being eroded in practice.
+
+  THE HONESTY CONSTRAINT — LOAD-BEARING, AND THIS COMPONENT HAS THE SCAR. A
+  refusal message may only claim help that actually arrives. There is a recorded
+  anti-precedent here: a gate documented as automatically dispatching a triage
+  agent does not do so, and every author who read that line believed they were
+  covered. Whatever this criterion promises in a refusal must be something a
+  reader can act on and a test can prove happens. A message naming a tool that is
+  not invoked, or a step that does not run, is worse than a bare verdict, because
+  it converts a known gap into a false belief.
+
+  WHAT "ROUGHLY WHERE" MEANS, AND WHAT IT DOES NOT. The obligation is to reduce
+  the next step from research to a decision — enough about what the file contains
+  and how it divides that an author can see a plausible seam. It is NOT an
+  obligation to produce a correct or complete refactoring plan, and a decomposition
+  that reaches for one has left this goal and entered CR-100's and INF-800's
+  territory. Set the bar at the point where the author stops investigating and
+  starts choosing.
+
+  DO NOT SETTLE THIS WITH THE PRESENCE OF TEXT. "The refusal includes remediation
+  guidance" is not an acceptance criterion; a fixed sentence pointing at a tool
+  satisfies it and is what exists today. Bind the acceptance to the guidance being
+  ABOUT THE FILE IN HAND: two different oversized files must not produce the same
+  advice, and the advice must change when the file's contents change. That is the
+  discriminator between guidance and a template.
+
+  BOUNDARY WITH GE-127d, WHICH IS EASY TO BLUR. That L1 requires the limit and the
+  reported size to be true and reproducible. This one requires the refusal to be
+  actionable. A gate can be perfectly honest and completely unhelpful, and
+  perfectly helpful about a limit it is not enforcing.

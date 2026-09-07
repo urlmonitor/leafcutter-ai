@@ -60,6 +60,14 @@ criteria: |
 depends_on:
   - GE-123d
 doc_links:
+  - path: templates/scripts/commit_guardian/check_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE LOAD-BEARING EDIT SURFACE. _PROSE_FILE_PREFIXES, _is_prose_exempt and _filter_prose_findings live in this module — this is the existing prose post-filter whose shape this criterion extends to the generic-credential rule, and the same-named-directory-at-any-depth matching the it_requirements forbid is the startswith/substring test in _is_prose_exempt. It is also the enforcement point that actually gates a commit. Canonical copy per ADR-001."
+  - path: templates/skills/security-scanner/scripts/scan_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "SECOND EDIT SURFACE, required by the shared-vocabulary and path-form requirements. The value-shape vocabulary must be defined once in a place both entry points read, and the test_spec entry test_same_verdict_for_relative_and_absolute_path_forms exercises the scanner invoked directly — so the same narrowing must reach this module too, or the hook and the scanner CLI reach opposite verdicts on the same line. Canonical copy per ADR-001."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -160,6 +168,23 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added TWO doc_links —
+    templates/scripts/commit_guardian/check_secrets.py and
+    templates/skills/security-scanner/scripts/scan_secrets.py, both with relationship
+    modifies. Nothing else changed; all pre-existing doc_links kept at their original
+    relationships, notably the known-issues link at related (it is context for KI-CG-004,
+    never a file this work edits — two records in this tree previously had that document
+    harvested out of prose as their edit surface, which is exactly the defect being fixed
+    here). WHY TWO: check_secrets.py is the load-bearing one — _PROSE_FILE_PREFIXES,
+    _is_prose_exempt and _filter_prose_findings live there, it is the existing prose
+    post-filter whose shape this criterion extends, the at-any-depth prefix matching the
+    it_requirements forbid is the startswith/substring test in _is_prose_exempt, and it is
+    the gate that actually blocks a commit. But this record''s own path-form requirement
+    and its test_spec entry test_same_verdict_for_relative_and_absolute_path_forms both
+    exercise the scanner invoked directly, and the shared-vocabulary requirement says the
+    value shapes must be defined once where both entry points read them — so a narrowing
+    landing only in the hook would let the two tools reach opposite verdicts on the same
+    line, which is precisely what that arm exists to catch.'
 superseded_by: null
 covered_by: []
 implemented_by:

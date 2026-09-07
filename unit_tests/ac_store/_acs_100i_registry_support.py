@@ -226,6 +226,221 @@ def stage_unrelated_edit(repo: Path) -> None:
     _git(repo, "add", "docs/notes.md")
 
 
+def current_branch(repo: Path) -> str:
+    """Return the name of the branch ``repo``'s HEAD currently points at."""
+    return _git(repo, "symbolic-ref", "--short", "HEAD").stdout.strip()
+
+
+def stage_merge_carrying_new_agent(repo: Path, agent_id: str) -> None:
+    """Leave ``repo`` mid-merge, carrying an entry the OTHER parent already has.
+
+    Reproduces KI-BP-20260901-0812: a real, diverged two-parent merge where the
+    only "new relative to HEAD" registry entry was registered by an earlier,
+    already-landed commit on the branch being merged in (``MERGE_HEAD``) — not
+    by this merge. Uses ``git merge --no-commit`` so the merge is left staged
+    with ``MERGE_HEAD`` present and uncommitted, exactly the state a
+    ``commit-msg`` hook observes for a real merge commit before it is written.
+
+    Args:
+        repo: Repo produced by :func:`make_repo`, on its base branch.
+        agent_id: Id of the agent entry to register on the base branch and then
+            merge in.
+    """
+    base_branch = current_branch(repo)
+
+    _git(repo, "checkout", "-b", "feature-branch")
+    notes = repo / "docs" / "feature-notes.md"
+    notes.parent.mkdir(parents=True, exist_ok=True)
+    notes.write_text("Unrelated feature-branch work.\n", encoding="utf-8")
+    _git(repo, "add", "docs/feature-notes.md")
+    _git(repo, "commit", "-q", "-m", "chore: unrelated feature-branch change")
+
+    _git(repo, "checkout", base_branch)
+    stage_new_agent(repo, agent_id)
+    _git(repo, "commit", "-q", "-m", f"feat(agents): add {agent_id} directly to base")
+
+    _git(repo, "checkout", "feature-branch")
+    merge = subprocess.run(
+        ["git", "-C", str(repo), "merge", "--no-commit", "--no-ff", base_branch],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert merge.returncode == 0, (
+        f"expected a clean, conflict-free merge; got {merge.returncode}: "
+        f"{merge.stdout}{merge.stderr}"
+    )
+
+
+def stage_merge_with_genuinely_new_agent(
+    repo: Path, carried_agent_id: str, new_agent_id: str
+) -> None:
+    """Leave ``repo`` mid-merge, carrying one entry AND introducing a fresh one.
+
+    Builds on :func:`stage_merge_carrying_new_agent` (``carried_agent_id`` is
+    already on the base branch being merged in, so it must NOT need a
+    citation), then additionally stages ``new_agent_id`` — an entry absent from
+    BOTH parents, added only while the merge is in progress. This is the
+    negative control: the merge-scoping fix must still refuse on
+    ``new_agent_id``, because nothing carried it in from either side.
+
+    Args:
+        repo: Repo produced by :func:`make_repo`, on its base branch.
+        carried_agent_id: Id already registered on the base branch (must be
+            waved through with no citation).
+        new_agent_id: Id that exists in neither parent (must still be refused
+            without a declaring citation).
+    """
+    stage_merge_carrying_new_agent(repo, carried_agent_id)
+    stage_new_agent(repo, new_agent_id)
+
+
+def stage_merge_with_edited_agent(repo: Path, agent_id: str, **changes: Any) -> None:
+    """Leave ``repo`` mid-merge, editing an entry already present on both parents.
+
+    Unlike :func:`stage_edited_agent` alone (a plain single-parent edit, no
+    ``MERGE_HEAD``), this builds a real diverged two-branch merge (``git merge
+    --no-commit --no-ff``) so ``MERGE_HEAD`` is genuinely present while
+    ``agent_id`` — already registered by :func:`make_repo` on both branches —
+    is edited on the branch being merged INTO. The registry KEY is unchanged
+    on both sides; only a field value differs. This is what "editing during a
+    merge" must actually mean for the test to earn its name: a real merge in
+    progress, not a bare single-parent edit relabelled with a merge-flavoured
+    docstring.
+
+    Args:
+        repo: Repo produced by :func:`make_repo`, on its base branch. Must
+            already carry ``agent_id`` (``make_repo`` seeds ``research-agent``).
+        agent_id: Id of the already-registered entry to edit.
+        **changes: Field values to change on ``agent_id``'s entry.
+    """
+    base_branch = current_branch(repo)
+
+    _git(repo, "checkout", "-b", "feature-branch")
+    stage_edited_agent(repo, agent_id, **changes)
+    _git(repo, "commit", "-q", "-m", f"chore: retier {agent_id} on feature-branch")
+
+    _git(repo, "checkout", base_branch)
+    notes = repo / "docs" / "base-branch-notes.md"
+    notes.parent.mkdir(parents=True, exist_ok=True)
+    notes.write_text("Unrelated base-branch work.\n", encoding="utf-8")
+    _git(repo, "add", "docs/base-branch-notes.md")
+    _git(repo, "commit", "-q", "-m", "chore: unrelated base-branch change")
+
+    _git(repo, "checkout", "feature-branch")
+    merge = subprocess.run(
+        ["git", "-C", str(repo), "merge", "--no-commit", "--no-ff", base_branch],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert merge.returncode == 0, (
+        f"expected a clean, conflict-free merge; got {merge.returncode}: "
+        f"{merge.stdout}{merge.stderr}"
+    )
+
+
+def merge_head_line_count(repo: Path) -> int:
+    """Return the number of non-blank lines in ``.git/MERGE_HEAD``.
+
+    Used by octopus-merge tests to prove the fixture actually built a merge
+    with 3+ parents rather than silently collapsing to a fast-forward or a
+    two-parent merge — the reproduction is worthless if it does not exercise
+    the third-and-later line the probe under test is accused of dropping.
+    """
+    path = repo / ".git" / "MERGE_HEAD"
+    if not path.is_file():
+        return 0
+    return len([line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()])
+
+
+def stage_octopus_merge_carrying_third_parent_only(repo: Path, agent_id: str) -> None:
+    """Leave ``repo`` mid-octopus-merge, carrying an entry on the THIRD parent ONLY.
+
+    Builds a real three-way octopus merge — ``git merge --no-commit --no-ff
+    branch-a branch-b branch-c`` run from the base branch — where ``agent_id``
+    was registered on ``branch-c``'s tip and nowhere else: not on the base
+    branch, not on ``branch-a``, not on ``branch-b``. ``MERGE_HEAD`` ends up
+    with three lines (one per named branch); the base branch's own tip is the
+    first parent (``HEAD``) and is not among them.
+
+    This reproduces the finding that ``git rev-parse -q --verify MERGE_HEAD``
+    resolves only the FIRST line of ``MERGE_HEAD``: that probe names only
+    ``branch-a`` and never consults ``branch-b`` or ``branch-c``, so a gate
+    still using it would refuse ``agent_id`` even though a real parent of the
+    merge already carries it — exactly the octopus scope ACS-100i-8-ii
+    requires and the pre-fix probe silently dropped.
+
+    Args:
+        repo: Repo produced by :func:`make_repo`, on its base branch.
+        agent_id: Id of the agent entry registered on ``branch-c``'s tip ONLY.
+    """
+    base_branch = current_branch(repo)
+
+    for branch_name in ("branch-a", "branch-b"):
+        _git(repo, "checkout", base_branch)
+        _git(repo, "checkout", "-b", branch_name)
+        notes = repo / "docs" / f"{branch_name}-notes.md"
+        notes.parent.mkdir(parents=True, exist_ok=True)
+        notes.write_text(f"Unrelated {branch_name} work.\n", encoding="utf-8")
+        _git(repo, "add", f"docs/{branch_name}-notes.md")
+        _git(repo, "commit", "-q", "-m", f"chore: unrelated {branch_name} change")
+
+    _git(repo, "checkout", base_branch)
+    _git(repo, "checkout", "-b", "branch-c")
+    stage_new_agent(repo, agent_id)
+    _git(repo, "commit", "-q", "-m", f"feat(agents): add {agent_id} on branch-c only")
+
+    _git(repo, "checkout", base_branch)
+    merge = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo),
+            "merge",
+            "--no-commit",
+            "--no-ff",
+            "branch-a",
+            "branch-b",
+            "branch-c",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert merge.returncode == 0, (
+        f"expected a clean, conflict-free octopus merge; got {merge.returncode}: "
+        f"{merge.stdout}{merge.stderr}"
+    )
+
+
+def stage_octopus_merge_with_genuinely_new_agent(
+    repo: Path, carried_agent_id: str, new_agent_id: str
+) -> None:
+    """Leave ``repo`` mid-octopus-merge, carrying a third-parent entry AND a fresh one.
+
+    Builds on :func:`stage_octopus_merge_carrying_third_parent_only`
+    (``carried_agent_id`` is on ``branch-c`` only, so it must NOT need a
+    citation), then additionally stages ``new_agent_id`` — an entry absent
+    from ALL THREE parents, added only while the octopus merge is in
+    progress. This is the negative control for the octopus case: the
+    merge-scoping fix must still refuse on ``new_agent_id`` on an octopus
+    merge, exactly as it does on a two-parent one.
+
+    Args:
+        repo: Repo produced by :func:`make_repo`, on its base branch.
+        carried_agent_id: Id already registered on ``branch-c`` only (must be
+            waved through with no citation).
+        new_agent_id: Id absent from every parent (must still be refused
+            without a declaring citation).
+    """
+    stage_octopus_merge_carrying_third_parent_only(repo, carried_agent_id)
+    stage_new_agent(repo, new_agent_id)
+
+
 def run_check(repo: Path, commit_message: str) -> HookRun:
     """Run the declaration check against ``repo``'s staged state.
 

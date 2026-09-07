@@ -1,0 +1,392 @@
+id: ACS-1300
+components:
+  - ac_store
+title: "Trust the link between a requirement and the tests that prove it"
+component: ac-store
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Proof that already exists is on the record, and what the record claims is real.
+
+  A requirement can be genuinely proven by a test that passes today and still show
+  no proof at all, and it can point at a test that no longer exists. Every honesty
+  check downstream reads that link, so wherever it is wrong the check answers
+  confidently from a false premise. This goal makes the link match reality: proof
+  that exists is credited, proof that has vanished is no longer claimed, and the
+  same accuracy holds for work that never passed through the usual delivery route.
+  Restoring a link is never the same act as awarding a done badge — that decision
+  stays exactly where it is today, behind its own evidence.
+depends_on: []
+doc_links:
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: related
+    status: exists
+    relevance: "The in-drive auto-fix that writes the link at build time. READ THIS BEFORE ASSUMING A LEAK — verified on this branch 2026-09-01: §3c now searches `tests/ unit_tests/` with an explicit warning that scoping to tests/ alone misses the common case, and §2f explicitly instructs NOT to skip the auto-fix eligibility check for L3. Both cite KI-ACD-003 / KI-ACD-019 / ACD-1900b-5-i; the agent's own changelog dates the fix 2026-08-26. What remains is that this is a ticket-phase agent conditional on `ac_traceability` frontmatter, so work delivered outside that path is still never linked. That residual is ACS-1300b; it is NOT the historical backlog."
+  - path: docs/acceptance-criteria/build-orchestration/BO-202.yaml
+    relationship: related
+    status: exists
+    relevance: "THE SHARPEST SINGLE PIECE OF EVIDENCE FOR THIS GOAL, and a live instance of the defect. BO-202 is the criterion that requires the link to be written at build time. Its fix shipped on 2026-08-26 (see the ac-fulfillment-gate changelog), yet BO-202 still reads `work_status: todo` on this branch. The record that exists to keep coverage honest is itself mis-recorded. Its `notes` field describes the defect AS FILED on 2026-08-25 and is now stale — do not read it as a current diagnosis."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "ALREADY OWNS THE BYTE-STABILITY RULE — inherit it, do not restate or re-derive it. Its it_requirements state the load-bearing form: byte stability means DO NOT WRITE, not write-the-same, because a YAML load-and-dump round trip preserves every value while reformatting quoting, key order and line wrapping. At this store's size that churns the whole store and makes the diff unreadable."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400d.yaml
+    relationship: related
+    status: exists
+    relevance: "ADJACENT AND OPPOSITE — do not merge. TQ-400d works through finished records that CANNOT be proven. ACS-1300 restores links for records that CAN be proven and whose proof the store forgot. The two together account for the same population from opposite ends; neither subsumes the other."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: related
+    status: exists
+    relevance: "STANDING CONTRACT THIS TREE INHERITS, not a parent. ACS-1100 governs whether an ANSWER about the store states its own denominator; ACS-1300 governs whether the stored LINK is true. Every figure any child of ACS-1300 reports must obey ACS-1100 (state the total it was measured against and what was excluded). Inherited, not duplicated — the same reading ACS-1100's own notes apply to KM-200."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-800.yaml
+    relationship: related
+    status: exists
+    relevance: "CLOSEST SUBJECT MATCH AND THE MOST SERIOUS PLACEMENT CANDIDATE — rejected, reasons in notes. Its L0 criteria commits to discovery 'using text similarity and keyword heuristics' against done tickets and to backfilling '(implemented_by, work_status)'. Both are incompatible with this goal's method and its central safety property."
+  - path: scripts/ac_store/ac_coverage_resolver.py
+    relationship: related
+    status: exists
+    relevance: "ANTI-DUPLICATION — BA MUST READ BEFORE SPECIFYING ANY NEW TRAVERSAL. Named by filename only; the PO did not read it. If it already resolves the requirement-to-test join, reuse it rather than writing a second reader. Two readers of the same evidence drift, and this repo has hit that failure mode before (EPIC-ComputedQualityGates FP-1)."
+  - path: scripts/ac_store/cross_reference_audit.py
+    relationship: related
+    status: exists
+    relevance: "ANTI-DUPLICATION, second candidate. ACS-900e's notes record that this tool already backfills the requirement-to-source link. Reuse its traceability resolution for the requirement-to-test direction; do not write a second independent traversal."
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: related
+    status: exists
+    relevance: "WHERE THE DONE BADGE STAYS. The refusal in this L0's notes is defined against this surface: promoting finished-state remains this tool's job, behind its own evidence gate. Nothing in the ACS-1300 tree may write that field."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Defines the coverage link field and the tag format the join reads. Also the likely home for the standing refusal recorded under ACS-1300c."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+amended_by:
+  - reason: figure-and-framing-correction
+    by: business-analyst
+    at: 2026-09-01
+    note: >-
+      criteria UNTOUCHED; notes only. Reconciled against an independent
+      re-measurement. (1) FRAMING, new and load-bearing: restoring a coverage link
+      does not change mark-done eligibility and never did — verify_done_eligible
+      resolves from the direct tag first and reads the coverage list only on the
+      composite path, and every rotted record has a direct tag by construction;
+      527 of 549 are already eligible. Added a section stating this tree is a
+      traceability and reporting fix that unblocks nothing, that the eligibility
+      teeth exist only one level up for parents with stale child lists, and that
+      the 276 eligible-but-unmarked records are a separate sweep. (2) FIGURES
+      corrected: forward rot 552 to 549 with the file-level versus function-level
+      rule (585) now named; empty lists 377 to 376; composite slice "12 of 20" to
+      "12 of 25"; parent disagreement stated as 118 with the 1,312 / 1,286 / 60
+      breakdown. (3) Recorded WHY the 12-of-20 was wrong — numerator recomputed,
+      denominator carried forward unre-measured from the sweep CLAUDE.md cites at
+      439b9076f (20 over 3,146 records), where the same rule at 34ebc2401 yields
+      25 via 20 - 2 + 7. That is ACS-1100's own failure mode occurring inside this
+      tree's evidence section and is now written up as the argument for the
+      standing rule. (4) Added three further measured rot directions (three
+      coverage dialects plus GE-107's single-colon malformation, ~87 phantom tag
+      ids, non-test artifacts in the coverage field) as RECORDED-NOT-OWNED. (5)
+      Added ACS-200f — a phantom-done record whose criterion was false at HEAD
+      because _find_nodeid_for_test could not match a parametrized nodeid, fixed
+      on this branch — as the worked example.
+created: 2026-09-01
+superseded_by: null
+covered_by:
+  - ACS-1300a
+  - ACS-1300b
+  - ACS-1300c
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  New root L0 in ac-store, authored 2026-09-01 (product-owner), slug folder
+  ACS-1300-trustworthy-coverage-links/. Next free hundred — 100 through 1200 are
+  all occupied; `ACS-1300` was verified free by grep across docs/ and tickets/
+  before allocation. Three L1s a–c.
+
+  ==========================================================================
+  THE DEFECT, IN TWO DIRECTIONS
+  ==========================================================================
+  FORWARD ROT (dominant). A test carrying a `# covers: <id>` tag exists and
+  passes, but the record's coverage list does not name it. The store has
+  forgotten proof that demonstrably exists.
+
+  INVERSE ROT (small). The coverage list names a test file that is no longer on
+  disk. The store claims proof that is gone.
+
+  Both matter for the same reason: every downstream honesty gate reads that
+  field, so wherever it is wrong the gate is answering from a false premise —
+  and answering confidently.
+
+  ==========================================================================
+  WHAT THIS TREE DOES AND DOES NOT MOVE — READ BEFORE BUILDING ANYTHING.
+  Established by independent re-measurement 2026-09-01; supersedes the framing
+  the first measurement implied.
+  ==========================================================================
+  RESTORING A COVERAGE LINK DOES NOT CHANGE MARK-DONE ELIGIBILITY, AND NEVER DID.
+  verify_done_eligible resolves a record's proof from its `# covers:` tag FIRST
+  and consults the coverage list only on the composite path — when the record has
+  no direct tag of its own. Every rotted record has a direct tag by construction
+  (that is what makes it rotted: a tag exists and the list does not name it), so
+  the coverage list is never read for it. Measured: 527 of 549 rotted records are
+  ALREADY eligible.
+
+  CONSEQUENCES, STATED SO NOBODY BUILDS THIS EXPECTING MOVEMENT THAT CANNOT HAPPEN:
+
+    - ACS-1300a is a TRACEABILITY AND REPORTING fix. It makes the store's record
+      of what proves what true. It unblocks nothing, and no criterion anywhere in
+      this tree may imply that it does. This is not a reduction in the goal's
+      worth — every downstream honesty gate and every human reading the store
+      reads that field — but it is a correction to what changes when it runs.
+    - COVERAGE ROT BECOMES AN ELIGIBILITY DEFECT ONLY ONE LEVEL UP: for a PARENT
+      whose child list is stale, where the composite path does read the list.
+      That is the 25-composite population, and it is the narrow place where this
+      tree has downstream teeth. See ACS-1300a-3.
+    - THE ACTIONABLE BACKLOG IS A DIFFERENT NUMBER AND A DIFFERENT JOB: 276
+      records are mark_ac_done-eligible today and not marked done. That is a
+      separate sweep. Do not conflate it with this tree, and do not let this
+      tree's report be read as having created it.
+
+  ==========================================================================
+  MEASUREMENTS — RE-MEASURED 2026-09-01. DO NOT BAKE ANY FIGURE INTO A CRITERIA
+  BLOCK.
+  ==========================================================================
+  Whole store, no sampling, branch fix/ac-coverage-backfill. These figures
+  supersede the first business-analyst measurement recorded here on the same
+  branch; the corrections are itemised in this record's amended_by. Per ACS-1100
+  (inherited), any figure a child of this tree reports must state its denominator
+  and its exclusions.
+
+    - Denominator: 3,749 records carry an id. Of those, 856 are named by at
+      least one `# covers:` tag somewhere in the test tree.
+    - Forward rot: 549 records under the FILE-LEVEL rule (the coverage list omits
+      a test FILE that names the record). 585 under the stricter FUNCTION-LEVEL
+      rule (the list omits a specific test function). This tree uses the
+      file-level rule; state which rule any future figure uses, because the two
+      differ by 36 and an unlabelled figure is unreconcilable.
+    - Of those 549, 376 have an entirely empty coverage list.
+    - Of those 549, 527 are already mark_ac_done-eligible — see the framing
+      section above.
+    - Inverse rot: 9 of the 416 records whose coverage list names a test at all
+      (2.2%) point at a file that does not exist, concentrated in two missing
+      files. Those 416 records carry 525 test-naming entries between them. An
+      earlier draft of this bullet read "9 of 521 coverage entries": a superseded
+      entry count from the pre-re-measurement pass, standing where a RECORD count
+      belonged. Corrected 2026-09-01 — and note that 9/521 and 9/416 are both
+      arithmetically fine and differ only in what they are a fraction OF, which
+      is why an unlabelled denominator survives review so easily.
+    - Phantom tags: of 937 distinct tag ids in the test tree, 850 resolve to a
+      record — so roughly 87 name a record that does not exist. Verified NOT to
+      be fallout from the BP-100k to BP-100n split: no -6/-7/-8 tags survive and
+      every remaining BP-100k-* tag resolves.
+    - Parent/child disagreement: 118 parents have a differing child set between
+      the coverage-list relation and ID-derivation. 1,312 ids are a parent under
+      the coverage relation, 1,286 under ID-derivation, and 60 ids are a parent
+      under one relation only.
+    - Composite slice: of 25 composites marked done with at least one unfinished
+      child, 12 were already built and merely unmarked.
+
+  Method: exact mechanical match on the `# covers:` tag. NOT text similarity, NOT
+  keyword heuristics, NOT ticket-body matching. The join key is the id in the tag.
+
+  ==========================================================================
+  THE DENOMINATOR THAT ROTTED IN THIS TREE'S OWN EVIDENCE SECTION — the best
+  argument available for the standing rule, and it cost nothing to find.
+  ==========================================================================
+  This record previously read "of 20 composites ... 12 were already built". The
+  NUMERATOR held. The DENOMINATOR was stale: 20 is what the identical rule yields
+  at 439b9076f — the SHA CLAUDE.md's sweep cites — over 3,146 records. At
+  34ebc2401 the same rule yields 25. Between the two, 2 cases closed and 7
+  appeared: 20 - 2 + 7 = 25.
+
+  Nobody mis-measured. A denominator was carried forward from a cited sweep and
+  never re-measured, while the numerator was recomputed — so the ratio drifted
+  silently and read as more complete than it was. That is exactly the failure
+  ACS-1100 exists to prevent, committed inside the evidence section of a tree
+  about records that say false things. Every figure above therefore carries the
+  date and rule it was computed under, and any figure quoted from another
+  document must be recomputed before it is repeated here.
+
+  ==========================================================================
+  THREE FURTHER ROT DIRECTIONS, MEASURED 2026-09-01. RECORDED, NOT YET OWNED BY
+  ANY CHILD — do not author ACs for them without a decision.
+  ==========================================================================
+  1. THE COVERAGE FIELD HAS THREE DIALECTS AND ONE MALFORMED CASE: child record
+     ids (3,586 entries), `path::Class::test` (162), and bare file paths (365).
+     GE-107 writes `path.py:Class::test` with a SINGLE colon, which a naive split
+     on `::` misreads as four dead links. Any parser this tree specifies must not
+     report GE-107 as inverse rot. This is a live implementation trap, not a
+     hypothetical — see ACS-1300a-1 and ACS-1300a-2-i.
+  2. PHANTOM TAGS — roughly 87 tag ids name records that do not exist. The mirror
+     of inverse rot and uncounted until now. ACS-1300c-3 currently reports these
+     as abstentions; whether they deserve their own repair direction is an open
+     question, not a decided one.
+  3. NON-TEST ARTIFACTS IN THE COVERAGE FIELD: BP-1100e-3 names an architecture
+     .md and UXP-530 names an eval.jsonl. Both exist on disk, so no validator
+     flags them, and neither can ever be proof of done. Separately, ACD-300f
+     names a child ACD-300f-5 that does not exist.
+
+  ==========================================================================
+  THE ARGUMENT FOR THIS TREE IN MINIATURE — ACS-200f, found and fixed on this
+  branch 2026-09-01.
+  ==========================================================================
+  ACS-200f was a phantom-done record: work_status done, priority high, carrying
+  the criterion "the tool's coverage gate treats those covering tests as passing"
+  — which was FALSE at HEAD for every parametrized covering test.
+  done_proof._find_nodeid_for_test matched nodeid.endswith("::func"), which a
+  parametrized nodeid never satisfies, so five records with fully green tests were
+  refused as "linked test not run". Fixed on this branch; ac_store,
+  build_orchestration and commit_guardian all green.
+
+  Every element of this tree's subject is in that one record: the criterion
+  written to stop the gate falsely refusing was itself falsely refusing; its
+  covering test never exercised the case; and nothing surfaced it until the oracle
+  was run across the whole store rather than over one commit's diff. Cite it as the
+  worked example, and note it also means every eligibility figure above depends on
+  a fix that is younger than this tree.
+
+  ==========================================================================
+  A STALE DIAGNOSIS THAT MUST NOT BE INHERITED
+  ==========================================================================
+  The BA's placement investigation reported BO-202 as the open root cause — that
+  the in-drive auto-fix skips L3 records and greps only `tests/`. THAT DIAGNOSIS
+  IS STALE and was corrected before this L0 was written. Verified on this branch
+  2026-09-01 by reading templates/agents/ac-fulfillment-gate.md: §3c searches
+  `tests/ unit_tests/` and warns explicitly that scoping to tests/ alone misses
+  the common case; §2f explicitly instructs NOT to skip the auto-fix eligibility
+  check for L3. The agent's changelog dates the fix 2026-08-26. The BA was
+  quoting BO-202's `notes`, which describe the defect as it stood when filed on
+  2026-08-25.
+
+  CONSEQUENCE FOR SCOPE: the leak is largely CLOSED for work that flows through
+  the ticket pipeline. Do NOT author or decompose anything premised on closing
+  it. What is left is (a) the historical backlog accumulated while it was open —
+  ACS-1300a — and (b) a residual: the fulfillment gate is a ticket-phase agent
+  conditional on `ac_traceability` frontmatter, so records created outside that
+  path (fast lane, direct commits) still get no link written — ACS-1300b.
+
+  THE IRONY, AND IT IS EVIDENCE RATHER THAN DECORATION: BO-202 — the criterion
+  whose whole purpose is keeping the coverage record honest — is itself
+  `work_status: todo` on this branch although its fix shipped on 2026-08-26. The
+  record that exists to keep the store honest is itself mis-recorded. It is the
+  sharpest single piece of evidence available for why this goal exists, and it is
+  a ready-made regression fixture.
+
+  ==========================================================================
+  SCOPE BOUNDARY — REFUSED, NOT DEFERRED. NOTHING HERE WRITES work_status.
+  ==========================================================================
+  No AC in the ACS-1300 tree, at any level, may write the finished-state field.
+  This is a refusal, not a phasing decision, and it is not to be revisited by the
+  BA, the IT PO, or an implementer who notices how easy it would be.
+
+  Restoring an evidence link is not the same act as awarding a done badge.
+  Auto-promoting finished-state from derived evidence manufactures a done claim
+  on the single field the entire phantom-done edifice rests on — the exact
+  failure mode this repository exists to prevent, committed by the tool built to
+  prevent it. Flipping the badge stays with mark_ac_done.py, which has its own
+  evidence gate.
+
+  Precedent, and the reason this is stated at L0 rather than left implicit: the
+  neighbouring L1 TQ-400f was authored and then CLOSED UNBUILT on 2026-09-01,
+  partly for approaching this line. This L0 states the refusal the way TQ-400f
+  stated its own promotion refusal. ACS-1300c makes it falsifiable rather than
+  merely written down — a negative control, not a note.
+
+  ==========================================================================
+  TWO PROPERTIES THE CHILDREN INHERIT — DO NOT RE-DERIVE THEM
+  ==========================================================================
+  BYTE STABILITY. A record with nothing to repair is never opened for writing.
+  This is NOT "written identically": a YAML load-and-dump round trip preserves
+  every value while reformatting quoting, key order and line wrapping, which at
+  ~3,749 records churns the whole store and makes the diff unreadable. TQ-400e-1
+  already owns this rule and states it in exactly that form — point at it, inherit
+  it, do not restate it in a competing form.
+
+  ABSTENTION OVER ACTION. Evidence the tool cannot trust produces a REPORTED
+  abstention. Never a silent skip, and never a write. A skipped record is
+  invisible, and invisibility is the same defect one level down.
+
+  ==========================================================================
+  PLACEMENT — WHY A NEW ROOT L0 RATHER THAN A GRAFT
+  ==========================================================================
+  Candidates evaluated and rejected:
+
+  - ACS-200 (automated-verification) is the correct quadrant by the component's
+    own four-quadrant governance map in PROJECT_CONTEXT.md, but it is
+    STRUCTURALLY BROKEN: there is no ACS-200.yaml L0 at all, and its L1 ACS-200d
+    depends on a nonexistent ACS-200b. A prior PO already recorded "DO NOT HANG
+    THIS UNDER ACS-200" in ACS-1100's notes. Not re-litigated. Repairing ACS-200
+    is a separate concern and is NOT in scope here.
+  - ACS-1100 (honest-coverage-answers) — evaluated by this PO, not by the BA, and
+    rejected on subject. ACS-1100 governs whether an ANSWER states its own
+    denominator; ACS-1300 governs whether the stored LINK is true. A perfectly
+    honest answer can accurately report a store whose links are wrong. ACS-1100
+    is a `scope: standing` contract other trees INHERIT and explicitly "not a home
+    for their surfaces" — grafting here would contradict its own non-duplication
+    rule. It also sits at 5 of 7 L1s.
+  - ACS-400b / ACS-400e — wrong subject (authorisation ceiling; commit-time
+    prevention), and each has room for only 2 more L2s.
+  - TQ-400d is the OPPOSITE direction: finished records that cannot be proven.
+    TQ-400a and TQ-400e are at or above the L2 cap of 5.
+  - ACD-800 is the closest subject match and was checked directly. Its L0
+    criteria commits to discovery "using text similarity and keyword heuristics"
+    against done tickets, and to backfilling "(implemented_by, work_status)". Our
+    join is an exact mechanical tag match, and never writing work_status is this
+    goal's central safety property. Parenting here would require rewriting that
+    L0's goal, not amending it. Its children confirm the mismatch: ACD-800a is
+    exact-CRITERIA-TEXT matching, ACD-800b is keyword-and-component matching,
+    ACD-800c is the --apply backfill.
+
+  The ac-store component has minted a sibling root L0 for exactly this situation
+  four times — ACS-800, ACS-900, ACS-1100, ACS-1200 — and PROJECT_CONTEXT.md
+  records the rule: when a new capability would push an existing tree over cap or
+  requires rewriting its goal, prefer a sibling L0 over overloading.
+
+  ==========================================================================
+  L1 SPLIT — THE SEAM, AND WHY THREE
+  ==========================================================================
+  The seam is ONE-OFF REPAIR versus STANDING ACCURACY versus THE TRUST ENVELOPE.
+
+  - ACS-1300a — clear the historical backlog, both directions of rot in one pass
+    (credit proof that exists; drop claims to files that are gone). A batch
+    operation over the whole store, run deliberately, reporting what it did.
+  - ACS-1300b — keep it accurate for records that never pass through the ticket
+    pipeline, so the backlog cleared once does not quietly refill. A different
+    surface, a different trigger, a different risk profile from (a).
+  - ACS-1300c — the trust envelope: awards nothing, rewrites nothing that is
+    already correct, abstains out loud. Precedent for a cross-cutting guarantee
+    as its own L1 is TQ-400e in the immediately adjacent tree ("You can trust
+    what the check takes away — it never cries wolf"), which is the same shape.
+
+  WHY (c) IS ITS OWN L1 RATHER THAN A NOTE ON (a): a refusal that lives only in
+  prose is not falsifiable, and the cheapest implementation of (a) satisfies (a)
+  perfectly while violating every guarantee in (c). (c) is the guard on the
+  guard. It also relieves cap pressure — see the arithmetic below.
+
+  CAP ARITHMETIC (caps are hard: 7 L1s per L0, 5 L2s per L1; no
+  child_limit_override is authored here and none may be added):
+    - 3 L1s against a cap of 7 — 4 slots of headroom.
+    - The BA's own decomposition needed five L2s. Under a single L1 that would
+      exactly fill it with ZERO room for a documentation AC, forcing a Pattern C
+      split later with mandatory ID renames. Split across three L1s the same
+      five redistribute to roughly 4 / 4 / 4 including each L1's documentation
+      AC, leaving at least one free slot per L1.
+    - Do NOT re-cut this split at L1. Decompose each of a/b/c into L2 behaviours.
+
+  ==========================================================================
+  ROADMAP FLAG (unresolved — for the user at the approval gate)
+  ==========================================================================
+  No `roadmap_phase` is claimed. Phase 1's exit criteria are about clean installs,
+  build idempotency and truthful build reporting; store-record health does not
+  advance them, and the fourth criterion ("no false all-clear") is about the build,
+  not the store. ACS-1200 set the precedent of leaving such a tree unphased;
+  ACS-1100 claimed phase_1, which reads as over-claiming. Either a phase claims
+  this tree or it stays unphased backlog. No roadmap or vision file was modified
+  while authoring it.

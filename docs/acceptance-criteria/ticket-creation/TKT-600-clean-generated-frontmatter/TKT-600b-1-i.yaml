@@ -1,0 +1,244 @@
+id: TKT-600b-1-i
+title: "Generation refuses rather than guesses when the ticket's final location is not yet settled"
+component: ticket-creation
+components:
+  - ticket_creation_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical   # owner decision at the approval gate, 2026-09-01
+roadmap_phase: phase_1
+criteria: |
+  Given a generation request in which the ticket's final location is not settled at the
+    moment the phase record is written — the file is to be placed, renamed, or moved
+    into or out of an epic folder afterwards,
+  When generation reaches the point of writing the phase record,
+  Then no ticket file is written,
+  And the failure report states that the location was unresolved,
+  And it names the phase or phases whose status could therefore not be determined,
+  And that report is distinguishable from a generation failure with any other cause, so
+    a reader can tell this apart from a malformed criterion or a missing field.
+
+  Given the same request once the final location IS settled before the phase record is
+    written,
+  When the ticket is generated,
+  Then it is written normally with the phase statuses that location implies.
+depends_on: [TKT-600b-1]
+doc_links:
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-018 — files renamed to their NN_ prefix after frontmatter is written; the seam that makes this constraint necessary."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: scripts/goal_to_epic.py
+    relationship: modifies
+    status: exists
+    relevance: "The caller that stages into tickets/00_inbox/ and moves afterwards — the only caller that can supply the resolved destination, and the one that currently cannot."
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
+    relevance: "Where a ticket file lives at each stage, which is what 'settled' has to mean here."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy the test_spec entries below are drawn from."
+assigned_agent: python-coder
+estimated_complexity: M
+# Derived from the Then clauses, not opinion (BO-2900g-2): "no ticket file is
+# written" on the unresolved path, "it is written normally" on the settled one.
+# Both are claims about a file on disk.
+declares_side_effect: true
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: >-
+      The resolved-destination parameter. A generation request must carry the
+      ticket's FINAL location, distinct from the staging root it is first written
+      to. Absent, and with a location-dependent phase in play, generation refuses.
+    properties:
+      resolved_destination:
+        type:
+          - string
+          - "null"
+        description: >-
+          Repo-relative directory the ticket file will finally occupy. Null means
+          the caller cannot state it — a refusal, never an inferred default.
+    required:
+      - resolved_destination
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: >-
+    2 files. (1) generate_ticket_from_ac.py — a resolved-destination parameter
+    threaded from main() (:3308) into _build_agents_map, which today receives no
+    location at all while the sibling _build_frontmatter call at :3317 already
+    receives tickets_root. (2) goal_to_epic.py — must pass the epic folder it
+    already knows, not the staging inbox. Changing only (1) leaves the epic path
+    still guessing and every epic ticket still wrong.
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - python -m pytest unit_tests/ac_store/ -q
+  mechanism_chosen: >-
+    THE CALLER PASSES A RESOLVED FINAL DESTINATION. This is pinned, not left open,
+    because the other two candidates are unsafe here for reasons visible only in
+    source. The destination is knowable: goal_to_epic.py derives epic_name at :2239
+    (and :2076) BEFORE generate_tickets_for_leaves runs at :2288, so the caller has
+    the answer in hand and simply does not pass it.
+  why_the_obvious_implementation_is_wrong: >-
+    Inferring the location from tickets_root is wrong TODAY, not hypothetically.
+    goal_to_epic.py:2283 sets tickets_root = inbox_dir, so every epic ticket is
+    generated into tickets/00_inbox/ — a NON-epic location — and only afterwards
+    moved by assemble_epic_folder (:2294) into
+    tickets/00_inbox/epics/EPIC-<Name>/NN_<base>.md. A generator that sniffs its
+    tickets_root for an EPIC-* segment would therefore answer "not an epic" for
+    every epic ticket and emit the phase as needed, reproducing KI-BO-20260831-1930
+    exactly — while a unit test that hands the generator an epic-shaped tickets_root
+    passes. That is KI-ACD-018's seam, one field over.
+  rejected_mechanisms: >-
+    (a) GENERATION AFTER PLACEMENT — rejected. goal_to_epic.py's assembly computes
+    ordinal prefixes from the generated ticket list
+    (_build_loose_to_epic_map(ticket_paths, epic_folder)), so inverting
+    generate-then-assemble is a rewrite of the epic pipeline, a far larger blast
+    radius than the defect, and it does not close the seam for the standalone
+    /build-ac path at all. (b) POST-MOVE RE-DERIVATION — rejected. That is the
+    mover editing the record after the fact, the same authorship violation
+    TKT-600b-4 forbids one hop later, and it is the shape KI-ACD-018 has now lost
+    to three times.
+  constraints:
+    - >-
+      --tickets-root is a STAGING root and must not be accepted as the resolved
+      destination. If it is, the goal_to_epic path silently keeps guessing and this
+      criterion is satisfied on paper only. The destination must be a separate,
+      explicitly supplied input.
+    - >-
+      The refusal must write no ticket file at all — not a partial file, not a file
+      with the phase omitted. Generation is all-or-nothing at this point.
+    - >-
+      The refusal must be distinguishable in kind from every other generation
+      failure the script can produce, so a reader can separate it from a malformed
+      criterion or a missing field. Distinguishable by a machine-readable signal,
+      not only by prose wording.
+    - >-
+      The failure report must name the specific phase or phases whose status could
+      not be determined, taken from the deferral declaration TKT-600b-1 introduces —
+      not a fixed phase name.
+    - >-
+      The refusal must fire only when the phase record actually depends on location.
+      A generation whose declared deferral set is empty for every location has
+      nothing to resolve and must not be blocked — the exemption derives from the
+      declaration's data, never from a caller name.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A generation entry point that either receives the ticket's final location and
+    computes the phase record from it, or writes nothing. This is the precondition
+    TKT-600b-1's location-to-phase-set function needs in order to be sound rather
+    than merely correct on the inputs its tests happen to supply.
+expects_from:
+  ac_id: TKT-600b-1
+  contract: >-
+    The location-keyed deferral declaration, which supplies both the set of phases
+    whose status depends on location (so the refusal knows when to fire) and the
+    phase names the failure report must list.
+test_spec:
+  - name: test_unresolved_destination_writes_no_ticket_and_reports_the_cause
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      With no resolved destination supplied and a non-empty deferral declaration,
+      generation writes no file, the report states the location was unresolved, and
+      it names the phases whose status could not be determined. Assert the named
+      phases come from the declaration by running the case twice with two different
+      declarations.
+  - name: test_unresolved_failure_is_distinguishable_from_other_failures
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Compare the unresolved-location failure against a malformed-criterion failure
+      and a missing-field failure from the same entry point. Assert a caller can tell
+      the three apart from the machine-readable signal alone, without matching prose.
+  - name: test_resolved_destination_generates_that_locations_phase_set
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      With the destination supplied, the ticket is written normally and its phase
+      statuses are the ones that location implies. Run for both an epic and a
+      standalone destination so the parameter is shown to be load-bearing rather
+      than merely accepted.
+  - name: test_staging_root_is_not_accepted_as_the_destination
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Supply --tickets-root pointing at an epic folder and no resolved destination.
+      Generation must still refuse. This is the adversarial case that separates a
+      real destination parameter from a path sniff wearing a new argument name.
+  - name: test_real_goal_to_epic_run_lands_the_epic_phase_set_on_disk
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Drive the real goal_to_epic.py over a two-AC epic and read the phase map back
+      off the moved, NN_-prefixed file in the assembled epic folder. This exercises
+      generate-then-move rather than a hand-passed tickets_root, and is the only test
+      here that would have caught the staging-vs-destination confusion, because every
+      hand-fixtured test supplies the destination the implementation expects.
+test_rationale: >-
+  The defect this AC guards against is invisible to a unit test by construction: the
+  generator writes a correct record for the location it was told about, and a fixture
+  tells it the right one. That is why the real_artifact entry runs goal_to_epic.py
+  end-to-end and reads the record off the file at its FINAL path — the same discipline
+  KI-ACD-018's own fix direction prescribes, and the same lesson as the
+  files_touched parser that passed every synthetic fixture and was a no-op on every
+  real ticket. The boundary entry exists because the cheapest way to appear to satisfy
+  this criterion is to rename the existing tickets_root sniff; pointing --tickets-root
+  at an epic folder and still requiring a refusal is what separates the two.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-01
+    note: >-
+      Pinned the settled-location mechanism to caller-supplied resolved destination,
+      with the two rejected mechanisms and the source evidence for the rejection
+      (goal_to_epic.py:2283 stages into the inbox; epic_name is known at :2239)
+      recorded in it_requirements. Complexity S -> M: two files must move together.
+      Criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS NOT PARANOIA. TKT-600b-1 makes the phase record a function of the ticket's
+  location. That is only sound while the location is known when the record is written.
+  This project has already shipped the opposite: TKT-600a-1's own amendment records that
+  the dangling ticket depends_on references came from a later step renaming generated
+  files to their NN_ prefix AFTER depends_on had been written, filed as KI-ACD-018. The
+  identical seam would silently defeat TKT-600b-1: the generator writes a correct record
+  for the location it was told about, a later step moves the file into an epic folder,
+  and the drive halts exactly as before while every test of TKT-600b-1 stays green.
+
+  A LOUD REFUSAL IS PREFERRED TO A DEFAULT. Defaulting to the non-epic answer reproduces
+  today's blocker; defaulting to the epic answer would strip the pull-request phase off
+  standalone tickets, which TKT-600b-3 forbids. There is no safe guess, so refusing is
+  the behaviour, and it surfaces the ordering problem at generation time instead of at
+  drive time.
+
+  LEFT FOR THE IT PO. Whether "settled" is established by the caller passing a resolved
+  destination, by generation being moved after placement, or by a post-move
+  re-derivation is a technical choice this criterion does not make. The doc_link to the
+  ac-driven-dev register is marked `exists` on the assumption KI-ACD-018 is filed there;
+  if that register lives elsewhere the link should be re-pointed, not dropped.

@@ -1181,6 +1181,12 @@ def find_uncovered_closure_dependencies(
 #   "this JS variable mirrors the output root" from "this JS variable is an
 #   arbitrary runtime path" — real static analysis, not a text regex — so it is
 #   left as a documented follow-up rather than bolted on here. (#BP-900g-6)
+#   [2026-09-01, BO-2400c-1-v: the example file fast-lane-build.js was an
+#   orphaned second runner and has been deleted. The dated text above is left
+#   as written. The residual gap it describes is still OPEN and still
+#   unexercised by this guard — read the example as fast-lane-ship.js, which
+#   carries the same `${worktreePath}/.leafcutter/scripts/injection_builders.py`
+#   shape and is the lane that actually runs.]
 # - 2026-08-18 [python-coder/EPIC-DeploymentCompleteness/05_BP-900b-1]: Added
 #   extract_compiled_script_path_refs(), the post-compile counterpart to
 #   extract_script_path_refs()/extract_script_path_refs_with_sources(). Those two

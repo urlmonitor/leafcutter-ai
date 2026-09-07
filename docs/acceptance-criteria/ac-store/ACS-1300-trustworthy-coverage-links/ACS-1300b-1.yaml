@@ -1,0 +1,147 @@
+id: ACS-1300b-1
+components:
+  - ac_store
+  - build_orchestration
+title: "The delivery paths that can finish work without recording the link are enumerated from the repository"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the repository as committed, in which some delivery paths reach the step that
+    records the link between a requirement and the test that proves it, and others carry
+    work to completion without ever reaching that step,
+  When the enumeration is produced,
+  Then it names every delivery path that can carry work to completion, and classifies
+    each one as reaching the link-recording step, bypassing it, or exempt with a stated
+    reason,
+  And the classification of each path is derived by reading the repository, so adding a
+    new delivery path to the repository makes that path appear in the enumeration on the
+    next run with no edit to the enumeration itself,
+  And removing the hand-off to the link-recording step from a path currently classified
+    as reaching it changes that path's classification on the next run, so the
+    classification tracks the repository rather than restating a list someone typed,
+  And the enumeration states how many delivery paths it examined and what it excluded,
+    so a run that found few bypassing paths is distinguishable from a run that looked at
+    few paths,
+  And the enumeration names no fixed expected number of paths, so it is neither
+    satisfied nor falsified by the count happening to match.
+depends_on:
+  - ACS-1300b
+doc_links:
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: relates-to
+    status: exists
+    relevance: "THE LINK-RECORDING STEP ITSELF, AND THE THING THIS AC MUST NOT RE-FIX. Verified on this branch 2026-09-01: §3c searches `tests/ unit_tests/` (:252) with an explicit warning at :255 that most of this repository's tests live under unit_tests/, and §2f (:210) instructs NOT to skip the auto-fix eligibility check for L3, citing KI-ACD-019 / ACD-1900b-5-i. Its changelog dates that fix 2026-08-26. What this AC is about is WHEN the step runs, never what it searches: the template skips silently when a ticket carries no ac_traceability key (:82-89)."
+  - path: templates/workflows-js/build-feature.js
+    relationship: relates-to
+    status: exists
+    relevance: "A delivery path that DOES reach the step — one of only two workflow surfaces that reference the gate at all. The enumeration must classify it as reaching, derived rather than assumed, or the classification is untested in the positive direction."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: relates-to
+    status: exists
+    relevance: "MEASURED 2026-09-01 — a delivery path that does NOT reference the gate or the ac_traceability key anywhere. Named here as grounding for the criterion, NOT as the answer: the enumeration must derive this, because a hand-written list of bypassing paths is exactly the artefact that goes stale and reports the repair as having failed."
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100c.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "THE COUNT-AGNOSTIC PATTERN TO COPY. That tree replaced an enumeration hard-coded to eight named surfaces with 'every declared surface is ingested', after the fixed count became the defect. The final clause here is the same rule applied to delivery paths."
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "THE PRECEDENT FOR TURNING A HARD-CODED ROSTER INTO DECLARED DATA WITHOUT OPENING IT UP. It replaced the fast lane's literal agentType strings with a declared allowlist while keeping the set closed, and it names fast-lane-ship.js, build-feature.js and done_proof.py as the same surfaces this enumeration must classify. Read it before choosing where the declaration of a delivery path lives — the answer should not be a second roster."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The documented dispatch topology and the existing vocabulary for what a delivery path IS. The enumeration must classify the same actors this document names, or the derived list and the architecture doc describe two different systems."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "DEFINE 'DELIVERY PATH' AS A DERIVED PROPERTY OF THE REPOSITORY, AND WRITE THAT DEFINITION DOWN IN THE ENUMERATOR ITSELF. Whatever the rule is — a workflow script under `templates/workflows-js/`, a slash command that reaches a commit phase, an agent that closes work — it must be a rule that a newly added file satisfies without anyone editing the enumerator. A hand-maintained roster satisfies 'names every delivery path' on the day it is written and never again."
+  - "CLASSIFICATION IS DERIVED FROM THE REPOSITORY, NEVER FROM A CONSTANT LIST. A path is classified as reaching the link-recording step because the enumerator observed the hand-off in that path's source, not because its name is in a set. `templates/workflows-js/fast-lane-ship.js` and `templates/workflows-js/build-feature.js` are named in the doc_links as grounding for the criterion and as fixtures — they are NOT the answer, and an implementation that hard-codes either verdict fails the two mutation clauses."
+  - "NO FIXED EXPECTED COUNT ANYWHERE — not in the enumerator, not in its tests, not in the report's pass condition. This is the exact defect the KM-KGS-100 tree had to be re-authored to undo: an assertion that N surfaces were found passes for the wrong reason the moment one path is added and another removed."
+  - "AN ENUMERATION THAT COULD NOT READ THE REPOSITORY MUST NOT REPORT AN EMPTY BYPASSING SET AS A CLEAN RESULT (GE-120). An unreadable workflow directory, a parse failure, or a zero-path scan must be distinguishable from a repository in which every path is wired. This is the single most likely way this AC ships as a permanent false all-clear, because 'no bypassing paths found' is the shape of both success and total failure."
+  - "STATE THE DENOMINATOR: how many delivery paths were examined and what was excluded, in ACS-1100's existing vocabulary. A run that found few bypassing paths must be distinguishable from a run that looked at few paths."
+  - "THE ENUMERATION IS READ-ONLY WITH RESPECT TO THE AC STORE. It reads the repository and produces a classification; it opens no record for writing and assigns no `work_status`. The tree-wide refusal applies here even though this AC touches no record, because the enumeration is the input to ACS-1300b-2's wiring and a shortcut taken here propagates."
+  - "PUBLISH THE CLASSIFICATION AS A CONSUMABLE ARTEFACT, NOT ONLY AS PRINTED TEXT. ACS-1300b-2, ACS-1300b-3 and ACS-1300b-4 all consume this classification; if the only output is prose on stdout, each of them re-derives the set and the three disagree. One producer, three readers."
+  - "Must have a real out-of-process entry point, must handle errors gracefully per the project error handling policy (CLAUDE.md rules 1-4), and must fail toward reporting a path as unresolved rather than silently omitting it — an omitted path is the permanent slow refill this L1 exists to prevent."
+  - "SCOPE FENCE — DO NOT TOUCH WHAT THE LINK-RECORDING STEP SEARCHES. `templates/agents/ac-fulfillment-gate.md` §3c (tests/ and unit_tests/) and §2f (L3 not skipped) were both fixed on 2026-08-26 and verified on this branch on 2026-09-01. This AC is about WHEN that step runs. An implementation that widens its search re-does shipped work and goes green against it."
+delivers_to:
+  agent: python-coder
+  contract: "The classified enumeration of delivery paths — reaching / bypassing / exempt-with-reason — with its examined total. ACS-1300b-2 wires the bypassing set and ACS-1300b-3 guards the enumeration's continued truth; both read this rather than re-deriving the set."
+expects_from: null
+test_spec:
+  - name: test_acs_1300b_1_every_delivery_path_is_classified_as_reaching_bypassing_or_exempt
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run the enumerator against the REAL repository, not a fixture. Assert every path it names carries exactly one of the three classifications and none is unclassified. Assert against the real tree because a synthetic workflow directory reproduces whatever bias the author's fixture had — the same failure mode that let an indented-dash parser pass on every synthetic ticket in EPIC-PhantomDoneFilesTouched."
+  - name: test_acs_1300b_1_a_newly_added_delivery_path_appears_with_no_edit_to_the_enumerator
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the delivery-path enumerator CLI, invoked as a subprocess against a repository copy with one file added"
+    description: "MUTATION ONE — THE DERIVED-NOT-LISTED PROOF. Copy the repository, add one new delivery-path file, re-run the enumerator with its source byte-identical, and assert the new path appears. Cannot be satisfied by a constant. Assert the enumerator's own source is unchanged between the two runs."
+  - name: test_acs_1300b_1_stripping_a_hand_off_flips_that_path_from_reaching_to_bypassing
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "MUTATION TWO — THE CLASSIFICATION-TRACKS-THE-REPO PROOF. Take a path the enumerator classifies as reaching, remove only its hand-off to the link-recording step, re-run, and assert its classification changed. In the same run assert at least one other path's classification did NOT change, so the enumerator discriminates rather than reclassifying everything on any edit."
+  - name: test_acs_1300b_1_report_states_paths_examined_and_exclusions
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The enumeration states how many delivery paths it examined and what it excluded. Assert both are present and reconcilable against the classified list; assert no hard-coded expected total appears in the enumerator's own source."
+  - name: test_acs_1300b_1_no_fixed_path_count_is_asserted_or_encoded
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "COUNT-AGNOSTIC, ENFORCED. Assert the enumeration is neither satisfied nor falsified by the number of paths: adding one path and removing another leaves every classification of the surviving paths unchanged and produces no pass/fail difference attributable to the total. Mirrors the KM-KGS-100c rewrite that removed a hard-coded eight."
+  - name: test_acs_1300b_1_an_unreadable_repository_root_does_not_report_an_empty_clean_result
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "GE-120. Point the enumerator at a root it cannot read and assert the outcome is distinguishable from a genuinely fully-wired repository — not zero bypassing paths and a clean exit. This is the AC's most likely permanent-false-all-clear, because 'found no bypassing paths' is the shape of both success and total failure."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+superseded_by: null
+covered_by:
+  - ACS-1300b-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ENUMERATION BEFORE IMPLEMENTATION, on the product owner's instruction in ACS-1300b's
+  notes: you cannot specify a fix for a set you have not established. One unenumerated
+  path is a permanent slow refill, and the next measurement reads that refill as the
+  repair in ACS-1300a having failed rather than as a path nobody wired.
+
+  DERIVED, NOT LISTED — AND THE TWO MUTATION CLAUSES ARE WHAT MAKE THAT FALSIFIABLE. A
+  hand-maintained list satisfies "names every delivery path" on the day it is written.
+  Requiring that a newly added path appears without editing the enumerator, and that a
+  path stripped of its hand-off changes classification, cannot be satisfied by a
+  constant. Both are single-edit mutations an implementer can run.
+
+  NO FIXED COUNT, DELIBERATELY. The final clause exists because the obvious test is to
+  assert the enumeration finds N paths, and that assertion passes for the wrong reason
+  the moment a path is added and another removed. It is also the failure the KM-KGS-100
+  tree had to be re-authored to undo.
+
+  THE STALE DIAGNOSIS THIS AC IS NOT BUILT ON, recorded because it was believed for a
+  week and is still written in BO-202's notes: that the gate skips L3 records and greps
+  only tests/. Both were true when BO-202 was filed on 2026-08-25 and both were fixed on
+  2026-08-26. Verified by reading the template on this branch, line numbers in the
+  doc_link above. An AC premised on re-fixing them would go green against work it did
+  not do.

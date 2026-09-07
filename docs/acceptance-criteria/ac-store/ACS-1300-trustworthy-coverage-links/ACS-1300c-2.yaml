@@ -1,0 +1,118 @@
+id: ACS-1300c-2
+components:
+  - ac_store
+title: "A record with nothing to repair is never opened for writing"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a store on disk in which some records need a coverage entry added or removed and
+    the remainder need neither,
+  And the raw bytes of every record file hashed before the run,
+  When the repair tool is invoked out of process with the apply request,
+  Then the raw bytes of every record needing neither hash identically after the run —
+    compared as bytes rather than as parsed values, because a load-and-dump round trip
+    preserves every value while rewriting the file,
+  And the last-modified time of every record needing neither is unchanged, so a record
+    that was opened and written back with identical content is distinguishable from one
+    that was never opened,
+  And every record that did need a change was changed in that same invocation, so the
+    untouched records were left alone by a run that was demonstrably writing,
+  And a record needing neither still appears in the run's report as examined, so
+    "untouched" and "never looked at" remain distinguishable,
+  And a store in which no record needs any change produces a run in which no file's bytes
+    and no file's last-modified time change at all.
+depends_on:
+  - ACS-1300c
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "ALREADY OWNS THIS RULE — INHERITED HERE, NOT RE-DERIVED. Its it_requirements carry the load-bearing form: byte stability means DO NOT WRITE, not write-the-same, and an implementation that loads the store, mutates in memory and writes it back cannot satisfy it and cannot be made to satisfy it later. Its test shape — sha256 of raw bytes before and after plus an anti-no-op control in the same run — is the shape reused here. The only thing this AC adds is the last-modified clause, which separates the two failure modes at the filesystem rather than at the content."
+  - path: scripts/ac_store/backfill_components.py
+    relationship: relates-to
+    status: exists
+    relevance: "THE TECHNIQUE THAT ALREADY SATISFIES THIS IN THIS STORE. _insert_after_id_line edits the file's existing text by targeted line insertion instead of round-tripping YAML, and _backfill_file returns early for a file that already satisfies the condition — so an untouched file is never opened for writing at all. Copy this shape rather than inventing one."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The real_artifact angle. A byte-level before-and-after comparison of a real record file written by the real serializer is the strongest available form of it, and the reason a fixture hand-typed into a test does not satisfy this criterion."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "BYTE STABILITY MEANS DO NOT OPEN FOR WRITING, NOT WRITE-THE-SAME — inherited verbatim from TQ-400e-1 and deliberately not restated in a competing form. Where this record and TQ-400e-1 could be read as differing, TQ-400e-1 is the source. A YAML load-and-dump round trip preserves every value while reformatting quoting, key order and line wrapping, which at roughly 3,700 records churns the whole store and makes the diff unreadable."
+  - "THE ONLY ADDITION THIS AC MAKES TO THE INHERITED RULE IS THE LAST-MODIFIED CLAUSE, and it proves a different fact from the hash. The hash distinguishes 'content unchanged' from 'content changed'; the mtime distinguishes 'never opened' from 'opened and written back identically'. A tool that reads every file, decides nothing changed and rewrites the same bytes passes every hash comparison and has still opened the entire store for writing. Both assertions are required and neither substitutes for the other."
+  - "THE EARLY RETURN MUST BE A REAL BRANCH, NOT A CONSEQUENCE OF A COINCIDENTALLY IDENTICAL SERIALIZER. Copy the shape already proven in this store: `scripts/ac_store/backfill_components.py::_backfill_file` returns before any write for a file already satisfying the condition, and `_insert_after_id_line` edits existing text by targeted line insertion. The mtime assertion is the cheapest available proof that this branch exists."
+  - "THIS CANNOT BE RETROFITTED, WHICH IS WHY IT CONSTRAINS THE DESIGN AND NOT JUST THE OUTPUT. If the write path is built as load-the-store / mutate / write-it-back, every untouched record is reformatted by the serializer and this AC becomes unimplementable without a rewrite. The decision must be made before the first line of ACS-1300a-2's apply step is written."
+  - "THE FILE-OPEN SET IS BOUNDED BY THE FINDING SET. The apply step may open for writing only records the detection pass classified as needing a change; membership is structural, not a condition evaluated after opening the file."
+  - "THE STEADY STATE IS THE EXPECTED STATE. Once the backlog is cleared the normal run is one where nothing needs changing, and that run must touch no file's bytes and no file's mtime. A repair that rewrites the store on every run cannot become the routine check ACS-1300b needs it to be, and it will collide with anyone else working in the tree — mtime drives build caching here."
+  - "NEVER WRITES THE FINISHED-STATE FIELD. The tree-wide refusal applies; a bulk-rewrite design breaks this AC and ACS-1300c-1 at the same time and for the same reason."
+  - "Must handle errors gracefully per the project error handling policy and must fail toward not opening the file."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300a-2
+  contract: "The apply step whose write set this guarantee bounds: it may open only the files the finding set marks as needing a change."
+test_spec:
+  - name: test_acs_1300c_2_untouched_record_bytes_hash_identically_while_others_are_changed
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "THE SHA256 ASSERTION, PAIRED INSIDE ONE INVOCATION. Build a real on-disk store with the project's real serializer in which some records need a change and the remainder need none. sha256 the raw bytes of every file, run one out-of-process apply, hash again. Assert together: every record needing neither is byte-identical, AND every record that did need a change was changed in that same run. Compare bytes, not parsed values. Do not split the pairing out — byte-identity alone is satisfied by a dead run."
+  - name: test_acs_1300c_2_untouched_record_mtime_is_unchanged_while_others_are_written
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "THE LAST-MODIFIED ASSERTION, CHARGED SEPARATELY BECAUSE IT PROVES A DIFFERENT FACT. The hash test above cannot distinguish 'never opened' from 'opened and written back identically'; this one can. Record every file's mtime before the run, run the same single apply invocation, and assert the mtime of every record needing neither is unchanged AND the records that did need a change were written in that same run. Guard against filesystem mtime granularity masking the result — space the runs or assert on a higher-resolution stat field."
+  - name: test_acs_1300c_2_a_record_needing_no_change_still_appears_in_the_report_as_examined
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Assert presence in the report, in the same run in which other records were repaired. 'Untouched' and 'never looked at' produce identical files and are distinguishable only here."
+  - name: test_acs_1300c_2_a_store_needing_nothing_changes_no_bytes_and_no_mtimes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE STEADY STATE. Over a store in which no record needs any change, one apply run must leave every file's bytes and every file's mtime untouched. This is the one descriptor that cannot carry an internal anti-no-op pairing — by construction nothing should happen — so it must invoke the SAME production entry point the two paired descriptors above proved live, never a separate code path or a mocked apply."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  INHERITED FROM TQ-400e-1, DELIBERATELY NOT RESTATED IN A COMPETING FORM. The rule and
+  its rationale live there; this record's job is to make the rule bite on THIS tool's
+  write path, because a guarantee stated only in a neighbouring tree is not enforced
+  here. Where the two records could be read as differing, TQ-400e-1 is the source.
+
+  THE LAST-MODIFIED CLAUSE IS THE ONE ADDITION, and it earns its place by separating two
+  failure modes that byte-identity alone conflates. A tool that reads a file, decides
+  nothing changed and writes the same bytes back passes a hash comparison and has still
+  opened every file in the store for writing — which is a real defect in a repository
+  where mtime drives build caching and where a run should be safely re-runnable against a
+  working tree someone else is using. It is also the cheapest possible proof that the
+  early-return branch exists rather than being simulated by a coincidentally identical
+  serializer.
+
+  THIS CANNOT BE RETROFITTED, which is why it is an L2 and not a note. If the write path
+  is built as load-the-store, mutate, write-it-back, every untouched record is reformatted
+  by the serializer and this criterion becomes unimplementable without a rewrite. The
+  decision has to be made before the first line of the apply step is written, and that is
+  the whole reason the ACS-1300c L1 exists separately from ACS-1300a.
+
+  THE FINAL CLAUSE COVERS THE STEADY STATE. Once the backlog is cleared, the expected run
+  is one where nothing needs changing — and that run touching every file would make the
+  repair unusable as a routine check, which is what ACS-1300b needs it to become.

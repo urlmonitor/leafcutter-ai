@@ -1,0 +1,168 @@
+id: TKT-600b-1-ii
+title: "A phase the drive will not run is recorded as excluded, never left out of the record"
+component: ticket-creation
+components:
+  - ticket_creation_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical   # owner decision at the approval gate, 2026-09-01
+roadmap_phase: phase_1
+criteria: |
+  Given a generated ticket for a location where the drive will not dispatch the
+    pull-request phase,
+  When the ticket's phase record is read,
+  Then the record carries an entry for the pull-request agent whose status is
+    "explicitly excluded from this ticket",
+  And the record does not instead omit that agent,
+  And a reader holding only the ticket can say, for every phase the drive knows about,
+    whether it was required of this ticket or deliberately excluded from it — without
+    consulting the drive or knowing where the file sits.
+depends_on: [TKT-600b-1]
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the status enum and the done-eligibility rule that reads the record's entries."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "An omitted entry clears the halt without recording a decision — silence read as agreement."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy the test_spec entries below are drawn from."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: >-
+      The shape of one entry in the generated ticket's agents map. Every phase
+      agent the drive knows about gets an entry; deferral is expressed by the
+      status value, never by the entry's absence.
+    additionalProperties:
+      type: string
+      enum:
+        - needed
+        - not_needed
+        - signed_off
+        - failed
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: >-
+    1 — the ordered-map assembly in _build_agents_map at :1089-1105. The walk over
+    phase_order currently assigns a status only when the agent is in all_needed,
+    in overrides, or protected; an agent in none of those falls through the
+    if/elif chain and is silently absent from the returned dict. That fall-through
+    is the omission this criterion forbids, and it is where the fix belongs.
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - python -m pytest unit_tests/ac_store/ -q
+  constraints:
+    - >-
+      The set of agents the record must account for is the drive's known phase
+      set, taken from the canonical phase order and the agent registry — not a
+      list maintained in a third place. A record that accounts for every agent in
+      a hand-written list is a fourth copy of the same rule.
+    - >-
+      Deferral must be encoded as a status value on a present entry. An
+      implementation that expresses deferral by deleting the entry is excluded
+      even though it clears the observed halt, because the completion gate walks
+      the record's entries and a phase that is not there cannot be outstanding.
+    - >-
+      The excluded status must be the project's existing exclusion value from the
+      sign-off status enum, so no new vocabulary is introduced and every existing
+      reader keeps working. The enum is defined in templates/skills/signoff/SKILL.md
+      and no synonym may be minted for this case.
+    - >-
+      This pins representation only. It must not change WHICH phases are excluded —
+      that is TKT-600b-1's decision, and a change here that also alters membership
+      would put the two ACs in conflict.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A generated agents map that is total over the drive's known phase set: every
+    phase agent appears with an explicit status, so a reader holding only the
+    ticket can distinguish "deliberately excluded" from "never considered" without
+    consulting the drive or the file's location.
+expects_from:
+  ac_id: TKT-600b-1
+  contract: >-
+    The per-location deferred phase set, which decides which entries carry the
+    excluded status. This AC decides only how that decision is written down.
+test_spec:
+  - name: test_deferred_phase_has_an_entry_with_the_excluded_status
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      For a location whose declaration defers a phase, the generated map contains
+      an entry for that phase agent and its value is the exclusion status from the
+      sign-off enum. Parameterised over the declared deferral set so it does not
+      assert on one phase name.
+  - name: test_no_known_phase_agent_is_missing_from_the_generated_map
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Assert the generated map's key set covers every agent in the canonical phase
+      order. This is the test that goes red against the omission fix — dropping the
+      entry clears the halt and passes any test that only asserts the phase is not
+      marked needed.
+  - name: test_omission_and_exclusion_are_not_the_same_evidence_to_a_reader
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      Build two records that differ only in whether the deferred phase has an
+      entry, and assert a reader given only the ticket reaches different
+      conclusions about whether the phase was considered. Exercises the read side,
+      not the write side, because that is where the omission does its damage.
+test_rationale: >-
+  Both correct-looking answers clear the observed halt, so a test that only asserts
+  "the drive no longer stalls" cannot separate them. The boundary entry asserts
+  coverage of the key set rather than the value of one key, which is the only shape
+  that fails on omission. It draws the expected key set from the canonical phase
+  order rather than a literal list, so a phase added to the drive later is covered
+  without editing the test — a hand-written list here would be the same
+  falls-behind-a-second-copy defect this AC's parent is about.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-01
+    note: >-
+      Added it_requirements, test_spec, test_rationale and contracts. Located the
+      omission at the phase_order walk in _build_agents_map (:1089-1105), where an
+      agent in neither all_needed nor overrides falls through the if/elif chain and
+      is silently absent. Criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THIS IS A REAL FORK, WHICH IS WHY IT IS WRITTEN DOWN. Dropping the entry altogether
+  also clears the observed halt — the completion gate walks the record's entries, so a
+  phase that is not there cannot be outstanding. It is nonetheless the wrong answer, and
+  a cheaper one, so without this constraint it is what a fix would plausibly do.
+
+  SILENCE IS NOT AGREEMENT. An omitted entry is indistinguishable from a record that
+  never knew the phase existed. A reader — human or gate — cannot tell "the drive
+  deliberately excluded this" from "nobody considered it", and the whole value of the
+  record is that it is readable on its own. It also erases the evidence: the hand
+  correction at 9682d6adf recorded the exclusion explicitly rather than deleting the
+  line, and that explicit line is what tells a later reader the omission was a decision.
+
+  This pins representation only. It does not decide which phases the record covers —
+  TKT-600b-1 does that.

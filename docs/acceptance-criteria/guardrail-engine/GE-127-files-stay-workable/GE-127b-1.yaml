@@ -1,0 +1,498 @@
+id: GE-127b-1
+title: "A change that leaves an already-oversized file longer than it was is refused; one that leaves it the same or shorter is allowed"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked file of a kind the size standard covers already stands above
+    its permitted length before the change,
+  And a change is staged that leaves that file one line longer than it stood
+    before,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and the outcome states both the length the
+    file stood at before the change and the length it stands at after it,
+  And given instead a change is staged that leaves that same already-oversized
+    file shorter than it stood before, while still above its permitted length,
+  When the author performs an ordinary commit,
+  Then the commit completes, and the file is not refused for still standing
+    above its permitted length,
+  And given a change is staged that leaves the already-oversized file at exactly
+    the length it stood before,
+  When the author performs an ordinary commit,
+  Then the commit completes,
+  And given a file of a covered kind that did not exist before is added, at a
+    length comfortably below its permitted length,
+  When the author performs an ordinary commit,
+  Then the commit completes — a file with no previous length is never treated as
+    having previously stood at zero lines, which would refuse every file ever
+    created.
+depends_on:
+  - GE-127b
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE — INHERITED AND NOT RESTATED. Every clause here is a
+      commit outcome and presupposes the guard is reached at commit time. That
+      registration is BP-100n-4's day-one triage. The dependency also runs this way
+      round for sequencing: without this ratchet, that triage's only options for
+      this guard are register-and-block-everything or disposition-it-away. Do not
+      restate the census, its counts, or any part of it.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The incumbent guard compares one number against one limit and has no notion
+      of a file's previous length. The comparison this record requires does not
+      exist in any form today.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Carries the per-kind limits and the default this record's "permitted length"
+      resolves through. Note it is a watched package surface — a NEW top-level key
+      trips the package-surface declaration gate and requires a declaring AC, which
+      is a consequence to weigh at enrichment rather than discover at commit time.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Describes the commit-time invocation shape every clause here is
+      written against.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A test that reads
+      the guard's source stays green on precisely the absent comparison this record
+      introduces.
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    WHERE THE PREVIOUS LENGTH COMES FROM — DECIDED, AND THE DECISION IS "NOWHERE NEW". The
+    BA deliberately left this open and it is pinned here: the length a file stood at before
+    the change is obtained by measuring the file's HEAD blob (`git show HEAD:<path>`) with
+    the SAME measurement function used on the staged content. There is NO persisted baseline
+    file, NO new configuration key and NO recorded state of any kind. Four reasons, and each
+    one independently rules out the persisted alternative: (1) a recorded baseline must be
+    updated on every commit that changes a size, so it either turns this judgment gate into
+    a transform gate that writes during commit, or it goes stale — and a stale baseline is
+    strictly worse than none, because it lets a file grow while asserting it did not;
+    (2) git already holds the exact quantity the criterion names, with no possibility of
+    drift between the record and reality; (3) a persisted record would have to live
+    somewhere, and the only natural home is a NEW top-level key in commit_guardian.json,
+    which is a watched mapping_keys container and would drag a package-surface declaration
+    and the structured five-field spec onto this record for no behavioural gain; (4)
+    `git show HEAD:<path>` is already the established pattern in this hook family — nine
+    scripts under templates/scripts/commit_guardian/ read HEAD blobs today, including
+    check_structural_change.py, check_ac_schema.py and check_adr_collision.py. Reuse the
+    pattern; do not invent a fifth kind of state.
+  - >-
+    NO PACKAGE SURFACE, AND THIS IS THE RECORD MOST LIKELY TO ACQUIRE ONE BY ACCIDENT. This
+    record's own doc_link on commit_guardian.json warns that a NEW top-level key trips the
+    package-surface declaration gate. With the HEAD-blob decision above, no new top-level
+    key is needed and none may be added: the ratchet consumes only the staged content, the
+    HEAD blob, and the per-kind limits already nested under the existing `file_size` key at
+    line 13. It also adds no hooks_manifest id — the registration is declared once on
+    GE-127a-1 and inherited. package_surface is therefore FALSE and the plain-list spec is
+    correct. If an implementer finds a genuine need for a new top-level key, that is a
+    decision to escalate, not to take: the declaration and the structured five-field spec
+    must move onto this record with it. Do NOT mint a config_schema_fragment key to satisfy
+    the validator — BP-100k-4 and BP-100k-4-i both did exactly that and neither declared key
+    was ever created.
+  - >-
+    THE PREVIOUS AND CURRENT LENGTHS MUST COME FROM ONE MEASUREMENT FUNCTION, CALLED TWICE.
+    Two implementations of the counting rule — one for the HEAD blob, one for the staged
+    content — can drift, and a drift of even one line manufactures phantom growth on files
+    nobody touched. Mandate a single pure function taking file content and returning a
+    length, used by the threshold comparison (GE-127a-1), the ratchet's before and after
+    measurements, and the published-rule reproduction (GE-127d-2). One rule, one
+    implementation, four call sites.
+  - >-
+    THE THREE ARMS ARE DISTINCT STATES AND MUST BE DISTINCT BRANCHES, NOT A SINGLE
+    INEQUALITY. Over the limit and grown → refuse. Over the limit and same-or-shorter →
+    allow, and say nothing that reads as a finding about that file. No HEAD blob for the path
+    (the file did not exist before) → the ratchet does not apply at all and the file is
+    governed only by GE-127a-1's threshold. An absent previous length is NEVER coerced to
+    zero: that single coercion refuses every new file ever created, and it is the BA's named
+    injection 2.
+  - >-
+    ONLY FILES ALREADY ABOVE THEIR LIMIT ENTER THE RATCHET. A file under its permitted length
+    that grows but stays under it is not this record's population and must produce no
+    finding — that is GE-127a-1's silence arm and this record must not break it. A file that
+    crosses from under to over in one change is GE-127a-1's population, refused by the
+    threshold arm, and must not be double-reported by the ratchet as well.
+  - >-
+    THE SHRINKING-BACKLOG PROMISE ADMITS NO DEFAULTED EXCEPTION. No routine condition — a
+    mechanical rename, a generated block, a merge commit, a bulk reformat — may be given an
+    implicit pass to grow an oversized file. If an exception is judged necessary it is an
+    explicit, recorded decision using the mechanisms that exist (see the rollout constraint
+    below), never a path pattern or a status check quietly added to the comparison.
+  - >-
+    THE ROLLOUT MECHANISMS THAT EXIST, STATED AS THEY ARE — THERE IS NO WARN-VERSUS-ENFORCE
+    TIER, SO DO NOT DESIGN A RAMP AROUND ONE. What exists: `enabled: false` on a manifest
+    entry, honoured by build_precommit_config's filter on h.get("enabled", True) before entry
+    lines are emitted (5 entries use it today); the two exemption registries
+    (drift_gate_exemption_registry, hook_trigger_reachability_exemption_registry), each entry
+    a {path|id, ground} pair with a mandatory non-empty ground and a __*_doc sibling carrying
+    the discipline that an exemption is "not a way to silence a finding the gate got right";
+    per-gate `excluded_dirs` overrides as complexity and sql_complexity use; and ad-hoc
+    per-script advisory severity as check_doc_links and check_adr_cross_reference implement
+    individually. What does NOT exist: any warn tier in the framework. The manifest `tier`
+    field takes only "judgment" (54 entries) and "transform" (6) and is not a severity, and
+    run_hook.py contains no advisory handling at all. BP-100n-4 additionally forbids using
+    enabled:false to dodge a day-one finding. THIS RECORD IS THE ROLLOUT MECHANISM — that is
+    why it is the keystone, and why reaching for any of the above instead of building it is
+    the failure mode.
+  - >-
+    THE MEASURED BLAST RADIUS THIS RECORD EXISTS TO ABSORB, RE-MEASURED IN THIS WORKTREE AT
+    b846121c9. Under the guard's own counting rule, 200 of 845 tracked .py files stand above
+    the 400-line limit already in force (largest: scripts/build_phases.py at 2603 counted /
+    3873 raw; tests/test_git_recovery.py at 3078). Zero tracked .sql files exist at all, so
+    the other in-scope kind contributes nothing. Once GE-127c-1's widened list lands, 10 of
+    13 tracked JavaScript files and 10 of 99 TypeScript files join that population. Every one
+    of those files must remain committable the day the gate is registered, and this record is
+    the only thing that makes that true.
+  - >-
+    DO NOT WIRE EXCLUDED_DIRS INTO THIS GUARD. check_file_size.py imports only
+    CHECKED_EXTENSIONS, DEFAULT_LINE_LIMIT and FILE_LINE_LIMITS and never imports
+    EXCLUDED_DIRS, although config.py:90 exports it and README.md line 65 claims the list
+    applies to ALL hooks. Fixing that inconsistency here would exempt every path under
+    `templates`, `unit_tests` and `tests` — including all 11 substantial JavaScript files,
+    which live under templates/workflows-js/ — and would ship the ratchet as a no-op over
+    most of its intended population. The discrepancy between the README's global claim and
+    this gate's behaviour is GE-127d-1's subject; it is not a silent code change here.
+  - >-
+    HOST AND LAYERING — MEASURED, NOT GUESSED. check_file_size.py stands at 148 of its 400
+    permitted lines (217 raw) under its own counting rule, so it has headroom, but this
+    record is the largest of the six landing on it. Put the previous-length resolution, the
+    shared measurement function and the outcome assembly in a sibling module INSIDE
+    templates/scripts/commit_guardian/ — build_commit_guardian copies that directory whole,
+    so no scripts/build_phases.py deploy entry is needed. A module imported from OUTSIDE that
+    directory MUST be added to the deploy map in the same change or the deployed hook raises
+    ModuleNotFoundError at commit time while source-tree tests stay green. Never split
+    outside the directory.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE.
+    templates/scripts/commit_guardian/ is canonical and tracked; scripts/commit_guardian/ and
+    the repo-root .pre-commit-config.yaml are UNTRACKED build outputs that build.py
+    overwrites; templates/commit-guardian/commit_guardian.json is a decoy that needs no edit
+    (manifest parity is one-directional, legacy ⊆ canonical). config.py:19 resolves
+    commit_guardian.json beside the DEPLOYED script, so `python scripts/build.py
+    --target-dir .` is mandatory and is part of this change, not a follow-up.
+  - >-
+    THE COUNTING-RULE INTERACTION IS INHERITED, NOT SETTLED HERE. If the measurement rule
+    declines to count some class of content, a change that adds only that class registers as
+    no growth and this ratchet allows it. That is GE-127d-2's call to make and this record's
+    to consume. Do not write a second counting rule into the comparison to close it.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    subprocess call to git, the blob decode and any file I/O; log at WARNING or higher or
+    re-raise; no bare or blind excepts. A swallowed lookup error must never become an absent
+    previous length — that is the precise fail-open shape GE-127b-1-i exists to make
+    impossible, and it is the shape all four cited precedents shipped.
+test_spec:
+  - name: test_ge_127b_1_an_oversized_file_made_one_line_longer_is_refused_naming_both_lengths
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE MANDATORY NEGATIVE ARM AND THE ONLY CLAUSE THAT DISTINGUISHES A WORKING RATCHET
+      FROM A DISABLED ONE — WRITE THIS ONE FIRST. In a real temporary git repository with the
+      gate installed, commit a covered file already above its permitted length, then stage a
+      change leaving it exactly one line longer and run an ordinary commit. The commit must
+      not complete, and the outcome must state BOTH the length the file stood at before the
+      change and the length it stands at after it. Both numbers are read from the process
+      output. This is genuinely RED today — no commit is refused for file length at all —
+      so capture the failing run before any work starts.
+  - name: test_ge_127b_1_an_oversized_file_made_shorter_commits_and_is_not_refused_for_still_being_over
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A change leaving an already-oversized covered file shorter than it stood before, while
+      still above its permitted length, commits cleanly and is not refused. NAMED MUTATION
+      (mandatory, run it, do not merely describe it — the BA's injection 1): judge the
+      already-oversized file against its fixed permitted length instead of against its own
+      previous length. Under that injection a change that SHRINKS an oversized file is
+      refused; this descriptor must go RED, failing BY THE COMMIT OUTCOME as well as by the
+      text, and return to green on revert. This injection reconstructs the freeze the parent
+      L1 names as the failure mode, and it is the single most likely way for a
+      well-intentioned implementation to land.
+  - name: test_ge_127b_1_an_oversized_file_left_at_exactly_its_previous_length_commits
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A change leaving an already-oversized covered file at exactly the length it stood at
+      before commits cleanly. The boundary between the refuse arm and the allow arm is
+      strictly greater-than, not greater-than-or-equal; an off-by-one here refuses every
+      pure edit to an oversized file and reproduces the freeze from the other side.
+  - name: test_ge_127b_1_a_newly_added_file_below_its_limit_commits_and_is_not_treated_as_having_grown
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A covered file that did not exist before, added at a length comfortably below its
+      permitted length, commits cleanly. NAMED MUTATION (mandatory, run it — the BA's
+      injection 2): treat an absent previous length as a previous length of zero. Under that
+      injection every newly added non-empty covered file is refused as having grown; this
+      descriptor must go RED and return to green on revert. Without the injection the clause
+      is satisfied by a guard that refuses nothing.
+  - name: test_ge_127b_1_the_previous_length_is_read_from_the_repository_history_and_moves_with_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      THE ANTI-STALE-BASELINE DESCRIPTOR. Establish an oversized covered file, commit a
+      change that SHRINKS it, then stage a change that grows it back by one line relative to
+      the NEW shorter length while leaving it below its original length. The commit must be
+      refused. An implementation reading a recorded baseline that was not updated by the
+      intervening commit allows this, and an implementation reading the file's HEAD blob
+      refuses it. Assert over real commits in a real repository, never over a fixture
+      describing a previous size.
+  - name: test_ge_127b_1_a_file_under_its_limit_that_grows_but_stays_under_produces_no_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      A covered file below its permitted length that the change leaves larger but still below
+      it commits cleanly and produces no line naming it. Guards the seam with GE-127a-1's
+      silence arm: an over-eager ratchet applied to every file, not only those already above
+      their limit, refuses ordinary growth everywhere and is the second-most-likely wrong
+      implementation after the freeze.
+  - name: test_ge_127b_1_the_ratchet_verdict_is_emitted_through_the_registered_hook_entry_point
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the gate as a subprocess through the registered hook path
+      with a grown oversized file staged, and assert the before-and-after lengths appear in
+      the hook's own output stream and that the exit status is the commit outcome rather than
+      an advisory note. A comparison computed by a function nothing at commit time calls is
+      inert.
+  - name: test_ge_127b_1_the_deployed_copy_runs_the_ratchet_over_the_repositorys_real_oversized_files
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy and every module it imports load and run in a cold
+      process — a helper outside templates/scripts/commit_guardian/ with no
+      scripts/build_phases.py deploy-map entry surfaces here as ModuleNotFoundError rather
+      than passing. Then the survivability proof this record exists for: stage a
+      size-neutral edit to one of the repository's genuinely oversized tracked files and
+      assert the deployed run permits it. A run that refuses it means the gate cannot be
+      switched on, whatever the synthetic descriptors say.
+test_rationale: |
+  Three of the four criterion arms assert that a commit is ALLOWED, and every one of them is
+  green on arrival on an implementation that refuses nothing — which is today's
+  implementation exactly. The BA attached two named injections to the two that matter most
+  and both are carried into descriptors verbatim rather than restated as prose. Each must
+  fail BY THE COMMIT OUTCOME, not merely by emitted text: a gate that prints a worried
+  message and exits 0 is indistinguishable from a passing one to pre-commit, which reads
+  only the status.
+
+  The negative arm — one line longer on an already-oversized file, refused — is written
+  first because it is the only clause that cannot pass on an implementation that permits
+  everything, and it is the one clause with a genuine red baseline today.
+
+  Two descriptors exist that the criteria do not name and that the enrichment decision
+  makes necessary. The history-derived descriptor discriminates the pinned HEAD-blob source
+  from a recorded baseline: it shrinks a file in one commit and grows it back relative to
+  the new length in the next, which a stale record permits and a HEAD read refuses. The
+  under-limit-growth descriptor guards the seam with GE-127a-1's silence arm, because a
+  ratchet applied to every file rather than only those already over is the second-most-likely
+  wrong implementation.
+
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", every descriptor
+  performs an ordinary commit in a real temporary repository over real git history; a test
+  that reads the guard's source stays green on precisely the absent comparison this record
+  introduces. The deployed descriptor ends on the survivability proof — a size-neutral edit
+  to one of the repository's real oversized files must be permitted by the built copy —
+  because that, and not any synthetic fixture, is the claim the keystone is making.
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-127b-1-i
+    contract: >-
+      The previous-length population resolved for the run — obtained by measuring each staged
+      covered file's HEAD blob with the shared measurement function — and the per-file
+      before-versus-after comparison built on it. GE-127b-1-i requires that population's size
+      to be stated in the single outcome, and converts its unavailability or its emptiness
+      from a silent completed commit into a named refusal.
+  - agent: python-coder
+    ac_id: GE-127c-1
+    contract: >-
+      The set of staged files the ratchet compared, which contributes to the set of kinds
+      GE-127c-1 requires the outcome to declare as measured.
+expects_from:
+  ac_id: GE-127a-1
+  contract: >-
+    The commit-time per-file verdict, the shared measurement function and the single outcome
+    stream, plus the per-kind permitted lengths resolved from the existing `file_size`
+    section. This record adds a second comparison — the file's length after the change
+    against the length it stood at before — as an additional arm on that same verdict, never
+    as a parallel gate with its own output.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-01
+  note: 'criteria untouched. THE DECISION THE BA DEFERRED IS TAKEN: the previous length comes
+    from the file''s HEAD blob (`git show HEAD:<path>`), measured with the same function used
+    on the staged content. NO persisted baseline, NO new state file, NO new configuration
+    key. Four grounds, each independently sufficient — a recorded baseline must be written
+    during commit or go stale, and a stale baseline lets a file grow while asserting it did
+    not; git already holds the exact quantity the criterion names; the only natural home for
+    a persisted record is a NEW top-level key in commit_guardian.json, which is a watched
+    mapping_keys container and would drag a package-surface declaration onto this record for
+    no behavioural gain; and HEAD-blob reads are already the established pattern here, used
+    by nine scripts under templates/scripts/commit_guardian/ including
+    check_structural_change.py, check_ac_schema.py and check_adr_collision.py. PACKAGE
+    SURFACE FALSE, and this is the record most at risk of acquiring one by accident — its own
+    doc_link warns about the new-top-level-key trap; the HEAD-blob decision is what keeps it
+    false. No hooks_manifest id either: that is declared once on GE-127a-1. RE-MEASURED AT
+    b846121c9 under the guard''s own counting rule: 200 of 845 tracked .py files above the
+    400-line limit in force (build_phases.py 2603 counted / 3873 raw), 314 above 400 raw —
+    both figures reproduce the BA''s exactly; zero tracked .sql files, confirming the BA''s
+    "no file of the other in-scope kind is over". EXCLUDED_DIRS trap recorded as a hard
+    prohibition: templates/ is in the global list and all 11 substantial JS files live under
+    templates/workflows-js/, so wiring it in as hygiene ships the ratchet as a no-op over most
+    of its population. Rollout mechanisms stated as they are, with the explicit finding that
+    NO warn-versus-enforce tier exists (tier takes only judgment/transform; run_hook.py has
+    no advisory handling) — this record IS the rollout mechanism. declares_side_effect false:
+    every Then clause reports to a stream and sets an exit status. test_spec: eight executing
+    descriptors, two carrying the BA''s named mutations, one discriminating HEAD-derivation
+    from a stale baseline, one guarding the seam with GE-127a-1''s silence arm, one the
+    registered hook entry point, and one running the deployed copy over a real oversized file
+    as the survivability proof.'
+superseded_by: null
+covered_by:
+  - GE-127b-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE KEYSTONE RECORD OF THE GOAL AND THE HIGHEST-VALUE ITEM IN IT. It is
+  what makes the standard switchable on the day it lands. RE-MEASURED IN THIS
+  WORKTREE AT AUTHORING TIME, 2026-09-01, under the guard's own counting rule
+  (docstrings and block comments discarded before counting), over tracked files
+  only: 200 files of the kind already in scope stand above their permitted length.
+  Two figures that must NOT be merged, both re-measured here and both moved since
+  assessment:
+    - 200 above their applicable limit under the guard's own counting rule
+      (assessment recorded "on the order of 190" — carry the new figure, and keep
+      the label).
+    - 314 above 400 raw lines with no exclusions (the L0 records 312 from a
+      differently-scoped walk of four source directories; this figure is over all
+      tracked files of that kind, so the two are not in conflict but are not the
+      same measurement either).
+  No file of the other currently-in-scope kind stands above its limit at all. The
+  gap between 200 and 314 is produced by the counting rule discarding
+  documentation blocks, and that gap is GE-127d's subject, not this record's.
+  A flat threshold switched on today refuses essentially every commit touching any
+  of those 200.
+
+  THE THREE ARMS ARE THE THREE THE L1 ASKS FOR, STATED SO THEY CANNOT BE INFERRED
+  AWAY. Grew → refused. Same or shorter → allowed, even though still over. No
+  previous length → outside what this comparison judges. The second arm is not a
+  concession, it is the mechanism: without it the ratchet is a freeze, and a
+  frozen file never gets refactored because nobody can touch it.
+
+  THE NEGATIVE ARM IS MANDATORY AND IT IS CLAUSE ONE. Every other arm here is
+  satisfied by an implementation that permits everything. One line longer on an
+  already-oversized file, refused, is the only clause that distinguishes a working
+  ratchet from a disabled one — and it is genuinely RED today, because no commit
+  is refused for file length at all. Capture that failing run before any work
+  starts.
+
+  README ALREADY PROMISES THIS AND HAS SINCE THE PROMISE WAS REMOVED. The
+  published description of this gate states that modifications to existing large
+  files are exempt as an "incremental refactor path". The guard's own recorded
+  change history says that exemption was removed on 2026-05-01 to drive
+  progressive refactoring, and nothing replaced the path it was providing. This
+  record restores a documented-but-absent behaviour rather than inventing a new
+  one — and it does so in the form that survives, since a ratchet gives the
+  incremental path without reintroducing the exemption. Reconciling the stale
+  wording itself is GE-127d's work and must not be done here.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Two clauses assert
+  that a commit is ALLOWED, and every one of them is green on arrival on an
+  implementation that refuses nothing. Each carries an injection that must be run
+  and reverted:
+
+  (1) "the commit completes, and the file is not refused for still standing above
+      its permitted length" — MUTATION: judge the already-oversized file against
+      its fixed permitted length instead of against its own previous length. Under
+      that injection a change that SHRINKS an oversized file is refused; this
+      clause must go RED, failing by the commit outcome as well as by the text, and
+      return to green on revert. This injection is the freeze the L1 names as the
+      failure mode, and it is the single most likely way for a well-intentioned
+      implementation to land.
+
+  (2) "a file with no previous length is never treated as having previously stood
+      at zero lines" — MUTATION: treat an absent previous length as a previous
+      length of zero. Under that injection every newly added non-empty file of a
+      covered kind is refused as having grown; this clause must go RED and return
+      to green on revert. Without the injection the clause is satisfied by a guard
+      that refuses nothing.
+
+  THE SHRINKING-BACKLOG CLAIM IS PART OF THE PROMISE, NOT A SIDE-EFFECT. The value
+  being sold is that the population of oversized files is monotonically
+  non-increasing once this lands. An implementation that lets an oversized file
+  grow under a routine condition — a large mechanical rename, a generated block, a
+  merge commit — breaks that promise even though every hand-written scenario above
+  passes. No such exception may be defaulted into existence. If one is judged
+  necessary it is a decision to be taken explicitly and recorded, and the record
+  belongs with the decision, not in a path pattern nobody revisits.
+
+  BOUNDARY WITH GE-127a-1, DELIBERATE. That record's population is a file that was
+  UNDER its permitted length before the change and is OVER it after. This record's
+  population is a file already OVER before the change. The populations do not
+  intersect and neither record closes the other.
+
+  BOUNDARY WITH GE-127d, AND A REAL HAZARD RATHER THAN A FORMALITY. What counts as
+  the file's length — which lines are counted and which discarded — is settled in
+  one place and that place is GE-127d. This record consumes that answer. Note the
+  interaction: if the counting rule discards some classes of line, a change that
+  adds only discarded lines registers as no growth and is allowed here. Whether
+  that is correct is GE-127d's call to make and this record's to inherit; do not
+  settle it by writing a second counting rule into the comparison.
+
+  WHERE THE PREVIOUS LENGTH COMES FROM IS DELIBERATELY UNSTATED. The criteria say
+  "the length it stood at before the change" and nothing about how that is
+  obtained. That is the IT PO's decision, and GE-127b-1-i is the floor that stops
+  whichever source is chosen from degrading into a silent no-op.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. delivers_to is null because nothing is
+  enriched yet, not because this record is terminal — it plainly is not, since
+  GE-127b-1-i consumes its comparison.

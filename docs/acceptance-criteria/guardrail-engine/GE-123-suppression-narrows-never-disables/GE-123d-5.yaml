@@ -43,6 +43,10 @@ criteria: |
 depends_on:
   - GE-123d
 doc_links:
+  - path: templates/scripts/commit_guardian/check_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. This is the check that emits the notice — the ADR-001 doc_link below already says so in words. The exemption decisions the notice announces are taken in _filter_prose_findings in this module, so the count, the per-finding lines and the stream discipline are all authored here. Canonical copy per ADR-001."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -130,6 +134,19 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added one doc_link,
+    templates/scripts/commit_guardian/check_secrets.py with relationship modifies. Nothing
+    else changed; all pre-existing doc_links kept at their original relationships,
+    including the GE-113c-3-v and ADR-001 entries. WHY: this record declared no edit
+    surface, leaving the ticket generator to harvest paths out of prose (KI-ACD-023). As
+    with GE-123d-4 the surface was already named in words only — the ADR-001 doc_link''s
+    relevance note says "the check that emits the notice is the canonical copy under
+    templates/", which is check_secrets.py. The exemption decisions the notice announces
+    are taken in _filter_prose_findings in that module, so the count, the one-line-per-
+    finding form and the stderr/stdout split are all authored there. This record carries
+    a load-bearing anti-precedent — a guard in this component that is documented as
+    dispatching a specialist and never does — so leaving its surface to a prose harvest
+    that pointed at directories would have been the same failure one level up.'
 superseded_by: null
 covered_by: []
 implemented_by:

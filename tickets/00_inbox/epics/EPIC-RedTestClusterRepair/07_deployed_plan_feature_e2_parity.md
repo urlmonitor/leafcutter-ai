@@ -24,7 +24,7 @@ agents:
   test-runner: needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 07: Regenerate deployed plan-feature.js from the E2 source

@@ -1,0 +1,88 @@
+id: GE-126c-5-i
+title: "A verdict that did not move under an applied alteration is reported as an alteration that changed nothing, and is distinguishable from one that never reached the code"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+  - testing_quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a guard whose refusal of its known-bad input has been observed and recorded,
+  And an alteration intended to remove that refusal has been applied to a copy that
+    the run names among the copies it loaded,
+  When the proof runs and the guard's verdict on the known-bad input is unchanged,
+  Then the run reports that the alteration reached the code and changed nothing,
+    names the copy altered and the copies loaded, and fails,
+  And it does not report the unchanged verdict as a proof that succeeded,
+  And given the identical alteration is applied instead to a copy the run does not
+    name among the copies it loaded,
+  When the proof runs,
+  Then the reported reason distinguishes the two cases by name — an alteration that
+    reached the code and changed nothing, against an alteration that never reached
+    the code — and a reader of the report can tell which occurred without opening
+    either copy.
+depends_on:
+  - GE-126c-5
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126c-5.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-20260831-mutation-probe-lands-in-the-wrong-copy for the wrong-copy case, and
+      KI-TQ-010 for the other one: an alteration that reaches the code and changes nothing
+      is the ordinary dead-negative-control finding, and it must stay reportable. Collapsing
+      the two into one message would close the wrong-copy hole by hiding the defect the
+      proof was originally for.
+  - path: templates/agents/test-writer.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  ac_id: GE-126c-5
+  contract: >-
+    The statement of loaded copies and the guard's verdict on the known-bad input before
+    and after the alteration. This AC adds no new observation; it constrains how the two
+    failing outcomes are told apart.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: >-
+  WHY THIS IS A SEPARATE RECORD AND NOT A CLAUSE OF ITS PARENT. Both outcomes are
+  failures, so an implementation can satisfy the parent by failing on both with one
+  undifferentiated message — and that message is worse than useless, because the two
+  cases have opposite remedies. "The alteration never reached the code" means redo the
+  proof. "The alteration reached the code and changed nothing" means the guard has a
+  dead refusal path and is the finding the proof exists to produce. A reader who cannot
+  tell them apart will redo the proof, get the same message, and conclude the tooling
+  is flaky.
+
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "It does not report the unchanged
+  verdict as a proof that succeeded" asserts an absence and is green on arrival.
+  INJECTION: treat any completed proof run whose exit status is zero as a successful
+  proof, ignoring whether the verdict moved. Under that injection the landed-but-inert
+  alteration reports as a successful proof; this criterion must go RED naming that case,
+  and must return to green on revert.
+
+
+  SECOND NAMED MUTATION, FOR THE DISTINGUISHABILITY CLAUSE. Emit one shared message for
+  both failing outcomes. Under that injection the run still fails in both cases — so the
+  parent's clauses stay green — and only this criterion goes RED. That asymmetry is the
+  reason this record exists.

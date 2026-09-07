@@ -68,13 +68,22 @@ from generate_ticket_from_ac import _build_agents_map  # noqa: E402
 # store-wide test walks the real store, which is exactly why it exists. The hook's
 # silence was not a pass. This test's allowlist was the only record that the
 # disagreement was known at all.
+#
+# BP-1100g-4-i removed 2026-09-01, reconciled rather than aged out. Same shape as
+# BP-1100g-5-i: it declared declares_side_effect: true, but every Then clause is a
+# reporter/refuser — "the work is NOT refused", the outcome is byte-identical
+# across cases, the wording is exactly "promised and claimed" — with no durable
+# object whose being written outlives the run. The derivation excludes transient
+# destinations (stdout, stderr, exit status) on purpose, so false is the honest
+# value. it-po's original note argued true from the output being "user-facing
+# commit-time output whose exact wording is load-bearing" — that conflates
+# importance with durability, which is not what the derivation measures.
 _KNOWN_PRE_EXISTING_DISAGREEMENTS = frozenset({
     "BO-2400g-4",
     "BO-2400g-4-i",
     "BO-2900g-1",
     "BO-2900g-2-i",
     "BO-2900g-4",
-    "BP-1100g-4-i",
 })
 
 

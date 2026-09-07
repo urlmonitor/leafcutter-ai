@@ -1,0 +1,231 @@
+id: ACS-1300c-1
+components:
+  - ac_store
+title: "The repair awards nothing — the finished-state field is never written"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a store containing two records whose coverage lists are empty, whose naming tests
+    are present and pass when run, and whose finished state reads as unfinished,
+  And, in the same store, a record whose finished state already reads as finished,
+  When the repair tool is invoked out of process with the apply request,
+  Then both of the first two records hold their naming test's path afterwards,
+  And the line carrying each of those two records' finished state is
+    character-for-character identical to that line before the run,
+  And no file anywhere under the store has its finished-state value changed by the run,
+    including the record that already read as finished,
+  And the run's report shows both records were repaired, so the unchanged finished state
+    is a refusal exercised by a demonstrably live run and not the residue of a run that
+    did nothing,
+  And the report names those two records as eligible to be marked finished and not so
+    marked, with that eligibility taken from the verdict the existing done-proof oracle
+    reaches for each record rather than from a judgement the repair formed itself,
+  And the report states that this eligibility is not a consequence of the repair: the
+    eligibility verdict computed for each of those records BEFORE the run is the same
+    verdict computed for it after, and the report says so rather than presenting the
+    record as newly unblocked,
+  And that eligibility appears only as a report line: re-reading each record from disk
+    after the run shows the same finished state it had before.
+depends_on:
+  - ACS-1300c
+doc_links:
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: relates-to
+    status: exists
+    relevance: "WHERE THE DONE BADGE STAYS. Promoting finished state remains this tool's job, behind its own evidence gate. The eligibility clause exists so the repair's report is useful as input to this tool without the repair becoming a second, ungated route into the same field."
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: "verify_done_eligible is THE per-record eligibility oracle, and the eligibility clause requires its verdict rather than a second one. Two readers of the same evidence drift, and a second eligibility rule inside a repair tool would drift toward whatever the repair just wrote — it would be marking its own homework."
+  - path: docs/acceptance-criteria/build-orchestration/BO-202.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "A LIVE TWO-FOR-ONE INSTANCE OF THIS TREE'S DEFECT, and the natural regression fixture. Measured on this branch: it still reads work_status: todo although its fix shipped 2026-08-26, AND its single coverage entry names a file whose 18 tests are all frontmatter and registry assertions — not one exercises the criterion. So the record that exists to keep coverage honest is both mis-recorded and covered in name only. NOTE THE BOUNDARY IT DRAWS FOR THIS AC: the repair restores BO-202's coverage link and reports it as eligible. It does not flip the field. Its notes describe the defect as filed on 2026-08-25 and are stale — do not read them as a current diagnosis."
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: describes
+    status: exists
+    relevance: "THE PRECEDENT FOR THE ONE-ORACLE RULE. EPIC-ComputedQualityGates' layer-3 defect was two readers of one classification developing disjoint vocabularies. The eligibility clause's insistence on verify_done_eligible's verdict rather than a second one is that lesson applied here, where the second reader would be reading evidence it had itself just written."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE FINISHED-STATE FIELD IS NEVER WRITTEN, ON ANY PATH REACHABLE FROM THIS TREE. Refused, not deferred. This is not a phasing decision, it is not open to an implementer who notices how easy it would be, and no it_requirement anywhere in this tree licenses it 'when the evidence is strong' — the strength of the evidence is exactly what makes the write tempting and exactly why it is forbidden. Promotion stays with `scripts/ac_store/mark_ac_done.py` behind its own gate. TQ-400f was authored and closed unbuilt on 2026-09-01 partly for approaching this line."
+  - "THE ELIGIBILITY VERDICT IS `done_proof.verify_done_eligible`'s, UNMODIFIED — THERE IS NO SECOND ORACLE. Do not adjust, post-filter, or re-derive eligibility inside the repair. A repair that formed its own verdict would be reading evidence it had just written, under a rule it wrote itself, and would drift toward whatever it had done. Note that ACS-1300a-1 also names `done_proof` as the source of the tag scan; that is the same module used as one reader in two roles, not two oracles — do not fork a private copy for either use. CLARIFIED 2026-09-01 AGAINST THE BEFORE/AFTER CLAUSE: the pre-run and post-run verdicts the criterion requires are TWO CALLS to that one oracle, not a cached verdict reused as an answer. The pre-run verdict is retained solely to be compared with the post-run one and reported alongside it; it is never presented as the record's current state, and no verdict is ever stale-read in place of a fresh call."
+  - "ELIGIBILITY IS A REPORT LINE AND NOTHING ELSE, AND IT IS COMPUTED TWICE. It must be structurally impossible for an eligibility verdict to reach a write path: no branch anywhere consumes one, and the only thing done with the list is printing it. CORRECTED 2026-09-01 — THE EARLIER FORM OF THIS REQUIREMENT SAID THE LIST IS 'PRODUCED AFTER ALL WRITING IS COMPLETE', WHICH THE AMENDED CRITERION NOW MAKES INSUFFICIENT: the verdict must be computed once BEFORE any write and once after, because the report has to state that the two are equal, and a run that only measures after writing cannot make that statement at all. Neither computation may gate, order, skip or otherwise influence any repair — the pre-run pass is an observation taken on the way in, not a precondition. Reporting 'this record is eligible and is not marked finished' remains one line of code away from marking it, which is why the report and the refusal live in one criterion: the implementer must not be able to ship the useful half without the restraint."
+  - "`scripts/ac_store/cross_reference_audit.py::_apply_backfill` MUST NOT BE CALLED, WRAPPED, OR COPIED. Verified 2026-09-01: line 457 sets `ac_data[\"work_status\"] = \"done\"`, then re-serialises the record. It is a NAMED anti-duplication candidate in this tree's L0 and L1, so an implementer following the reuse advice carefully arrives at the forbidden write as a side effect of good advice followed well. Read-side helpers only: `_detect_worktree_root`, `_load_ac_yamls`, `_write_report`. `scripts/ac_store/backfill_components.py` is the safe write-side model."
+  - "THE REFUSAL IS VERIFIED AT THE LINE, NOT AT THE VALUE. Compare the record's finished-state LINE character for character before and after, not the parsed value: a re-serialisation that preserves the value while re-quoting the line has still opened and rewritten the record, which ACS-1300c-2 forbids for a separate reason."
+  - "THE PAIRING IS PART OF THE GUARANTEE, NOT PART OF ITS TEST. 'No finished state changed' is satisfied by a tool that does nothing, by a crashed run, and by a test that never invoked the tool. The refusal is only meaningful about a run that was demonstrably live and writing, so the implementation must not permit a globally-disabled write mode in which the refusal trivially holds."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md rules 1-4) and must fail toward not writing: an undetermined eligibility verdict is reported as an abstention (ACS-1300c-3), never resolved by a default."
+delivers_to:
+  agent: python-coder
+  contract: "The post-repair eligibility list — records the done-proof oracle reports as eligible and which are not marked finished — offered as input to mark_ac_done and to nothing else. It is a report, never an instruction the repair executes. CORRECTED 2026-09-01: this list is NOT 'records whose verdict changed as a result of the restored links'. Restoring a link changes no verdict, because verify_done_eligible resolves from the direct tag first; the list is a standing inventory the repair happens to be well placed to emit, not an effect it produced."
+expects_from:
+  ac_id: ACS-1300a-2
+  contract: "The apply step whose write set this refusal constrains."
+test_spec:
+  - name: test_acs_1300c_1_two_records_are_repaired_and_no_finished_state_line_changes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "THE CENTRAL TEST — THE PAIRING MUST STAY INSIDE ONE INVOCATION AND ONE SCENARIO. One out-of-process apply run over a real on-disk store holding two unfinished records with empty coverage lists whose naming tests are present and ACTUALLY PASS when run, plus one record already reading as finished. Assert together: both records now hold their naming test's path; the finished-state LINE of each of those two is character-for-character identical; and no file anywhere under the store has its finished-state value changed, the already-finished record included. Separating the refusal clauses from the repair clauses into different scenarios reopens all three no-op escapes."
+  - name: test_acs_1300c_1_report_shows_both_records_repaired
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The run's report names both records as repaired. This is what makes the unchanged finished state a refusal a live run exercised rather than the residue of a run that did nothing."
+  - name: test_acs_1300c_1_eligibility_reported_for_each_record_equals_verify_done_eligible_s_verdict
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER, ONE ORACLE. For every record in the store, assert the eligibility the report states equals `done_proof.verify_done_eligible`'s verdict computed independently against the post-run store. Assert per record, never on totals — matching totals hide two offsetting misclassifications, and offsetting misclassifications are how a second reader drifts undetected."
+  - name: test_acs_1300c_1_eligibility_is_report_only_and_disk_state_is_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Re-read each record from disk after the run and assert its finished state is the value it had before, including for every record the report names as eligible. The eligibility list must be observable in the report and absent from the filesystem. Additionally compute verify_done_eligible for those records BEFORE the run and assert the verdict is unchanged after it — the report must not present a standing eligibility as something the repair produced."
+  - name: test_acs_1300c_1_report_names_eligible_and_unmarked_records_and_says_the_repair_did_not_cause_it
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      THE TWO CORRECTED CLAUSES, ASSERTED AFFIRMATIVELY. Assert (a) the eligibility list
+      holds exactly those records the oracle calls eligible AND whose finished state is
+      not marked — a record already reading as finished must NOT appear, so the list is a
+      standing inventory of what is unmarked, not a roll-call of everything eligible — and
+      (b) the report STATES IN ITS OWN TEXT that this eligibility is not a consequence of
+      the run, carrying the before-run and after-run verdicts and their equality. The
+      neighbouring test asserts the verdicts ARE equal; this one asserts the report SAYS
+      SO. A report that is silently correct still lets the next reader conclude the repair
+      unblocked the record — that inference is exactly the false premise this criterion
+      was amended to kill, and it recurs downstream unless the report closes it in words.
+  - name: test_acs_1300c_1_bo_202_as_a_real_store_regression_fixture
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "AGAINST THE REAL RECORD, COPIED VERBATIM, NOT A HAND-TYPED FIXTURE. Copy `docs/acceptance-criteria/build-orchestration/BO-202.yaml` into a temporary store as it exists on disk. Assert the run restores its coverage link, reports it, leaves its `work_status: todo` line byte-identical, and — if the oracle says so — names it eligible and unmarked. Compute BO-202's verdict BEFORE the run as well and assert it is unchanged: BO-202 is this tree's real-artifact instance of the corrected model, eligible or not on its own direct tag before the repair ever touched it, and it is the record most likely to be misread as newly unblocked. A hand-typed fixture reproduces the author's formatting bias; this repository has already shipped a parser that passed every synthetic fixture and no-opped on every real file."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+- reason: false-premise-correction-criteria-changed-reapproval-required
+  by: business-analyst
+  at: 2026-09-01
+  note: 'CRITERIA CHANGED ON AN ALREADY-APPROVED RECORD; readiness demoted approved
+    to draft so the approval gate is re-run rather than silently inherited. The approval
+    above was granted against a criterion that is now known false. What was wrong:
+    the clause read "the report names those two records as having become eligible",
+    and delivers_to described "records whose done-proof verdict CHANGED to eligible
+    as a result of the restored links". Independent re-measurement 2026-09-01 established
+    that restoring a coverage link changes no record''s eligibility and never did
+    — verify_done_eligible resolves from the direct tag first and reads the coverage
+    list only on the composite path, and every rotted record has a direct tag by construction;
+    527 of 549 were already eligible. What changed: the clause now requires the report
+    to name records eligible AND NOT MARKED, plus a new clause requiring the report
+    to state that the eligibility is not a consequence of the repair, evidenced by
+    the before-run and after-run verdicts being equal. delivers_to reworded and its
+    prior claim explicitly retracted in place. One test_spec description corrected
+    from "newly eligible" and extended to compute the pre-run verdict. The refusal
+    clauses, the pairing, all seven it_requirements and the other four test_spec entries
+    are UNCHANGED and remain valid. Added ACS-200f as the worked example for why the
+    oracle itself needs watching.'
+- reason: technical-layer-swept-for-residue-of-the-became-eligible-model
+  by: it-po
+  at: 2026-09-01
+  note: 'RE-ENRICHMENT SWEEP AFTER THE FALSE-PREMISE CORRECTION. All seven it_requirements
+    and all five test_spec entries were re-read against the amended criteria. TWO
+    SURVIVING TRACES FOUND AND CORRECTED, both in it_requirements and both now actively
+    contradicted by the new before/after clause rather than merely stale. (1) it_requirement
+    3 said the eligibility list "is produced after all writing is complete" — under
+    the amended criterion the verdict must be computed once BEFORE any write and once
+    after, so a post-write-only computation cannot state the equality the report now
+    owes. Rewritten to require both computations while keeping the structural rule
+    intact: no branch consumes a verdict, neither pass may gate or reorder any repair.
+    (2) it_requirement 2 forbade "cache" alongside compute/adjust/post-filter, which
+    now reads as a prohibition on holding the pre-run verdict at all. Clarified: the
+    pair is two calls to the one oracle, the pre-run verdict is retained only for
+    comparison and never reported as current state. it_requirement 4 (cross_reference_audit._apply_backfill:457
+    forbidden) re-checked and left exactly as written — it is unaffected by the correction.
+    it_requirements 1, 5, 6, 7 unchanged. ONE test_spec ADDITION: the amended criteria
+    carry two obligations no existing entry asserted affirmatively — that the list
+    is filtered to eligible AND NOT MARKED, and that the report SAYS the eligibility
+    is not a consequence of the run. Entry 4 asserts the verdicts are equal but not
+    that the report states it, and entry 3 checks verdict fidelity without the unmarked
+    filter. The BO-202 entry was extended to take the pre-run verdict too, so the
+    corrected model is exercised on the real artifact and not only on the synthetic
+    store. criteria, delivers_to, expects_from, doc_links, assigned_agent, complexity
+    and readiness untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+superseded_by: null
+covered_by:
+  - ACS-1300c-1-i
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE CENTRAL SAFETY PROPERTY OF THE WHOLE TREE, and it is REFUSED, NOT DEFERRED. This
+  is not a phasing decision and it is not open to the IT PO or to an implementer who
+  notices how easy it would be. Restoring an evidence link is not the same act as
+  awarding a done badge: auto-promoting finished state from derived evidence
+  manufactures a done claim on the single field the entire phantom-done edifice rests
+  on — the exact failure mode this repository exists to prevent, committed by the tool
+  built to prevent it. The neighbouring L1 TQ-400f was authored and then closed unbuilt
+  on 2026-09-01 partly for approaching this line.
+
+  THE PAIRING IS WHAT MAKES THIS FALSIFIABLE. "No finished state changed" is perfectly
+  satisfied by a tool that does nothing, by a crashed run, and by a test that never
+  invoked the tool. Requiring, in the SAME invocation, that two records demonstrably
+  gained their coverage entries excludes all three. Any amendment that separates the
+  refusal clauses from the repair clauses into different scenarios reopens them.
+
+  THE ELIGIBILITY CLAUSES ARE THE SHARP EDGE, and they are deliberately adjacent to the
+  refusal rather than in a record of their own. Reporting "these records could now be
+  marked finished" is exactly one line of code away from marking them, and separating
+  the report from the refusal would let one ship without the other. Keeping them in one
+  criterion means the implementer cannot satisfy the useful half without satisfying the
+  restraint.
+
+  WHY THE VERDICT MUST BE THE ORACLE'S. A repair that computed its own eligibility would
+  be reading evidence it had just written, in a rule it wrote itself. Requiring
+  verify_done_eligible's verdict keeps the judgement with the code that already fails
+  closed on xfail, skip, error and not-run outcomes.
+
+  CORRECTED 2026-09-01 — THE ELIGIBILITY CLAUSES SAID "BECAME ELIGIBLE" AND THAT WAS
+  FALSE. Restoring a coverage link changes no record's mark-done eligibility, and never
+  did: verify_done_eligible resolves a record's proof from its direct `# covers:` tag
+  first and reads the coverage list only on the composite path, and every rotted record
+  has a direct tag by construction. Measured: 527 of 549 rotted records were ALREADY
+  eligible. The eligibility list this AC requires is therefore a standing inventory the
+  repair is well placed to emit, not an effect the repair produced. The clause now
+  requires the report to SAY that — before-and-after verdicts equal — which converts the
+  correction into a guard against the same misreading recurring downstream.
+
+  THE REFUSAL IS UNAFFECTED AND IF ANYTHING SHARPER. The temptation the refusal exists to
+  resist was always "the evidence is right there, just flip it". Under the corrected model
+  the evidence was right there BEFORE the repair ran, so the repair has even less claim to
+  be the thing that earned the promotion. 276 records are eligible and unmarked today;
+  clearing them is a separate sweep, and this tree's report is an input to it, never an
+  execution of it.
+
+  ACS-200f IS THE WORKED EXAMPLE FOR WHY THE ORACLE ITSELF NEEDS WATCHING. Found and fixed
+  on this branch 2026-09-01: ACS-200f was marked done at priority high carrying the
+  criterion "the tool's coverage gate treats those covering tests as passing", which was
+  FALSE at HEAD for every parametrized covering test — done_proof._find_nodeid_for_test
+  matched nodeid.endswith("::func"), which a parametrized nodeid never satisfies, so five
+  records with fully green tests were refused as "linked test not run". The AC written to
+  stop the gate falsely refusing was itself falsely refusing, its covering test never
+  exercised the case, and only a whole-store oracle run surfaced it. Every eligibility
+  figure this AC depends on is downstream of that fix.

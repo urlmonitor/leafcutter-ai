@@ -49,6 +49,10 @@ criteria: |
 depends_on:
   - GE-123a
 doc_links:
+  - path: templates/skills/security-scanner/scripts/scan_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. The sensitive-filename rule and the set of filename forms it recognises live in this module; this criterion is the deletion guard on both — the finding must survive de-privileging, and the recognised set must not narrow. Canonical copy per ADR-001."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -124,6 +128,15 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added one doc_link,
+    templates/skills/security-scanner/scripts/scan_secrets.py with relationship modifies.
+    Nothing else changed; all pre-existing doc_links kept at their original relationships.
+    WHY: this record declared no edit surface, leaving the ticket generator to harvest
+    paths out of prose (KI-ACD-023). The sensitive-filename rule and the set of filename
+    forms it recognises both live in scan_secrets.py, and this criterion is the deletion
+    guard on both of them — the finding must survive being de-privileged, and the
+    recognised set must not narrow. A record whose whole job is to stop a rule being
+    deleted from one specific module must name that module.'
 superseded_by: null
 covered_by: []
 implemented_by:

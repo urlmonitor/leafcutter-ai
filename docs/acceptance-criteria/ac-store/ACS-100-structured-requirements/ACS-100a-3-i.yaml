@@ -1,0 +1,89 @@
+id: ACS-100a-3-i
+components:
+  - ac_store
+title: "A test_spec framework the project actually ships is accepted, and an unknown one is still refused"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance-criterion record whose test_spec names a test framework this
+    repository actually ships a runner or skill for,
+  When the schema validator checks that record,
+  Then the record validates, and a component-wide validate_ac_schema run over the
+    directory containing it reports every file valid,
+  And this holds specifically for `framework: playwright`, which the package ships a
+    Playwright-driven `webapp-testing` skill for and which two approved, high-priority
+    records (BP-1400c-1 and BP-1400c-1-i) already declare for a headless route-render
+    check.
+
+  And given a record whose test_spec names a framework this repository ships nothing
+    for — an invented value such as "jasmine" or an empty string —
+  When the same validator checks it,
+  Then validation still fails, so widening the vocabulary does not turn the field into
+    a free-text box.
+
+  Coverage note: the discriminating half is the second block. A test that only asserts
+  playwright is accepted would pass equally against a schema that dropped the enum
+  altogether, which is the opposite of what this criterion asks for — the field must
+  admit what the project ships and refuse what it does not. Both halves are required.
+depends_on: [ACS-100a-3]
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: modifies
+    status: exists
+    relevance: "The test_spec.framework enum. Held ['unittest', 'pytest'], which refused the playwright value two approved BP-1400 records legitimately declare, so validate_ac_schema failed across the whole build_pipeline component for a reason unrelated to any branch."
+  - path: templates/skills/webapp-testing/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The Playwright-based verification skill the package ships. Its existence is why playwright is a framework this project genuinely uses rather than an arbitrary widening of the vocabulary."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by:
+  - reason: >
+      The originally-authored second criteria block demanded that the validation
+      diagnostic name the offending framework value and list the accepted enum
+      members. Delivering that required restructuring test_spec from
+      `oneOf: [<array-schema>, <null-schema>]` to a plain `type: ["array", "null"]`
+      union, so jsonschema's error surfaces the leaf enum violation instead of the
+      generic "is not valid under any of the given schemas" oneOf message. That
+      restructuring was implemented, then reverted here: the oneOf shape is a
+      contract twelve tests across four other modules
+      (unit_tests/ac_store/test_derived_test_reachability_floor.py,
+      unit_tests/ac_store/test_bo_2900g_3.py,
+      unit_tests/ac_store/test_bp_1100g_3.py,
+      unit_tests/ac_store/test_bp_1100g_3_ii.py,
+      unit_tests/commit_guardian/test_bp_1100g_4.py,
+      unit_tests/prompt_assembly/test_bp_1100g_1.py) depend on — they navigate the
+      schema by literally indexing `["oneOf"]` to reach the test_spec item schema,
+      so removing the combinator raises KeyError there. Trading twelve other ACs'
+      coverage for one diagnostic-quality improvement was the wrong trade, so the
+      second criteria block is narrowed here to what the enum widening alone
+      delivers: an unshipped value is still refused. The diagnostic-quality
+      improvement is deliberately deferred, not forgotten — its honest home is
+      check_ac_schema.py's error formatting (post-processing the oneOf failure to
+      surface the leaf enum violation), which is a different file and outside this
+      single-file schema-change scope.
+    date: 2026-09-01
+    origin_agent: python-coder
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_check_ac_schema.py
+implemented_by:
+  - config/ac_store_schema.json
+change_target: schema
+risk_surface: internal
+test_spec:
+  - name: test_playwright_framework_is_accepted_and_unknown_framework_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Validates a record declaring framework: playwright and asserts it passes, then validates records declaring an unshipped framework value (an invented name, and an empty string) and asserts each still fails validation. Both halves in one test so the widening cannot be satisfied by removing the enum."

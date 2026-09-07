@@ -1,0 +1,31 @@
+# MODULE: config/phase_deferral.yaml
+# GOAL: The single, location-keyed declaration of which phase agents the
+#       build drive will NOT dispatch for a ticket at a given location kind.
+#       generate_ticket_from_ac.py's _build_agents_map (the generating side)
+#       and templates/workflows-js/build-feature.js's selectDispatchPhases /
+#       deferredPhases (the dispatching side) must both derive their answer
+#       from THIS file (or, on the drive side, from a status-checker reply
+#       that was itself computed from this file) so the two sides cannot
+#       state different phase sets for the same location (TKT-600b-1).
+# BUSINESS CONTEXT: An epic ticket's own pull request is superseded by one
+#       epic-level pull request covering every ticket on the branch, so the
+#       drive does not dispatch the pull-request phase for a ticket generated
+#       into an epic folder. A standalone ticket has no such covering PR, so
+#       its own pull-request phase is not deferred.
+# ARCHITECTURE: Read directly by generate_ticket_from_ac.py::_build_agents_map
+#       via the same config-read path already used for
+#       config/guardrail_gates.yaml. A location kind with an EMPTY list is a
+#       positive statement ("this location defers nothing"), not the absence
+#       of a rule. A missing/unreadable file must cause generation to refuse
+#       rather than silently fall back to a built-in default (TKT-600b-1's
+#       "must refuse rather than default" constraint) — see
+#       generate_ticket_from_ac.py's PhaseDeferralDeclarationError.
+#
+# Adding a new location kind here requires no source edit on the generating
+# side; adding a new deferred phase name for an existing kind requires no
+# source edit on either side (TKT-600b-1's "no literal phase name in
+# deferral logic" constraint).
+
+epic_member:
+  - pull-request
+standalone: []

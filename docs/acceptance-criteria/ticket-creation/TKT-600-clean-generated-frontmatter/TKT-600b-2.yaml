@@ -1,0 +1,220 @@
+id: TKT-600b-2
+title: "An excluded phase is recorded as excluded, never as signed off, and carries no sign-off row"
+component: ticket-creation
+components:
+  - ticket_creation_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical   # owner decision at the approval gate, 2026-09-01
+roadmap_phase: phase_1
+criteria: |
+  Given a generated ticket whose phase record marks the pull-request phase as excluded,
+    because the drive will not dispatch that phase for this ticket's location,
+  When the ticket is read immediately after generation, and again after a drive that
+    completes every phase the record requires,
+  Then on both readings the pull-request entry's status is "explicitly excluded from
+    this ticket",
+  And on neither reading is it "signed off",
+  And the ticket's sign-off checklist contains no row for the pull-request agent,
+  And the ticket's comment log contains no sign-off entry attributed to the
+    pull-request agent,
+  And the ticket is nonetheless eligible to be recorded complete, because an excluded
+    phase is not an outstanding one.
+
+  Given the same ticket with the pull-request entry set to "signed off" instead,
+  When the ticket is read,
+  Then that is a defect and not an alternative satisfaction of this criterion: no
+    pull-request phase ran for this ticket, and a record saying one did is a false claim
+    of work performed.
+
+  And all four facts above — excluded status, no signed-off status, no checklist row, no
+  comment entry — hold together for every phase the record marks excluded, not for the
+  pull-request phase alone.
+depends_on: [TKT-600b]
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "States that an excluded agent must not appear in the Sign-offs checklist at all, and that an orphan checklist row is itself rejected by the parity guard."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-20260831-1930 records that the hand correction at 9682d6adf set excluded and deliberately did NOT set signed off."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "A phase recorded as passed that never ran — the phantom sign-off, inside the gate's own evidence."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy the test_spec entries below are drawn from."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: >-
+      The four facts an excluded phase must satisfy together, as the shape a
+      checker reads off a generated ticket. All four are properties of the same
+      agent name; satisfying three is not a partial pass.
+    properties:
+      frontmatter_status:
+        const: not_needed
+      signoff_checklist_row:
+        const: absent
+      comment_log_entry:
+        const: absent
+      blocks_completion:
+        const: false
+    required:
+      - frontmatter_status
+      - signoff_checklist_row
+      - comment_log_entry
+      - blocks_completion
+  reference_file_path: scripts/ac_store/generate_ticket_from_ac.py
+  n_location_rule: >-
+    2 surfaces in one file, which must agree. (1) the agents map from
+    _build_agents_map — the status value. (2) the ## Sign-offs checklist rendered
+    by _build_ticket_body, which must omit the row for an excluded agent. Setting
+    the status without dropping the row leaves an unticked box that reads as
+    outstanding work and is rejected outright by the sign-off parity guard;
+    dropping the row without setting the status is the omission TKT-600b-1-ii
+    forbids.
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - python -m pytest unit_tests/ac_store/ -q
+  constraints:
+    - >-
+      The exclusion status and the absence of the checklist row are one change,
+      not two. The rule is already normative — templates/skills/signoff/SKILL.md
+      states that agents marked not_needed must not appear in ## Sign-offs at all,
+      and that orphan checklist rows are themselves rejected by the parity guard —
+      so this AC is making the generator satisfy an existing contract by
+      construction rather than introducing a new one.
+    - >-
+      The excluded phase must reduce the ticket's outstanding set, not satisfy it.
+      Recording the phase as signed off also clears the halt and must be
+      unreachable from the generator: no code path may emit a passing status for a
+      phase that has not run.
+    - >-
+      All four facts must hold for EVERY phase the declaration marks excluded, not
+      for the presently-deferred one. Any implementation that special-cases a phase
+      name here is excluded by the same rule as TKT-600b-1's second scenario.
+    - >-
+      No sign-off comment entry may be written at generation time for an excluded
+      agent. The comment log is testimony from the party that did the work; a
+      generator has performed no phase and may not testify for one.
+    - >-
+      Must not weaken the existing done-eligibility rule (every entry in the agents
+      map is in {not_needed, signed_off}). The ticket becomes eligible because the
+      excluded phase is genuinely not outstanding, never because the gate was
+      relaxed.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A generated ticket on which the four facts hold jointly for every excluded
+    phase — exclusion status, no passing status, no checklist row, no comment
+    entry — and which the existing sign-off parity guard and completion gate accept
+    unmodified. Consumed by the completion writer, which needs the record to be
+    trustworthy rather than merely permissive.
+expects_from:
+  ac_id: TKT-600b-1
+  contract: >-
+    The set of phases the declaration marks excluded for this ticket's location.
+    This AC decides what an excluded phase looks like on disk; it does not decide
+    which phases are excluded.
+test_spec:
+  - name: test_excluded_phase_holds_all_four_facts_at_generation
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Immediately after generation, for every phase the declaration marks excluded:
+      status is the exclusion value, status is not the passing value, no ## Sign-offs
+      row exists for that agent, and no comment entry is attributed to it. Asserted
+      as one conjunction so a partial implementation cannot report a partial pass.
+  - name: test_all_four_facts_survive_a_completed_drive
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Read the same ticket again after a drive that completed every phase the record
+      requires. The four facts must be unchanged, and the ticket must nonetheless be
+      eligible to be recorded complete. Covers the case where something downstream
+      "helpfully" fills the excluded entry in.
+  - name: test_signed_off_without_a_signoff_entry_is_rejected
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Construct the phantom-sign-off record — the excluded agent marked as passed
+      with no sign-off entry behind it — and assert it is rejected rather than
+      accepted as an alternative satisfaction. This is the wrong fix that clears the
+      halt just as effectively and is slightly cheaper to write.
+  - name: test_real_parity_guard_accepts_a_really_generated_ticket
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Run the project's real sign-off parity guard over a ticket produced by the
+      real generator — not a hand-authored fixture — and assert it passes, and that
+      it fails when the excluded agent's checklist row is reinstated. A hand-written
+      fixture reproduces the author's own assumptions about row formatting, which is
+      how the files_touched parser passed every synthetic test while being a no-op
+      on every real ticket.
+test_rationale: >-
+  Marking the phase as passed satisfies the completion gate exactly as well as
+  marking it excluded, so no test framed around "the drive no longer halts" can
+  distinguish the correct fix from the phantom one. The boundary entry is therefore
+  the load-bearing test: it asserts the phantom record is REJECTED, which is a claim
+  about the checker's behaviour rather than the generator's, and it is the only entry
+  that fails if someone reaches for the cheaper status. The real_artifact entry runs
+  the actual parity guard over actual generator output because the checklist-row half
+  of this criterion is a text-rendering concern, and text-rendering concerns are
+  precisely where fixtures and reality diverge.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-01
+    note: >-
+      Added it_requirements, test_spec, test_rationale and contracts. Named the two
+      surfaces that must agree (agents map and the ## Sign-offs checklist rendered by
+      _build_ticket_body) and recorded that the no-row rule is already normative in
+      templates/skills/signoff/SKILL.md rather than new here. Criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE CRITERION AND NOT A LINE IN TKT-600b-1. Marking the phase
+  "signed off" clears the halt just as effectively as marking it excluded — the
+  completion gate treats both as satisfied. It is the phantom sign-off this project
+  exists to prevent: a phase that never ran, recorded as having passed, in the very
+  record the completion gate trusts. Without this criterion stated separately and
+  testably, "signed off" is an available and slightly simpler way to pass TKT-600b-1.
+
+  THE CHECKLIST ROW GOES WITH THE STATUS. Two failure shapes, both real. An excluded
+  agent that keeps its checklist row leaves an unticked box that reads as outstanding
+  work to a human and is rejected outright by the sign-off parity guard. An excluded
+  agent that keeps a row AND gets it ticked is the phantom sign-off wearing a second
+  coat. Both are excluded by requiring the row's absence alongside the status.
+
+  PRECEDENT, NOT INVENTION. The hand correction of all 25 tickets (9682d6adf) made
+  exactly this distinction, and the register records the reasoning: excluded means
+  "explicitly excluded from this ticket", which is precisely what the drive does; signed
+  off would have been false. This criterion makes the generator do by construction what
+  a person had to do by hand 25 times.

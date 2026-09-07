@@ -15,7 +15,7 @@ BUSINESS CONTEXT: AC BP-900a..BP-900g verify deployment completeness
     would reintroduce the source-tree bias that hides missing-deploy defects)
     and then reuses the existing reference-resolution machinery against the
     deployed output.
-ARCHITECTURE: A single CLI entry point (``main``) that composes four small,
+ARCHITECTURE: A single CLI entry point (``main``) that composes five small,
     independently testable steps: (1) ``_ensure_scratch_environment`` creates
     ``--target-dir`` and seeds a minimal ``skills_config.json`` when absent;
     (2) ``_maybe_run_build`` shells out to ``<--package-dir>/scripts/build.py``
@@ -26,27 +26,39 @@ ARCHITECTURE: A single CLI entry point (``main``) that composes four small,
     ``build_propagation_audit.build_broken_ref_report`` from
     ``--package-dir/scripts`` and reuses them, unmodified, against the
     deployed tree — per the ticket's Implementation Notes, this script does
-    not reimplement the matching rules those modules already own.
+    not reimplement the matching rules those modules already own; (5), only
+    when ``--use-install`` is given, ``run_use_install_and_report`` (in the
+    sibling module ``_use_install_step.py``, kept there to stay within this
+    file's line-size budget and per BP-900h-6's "one entry point for the job
+    and its test" it_requirement) drives a real ``git init`` + real
+    ``pre-commit install`` + real ``git commit`` over the built tree and
+    reports which guards the commit path actually executed — the "use it,
+    don't just build it" half BP-900h-1..BP-900h-2 leave uncovered, since a
+    guard only speaks when a commit is attempted.
 
 Usage::
 
     python scripts/ci/check_consumer_install.py \\
         --package-dir <path-to-leafcutter-ai-checkout> \\
         --target-dir <scratch-dir> \\
-        [--skip-build]
+        [--skip-build] [--use-install]
 
 CI registration::
 
     # In your CI YAML (e.g. .github/workflows/ci.yml):
     - name: Consumer install simulation
       run: python leafcutter-ai/scripts/ci/check_consumer_install.py \\
-             --package-dir leafcutter-ai --target-dir .
+             --package-dir leafcutter-ai --target-dir . --use-install
 
 Exit codes:
-    0 — build succeeded, deployed tree is complete, all references resolve.
+    0 — build succeeded, deployed tree is complete, all references resolve,
+        and (with --use-install) the adopter's first commit completed with a
+        non-empty executed-guard record.
     1 — build.py exited non-zero, the deployed tree is missing scripts/ or
-        agents/, or one or more compiled-template script references do not
-        resolve to a deployed file (unresolved paths are named on stderr).
+        agents/, one or more compiled-template script references do not
+        resolve to a deployed file (unresolved paths are named on stderr),
+        or (with --use-install) the commit failed or its executed-guard
+        record was empty.
     2 — usage/environment error (bad --package-dir, filesystem error, or the
         reference-resolution modules could not be imported).
 """
@@ -58,6 +70,19 @@ import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
+
+_THIS_DIR = Path(__file__).resolve().parent
+if str(_THIS_DIR) not in sys.path:
+    # Guarantees the sibling module resolves for an import-based caller too,
+    # not only under direct script execution (where the interpreter already
+    # adds argv[0]'s directory to sys.path implicitly). See BP-900h-6-i
+    # review finding (b): an unqualified `from _use_install_step import ...`
+    # relies on that implicit script-execution behaviour and raises
+    # ModuleNotFoundError for any caller that imports this module instead of
+    # running it as __main__.
+    sys.path.insert(0, str(_THIS_DIR))
+
+from _use_install_step import check_target_entitlement, run_use_install_and_report
 
 _MINIMAL_SKILLS_CONFIG: dict[str, str] = {
     "_comment": "Minimal config for consumer-install simulation (BP-900h-1).",
@@ -286,6 +311,17 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "check against an already-deployed tree."
         ),
     )
+    parser.add_argument(
+        "--use-install",
+        action="store_true",
+        help=(
+            "After building and verifying the deployed tree, git-init the "
+            "install, stage an ordinary adopter change, and attempt a real "
+            "commit through the ordinary commit path (BP-900h-6). Reports "
+            "an 'EXECUTED GUARDS:' line naming every guard the commit path "
+            "itself reported as having run."
+        ),
+    )
     return parser
 
 
@@ -304,6 +340,24 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
+    if args.use_install and target_dir.exists():
+        # Entitlement (BP-900h-6-i) must be checked BEFORE any mutation at
+        # all — including the scratch-environment bootstrap below, which
+        # writes a skills_config.json into target_dir when one is absent.
+        # Skipped when target_dir does not exist yet: a not-yet-created
+        # directory holds nothing a census could catch as mutated, and
+        # run_use_install_and_report re-checks entitlement once the
+        # directory exists, later in this same flow.
+        entitlement_violation = check_target_entitlement(target_dir)
+        if entitlement_violation is not None:
+            print(
+                f"CONSUMER INSTALL SIMULATION REFUSED: target {target_dir} is not "
+                f"entitled to the use-install step's destructive actions: "
+                f"{entitlement_violation}.",
+                file=sys.stderr,
+            )
+            return 1
+
     setup_code = _ensure_scratch_environment(target_dir)
     if setup_code != 0:
         return setup_code
@@ -319,6 +373,11 @@ def main(argv: list[str] | None = None) -> int:
     refs_code = _check_unresolved_references(package_dir, output_root)
     if refs_code != 0:
         return refs_code
+
+    if args.use_install:
+        use_install_code = run_use_install_and_report(target_dir)
+        if use_install_code != 0:
+            return use_install_code
 
     print(f"CONSUMER INSTALL SIMULATION OK: deployed output root at {output_root}")
     return 0

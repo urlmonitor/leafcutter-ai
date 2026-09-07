@@ -1,0 +1,478 @@
+id: GE-127c-1
+title: "The outcome states which kinds of file it measured, so a kind that was never measured is not read as having passed"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a commit stages files of several kinds, of which some kinds are within
+    the size standard's scope and at least one kind is not,
+  When the author performs an ordinary commit,
+  Then the outcome states which kinds of file the standard measured on this run,
+    and states that files of the remaining staged kinds were not measured,
+  And a staged file of a kind that was not measured is never reported as being
+    within its permitted length, and is never counted among the files found to be
+    within their permitted length,
+  And given the set of kinds in scope is changed so that a kind previously
+    outside it is now within it, and nothing else in the repository changes,
+  When the author performs an ordinary commit staging one file of that kind,
+  Then the kinds the outcome states it measured include that kind, and that file
+    is measured — establishing that what the outcome states is taken from the
+    scope actually in force on the run rather than from a set written into the
+    standard itself,
+  And given a file is refused for exceeding its permitted length,
+  When the refusal offers advice on how to divide the file,
+  Then for every distinct form of dividing advice the standard is capable of
+    producing there is a kind of file it measures that produces it — the standard
+    carries no advice for a kind it can never refuse.
+depends_on:
+  - GE-127c
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE — INHERITED AND NOT RESTATED. Stating what was
+      measured is worth nothing while nothing is measured at any commit; that
+      registration is BP-100n-4's day-one triage. Do not restate the census, its
+      counts, or any part of it. Note also the pattern this record borrows from
+      that criterion and should borrow only in shape: its decisive descriptor adds
+      one item to a population and requires a stated number to move. The third
+      clause here is the same idea applied to the set of kinds in scope, and it is
+      the clause to write first.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The scope decision is a configuration decision on a watched package surface,
+      which is why the set of kinds in force must be readable at run time rather
+      than written into the standard. The concrete set of kinds is pinned at
+      technical enrichment, NOT in this record and NOT in this doc_link.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Two facts read from source in this worktree on 2026-09-01, both of which
+      this record's clauses turn on, and neither of which may be re-expressed as
+      an extension list in the criteria. First, a staged file whose kind is
+      outside scope is skipped by an early continue: it appears in no reported
+      class at all, so the outcome cannot distinguish "measured and fine" from
+      "never looked at". Second, the refusal carries a branch of dividing advice
+      addressed to a kind of file that the configured scope does not contain, so
+      that branch cannot execute — the fourth clause disposes of it as a
+      consequence of the rule rather than as a special case, which is why the
+      clause is written over ALL forms of advice and names none of them.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Describes the commit-time invocation shape every clause here is
+      written against.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". The third clause is
+      the anti-grep clause of this record: no implementation carrying a set of
+      kinds written into itself can pass it, however that set is spelled.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    THE SCOPE LIST, PINNED. This is the enumeration the L0, the L1 and this record all
+    deliberately withheld, and the user's 2026-09-01 decision deferred to technical
+    enrichment. It belongs here and nowhere in any criterion. Set `file_size.checked_extensions`
+    and `file_size.line_limits` in templates/scripts/commit_guardian/commit_guardian.json to
+    exactly this, and re-run the build:
+    IN SCOPE — ".py" limit 400 (unchanged); ".sql" limit 600 (unchanged); ".js" limit 1000
+    (NEW); ".mjs" limit 1000 (NEW); ".ts" limit 400 (NEW); ".tsx" limit 400 (NEW); ".sh"
+    limit 400 (NEW).
+    OUT OF SCOPE, EACH FOR A STATED REASON, NOT BY OMISSION — ".md", ".yaml", ".json",
+    ".css", ".html", and everything not listed. Grounds are given below, because the whole
+    subject of this L1 is that a kind is outside scope by DECISION rather than by accident.
+  - >-
+    THE MEASURED BASIS FOR THE LIST, RE-MEASURED IN THIS WORKTREE AT b846121c9 UNDER THE
+    GUARD'S OWN COUNTING RULE (docstrings and C-style block comments discarded). Tracked files
+    only. ".py": 845 files, 200 over 400 — already in scope, the largest first-party files in
+    the repository are here, and this is why widening scope is NOT a substitute for
+    GE-127b-1's ratchet. ".sql": ZERO tracked files — in scope today and guarding nothing
+    locally; retained because this is a portable package whose consumers do have SQL, and
+    removing a shipped default costs consumers more than an inert entry costs us. ".js" +
+    ".mjs": 13 files, 10 over 400, largest 2575 counted / 3066 raw — the single largest body
+    of unguarded first-party work and the direct answer to why files keep growing. ".ts" +
+    ".tsx": 99 files (leafcutter-web), 10 over 400, largest 882 — first-party and currently
+    uncapped. ".sh": 3 files, largest 225 — zero present cost, closes a language before it
+    grows one.
+  - >-
+    WHY ".js" AND ".mjs" ARE 1000 AND NOT 400, FROM THE DISTRIBUTION RATHER THAN BY
+    INHERITANCE. The 13 tracked JavaScript files measure, under the guard's own rule: 4, 8,
+    122, 435, 453, 555, 567, 1046, 1315, 1411, 1813, 2441, 2575. There is a clean empty band
+    between 567 and 1046, so every threshold from 600 to 1000 selects the same six files —
+    the six workflow bodies. 1000 is chosen as the top of that band because it leaves the
+    largest compliant file (567) 43% headroom, so the gate does not fire on routine growth of
+    build-epic.js or create-ticket.js, while still catching every file the goal is actually
+    about. 400 would put 10 of 13 over and is precisely the number that arrives by omission;
+    2600 would catch nothing. ".mjs" takes the same limit as ".js" deliberately: a different
+    number, or omitting ".mjs", makes a rename the cheapest way past the gate.
+  - >-
+    ADDING AN EXTENSION TO checked_extensions WITHOUT A MATCHING line_limits ENTRY SILENTLY
+    INHERITS 400. get_limit_for_extension does `FILE_LINE_LIMITS.get(ext, DEFAULT_LINE_LIMIT)`
+    and DEFAULT_LINE_LIMIT is 400, so a half-registration produces a working gate at the wrong
+    number with no error anywhere. Every extension added to checked_extensions MUST get an
+    explicit line_limits entry in the same change, including the ones whose chosen limit
+    happens to equal 400 — an explicit 400 is a decision, an inherited 400 is an accident, and
+    only the explicit one survives a later change to default_limit.
+  - >-
+    ".md" IS OUT OF SCOPE BECAUSE IT IS ALREADY GOVERNED BY A DIFFERENT GATE, AND TWO GATES
+    OVER ONE POPULATION IS THE DRIFT GE-127d EXISTS TO PREVENT. check-doc-length is registered,
+    runs today on `^docs/.*\.md$`, and applies max_lines 300 / max_lines_adr 400 with severity
+    "warn" (no `doc_length` section exists in commit_guardian.json, so all four values are
+    config.py defaults). Bringing ".md" into file_size would put two gates with two limits and
+    two counting rules over the same files. THE GAP THIS LEAVES IS REAL AND MUST BE STATED
+    RATHER THAN GLOSSED: check-doc-length covers only `docs/`, so markdown under `templates/`
+    (28 files over 400 raw) and `tickets/` (35 files over 400 raw) is capped by nothing at all.
+    That gap belongs to check-doc-length's trigger, not to this gate's extension list, and is
+    recommended as a follow-up AC under GE-127c rather than absorbed here.
+  - >-
+    ".yaml", ".json", ".css" AND ".html" ARE OUT OF SCOPE, EACH FOR A STATED REASON. ".yaml":
+    3849 tracked files of which only 4 exceed 400 and the population is overwhelmingly the
+    machine-authored AC store, whose size is already governed by the AC tree-limit and schema
+    gates — a second, length-based rule over generated records would fire on records nobody
+    hand-writes. ".json": configuration and registries, generated or registry-shaped, where
+    length carries no comprehension cost of the kind this goal is about. ".css" (1 file, 128)
+    and ".html" (6 files, max 389): asset surfaces with no file above any candidate limit and
+    no first-party authoring pressure. All four may be revisited; none is excluded by omission.
+  - >-
+    THE NOT-FIRST-PARTY EXCLUSION, STATED POSITIVELY AS THE L1 REQUIRES. Only files TRACKED IN
+    THIS REPOSITORY are in scope. Vendored, generated and installed content is excluded by
+    virtue of being untracked (node_modules/, .next/, .venv/, __pycache__/ are all gitignored),
+    which is a property of the material rather than a hand-maintained path pattern nobody
+    revisits — so new vendored content inherits the exclusion automatically. The gate already
+    reads its population from `git diff --cached`, so this exclusion is a consequence of the
+    existing design and needs no new list. Do NOT add a path-pattern allowlist to express it.
+  - >-
+    THE SET IN FORCE MUST BE READ AT RUN TIME FROM THE CONFIGURATION, NEVER WRITTEN INTO THE
+    GATE. The third clause of this record is the anti-grep clause and no implementation
+    carrying a set of kinds inside itself can pass it, however that set is spelled. The kinds
+    the outcome declares as measured MUST be derived from the same CHECKED_EXTENSIONS value the
+    measurement decision uses — one read, two uses — so the declaration cannot drift from the
+    behaviour. A literal list assembled for the message is the defect one level up.
+  - >-
+    RESOLVE THE FOURTH CLAUSE BY REMOVING THE UNREACHABLE ADVICE, NOT BY WIDENING SCOPE TO
+    REACH IT. check_file_size.py's refusal carries a branch addressed to ".md" files, pointing
+    at @documentation-expert, and ".md" is not in checked_extensions — so the branch cannot
+    execute and is a claim of coverage that is not there. The BA left both reconciliations open;
+    with ".md" deliberately out of scope per the constraint above, the consistent resolution is
+    to DELETE that branch. Deleting advice for a kind the standard does not measure and adding
+    the kinds it now does measure are the same change, and after it every remaining branch of
+    dividing advice must be producible by some file of a measured kind.
+  - >-
+    NO PACKAGE SURFACE — MEASURED, AND THIS IS THE DETERMINATION MOST WORTH SHOWING THE WORKING
+    FOR. This record's own doc_link warns that the scope decision lands on a watched package
+    surface. It does not add a watched entry: `file_size` ALREADY EXISTS as a top-level key at
+    commit_guardian.json line 13, one of the file's 36, and `line_limits` and
+    `checked_extensions` are NESTED inside it. _package_surface_registry.WATCHED_REGISTRIES
+    binds two containers on this file — `hooks_manifest.hooks` by list_ids, and dotted path ""
+    by mapping_keys, which addresses the document's own top level only. A nested addition is
+    invisible to both. package_surface is therefore FALSE and the plain-list spec is correct;
+    the one watched addition in this whole tree is the hooks_manifest id declared on GE-127a-1.
+    Do NOT mint a config_schema_fragment key for `file_size` to clear the validator — it is a
+    real key and needs no fragment, and BP-100n-4-ii records what happened the last two times a
+    fragment was authored for a key that did not exist.
+  - >-
+    ADDING A KIND ACTIVATES GE-127b-1's RATCHET OVER A POPULATION NEVER MEASURED AGAINST ANY
+    LIMIT — THIS IS THE CONSEQUENCE THE L1 SAYS BELONGS WITH THE DECISION. At the pinned limits,
+    six JavaScript files and roughly ten TypeScript files enter ratchet mode the day this lands,
+    on top of the 200 Python files already there. Every one remains workable — that is what
+    GE-127b-1 buys — but none may be grown. GE-127b-1 must land with or before this record; the
+    two are not independently shippable, and shipping this one first makes six workflow bodies
+    uneditable.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE. Edit
+    templates/scripts/commit_guardian/commit_guardian.json only. scripts/commit_guardian/ and
+    the repo-root .pre-commit-config.yaml are UNTRACKED build outputs; templates/commit-guardian/
+    commit_guardian.json is a decoy with no file_size section at all. config.py:19 resolves
+    commit_guardian.json beside the DEPLOYED script, so a limits change written only into the
+    canonical template leaves the running gate on ".py" and ".sql" with no error whatsoever —
+    the single most likely way for this record to appear done and change nothing. Re-run
+    `python scripts/build.py --target-dir .` and verify the deployed copy carries the new list.
+  - >-
+    DO NOT WIRE EXCLUDED_DIRS INTO THIS GUARD WHILE ADDING THE EXTENSIONS. check_file_size.py
+    imports only CHECKED_EXTENSIONS, DEFAULT_LINE_LIMIT and FILE_LINE_LIMITS and never imports
+    EXCLUDED_DIRS, though config.py:90 exports it and README.md line 65 states the global list
+    applies to ALL hooks. It will look like an omission to fix in passing. It is not: the global
+    list is ["unit_tests", "alembic", "debugging", "legacy", "tests", "templates"] and every one
+    of the 11 substantial JavaScript files this record brings into scope lives under
+    templates/workflows-js/. Honouring that list ships the widened scope as a guaranteed no-op —
+    the obvious hygiene fix silently cancels the feature. The README/behaviour discrepancy is
+    GE-127d-1's subject.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around config and
+    file I/O; log at WARNING or higher or re-raise; no bare or blind excepts. A configuration
+    read that fails must not silently yield an empty set of kinds — an empty scope reports
+    nothing and reads as a clean run, which is the failure GE-127b-1-i and GE-127a-1-i both
+    exist to forbid on their own populations.
+test_spec:
+  - name: test_ge_127c_1_the_outcome_states_the_kinds_measured_and_that_other_staged_kinds_were_not
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Stage a commit containing files of several kinds, at least one of which is outside the
+      scope in force, and run an ordinary commit. The outcome must state which kinds the
+      standard measured on this run AND state that files of the remaining staged kinds were not
+      measured. Both are read from the process output; neither is compared against a literal
+      list of today's extensions.
+  - name: test_ge_127c_1_an_unmeasured_kind_is_never_reported_as_within_its_permitted_length
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      A staged file of a kind outside the scope in force appears in no within-permitted-length
+      class and is not counted among the files found to be within their limits. NAMED MUTATION
+      (mandatory, run it, do not merely describe it — the BA's injection): report every staged
+      file in the within-permitted-length summary regardless of whether its kind was measured.
+      Under that injection this descriptor must go RED naming the out-of-scope file, and return
+      to green on revert. Without the injection the clause is satisfied by a standard that
+      reports nothing about anything.
+  - name: test_ge_127c_1_changing_the_scope_in_force_moves_the_stated_set_of_measured_kinds
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      THE DECISIVE ANTI-GREP DESCRIPTOR — WRITE THIS ONE FIRST. Over a fixture configuration,
+      run the gate and capture the stated set of measured kinds and the verdict for one file of
+      a kind currently outside scope. Then add ONLY that kind to the scope in force, changing
+      nothing else, and run again. The stated set must now include that kind and the file must
+      be measured. Both facts are read from the gate's own output, never from a literal expected
+      set. No implementation carrying a set of kinds written into itself — however that set is
+      spelled — can pass this.
+  - name: test_ge_127c_1_every_form_of_dividing_advice_is_producible_by_some_measured_kind
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Enumerate the distinct forms of dividing advice the standard can produce and require each
+      to be produced by an actual refusal of a file of a kind the scope in force contains. This
+      has a genuine red baseline and needs no mutation: the refusal currently carries a branch
+      addressed to ".md" files, and ".md" is not in checked_extensions, so that branch cannot
+      execute. Derive the set of advice forms from the gate's own behaviour over real refusals,
+      not by reading the source for branch strings — a source-reading test passes on advice that
+      is present and unreachable, which is the exact state being forbidden.
+  - name: test_ge_127c_1_the_newly_scoped_javascript_and_typescript_kinds_are_measured_at_their_own_limits
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Guards the silent-inheritance hazard. With the pinned scope in force, a ".js" file at 1001
+      counted lines is refused and a ".js" file at 999 is not, and a ".ts" file at 401 is
+      refused and one at 399 is not — establishing that each newly scoped kind is judged at the
+      limit chosen for it rather than at DEFAULT_LINE_LIMIT. An implementation that adds the
+      extensions to checked_extensions without matching line_limits entries passes every other
+      descriptor here and fails this one.
+  - name: test_ge_127c_1_the_declared_kinds_reach_the_registered_hook_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the gate as a subprocess through the registered hook path and
+      assert the statement of measured and unmeasured kinds appears in the hook's own output
+      stream, and that the exit status is the commit outcome rather than an advisory note. A
+      declaration computed by a function nothing at commit time calls is inert.
+  - name: test_ge_127c_1_the_deployed_configuration_carries_the_pinned_scope_and_the_deployed_gate_applies_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, load the configuration the DEPLOYED gate actually reads — the
+      commit_guardian.json sitting beside the deployed script, which config.py:19 resolves
+      relative to __file__ — and assert its file_size.checked_extensions and
+      file_size.line_limits carry the pinned scope. Then run the deployed gate in a cold process
+      over a real oversized JavaScript file and require a refusal. This is the descriptor that
+      catches the single most likely way for this record to appear done and change nothing: the
+      canonical template edited and the build never re-run.
+test_rationale: |
+  The third clause is written first because it is the only one that cannot pass on an
+  implementation whose scope is a constant, however that constant is spelled: it changes the
+  scope in force and requires the stated set to move with it. Everything else here is
+  satisfiable by a well-written literal, which is exactly the failure mode the parent L1 is
+  designed against — a scope list written when the project used two kinds of file and never
+  revisited as the project grew into others.
+
+  The absence-asserting clause carries the BA's named injection verbatim rather than as prose,
+  because on today's implementation, which reports nothing at any commit, it is green on
+  arrival.
+
+  The fourth clause is the one arm here with a real red baseline and deliberately has no
+  mutation: the ".md" dividing-advice branch exists today and can never execute. Its descriptor
+  derives the set of advice forms from real refusals rather than from source strings, because a
+  source-reading test passes on precisely the present-but-unreachable state being forbidden —
+  the same anti-precedent this component already carries a scar from, where a gate documented
+  as dispatching a triage agent does not.
+
+  Two descriptors exist that the criteria do not name and that the pinned scope decision makes
+  necessary. The per-kind-limit boundary descriptor catches the silent inheritance of
+  DEFAULT_LINE_LIMIT when an extension is added to checked_extensions without a line_limits
+  entry — a half-registration that produces a working gate at the wrong number with no error.
+  The deployed descriptor asserts against the configuration the deployed gate actually reads,
+  because config.py resolves it beside the deployed script: a scope change written only into
+  the canonical template is invisible to every source-tree test and visible only there.
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-127d-1
+    contract: >-
+      The set of kinds in force at run time, read once from file_size.checked_extensions and
+      used both to decide what is measured and to state what was measured. GE-127d-1 compares
+      that same set against every published description of the scope, so it must consume this
+      value rather than re-read or re-derive the configuration independently.
+  - agent: documentation-expert
+    ac_id: null
+    contract: >-
+      The pinned scope and its per-kind limits, for the reference-doc that GE-127c's
+      documentation_triggers require. The published description must state the same seven
+      extensions and seven limits the configuration carries, and the stated grounds for the
+      kinds deliberately excluded, because GE-127d-1's comparison will hold it to them.
+expects_from:
+  ac_id: GE-127a-1
+  contract: >-
+    The commit-time per-file verdict and the single outcome stream, plus the extension-to-limit
+    resolution through the existing `file_size` configuration section. This record widens the
+    set of kinds that resolution covers and requires the run to declare which kinds it measured;
+    it introduces no second gate and no second outcome.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-01
+  note: 'criteria untouched, and no extension appears in any of them — the user''s 2026-09-01
+    deferral is honoured. THE LIST IS PINNED IN it_requirements: in scope .py 400, .sql 600,
+    .js 1000, .mjs 1000, .ts 400, .tsx 400, .sh 400; out of scope .md, .yaml, .json, .css,
+    .html, each with a stated ground rather than by omission. MEASURED AT b846121c9 under the
+    guard''s own counting rule over tracked files: .py 845 files / 200 over 400; .sql ZERO
+    tracked files; .js+.mjs 13 files / 10 over 400 / largest 2575 counted, 3066 raw; .ts+.tsx 99
+    files / 10 over 400 / largest 882; .sh 3 files / largest 225; .md 2147 files / 93 over 400;
+    .yaml 3849 files / 4 over 400. The .js limit of 1000 is taken from the distribution, not
+    inherited: the 13 files measure 4, 8, 122, 435, 453, 555, 567, 1046, 1315, 1411, 1813, 2441,
+    2575, so every threshold from 600 to 1000 selects the same six workflow bodies, and 1000 is
+    the top of that empty band, leaving the largest compliant file 43% headroom. .md is excluded
+    because check-doc-length already governs docs/ markdown at 300 lines warn-only; the real gap
+    that leaves — templates/ (28 files) and tickets/ (35 files) markdown capped by nothing — is
+    named as a recommended follow-up rather than absorbed. PACKAGE SURFACE FALSE, MEASURED
+    against the record''s own doc_link warning: file_size already exists at commit_guardian.json
+    line 13 among 36 top-level keys and line_limits/checked_extensions are nested inside it,
+    while WATCHED_REGISTRIES binds mapping_keys at dotted path "" — the document top level —
+    only. Nested additions are unwatched. No config_schema_fragment minted for a key that
+    already exists; the BP-100k-4 / BP-100k-4-i fictional-key precedent is not repeated. FOURTH
+    CLAUSE RESOLVED CONSISTENTLY WITH THE SCOPE DECISION: the unreachable .md dividing-advice
+    branch is DELETED rather than reached by widening scope. Silent fallback to
+    DEFAULT_LINE_LIMIT 400 and the EXCLUDED_DIRS trap (templates/ is in the global list and all
+    11 substantial JS files live there) are both recorded as hard constraints.
+    declares_side_effect false: every Then clause reports to a stream and sets an exit status.
+    test_spec: seven executing descriptors, one carrying the BA''s named mutation, the anti-grep
+    scope-change descriptor written first, a per-kind-limit boundary descriptor for the silent-
+    inheritance hazard, one the registered hook entry point, and one asserting against the
+    configuration the DEPLOYED gate actually reads.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  NO EXTENSION IS NAMED HERE, AND THAT IS A USER DECISION OF 2026-09-01, NOT AN
+  OMISSION. Which kinds of file to cap was escalated as a scope call and the
+  decision was to author the principle and pin the concrete list at technical
+  enrichment. This record therefore says that the measured kinds are DECLARED and
+  DISTINGUISHABLE FROM PASSING; it does not say which kinds. An amendment that
+  substitutes a list of extensions into any clause above is at the wrong altitude
+  and must be rewritten rather than approved. The same rule governs the doc_links
+  above, which is why none of them names one either.
+
+  THIS RECORD WAS PROPOSED AS AN L3 AND IS AUTHORED AS AN L2, FOR TWO REASONS.
+  Mechanically, the store's id regex admits no roman-suffixed child of an L1, so a
+  `GE-127c-i` would fail the id-format check outright and an L3 would need an L2
+  parent that does not exist. Semantically it is not an edge case of anything: it
+  is the first-order discoverability arm of GE-127c's own promise. Recorded rather
+  than silently changed.
+
+  WHAT THE THIRD CLAUSE IS FOR, AND WHY IT IS THE ONE TO BUILD FIRST. It is the
+  only clause here that cannot pass on an implementation whose scope is written
+  into itself, however that set is spelled — it changes the scope in force and
+  requires the stated set to move with it. Everything else here is satisfiable by
+  a well-written constant. The failure mode this whole L1 is designed against is a
+  scope list written when the project used two kinds of file and never revisited
+  as the project grew into others, with the gap invisible because a file nobody
+  checks produces no finding. A criterion that fixes today's gap by naming today's
+  kinds recreates that failure the next time a kind is added.
+
+  NAMED MUTATION — MANDATORY, EXECUTE IT. "A staged file of a kind that was not
+  measured is never reported as being within its permitted length" asserts an
+  absence, and on today's implementation — which reports nothing at any commit —
+  it is green on arrival. MUTATION: report every staged file in the
+  within-permitted-length summary regardless of whether its kind was measured.
+  Under that injection this clause must go RED, naming the out-of-scope file, and
+  return to green on revert. Without the injection the clause is satisfied by a
+  standard that reports nothing about anything.
+
+  THE FOURTH CLAUSE HAS A REAL RED BASELINE AND NEEDS NO MUTATION. It is false
+  today: the standard carries a branch of dividing advice for a kind of file that
+  its configured scope does not contain, so no refusal can ever produce that
+  branch. Assert it by enumerating the distinct forms of advice the standard can
+  produce and requiring each to be produced by some file of a measured kind. Two
+  reconciliations satisfy it — bring the kind into scope, or remove the advice —
+  and this record deliberately takes no position on which. It only forbids the
+  present state, in which the advice exists and can never be reached, because
+  advice that cannot be reached is a claim of coverage that is not there. That is
+  the same anti-precedent this component already carries a scar from, in which a
+  gate documented as dispatching a triage agent does not, and every author who
+  read the line believed they were covered.
+
+  THE ARM MOST LIKELY TO BE DROPPED, RECORDED SO IT IS NOT. Anything genuinely NOT
+  first-party — content the project did not author and does not maintain — stays
+  out of scope, and the exclusion must be stated positively rather than left to a
+  path pattern nobody revisits. It is not written as a clause here because it
+  belongs with the scope decision the IT PO pins, and a criterion asserting it
+  would have to name paths to be testable. Flagged as an obligation on that
+  decision, not as work absorbed into this record.
+
+  BOUNDARY WITH GE-127d, WHICH IS THE EASIEST ONE IN THIS TREE TO BLUR. This
+  record is about the run STATING what it measured, so that unchecked is not read
+  as passed. GE-127d-1 is about the PUBLISHED description of the scope and the
+  scope actually enforced agreeing. A run that states its measured kinds perfectly
+  while the reference documentation describes a different set still fails
+  GE-127d-1; a perfectly documented scope whose runs say nothing about what they
+  looked at still fails this one. Neither closes the other.
+
+  BOUNDARY WITH GE-127b. Adding a kind of file to scope activates GE-127b-1's
+  ratchet over a population that has never been measured against any limit. That
+  is a consequence of the enrichment decision and belongs in it; it is not a
+  behaviour of this record.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect.

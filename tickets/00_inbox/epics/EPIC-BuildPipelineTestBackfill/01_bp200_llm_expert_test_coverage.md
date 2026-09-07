@@ -54,7 +54,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 01: Green test coverage for BP-200 (llm-expert-agent)
@@ -160,6 +160,5 @@ tests:
 - [ ] test-runner
 - [ ] pr-reviewer
 - [ ] commit
-- [ ] pull-request
 
 ## Comments
