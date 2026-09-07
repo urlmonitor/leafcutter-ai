@@ -65,6 +65,7 @@ Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep".
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import sys
@@ -262,6 +263,73 @@ class TestMidDrivePromotionIsDispatched(_DriveCase):
             "not-a-real-agent",
             dispatched,
             f"an unrecognised agent name became a dispatch: {dispatched}",
+        )
+
+    def test_mid_drive_promotion_is_reachable_from_the_workflow_top_level_body(self):
+        # covers: BO-3700
+        # angle: reachability
+        #
+        # Proof that the re-derivation is exercised by build-feature.js's own
+        # top-level driveTicketPhases() body — not by calling
+        # absorbPromotedPhases() (or an equivalent extracted helper) directly.
+        #
+        # The criterion test above (test_agent_promoted_mid_drive_...) only
+        # asserts that "adr-author" ends up in the final dispatched-labels
+        # list. That alone is not proof of WHERE the promotion logic ran: a
+        # "fix" that re-derives the pending set through some other mechanism
+        # (a post-hoc cleanup pass after the main loop, or a helper exercised
+        # only by a unit test and never wired into the real dispatch loop)
+        # could still leave "adr-author" in `dispatched`, for the wrong
+        # reason, and the criterion test would stay green.
+        #
+        # This test instead requires the exact log line the production code
+        # emits INLINE, immediately after its own real call to
+        # absorbPromotedPhases() inside driveTicketPhases()'s dispatch loop
+        # (build-feature.js ~1707-1721, tagged "(BO-3700)" in its own text).
+        # That line is built from the live loop's own `phaseName` and
+        # `worktreeTicketPath` variables at that exact call site — a
+        # standalone test of absorbPromotedPhases() in isolation, or any
+        # alternate re-derivation path, could never produce this string,
+        # because nothing outside that call site interpolates the real
+        # on-disk ticket path into that exact sentence. So this test can go
+        # red in a case where the criterion test above stays green — which is
+        # what distinguishes a reachability proof from a criterion proof.
+        observation, ticket_path = self._drive(
+            ["architect-review", "test-writer", "python-coder"],
+            {
+                "architect-review": {"status": "ok", "promotes": ["adr-author"]},
+                "test-writer": {"status": "ok"},
+                "python-coder": {"status": "ok"},
+            },
+        )
+        self.assertIsNone(
+            observation.get("error"),
+            f"the driver threw instead of running: {observation.get('error')}",
+        )
+        dispatched = H.phase_dispatch_labels(observation)
+        self.assertIn(
+            "adr-author",
+            dispatched,
+            f"architect-review promoted adr-author but it was never dispatched: {dispatched}",
+        )
+
+        logs = observation.get("logs") or []
+        expected_fragment = (
+            f"'architect-review' promoted {json.dumps(['adr-author'])} "
+            f"to needed in {ticket_path}"
+        )
+        matching = [
+            line for line in logs if expected_fragment in line and "(BO-3700)" in line
+        ]
+        self.assertTrue(
+            matching,
+            "did not find the production log line that only the real "
+            "driveTicketPhases() top-level body, at its own "
+            "absorbPromotedPhases() call site, can emit. Expected a log "
+            f"containing {expected_fragment!r} and '(BO-3700)'. This is the "
+            "evidence that the promotion path was reached from the workflow's "
+            f"own top-level body, not from an extracted helper. Logs observed: "
+            f"{logs}",
         )
 
 

@@ -3275,3 +3275,66 @@ hit this and will either bypass it or stall.
 
 **Pattern:** a gate that failed to fire where the defect was introduced, and fires instead on
 everyone who arrives afterwards.
+
+---
+
+### KI-BP-20260907-0852 — `build.py` deploys `tickets/README.md` and never records it, so the drift gate blocks the commit and prescribes the one action that cannot clear it
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build.py` / `scripts/build_phases.py` — the phase deploying
+  `templates/ticket-lifecycle/README.md` · surfaces through the `check-output-drift`
+  pre-commit hook
+
+**Symptom.** A commit modifying `templates/ticket-lifecycle/README.md` is blocked by:
+
+```text
+UNCOMPARABLE: GAP .claude/tickets/README.md action=run build.py to register it
+check-output-drift: RESULT verified=... uncomparable=... gaps=1 drifted=0
+```
+
+`build.py` had already been run — that is what produced the deployed file. Running it again
+changes nothing, because the gap is not in what the build *wrote*, it is in what the build
+*records*:
+
+```text
+grep -c "tickets/README.md" .build_manifest.json   ->  0
+```
+
+The build deploys the file on every run and registers it in the output manifest on none, so
+`check-output-drift` sees a deployed artifact it has no expected hash for and reports an
+uncomparable gap. The remediation the message prescribes is the remediation that cannot work.
+
+**Why it surfaced only now.** The file is deployed unconditionally, so the gap has existed for
+as long as both the deploy and the gate have. It becomes *blocking* only on a commit that
+touches that template, because only then does `check-build-drift` force a `build.py` run and
+put the deployed surface in scope. `templates/ticket-lifecycle/README.md` is rarely edited; the
+commit that finally did (PR #687, a handoff-contract fix) was the first to meet it.
+
+**The trap in the remediation.** The obvious way to make the gate quiet is to delete
+`.claude/tickets/README.md` — the gap disappears and the commit proceeds. That is wrong: the
+file belongs in a consumer install, and deleting it locally to pass a local gate would leave
+the next build to silently re-create it, converting a reported gap into an unreported one. The
+manifest is what is incomplete. Skipping the hook with a stated cause is the honest interim.
+
+**A second, unrelated artifact was reported in the same run and is genuinely disposable:**
+`.claude/.cache/readme_markers/fallback-<pid>.json`. It is a per-run cache file with a
+PID-suffixed name; nothing should register it, and deleting it is correct rather than evasive.
+Worth distinguishing, because the two arrive together and the right response differs.
+
+**Countermeasure.** Register the deployed `tickets/README.md` in the build's output mapping
+alongside the other deploy phases, so the gate has an expected hash to compare. While there,
+check whether the same phase deploys anything else unregistered — one unrecorded output found
+by accident is weak evidence that it is the only one. `BP-100k-2` already requires that every
+deployed output the build produces appears in the manifest's output mapping; this is an
+instance of that criterion not holding, so it may be cheaper to audit against `BP-100k-2` than
+to patch the single path.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → an error message naming a remedy that
+does not address its own cause, so the operator repeats it and concludes the gate is broken.
+
+**Related.** `BP-100k-2` (every deployed output must be in the manifest's output mapping — the
+criterion this violates). `BP-100k-6` (a recorded output absent from disk — the mirror-image
+failure). `KI-BP-018` (the hand-maintained deploy-map mechanism behind this whole class).

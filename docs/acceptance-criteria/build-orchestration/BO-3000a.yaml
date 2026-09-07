@@ -7,7 +7,7 @@ status: active
 level: L3
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 origin_agent: BrainCandy
 change_target: pipeline
 risk_surface: contract_boundary
@@ -129,8 +129,15 @@ amended_by:
   - date: 2026-09-07
     agent: business-analyst
     reason: "The handoff-target design was reversed and this record had to follow. The first draft required the driver, on a targetless handoff, to infer its re-dispatch target by reading the `### <agent>` headings under the ticket's `## Implementation Tasks` section. Code review and follow-up verification rejected that on three grounds now recorded in the notes: the per-agent task breakdown is a general convention carried by 13 agents that answers what each agent OWES on a ticket, not who a handoff is ADDRESSED to, so it is ambiguous by construction on exactly the tickets that follow the convention best; inference converts the deliberate targetless halt emitted by python-coder's contract-shrinkage guard and test-writer's test-repair rule into a spurious agent run that looks like progress; and the template/driver skew it was justified as covering is unreachable, since build.py deploys agent templates and workflow JS in the same run from the same package. The remedy moved to the emitter — the templates now require `handoff_target` alongside the handoff — so the criteria were rewritten from inference-plus-fallback to explicit-target-or-diagnosable-refusal, adding the unrecognised-value reproduction clause, the no-inference-from-prose clause, and the unobtainable-result versus targetless-result distinction. title, test_spec and notes were rewritten in the same pass to match; BO-3000's five existing refusals are not relaxed, only strengthened. work_status, covered_by and implemented_by were deliberately left untouched — the five covering tests in unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py still encode the REJECTED design, so a green run of them is now evidence against this record rather than for it, and reconciling status here would be a claim ahead of its proof."
-covered_by: []
-implemented_by: []
+  - date: 2026-09-07
+    agent: business-analyst
+    reason: "notes only — corrected a passage that had gone stale between amendments. The first amendment left a present-tense warning that the covering tests in unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py still encoded the REJECTED inference design, so that a green run of them was evidence against this record rather than for it. That was true when written and is now false: commit 5d997855a rewrote the file, DELETING the tests that asserted the rejected inference (test_handoff_without_target_field_resolves_target_from_implementation_tasks, test_agent_contracts_subsection_is_not_read_as_a_handoff_target, test_two_candidate_agents_in_implementation_tasks_still_refuses, test_explicit_handoff_target_field_takes_precedence_over_the_record) and implementing this record's seven test_spec entries name for name; an AC-fulfilment gate verified the mapping 1:1 and flipped work_status to done on that basis. Verified before editing: the rejected-design test name no longer occurs in the file, all seven spec names are present, and the class named in covered_by still exists. Left standing as history is the sequence itself — criteria rewritten first, coverage rewritten second, and the window between them in which the record and its own tests disagreed — since that window, and the decision not to reconcile status inside it, is what the note exists to preserve; only the claim that the disagreement STILL holds was removed, because a reader hitting it would reasonably distrust a work_status the evidence supports. No other passage altered: the field evidence on the dropped GE-122d-1 ticket, the three grounds for rejecting inference, the observation about BO-3000's own unreconciled state, and the build-ticket.js scope note are all still accurate. work_status, covered_by and implemented_by deliberately untouched — the gate set them against verified evidence."
+covered_by:
+  - unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py::TestHandoffTargetResolvedFromRecord
+implemented_by:
+  - "templates/workflows-js/build-feature.js"
+  - "templates/agents/python-coder.md"
+  - "templates/agents/test-writer.md"
 notes: |
   FIELD EVIDENCE — observed 2026-09-01, EPIC-TheNumberingGuaranteeHoldsAtEveryStage,
   ticket 01 (GE-122d-1). python-coder completed a verified 77-line fix to
@@ -200,13 +207,30 @@ notes: |
   empty distinction BO-400a-2-iii insists on for the ticket record, applied to the
   phase reply. BO-3000's five existing tests pass today and must continue to pass.
 
-  THE CURRENT COVERING TESTS ENCODE THE REJECTED DESIGN. The five BO-3000a cases in
-  unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py assert the inference
-  behaviour by name (resolves-from-implementation-tasks, agent-contracts-not-read,
-  two-candidates-refuses, field-takes-precedence-over-the-record). They must be
-  replaced by the test_spec above, not adapted; a green run of the existing file is
-  now evidence AGAINST this record rather than for it. Not touched from here — the
-  test surface is out of scope for an AC rewrite.
+  THE COVERING TESTS ONCE ENCODED THE REJECTED DESIGN — RESOLVED, AND KEPT HERE AS
+  HISTORY. At the moment the criteria above were rewritten (first amendment, this
+  record's `amended_by`), the five BO-3000a cases in
+  unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py still asserted the
+  inference behaviour by name (resolves-from-implementation-tasks,
+  agent-contracts-not-read, two-candidates-refuses, field-takes-precedence-over-the-
+  record). For that window a green run of that file was evidence AGAINST this record
+  rather than for it, and this record's `work_status` was deliberately left unflipped
+  on exactly that ground: the criteria had moved and their coverage had not, so any
+  claim of done would have been a claim ahead of its proof.
+
+  That window is closed. Commit 5d997855a rewrote the file: the tests asserting the
+  rejected inference were DELETED rather than adapted, as this note required, and the
+  file now implements the seven-entry test_spec above name for name, driven through
+  unit_tests/prompt_assembly/_driver_harness.py. An AC-fulfilment gate verified the
+  spec-to-test mapping 1:1 and flipped `work_status` to done on that evidence. A green
+  run of that file is now evidence FOR this record.
+
+  The sequence is preserved rather than deleted because it is the shape of the risk,
+  not an anecdote about one file: criteria were rewritten first and their coverage
+  second, and between the two commits the store held a record whose own tests
+  contradicted it. The correct behaviour in that window was the one taken — leave
+  `work_status` alone and say plainly in the record why — and a reader who finds this
+  record mid-rewrite again should recognise the state rather than reconcile it early.
 
   NOTE ON BO-3000's OWN STATE. BO-3000 reads `work_status: todo` with an empty
   `implemented_by` while unit_tests/workflows/test_bo_3000_handoff_routing.py

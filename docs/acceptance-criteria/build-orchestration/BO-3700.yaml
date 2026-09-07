@@ -7,7 +7,7 @@ status: active
 level: L2
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 origin_agent: BrainCandy
 change_target: pipeline
 risk_surface: contract_boundary
@@ -96,8 +96,10 @@ test_spec:
     type: behavioral
     angle: reachability
     description: "The re-derivation is exercised by executing build-feature.js's own top-level body, not an extracted helper."
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py::TestMidDrivePromotionIsDispatched
+implemented_by:
+  - "templates/workflows-js/build-feature.js"
 notes: |
   FIELD EVIDENCE — observed 2026-09-01, EPIC-TheNumberingGuaranteeHoldsAtEveryStage.
   Two of four tickets in batch 1 (GE-122d-3, BP-900h-6) died on this. In both,
