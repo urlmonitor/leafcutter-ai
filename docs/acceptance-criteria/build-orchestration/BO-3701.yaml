@@ -1,0 +1,244 @@
+id: BO-3701
+title: "A standalone ticket driven by build-ticket.js also runs the work that became necessary while it was being driven, and the twins are held to that by a test rather than by a comment"
+component: build-orchestration
+components:
+  - build_orchestration
+status: active
+level: L2
+readiness: approved
+priority: high
+work_status: todo
+origin_agent: BrainCandy
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given templates/workflows-js/build-ticket.js computes `neededPhases` once, at
+    Phase 2, before any phase runs, and Phase 3 then iterates that captured array
+    with `for (const currentPhase of neededPhases)`
+  And a running phase can promote another agent to `needed` in the ticket's
+    frontmatter — which is precisely what architect-review does when it concludes
+    an ADR or a diagram is required
+  When a phase promotes an agent to `needed` after the drive has started
+  Then this driver MUST dispatch that agent before it concludes the ticket
+  And the ticket MUST NOT be reported incomplete on the ground that an agent "is
+    still needed and was never dispatched" when the driver itself was told it had
+    become needed
+
+  Given this driver already reads the record back after every dispatch and already
+    parses `needed_phases` out of that reply, and already keeps the reply as the
+    record the completion decision is taken from
+  When a phase completes
+  Then the pending set MUST be re-derived from that same reply rather than from the
+    opening Phase 2 snapshot, so the driver dispatches on the state it just read
+    instead of the state it assumed before it read anything
+  And an agent that is already signed off, or already dispatched in this drive,
+    MUST NOT be dispatched again as a result of appearing in that reply
+  And a read-back that is unreadable MUST leave the pending set as it stood rather
+    than emptying it, so an unreadable reply cannot silently end the drive early
+
+  Given a newly-promoted agent whose canonical priority in this driver's own
+    `phaseOrder` is EARLIER than the phase that promoted it (adr-author is
+    priority 2; architect-review, which promotes it, is priority 4)
+  When the pending set is re-derived
+  Then the newly-promoted agent MUST be dispatched next, ahead of later-priority
+    phases still outstanding, so a decision taken at priority 4 is not defeated by
+    its subject sitting at priority 2
+
+  Given no phase promotes anything during a drive
+  When the ticket completes
+  Then the dispatch sequence MUST be identical to the sequence this driver produced
+    before this criterion existed, so the ordinary standalone-ticket path is
+    unchanged
+
+  Given a phase promotes a name that is NOT one of this driver's phase agents
+  When the pending set is re-derived
+  Then that name MUST be excluded from the pending set rather than dispatched, and
+    the drive MUST NOT fail on its account
+  And it MUST NOT reach this driver's sorts-last fallback for unlisted agents,
+    because a name sorted last is a name that still runs — after commit and
+    pull-request — which is the outcome this clause exists to prevent
+
+  Given the JS workflow driver harness at
+    unit_tests/prompt_assembly/_driver_harness.py, which already knows this driver:
+    it is one of `TWIN_DRIVERS` and `H.BUILD_TICKET_JS` resolves to it, so the
+    fixtures this verification needs already exist
+  When BO-3701 is verified
+  Then the covering test MUST execute build-ticket.js's own top-level body through
+    that harness, with a stubbed phase that really promotes an agent in the real
+    on-disk record, and assert on the observed dispatch sequence
+  And a grep-only / structural assertion over the JS source MUST NOT be accepted as
+    coverage for this AC, because a frozen loop and a re-derived one are
+    indistinguishable by reading either file
+
+  Given build-feature.js and build-ticket.js declare themselves twins, and the only
+    thing holding them together on this behaviour is the header instruction "keep
+    them in sync manually", which has already failed once — BO-3700 shipped to one
+    driver and not the other
+  When BO-3701 is verified
+  Then the mid-drive-promotion cases above MUST be asserted over every entry in
+    `H.TWIN_DRIVERS`, not against build-ticket.js alone, in the manner the store's
+    existing twin-parameterised tests already use
+  And a change that alters the promotion or re-derivation behaviour of one driver
+    without the other MUST fail that test, so this specific divergence is detected
+    by a run rather than by a reader
+test_required: true
+test_spec:
+  - name: test_build_ticket_agent_promoted_mid_drive_is_dispatched_before_the_ticket_concludes
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The defect itself on the twin — an agent promoted to needed after build-ticket.js started its drive must actually run."
+  - name: test_build_ticket_promoted_agent_with_earlier_priority_runs_next_not_never
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "adr-author at priority 2 promoted by architect-review at priority 4 is the live case; a forward-only walk over the Phase 2 snapshot is already past that slot."
+  - name: test_build_ticket_drive_with_no_promotion_dispatches_the_identical_sequence
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The ordinary standalone-ticket path is unchanged — the guard against this fix widening dispatch generally."
+  - name: test_build_ticket_already_dispatched_or_signed_off_agent_is_not_redispatched
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Re-deriving the pending set from the record after every phase must not loop or re-run completed work."
+  - name: test_build_ticket_unknown_promoted_name_is_excluded_not_sorted_last
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The record is agent-written text; an unrecognised name must be dropped from the pending set, not handed to the sorts-last fallback that would run it after commit."
+  - name: test_build_ticket_unreadable_read_back_does_not_empty_the_pending_set
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A read-back the driver cannot parse must leave the outstanding phases standing rather than concluding the ticket on an absent reply."
+  - name: test_mid_drive_promotion_behaves_identically_across_both_twin_drivers
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The promotion cases are asserted over every entry in H.TWIN_DRIVERS, so a change landing on one driver and not the other fails rather than passing unnoticed."
+  - name: test_build_ticket_mid_drive_promotion_is_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-ticket.js
+    description: "The re-derivation is exercised by executing build-ticket.js's own top-level body through _driver_harness.py, not an extracted helper and not a source scan."
+test_rationale: |
+  A direct-import unit test cannot cover this record, because the thing being
+  specified is not a function — it is which agents a top-level script actually
+  spawns, in what order, when the on-disk record changes underneath it mid-run.
+  The defect is a `for` loop over a snapshot; a helper extracted from that loop
+  would be correct in isolation while the drive stayed broken. Equally, a grep for
+  "re-derive" or for the absence of `for (const currentPhase of neededPhases)`
+  passes on any refactor that keeps the shape and loses the behaviour. Only running
+  build-ticket.js's own body through _driver_harness.py, with a stub that writes a
+  real promotion into a real record, distinguishes a driver that re-reads from one
+  that does not. The twin-parameterised entry is the same argument applied to
+  divergence: the two drivers can only be shown to agree by running both.
+depends_on:
+  - BO-3700
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-20260907-0850 — the filed finding this record answers, including the corrected split between the genuinely-unfixed frozen list and the generation-behind handoff branch."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: implements
+    status: exists
+    relevance: "Phase 2 computes neededPhases; Phase 3 iterates it; the per-phase read-back sits at the end of the loop body and currently feeds only the completion decision."
+  - path: unit_tests/prompt_assembly/_driver_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The harness the covering test must use. build-ticket.js is already one of TWIN_DRIVERS and H.BUILD_TICKET_JS resolves to it."
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS EXISTS. PR #687 fixed two dispatch defects in build-feature.js — the
+  frozen phase list (BO-3700) and the handoff contract (BO-3000a). build-ticket.js,
+  the declared twin, received neither. Only one of those two halves is uncovered,
+  and this record covers exactly that half:
+
+    - Frozen phase list — UNCOVERED, and this record's subject. BO-3700's criteria
+      name templates/workflows-js/build-feature.js explicitly, and its notes close
+      with a SCOPE paragraph deliberately excluding the twin for want of a red
+      baseline. Nothing in the store requires the twin to re-derive its pending set
+      until this record does.
+    - Handoff routing — ALREADY COVERED, and deliberately NOT restated here.
+      BO-3000 requires that "build-ticket.js MUST apply the same handoff routing
+      behaviour as build-feature.js, so the two drivers cannot diverge". That
+      criterion is currently false and BO-3000 is still work_status: todo, so the
+      requirement exists and is unmet. Authoring a second record for it would
+      duplicate a live requirement and split its coverage across two ids.
+
+  WHY A TOP-LEVEL L2 AND NOT A CHILD OF BO-3700. The store's precedent for a
+  follow-up on the same behaviour is a lettered child (BO-3000a under BO-3000), and
+  that shape was the first candidate here. It is wrong for this case on two counts.
+
+  First, BO-3700 is work_status: done, verified against build-feature.js through a
+  green harness test. A todo child hung under a done parent is precisely the drift
+  shape this repo has already had to sweep for — the store-wide sweep at 439b9076f
+  found twenty composites marked done with unfinished children — and it would make
+  BO-3700's done a claim about work that has not happened. The alternative,
+  reopening BO-3700 so the parent can honestly carry the child, would retract a
+  verified done to describe a second file it was explicitly scoped away from.
+
+  Second, and independent of status: the twin is its own unit of work. It needs its
+  own red baseline through _driver_harness.py, its own test file entries, and its
+  own lifecycle; BO-3700's SCOPE paragraph gives the reason ("widening a fix to a
+  second driver without one turns a fix into a rewrite"). A record that can be
+  scheduled, driven and closed on its own is a record, not a constraint on another
+  one. `depends_on: [BO-3700]` carries the relationship instead: the shape of the
+  fix is already settled on the twin, and this one should follow it rather than
+  reinvent it. BO-3701 is a root id, so it derives no parent and needs no
+  covered_by back-link — the same shape BO-3000 and BO-3700 already use.
+
+  ON THE DIVERGENCE-DETECTION CRITERION. The last criterion above is deliberately
+  narrow: it requires the mid-drive-promotion cases to be asserted over every entry
+  in H.TWIN_DRIVERS, which makes THIS axis of divergence a test failure rather than
+  a reading exercise. It is in this record rather than its own because it costs
+  nothing extra here — the harness already exposes TWIN_DRIVERS and at least seven
+  existing test files already loop over it — and because a promotion fix that is
+  written against one driver only is how this record came to be needed.
+
+  What is NOT in this record, and should be its own: a general twin-parity gate
+  asserting that the two drivers' phaseOrder arrays and handoff-branch behaviour
+  agree, failing on any future divergence on any axis. That belongs elsewhere for
+  three reasons. It also serves BO-3000's half, so parking it here would make one
+  record's done depend on work that two records need. It is a new mechanism rather
+  than a mirrored fix, with its own design question (assert the arrays are equal,
+  or assert the observable orderings are — the first is stricter and will fire on a
+  harmless comment change). And a parity gate that fails would then read as "the
+  promotion fix is not done", which is a diagnosis this record should not be able
+  to emit. Recommended as a follow-up record; KI-BO-20260907-0850's countermeasure
+  paragraph already argues for it.
+
+  WHAT THE KNOWN-ISSUE ENTRY UNDERSTATES. KI-BO-20260907-0850 records "Occurrences:
+  0 observed on this path", correctly, and then reads that as sampling rather than
+  safety — also correct, but only for the handoff half. For the frozen-list half
+  the exposure is narrower than the entry implies and worth stating: the promotion
+  that triggers it comes from architect-review, and whether a standalone ticket
+  schedules architect-review at all is what decides whether this driver can hit the
+  bug. The entry's "anyone running /build-ticket" is true of the handoff defect,
+  which any coder handoff reaches; the frozen-list defect needs a promoting phase in
+  the drive. That does not lower the severity — the field evidence behind BO-3700 is
+  two tickets in one batch of four — but it does mean the absence of observed
+  occurrences here is partly a real difference in reach, not purely which driver got
+  looked at.
+
+  Two further notes on the entry. It says the twin's `PHASE_RESULT_SCHEMA` has no
+  `handoff_target` property and no `additionalProperties: false`, so an agent
+  correctly emitting the field is refused for non-conformance — that belongs to the
+  BO-3000 half and is not this record's to fix; nothing here should be read as
+  covering it. And the entry's countermeasure asks for both changes to be mirrored
+  "in the same pass": the two halves now sit under different records with different
+  work_status, so a single pass is an efficiency, not a requirement, and either half
+  can land alone without leaving the other unrecorded.

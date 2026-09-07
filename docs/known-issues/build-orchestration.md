@@ -2874,18 +2874,45 @@ than against an observable side effect — the same substitution of a proxy for 
 
 ---
 
-### KI-BO-20260907-0850 — `build-ticket.js` is the declared twin of the driver just fixed and received neither fix, so `/build-ticket` still loses the ticket in exactly the way `/build-feature` no longer does
+### KI-BO-20260907-0850 — `build-ticket.js` is the declared twin of the driver just fixed: one defect is unfixed there and the other handler is a generation behind, so `/build-ticket` still loses the ticket in ways `/build-feature` no longer does
 
 - **Severity:** high
 - **Status:** open — no AC
 - **Occurrences:** 0 observed on this path; the twin defect was observed 3× on `build-feature.js`
 - **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
-- **Where:** `templates/workflows-js/build-ticket.js` — the per-ticket phase loop and the
-  handoff branch (~:1428) · twin of `templates/workflows-js/build-feature.js`
+- **Where:** `templates/workflows-js/build-ticket.js` — the per-ticket phase loop at `:1258`
+  (`for (const currentPhase of neededPhases)`) and the handoff branch · twin of
+  `templates/workflows-js/build-feature.js`
+  <br>The handoff branch is deliberately cited without a line number: it moves whenever either
+  half is edited, so a number there rots. The loop line is stable and is the one to grep.
 
 **Symptom.** PR #687 fixed two dispatch defects in `build-feature.js`: the frozen phase list
-(`BO-3700`) and the handoff contract (`BO-3000a`). `build-ticket.js` carries **both** defects
-unchanged. Its handoff refusal still reads, verbatim, the pre-fix wording:
+(`BO-3700`) and the handoff contract (`BO-3000a`). `build-ticket.js` received neither.
+
+**Corrected 2026-09-07, same day as filing.** The first version of this entry said the twin
+"carries **both** defects unchanged". That overstates one half and the precision matters,
+because the two halves need different remedies:
+
+- **Frozen phase list — genuinely unfixed.** `build-ticket.js:1258` is still
+  `for (const currentPhase of neededPhases)` over a list computed once before any phase runs.
+  No AC covers it: `BO-3700`'s criteria name `build-feature.js` explicitly.
+- **Handoff routing — present, but a generation behind.** The twin DOES have a handoff branch
+  and DOES read `handoff_target`; that arrived with `BO-3000`, whose test file already drives
+  this driver. What it lacks is everything `BO-3000a` added: `handoff_target` declared in
+  `PHASE_RESULT_SCHEMA`, the conditional `if`/`then` requirement, and the two-case diagnosable
+  refusal. So this half is a divergence between twins rather than an absent guard.
+
+That second half is already covered by an acceptance criterion, and the criterion is now
+false. `BO-3000` requires:
+
+> Then build-ticket.js MUST apply the same handoff routing behaviour as build-feature.js, so
+> the two drivers cannot diverge
+
+The drivers diverged the moment `BO-3000a` landed on one of them. `BO-3000` still reads
+`work_status: todo`, so nothing has to be authored to justify fixing this half — the
+requirement exists and is violated.
+
+Its handoff refusal still reads, verbatim, the pre-fix wording:
 
 ```text
 named no recognizable handoff_target ('undefined')
@@ -2908,11 +2935,23 @@ deliberately and said so in both AC records — the reason given (no red baselin
 build-ticket.js in that pass, and widening a fix to a second driver without one turns a fix into
 a rewrite) is sound, but it is a reason to file this, not a reason to forget it.
 
-**Who is exposed.** Anyone running `/build-ticket` on a standalone ticket. The field evidence
-that motivated #687 came from an epic drive, which uses `build-feature.js`, so the observed
-incidents are all on the fixed side. That is sampling, not safety: a coder that hands off to
-test-writer does so identically under either driver, and under this one the ticket is still
-dropped with the old undiagnosable message.
+**Who is exposed — and the two halves differ, which changes the triage order.** The first
+version of this entry said "anyone running `/build-ticket`". That is true of the HANDOFF half
+and over-general for the other:
+
+- **Handoff divergence — reachable on every drive.** Any coder that hands off to test-writer
+  hits it, and that is a routine, template-mandated path. This is the half an operator meets
+  first.
+- **Frozen phase list — reachable only when the drive contains a promoting phase.** The
+  promotion comes from `architect-review`, so a standalone ticket that never schedules
+  `architect-review` cannot hit it at all.
+
+Severity is unchanged — `BO-3700`'s field evidence was 2 of 4 tickets in a single batch — but
+the handoff half is the more reachable one and should be fixed first. The original wording
+would have led a triager to the opposite order.
+
+The "0 occurrences" figure is therefore partly sampling and partly a real difference in reach:
+the incidents that motivated #687 all came from an epic drive, which uses `build-feature.js`.
 
 **The templates already assume the fix is universal.** `python-coder.md` and `test-writer.md`
 now instruct agents to return `handoff_target` unconditionally, without reference to which
@@ -2921,11 +2960,43 @@ false`, so the extra field is ignored rather than rejected — harmless, but it 
 correctly emitting the field under this driver still gets refused, which is the worst
 combination for diagnosis. The operator sees a conformant agent rejected for non-conformance.
 
-**Countermeasure.** Mirror both changes into `build-ticket.js`, with its own red baseline
-through the same `_driver_harness.py` (it is already one of the `TWIN_DRIVERS` the harness
-knows, so the fixtures exist). Then consider what would have caught this: a test that asserts
-the twins' `phaseOrder` arrays and handoff-branch behaviour agree would convert "keep them in
-sync manually" from an instruction into a gate. The instruction has now failed once.
+This paragraph belongs entirely to the HANDOFF half, i.e. to `BO-3000`. Nothing in `BO-3701`
+covers it. A reader who lands `BO-3701` and closes this entry on that basis will leave the
+more reachable of the two defects in place.
+
+**Countermeasure — now two independently schedulable pieces, not one pass.** The first version
+of this entry said "mirror both changes in the same pass". That framing is stale, and it is
+worth correcting precisely because it is the framing that produced the divergence in reverse:
+
+- **Handoff half** — covered by `BO-3000`'s existing twin criterion, still `work_status: todo`.
+  Nothing to author.
+- **Frozen-list half** — covered by `BO-3701` (authored 2026-09-07), a top-level L2 rather than
+  a child of `BO-3700`, because `BO-3700` is now `done` and hanging a `todo` child under it
+  would recreate the done-parent-with-unfinished-children drift this repo swept for.
+
+Either can land alone without leaving the other unrecorded. Doing both in one branch is an
+efficiency, not a constraint.
+
+A NAIVE MIRROR WOULD INTRODUCE A BUG. `build-ticket.js` is not a copy of its twin, and two of
+`BO-3701`'s criteria exist because of that:
+
+- Its `canonicalPriority` (`:251-264`) deliberately does NOT throw on a name outside
+  `phaseOrder` — it returns `phaseOrder.length` and warns. So an unknown promoted name fed into
+  a re-derived pending set does not get ignored; it sorts LAST and runs *after commit and
+  pull-request*. `BO-3700`'s wording ("ignored rather than dispatched") is adequate for
+  `build-feature.js` and under-specified here.
+- The driver sets `lastRecord = null` on an unreadable read-back (`:1358-1363`). Once the
+  pending set is derived FROM that reply, "unreadable" silently becomes "nothing left to run"
+  unless the criterion forbids it — a failure mode the fix itself creates.
+
+**What would have caught the divergence.** A test asserting the two drivers agree. `BO-3701`
+takes the cheap half: its promotion cases must be asserted over every entry in
+`H.TWIN_DRIVERS`, which the harness already exposes and which at least seven existing test
+files already loop over. The general parity gate — asserting the two `phaseOrder` arrays and
+handoff branches agree — is deliberately NOT in `BO-3701`: it also serves `BO-3000`'s half, so
+parking it there would make one record's `done` depend on work two records need, and it carries
+a real design question (assert the arrays literally equal, or the observable orderings equal?).
+It wants its own id.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → a duplicated implementation kept
 consistent by a comment. The comment is not a mechanism.
