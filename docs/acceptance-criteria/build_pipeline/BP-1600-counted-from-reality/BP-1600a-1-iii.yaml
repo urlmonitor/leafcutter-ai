@@ -1,0 +1,317 @@
+id: BP-1600a-1-iii
+components:
+  - build_pipeline
+  - precommit_hooks
+title: "A script deliberately left unwired is recorded with a ground that names where its fate is decided, and the census quotes the ground without saying what should be done; a record stating only that a decision is pending is refused and the script it names stays reported"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given some of the scripts kept in that place are deliberately not run — one whose
+    detection is being folded into another check, one whose wiring is held back
+    until a repair it would obstruct has landed,
+  And there is a register of deliberately-unwired scripts in which each record names
+    one script and states the ground on which it is not run, and that ground names
+    the record in which that script's fate is decided,
+  When the census runs,
+  Then a script whose record states such a ground is reported as deliberately
+    unwired, quoting the ground, is not counted among the scripts nothing runs, and
+    does not fail the run,
+  And the census states nothing about what should become of that script — being
+    wired, being folded into another check, and being removed are all outcomes a
+    ground may name, and choosing between them is never the census's to do,
+  And given a record that names a script and states no ground, or states only that a
+    decision has not yet been taken,
+  When the census runs,
+  Then that record is reported as refused, and the script it names is counted among
+    the scripts nothing runs and fails the run — a postponement is not a ground,
+  And given a record whose ground names a decision record that does not exist, or one
+    that exists and does not itself name that script,
+  When the census runs,
+  Then that record is reported as refused in the same way, so a citation cannot serve
+    as cover without the thing it cites saying anything,
+  And given a record naming a script no longer present in that place,
+  When the census runs,
+  Then that record is reported as stale and named, so the register cannot accumulate
+    cover for scripts that no longer exist,
+  And given a script that is present, is run by a wiring, and also carries a record,
+  When the census runs,
+  Then it is reported as run and the redundant record is named,
+  And the number of scripts treated as deliberately unwired is stated in the run's
+    summary alongside the number examined and the number reported, so the size of the
+    register is visible in every run rather than only on inspection.
+depends_on:
+  - BP-1600a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-i.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE REGISTER SHAPE TO REUSE, AND THE ONE PLACE THIS RECORD IS STRICTER. That record
+      (approved) establishes, for the commit-gate surface, a register keyed on a script with a
+      stated ground; a blank ground is refused and the script falls back into the reported
+      class; a record naming an absent script is reported stale; a redundant record over an
+      invoked script is named; and the register's size is stated in the summary. Reuse all of
+      it, including the record shape, rather than inventing a second exemption vocabulary.
+      The addition here is that the ground must NAME THE RECORD WHERE THE SCRIPT'S FATE IS
+      DECIDED, because on this surface both of the scripts the census will name on its first
+      run already have owning records, and because "not a gate at all" — the ground that
+      surface expects — is not the honest ground for either of them.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122a-2.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      THE OWNING RECORD FOR ONE OF THE TWO, AND THE REASON THIS CRITERION EXISTS AT ALL. It
+      requires that script's detection be extracted into the shared uniqueness pass — a
+      disposition that is neither wiring nor deletion — and records the script as verified
+      never to have run. A census with only two states would force that script to be wired,
+      contradicting an approved record. This is a ground of exactly the shape the criterion
+      requires: a named record that names the script and decides its fate.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122e-2.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      THE OWNING RECORD FOR THE OTHER, AND A SEQUENCING HAZARD RATHER THAN A DISPOSITION. It
+      records that script as registered nowhere and therefore not firing today, and warns that
+      wiring it would collide with the repair it specifies, which moves work-item files on a
+      branch — the very action that script blocks. Its ground is therefore a sequencing one
+      and it must say so; a ground that merely asserted "deferred" would be refused by this
+      criterion, and correctly, because the difference between "held until that repair lands"
+      and "nobody has decided" is exactly what this record is for.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126d-3.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      Where a settings-surface registration leg belongs once it is declared: one declaration
+      read by both the authoring procedure and the parity check, with one wording per leg.
+      The grounded register here is the retrospective counterpart, covering what is already in
+      the directory rather than what an author is adding. If both exist, the leg declaration
+      should name the register as the place a deliberate omission is recorded, so an author who
+      chooses not to wire a new script is told where to say so.
+  - path: "templates/settings.json"
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the register does NOT belong. The wiring surface is the harness's configuration
+      and carries no vocabulary for a script that is deliberately absent from it; adding one
+      would make the census's exemption store part of the file whose completeness it measures.
+      Choose a home beside it, and see the it_requirement on where.
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+it_requirements:
+  - >-
+    ONE REGISTER VOCABULARY ACROSS BOTH SURFACES, KEYED ON A SCRIPT. The commit-gate surface's
+    register is a list of records each naming a script and stating a ground, and it is keyed on
+    a script rather than on an identifier precisely because an unwired script has no identifier
+    to be keyed by. Reuse that record shape here. Two independently-maintained exemption
+    vocabularies will disagree, and an exemption declared for one surface must never silently
+    apply to the other — if the two registers share a storage location, each record states which
+    surface it applies to and an unscoped record is refused rather than defaulted to both.
+  - >-
+    WHERE THE REGISTER LIVES IS OPEN AND HAS A PACKAGE-SURFACE CONSEQUENCE. It must not live in
+    the settings surface itself, for the reason stated in that doc_link. If it is placed inside
+    the commit-guardian registry it becomes a watched package surface and this record's parent
+    must then declare package_surface before it can be committed; if it is placed in a new file
+    beside the census it does not. Decide before implementing and amend the parent if the choice
+    is the former. Wherever it lands, it must be present in every installed layout the census
+    runs from, or the census reads an empty register and reports every grounded script as run by
+    nothing.
+  - >-
+    THE GROUND MUST BE MACHINE-CHECKABLE AT THE CITATION LEVEL ONLY, AND THAT LIMIT IS
+    DELIBERATE. The census verifies that the cited record exists and that it names the script;
+    it does not and must not assess whether the cited disposition is wise, current, or being
+    worked on. Anything more turns the census into an arbiter of other records' correctness,
+    which is not its job and would couple it to the shape of every record it might be pointed at.
+    Anything less — accepting free text — reproduces the blank-ground failure with more
+    characters.
+  - >-
+    THE CENSUS MAY NOT RECOMMEND A DISPOSITION, AND THIS IS A HARD LINE. It reports the state and
+    quotes the ground. A message of the form "register this script" or "this script should be
+    wired" is a false statement about at least one of the two scripts on this surface today,
+    whose approved disposition is dissolution rather than registration. The wording of the
+    reported classes must therefore be descriptive — run by nothing, deliberately unwired,
+    refused, stale, redundant — and never imperative.
+  - >-
+    ADD THE THIRD NUMBER TO THE EXISTING SUMMARY LINE, NOT A SECOND LINE. BP-1600a-1-i
+    establishes the summary with the examined and wirings-read counts; this criterion extends
+    the same line with the deliberately-unwired count. Two summary lines can disagree about
+    whether the same run was determinate.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around reading and
+    parsing the register and around resolving a cited record; log at WARNING or higher or
+    re-raise; no bare or blind excepts. A register that cannot be read is an unresolved
+    condition under BP-1600a-1-i's contract, not an empty register — an empty register read from
+    a failure reports every grounded script as run by nothing, which is an avalanche, and a
+    swallowed failure that yields "everything is grounded" is the opposite and worse.
+test_spec:
+  - name: test_bp_100n_6_iii_a_grounded_record_reports_the_script_as_deliberately_unwired_and_does_not_fail
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A fixture register record naming an unwired script, with a ground citing a record that
+      exists and names that script, causes the executed census to report the script as
+      deliberately unwired, quote the ground, omit it from the run-by-nothing class, and — with
+      no other finding present — exit zero.
+  - name: test_bp_100n_6_iii_a_blank_or_postponing_ground_is_refused_and_the_script_stays_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Two fixture records — one with an empty ground, one whose ground states only that a
+      decision has not yet been taken and cites nothing — are each reported as refused, their
+      scripts are counted among those run by nothing, and the run exits non-zero. This is the
+      suppression path and it is the whole reason the register can be trusted; a register that
+      accepts a postponement is an allowlist with a longer field.
+  - name: test_bp_100n_6_iii_a_ground_citing_a_record_that_does_not_name_the_script_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A ground citing a record that does not exist, and separately a ground citing a record
+      that exists but does not name the script, are both reported as refused. Distinguishes a
+      real citation from a citation-shaped string, which is the failure a citation requirement
+      invites.
+  - name: test_bp_100n_6_iii_the_census_never_states_what_should_be_done_with_a_reported_script
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Over a fixture holding a script whose owning record disposes of it by folding its
+      detection into another check, the census's output describes its state and quotes its
+      ground and contains no instruction to wire, register or delete it. Asserted over the
+      emitted output. Protects an approved sibling record whose disposition for a real script on
+      this surface is not registration.
+  - name: test_bp_100n_6_iii_a_stale_record_and_a_redundant_record_are_each_named
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A record naming a script absent from the hook directory is reported as stale, and a record
+      naming a script that a wiring does execute is reported as redundant while the script
+      itself is reported as run. Keeps the register from accumulating cover nobody needs.
+  - name: test_bp_100n_6_iii_the_deliberately_unwired_count_appears_in_the_same_summary_line
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      The run summary states the deliberately-unwired count alongside the examined and
+      wirings-read counts established by BP-1600a-1-i, in one line, and the number moves when
+      the register's contents change. Goes red on a second summary printed elsewhere and on a
+      hard-coded count.
+  - name: test_bp_100n_6_iii_an_unreadable_register_is_an_unresolved_run_not_an_empty_register
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      With the register made genuinely unreadable at run time, the census reports an unresolved
+      run naming that reason and exits non-zero — it does NOT proceed with an empty register
+      (which reports every grounded script as run by nothing) and does NOT proceed as though
+      everything were grounded. Exercised by breaking the read for real.
+  - name: test_bp_100n_6_iii_the_register_is_readable_from_the_installed_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After a real build, the deployed census reads a register with the same contents as the
+      authored one. A register present only in the project's own tree leaves the installed
+      census measuring against nothing, which under this criterion is an unresolved run and
+      under a careless implementation is a clean one.
+test_rationale: |
+  The register is the part of this design most likely to become the thing it was built to
+  prevent. Every mechanism that lets a check tolerate a known finding is one edit away from
+  being an allowlist, and the edit is always made under pressure on the day the check first goes
+  red. So the descriptors here are weighted towards the refusal paths rather than the
+  acceptance path: a blank ground, a postponing ground, a ground citing nothing, and a ground
+  citing something that does not name the script are four separate descriptors, while the happy
+  path is one.
+
+  The citation requirement is stronger than the sibling surface's plain stated-ground rule, and
+  the reason is concrete rather than stylistic: both scripts this census will name on its first
+  run already have approved records deciding their fate, and neither decides it by wiring. A
+  ground that must name such a record is satisfiable today, honestly, for both — and is not
+  satisfiable by "we will look at this later", which is what a stated-ground rule alone permits.
+
+  The never-recommend descriptor exists because the obvious wording for a census finding is an
+  instruction, and the obvious instruction is wrong here. One of the two scripts is scheduled for
+  dissolution into a shared pass by an approved record; a census that tells an implementer to
+  register it is not merely unhelpful, it contradicts the store.
+
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", every descriptor
+  executes the census as a process over a fixture register and asserts on its emitted output and
+  exit status; none is satisfied by reading the register or the census source as text.
+delivers_to: null
+expects_from:
+  ac_id: BP-1600a-1
+  contract: >-
+    The per-script verdict set and the run summary, into which this criterion inserts the
+    deliberately-unwired verdict, the refused, stale and redundant record findings, and the
+    third summary number.
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by:
+  - reason: authored-at-ba-stage-with-mechanism-fields
+    by: business-analyst
+    at: 2026-09-07
+    note: >-
+      it_requirements, test_spec and test_rationale authored in the same pass as criteria at
+      the user's explicit instruction. Open to IT PO revision; criteria are not. readiness
+      stays draft.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  THIS RECORD IS WHAT MAKES DAY-ONE LANDING POSSIBLE WITHOUT FORCING A DISPOSITION, AND IT IS
+  NOT AN ALLOWLIST. The census fails on the commit that lands it. Measured at 468e0490f on
+  2026-09-07 the reported set is two scripts, and neither can honestly be wired that day: one
+  has an approved record requiring its detection to be extracted into a shared pass instead,
+  and the other cannot be wired without breaking a repair that another approved record
+  specifies, because it blocks exactly the file moves that repair performs. With only two
+  states — wired or failing — the census would force a contradiction with the store on its
+  first run, and the natural remedy for that is to weaken the census. The third state resolves
+  it, and the citation requirement is what stops the third state from becoming the weakening.
+
+
+  THE DIFFERENCE BETWEEN A GROUND AND A POSTPONEMENT IS THE WHOLE DESIGN. "Held back until the
+  work-item repair has landed, decided in that record, which names this script" is a ground: it
+  is falsifiable, it has an owner, and it expires when the cited record does. "Triage deferred"
+  is a postponement: it has no owner, no end, and no way to be wrong. The sibling surface's
+  register requires a ground and calls a blank one no ground; this record goes one step further
+  and requires the ground to name where the decision lives, because on this surface the honest
+  grounds all happen to have such a record already, so the stricter rule costs nothing today and
+  closes the loophole permanently.
+
+
+  THE CENSUS IS FORBIDDEN TO RECOMMEND, AND THAT IS A CORRECTION OF A REAL RISK RATHER THAN A
+  STYLE PREFERENCE. The obvious wording for a finding on this surface is "this script is not
+  wired — wire it". For one of the two scripts that sentence is false, and it is false against
+  an approved high-priority record. A census whose output contradicts the store trains its
+  readers to ignore it.
+
+
+  WHAT IS DELIBERATELY NOT HERE. No expiry mechanism, no review date, no owner field beyond the
+  cited record. Each was considered and each adds a second place where the disposition lives,
+  which is the defect one level up: the cited record already carries the owner, the reasoning and
+  the schedule, and duplicating any of that here creates two statements free to disagree. If the
+  register ever needs an expiry, the honest form is that the cited record reaching its own
+  completion invalidates the ground — which is a question for whoever builds that, not a field
+  to mint now.

@@ -1,0 +1,122 @@
+id: BP-1600a
+components:
+  - build_pipeline
+  - precommit_hooks
+title: "Every place that declares what runs is checked against what is really there, and anything nothing runs is named"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Anything present that nothing invokes is reported by name, never quietly skipped.
+
+  Each surface that declares which scripts the project runs is compared against
+  the scripts that are actually present, with both sides read at the moment the
+  check runs. Anything present that no declaration accounts for is reported by
+  name and fails the run, and the check states how many things it examined so a
+  population that silently shrank to nothing cannot look like a clean result.
+depends_on:
+  - BP-1600
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SIBLING CENSUS ON THE COMMIT-GATE SURFACE, AND THE INTENDED SECOND CHILD
+      OF THIS L1 — but not yet, and not from here. BP-100n-4 is the same shape as
+      BP-1600a-1 on a different surface: run-time population on both sides, path
+      identity, report by name, fail the run. It belongs under this L1 on the
+      merits. It has NOT been moved, because moving it means renaming it, and it
+      is cited from roughly sixty places. See this record's notes.
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-3.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The third member of the cluster, and the same rule in a non-script form:
+      the build-equality guard's platform population is taken from the build's own
+      platform set rather than from the platforms the guard chose to enable. It is
+      work_status done with covers-tags in shipped source, so it is pinned where
+      it is. Read it for the shape; do not renumber it.
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The former parent, and the neighbouring rule this L1 must not be confused
+      with. BP-100n owns "an absence is reported as an absence, never as nothing
+      to check" — what a guard does when it finds nothing. This L1 owns the prior
+      question: how the guard worked out what to look for in the first place. A
+      guard can report every absence it finds faithfully and still be looking at a
+      population that omits the thing that matters.
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by:
+  - "split: BP-100n -> BP-100n + BP-1600a [Pattern C, 6 L2 children -> 5 + 1], 2026-09-07. BP-100n had six L2 children against a cap of five and no child_limit_override, deliberately: the record that made it six (the former BP-100n-6) is about guards that were silenced, and its author declined to silence a guard to land it. The user chose SPLIT over override, following the family precedent — BP-100k sat at eight on a live override and was split into BP-100k + BP-100n, discharging the override rather than renewing it. The former BP-100n-6 and its three technical-constraint children were renamed BP-1600a-1 and BP-1600a-1-i/-ii/-iii and moved here. The rename is forced: check_ac_limits.py and the parent-link hooks derive a child's parent from its id string, not from covered_by (GE-106), so a moved child keeping its old prefix would still count against BP-100n."
+superseded_by: null
+covered_by:
+  - BP-1600a-1
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE SEAM, AND WHICH CONSIDERATION WON. BP-100n's six children fell into two
+  coherent groups of three. Group B — the former -1, -2 and -5 — share the rule
+  BP-100n's own title states: an absence is reported as an absence, never as
+  nothing to check. Group A — the former -3, -4 and -6 — share a different and
+  prior rule: the population a check walks is taken from reality, never from a
+  list that can omit things. The existing parent title fits group B, so the honest
+  seam is to lift group A out. That is the seam this record names.
+
+  Only one of the three could actually be lifted, and the reason is evidence, not
+  taste. A child's parent is derived from its ID STRING, so moving a child renames
+  it, and a rename must chase every citation of the old ID or leave a dead link.
+
+    - BP-100n-3 is work_status: done. Its ID appears as a covers-tag in shipped
+      source (scripts/build_phases.py) and names its own test file
+      (unit_tests/build_guards/test_bp_100n_3.py), with further citations in
+      test_bp_100k_2.py. Renaming a done record breaks the evidence chain that
+      links criterion to code to green test — the one chain this whole store
+      exists to keep honest — and would force implementation-source edits inside
+      what is supposed to be a structural bookkeeping change.
+    - BP-100n-4 is readiness: approved and is cited from roughly sixty places: the
+      whole of the GE-127 feature folder, GE-126b-5 and -5-i, the GE-120f family,
+      BO-210a-2, docs/reference/false-green-mechanisms.md (which names it as
+      scheduled work), the guardrail-engine PROJECT_CONTEXT.md, a ticket, and
+      unit_tests/commit_guardian/test_ge_127b_1_i.py. On top of that, the OPEN and
+      UNMERGED PR #726 (branch ac-authoring/census-ownership) adds five more
+      references to it — from GE-120c-6, GE-120f, KM-ADM-001, TQ-100b-5 and
+      TQ-100c-2-i — on a branch that is not visible from here and must not be
+      edited from here.
+    - The former BP-100n-6 and its three children are cited by nothing outside
+      their own family. Its own notes anticipated the rename.
+
+  So: the semantically clean seam is group A; the affordable subset of group A is
+  one record. Cost won, and it won on a specific ground — not "renames are
+  disruptive" in the abstract, but that two of the three are load-bearing in
+  artifacts a structural move has no business touching (shipped source, a green
+  test file, and an unmerged branch). This L1 is therefore opened at its minimum
+  size rather than opened dishonestly wide.
+
+  WHY A ONE-CHILD L1 IS NOT A CATEGORY INVENTED FOR ONE RECORD. The category is
+  the group-A rule, which already has three members and a stated expectation of
+  more: BP-1600a-1's own analysis records that "two registration surfaces exist in
+  this project and until now only one has been counted", which is a claim about a
+  growing set of surfaces, not about one script directory. The alternative — filing
+  a second surface's census as a sixth child of a parent whose title is about
+  absence-reporting — would have hidden the category rather than named it.
+
+  MIGRATION PATH FOR BP-100n-4, AND ITS PRECONDITION. When PR #726 has MERGED,
+  BP-100n-4 (with BP-100n-4-i and -4-ii) should be renamed BP-1600a-2 (with -2-i
+  and -2-ii) and moved here, as its own deliberate change whose entire content is
+  the rename and its citation sweep. The precondition is the merge: doing it now
+  would land five dangling references on a branch nobody can fix from here.
+  BP-100n-3 is a separate judgement and probably stays where it is — a done record
+  with covers-tags in source is not worth renaming for tidiness. Until BP-100n-4
+  moves, this L1 and its L0 will both draw the sparse-parent advisory, which is
+  non-blocking and is an accurate description of the situation rather than a
+  problem to suppress.

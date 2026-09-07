@@ -1,0 +1,285 @@
+id: BP-1600a-1-ii
+components:
+  - build_pipeline
+  - precommit_hooks
+title: "A script counts as run only when a shipped wiring executes it — the two sides name the same script in two different layouts and are resolved to one identity, a name that merely appears in the settings document is not a wiring, and a wiring that executes nothing is reported too"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the settings surface names each hook script inside the command the harness
+    executes for a tool-call event, rather than in a field of its own,
+  And it names that script by the position it occupies once the project is
+    installed, while the same script is held, in the project's own tree, at a
+    different position,
+  When the census builds the population of scripts that are run,
+  Then it takes from each wiring the hook script that wiring's command executes,
+    including when that command wraps the script in other tokens before and after
+    it,
+  And it resolves the script a wiring names and the script held in the project's
+    tree to one identity, so a comparison made between the two positions as written
+    does not report every script as run by nothing,
+  And a script whose name appears somewhere in the settings surface other than
+    inside a command that executes it is not counted as run,
+  And a wiring that exists only in a copy of the settings surface the project does
+    not ship — a local override present in one working copy — is not counted, because
+    a wiring an installed project never receives is not a wiring,
+  And given a wiring whose command executes a script that is not present in that
+    place at all,
+  When the census runs,
+  Then that wiring is reported by name as executing nothing, and the run fails.
+depends_on:
+  - BP-1600a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME QUESTION, A DIFFERENT ANSWER, AND THE DIFFERENCE IS THE POINT. That record's
+      equivalent rule is "the invoking side is the entry line, never the id", with the
+      extraction fixed as the last script-shaped token of the entry — a rule it had to
+      correct once, after an existing helper's last-whitespace-token extraction was found to
+      resolve three entries to a flag rather than to a script. This surface has the same
+      hazard in a harder form: the script sits inside a shell command that first walks up the
+      tree to find the installed hook directory, so the command contains several tokens, at
+      least one other path, and quoting. Do not copy that surface's extraction; copy its
+      lesson, which is that the rule must be stated and tested against the commands the
+      surface actually carries.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-6.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECEDENT FOR THE SHIPPED-COPY CLAUSE, AND IT IS DIRECTLY TRANSFERABLE. That sweep
+      requires a candidate whose registration exists only in a manifest the install does not
+      deploy from to be reported as unregistered, "because a registration the commit path
+      never reads is not a registration". Here the equivalent is a wiring that exists only in
+      a local override: it makes the script run for one working copy while every installed
+      project receives nothing. Reuse that reasoning; do not invent a second statement of it.
+  - path: "templates/settings.json"
+    relationship: describes
+    status: exists
+    relevance: >-
+      The shipped wiring surface. Its wirings are grouped by tool-call event and then by
+      matcher, and each carries a command string rather than a script path — so both the
+      extraction rule and the two-layout resolution are facts about this file's shape, not
+      design choices. It also carries a permission list holding command patterns, which is
+      the concrete source of the "named somewhere other than inside a command that executes
+      it" clause: a name can appear in this document without anything running it.
+  - path: "docs/reference/false-green-mechanisms.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      M9a is the measured account of what path resolution does on this surface: the installed
+      hook directory is reached through a symlink, and comparing a resolved path against a
+      declared one is exactly what makes that guard match nothing. The census performs the
+      same comparison across the same symlink and will fail the same way unless the
+      resolution rule is decided once and applied to both sides.
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100a.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MIRROR DIRECTION, ON THE OTHER SURFACE, AND DELIBERATELY NOT WIDENED. BP-100a owns
+      "every registered hook has a real script behind it" for the commit-gate registry, and
+      it is explicitly non-blocking — the build warns and continues. The final clause here is
+      the same question asked of the settings surface, and it FAILS rather than warns,
+      because the two populations are already in hand at that moment and a wiring pointing at
+      nothing is a hook the harness will try to run on every tool call. Neither record may be
+      closed as a duplicate of the other; if BP-100a is ever generalised across surfaces,
+      this clause is what it must absorb.
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+it_requirements:
+  - >-
+    STATE THE EXTRACTION RULE AND TEST IT AGAINST THE COMMANDS THE SURFACE ACTUALLY CARRIES.
+    Every wiring in the shipped surface today invokes an interpreter on a path assembled by a
+    shell fragment that walks up to the installed hook directory first, so the command holds
+    several tokens and more than one path-shaped one. A rule that takes the last token, or
+    the first path-shaped token, or everything after the interpreter, gives a different answer
+    on that shape. Whatever rule is chosen must be written down in the implementation and
+    exercised against a wiring carrying arguments after the script, since that is the exact
+    variation that broke the equivalent rule on the sibling surface.
+  - >-
+    THE TWO-LAYOUT RESOLUTION IS THE HIGHEST-RISK PART AND ITS FAILURE MODE IS AN AVALANCHE,
+    NOT A SILENCE. The wirings name scripts where they live once installed; the census's disk
+    side lists them where they are authored. Resolve both to one identity — normalising the
+    wiring's path to the authored position, or the authored position to the installed one, but
+    ONE rule applied to both sides. Get it wrong and every script is reported as run by
+    nothing on the first run, which is a false-positive avalanche whose natural remedy is
+    switching the census off. State the resolution rule in the run's output so a reader can
+    tell an avalanche from a finding.
+  - >-
+    A NAME IS NOT A WIRING. The settings document carries at least one other list of
+    command-shaped strings that executes nothing at census time. A substring or regular
+    expression search over the document's raw text returns the correct answer on the
+    repository as it stands and the wrong answer the first time a script's name appears in
+    one of those positions — which is why the parent record's named mutation is exactly that
+    search. Build the wired set by walking the wiring structure and reading each wiring's
+    command, never by searching the document.
+  - >-
+    WHICH COPIES COUNT MUST BE DECIDED EXPLICITLY, NOT INHERITED FROM WHATEVER THE HARNESS
+    MERGES. The harness may compose its effective configuration from more than one document,
+    including per-user and per-working-copy files that are not part of what the project ships.
+    The census's question is about what an installed project receives, so the shipped surface
+    is the one it reads. Do NOT read the merged effective configuration: a script wired only
+    in one developer's local override would then be reported as wired while every consumer
+    receives a script that nothing runs — the precise false negative this census exists to
+    close, arriving through the configuration system.
+  - >-
+    THE WIRING-EXECUTES-NOTHING CLAUSE IS A SET DIFFERENCE IN THE OPPOSITE DIRECTION AND MUST
+    BE REPORTED IN ITS OWN CLASS. It is not a script reported as run by nothing; it is a
+    wiring reported as executing nothing, and the two must be distinguishable in the output
+    and in the exit path. Keeping them separate is what lets a reader tell "we built something
+    and never wired it" from "we wired something and never built it", which have different
+    fixes and different owners.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around reading
+    and parsing the settings surface and around any path resolution that touches the
+    filesystem; log at WARNING or higher or re-raise; no bare or blind excepts. A resolution
+    error must never silently drop a wiring from the wired population — a dropped wiring
+    turns a wired script into a reported one, which is a false accusation, and a swallowed
+    parse error turns the whole surface into zero wirings, which BP-1600a-1-i converts into a
+    named failure.
+test_spec:
+  - name: test_bp_100n_6_ii_a_wiring_carrying_arguments_after_its_script_still_resolves_to_that_script
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      A fixture wiring whose command invokes a hook script and then passes further arguments
+      after it resolves to that script, and the script is NOT reported as run by nothing.
+      This is the exact variation that broke the equivalent extraction on the sibling surface,
+      where a last-whitespace-token rule resolved three live entries to a flag.
+  - name: test_bp_100n_6_ii_the_two_layouts_resolve_to_one_identity
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Over the real shipped settings surface and the real authored hook directory — where the
+      wirings name the installed position and the files sit at the authored one — the census
+      reports FEWER scripts as run by nothing than the total it examined. Goes red on an
+      implementation that compares the two positions as written, which reports every script
+      as unwired; that avalanche is the failure this descriptor exists to catch, and it is
+      indistinguishable from a working census by any test that only checks that findings
+      exist.
+  - name: test_bp_100n_6_ii_a_name_appearing_outside_an_executed_command_is_not_a_wiring
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A fixture surface in which a script's name appears in a position that executes nothing —
+      a permission entry, or any value the harness does not run — while no wiring executes it:
+      the script is reported as run by nothing. Goes red on any implementation that searches
+      the document's text rather than walking its wirings.
+  - name: test_bp_100n_6_ii_a_wiring_present_only_in_an_unshipped_local_copy_does_not_count
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: >-
+      A fixture tree in which a script is wired ONLY in a local override that the project does
+      not ship reports that script as run by nothing. Establishes that the census answers for
+      what an installed project receives, not for what one working copy happens to have
+      configured.
+  - name: test_bp_100n_6_ii_a_wiring_whose_script_is_absent_is_reported_in_its_own_class_and_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      A fixture wiring executing a script that is not present in the hook directory is
+      reported by name as executing nothing, in a class distinct from the scripts reported as
+      run by nothing, and the run exits non-zero. Asserts the two directions are separately
+      readable in the output, not merged into one finding list.
+  - name: test_bp_100n_6_ii_the_resolution_rule_is_stated_in_the_run_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The census's output states which resolution rule it applied to reconcile the two
+      layouts, so a reader confronted with a large finding set can tell a real census from a
+      census that resolved nothing. Asserted over the executed process's own output.
+test_rationale: |
+  This criterion exists because the wired side of this surface cannot be read the way the
+  sibling surface's is. There, a manifest names scripts on entry lines in one layout. Here the
+  script is buried inside a shell command, named in the layout it will occupy after
+  installation, in a document that also carries command-shaped strings which execute nothing —
+  three independent ways to build the wrong population, each of which produces a plausible
+  result on the repository as it stands.
+
+  The two-layout descriptor is written as an inequality rather than an exact expectation
+  deliberately. The failure it guards is an avalanche — every script reported as unwired — and
+  an avalanche satisfies any test that merely asserts findings exist or that a particular
+  script is named. Requiring that fewer scripts be reported than were examined is the weakest
+  assertion that still cannot pass on a census that resolved nothing.
+
+  The unshipped-local-copy descriptor is the one most likely to be dismissed as pedantic and
+  is the one with the sharpest consequence: a developer who wires a hook locally and never
+  ships the wiring has a census that reports clean for them and a consumer base receiving a
+  script nothing runs. That is the same class of evidence failure as a registration the commit
+  path never reads, which an approved sibling record already refuses.
+
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", every descriptor
+  executes the census as a process and asserts over its emitted output; none may be satisfied
+  by reading the settings surface or the census source as text.
+delivers_to: null
+expects_from:
+  ac_id: BP-1600a-1
+  contract: >-
+    The comparison seam: the census's disk-side population and its request for a wired
+    population, into which this criterion inserts the extraction rule, the two-layout identity
+    resolution, the shipped-copy restriction, and the opposite-direction finding for a wiring
+    that executes nothing.
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by:
+  - reason: authored-at-ba-stage-with-mechanism-fields
+    by: business-analyst
+    at: 2026-09-07
+    note: >-
+      it_requirements, test_spec and test_rationale authored in the same pass as criteria at
+      the user's explicit instruction. Open to IT PO revision; criteria are not. readiness
+      stays draft.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  OBSERVED IN THIS WORKTREE AT 468e0490f, 2026-09-07, AS SHAPE RATHER THAN AS COUNTS. Every
+  wiring in the shipped settings surface invokes an interpreter on a path built by a shell
+  fragment that first walks up the tree looking for the installed hook directory, then names
+  the script beneath it. So the script is (a) inside a command string, (b) named in the
+  installed layout while the file it refers to is authored elsewhere, and (c) accompanied in
+  the same command by another path-shaped token. The same document also carries a list of
+  permitted command patterns, which is a place a script name can appear while executing
+  nothing. Each of those three facts defeats a different naive implementation, and all three
+  are true of the file today.
+
+
+  THE AVALANCHE IS THE FAILURE TO DESIGN AGAINST, NOT THE SILENCE. Most records in this family
+  worry about a census that reports nothing. This one's dominant risk runs the other way: get
+  the two-layout resolution wrong and the first run reports every installed hook as unwired.
+  A census that raises a dozen false alarms on the day it lands has exactly one natural remedy
+  — weakening it until it stops — so the resolution rule is required to be stated in the
+  output, and the descriptor for it is written as an inequality that an unresolved census
+  cannot satisfy.
+
+
+  THE SYMLINK IS NOT INCIDENTAL. The installed hook directory and the installed settings
+  surface are both reached through symlinks into the installed tree, and resolving a path
+  through exactly those symlinks is the measured mechanism that makes this surface's own M9a
+  exemplar match nothing on three of its four targets. A census built here without deciding
+  the resolution rule reproduces its subject's defect while examining it.
