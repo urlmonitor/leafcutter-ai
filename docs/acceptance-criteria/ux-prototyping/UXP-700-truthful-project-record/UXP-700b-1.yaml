@@ -1,0 +1,93 @@
+id: UXP-700b-1
+title: "A run that examined nothing reports a different outcome from a run that examined something"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - precommit_hooks
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project record holding zero journeys, zero example datasets and zero screens,
+  When the record's checker runs,
+  Then the outcome it reports is not the outcome it reports for a record holding at least one
+    artifact of each type that satisfies every check,
+  And the reported outcome names each artifact type for which the checker read zero records,
+  And a caller that reads only the outcome, without reading the message, can tell the two runs
+    apart.
+depends_on:
+  - UXP-700b
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+    relevance: "Parent principle: green means it was checked. This AC is that rule applied to the record's own checker."
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-609-2.yaml
+    relationship: context
+    status: exists
+    relevance: "The shape to mirror: the drift-guard fails when it read zero fixture records; it never passes on nothing."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A machine-readable outcome vocabulary (checked-and-sound / nothing-examined / degraded / failed) that UXP-700c-3 uses as the gate's verdict."
+expects_from:
+  ac_id: UXP-700a-2
+  contract: "A zero-artifact record whose index is present and empty, so the empty case is reachable at all."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by:
+  - UXP-700b-1-i
+  - UXP-700b-1-ii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  The defect is that two runs are indistinguishable, so no single-run test can detect it. The
+  contract can only be proved by running the checker twice - once over an empty record, once
+  over a populated sound one - and asserting the outcomes differ. A test that asserts the empty
+  run produces some particular message is satisfiable by a message change while the outcome a
+  caller reads stays identical, which is the live defect.
+test_spec:
+  - name: test_empty_store_outcome_differs_from_populated_sound_store_outcome
+    target_dir: unit_tests/product_truth/
+    description: "Running the checker over a zero-artifact store and over a populated sound store yields two different machine-readable outcomes."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_empty_store_report_names_each_zero_record_artifact_type
+    target_dir: unit_tests/product_truth/
+    description: "The empty-store report names journeys, example data and screens as the types for which zero records were read."
+    type: integration
+    angle: criterion
+    framework: unittest
+  - name: test_outcome_is_distinguishable_without_parsing_prose
+    target_dir: unit_tests/product_truth/
+    description: "A caller reading only the outcome value, not the message text, can separate the two runs."
+    type: unit
+    angle: seam
+    framework: unittest
+notes: |
+  DIRECTLY OBSERVED AND REPRODUCED (2026-09-07, this repo). A completely empty product-truth
+  store, with its derived index regenerated, produced:
+      OK: 0 flows, 0 mock-data, 0 mockups, eval + index + derived data valid (0 warnings)
+  and exit 0 - character-for-character the shape of a real pass. The hook that consumes it
+  reads only the exit code, so nothing downstream can tell the two apart either. That is why
+  the third clause is about what a CALLER can distinguish, not about the message.
+
+  STANDING-RULE CAUTION inherited from GE-120 and restated on UXP-700b: this does NOT repeal
+  the project's fail-open convention. Failing open on one bad input while the check still ran
+  is fine; reporting success when the check never examined anything is not. The reconciliation
+  is written as its own record, UXP-700b-1-i, so an implementer cannot satisfy this AC by
+  making every degraded run fail.

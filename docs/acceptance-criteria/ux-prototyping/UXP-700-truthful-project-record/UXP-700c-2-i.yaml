@@ -1,0 +1,70 @@
+id: UXP-700c-2-i
+title: "A journey never confirmed is reported as never confirmed, not as current"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a newly authored journey carrying no record of ever having been confirmed against what
+    it describes,
+  When the record is checked,
+  Then it is reported as never confirmed, naming the journey,
+  And it is not reported as up to date,
+  And it is not reported as behind, because there is no earlier confirmation for it to be
+    behind,
+  And the count of journeys compared does not include it.
+depends_on:
+  - UXP-700c-2
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c-2.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700c-2
+  contract: "The freshness verdict this record adds the never-confirmed value to."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  This is the state all fourteen existing journeys are in today, so it is not an exotic edge
+  case - it is the migration state, and the default an implementation picks for it decides
+  whether this whole L1 lands green on day one having proved nothing. The test has to assert
+  the never-confirmed journey is excluded from the compared count, because including it is how
+  a vacuous pass gets manufactured.
+test_spec:
+  - name: test_unconfirmed_journey_is_reported_as_never_confirmed
+    target_dir: unit_tests/product_truth/
+    description: "A journey with no confirmation record is reported as never confirmed, by name."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_unconfirmed_journey_is_neither_current_nor_behind
+    target_dir: unit_tests/product_truth/
+    description: "The never-confirmed journey appears in neither the current set nor the behind set."
+    type: integration
+    angle: boundary
+    framework: unittest
+notes: |
+  MIGRATION FACT the implementer must plan for: on the day this ships, all 14 journeys in this
+  repository are never-confirmed. If never-confirmed defaults to current, the check reports a
+  clean store having compared nothing, which is exactly the UXP-700b failure. If it defaults to
+  behind, the first run reports 14 findings and is ignored. The reason it is a third value is
+  that neither default is honest.

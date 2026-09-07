@@ -715,10 +715,24 @@ sides — a generator emitting artifacts its own repository's gates reject.
 
 ---
 
-### KI-BO-015 — `_worktree_exists` does not know the `fast-lane/` prefix, so a fast-lane run can never reuse its own worktree and aborts at phase one
+### KI-BO-015 — `_worktree_exists` does not know the `fast-lane/` prefix, so a fast-lane run cannot recognise its own workspace and aborts at phase one
 
 - **Severity:** high
-- **Status:** open
+- **Status:** **RESOLVED 2026-09-07 — root cause fixed; the remedy this entry proposed was
+  deliberately NOT taken.** `_worktree_exists` now matches `refs/heads/fast-lane/<branch>`, so
+  the prefix blindness is gone and the lookup can see its own workspace. What it does on
+  finding one is a **named refusal**, not reuse — specified by `BO-2400f-13` and its four
+  children, and recorded as **ADR-039**. Verified: 10/10 on
+  `test_bo2400f_13_occupied_workspace_refusal.py` plus 45 further tests across the changed
+  module, all under `AC_ENFORCE_STRICT=1`.
+  **The title above was corrected on the same date.** It read *"can never **reuse** its own
+  worktree"*, which states the remedy as if it were the defect. The defect is that the lookup
+  cannot **recognise** its own workspace; what to do about a recognised one was always a
+  separate question, and this entry's own fix-direction listed it as undecided. The old
+  wording cost a real collision: a test-writer derived a regression guard asserting reuse from
+  this entry's framing while a coder implemented the AC's refusal, and the two met at the green
+  gate after ~907k subagent tokens.
+  **Do not delete this entry** — acceptance criteria and commit messages cite it by id.
 - **Occurrences:** 1
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
 - **Where:** `templates/scripts/setup_ticket_worktree.py:232-275` (`_worktree_exists`), called at `:1289` from `cmd_create_fastlane_worktree`; branch built at `:1286` by `_fastlane_branch` (`:487-500`)
@@ -3595,16 +3609,67 @@ message rather than the new one).
 
 ---
 
-### KI-BO-20260901-1450 — UNDER INVESTIGATION: the fast lane isolates its worktree but not the process-level state around it, and three shared surfaces already misfired with only ONE lane running
+### KI-BO-20260901-1450 — The fast lane shares exactly one process-level surface with its siblings: `$GIT_COMMON_DIR/config`. Two other suspected surfaces were measured and are isolated.
 
-- **Severity:** unknown — under investigation, see "What we are asking for" below
-- **Status:** **UNDER INVESTIGATION** — filed before the confirming experiment, deliberately.
-  Contributions wanted; this entry is a request for evidence as much as a record.
-- **Occurrences:** 3 distinct surfaces, each observed at least once on 2026-09-01, **all with a
-  single lane running**
-- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
-- **Where:** `$GIT_COMMON_DIR/config`; `<root>/.build_manifest.json`; the shared `.leafcutter`
-  install tree reached through each worktree's symlink
+- **Severity:** **medium** (was: unknown). Narrowed by experiment on 2026-09-07 from three
+  suspected surfaces to one real one, whose root cause is already known and one-word fixable.
+- **Status:** **MEASURED — the experiment this entry was filed ahead of has now run.** Two of
+  its three predictions are FALSIFIED and the third is confirmed. The request for evidence
+  below stands only for the surfaces still unchecked.
+- **Occurrences:** 1 surface confirmed under genuine concurrency (2026-09-07); 2 surfaces
+  falsified
+- **First seen:** 2026-09-01 · **Measured:** 2026-09-07
+- **Where:** `$GIT_COMMON_DIR/config` — **and only that**. Not
+  `<worktree>/.build_manifest.json`, not the `.leafcutter` install tree; see the result below.
+
+**THE EXPERIMENT, AND ITS RESULT.** Two fast lanes were launched simultaneously against
+`BO-2900a-1-i` and `BO-2900d-2` — connected sets confirmed three-way disjoint by AC id and by
+file beforehand, precisely so that any interference could not be footprint collision. The three
+predictions were written into this entry *before* the run, so they could be scored rather than
+reconstructed.
+
+| # | prediction | outcome |
+|---|---|---|
+| 1 | `.git/config` identity leaks across lanes | **CONFIRMED** |
+| 2 | `.build_manifest.json` causes cross-lane `check-build-drift` failures | **FALSIFIED** |
+| 3 | Shared `.leafcutter` — one lane's build clobbers the other's deployed package | **FALSIFIED** |
+
+**The two falsifications are the more useful half, and they correct this entry's own framing.**
+Measured after the run:
+
+- Each lane worktree holds its **own real `.leafcutter` directory**, not a symlink to the shared
+  install tree. `ls -ld` on both returns `drwxr-xr-x`, not `lrwxrwxrwx`.
+- Each holds its **own `.build_manifest.json`** (127,211 bytes, both written 12:31). The
+  workspace-root manifest was untouched, still dated 2026-09-01.
+
+So the lane's bootstrap builds a genuinely private install tree per run. The original
+observations behind surfaces 2 and 3 were real, but they came from **hand-made** worktrees where
+the `.leafcutter` symlink was created manually per the `CLAUDE.md` worktree guidance. Generalising
+from a hand-made worktree to a lane-made one was the error. A lane worktree is better isolated
+than the ones humans and agents make by following the documented setup.
+
+Both lanes bootstrapped within the same minute with **no collision of any kind observed**.
+
+**WHAT REMAINS, AND WHY IT CANNOT BE FIXED THE SAME WAY.** `.git/config` is shared because
+worktrees share `$GIT_COMMON_DIR` by construction — the lane cannot bootstrap its way out of it.
+The identity was verified clean immediately before launch and the successful lane's commit landed
+authored `GE-120e-1-i fixture`, on a pull request. Root cause and remedy are already recorded in
+`KI-TQ-012`: a test fixture writes an identity with plain `git config` instead of
+`git config --worktree`, and this repository already sets `extensions.worktreeConfig = true`, so
+the correctly-scoped form is available today.
+
+**The practical consequence for running lanes in parallel is therefore much narrower than this
+entry originally implied.** Parallel lanes do not corrupt each other's build state. They do share
+a commit identity, and until `KI-TQ-012` is fixed every lane commit is at risk of misattribution —
+which is a real defect on a real pull request, but a different and smaller thing than "the
+isolation story stops at the worktree boundary".
+
+**STILL WANTED.** The falsifications narrow the question rather than closing it. Unchecked
+surfaces, in rough order of likelihood: the pre-commit cache under `~/.cache/pre-commit`;
+`.security-allowlist` resolution (`KI-BP-017`); the feedback sink
+`debugging/logs/feedback.jsonl`; and concurrent writers to the AC store's claim records. A
+negative result on any of these is worth as much as a positive one — two of the three original
+predictions were negative, and that is what made this entry useful.
 
 **Why this is filed now, before the experiment.** The intended next step is to run two fast
 lanes concurrently on independent acceptance criteria and observe what actually breaks. That
@@ -3631,8 +3696,12 @@ criteria touch which repository files. That is a real and separate gap (its host
 footprint. They are process-level singletons that no criterion in the store currently mentions,
 so building `ACD-2000b-4` in full would leave all three untouched.
 
-**The hypothesis, stated so it can be falsified.** Each of these degrades with N lanes rather
-than improving, because each is a single shared resource written by every run:
+**The hypothesis, stated so it can be falsified.** [ANSWERED 2026-09-07 — read the three
+numbered items below as the prediction, not the finding. Item 1 was confirmed; items 2 and 3
+were falsified, because a lane worktree gets its own `.leafcutter` and its own build manifest.
+The result table is in the header above; this paragraph is retained because a prediction is only
+worth anything if it stays legible after it has been scored.] Each of these degrades with N
+lanes rather than improving, because each is a single shared resource written by every run:
 
 1. Concurrent commits misattributed, or attributed inconsistently within one lane's own history,
    whenever any run executes a suite that writes git config.
@@ -3734,9 +3803,33 @@ role reassignment. The claim prompt opens `You are the claim-phase agent for a f
 different model, or after a template edit, and if it refuses at the claim step the run loses its
 only exclusion guarantee.
 
-**Nothing enforces the field.** No hook, gate or test compares a workflow's `agentType`
-dispatches against `permits_shell`. The field is declared, documented, and consulted by exactly
-one hand-written comment. That is why a wrong reading of it survived review and shipped.
+**CORRECTION, 2026-09-01 — the paragraph that stood here was wrong, and the correction narrows
+this entry.** It claimed "nothing enforces the field … consulted by exactly one hand-written
+comment". Both halves are false, and the entry is weaker for it being so:
+
+- **`permits_shell` is read by real code.** `templates/workflows-js/plan-feature.js:1850`,
+  `classifyWorkspaceSetupPermission()`, gates the workspace-setup dispatch on it, with live
+  tests behind it (`unit_tests/workflows/test_bo_1500f_1_real_registry_read.py`,
+  `test_bo_1500f_1.py`). The `fast-lane-ship.js` occurrence is a comment; it is not the only
+  reader.
+- **`status-checker` holding `Bash` while declaring `permits_shell: false` is DELIBERATE, not a
+  contradiction.** The schema says so by name: *"Distinct from tool possession (an agent can
+  have `Bash` in its tools list purely for read-only diagnostics, e.g. status-checker, without
+  `permits_shell` being true)."* So the three dispatches above are a charter *inconsistency* —
+  the claim step writes to the store, which is not read-only diagnostics — but nothing is being
+  mechanically bypassed, because `permits_shell` does not gate fast-lane's dispatches at all.
+
+**What IS true, restated.** No check compares a *workflow's* `agentType` dispatches against
+`permits_shell`. `plan-feature.js` consults it for its own single dispatch and nothing
+generalises that. So the field is enforced in exactly one place and advisory everywhere else,
+which is how a wrong reading of it survived review in a different workflow.
+
+**And backfilling alone would change nothing.** The gate is `if (match.permits_shell === true)`.
+For the 58 of 60 agents where the field is absent, absent and `false` already take the identical
+branch — so populating them buys documentation, not behaviour. The behaviour only changes when a
+reader learns to distinguish *undecided* from *decided-none*, which is precisely what
+`classifyWorkspaceSetupPermission()` already does for its own four failure modes and what no
+other reader does.
 
 **Suggested fix, and the ordering matters.**
 
@@ -3765,3 +3858,69 @@ is the mechanism that entry's parallel-safety question depends on).
 **Pattern:** a permission field with a documented tri-state, no enforcement, and two of ~40
 records populated — so the first person to consult it reasoned from the populated cases and got
 the default backwards, in a comment that now teaches the error.
+
+---
+
+### KI-BO-20260907-0955 — The fast lane cannot complete any AC whose tests build a real clone, because its green gate runs before its commit phase
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/workflows-js/fast-lane-ship.js` phase order (green gate before commit)
+  vs. `unit_tests/portability/_bp900h4_layout_helpers.py` (`git clone --local`,
+  `git worktree add --detach <dest> HEAD`)
+
+**Not a flaky run and not a code defect — a structural impossibility.** The fast lane runs
+`verify_green_and_coverage` before its commit phase. `BP-900h-4-i`'s fixtures build their four
+adopter layouts with a real `git clone --local` and a real `git worktree add --detach <dest>
+HEAD`, because the AC explicitly requires a real worktree rather than a copy (a copy
+reproduces neither the trigger nor the defect it exists to catch). **Both git operations see
+only COMMITTED state.**
+
+So a change to `scripts/build_phases.py` is invisible inside every cloned layout until it is
+committed, the layouts are built from the pre-change tree, and the green gate fails. Red then
+green inside one working tree is impossible for such an AC. Retrying the gate cannot help,
+because nothing about the retry changes what `HEAD` contains.
+
+**Observed.** Driving `BP-900h-4` on 2026-09-07, the lane halted at `python-coder` with
+`green:false` and released both ACs back to `todo`, having reproduced the same result across
+three gate runs. The diagnosis was confirmed by reading the fixture and then causally: the
+implementation was committed by hand and the identical test command returned **9/9 green**.
+Nothing else changed.
+
+**Why this is not "just commit first".** Committing before green means committing unverified
+work, which is the order the lane exists to prevent. It was acceptable in that instance only
+because the sibling `BP-900h-4` had five tests already green against the live worktree, so the
+uncommitted change was not unverified — merely unverifiable *by the child AC*. That reasoning
+does not generalise; an AC with only clone-based tests has no such fallback.
+
+**It will recur.** Nothing marks an AC as clone-based, so the next one lands the same way:
+the lane halts with `green:false`, the payload blames the coder phase, and the real cause is
+one phase boundary away. The failure names the wrong culprit, which is what makes it worth an
+entry rather than a comment.
+
+**Fix direction, in preference order.**
+
+1. Let the lane detect this rather than the human. A test that shells out to `git clone` or
+   `git worktree add` against the repo under test is statically recognisable; when the build
+   set contains one, the lane should say so and route it rather than reporting a coder
+   blocker.
+2. Give clone-based fixtures a committed-state source that is not `HEAD` — e.g. build the
+   layouts from a temporary commit or a stash-free `git stash create` tree object, so the
+   working tree's changes are visible without altering branch history.
+3. Failing both, permit an explicitly-marked AC to run its green gate after a provisional
+   commit on the lane's own branch, which is reversible and never reaches `main`.
+
+**Do NOT "fix" this by relaxing the AC to use a copied tree.** `BP-900h-4-i` requires a real
+worktree precisely because the KI-BP-003 trigger — a submodule directory unpopulated in a
+worktree — cannot be reproduced by copying. Weakening the fixture would make the lane green
+and the coverage worthless.
+
+**Related.** `KI-BO-20260901-1450` (the fast lane's isolation stops at the worktree boundary)
+is the same seam from the other side. `KI-TQ-20260901-1310` is the sibling case of a lane gate
+shaping the work rather than judging it.
+
+**Pattern:** a pipeline whose verification step reads committed state while its commit step
+runs later — so any test that consults git history can never be satisfied by the pipeline that
+is supposed to satisfy it, and the resulting failure is attributed to the last agent that ran.

@@ -1,0 +1,77 @@
+id: UXP-700b-3
+title: "An every-record rule with no records to test reports that it was not exercised"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a check phrased as a rule that must hold of every record of some kind,
+  And a project record in which no record of that kind exists,
+  When the check runs,
+  Then it reports that it was not exercised, naming the kind of record it needed,
+  And it does not report that the rule holds,
+  And the run's overall outcome is not the outcome for a record that was checked and found
+    sound while any such check reports it was not exercised.
+depends_on:
+  - UXP-700b
+  - UXP-700b-2
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-514.yaml
+    relationship: context
+    status: exists
+    relevance: "The live instance. Every clause of UXP-514 is of the form 'errors if any X differs', which is universally quantified and therefore vacuously satisfied on an empty store."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "The not-exercised verdict that UXP-514-5 applies to the four named drift checks."
+expects_from:
+  ac_id: UXP-700b-2
+  contract: "The per-check examined figure from which not-exercised is decided."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by:
+  - UXP-700b-3-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  Vacuous truth is invisible to any test that only feeds the check a populated input, which is
+  what every existing test in this area does. The fixture has to be an empty input set for a
+  universally quantified check, and the assertion has to be that the check refuses to claim the
+  rule holds. Asserting the outcome is non-zero would be too weak: a crash also produces a
+  non-zero outcome and is not the required behaviour.
+test_spec:
+  - name: test_universal_rule_on_empty_input_reports_not_exercised
+    target_dir: unit_tests/product_truth/
+    description: "A check of the form 'every X must satisfy P' run against zero X reports not-exercised naming X."
+    type: unit
+    angle: boundary
+    framework: unittest
+  - name: test_universal_rule_on_empty_input_does_not_report_the_rule_holds
+    target_dir: unit_tests/product_truth/
+    description: "The not-exercised report is distinct from, and does not accompany, a statement that the rule holds."
+    type: unit
+    angle: criterion
+    framework: unittest
+notes: |
+  EVIDENCE. UXP-514's four clauses are each "errors if ANY X differs". On an empty store there
+  is no X, so all four clauses are true and the checker reports success having tested nothing.
+  UXP-514-5 is the instance of this rule for those four checks specifically; this AC is the
+  general rule the record's checks are held to.
+
+  Paired acceptable input lives in UXP-700b-3-i so this AC cannot be discharged by making every
+  such check refuse unconditionally.

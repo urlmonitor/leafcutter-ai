@@ -1,0 +1,82 @@
+id: UXP-700d-2-i
+title: "The three example criteria that are dispatchable today are the proof"
+component: ux-prototyping
+components:
+  - ac_store
+  - ux_prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the example criteria that today appear as ready to work on or one blocker away - the
+    order-summary-before-payment criterion, the payment-record criterion, and the criterion
+    blocked behind the payment-record one,
+  When the store of work is scanned,
+  Then none of the three appears in the ready set,
+  And none of the three appears in the blocked set,
+  And the number of items in the ready set is smaller than before the change by exactly the
+    number of example criteria that were previously in it.
+depends_on:
+  - UXP-700d-2
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700d-2.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-210-buy-a-plant/UXP-210d-4.yaml
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-210-buy-a-plant/UXP-210d-5.yaml
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-210-buy-a-plant/UXP-210d-6.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700d-2
+  contract: "The set-aside classification whose effect on the live store this record measures."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  UXP-700d-2 is provable against a synthetic fixture, and a synthetic fixture can be built to
+  pass while the real store still dispatches plant-shop work. This record pins the assertion to
+  the three specific criteria observed in the live store on 2026-09-07, so the fix is verified
+  against the actual defect rather than a model of it. The ready-set-size clause is what stops
+  the test passing because the scan returned nothing at all.
+test_spec:
+  - name: test_the_three_known_dispatchable_example_criteria_are_absent_from_the_ready_set
+    target_dir: unit_tests/ac_store/
+    description: "UXP-210d-4, UXP-210d-5 and UXP-210d-6 are returned by neither the ready nor the blocked scan of the live store."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_ready_set_shrinks_by_exactly_the_number_of_example_criteria_removed
+    target_dir: unit_tests/ac_store/
+    description: "The ready-set size falls by the set-aside count, not to zero and not by more."
+    type: integration
+    angle: boundary
+    framework: unittest
+notes: |
+  VERIFIED 2026-09-07: the store scanner surfaces UXP-210d-4 ("Order summary is shown before
+  payment") and UXP-210d-5 ("Entering payment details creates a Payment record") as READY
+  LEAVES, both assigned_agent frontend-coder, both in the ready set alongside 649 real items.
+  UXP-210d-6 sits in the blocked set and becomes ready the moment UXP-210d-5 clears. All three
+  are level L3, readiness approved, work_status todo. The concrete consequence today: an agent
+  can be dispatched to build plant-shop checkout and payment handling inside leafcutter.
+
+  The criteria deliberately describe the three by what they say rather than only by id, so the
+  record survives an id change; the ids are pinned in doc_links and test_spec.

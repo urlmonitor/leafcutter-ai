@@ -1,0 +1,66 @@
+id: UXP-700c-5
+title: "A sequence diagram of how a change reaches a drift finding"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - documentation_system
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a reader trying to understand how a change to the code becomes a drift finding,
+  When they open the sequence diagram for the record's freshness check,
+  Then it shows the ordered exchange from the change being offered to the automatic checks,
+    through the checker resolving pointers and comparing each journey against what it was last
+    confirmed against, to the verdict being reported and the behind mark being written,
+  And it shows the three verdict outcomes - checked and sound, nothing examined, and not
+    checked - as distinct terminations rather than one,
+  And each participant in the diagram corresponds to a component named in the project's
+    component registry.
+depends_on:
+  - UXP-700c
+  - UXP-700c-2
+  - UXP-700c-3
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c.yaml"
+doc_links:
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: related
+    status: planned
+    relevance: "Component architecture page the diagram belongs beside; confirm the exact path at authoring time."
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700c-3
+  contract: "The gate-to-checker call order the diagram depicts."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+test_required: false
+test_rationale: |
+  The deliverable is a diagram. Its participants are checkable against the component registry
+  by the repository's existing diagram guards; the ordering it depicts is pinned by the
+  executable tests on UXP-700c-3. A bespoke unit test over diagram source would assert syntax,
+  not correctness.
+notes: |
+  Produced because UXP-700c declares documentation_triggers: [how-to, sequence-diagram]. The
+  second clause is the one that earns the diagram: showing three terminations rather than one
+  is what makes the UXP-700b distinction visible to a reader who will never read UXP-700b.
+
+  UNVERIFIED: docs/architecture/components/ux-prototyping.md is recorded as planned because its
+  existence was not confirmed during this authoring pass. The diagram author should confirm the
+  destination page before writing.
