@@ -75,7 +75,7 @@ def _hook_ids_from_job(job: dict) -> set[str]:
     return set(re.findall(r"pre-commit\s+run\s+([A-Za-z0-9._-]+)", run_bodies))
 
 
-def _find_whole_store_job(workflow: dict) -> tuple[str, dict]:
+def _find_whole_store_job(workflow: dict) -> tuple[str | None, dict]:
     """Locate the job that re-checks the ENTIRE store on a push to `main`.
 
     A qualifying job must:
