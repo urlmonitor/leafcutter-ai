@@ -100,6 +100,22 @@ DECISION HISTORY
   they are not evidence the defect is closed. Every other test in this class
   fails today; see the captured red_baseline in the ticket sign-off comment
   for actual failure text.
+- 2026-09-07 [GE-123a-1]: THE 2026-08-18 ENTRY'S PREMISE NO LONGER HOLDS. That
+  entry is left standing because it was true when written and it records why
+  the fixtures look the way they do — but the behaviour it describes is gone.
+  `scan_file` no longer returns after appending the ENV_FILE finding; it falls
+  through and runs every content rule, so a `.env` path CAN now carry
+  ENTROPY_HIGH and GENERIC_SECRET findings alongside the filename one. That was
+  the whole point of GE-123a-1: recognising a filename ADDS a finding, it does
+  not replace the content scan.
+  Nothing here needed changing. These tests call `_is_suppressed` directly with
+  hand-built Finding objects and never reach `scan_file`, so the short-circuit
+  never affected them either way — the 2026-08-18 change was about making the
+  fixtures *describe a reachable scenario*, and non-.env filenames still do.
+  Keeping them off the .env family also stays sensible: it keeps this suite
+  measuring suppression rather than the filename rule.
+  Read the 2026-08-18 entry as history, not as a current fact about the
+  scanner.
 """
 
 from __future__ import annotations
@@ -314,11 +330,16 @@ class TestIsSuppressedPathSuffixSemantics(unittest.TestCase):
         and "src/config/secrets.py" (segment suffix), but must NOT suppress
         "deploy/secrets.py", which shares only the basename.
 
-        Filenames deliberately avoid the .env family: scan_file short-circuits
-        env-filename paths to a single ENV_FILE finding and returns without
-        scanning content, so a GENERIC_SECRET finding at a .env path cannot
-        exist end-to-end. Using one here would make the fixture describe a
-        scenario the real scanner can never reach.
+        Filenames deliberately avoid the .env family, but NOT for the reason
+        this docstring gave until 2026-09-07. The old reason — that scan_file
+        short-circuits env-filename paths and so a GENERIC_SECRET finding at a
+        .env path cannot exist end-to-end — stopped being true when GE-123a-1
+        removed that short-circuit; content rules now run on .env paths too.
+
+        The fixture choice stands on its own footing: this suite is about
+        _is_suppressed, and an env-named path would drag the separate
+        filename rule into a scenario that is only meant to exercise
+        allowlist matching. Keeping the two apart is the point.
         """
         allowlist = {("GENERIC_SECRET", "config/secrets.py", "*")}
 
