@@ -1,0 +1,310 @@
+id: BP-1600a-1-i
+components:
+  - build_pipeline
+  - precommit_hooks
+title: "The census states how many hook scripts it examined and how many wirings it read, and a run that could not establish either population is an unresolved run that fails — an unlistable directory and a directory that lists empty are two different facts and must be named as two"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the wiring census has completed a run,
+  When it reports,
+  Then its summary states how many hook scripts it found in that place and
+    examined, and how many wirings it read from the settings surface, so a run that
+    compared nothing cannot produce the same output as a run that compared
+    everything,
+  And given the place the hook scripts are kept cannot be listed, or is listed
+    successfully and holds no hook scripts at all,
+  When the census runs,
+  Then it states that it could not establish which hook scripts exist, names which
+    of those two situations it is in, and fails,
+  And given the settings surface cannot be read, or is read and cannot be
+    understood as the wiring it is supposed to be,
+  When the census runs,
+  Then it states that it could not establish which scripts are run, names which of
+    those two reasons applies, and fails,
+  And in none of those situations does it state that no script is run by nothing,
+    and in none does it exit as though the comparison had been performed and had
+    found every script wired,
+  And given a run in which every hook script present is either run by a wiring or
+    carries a stated ground,
+  When it reports,
+  Then the number of scripts it states it examined is greater than zero, and that
+    stated number is what establishes the run as clean — a run is never reported
+    clean on the strength of having found nothing to report.
+depends_on:
+  - BP-1600a-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-ii.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME CONTRACT, ALREADY WRITTEN FOR THE COMMIT-GATE SURFACE — REUSE ITS VOCABULARY,
+      DO NOT MINT A SECOND ONE. BP-100n-4-ii (approved) fixes the run summary there at four
+      numbers, requires the unlistable and the successfully-empty directory to be named as
+      two different situations, and refuses to let either become a zero-findings clean exit.
+      Every one of those decisions is repeated here for this surface and none is
+      re-litigated. The differences are only in the populations: two numbers rather than
+      four in the base summary, because the declared-non-gate count of that surface
+      corresponds to BP-1600a-1-iii's deliberately-unwired count and is added by that record
+      rather than by this one, and because there is no third registered-but-disabled state
+      on this surface — a settings entry that exists runs.
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-1-iii.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      Adds the third number to the same summary line — how many scripts were treated as
+      deliberately unwired. One line, extended in place; a second summary printed elsewhere
+      would let one line report a determinate run while the other reports an empty one.
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4-i.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The original fail-closed vocabulary in this family — a named indeterminate reason and
+      a distinct exit status, never a clean verdict — and its standing constraint that the
+      indeterminate path be exercised by making the lookup genuinely unavailable at run time
+      rather than by asserting an error branch exists in the source. That constraint applies
+      here unchanged.
+  - path: "docs/known-issues/commit-guardian.md"
+    relationship: context
+    status: exists
+    relevance: >-
+      The register of precedents this criterion exists to stop repeating — checks that
+      examined a population, skipped all of it, compared none, and exited zero. In every one
+      of them the missing artifact was a stated count. Read them before choosing what the
+      summary prints.
+  - path: "CLAUDE.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      "AC-store hygiene" records the sibling case in the store validator, where a bare
+      directory matched nothing, printed a success-shaped message and exited zero for eight
+      days, making the documented defence against store rot itself a no-op — and the habit
+      that survived the fix: before believing a pass, confirm the run actually named
+      something. That is the positive-count assertion this criterion requires.
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+it_requirements:
+  - >-
+    THE POSITIVE-COUNT FORM IS THE REQUIREMENT AND THE FAILURE GUARD IS DERIVED FROM IT.
+    "Fails when it examined nothing" and "states how many it examined" are different
+    requirements. The first is satisfiable by a branch on one code path; the second makes the
+    empty state unrepresentable in the output, so a reader — human, agent, or a log grep —
+    can tell a run that examined everything from a run that examined nothing without knowing
+    which branch was taken. Implement the second and derive the first from it.
+  - >-
+    THE TWO DISK SITUATIONS MUST BE DISTINGUISHED BY NAME, NOT MERELY BOTH FAIL. "The hook
+    directory could not be listed" and "the hook directory listed successfully and holds no
+    hook scripts" are different facts about the world, and on this surface they have
+    different causes: the first is a broken checkout or a permission problem, the second is a
+    path constant pointing at the wrong layout — which is a live hazard here, because the
+    installed hook directory is reached through a symlink and the authored one is not.
+    Collapsing them into one message costs the reader the only information that tells those
+    two apart.
+  - >-
+    THE SETTINGS-SURFACE FAILURES ARE ALSO TWO. Absent or unreadable is one; present but not
+    parseable as the wiring it is supposed to be is the other, and on this surface the second
+    includes a document that parses as valid data but carries no wiring section at all. A
+    document with no wiring section must be the second named situation and must fail — read
+    as "zero wirings, therefore every script is unwired" it produces an avalanche of false
+    positives, and read as "nothing to compare" it produces a clean exit. Both are wrong and
+    they are wrong in opposite directions, which is exactly why the situation has to be named
+    rather than inferred.
+  - >-
+    ONE SUMMARY, EXTENDED IN PLACE. This criterion establishes the summary and its first two
+    numbers; BP-1600a-1-iii adds the third to the same line. Do not print a second summary
+    elsewhere — two summaries can disagree about whether the same run was determinate.
+  - >-
+    THE INDETERMINATE PATHS MUST BE EXERCISED FOR REAL. Make the directory listing and the
+    settings read GENUINELY unavailable at run time — a path that does not exist, permissions
+    that forbid listing, a file present but not parseable — never by asserting that an error
+    branch is present in the source. A source assertion stays green on precisely the
+    fail-open implementation this criterion exists to forbid.
+  - >-
+    A SWALLOWED ERROR MUST NEVER BECOME AN EMPTY POPULATION, AND AN EMPTY POPULATION MUST
+    NEVER BECOME A CLEAN RUN. This is the shape every cited precedent actually shipped. The
+    exit status carries the verdict: a check that prints a worried message and then exits
+    zero is indistinguishable from a passing one to whatever invokes it, which reads only the
+    status.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    directory listing and around reading and parsing the settings surface; log at WARNING or
+    higher or re-raise; no bare or blind excepts. Here the re-raise-equivalent is the
+    unresolved verdict — it must never degrade into a swallowed error and a clean exit.
+test_spec:
+  - name: test_bp_100n_6_i_the_summary_states_both_population_numbers
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The executed census states how many hook scripts it examined and how many wirings it
+      read. Asserted by varying each population between runs and requiring the corresponding
+      stated number to move with it, never by matching a fixed number, which would pass on
+      two hard-coded literals — the same defect one level up.
+  - name: test_bp_100n_6_i_an_unlistable_hook_directory_is_named_as_such_and_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      With the hook directory made GENUINELY unavailable at run time — a path that does not
+      exist, or one whose permissions forbid listing — the executed census states that it
+      could not establish which hook scripts exist, names this situation specifically as the
+      unlistable one, and exits non-zero. Exercised by breaking the listing for real, never
+      by asserting an error branch appears in the source.
+  - name: test_bp_100n_6_i_a_listable_but_empty_hook_directory_is_the_other_named_situation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A hook directory that lists successfully and holds no hook scripts is reported as a
+      DIFFERENT, separately named situation from the unlistable one, and also fails. A
+      successfully-empty listing carries the same epistemic weight as a failed one while
+      remaining distinguishable from it in the output — and on this surface it is the shape a
+      path constant aimed at the wrong layout produces.
+  - name: test_bp_100n_6_i_an_unreadable_or_unparseable_settings_surface_names_its_reason_and_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      With the settings surface made genuinely unreadable at run time, and separately with
+      one that is present but cannot be understood as wiring — including one that parses as
+      valid data but carries no wiring section — the executed census states that it could not
+      establish which scripts are run, names which reason applies, and exits non-zero. The
+      present-but-unusable case must not fall through to another copy of the surface and
+      report clean against a document the harness would never read.
+  - name: test_bp_100n_6_i_no_unresolved_situation_emits_a_zero_unwired_clean_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      In none of the unresolved situations does the census state that no script is run by
+      nothing, and in none does it exit as though the comparison had been performed. NAMED
+      MUTATION (mandatory, run it, do not merely describe it): make the directory listing
+      return an empty collection on error rather than raising or returning an unavailability
+      signal — the ordinary fail-open shape, and the one every cited precedent actually
+      shipped. Under that injection the census reports zero examined, zero unwired, and exits
+      clean; this descriptor must go RED, and must fail BY THE EXIT STATUS as well as by the
+      text, then return to green on revert.
+  - name: test_bp_100n_6_i_a_clean_run_states_an_examined_count_greater_than_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Over a run in which every hook script is wired or grounded, the stated examined-count
+      read from the census's own output is greater than zero, and it is that positive number
+      — not the absence of findings — that establishes the run as clean. A run reporting
+      nothing while stating an examined count of zero must not be accepted as clean by this
+      descriptor.
+  - name: test_bp_100n_6_i_the_counts_and_the_unresolved_verdict_reach_the_invoking_host_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      PRODUCTION ENTRY POINT. Run the census through the host that will invoke it in practice
+      and assert that both summary numbers appear in that host's own output stream on a
+      resolved run, that the unresolved verdict and its named reason appear on an unresolved
+      one, and that the exit status is the host's outcome in both cases rather than an
+      advisory note.
+  - name: test_bp_100n_6_i_the_deployed_copy_fails_closed_when_the_listing_is_unavailable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After a real build, the DEPLOYED copy runs in a cold process — a helper missing from
+      the deploy manifest surfaces here as a missing-module error rather than passing. With
+      the installed hook listing made genuinely unavailable to that run, it emits the
+      unresolved verdict with its named reason and exits non-zero; over the real installed
+      tree it states an examined count greater than zero. Source-tree greenness cannot
+      substitute, because the installed layout is the one reached through symlinks.
+test_rationale: |
+  Every clause here asserts what the census must NOT do — must not state that nothing is
+  unwired, must not exit clean, must not let a comparison that never happened look like a
+  comparison that found nothing wrong. On a repository with no census at all, every one of
+  them is green on arrival for the trivial reason that nothing is reported. That is why the
+  zero-clean-verdict clause carries an executable injection rather than a note asking someone
+  to confirm the test is meaningful, and why the injection reconstructs the fail-open shape
+  the cited precedents actually shipped rather than a hypothetical one.
+
+  Requiring that descriptor to fail by the EXIT STATUS as well as by the text is deliberate:
+  a check that prints a worried message and then exits zero is indistinguishable from a
+  passing one to whatever invokes it.
+
+  The stated-count descriptor asserts by variation rather than by fixed numbers because two
+  hard-coded literals would satisfy a stated-count requirement while proving nothing about
+  what was examined — the same defect one level up, which is precisely how a census can be
+  born already broken.
+
+  The empty-directory descriptor is not redundant with the unlistable one on this surface.
+  The installed hook directory is reached through a symlink and the authored one is not, so a
+  path constant aimed at the wrong layout produces a successful listing of nothing — the
+  greenest possible run — and that is a different bug from a broken checkout, with a
+  different fix.
+delivers_to: null
+expects_from:
+  ac_id: BP-1600a-1
+  contract: >-
+    The two enumerated populations — hook scripts listed from the hook directory, and scripts
+    executed by the wirings of the shipped settings surface — whose sizes this criterion
+    requires to be stated and whose unavailability or emptiness it converts from a silent
+    clean exit into a named, non-zero failure.
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by:
+  - reason: authored-at-ba-stage-with-mechanism-fields
+    by: business-analyst
+    at: 2026-09-07
+    note: >-
+      it_requirements, test_spec and test_rationale authored in the same pass as criteria at
+      the user's explicit instruction. Open to IT PO revision; criteria are not. readiness
+      stays draft.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  WHY THIS IS NOT PARANOIA, AND WHY IT IS SHARPER ON THIS SURFACE THAN ON THE OTHER ONE. The
+  known-issues register already holds several guards that exited zero having examined
+  nothing, and the store's own validator spent eight days reporting clean from a bare
+  directory that matched no files. A census of the hook surface has two independent
+  populations to resolve, either of which can come back empty, so it has two routes into that
+  state on the day it lands. It also has a third route the sibling surface does not have: the
+  hook directory and the settings surface are BOTH reached through symlinks into the
+  installed tree, and resolving a path through those symlinks is the exact mechanism that
+  made this surface's own worked example — the M9a guard — unable to match anything. A path
+  constant aimed at the wrong side of that symlink produces a successful listing of nothing,
+  which under a fail-open implementation is the greenest run the census can emit.
+
+
+  TWO NUMBERS HERE, THREE IN TOTAL. The sibling contract on the commit-gate surface fixes its
+  summary at four numbers. This surface has no registered-but-disabled state — a wiring that
+  exists in the settings surface runs — so the base summary carries two: scripts examined and
+  wirings read. BP-1600a-1-iii adds the third, the count of deliberately-unwired scripts, to
+  the same line. That is a deliberate difference from the sibling and not an omission.
+
+
+  THE EMPTY-WIRING-SECTION CASE IS THE ONE MOST LIKELY TO BE MISSED. A settings document that
+  parses cleanly and simply has no wiring section is neither unreadable nor unparseable, and
+  it is the natural shape of a consumer project that installed the package but has not yet
+  received the settings file. Read as zero wirings it reports every installed hook as unwired,
+  which is an avalanche whose natural remedy is switching the census off. Read as nothing to
+  compare it reports clean while nothing whatsoever is running. Both readings are wrong and
+  they fail in opposite directions, which is why the criterion requires the situation to be
+  named rather than inferred from a count.

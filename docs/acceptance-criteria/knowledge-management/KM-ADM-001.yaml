@@ -28,6 +28,34 @@ criteria: |
   And the bug symptom ("ac-tested is rated warn and ticket-touches is rated none, so a
     refactorer trusts the test link that nothing checks and discards the
     files_touched link that is actually reported") must not occur
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE AC WHOSE DAY-ONE TRIAGE CAN FALSIFY THIS ONE. ADDED 2026-09-07. BP-100n-4 (approved,
+      high, phase_1) requires that every commit-guardian check script no registry entry names be
+      registered, deleted, or recorded as a declared non-gate IN THE SAME CHANGE that lands its
+      census — and check_ac_coverage.py is in that unreferenced set. This AC's criteria REQUIRE
+      the ac-tested edge to be rated `enforcement: none` on the stated ground that "its named
+      hook check_ac_coverage.py is unregistered dead code". If triage registers the script, that
+      ground disappears and this AC's mandated rating becomes wrong: a registered, enabled,
+      non-blocking hook is `warn` under this AC's own second clause, not `none`. That is a
+      criteria change, so this record must be AMENDED rather than merely re-read. BP-100n-4 now
+      carries the reciprocal link and names this collision explicitly in its notes.
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE THIRD POSITION ON THE SAME SCRIPT, AND THE ONLY ONE THAT READ ITS CODE. TQ-100b-5
+      (approved, high) treats check_ac_coverage.py as "R3", a live member of a closed four-rule
+      coverage-tag set whose real output must agree, and records its actual behaviour: captures
+      the id, but anchors on "#" so it never matches a "// covers:" tag, and takes three OR MORE
+      digits. ACS-1300a-1:76 goes further — VERIFIED DISQUALIFIED 2026-09-01, it collapses every
+      suffixed id to its L0 root. RELEVANT TO THIS AC'S RATING: "unregistered dead code" and
+      "registered but wrong" are different verdicts with different enforcement ratings, and the
+      script could plausibly end up neither dead nor trustworthy. A fourth position — TQ-100c-2-i
+      — asserted the file did not exist at all; that claim was corrected 2026-09-07.
 notes: |
   Authored by /quick-fix. Root cause: the two-axis trust ratings were assigned from the
   EXISTENCE of a hook script on disk (scripts/commit_guardian/check_ac_coverage.py) and
@@ -44,5 +72,54 @@ notes: |
   KM-ADM-100a ("a connection's trust rating reflects what actually runs, and says how
   much it covered"), under the L0 KM-ADM-100. The `parent` field is explicit because
   compound-prefix ids are not resolvable by derive_parent_id() — see KM-ADM-100 notes.
+
+  STANDING HAZARD RECORDED 2026-09-07 — THIS AC IS FALSIFIABLE BY SCHEDULED WORK ON ANOTHER
+  COMPONENT, AND NOTHING PREVIOUSLY LINKED THE TWO. This AC's criteria name a specific
+  script and a specific ground: the ac-tested edge is rated `enforcement: none` BECAUSE
+  "its named hook check_ac_coverage.py is unregistered dead code". That is a fact about
+  the registry, asserted as a requirement. BP-100n-4 (approved, high, phase_1) requires
+  day-one triage to register, delete, or formally declare a non-gate EVERY commit-guardian
+  script the registry does not name — check_ac_coverage.py included — on the very commit
+  that lands its census. Whichever way that triage goes, this AC is affected:
+    - REGISTERED and enabled: the ground vanishes and the mandated rating flips from
+      `none` to `warn` under this AC's own second clause. Criteria must be amended.
+    - DELETED: the edge has no named hook at all; `none` survives but the stated reason
+      ("unregistered dead code") no longer describes anything that exists.
+    - DECLARED A NON-GATE: `none` survives with a better ground, and this is the only
+      outcome under which the record needs no change beyond a citation.
+  The store holds two further positions on the same script, neither compatible with this
+  one: TQ-100b-5 / TQ-100b-5-i treat it as live coverage-tag reader "R3" in a four-rule
+  parity set (with ACS-1300a-1:76 recording it VERIFIED DISQUALIFIED for collapsing
+  suffixed ids to their L0 root and being blind to "//"), and TQ-100c-2-i asserted until
+  2026-09-07 that the file did not exist at all. Three ACs, three incompatible views, one
+  script. All are now cross-linked from BP-100n-4. THE FATE OF THE SCRIPT IS NOT DECIDED
+  HERE and is not this AC's to decide — it belongs to whoever runs BP-100n-4's triage. What
+  is recorded here is that this AC is a stakeholder in that decision and must be revisited
+  with it, rather than discovering after the fact that its criteria assert something the
+  registry no longer supports. The underlying regression class this AC was written to close
+  — "trust rating asserted from file presence" — is unchanged and still correct; the
+  hazard is that its worked example is a moving fact.
 change_target: docs
 risk_surface: internal
+amended_by:
+  - reason: check-ac-coverage-triage-collision-cross-linked
+    by: business-analyst
+    at: '2026-09-07'
+    note: >-
+      criteria UNTOUCHED. readiness (reviewed), priority (high) and status UNTOUCHED. No
+      decision taken about check_ac_coverage.py — that belongs to whoever runs BP-100n-4's
+      day-one triage. Two doc_links and one standing-hazard notes block added so this AC is
+      visible as a stakeholder in that decision. THE COLLISION: this AC's criteria require the
+      ac-tested edge to be rated `enforcement: none` on the ground that its named hook
+      check_ac_coverage.py "is unregistered dead code", while BP-100n-4 (approved, high,
+      phase_1) requires every unreferenced commit-guardian script — that one included — to be
+      registered, deleted, or declared a non-gate on the commit that lands its census.
+      Registration falsifies this AC's mandated rating outright (a registered, enabled,
+      non-blocking hook is `warn` under this AC's own second clause), so that outcome needs an
+      amendment here, not a re-read. Deletion leaves the rating standing on a ground that no
+      longer describes anything. Only the declared-non-gate outcome leaves this record intact.
+      Recorded alongside it: the store holds three incompatible positions on this one script —
+      this AC requires it dead, TQ-100b-5 / TQ-100b-5-i treat it as live reader R3 needing
+      reconciliation (with ACS-1300a-1:76 recording its tag rule VERIFIED DISQUALIFIED), and
+      TQ-100c-2-i asserted the file did not exist until that claim was corrected on 2026-09-07.
+      All three are now cross-linked from BP-100n-4 so the triage is made in full knowledge.

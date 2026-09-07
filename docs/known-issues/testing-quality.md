@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-31
+last_updated: 2026-09-07
 components:
   - testing_quality
 related_docs:
@@ -1282,3 +1282,76 @@ repository) is the same *file family* mishandling git state, though a different 
 
 **Pattern:** a fixture that treats a subprocess as finished when it returns, while the tool it
 invoked has deliberately left work running behind it.
+
+---
+
+### KI-TQ-20260907-0940 — A reachability fixture symlinks the package into its scratch workspace where the real consumer layout is a directory
+
+- **Severity:** low — recorded so it is not rediagnosed, **not** worth a fix of its own. See
+  "Do not action this on its own" below.
+- **Status:** open — no AC, and none wanted
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `unit_tests/portability/test_bp_900h6ii.py:581`
+
+**What it is.** `TestBp900h6iiReachability` builds a scratch workspace and places the package
+into it as a **symlink** rather than a copy:
+
+```python
+(workspace_dir / "leafcutter-ai").symlink_to(_WORKTREE_ROOT)
+```
+
+The real layout is a real directory, on both authorities. `CLAUDE.md:66` — *"this repo is
+cloned into a subdirectory (e.g. `my-project/leafcutter-ai/`)"*. And `.github/workflows/ci.yml`
+`:443-445`, the very command this test extracts and runs:
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    path: leafcutter-ai
+```
+
+`actions/checkout` writes a directory. So the fixture's workspace differs from the layout it
+exists to simulate, in a test whose declared angle is `reachability`. All line numbers and
+quotations verified 2026-09-07 at `origin/main` (`e2b1eb7ea`).
+
+The motive is legitimate: a `copytree` of the package is expensive. (Measured in this worktree
+2026-09-07: 67 MB excluding `.git`; a build tree with `__pycache__` and deploy outputs runs
+higher, ~76 MB observed.) The symlink is a reasonable thing to have reached for.
+
+**Do not action this on its own.** It accounts for **1 of the 18** regressed outcomes in
+`KI-BO-20260831-1520`'s second occurrence — the other 17 have nothing to do with it. And
+re-anchoring the harness under `BP-1500d-1`, which is already the plan, **subsumes it**: that
+work builds a real out-of-package scratch project with a real package directory at
+`<scratch>/leafcutter-ai/`, which is this fixture's fix by construction. Doing both means
+writing the same fix twice. The entry exists so the next person to hit this recognises it in
+one minute instead of re-deriving it; that is the whole of its value.
+
+> **The misdirection, which is the actually useful part of this entry.** The instinct on
+> seeing a symlink-vs-directory discrepancy is to make the code resolve symlinks. **It already
+> does, and resolving harder cannot fix this.** Verified 2026-09-07:
+>
+> ```text
+> build.py:1618   package_root = Path(__file__).resolve().parent.parent
+> build.py:1899   target_root  = Path(args.target_dir).resolve() if args.target_dir else Path.cwd()
+> ```
+>
+> Both ends of the comparison are `.resolve()`d — which is *why* the symlink case behaves
+> differently: resolution collapses `<scratch>/leafcutter-ai` back onto the real worktree path,
+> so the package and the target no longer sit in the relationship the layout implies. More
+> resolution moves it further from the real layout, not closer. **The fixture has to hold a
+> real directory; there is no path-normalisation fix.** This cost one investigation cycle on
+> 2026-09-07.
+
+**Fix direction (only as part of the `BP-1500d-1` harness work).** Materialise a real
+directory. If copy cost is the objection, the harness does not need the whole package — a
+`copytree` with an ignore predicate dropping `.git/`, `__pycache__/`, `leafcutter-web/` and
+`changelogs/` is small, and closer to a consumer's install than a full mirror is.
+
+**Related.** `KI-BO-20260831-1520` (second occurrence — the regression this was 1 of 18 of).
+`KI-ACS-014` and `KI-TQ-004` are the same family from other angles: a symlinked build output
+standing in for a source tree, and a test consequently measuring something other than what it
+names.
+
+**Pattern:** a fixture whose shortcut is invisible in its own result — the test passes, and
+nothing in its output says the workspace it built is not the workspace it is named after.

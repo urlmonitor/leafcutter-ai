@@ -25,6 +25,17 @@ ARCHITECTURE: Standalone script. Accepts file paths as CLI args. Returns exit
 #   (never raising); `_is_suppressed` independently guards with an
 #   `if not al_parts: continue` so the invariant holds for callers that
 #   construct allowlist tuples directly. (#GE-113c-3-v)
+# - 2026-09-07 09:00 [python-coder]: A file recognised by its sensitive
+#   filename (e.g. ".env") appended a single ENV_FILE finding and returned
+#   immediately, so its contents were never read — that finding was the
+#   ONLY one such a file could ever produce, and a single suppression line
+#   left the whole file unexamined. `scan_file` now appends the ENV_FILE
+#   finding and falls through to the same content-rule scan every other
+#   file receives, so the filename finding is additive, never exclusive.
+#   Applies uniformly across every file in a `scan_files` run — the
+#   short-circuit removed here was per-file, not run-scoped, so there was
+#   no separate aggregation-layer state to fix. (#EPIC-SuppressionNarrowsNeverDisables/01)
+#   (#EPIC-SuppressionNarrowsNeverDisables/02)
 """
 
 from __future__ import annotations
@@ -230,10 +241,13 @@ def scan_file(file_path: Path) -> list[Finding]:
     findings: list[Finding] = []
     path_str = str(file_path)
 
-    # Rule: ENV_FILE — never commit .env files
+    # Rule: ENV_FILE — a sensitive filename ADDS a finding; it never
+    # replaces the content scan below (GE-123a-1). A file recognised by
+    # its name is still read line by line like any other file, so a
+    # suppression of this one finding never leaves the file's contents
+    # unexamined.
     if _ENV_FILENAME_RE.search(path_str):
         findings.append(Finding("ENV_FILE", path_str, 0, f"Sensitive filename: {file_path.name}"))
-        return findings  # Don't scan content of env files further
 
     try:
         text = file_path.read_text(encoding="utf-8", errors="replace")

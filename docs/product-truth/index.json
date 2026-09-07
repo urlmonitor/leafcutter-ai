@@ -193,11 +193,11 @@
       "version": 1,
       "entities": [],
       "impl_summary": {
-        "done": 5,
-        "in_progress": 0,
+        "done": 0,
+        "in_progress": 5,
         "not_started": 0,
         "total": 5,
-        "asof": "2026-07-20"
+        "asof": "2026-09-07"
       },
       "tags": [
         "product-truth",
@@ -1093,13 +1093,13 @@
       "level": "pipeline",
       "entities": [],
       "path": "flows/leafcutter/generate-product-truth.flow.json",
-      "impl_status": "done",
+      "impl_status": "in_progress",
       "impl_summary": {
-        "done": 5,
-        "in_progress": 0,
+        "done": 0,
+        "in_progress": 5,
         "not_started": 0,
         "total": 5,
-        "asof": "2026-07-20"
+        "asof": "2026-09-07"
       },
       "expands": [],
       "parents": []

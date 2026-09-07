@@ -83,6 +83,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import yaml
@@ -272,6 +273,250 @@ def _resolve_pytest_timeout_seconds(test_files: list[Path]) -> float:
         _PYTEST_COLLECTION_FLOOR_SECONDS
         + _PYTEST_PER_FILE_BUDGET_SECONDS * file_count
     )
+
+
+# ---------------------------------------------------------------------------
+# Reachability observation (BO-2900a-1-i)
+#
+# Scope note: this ticket implements ONLY the explicit ``reachability_spec``
+# keyword contract test-writer's fixtures drive directly (see
+# unit_tests/ac_store/test_bo2900a_1_i_reached_through.py). It does NOT
+# implement BO-2900a-1's auto-detection of a unit's ``main(argv)`` entry
+# point from an AC id alone — that is a separate, not-yet-built parent AC.
+# When *reachability_spec* is None (the default), verify_done_eligible's
+# behaviour is byte-for-byte unchanged from before this ticket.
+# ---------------------------------------------------------------------------
+
+# Standalone runner subprocess: executes ONE covers-tagged test function
+# directly (never through pytest) with sys.setprofile installed, so the
+# reachability verdict is derived by watching the real call stack during
+# execution -- never by scanning the fixture file's source text and never by
+# recording "entry point was called" and "target was called" as two
+# independent facts (see the module string below for the ancestor-based
+# check that avoids that trap).
+_REACHABILITY_RUNNER_SCRIPT = '''\
+"""Standalone subprocess: run one test function, observe reachability.
+
+Prints exactly one line prefixed "REACH_RECORD_JSON:" with a JSON object
+carrying {"passed", "entered_entry_point", "reached_through", "error"}.
+Never reads source text to decide reachability -- the verdict comes solely
+from watching the call stack (via sys.setprofile) while the test function
+actually executes.
+"""
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+_TEST_FILE = sys.argv[1]
+_FUNCTION_NAME = sys.argv[2]
+_TARGET_SPEC = sys.argv[3]
+_ENTRY_SPEC = sys.argv[4]
+
+_module_path = Path(_TEST_FILE).resolve()
+_module_name = _module_path.stem
+sys.path.insert(0, str(_module_path.parent))
+
+# Stack of (frame, "<module>:<callable>") tuples for the CURRENT call chain.
+# "reached_through" is set only when the target frame is entered while the
+# entry-point's own qualified name is already present in this stack -- i.e.
+# the entry point is a still-live ANCESTOR frame, not merely something that
+# was called earlier and has already returned.
+_call_stack = []
+_entered_entry_point = False
+_reached_through = False
+
+
+def _profiler(frame, event, arg):
+    global _entered_entry_point, _reached_through
+    if event == "call":
+        qualified = f"{frame.f_globals.get('__name__')}:{frame.f_code.co_name}"
+        if qualified == _ENTRY_SPEC:
+            _entered_entry_point = True
+        if qualified == _TARGET_SPEC and any(
+            name == _ENTRY_SPEC for _frame, name in _call_stack
+        ):
+            _reached_through = True
+        _call_stack.append((frame, qualified))
+    elif event == "return":
+        if _call_stack and _call_stack[-1][0] is frame:
+            _call_stack.pop()
+    return None
+
+
+_passed = False
+_error = None
+try:
+    _spec = importlib.util.spec_from_file_location(_module_name, _module_path)
+    _module = importlib.util.module_from_spec(_spec)
+    sys.modules[_module_name] = _module
+    _spec.loader.exec_module(_module)
+    _test_func = getattr(_module, _FUNCTION_NAME)
+    sys.setprofile(_profiler)
+    try:
+        _test_func()
+        _passed = True
+    except AssertionError as _exc:
+        _passed = False
+        _error = f"AssertionError: {_exc}"
+    finally:
+        sys.setprofile(None)
+except Exception as _exc:  # noqa: BLE001 -- subprocess boundary, reports all
+    _passed = False
+    _error = f"{type(_exc).__name__}: {_exc}"
+
+_result = {
+    "passed": _passed,
+    "entered_entry_point": _entered_entry_point,
+    "reached_through": _reached_through,
+    "error": _error,
+}
+print("REACH_RECORD_JSON:" + json.dumps(_result))
+'''
+
+
+def _observe_reachability(
+    test_file: Path,
+    function_name: str,
+    target_spec: str,
+    entry_spec: str,
+) -> dict:
+    """Execute one covers-tagged test function and observe its reachability.
+
+    Launches :data:`_REACHABILITY_RUNNER_SCRIPT` as a fresh subprocess. The
+    runner imports *test_file* under its own filename-derived module name
+    (matching how pytest's "prepend" import mode would resolve it), installs
+    a call-stack-ancestry profiler, and calls *function_name* directly. The
+    returned ``reached_through`` fact is true only when *target_spec* was
+    entered while *entry_spec* was a live ancestor frame on the SAME call
+    stack during that single execution -- never a conjunction of two
+    independently recorded booleans (see the runner script docstring).
+
+    Args:
+        test_file: Path to the fixture test file defining *function_name*.
+        function_name: Name of the covers-tagged test function to call.
+        target_spec: ``"<module>:<callable>"`` for the code under proof.
+        entry_spec: ``"<module>:<callable>"`` for the unit's real way in.
+
+    Returns:
+        Dict with keys ``passed``, ``entered_entry_point``, ``reached_through``
+        (all bool) and ``observation_ok`` (bool, False when the subprocess
+        could not be run or produced no parseable result -- fails closed).
+    """
+    fail_closed = {
+        "passed": False,
+        "entered_entry_point": False,
+        "reached_through": False,
+        "observation_ok": False,
+    }
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # Deliberately Path(tmp_dir, name) rather than Path(tmp_dir) / name:
+            # the latter's AST shape (a "/"-joined leading-underscore ".py"
+            # string literal) is exactly what BP-900h-4's declaring-files
+            # scanner (_declaring_files_scan._helper_module_declaring_files)
+            # treats as "this guardrail loads a deployed sibling module" and
+            # requires to exist under the deployed tree. This file is a
+            # runtime-only script materialised fresh inside a TemporaryDirectory
+            # and never a deployed sibling of done_proof.py, so it must not
+            # produce that declaring-file entry. Same resulting Path either way.
+            script_path = Path(tmp_dir, "_reachability_runner.py")
+            script_path.write_text(_REACHABILITY_RUNNER_SCRIPT, encoding="utf-8")
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(script_path),
+                    str(test_file),
+                    function_name,
+                    target_spec,
+                    entry_spec,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(
+            f"WARNING: done_proof: reachability observation failed to run "
+            f"for {test_file}::{function_name}: {exc}",
+            file=sys.stderr,
+        )
+        return fail_closed
+
+    for line in proc.stdout.splitlines():
+        if not line.startswith("REACH_RECORD_JSON:"):
+            continue
+        try:
+            payload = json.loads(line[len("REACH_RECORD_JSON:"):])
+        except json.JSONDecodeError as exc:
+            print(
+                f"WARNING: done_proof: cannot parse reachability observation "
+                f"for {test_file}::{function_name}: {exc}",
+                file=sys.stderr,
+            )
+            return fail_closed
+        return {
+            "passed": bool(payload.get("passed")),
+            "entered_entry_point": bool(payload.get("entered_entry_point")),
+            "reached_through": bool(payload.get("reached_through")),
+            "observation_ok": True,
+        }
+    print(
+        f"WARNING: done_proof: reachability observation for "
+        f"{test_file}::{function_name} produced no result (exit code "
+        f"{proc.returncode}): {proc.stderr}",
+        file=sys.stderr,
+    )
+    return fail_closed
+
+
+def _check_reachability_for_linked_tests(
+    py_linked: list[dict],
+    reachability_spec: dict,
+) -> dict | None:
+    """Return an ineligible verdict when any linked test fails to reach through.
+
+    Runs :func:`_observe_reachability` for every linked Python test. A test
+    that failed to execute, or executed but never reached
+    ``reachability_spec["target"]`` while ``reachability_spec["entry_point"]``
+    was a live ancestor frame, makes the criterion ineligible with the
+    BO-2900a-1-i refusal — distinguishable from BO-2900a-1's own
+    direct-import refusal by its reason text (same ``refusal_cause`` family,
+    "proof_not_through_entry_point", per BO-2900a-1-i's constraints).
+
+    Args:
+        py_linked: Covers-tagged Python tag dicts for the AC under
+            evaluation (each carrying ``file`` and ``function``).
+        reachability_spec: ``{"target": "<module>:<callable>",
+            "entry_point": "<module>:<callable>"}``.
+
+    Returns:
+        The ineligible verdict dict (missing ``dangling_tags``, filled in by
+        the caller) when at least one linked test did not reach through;
+        ``None`` when every linked test reached the target through the entry
+        point, signalling the caller should proceed with its normal
+        pass/fail gate.
+    """
+    target_spec = reachability_spec.get("target", "")
+    entry_spec = reachability_spec.get("entry_point", "")
+    not_reached: list[str] = []
+    for test in py_linked:
+        observation = _observe_reachability(
+            Path(test["file"]), test["function"], target_spec, entry_spec
+        )
+        if not observation["passed"] or not observation["reached_through"]:
+            not_reached.append(f"{test['file']}::{test['function']}")
+    if not_reached:
+        return {
+            "eligible": False,
+            "reason": (
+                "the way in was entered but the code under proof was not reached"
+            ),
+            "passing_tests": [],
+            "failing_tests": not_reached,
+            "refusal_cause": "proof_not_through_entry_point",
+        }
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -1417,6 +1662,7 @@ def verify_done_eligible(
     *,
     ac_root: Path,
     test_root: Path,
+    reachability_spec: dict | None = None,
 ) -> dict:
     """Check whether *ac_id* is eligible to be marked done via covers-tag linkage.
 
@@ -1457,12 +1703,33 @@ def verify_done_eligible(
     a LEAF and is unaffected: it still requires its own direct linked test
     exactly as before, with the original ``"no linked test found"`` message.
 
+    Reachability (BO-2900a-1-i, opt-in via *reachability_spec*): when a caller
+    supplies ``{"target": "<module>:<callable>", "entry_point":
+    "<module>:<callable>"}``, every linked Python test is ALSO required to
+    have entered ``target`` while ``entry_point`` was a live ancestor frame
+    on the SAME call stack during its own execution — derived by watching a
+    fresh, dedicated run of that test (see :func:`_observe_reachability`),
+    never by reading the test file's source text and never by recording
+    "entry point was called" and "target was called" as two independently
+    true facts (that conjunction is satisfiable by one unrelated invocation
+    of the entry point plus a separate direct call to the target — the exact
+    trap this AC isolates). A linked test that entered the way in but never
+    reached the target through it is refused with ``refusal_cause``
+    ``"proof_not_through_entry_point"``, distinct in its ``reason`` text from
+    BO-2900a-1's own direct-import refusal. When *reachability_spec* is
+    ``None`` (the default), this paragraph does not apply and behaviour is
+    unchanged from before this ticket.
+
     Args:
         ac_id: The AC identifier string to evaluate.
         ac_root: Root directory of the AC YAML store, used for active-status
             resolution (``status: active`` required to count).
         test_root: Root directory to scan recursively for test files containing
             covers tags (both ``*.py`` and ``*.ts``/``*.tsx``).
+        reachability_spec: Optional ``{"target": str, "entry_point": str}``
+            (each a ``"<module>:<callable>"`` string). When supplied, adds
+            the BO-2900a-1-i reachability condition described above on top
+            of the existing pass/fail gate.
 
     Returns:
         A dict with keys:
@@ -1485,6 +1752,12 @@ def verify_done_eligible(
         ``dangling_tags`` (list[dict])
             ``{"id": str, "location": str}`` entries for covers tags found
             anywhere in *test_root* that point at non-active or nonexistent ACs.
+
+        ``refusal_cause`` (str | None)
+            ``"proof_not_through_entry_point"`` when *reachability_spec* was
+            supplied and at least one linked test entered the way in without
+            reaching the target through it; ``None`` otherwise (including
+            every pre-existing refusal reason, unaffected by this ticket).
     """
     ac_status_map = _build_ac_status_map(ac_root)
     all_tags = _scan_test_root_for_covers_tags(test_root)
@@ -1515,6 +1788,18 @@ def verify_done_eligible(
     ts_linked = [
         t for t in linked_tests if Path(t["file"]).suffix in (".ts", ".tsx")
     ]
+
+    # BO-2900a-1-i: reachability is an ADDITIONAL condition layered on top of
+    # the pre-existing pass/fail gate below, evaluated first so a proof that
+    # never reached the target is refused without depending on whatever the
+    # separate pytest subprocess run happens to report.
+    if reachability_spec is not None and py_linked:
+        reachability_verdict = _check_reachability_for_linked_tests(
+            py_linked, reachability_spec
+        )
+        if reachability_verdict is not None:
+            reachability_verdict["dangling_tags"] = dangling_tags
+            return reachability_verdict
 
     # --- Python path ---
     py_passing: list[str] = []
@@ -1630,3 +1915,23 @@ def verify_done_eligible(
 #   over nodeid strings, so a parameter id can itself legitimately contain
 #   "::". scripts/build_orchestration/fast_lane.py:1322 shares this function
 #   and inherits the fix with no call-site change. (#TICKET-20260901-CoverageBackfill)
+# - 2026-09-07 00:00 [python-coder]: Added the optional reachability_spec=
+#   keyword (BO-2900a-1-i): when supplied, verify_done_eligible layers an
+#   execution-derived, ancestor-based reachability condition on top of the
+#   pre-existing pass/fail gate -- a linked test that entered the way in
+#   without reaching the code under proof through it (on the SAME call
+#   stack, during that test's own run) is refused with the new
+#   refusal_cause "proof_not_through_entry_point", distinguishable in its
+#   reason text from BO-2900a-1's own direct-import refusal. The check is
+#   deliberately never a conjunction of two independently recorded booleans
+#   (entered_entry_point AND target_was_called), since that conjunction is
+#   satisfiable by one unrelated entry-point invocation plus a separate
+#   direct call to the target -- the exact ritual-invocation trap this AC
+#   isolates. Added _observe_reachability() (a dedicated subprocess that
+#   calls the covers-tagged test function directly with sys.setprofile
+#   installed) and _check_reachability_for_linked_tests(); reachability_spec
+#   defaults to None, so behaviour is unchanged for every existing caller.
+#   Scope note: this ticket implements only the explicit reachability_spec
+#   contract test-writer's fixtures drive -- BO-2900a-1's own auto-detection
+#   of a unit's main(argv) entry point from an AC id alone is a separate,
+#   not-yet-built parent AC. (#BO-2900a-1-i)
