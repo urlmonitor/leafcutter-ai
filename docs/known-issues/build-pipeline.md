@@ -3370,13 +3370,52 @@ UNCOMPARABLE: GAP .claude/tickets/README.md action=run build.py to register it
 check-output-drift: RESULT verified=... uncomparable=... gaps=1 drifted=0
 ```
 
-`build.py` had already been run — that is what produced the deployed file. Running it again
-changes nothing, because the gap is not in what the build *wrote*, it is in what the build
-*records*:
+`build.py` had already been run, and running it again changes nothing.
+
+**DIAGNOSIS CORRECTED 2026-09-07, after the first version of this entry got the mechanism
+wrong.** The original text said the build "deploys the file and never records it", citing
+`grep -c "tickets/README.md" .build_manifest.json -> 0`. That grep is real but it is not the
+cause, and the wrong diagnosis pointed at the wrong fix. What actually happens:
+
+`.claude/tickets/README.md` is a **write-if-absent scaffold**, and it IS registered — but
+CONDITIONALLY. `scripts/build_helpers.py` `_register_scaffold_if_unmodified()` compares the
+on-disk copy against the content the scaffold phase would render today, and registers it only
+while the two match:
+
+```python
+if on_disk != content:
+    return          # released from registration — a project has customised its copy
+```
+
+That release is deliberate and correct: a consumer who edits their own `tickets/README.md`
+should not have the drift gate policing it. The trouble is that the check cannot distinguish
+"a consumer customised their copy" from "**the package's own template changed**". Editing
+`templates/ticket-lifecycle/README.md` makes the render diverge from the committed deployed
+copy, the scaffold is released, and the gate reports the now-unregistered file as a gap.
+
+**And the build cannot fix it, which is why the prescribed remedy fails.** The scaffold is
+write-if-absent: `build.py` will not rewrite the deployed copy while it exists, so the
+divergence it just caused is permanent from the build's point of view. Deleting the deployed
+file and rebuilding does not help either — verified, the scaffold phase did not recreate it in
+this self-hosted worktree layout.
+
+**The actual repair** is to bring the tracked deployed copy back into agreement by hand, which
+is what a fresh install's scaffold write would have produced anyway:
 
 ```text
-grep -c "tickets/README.md" .build_manifest.json   ->  0
+cp templates/ticket-lifecycle/README.md .claude/tickets/README.md
 ```
+
+Confirmed: `unit_tests/commit_guardian/test_bp_100k_5_ii.py` goes from 3 failures to 6 passed
+(15 subtests) once the two agree, and the diff is exactly the template's own change.
+
+**So the real defect is narrower and sharper than first filed.** Two copies of one file are
+tracked — `templates/ticket-lifecycle/README.md` and `.claude/tickets/README.md` — with no
+mechanism keeping them in step, because the only mechanism that could (the scaffold write) is
+suppressed precisely when the file already exists. Editing the template silently desynchronises
+them, and the failure surfaces two layers away as a drift-gate gap with a remedy that cannot
+work. It is the same shape as the twin-driver divergence recorded in
+`KI-BO-20260907-0850`: two copies, kept together by nothing, discovered by a run.
 
 The build deploys the file on every run and registers it in the output manifest on none, so
 `check-output-drift` sees a deployed artifact it has no expected hash for and reports an
@@ -3399,13 +3438,25 @@ manifest is what is incomplete. Skipping the hook with a stated cause is the hon
 PID-suffixed name; nothing should register it, and deleting it is correct rather than evasive.
 Worth distinguishing, because the two arrive together and the right response differs.
 
-**Countermeasure.** Register the deployed `tickets/README.md` in the build's output mapping
-alongside the other deploy phases, so the gate has an expected hash to compare. While there,
-check whether the same phase deploys anything else unregistered — one unrecorded output found
-by accident is weak evidence that it is the only one. `BP-100k-2` already requires that every
-deployed output the build produces appears in the manifest's output mapping; this is an
-instance of that criterion not holding, so it may be cheaper to audit against `BP-100k-2` than
-to patch the single path.
+**Countermeasure.** Not "register it in the output mapping" — that was the first version's
+suggestion and it followed from the wrong diagnosis. The registration already exists and is
+conditional by design. Two candidates that address the real cause:
+
+- **Make the pristine check compare against the template's CURRENT render rather than the
+  committed deployed copy**, so a package-side template edit is not mistaken for a
+  consumer-side customisation. This is the narrow fix, and it needs care: the whole point of
+  the release behaviour is to stop policing genuinely customised consumer copies, so the check
+  has to distinguish "diverged from the render" (customised — release) from "the render moved"
+  (package changed — re-register and expect the deployed copy to follow).
+- **Or stop tracking the deployed copy at all** and let the scaffold write it on install. The
+  file is byte-identical to its template; tracking both is what creates the pair that can
+  desynchronise. This is the structural fix and the larger one, since anything reading
+  `.claude/tickets/README.md` from a checkout would need to survive its absence.
+
+Whichever is chosen, add a guard that fails when the two tracked copies disagree, so the next
+template edit is caught at the edit rather than two layers away as a drift-gate gap. While
+there, check whether any other write-if-absent scaffold has both copies tracked — one such pair
+found by accident is weak evidence that it is the only one.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → an error message naming a remedy that
 does not address its own cause, so the operator repeats it and concludes the gate is broken.

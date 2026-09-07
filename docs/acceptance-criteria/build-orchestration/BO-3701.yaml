@@ -7,7 +7,7 @@ status: active
 level: L2
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 origin_agent: BrainCandy
 change_target: pipeline
 risk_surface: contract_boundary
@@ -159,8 +159,10 @@ doc_links:
     relationship: specifies
     status: exists
     relevance: "The harness the covering test must use. build-ticket.js is already one of TWIN_DRIVERS and H.BUILD_TICKET_JS resolves to it."
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/workflows/test_bo_3701_build_ticket_dispatch.py::TestBuildTicketMidDrivePromotionIsDispatched
+implemented_by:
+  - "templates/workflows-js/build-ticket.js"
 notes: |
   WHY THIS EXISTS. PR #687 fixed two dispatch defects in build-feature.js — the
   frozen phase list (BO-3700) and the handoff contract (BO-3000a). build-ticket.js,
