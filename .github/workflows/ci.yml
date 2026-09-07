@@ -363,10 +363,30 @@ jobs:
       # job would fail on its own fixtures.
       - name: Stage the whole store so the index-driven hooks can see it
         run: |
-          git reset --soft "$(git commit-tree "$(git hash-object -t tree /dev/null)" -m 'empty base for whole-store staging')"
+          # `git commit-tree` WRITES a commit, so it needs a committer identity.
+          # A GitHub runner has none configured, and the failure is opaque:
+          # commit-tree prints "fatal: empty ident name" to stderr, substitutes
+          # EMPTY into the reset, and the next line dies with the misleading
+          # "ambiguous argument ''". Supplied inline with -c rather than via
+          # `git config` so no repository state is mutated.
+          base="$(git -c user.name=ci -c user.email=ci@localhost commit-tree "$(git hash-object -t tree /dev/null)" -m 'empty base for whole-store staging')"
+          if [ -z "$base" ]; then
+            echo "FATAL: could not create the empty base commit; refusing to continue." >&2
+            echo "Without it the index matches HEAD and every hook would validate ZERO records and pass." >&2
+            exit 1
+          fi
+          git reset --soft "$base"
           git reset -q
           git add -- docs/acceptance-criteria/
-          echo "staged records: $(git diff --cached --name-only --diff-filter=AM -- docs/acceptance-criteria/ | wc -l)"
+          staged="$(git diff --cached --name-only --diff-filter=AM -- docs/acceptance-criteria/ | wc -l)"
+          echo "staged records: $staged"
+          # A zero here means the hooks would inspect nothing and report green.
+          # That is the exact false pass this job exists to avoid, so it fails
+          # loudly rather than proceeding to a meaningless success.
+          if [ "$staged" -eq 0 ]; then
+            echo "FATAL: staged 0 records — the hooks would validate nothing and exit 0." >&2
+            exit 1
+          fi
 
       # Same hook set, same order, as the PR-scoped job (ACS-200i parity).
       # `|| true` per hook: this job reports the FULL backlog in one run rather

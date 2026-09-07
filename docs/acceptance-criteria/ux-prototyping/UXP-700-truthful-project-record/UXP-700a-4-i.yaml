@@ -1,0 +1,69 @@
+id: UXP-700a-4-i
+title: "Removing one required file turns this check red and no other check"
+component: ux-prototyping
+components:
+  - build_pipeline
+  - ux_prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the build's from-scratch record check is passing,
+  When exactly one file that the checker reads before checking begins is removed from what the
+    install writes,
+  Then the build fails and the failure names that file,
+  And no other check in the build changes its verdict,
+  And restoring the file returns the build to passing with no other change.
+depends_on:
+  - UXP-700a-4
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700a-4.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900b-2.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700a-4
+  contract: "The build check whose sensitivity this proves."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+test_required: true
+test_rationale: |
+  A guard that never refuses anything passes every test that only feeds it good input. This
+  record is the negative control for UXP-700a-4: it is the only test in the family that proves
+  the check can fail, and the isolation clause is what stops the fix being "make the whole
+  build fail loudly", which would be indistinguishable from a broken build.
+test_spec:
+  - name: test_removing_one_required_file_fails_the_build_naming_it
+    target_dir: unit_tests/build_guards/
+    description: "With one start-up input removed from the install, the build fails and the message names that file."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_removing_one_required_file_leaves_other_build_checks_green
+    target_dir: unit_tests/build_guards/
+    description: "The verdicts of the build's other checks are unchanged by the removal."
+    type: integration
+    angle: boundary
+    framework: unittest
+notes: |
+  Named mutation: delete one entry from what the deploy phase writes. Only this record and
+  UXP-700a-4 turn red. If any sibling also reddens, the mutation was too coarse and the
+  isolation clause has not been implemented.

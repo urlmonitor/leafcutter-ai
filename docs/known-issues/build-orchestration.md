@@ -715,10 +715,24 @@ sides — a generator emitting artifacts its own repository's gates reject.
 
 ---
 
-### KI-BO-015 — `_worktree_exists` does not know the `fast-lane/` prefix, so a fast-lane run can never reuse its own worktree and aborts at phase one
+### KI-BO-015 — `_worktree_exists` does not know the `fast-lane/` prefix, so a fast-lane run cannot recognise its own workspace and aborts at phase one
 
 - **Severity:** high
-- **Status:** open
+- **Status:** **RESOLVED 2026-09-07 — root cause fixed; the remedy this entry proposed was
+  deliberately NOT taken.** `_worktree_exists` now matches `refs/heads/fast-lane/<branch>`, so
+  the prefix blindness is gone and the lookup can see its own workspace. What it does on
+  finding one is a **named refusal**, not reuse — specified by `BO-2400f-13` and its four
+  children, and recorded as **ADR-039**. Verified: 10/10 on
+  `test_bo2400f_13_occupied_workspace_refusal.py` plus 45 further tests across the changed
+  module, all under `AC_ENFORCE_STRICT=1`.
+  **The title above was corrected on the same date.** It read *"can never **reuse** its own
+  worktree"*, which states the remedy as if it were the defect. The defect is that the lookup
+  cannot **recognise** its own workspace; what to do about a recognised one was always a
+  separate question, and this entry's own fix-direction listed it as undecided. The old
+  wording cost a real collision: a test-writer derived a regression guard asserting reuse from
+  this entry's framing while a coder implemented the AC's refusal, and the two met at the green
+  gate after ~907k subagent tokens.
+  **Do not delete this entry** — acceptance criteria and commit messages cite it by id.
 - **Occurrences:** 1
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
 - **Where:** `templates/scripts/setup_ticket_worktree.py:232-275` (`_worktree_exists`), called at `:1289` from `cmd_create_fastlane_worktree`; branch built at `:1286` by `_fastlane_branch` (`:487-500`)
@@ -3407,16 +3421,255 @@ than against an observable side effect — the same substitution of a proxy for 
 
 ---
 
-### KI-BO-20260901-1450 — UNDER INVESTIGATION: the fast lane isolates its worktree but not the process-level state around it, and three shared surfaces already misfired with only ONE lane running
+### KI-BO-20260907-0850 — `build-ticket.js` is the declared twin of the driver just fixed: one defect is unfixed there and the other handler is a generation behind, so `/build-ticket` still loses the ticket in ways `/build-feature` no longer does
 
-- **Severity:** unknown — under investigation, see "What we are asking for" below
-- **Status:** **UNDER INVESTIGATION** — filed before the confirming experiment, deliberately.
-  Contributions wanted; this entry is a request for evidence as much as a record.
-- **Occurrences:** 3 distinct surfaces, each observed at least once on 2026-09-01, **all with a
-  single lane running**
-- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
-- **Where:** `$GIT_COMMON_DIR/config`; `<root>/.build_manifest.json`; the shared `.leafcutter`
-  install tree reached through each worktree's symlink
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 0 observed on this path; the twin defect was observed 3× on `build-feature.js`
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/workflows-js/build-ticket.js` — the per-ticket phase loop at `:1258`
+  (`for (const currentPhase of neededPhases)`) and the handoff branch · twin of
+  `templates/workflows-js/build-feature.js`
+  <br>The handoff branch is deliberately cited without a line number: it moves whenever either
+  half is edited, so a number there rots. The loop line is stable and is the one to grep.
+
+**Symptom.** PR #687 fixed two dispatch defects in `build-feature.js`: the frozen phase list
+(`BO-3700`) and the handoff contract (`BO-3000a`). `build-ticket.js` received neither.
+
+**Corrected 2026-09-07, same day as filing.** The first version of this entry said the twin
+"carries **both** defects unchanged". That overstates one half and the precision matters,
+because the two halves need different remedies:
+
+- **Frozen phase list — genuinely unfixed.** `build-ticket.js:1258` is still
+  `for (const currentPhase of neededPhases)` over a list computed once before any phase runs.
+  No AC covers it: `BO-3700`'s criteria name `build-feature.js` explicitly.
+- **Handoff routing — present, but a generation behind.** The twin DOES have a handoff branch
+  and DOES read `handoff_target`; that arrived with `BO-3000`, whose test file already drives
+  this driver. What it lacks is everything `BO-3000a` added: `handoff_target` declared in
+  `PHASE_RESULT_SCHEMA`, the conditional `if`/`then` requirement, and the two-case diagnosable
+  refusal. So this half is a divergence between twins rather than an absent guard.
+
+That second half is already covered by an acceptance criterion, and the criterion is now
+false. `BO-3000` requires:
+
+> Then build-ticket.js MUST apply the same handoff routing behaviour as build-feature.js, so
+> the two drivers cannot diverge
+
+The drivers diverged the moment `BO-3000a` landed on one of them. `BO-3000` still reads
+`work_status: todo`, so nothing has to be authored to justify fixing this half — the
+requirement exists and is violated.
+
+Its handoff refusal still reads, verbatim, the pre-fix wording:
+
+```text
+named no recognizable handoff_target ('undefined')
+```
+
+Its `PHASE_RESULT_SCHEMA` has no `handoff_target` property and no conditional requirement, and
+its phase loop is still `for (const currentPhase of neededPhases)` over a list computed once
+before any phase runs.
+
+**Why this is a register entry rather than a TODO.** The two files declare themselves twins.
+`build-feature.js`'s own header says so:
+
+> TWIN: The phaseOrder array and per-ticket phase loop below are the canonical twin of
+> build-ticket.js Phase 1–3. Keep them in sync manually — any change to build-ticket.js
+> phaseOrder or the retry/adjudication logic must be mirrored here.
+
+"Keep them in sync manually" is the whole mechanism. There is no test asserting the twins agree,
+so divergence is invisible until someone runs the neglected one. PR #687 widened the gap
+deliberately and said so in both AC records — the reason given (no red baseline for
+build-ticket.js in that pass, and widening a fix to a second driver without one turns a fix into
+a rewrite) is sound, but it is a reason to file this, not a reason to forget it.
+
+**Who is exposed — and the two halves differ, which changes the triage order.** The first
+version of this entry said "anyone running `/build-ticket`". That is true of the HANDOFF half
+and over-general for the other:
+
+- **Handoff divergence — reachable on every drive.** Any coder that hands off to test-writer
+  hits it, and that is a routine, template-mandated path. This is the half an operator meets
+  first.
+- **Frozen phase list — reachable only when the drive contains a promoting phase.** The
+  promotion comes from `architect-review`, so a standalone ticket that never schedules
+  `architect-review` cannot hit it at all.
+
+Severity is unchanged — `BO-3700`'s field evidence was 2 of 4 tickets in a single batch — but
+the handoff half is the more reachable one and should be fixed first. The original wording
+would have led a triager to the opposite order.
+
+The "0 occurrences" figure is therefore partly sampling and partly a real difference in reach:
+the incidents that motivated #687 all came from an epic drive, which uses `build-feature.js`.
+
+**The templates already assume the fix is universal.** `python-coder.md` and `test-writer.md`
+now instruct agents to return `handoff_target` unconditionally, without reference to which
+driver dispatched them. Checked: `build-ticket.js`'s schema sets no `additionalProperties:
+false`, so the extra field is ignored rather than rejected — harmless, but it means an agent
+correctly emitting the field under this driver still gets refused, which is the worst
+combination for diagnosis. The operator sees a conformant agent rejected for non-conformance.
+
+This paragraph belongs entirely to the HANDOFF half, i.e. to `BO-3000`. Nothing in `BO-3701`
+covers it. A reader who lands `BO-3701` and closes this entry on that basis will leave the
+more reachable of the two defects in place.
+
+**Countermeasure — now two independently schedulable pieces, not one pass.** The first version
+of this entry said "mirror both changes in the same pass". That framing is stale, and it is
+worth correcting precisely because it is the framing that produced the divergence in reverse:
+
+- **Handoff half** — covered by `BO-3000`'s existing twin criterion, still `work_status: todo`.
+  Nothing to author.
+- **Frozen-list half** — covered by `BO-3701` (authored 2026-09-07), a top-level L2 rather than
+  a child of `BO-3700`, because `BO-3700` is now `done` and hanging a `todo` child under it
+  would recreate the done-parent-with-unfinished-children drift this repo swept for.
+
+Either can land alone without leaving the other unrecorded. Doing both in one branch is an
+efficiency, not a constraint.
+
+A NAIVE MIRROR WOULD INTRODUCE A BUG. `build-ticket.js` is not a copy of its twin, and two of
+`BO-3701`'s criteria exist because of that:
+
+- Its `canonicalPriority` (`:251-264`) deliberately does NOT throw on a name outside
+  `phaseOrder` — it returns `phaseOrder.length` and warns. So an unknown promoted name fed into
+  a re-derived pending set does not get ignored; it sorts LAST and runs *after commit and
+  pull-request*. `BO-3700`'s wording ("ignored rather than dispatched") is adequate for
+  `build-feature.js` and under-specified here.
+- The driver sets `lastRecord = null` on an unreadable read-back (`:1358-1363`). Once the
+  pending set is derived FROM that reply, "unreadable" silently becomes "nothing left to run"
+  unless the criterion forbids it — a failure mode the fix itself creates.
+
+**What would have caught the divergence.** A test asserting the two drivers agree. `BO-3701`
+takes the cheap half: its promotion cases must be asserted over every entry in
+`H.TWIN_DRIVERS`, which the harness already exposes and which at least seven existing test
+files already loop over. The general parity gate — asserting the two `phaseOrder` arrays and
+handoff branches agree — is deliberately NOT in `BO-3701`: it also serves `BO-3000`'s half, so
+parking it there would make one record's `done` depend on work two records need, and it carries
+a real design question (assert the arrays literally equal, or the observable orderings equal?).
+It wants its own id.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a duplicated implementation kept
+consistent by a comment. The comment is not a mechanism.
+
+**Related.** `KI-BO-20260901-1000` and `KI-BO-20260901-1052` (the two defects, as observed and
+fixed on the other twin). `KI-BO-20260901-0920` (a third control ADR-006's flattening dropped —
+the same refactor is upstream of all of these).
+
+---
+
+### KI-BO-20260907-0851 — Two agent templates use `(status: handoff)` to mean "stop, I need human authorization", so a deliberate halt is reported to the operator as a malformed result
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 2 sites, found by 3 independent agents in one session
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/agents/python-coder.md` §Contract-Shrinkage Guard step 2 ·
+  `templates/agents/test-writer.md` Rule 2
+
+**Symptom.** Both sites instruct the agent to emit `(status: handoff)` and stop, meaning
+"blocked, do not proceed without explicit user authorization". Neither names a receiving agent,
+because neither wants one:
+
+```text
+if any consumer reads a field the proposed change would remove, the change is blocked.
+Emit `(status: handoff)` and stop. Do not proceed without explicit user authorization
+(`allow_contract_shrinkage: true` in the ticket body).
+```
+
+`signoff` SKILL.md's own definition of `handoff` is "another agent must act before I can
+proceed", and requires the recipient to be named. A halt pending *human* authorization is what
+`blocker` and `question` exist for.
+
+**The consequence is a misdiagnosis, not a malfunction.** Under `BO-3000a` the driver refuses a
+targetless handoff and stops the ticket — which is the correct outcome for these two sites, by
+luck rather than design. But the message the operator gets says the agent's result *named no
+handoff target*, i.e. it reports a conformance defect. The agent did exactly what its template
+told it to. So the operator is pointed at the emitter when the actual next step is to grant
+authorization, and the two situations — "an agent forgot the field" and "an agent is asking you
+for permission" — are indistinguishable in the run output.
+
+**Why it was not fixed alongside the handoff contract.** Reclassifying which status value a
+site emits is a behavioural change to the adjudication path: `question` is
+terminal-until-user-reply and `blocker` enters the retry ladder, so the choice changes what the
+driver does next, not merely what it prints. That belongs in its own change with its own tests,
+not folded into a field-naming fix. Recorded here so the decision is visible rather than
+implicit.
+
+**Countermeasure.** Decide which status each site should emit — `question` fits "waiting for a
+human decision" and `blocker` fits "cannot proceed, escalate" — then update the two templates
+and confirm the driver's routing for that status produces a sensible operator message. Note
+`building-epics` §5.0's warning while doing so: a `question` from a phase agent mid-drive
+deadlocks, because no reply channel exists during a supervisor run. That constraint is probably
+why `handoff` was reached for in the first place, and it means the honest fix may require
+giving the drive a way to surface an authorization request, not just relabelling the status.
+
+**Pattern:** an enum value borrowed for a meaning it does not carry, because the value that
+does carry it has an unrelated cost.
+
+**Related.** `KI-BO-20260901-1052` (the handoff contract these sites sit inside).
+`KI-BO-20260907-0850` (the twin driver, where the same two sites produce the OLD undiagnosable
+message rather than the new one).
+
+---
+
+### KI-BO-20260901-1450 — The fast lane shares exactly one process-level surface with its siblings: `$GIT_COMMON_DIR/config`. Two other suspected surfaces were measured and are isolated.
+
+- **Severity:** **medium** (was: unknown). Narrowed by experiment on 2026-09-07 from three
+  suspected surfaces to one real one, whose root cause is already known and one-word fixable.
+- **Status:** **MEASURED — the experiment this entry was filed ahead of has now run.** Two of
+  its three predictions are FALSIFIED and the third is confirmed. The request for evidence
+  below stands only for the surfaces still unchecked.
+- **Occurrences:** 1 surface confirmed under genuine concurrency (2026-09-07); 2 surfaces
+  falsified
+- **First seen:** 2026-09-01 · **Measured:** 2026-09-07
+- **Where:** `$GIT_COMMON_DIR/config` — **and only that**. Not
+  `<worktree>/.build_manifest.json`, not the `.leafcutter` install tree; see the result below.
+
+**THE EXPERIMENT, AND ITS RESULT.** Two fast lanes were launched simultaneously against
+`BO-2900a-1-i` and `BO-2900d-2` — connected sets confirmed three-way disjoint by AC id and by
+file beforehand, precisely so that any interference could not be footprint collision. The three
+predictions were written into this entry *before* the run, so they could be scored rather than
+reconstructed.
+
+| # | prediction | outcome |
+|---|---|---|
+| 1 | `.git/config` identity leaks across lanes | **CONFIRMED** |
+| 2 | `.build_manifest.json` causes cross-lane `check-build-drift` failures | **FALSIFIED** |
+| 3 | Shared `.leafcutter` — one lane's build clobbers the other's deployed package | **FALSIFIED** |
+
+**The two falsifications are the more useful half, and they correct this entry's own framing.**
+Measured after the run:
+
+- Each lane worktree holds its **own real `.leafcutter` directory**, not a symlink to the shared
+  install tree. `ls -ld` on both returns `drwxr-xr-x`, not `lrwxrwxrwx`.
+- Each holds its **own `.build_manifest.json`** (127,211 bytes, both written 12:31). The
+  workspace-root manifest was untouched, still dated 2026-09-01.
+
+So the lane's bootstrap builds a genuinely private install tree per run. The original
+observations behind surfaces 2 and 3 were real, but they came from **hand-made** worktrees where
+the `.leafcutter` symlink was created manually per the `CLAUDE.md` worktree guidance. Generalising
+from a hand-made worktree to a lane-made one was the error. A lane worktree is better isolated
+than the ones humans and agents make by following the documented setup.
+
+Both lanes bootstrapped within the same minute with **no collision of any kind observed**.
+
+**WHAT REMAINS, AND WHY IT CANNOT BE FIXED THE SAME WAY.** `.git/config` is shared because
+worktrees share `$GIT_COMMON_DIR` by construction — the lane cannot bootstrap its way out of it.
+The identity was verified clean immediately before launch and the successful lane's commit landed
+authored `GE-120e-1-i fixture`, on a pull request. Root cause and remedy are already recorded in
+`KI-TQ-012`: a test fixture writes an identity with plain `git config` instead of
+`git config --worktree`, and this repository already sets `extensions.worktreeConfig = true`, so
+the correctly-scoped form is available today.
+
+**The practical consequence for running lanes in parallel is therefore much narrower than this
+entry originally implied.** Parallel lanes do not corrupt each other's build state. They do share
+a commit identity, and until `KI-TQ-012` is fixed every lane commit is at risk of misattribution —
+which is a real defect on a real pull request, but a different and smaller thing than "the
+isolation story stops at the worktree boundary".
+
+**STILL WANTED.** The falsifications narrow the question rather than closing it. Unchecked
+surfaces, in rough order of likelihood: the pre-commit cache under `~/.cache/pre-commit`;
+`.security-allowlist` resolution (`KI-BP-017`); the feedback sink
+`debugging/logs/feedback.jsonl`; and concurrent writers to the AC store's claim records. A
+negative result on any of these is worth as much as a positive one — two of the three original
+predictions were negative, and that is what made this entry useful.
 
 **Why this is filed now, before the experiment.** The intended next step is to run two fast
 lanes concurrently on independent acceptance criteria and observe what actually breaks. That
@@ -3443,8 +3696,12 @@ criteria touch which repository files. That is a real and separate gap (its host
 footprint. They are process-level singletons that no criterion in the store currently mentions,
 so building `ACD-2000b-4` in full would leave all three untouched.
 
-**The hypothesis, stated so it can be falsified.** Each of these degrades with N lanes rather
-than improving, because each is a single shared resource written by every run:
+**The hypothesis, stated so it can be falsified.** [ANSWERED 2026-09-07 — read the three
+numbered items below as the prediction, not the finding. Item 1 was confirmed; items 2 and 3
+were falsified, because a lane worktree gets its own `.leafcutter` and its own build manifest.
+The result table is in the header above; this paragraph is retained because a prediction is only
+worth anything if it stays legible after it has been scored.] Each of these degrades with N
+lanes rather than improving, because each is a single shared resource written by every run:
 
 1. Concurrent commits misattributed, or attributed inconsistently within one lane's own history,
    whenever any run executes a suite that writes git config.
@@ -3546,9 +3803,33 @@ role reassignment. The claim prompt opens `You are the claim-phase agent for a f
 different model, or after a template edit, and if it refuses at the claim step the run loses its
 only exclusion guarantee.
 
-**Nothing enforces the field.** No hook, gate or test compares a workflow's `agentType`
-dispatches against `permits_shell`. The field is declared, documented, and consulted by exactly
-one hand-written comment. That is why a wrong reading of it survived review and shipped.
+**CORRECTION, 2026-09-01 — the paragraph that stood here was wrong, and the correction narrows
+this entry.** It claimed "nothing enforces the field … consulted by exactly one hand-written
+comment". Both halves are false, and the entry is weaker for it being so:
+
+- **`permits_shell` is read by real code.** `templates/workflows-js/plan-feature.js:1850`,
+  `classifyWorkspaceSetupPermission()`, gates the workspace-setup dispatch on it, with live
+  tests behind it (`unit_tests/workflows/test_bo_1500f_1_real_registry_read.py`,
+  `test_bo_1500f_1.py`). The `fast-lane-ship.js` occurrence is a comment; it is not the only
+  reader.
+- **`status-checker` holding `Bash` while declaring `permits_shell: false` is DELIBERATE, not a
+  contradiction.** The schema says so by name: *"Distinct from tool possession (an agent can
+  have `Bash` in its tools list purely for read-only diagnostics, e.g. status-checker, without
+  `permits_shell` being true)."* So the three dispatches above are a charter *inconsistency* —
+  the claim step writes to the store, which is not read-only diagnostics — but nothing is being
+  mechanically bypassed, because `permits_shell` does not gate fast-lane's dispatches at all.
+
+**What IS true, restated.** No check compares a *workflow's* `agentType` dispatches against
+`permits_shell`. `plan-feature.js` consults it for its own single dispatch and nothing
+generalises that. So the field is enforced in exactly one place and advisory everywhere else,
+which is how a wrong reading of it survived review in a different workflow.
+
+**And backfilling alone would change nothing.** The gate is `if (match.permits_shell === true)`.
+For the 58 of 60 agents where the field is absent, absent and `false` already take the identical
+branch — so populating them buys documentation, not behaviour. The behaviour only changes when a
+reader learns to distinguish *undecided* from *decided-none*, which is precisely what
+`classifyWorkspaceSetupPermission()` already does for its own four failure modes and what no
+other reader does.
 
 **Suggested fix, and the ordering matters.**
 
@@ -3577,3 +3858,69 @@ is the mechanism that entry's parallel-safety question depends on).
 **Pattern:** a permission field with a documented tri-state, no enforcement, and two of ~40
 records populated — so the first person to consult it reasoned from the populated cases and got
 the default backwards, in a comment that now teaches the error.
+
+---
+
+### KI-BO-20260907-0955 — The fast lane cannot complete any AC whose tests build a real clone, because its green gate runs before its commit phase
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/workflows-js/fast-lane-ship.js` phase order (green gate before commit)
+  vs. `unit_tests/portability/_bp900h4_layout_helpers.py` (`git clone --local`,
+  `git worktree add --detach <dest> HEAD`)
+
+**Not a flaky run and not a code defect — a structural impossibility.** The fast lane runs
+`verify_green_and_coverage` before its commit phase. `BP-900h-4-i`'s fixtures build their four
+adopter layouts with a real `git clone --local` and a real `git worktree add --detach <dest>
+HEAD`, because the AC explicitly requires a real worktree rather than a copy (a copy
+reproduces neither the trigger nor the defect it exists to catch). **Both git operations see
+only COMMITTED state.**
+
+So a change to `scripts/build_phases.py` is invisible inside every cloned layout until it is
+committed, the layouts are built from the pre-change tree, and the green gate fails. Red then
+green inside one working tree is impossible for such an AC. Retrying the gate cannot help,
+because nothing about the retry changes what `HEAD` contains.
+
+**Observed.** Driving `BP-900h-4` on 2026-09-07, the lane halted at `python-coder` with
+`green:false` and released both ACs back to `todo`, having reproduced the same result across
+three gate runs. The diagnosis was confirmed by reading the fixture and then causally: the
+implementation was committed by hand and the identical test command returned **9/9 green**.
+Nothing else changed.
+
+**Why this is not "just commit first".** Committing before green means committing unverified
+work, which is the order the lane exists to prevent. It was acceptable in that instance only
+because the sibling `BP-900h-4` had five tests already green against the live worktree, so the
+uncommitted change was not unverified — merely unverifiable *by the child AC*. That reasoning
+does not generalise; an AC with only clone-based tests has no such fallback.
+
+**It will recur.** Nothing marks an AC as clone-based, so the next one lands the same way:
+the lane halts with `green:false`, the payload blames the coder phase, and the real cause is
+one phase boundary away. The failure names the wrong culprit, which is what makes it worth an
+entry rather than a comment.
+
+**Fix direction, in preference order.**
+
+1. Let the lane detect this rather than the human. A test that shells out to `git clone` or
+   `git worktree add` against the repo under test is statically recognisable; when the build
+   set contains one, the lane should say so and route it rather than reporting a coder
+   blocker.
+2. Give clone-based fixtures a committed-state source that is not `HEAD` — e.g. build the
+   layouts from a temporary commit or a stash-free `git stash create` tree object, so the
+   working tree's changes are visible without altering branch history.
+3. Failing both, permit an explicitly-marked AC to run its green gate after a provisional
+   commit on the lane's own branch, which is reversible and never reaches `main`.
+
+**Do NOT "fix" this by relaxing the AC to use a copied tree.** `BP-900h-4-i` requires a real
+worktree precisely because the KI-BP-003 trigger — a submodule directory unpopulated in a
+worktree — cannot be reproduced by copying. Weakening the fixture would make the lane green
+and the coverage worthless.
+
+**Related.** `KI-BO-20260901-1450` (the fast lane's isolation stops at the worktree boundary)
+is the same seam from the other side. `KI-TQ-20260901-1310` is the sibling case of a lane gate
+shaping the work rather than judging it.
+
+**Pattern:** a pipeline whose verification step reads committed state while its commit step
+runs later — so any test that consults git history can never be satisfied by the pipeline that
+is supposed to satisfy it, and the resulting failure is attributed to the last agent that ran.

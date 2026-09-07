@@ -588,10 +588,25 @@ cannot see, where the absence of the check is documented as correct.
 
 ### KI-TQ-012 — A fixture that sandboxes with `git worktree add` sets its identity in the *real* repository's config, and every worktree and every session inherits it
 
+> **DUPLICATE ID.** A second, independently-filed `KI-TQ-012` exists further down this
+> file ("A test fixture reassigns the real repository's commit identity…"). Same defect,
+> same two files, filed twice on different days without either author seeing the other.
+> Both are closed by the same fix. Neither is renumbered: both are cited by id elsewhere,
+> and this register already carries an unrepaired `KI-CG-012` collision for the same reason.
+> That two people could file the same high-severity defect a week apart is itself the
+> finding — the register is long enough that filing is cheaper than searching.
+
 - **Severity:** high
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Status:** **RESOLVED 2026-09-07.** The identity now comes from `GIT_AUTHOR_*` /
+  `GIT_COMMITTER_*` in `_GIT_ENV_OVERRIDES`, and every `git config user.*` call is gone
+  from both fixtures. Environment variables live and die with the subprocess, so no
+  configuration file is written and nothing can outlive the run.
+  **Proven, not asserted:** the repository identity was set to a known value, both suites
+  were run (10 passed), and the identity was re-read afterwards — unchanged. Before the fix
+  the same run guaranteed a poisoned config.
+- **Occurrences:** **10** misattributed commits in a single session on 2026-09-07, several
+  on open pull requests, across worktrees these tests have never heard of
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07 · **Closed:** 2026-09-07
 - **Where:** `unit_tests/portability/test_ge_120e_1_i.py` — the merge fixture's `build()`
   (`git worktree add` at ~L264, `git config user.*` at L270-271) and its `tearDownClass`
   (`git worktree remove --force`, ~L338)
@@ -839,10 +854,32 @@ does not load — where the failure mode is silence, and silence is the result t
 
 ### KI-TQ-012 — A test fixture reassigns the real repository's commit identity, and every commit made afterwards is authored by the fixture
 
+> **DUPLICATE ID** — see the note on the other `KI-TQ-012` earlier in this file. Same
+> defect, filed twice a week apart; both closed by the same fix; neither renumbered,
+> because both are cited by id.
+
 - **Severity:** high
-- **Status:** open — recurs on every run of the suite; a config repair does not hold
-- **Occurrences:** 3 observed the same day, from three different worktrees — and the offending code is **two** files with **six** call sites, not four in one: a third commit landed authored `GE-120e-1-i fixture`, which is a *different* fixture, so `unit_tests/portability/test_ge_120e_1_i.py` carries the identical defect at 2 further sites
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Status:** **RESOLVED 2026-09-07** — identity now supplied via `GIT_AUTHOR_*` /
+  `GIT_COMMITTER_*` in `_GIT_ENV_OVERRIDES`; every `git config user.*` call removed from
+  both fixtures. Verified by setting the repository identity to a known value, running both
+  suites (10 passed), and re-reading it: **unchanged**.
+- **Occurrences:** **10** misattributed commits in one session (2026-09-07), several on open
+  pull requests. **The count in this line was wrong twice before it was measured** — filed as
+  "four sites in one file", corrected to "two files, six sites", and the real figure is
+  **two files, TEN sites** (8 in `test_ge_120e_1.py`, 2 in `test_ge_120e_1_i.py`). Both
+  earlier counts came from reading the commits that happened to be misattributed rather than
+  from grepping the fixtures.
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07 · **Closed:** 2026-09-07
+- **Scope check, so nobody re-audits it:** a repo-wide sweep found ~40 test files setting
+  `git config user.*`. Only these two leak. The rest set identity inside a throwaway
+  `git init` repository, which has its own config and cannot escape. The discriminator is
+  `git worktree add` against the *real* repository root, not the presence of a `git config`
+  call. One file, `test_check_doc_frontmatter_worktree_pathbase.py`, looks leaky to a naive
+  grep and is not — it worktrees a temp repo it created itself.
+- **Why not `git config --worktree`:** it scopes correctly but requires
+  `extensions.worktreeConfig`, which lives in untracked `.git/config`. This repository has it
+  enabled locally; a fresh CI clone does not, so that fix would pass here and fail in CI. The
+  environment works everywhere and writes nothing.
 - **Where:** `unit_tests/portability/test_ge_120e_1.py` — lines 234, 300, 344, 543 — **and
   `unit_tests/portability/test_ge_120e_1_i.py`**, 2 more sites (found by grepping
   `fixture@example.com` across the branch after a third misattributed commit; the entry
@@ -952,10 +989,42 @@ is convincing and the invisible half leaks permanently.
 
 ### KI-TQ-20260901-1310 — The red-baseline gate's 60-second pytest budget silently negotiates the AC's required test shape down to whatever fits
 
-- **Severity:** high
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Severity:** was high.
+- **Status:** **RESOLVED 2026-09-07, on CI evidence rather than on the fix landing.**
+
+  > Fixed by **PR #706** (`fde1e75b`). This entry was deliberately held open after that
+  > merge: its claim was that a subprocess-level AC could now clear the gate, and a merged
+  > fix is not that claim's evidence — a green CI run is. Both arrived:
+  >
+  > | PR | `Proof-of-done coverage check (BO-2500b)` |
+  > |---|---|
+  > | #708 | **pass, 2m03s** |
+  > | #694 | **pass, 2m51s** |
+  >
+  > Neither could have completed under the old 60-second ceiling; #694 is the very PR whose
+  > `pytest timed out after 60 s` produced this entry.
+  >
+  > **The budget is composed, not raised** — a 30 s collection floor charged ONCE, plus
+  > 300 s per linked test file. A single larger constant would still ignore the AC's own
+  > size and reproduce this defect one notch up, which is what the fix direction above
+  > warned against; a test pins that ten files get strictly more than one. A timeout is
+  > now also distinguishable from an absent test: a non-nodeid-shaped sentinel is threaded
+  > through `verify_done_eligible` and `_verify_composite_eligible` so the reason names the
+  > budget and the command instead of reading as "these tests do not exist".
+  >
+  > The per-file figure is deliberately ~2x the measured worst case. The ~142 s that
+  > exposed this was measured on a workstation, and a hosted runner is materially slower
+  > for subprocess-heavy work — a value chosen to just clear the local number would have
+  > reproduced this defect in CI while looking fixed locally.
+  >
+  > **A second occurrence, recorded before the fix landed and worth keeping.** Building
+  > BP-900h-4 the same budget forced its author to optimise the declaring-file inspector
+  > from ~7.1 s to ~1.7 s per invocation to fit. That is a genuine improvement, but the
+  > prompt was a gate budget rather than a profiler — the first time this pressure produced
+  > an optimisation instead of deleted coverage. Two ACs in one day had their test design
+  > bent by this number.
+- **Occurrences:** 2
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-07
 - **Where:** `scripts/ac_store/done_proof.py:896-908` (`_run_pytest_and_parse`, `timeout=60`),
   consumed by `scripts/build_orchestration/fast_lane.py:1482` (`verify_red_baseline`)
 

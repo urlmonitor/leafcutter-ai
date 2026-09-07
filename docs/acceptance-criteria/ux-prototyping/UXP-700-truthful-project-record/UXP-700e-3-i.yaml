@@ -1,0 +1,89 @@
+id: UXP-700e-3-i
+title: "A field being reshaped is read in both shapes and written in only the new one"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given three journeys in which the expansion reference is written as a single value where a
+    list is wanted, and no journey anywhere carries a branch outcome kind,
+  When the record is read,
+  Then a single value is accepted and read as a list holding one item,
+  And a list is accepted as written,
+  And an absent branch outcome kind is accepted while that field is being introduced, and is
+    reported as a field to be filled rather than as a violation,
+  And anything the record writes back uses only the new shape, so the older shape disappears as
+    artifacts are rewritten rather than by one migration rewriting them all at once.
+depends_on:
+  - UXP-700e-3
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700e-3.yaml"
+doc_links:
+  - path: docs/product-truth/schemas/flow.schema.json
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-700e-1-i
+  contract: "The shape-version transition window this record's read-both behaviour lives inside."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  Read-both / write-new is easy to implement half of: the read half alone leaves the old shape
+  in the store forever, the write half alone breaks every unmigrated artifact on the next read.
+  Both halves need their own assertion, and the write-new assertion has to be made by reading
+  the file back, because an in-memory normalisation that is serialised in the old shape passes
+  every in-process check.
+test_spec:
+  - name: test_single_value_expansion_reference_is_read_as_a_list_of_one
+    target_dir: unit_tests/product_truth/
+    description: "A journey whose expansion reference is a bare string is read as a one-item list."
+    type: unit
+    angle: boundary
+    framework: unittest
+  - name: test_list_expansion_reference_is_read_unchanged
+    target_dir: unit_tests/product_truth/
+    description: "A journey whose expansion reference is already a list is read as written."
+    type: unit
+    angle: criterion
+    framework: unittest
+  - name: test_absent_branch_outcome_kind_is_reported_as_to_be_filled_not_violated
+    target_dir: unit_tests/product_truth/
+    description: "A branch with no outcome kind produces a to-be-filled finding, not a violation."
+    type: unit
+    angle: boundary
+    framework: unittest
+  - name: test_rewritten_artifact_is_serialised_only_in_the_new_shape
+    target_dir: unit_tests/product_truth/
+    description: "Reading a single-value artifact and writing it back yields a list on disk."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+notes: |
+  MIGRATION CONSTRAINTS, measured 2026-09-07 and load-bearing: expands_to is a string in 3
+  flows where an array is wanted; branch.outcome_kind exists in 0 flows. Any tightening needs a
+  shape-version transition window (UXP-700e-1-i) and a backfill, and the first enforcement must
+  be a warning rather than a block.
+
+  Note the interaction with UXP-513's idempotency contract: write-new means the first
+  regeneration after this lands WILL rewrite the three affected journeys, so that run is not a
+  no-op. The idempotency test must be read as "no change after the shape has settled", and
+  whoever builds this should expect one deliberate churn commit.

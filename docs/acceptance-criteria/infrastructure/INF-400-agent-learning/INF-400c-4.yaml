@@ -1,30 +1,80 @@
 id: INF-400c-4
 components:
   - infrastructure
-title: "Emitters and the harvester resolve the same knowledge-emission sink from one declared location"
+  - knowledge_system
+title: "Emitters and the harvester read one knowledge-emission sink per install, as an absolute path fixed at build time, from one declared location"
 component: infrastructure
 level: L2
 status: active
 req_status: active
 work_status: todo
 priority: high
-readiness: draft
+readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c.yaml"
 criteria: |
-  Given ADR-034 names debugging/logs/knowledge_emissions.jsonl as the sink
-    that agents emit knowledge_captured events to and the harvester drains,
-  And the emission sink path is declared exactly once, in a single named
-    location that both the emitting side and the harvesting side read,
-  When the emitting side resolves its sink path and the harvesting side
-    resolves its sink path in the same working tree,
-  Then both resolve to the identical absolute path,
-  And the harvester's own default sink (used when no --sink argument is given)
-    is that same declared value rather than an independently-written literal,
-  And a check exists that fails when the two sides resolve to different paths,
-    naming both resolved paths in its failure output,
-  And that check fails today, because the emitting side writes
-    debugging/logs/agent_telemetry.jsonl while the harvester defaults to
-    debugging/logs/knowledge_emissions.jsonl.
+  Given the side that emits a knowledge record and the side that reads
+    knowledge records disagree about which file the record lands in: the four
+    shipped emit surfaces name debugging/logs/agent_telemetry.jsonl, and the
+    reader's own default names debugging/logs/knowledge_emissions.jsonl, a
+    file that has never existed in this repository or in any install,
+  And underneath that disagreement sits a second one that survives settling it:
+    both of those names are bare relative names, so each side reaches whichever
+    file lies under the directory its process happened to start in. Four of the
+    five ways this package completes work start their processes inside an
+    isolated working directory that is removed once the work has been merged,
+    so a name resolved that way reaches a file that is reclaimed with the
+    directory. Agreeing on a name and leaving the resolution alone leaves both
+    sides agreeing, per working directory, about a different file each time,
+  And exactly two settlements would end the first disagreement -- move the
+    reader onto the operational stream the emitters already write to, or move
+    the emitters onto a knowledge-only stream the reader keeps to itself,
+  When the sink is settled,
+  Then the sink is declared exactly once, as an ABSOLUTE path, in a single
+    named location that both the emitting side and the reading side read,
+  And that path is fixed when the package is built into a project, from the
+    project root the build was pointed at, and is recorded in the configuration
+    that build deploys: nothing discovers it at run time, nothing walks upward
+    from wherever a process is standing, and no process finishes the resolution
+    for itself,
+  And because it is absolute and written down once, every process of that
+    install reaches the same file wherever it was started: two reads of the
+    declaration made from two different current directories -- one from inside
+    an isolated working directory of the project, one from the project root --
+    yield the identical path, and that path lies outside every isolated working
+    directory,
+  And a record appended at that path from inside an isolated working directory
+    is still readable there, unchanged, after that working directory has been
+    removed,
+  And the reader's default -- the path it uses when no sink is supplied on the
+    command line -- is that declared value, and not an independently written
+    literal,
+  And two units of work running at the same time in that install append to the
+    one file without a record being lost, truncated, or interleaved with
+    another: the sink is shared, so simultaneous emission is the ordinary case
+    and not an exceptional one. What two simultaneous ROUTING STEPS over that
+    one file must do is INF-700a-5-iii's; this clause covers the appending side
+    only,
+  And the declared value is a knowledge-only stream: a tree in which the
+    declaration resolves to the file that also carries pre-drive writability
+    probes and supervisor telemetry fails this criterion, so of the two
+    settlements the one required here is that the EMITTERS move and the reader
+    stays where it is,
+  And a check exists that resolves both sides and fails when they differ,
+    naming both resolved paths and which side produced each,
+  And that same check fails when the declared value is the operational
+    telemetry stream, so an implementation that ends the disagreement by
+    pointing the reader at the shared file is rejected rather than accepted,
+  And that same check fails when the declared value is not an absolute path, or
+    when reading the declaration from two different current directories yields
+    two different paths, naming both values and the directory each was read
+    from, so a settlement that changes which name is written down and leaves
+    each process to finish the resolution against its own directory is rejected
+    rather than accepted,
+  And all three of that check's failure branches fire today: the two sides
+    resolve to different paths, the path the emitting side names is the
+    operational telemetry stream, and each side's shipped default is a bare
+    relative name — not absolute, and reaching a different file according to
+    where its process was started.
 depends_on: [INF-400c, INF-400c-1]
 doc_links:
   - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
@@ -41,19 +91,211 @@ estimated_complexity: M
 it_requirements:
   - "The sink path must be declared once and read by both sides — two literals kept in sync by convention do not satisfy this AC"
   - "The parity check must compare resolved paths, not source strings, so a relative-vs-absolute difference is caught"
+  - "The check needs TWO failure branches, not one. Branch 1 (paths differ) is the mismatch. Branch 2 (the declared value IS the operational telemetry stream) is the settlement discriminator, and without it a one-line edit to the reader's argparse default passes the AC while producing the outcome the criteria reject. Both branches must be independently exercisable."
   - "Must handle errors gracefully per the project error handling policy"
   - "Must not silently create the sink file as a side effect of resolving its path"
+  - "WHERE THE DECLARATION LIVES — IT PO decision RE-DECIDED 2026-09-07, REPLACING THE config/paths.json BULLET THAT STOOD HERE. That bullet is withdrawn as an instruction, not merely annotated: config/paths.json is a tracked, reviewed, PROJECT-RELATIVE paths SSOT, and what is declared here is an absolute path that differs per machine and per install and is produced by the build. The two cannot be the same artefact. THE FOUR PROPERTIES THAT BULLET ARGUED FROM SURVIVE AS THE TEST ANY HOME MUST PASS: one declared SSOT; readable by both sides WITHOUT importing the reader; ships through build.py so a consumer install sees a correct value; and tolerant of a sink FILE that does not exist yet. THE HOME IS NOW A BUILD-GENERATED CONFIGURATION ARTEFACT that build.py writes into the target, derived from the target root the build already resolves (scripts/build.py line 1899). The fourth property is met by the artefact recording a path and nothing validating its existence: whatever checks the deployed configuration must never require the sink file or the directory holding it to exist, for the reason INF-400c-4-iv gives. Do NOT put the declaration in a Python module constant — the parity check and the prompt-surface check both need to read it without importing the reader."
+  - "TWO CONSEQUENCES OF THAT HOME A BUILDER WILL HIT, stated because neither is visible from the criteria. (a) Nothing in scripts/build_phases.py today GENERATES a configuration file carrying install-specific values — the config phases copy files — so this is a NEW build output rather than a new key in an existing one, and it must be added to the deploy manifest for exactly the reason done_proof.py had to be: a hook or gate that reads it runs from the deployed layout, not the source tree. (b) The artefact holds a machine-specific absolute path, so it must not be tracked by version control; a tracked home is disqualified by the same property that disqualified config/paths.json, and committing one would make every clone claim a path belonging to whoever built last."
+  - "build.py's TARGET DEFAULTS TO THE CURRENT DIRECTORY WHEN --target-dir IS OMITTED (scripts/build.py line 1899: target_dir if given, else Path.cwd()). A bare build run from inside an isolated working directory therefore fixes that directory's own root into the declaration, with no flag typed and no warning printed. That is the silent-sink-split hazard INF-400c-4-v owns, and it is reachable by accident rather than by misuse — treat the default-to-cwd branch as an in-scope surface of that AC rather than as user error."
+  - "ONE SIDE OF THE PARITY CHECK IS PROSE, AND THAT IS NOT A DETAIL. The reading side resolves the declaration at runtime; the emitting side is four markdown surfaces an LLM reads, which cannot call a resolver. THE EARLIER FORM OF THIS BULLET SAID THE EMITTING SIDE IS THE PATH LITERAL EXTRACTED FROM EACH SURFACE, AND THAT IS WITHDRAWN — INF-400c-4-i's criteria now forbid any shipped surface carrying a destination of its own, so there is no literal left to extract and a check built to compare one would compare nothing and pass. The emitting side of the comparison must instead be what the surface tells the agent to READ OR INVOKE in order to obtain the sink, resolved the way an agent following that instruction would resolve it. WHAT SURVIVES UNCHANGED IS THE COUNT: state how many emitting surfaces the check inspected in its own output — a check that resolves zero surfaces and reports agreement is the failure mode this AC exists to prevent, one level up."
+  - "SEQUENCING AGAINST THE TWO IN-FLIGHT TEMPLATE ACs. This AC touches scripts/ and config/ only and touches no template, so its file set is disjoint from INF-700b-1 (adding the text field to the same four surfaces, in implementation now) and it can land in parallel with it. INF-400c-4-i is what touches the templates and must land after both. Do not bundle this AC's change into a template commit."
 delivers_to:
   agent: llm-expert
-  contract: "A single declared knowledge-emission sink path that the four shipped emit sites (signoff section 7 and the PO v3, BA v3, IT-PO v3 templates) must name verbatim instead of debugging/logs/agent_telemetry.jsonl"
+  contract: "A single declared knowledge-emission sink path, distinct from debugging/logs/agent_telemetry.jsonl, that the four shipped emit sites (signoff section 7 step 4 and the S9 blocks of the product-owner, business-analyst and it-po templates) resolve through instead of naming the telemetry sink"
 expects_from:
   ac_id: INF-400c-1
   contract: "ADR-011 as amended by ADR-034: the deferred-harvest model with a dedicated knowledge-emission sink separate from the telemetry sink"
 origin_agent: BrainCandy
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - reason: "BA refresh, 2026-09-07. The original criteria opened with 'Given ADR-034 names knowledge_emissions.jsonl as the sink' and then asked only that both sides agree — so an implementation that repointed the READER at debugging/logs/agent_telemetry.jsonl satisfied every Then clause while producing the outcome ADR-011 rejected. The two candidate settlements were indistinguishable by the criteria. Rewritten to state the disagreement as the Given rather than the answer, to require the declared value be a knowledge-only stream, and to require the parity check to have a second failure branch that rejects the shared-file settlement. Decision recorded in notes with its evidence. Also added INF-400c-4-iv (an absent declared sink is a no-work outcome), which the repoint creates as a live condition: after the emitters move, the knowledge sink still does not exist until the first agent emits, and INF-700a's caller will run against exactly that state."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA housekeeping, 2026-09-07. Criteria unchanged. Evidence point 2 in the notes had expired: it cited INF-700c-2's it_requirements as making debugging/logs/agent_telemetry.jsonl byte-immutable, but INF-700c-2 is now work_status done and that constraint was explicitly scoped to the duration of that AC, so it is historical and holds nothing. The citation is withdrawn and replaced with a pointer to INF-400c-4-iii, which carries the live byte-identity invariant. The settlement is unaffected — the other three evidence points (the shared file is not a knowledge file; two lifecycles would share one file; reversing the direction needs an ADR amendment nobody has commissioned) each stand on their own, and point 2's three named consumers survive the withdrawal."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA rewrite, 2026-09-07, on a decision BrainCandy approved: THE SINK RESOLVES AGAINST THE REPOSITORY, NOT AGAINST THE PROCESS'S CURRENT DIRECTORY — one sink per repository, shared by every working directory of it. WHY THE OLD CRITERIA WERE NOT ENOUGH. They asked the two sides to agree on a name and to 'produce the identical absolute path resolving that declaration IN THE SAME WORKING TREE'. Both shipped defaults are bare relative names, and two bare relative names that are equal to each other do resolve identically in the same working tree — so the criterion was fully satisfied by editing one default string and leaving each process to finish the resolution against its own directory. That is the bug, not the fix: four of the five completion paths start their processes inside an isolated working directory that is removed after merge, so the file both sides agreed about is reclaimed with the directory. WHAT CHANGED: the Given now states the relative-resolution disagreement as a second disagreement underneath the first; the declaration is now a RULE for arriving at the sink rather than a name; two new outcome clauses give the discriminators (the same absolute path from an isolated working directory and from the main checkout, and a record still readable at that path after the working directory is removed); and the parity check gains a THIRD failure branch that blocks a declaration whose resolution varies with the current directory, stated to fire today. WHAT DID NOT CHANGE: the settlement itself. The emitters still move and the reader still stays; branches 1 and 2 and the knowledge-only-stream requirement are untouched, and the four evidence points in the notes still stand. ALTERNATIVES REJECTED BY THE APPROVED DECISION, recorded so they are not reopened on a hunch: an installed database or SQLite (portability is this package's proposition, a server is a dependency every consumer must provision, a binary file cannot be diffed or reviewed in a repository whose review trail is the point, and it fixes nothing — the defect is path resolution, and a database whose path is also resolved against the current directory has the identical bug); and an API that commits learnings to main immediately (main is PR-only here and a direct push is rejected by branch protection, and review is a feature rather than friction — the existing 28 records already carry 15 inconsistent entry_kind values, so unreviewed agent prose landing on memory files is how those files fill with near-duplicates). ALSO ADDED: INF-400c-4-v, which states the outcome in each of the two install layouts and owns the case where the work is not in a repository at all."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA revision, 2026-09-07, same day, replacing the ANCHOR chosen in the entry above while keeping everything else it settled. THE ANCHOR IS NOW A BUILD-TIME ABSOLUTE PATH: the build already receives the project root as an argument, unambiguously, in both install shapes; it fixes the sink to an absolute path from that root and writes it into the configuration it deploys, and both sides read it there. No run-time discovery, no walk-up. WHY THE PREVIOUS ANCHOR (the repository's common git directory) WAS DROPPED, both reasons found in review of it rather than after shipping: (1) 'the repository' is ambiguous in a consumer install, because the package subdirectory is a clone in its own right nested inside the consumer's, so the answer depended on where the asking process stood and both answers looked plausible; (2) the common directory is reported RELATIVE from a main checkout and ABSOLUTE from an isolated working directory — verified in both directions — so the obvious implementation reproduced the original relative-path defect in precisely the layout a developer would test in. Neither can arise now, because the path is absolute before any process starts. WHAT CHANGED IN THE CRITERIA: the declared value must be ABSOLUTE and build-determined rather than a rule anchored on a repository; branch 3 of the parity check now blocks a non-absolute declared value as well as a directory-dependent read. WHAT DID NOT CHANGE: the settlement (emitters move, reader stays), branches 1 and 2, the knowledge-only-stream requirement, the durability discriminators (same path from an isolated working directory and from the project root; a record still readable after that directory is removed), and the four evidence points in the notes. ALSO ADDED IN THIS REVISION: the concurrent-append clause, because a shared sink makes simultaneous writers the ordinary case — its routing counterpart is the new INF-700a-5-iii. AND RECORDED IN THE NOTES: the IT PO's config/paths.json declaration home is SUPERSEDED, since that file is a tracked project-relative SSOT and this value is an absolute per-install path produced by the build; the four properties that decision argued from are restated there as the test any alternative home must still pass."
+    by: business-analyst
+    at: 2026-09-07
 superseded_by: null
-covered_by: [INF-400c-4-i, INF-400c-4-ii, INF-400c-4-iii]
+covered_by: [INF-400c-4-i, INF-400c-4-ii, INF-400c-4-iii, INF-400c-4-iv, INF-400c-4-v]
 implemented_by: []
+test_spec:
+  - name: test_emitting_and_reading_sides_resolve_the_same_absolute_path
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Resolve the sink from the reading side (the harvester CLI with no --sink argument) and from the emitting side (the path literal in each of the four shipped surfaces) in one working tree; assert all resolved absolute paths are equal and that the check reports having inspected four emitting surfaces, so a run that resolved none cannot report agreement."
+  - name: test_parity_check_blocks_when_the_two_sides_resolve_to_different_paths
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the sink-parity check invoked through its production entry point via subprocess"
+    description: "Failure branch 1, negative control. In a temp tree where one emitting surface names a different path, run the check through its real entry point; assert non-zero exit and that the message names both resolved paths and which side produced each."
+  - name: test_parity_check_blocks_when_the_declared_value_is_the_operational_telemetry_stream
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Failure branch 2, the settlement discriminator. In a temp tree where BOTH sides agree and the agreed value is debugging/logs/agent_telemetry.jsonl, run the check; assert non-zero exit. This is the branch that rejects the one-line argparse-default settlement, and it must fail even though branch 1 is satisfied."
+  - name: test_resolving_the_sink_path_creates_neither_the_file_nor_its_directory
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Resolve the declared sink in a temp tree containing no debugging/ directory; assert afterwards that neither the sink file nor debugging/logs/ was created."
+  - name: test_the_declaration_reads_the_same_from_an_isolated_working_directory_and_from_the_project_root
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    surface_invoked: "the reader's production entry point, run as a subprocess twice with two different current directories"
+    description: "Build the package into a temp project, add an isolated working directory to it, then read the declaration twice as separate processes — once with the current directory inside the isolated working directory and once at the project root. Assert the two paths are EQUAL, that both are absolute, and that neither lies underneath the isolated working directory. Two separate processes started in two different directories is the whole test: a single in-process read cannot distinguish a build-fixed absolute path from a relative name."
+  - name: test_a_record_written_from_an_isolated_working_directory_is_still_there_after_it_is_removed
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "Append one record at the declared path from a process whose current directory is inside an isolated working directory; remove that working directory; then read the declared path from the project root and assert the record is present and byte-identical. Read the file after the removal, never before — a check that reads it first passes on the exact defect."
+  - name: test_parity_check_blocks_a_relative_declared_value_and_a_directory_dependent_read
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Failure branch 3, the resolution discriminator, in two variants. Variant A: BOTH sides agree on a name and that name is a knowledge-only stream — so branches 1 and 2 are satisfied — but the declared value is relative; assert the check exits non-zero. Variant B: the declaration is read from two different current directories and yields two different paths; assert non-zero and that the message names both values and the directory each was read from. This is the branch that rejects a settlement made by editing one default string, and both variants must fail even though the other two branches are green."
+  - name: test_two_units_of_work_emitting_at_once_lose_no_record_and_interleave_none
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "The shared-sink appending case. From two concurrent processes in the same install — one with its current directory inside an isolated working directory — append a known number of records each, then read the sink once both have finished. Assert the total line count equals the sum, that every line parses on its own, and that no line contains fragments of two records. Concurrency is now the ordinary case for this file, so a run of one writer proves nothing about it."
+test_rationale: |
+  The three failure branches are the whole AC, and each needs its own negative
+  control run through the real entry point — a single positive-path test passes
+  on a check that is defined and never executed, which is the shape this
+  repository shipped in fast-lane-build.js. Branch 2's test is the one that
+  cannot be satisfied by the first rejected settlement: it holds both sides in
+  agreement and still requires a block, so an implementation that repoints the
+  reader at agent_telemetry.jsonl goes red rather than green. Branch 3's test
+  is the same trick one layer down and is the newer of the two: it holds both
+  sides in agreement AND on a knowledge-only name, so branches 1 and 2 are both
+  green, and still requires a block, so an implementation that settles the
+  question by editing a default string while each process keeps resolving the
+  name against its own directory goes red. Without branch 3 the AC is
+  satisfiable by the change that reproduces the defect. The
+  inspected-surface count in the first test exists because a resolver that
+  finds zero emitting surfaces would otherwise report perfect agreement. The
+  two-process, two-current-directory shape of the resolution tests is not
+  incidental: resolution is a function of where a process starts, so a test
+  that resolves twice inside one process from one directory cannot fail.
+notes: |
+  WHICH SETTLEMENT, AND WHY (BA decision, 2026-09-07). The criteria require the
+  emitters to move onto a knowledge-only stream. The reader is not repointed at
+  debugging/logs/agent_telemetry.jsonl. Four pieces of evidence, each checkable:
+
+  1. The shared file is not a knowledge file. At 2026-09-07 it holds 33 lines:
+     28 knowledge_captured records, 4 pre-drive writability probes with no
+     `event` key (written by the probe this repository's own CLAUDE.md pre-drive
+     checklist prescribes), and 1 line that is not JSON at all. A reader pointed
+     at it inherits all three shapes forever.
+  2. Another consumer owns it. ADR-011's backward-compatibility section names
+     retrospective-agent and feedback-analyst as consumers of the operational
+     stream, and INF-700b-3's capture-health report is a third. Those three
+     named consumers are the whole of this point. An earlier version of it also
+     cited INF-700c-2's it_requirements as making the file byte-immutable; that
+     citation is withdrawn as of 2026-09-07 because INF-700c-2 is work_status
+     done and its constraint was scoped to the duration of that AC, so it holds
+     nothing in place now. The forward-looking invariant lives with
+     INF-400c-4-iii, which requires the operational stream to be byte-identical
+     across a run of the knowledge reader. Cite that, not the closed AC.
+  3. Two lifecycles would share one file. A knowledge record is drained once and
+     watermarked; an operational record is appended and aggregated forever.
+     INF-400c-4-iii records why one file with a type discriminator was rejected.
+  4. Reversing the direction would need an ADR amendment nobody has commissioned.
+     ADR-011's Decision and ADR-034's "consequences that follow mechanically"
+     both name the four emit sites as the thing that moves.
+
+  WHAT THIS AC DOES NOT DECIDE. The retained 28 records are not migrated,
+  copied, marked or deleted by this repoint. They stay in the operational stream
+  and stay at rest by INF-700c-2's eligibility rule, which is sink-agnostic by
+  construction. INF-400c-4-ii proposed carrying them across and is withdrawn;
+  nothing here reopens it.
+
+  COORDINATION. Two other ACs edit the same four emit surfaces. INF-700b-1 adds
+  the `text` field to them, and INF-400c-5 replaces the hand-written JSON append
+  with a validating emission helper. This AC constrains only which sink the
+  append resolves to, and is satisfied whether the append is hand-written prose
+  or a helper call, provided the path comes from the single declaration.
+
+  THE ANCHOR, AND THE OPTION THAT WAS TRIED AND DROPPED (BA, 2026-09-07,
+  recording the settled decision as evidence rather than as instruction).
+  The build already receives the project root as an argument, in both install
+  shapes, and it is unambiguous there in a way nothing computed later is. So
+  the build fixes the sink to an absolute path and writes it into the
+  configuration it deploys, and both sides read it from there.
+
+  AN EARLIER FORM OF THIS DECISION ANCHORED ON THE REPOSITORY'S COMMON GIT
+  DIRECTORY AND WAS DROPPED, and the reasons are worth keeping because they are
+  the shape of failure to watch for in any replacement. First, "the repository"
+  is ambiguous in a consumer install: the package subdirectory is a clone in
+  its own right nested inside the consumer's, so the answer depended on where
+  the asking process stood, and both answers looked plausible. Second, the
+  common directory is reported as a RELATIVE name from a main checkout and an
+  ABSOLUTE one from an isolated working directory — verified in both directions
+  on 2026-09-07 — so the obvious implementation reproduced the original
+  relative-path defect in exactly the layout a developer would test in, while
+  working correctly in the layout they would not. Neither hazard can arise here
+  because nothing walks up anything: the path is absolute before any process
+  starts.
+
+  WHAT IS BOUGHT AND WHAT IS PAID. Bought: no discovery, no ambiguity, one
+  written-down answer both sides read. Paid: the path is a property of the
+  BUILD rather than of the tree, so an install moved by hand, or a second build
+  pointed somewhere else, changes it. INF-400c-4-v owns both consequences and
+  the case that matters most here — a build pointed at an isolated working
+  directory of an already-installed project.
+
+  TWO CALL SITES DEFAULT TO A BARE RELATIVE NAME AND BOTH MUST STOP: the
+  emit-side event script's log default, and the harvester's sink default. A
+  change that edits one default string and leaves it relative satisfies
+  branches 1 and 2 and reproduces the defect, which is why branch 3 exists and
+  why it now blocks a non-absolute declared value outright.
+
+  SUPERSEDED IT-PO DECISION — READ THIS BEFORE FOLLOWING THE it_requirements
+  BELOW. The bullet placing the declaration in config/paths.json was decided
+  before the anchor was settled and no longer fits: that file is a tracked,
+  reviewed, PROJECT-RELATIVE paths SSOT, and what is declared here is an
+  absolute path that differs per machine and per install and is produced by the
+  build. The two cannot be the same artefact. The declaration is now the
+  configuration the build deploys. The four properties that bullet argued from
+  still hold and are still the right test for any alternative home; three of
+  them (single SSOT, ships through the build so a consumer install sees the
+  same value, readable without importing the reader) are satisfied by the
+  deployed configuration, and the fourth — project-relative — is the one the
+  decision deliberately gives up. The permitted-absent requirement moves with
+  it: whatever existence checking applies to the deployed configuration must
+  not require the sink FILE to exist, for the reason INF-400c-4-iv gives.
+
+  ONE STREAM ANCHOR, NOT TWO. The operational stream sits beside the knowledge
+  sink under the same excluded directory. Fixing only the knowledge sink at
+  build time would leave the operational stream fragmenting into one file per
+  working directory, which breaks aggregation for its three named consumers.
+  INF-400c-4-iii carries that clause; it is named here so the two are not
+  implemented against different anchors.
+
+  CONCURRENCY IS SPLIT ACROSS TWO RECORDS, DELIBERATELY. A shared sink means
+  simultaneous writers, and the two halves have different owners because they
+  have different failure modes. The APPENDING half is here: appends must not
+  lose, truncate or interleave records, which is a property of how the file is
+  written. The ROUTING half is INF-700a-5-iii: two routing steps reading the
+  same sink at once must not both route the same record onto two different
+  branches, which is a property of the state beside the sink, not of the sink.
+  Append-only writing is the easy half and is close to free; the state is where
+  this breaks.
 change_target: code
 risk_surface: contract_boundary

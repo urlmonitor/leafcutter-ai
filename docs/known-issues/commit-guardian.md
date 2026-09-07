@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-26
+last_updated: 2026-09-07
 components:
   - commit_guardian
 related_docs:
@@ -2726,68 +2726,78 @@ nothing and reports success).
 
 ---
 
-### KI-CG-20260831-0713 — `check-hook-trigger-reachability` blocks EVERY commit in a consumer project that tracks no Python
+### KI-CG-20260831-0713 — PARTIALLY fixed by BP-100k-4-ii; the adopter still cannot commit, for a different reason
 
-- **Severity:** blocker
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
-- **Where:** `templates/scripts/commit_guardian/commit_guardian.json:1082-1093` (the gate's
-  own manifest entry), `templates/scripts/commit_guardian/check_hook_trigger_reachability.py`,
-  and `hook_trigger_reachability_exemption_registry` in the same config
+- **Severity:** blocker — unchanged. The reported symptom, "a consumer project cannot make a
+  commit at all", still reproduces.
+- **Status:** open. The kind-based half is fixed; the location-based half is not, and the
+  location-based half is the larger population.
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07
 
-**The defect.** The gate shipped by `BP-100k-4` is `always_run: true`, `pass_filenames: false`,
-and exits non-zero when any registered hook's `files` pattern matches no tracked path. It is
-rendered into every consumer's `.pre-commit-config.yaml` — `_render_hook_yaml` in
-`scripts/build_precommit.py` iterates the whole `hooks_manifest` with no tier filtering and no
-opt-out. Two registered hooks trigger on `files: '\.py$'`: `check-placeholder-defaults` and
-`check-exception-handling`. **A consumer project containing no Python therefore cannot make a
-commit at all.**
+**This entry was briefly marked CLOSED, and that was wrong.** The closure was written when
+`BP-100k-4-ii` landed and it is corrected here rather than quietly amended, because a
+blocker-severity entry reading CLOSED over a still-reproducing symptom is the exact failure
+this register exists to catch — one level up from the code.
 
-**Evidence — reproduced independently, twice, against the real registry.**
-Synthetic consumer repos, gate executed as a process with cwd inside the probe:
+**What BP-100k-4-ii genuinely fixed.** `evaluate_gate` now draws a could-ever/does-now
+distinction: a kind-based condition such as `files: '\.py$'`, matching zero tracked paths, is
+reported under a fourth verdict `NOTHING-TO-MATCH` and does not fail the run, while a
+condition naming a location no checkout could ever produce is still `UNREACHABLE` and still
+blocks. See `BP-100k-4-ii.yaml` and `unit_tests/commit_guardian/test_bp_100k_4_ii.py`,
+verified against a real `build.py`-deployed consumer tracking zero `.py` files. That work is
+sound and is not in question.
 
-| probe | result |
-|---|---|
-| Fresh TypeScript consumer (`src/index.ts`, `README.md`, `.gitignore`) | `exit 1` · `RESULT total=52 unreachable=27 exempt=9` |
-| **Fully-onboarded** consumer — adds `docs/*.md`, `docs/components.json`, `docs/roadmap.json`, `docs/acceptance-criteria/*.yaml`, `tickets/*.md`, `docs/product-truth/*.json` | **still `exit 1`** · `RESULT total=52 unreachable=2 exempt=9` |
-
-The onboarded residue is exactly the two language-shaped triggers:
+**Why the symptom survives it.** Only three registered conditions are kind-shaped. The rest
+are location-shaped, and a fresh consumer tracks almost none of those locations. Two
+independent measurements on 2026-09-07:
 
 ```
-UNREACHABLE: check-placeholder-defaults reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
-UNREACHABLE: check-exception-handling   reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
+runtime, real deployed consumer tracking one placeholder file (pr-reviewer):
+  exit 1 · RESULT total=56 unreachable=28 exempt=6 nothing_to_match=7
+
+static, counted from commit_guardian.json hooks_manifest:
+  46 conditions carry a files pattern
+   3 kind-shaped (check-placeholder-defaults, check-mermaid-complexity, check-exception-handling)
+  43 location-shaped
+  35 location-shaped AND absent from hook_trigger_reachability_exemption_registry
 ```
 
-So this is not a not-yet-onboarded edge case. There is no amount of correct onboarding that
-clears it short of adding a `.py` file to the consumer's own tracked tree.
+The two numbers differ because the static 35 is an upper bound — some location patterns do
+match files a real install leaves tracked. 28 ≤ 35 is the expected relationship, and the
+agreement in shape is what makes the runtime figure trustworthy rather than a one-off.
 
-**Why the blast-radius sweep missed it.** `BP-100k-4`'s consumer-layout check was done — nine
-grounded exemptions exist and they are good ones — but every exemption reasons about a
-**path-shaped** pattern ("this path only exists inside the vendored package / the gitignored
-deploy mirror"). No one asked the different question a **language-shaped** pattern raises:
-*what if the consumer simply is not a Python project?* The package is self-hosted in Python, so
-`\.py$` always matches here, and the gate is green in the only repo it was exercised in.
+So `BP-100k-4-ii` moved 7 conditions out of the blocking set and left roughly 28 in it. The
+adopter's first commit still fails.
 
-Two further gates look like the same omission and have no exemption:
-`check-surface-components-e3` (targets `config/agent_registry.json` — the **same file**
-`check-agent-spawn-consistency` was exempted for) and `check-eval-staleness`.
+**The residual this entry previously named, restored.** The pre-closure text flagged
+`check-surface-components-e3` and `check-eval-staleness` as looking like the same omission
+with no exemption. Both were re-confirmed still `UNREACHABLE` on 2026-09-07. They are not
+special — they are two members of the ~28, and naming only them would understate the
+population. They are kept here because they were the two already identified by name and
+losing them was how this residual nearly went untracked.
 
-**Suggested fix (not applied).** Distinguish "this trigger is dead" from "this repository has
-none of that kind of file yet". A pattern that names a language or file family should be
-unreachable only when the repository *could* have such files. Options: extend the exemption
-vocabulary with a language-conditional ground; skip language-shaped triggers when the
-repository tracks zero files of that type; or make the gate advisory in consumer installs and
-blocking only in the package's own checkout. Whichever is chosen, add a consumer-layout probe
-that tracks **no** `.py` to the test suite — the existing consumer fixture has Python in it,
-which is why this passed.
+**Fix direction, and what NOT to do.** Do not extend the exemption registry to ~28 entries to
+make the number go to zero. An exemption is an audited statement that a specific condition
+legitimately cannot match here, and mass-adding them converts an audited list into a
+rubber stamp — the shape `BP-100k-4-i` was written to prevent. The real question is whether a
+location-based condition naming a path that a *consumer install does not create* is
+"unreachable" at all, or whether reachability must be evaluated against the layout the gate
+is running in rather than against the package's own. That is a design decision about the
+gate's frame of reference, and it wants an AC of its own rather than a patch.
 
-**Found by** an adversarial review of the shipped `ab9e91c41`, then independently reproduced
-before filing.
+**Related.** `BP-100k-4-ii` (the kind-based half, done). `BP-100n-4` (the same gate's
+opposite defect — it walks only registered hooks, so an unregistered script is invisible;
+`todo`). `BP-900h-6-iii` (the consumer simulation must exercise a language-absent adopter, so
+this class is caught by CI rather than by hand).
 
-**Pattern:** the inverse of this register's usual M5 — not a gate that passes without checking,
-but a gate that **fails without a defect**. Same root cause though: the gate cannot tell
-"nothing to check" from "something is wrong".
+**Pattern:** a fix that is correct, well-tested, and closes the mechanism it names, mistaken
+for a fix that closes the *symptom* — because the symptom had two independent causes and only
+one was in scope.
+
+**Scope note — this closes only the too-strict half.** The check still walks only
+*registered* hooks, so a script the registry never mentions remains invisible to it
+(`BP-100n-4` and its siblings, `todo` on `main` as of this fix). That is a distinct, still-open
+defect and is not resolved by this entry's closure.
 
 ---
 
@@ -3705,3 +3715,191 @@ never-attempted from attempted-and-passed). `docs/reference/false-green-mechanis
 **Pattern:** a probe whose human-readable output distinguishes "could not determine" from a
 verdict, and whose machine-readable output does not — so the consumer built to act on it is
 the one consumer that cannot tell.
+
+---
+
+### KI-CG-20260907-commit-delegation-is-a-password-not-an-identity — the hook that enforces "only the commit agent may commit" is satisfied by typing a string
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1 (found by an `architect-review` blast-radius pass; the author had been
+  bypassing it unknowingly all session)
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/hooks/enforce_commit_delegation.py:84-94`
+
+**Symptom.** `CLAUDE.md` states the rule in strong terms: *"`git commit` must never be called
+directly. Dispatch the `commit` agent via the Agent tool instead… The
+`enforce_commit_delegation` PreToolUse hook will block any direct `git commit` call that does
+not originate from within the `commit` agent."*
+
+The hook cannot do that, and does not try. Its entire authorisation check:
+
+```python
+if os.environ.get("COMMIT_AGENT_MODE", "") == "1":
+    return True
+if payload is not None:
+    ...
+    tokens = command.lstrip().split()
+    if "COMMIT_AGENT_MODE=1" in tokens:
+        return True
+return False
+```
+
+It is a **token match on the command string**. There is no caller binding, no agent identity,
+no provenance of any kind. Anything that prefixes its command with `COMMIT_AGENT_MODE=1`
+passes — the commit agent, another agent, a human, a script.
+
+**The gap is between the documented guarantee and the implemented one, and only one of them
+is load-bearing.** "Originates from within the commit agent" is an identity claim. What is
+enforced is a shared secret with a published value, written in `CLAUDE.md`, in the commit
+agent's own template, and in this entry. Calling it a bypass overstates it: there is nothing
+to bypass, because possession of the string *is* the authorisation.
+
+**Found the way these things are usually found.** An `architect-review` was asked for the
+blast radius of a change to the commit path and reported the hook as identity-blind in
+passing. The session that received that report had used
+`COMMIT_AGENT_MODE=1 git commit -F …` on **every commit it made that day** — six merged PRs
+— under the documented understanding that the batch-drive form was a sanctioned exception
+routed through the same guarantee. It was not routed through anything.
+
+**What is actually still enforced, and worth keeping in view.** The value of the delegation
+rule was never only the identity check. `COMMIT_AGENT_MODE=1` bypasses the commit agent's
+*interactive confirmation gate* and nothing else — the pre-commit hook chain, the
+autofix-and-retry path and the message-matches-diff discipline all still run, because they
+are hooks on the commit itself rather than on the caller. So the practical exposure is
+narrower than "anyone can commit anything": it is that an unattended caller can commit
+**without a human gate**, which is exactly the property `finalize-feature`'s step 3.5 already
+exercises and which `KI-BO-*` has recorded going wrong at store-wide scale.
+
+**Fix direction.** Decide which guarantee is wanted and make the two agree, in that order —
+the current state is bad mainly because the documentation promises the stronger one.
+
+- If identity is genuinely wanted, the hook needs something the caller cannot mint. A
+  PreToolUse hook receives the payload; whether it can see agent provenance is the question
+  to answer first, and if it cannot, the honest conclusion is that this rule is not
+  mechanically enforceable at this layer and `CLAUDE.md` should stop saying it is.
+- If a human gate is the real requirement, enforce *that* — the check becomes "was this
+  commit confirmed", which is observable, rather than "who is calling", which is not.
+- Either way, **correct `CLAUDE.md`.** A documented guarantee nobody can rely on is worse
+  than a documented convention everybody follows, because the first stops people looking.
+
+**The same hook fails in the opposite direction too, and it demonstrated this on the commit
+that filed this entry.** `_is_git_commit_call` (line 40) returns True when the command field
+*contains the literal string* `git commit` — anywhere, in any context. So the hook is
+simultaneously:
+
+| | |
+|---|---|
+| **False negative** | any caller that types `COMMIT_AGENT_MODE=1` is authorised |
+| **False positive** | any command whose text merely *mentions* `git commit` is blocked |
+
+The second is not hypothetical. Opening the pull request for this entry —
+`gh pr create … --body "…"` , where the body quotes `CLAUDE.md`'s sentence about
+`git commit` — was blocked by this hook. Nothing was being committed; the phrase appeared
+inside prose being passed to GitHub. **The hook blocked the attempt to document the hook.**
+
+The workaround is `--body-file`, which keeps the phrase out of the command string — but note
+what that means: the guard is evaded by moving text into a file, and enforced against
+commands that were never commits. Both halves are the same root cause, which is that a
+command string is being used as a proxy for two things it cannot express — *who is calling*
+and *what is being done*.
+
+**Trap.** The hook is not broken and will not appear in any failing test — it does precisely
+what its code says. Reading the code answers "does the env-var check work" (yes) rather than
+"does this enforce delegation" (no). The mismatch is only visible by reading the hook against
+the sentence in `CLAUDE.md` that claims what it does.
+
+**Related.** `KI-BO-*` on `finalize-feature` step 3.5's unattended closure commit — the
+concrete case where an unattended, unconfirmed commit did real damage, and the reason the
+human-gate reading of this rule is the one with evidence behind it.
+`docs/reference/false-green-mechanisms.md` — a guard that reports enforcement it does not
+perform.
+
+---
+
+### KI-CG-20260907-0745 — `enforce_commit_delegation` and `inline_work_guard` locate themselves by testing for the *directory* `.claude/hooks`, so a partial one shadows the real set and blocks every Bash, Edit and Write call
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** the generated `.claude/settings.json` — both `PreToolUse` entries (matchers `Bash` and `Edit|Write`). The defect is in the inline `bash -c` resolver they share, not in either Python hook.
+- **Reported by:** observed in the self-hosting workspace `C:\Users\Hendrik\Code\leafcutter` after a v7.0.194 build
+
+**Symptom.** Every Bash call, and every Edit/Write, made while the working directory sits inside a
+nested repo is rejected before it runs:
+
+```text
+PreToolUse:Bash hook error: ... can't open file
+'C:\Users\Hendrik\Code\leafcutter\leafcutter-ai\.claude\hooks\enforce_commit_delegation.py':
+[Errno 2] No such file or directory
+```
+
+`cd` cannot escape it. The hook fires *before* the command, resolving from the tool's persistent
+working directory, so the very command that would move out of the directory is itself blocked.
+
+**Mechanism.** Both hooks share one resolver, shipped verbatim in `.claude/settings.json`:
+
+```bash
+d="$PWD"; while [ ! -d "$d/.claude/hooks" ] && [ "$d" != "/" ]; do d="$(dirname "$d")"; done
+python "$d/.claude/hooks/enforce_commit_delegation.py"
+```
+
+The loop stops at the first ancestor that **contains a `.claude/hooks` directory**, then invokes a
+**specific script** inside it. A directory-existence test is standing in for a script-existence
+test. Any ancestor holding a *partial* `.claude/hooks` — one written by an older package version,
+or belonging to a different project — captures the walk, and every script that directory lacks
+becomes unreachable.
+
+The self-hosting layout produces exactly that shape. `build.py --target-dir <workspace>` writes
+the current hook set to `<workspace>/.claude/hooks/` (13 scripts here), while
+`<workspace>/leafcutter-ai/.claude/hooks/` retains whatever an earlier build left (6 here). The
+path is gitignored (`.gitignore:19`), so nothing surfaces the divergence. Any tool call made from
+inside `leafcutter-ai/` resolves to the 6-script directory and fails on the 7 it does not have.
+
+**Detection.** Walk the same path the hook walks, from the cwd where the call fails:
+
+```bash
+d="$PWD"; while [ ! -d "$d/.claude/hooks" ] && [ "$d" != "/" ]; do d="$(dirname "$d")"; done
+echo "resolved to: $d"; ls "$d/.claude/hooks" | wc -l
+```
+
+Compare against the repository root's own count. A smaller number at the nearer ancestor is the
+fault. The error text names the resolved path, which identifies the shadowing directory directly —
+that much is well behaved.
+
+**Impact observed, and why the severity is high.** Two subagent audits dispatched in one session
+ran to completion **with no shell at all** — both `ac-scanner` and `knowledge-query` require Bash —
+and returned findings reconstructed from `Read` probing alone. One of them drew two incorrect
+conclusions about which acceptance criteria covered which subject, inferred precisely because it
+could not grep. Neither agent could `cd` out of the trap, and neither surfaced the degradation
+until its final report. A guard that cannot find itself does not merely fail; it silently degrades
+every agent downstream of it, and the degradation looks like a completed audit.
+
+**Workaround.** Move the session working directory above the shadowing repo, or make the near
+directory complete:
+
+```bash
+cp <workspace>/.claude/hooks/*.py <nested-repo>/.claude/hooks/
+```
+
+Both are local repairs and neither survives the next build.
+
+**Fix direction.** Test for the script rather than the directory, so the walk continues past a
+partial one instead of stopping at it:
+
+```bash
+d="$PWD"; while [ ! -f "$d/.claude/hooks/enforce_commit_delegation.py" ] && [ "$d" != "/" ]; do d="$(dirname "$d")"; done
+```
+
+Independently, the hook should **fail open with a warning** when it cannot locate itself. A
+delegation guard that did not run is a missing guard; a delegation guard that blocks every tool
+call is a stopped workstation, and the second failure mode is worse than the first — especially
+for a subagent, which has no way to diagnose or repair it. Both `PreToolUse` entries carry the
+same inline walk, so a fix must touch both. This resolver is generated into every consumer's
+`settings.json`, so any adopter whose tree contains a nested repo with a partial `.claude/hooks`
+inherits it.
+
+**Related.** KI-CG-016 concerns the same hook but a different defect — it matches the phrase
+"commit" anywhere in the command string. This entry is about the resolver that decides *which
+copy* of the hook runs, not about what the hook does once it is running.

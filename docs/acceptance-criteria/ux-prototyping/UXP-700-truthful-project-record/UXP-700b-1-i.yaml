@@ -1,0 +1,76 @@
+id: UXP-700b-1-i
+title: "Failing open on one bad input stays a run that happened"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - precommit_hooks
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a record holding five journeys, one of which cannot be read because its file is
+    malformed,
+  When the record's checker runs,
+  Then it names the unreadable journey,
+  And it states that it examined the other four,
+  And the outcome it reports is neither the outcome for a run that examined nothing nor the
+    outcome for a run that was checked and found sound,
+  And it does not stop the work that triggered it on account of that single unreadable input.
+depends_on:
+  - UXP-700b-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-1.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+    relevance: "The standing fail-open convention this record reconciles rather than repeals."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700b-1
+  contract: "The outcome vocabulary this record adds a third value to."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  Without this record an implementer discharges UXP-700b-1 by making any imperfect run fail,
+  which repeals the project's deliberate fail-open convention and would block unrelated work.
+  This is therefore the paired acceptable input: it proves the degraded run is visible AND
+  non-blocking, and both halves must be asserted or the pair is not a control.
+test_spec:
+  - name: test_one_malformed_journey_is_named_and_the_rest_are_examined
+    target_dir: unit_tests/product_truth/
+    description: "The report names the malformed journey and states four journeys examined."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_degraded_run_outcome_is_neither_clean_nor_nothing_examined
+    target_dir: unit_tests/product_truth/
+    description: "The outcome value differs from both the clean-pass outcome and the nothing-examined outcome."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_degraded_run_does_not_block_the_triggering_work
+    target_dir: unit_tests/product_truth/
+    description: "The caller is not stopped by a single unreadable input."
+    type: integration
+    angle: criterion
+    framework: unittest
+notes: |
+  The unit of the rule is visibility, not blocking. Three distinct outcomes are required by
+  this record together with UXP-700b-1: nothing-examined, degraded, checked-and-sound. A design
+  that collapses degraded into either neighbour fails this record.
