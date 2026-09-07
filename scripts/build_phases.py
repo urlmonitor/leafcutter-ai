@@ -1550,13 +1550,66 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     # Without this the loader fail-softs to an empty permitted set and every
     # correctly-tagged test is reported as declaring an unrecognised kind.
     # Mirrors build_feedback's config/feedback_categories.yaml deployment.
-    schema_src = PACKAGE_ROOT / "config" / "ac_store_schema.json"
-    if schema_src.is_file():
-        schema_output = target_root / "config" / "ac_store_schema.json"
-        if _write(schema_output, schema_src.read_text(encoding="utf-8"), dry_run, force):
+    #
+    # AC BP-900g-8-ii widened this to every "core config" file a deployed
+    # ac_store script reads at runtime, once the intra-package dependency
+    # closure was taught to see non-code (data/config) reads on the same
+    # terms as module imports: ``generate_ticket_from_ac.py`` (deployed here)
+    # reads ``config/agent_registry.json`` and ``config/guardrail_gates.yaml``
+    # via its own ``_DEFAULT_AGENT_REGISTRY`` / ``_DEFAULT_GUARDRAIL_GATES``
+    # module-level fallbacks; ``injection_builders.py`` (deployed by
+    # ``build_agent_support_scripts``) reads ``config/agent_registry.json``
+    # and ``config/paths.json``; the commit-guardian doc-type guardrail
+    # (deployed by ``build_commit_guardian``) reads ``config/doc_types.json``
+    # via an ancestor-directory walk that finds it here. None of the four new
+    # entries were deployed anywhere before this AC -- confirmed absent from
+    # a deployed output root on 2026-08-18 (this AC's own regression date) --
+    # so turning the widened closure guard on without also shipping them
+    # would abort every clean build.
+    #
+    # config/diagram_types.json is a LATER addition to this same tuple
+    # (AC BP-900g-8-ii TDD rework): its reader, the commit-guardian
+    # diagram_type_validators.py::_find_diagram_types_json ancestor walk, is
+    # the IDENTICAL shape to doc_type_validators.py's doc_types.json walk,
+    # but degrades SILENTLY to a built-in constant on failure rather than
+    # raising -- so nothing ever crashed to reveal it was undeployed, and it
+    # was genuinely absent (no second, unrelated reader put it in the
+    # manifest "by luck" the way doc_types.json's was). Deployed through this
+    # SAME core-config mechanism rather than a bespoke path, per this AC's
+    # own doc_links relevance note: "extend that derivation rather than
+    # adding a second, parallel one".
+    #
+    # config/skill_registry.json is a SECOND later addition, surfaced by
+    # turning the corrected (BP-900g-8-ii) closure guard on across the whole
+    # package rather than confined to the two named `*_types.json` files:
+    # three deployed commit-guardian scripts (_package_surface_registry.py,
+    # check_package_surface_declaration.py, check_surface_components_e3.py)
+    # read it via a fallback dict literal keyed the same way
+    # config/agent_registry.json and docs/roadmap.json are, and it was never
+    # deployed anywhere -- confirmed absent from every deploy phase before
+    # this fix (AC BP-900g-8-ii's own "enumerate, do not skip" constraint).
+    for core_config_name in (
+        "ac_store_schema.json",
+        "agent_registry.json",
+        "doc_types.json",
+        "diagram_types.json",
+        "skill_registry.json",
+        "guardrail_gates.yaml",
+        "paths.json",
+    ):
+        core_config_src = PACKAGE_ROOT / "config" / core_config_name
+        if not core_config_src.is_file():
+            continue
+        core_config_output = target_root / "config" / core_config_name
+        if _write(
+            core_config_output,
+            core_config_src.read_text(encoding="utf-8"),
+            dry_run,
+            force,
+        ):
             written += 1
             if not dry_run:
-                print("  config/ac_store_schema.json")
+                print(f"  config/{core_config_name}")
 
     # TKT-600b-1: generate_ticket_from_ac.py's _build_agents_map reads
     # config/phase_deferral.yaml the same way it already reads

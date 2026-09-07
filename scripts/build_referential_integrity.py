@@ -63,6 +63,26 @@ ARCHITECTURE: Four public functions. check_referential_integrity() validates pat
     unmodified against the SOURCE tree (root=package root) or the DEPLOYED tree
     (root=output root) -- the latter is what proves the closure is actually shipped,
     not merely present in source by construction.
+    AC BP-900g-8-ii widens Set A/Set B to also see NON-CODE (data/config) reads
+    a deployed script performs -- a schema, a vocabulary, a registry, a data
+    table -- on the same terms as a module import, through the SAME two
+    functions and the SAME ``closure``/``uncovered`` sets, rather than a
+    second, parallel notion of "data dependency". See the DECISION comment
+    above ``_extract_data_file_read_candidates`` for the three detectors this
+    requires (a data read is an ordinary function call against a
+    possibly-constructed path, unlike an import's fixed syntactic declaration).
+    A later fix within the same AC adds an optional ``data_root`` parameter to
+    ``compute_intra_package_closure()``/``find_uncovered_closure_dependencies()``
+    and a new ``compute_intra_package_closure_with_deploy_root_relative()``:
+    a template-sourced family's MODULE root (e.g. ``<package_root>/templates``
+    for the whole commit-guardian family) is the wrong base for a
+    repo-root-relative data read such as ``config/doc_types.json`` -- relative
+    to that root it never exists, so it was silently dropped. ``data_root``
+    gives such a read a second, DEPLOY-rooted base to resolve against, and the
+    ``_with_deploy_root_relative`` variant tells a namespacing caller
+    (``build.py``) which entries came from which root, since the two must be
+    namespaced differently (a deploy-root-relative entry must NOT receive the
+    family's deploy-namespace prefix, or it lands at a path nothing deploys).
 """
 
 from __future__ import annotations
@@ -635,6 +655,23 @@ def _eval_static_path(
             return None
         return body_paths + orelse_paths
 
+    # AC BP-900g-8-ii: ``package_root or _PACKAGE_ROOT``-shaped fallback
+    # expressions (e.g. ``injection_builders.py``'s
+    # ``root = package_root or _PACKAGE_ROOT``). Unlike ``IfExp`` above, a
+    # runtime-only branch (a bare function parameter with no default here) must
+    # NOT poison the whole expression -- at runtime exactly one operand wins,
+    # and the module-level fallback operand is the one most commonly reachable
+    # statically. Every operand that DOES resolve contributes its candidates;
+    # an operand that does not (e.g. an unassigned parameter) is skipped rather
+    # than treated as a hard failure the way IfExp's two required branches are.
+    if isinstance(node, ast.BoolOp) and isinstance(node.op, ast.Or):
+        resolved: list[Path] = []
+        for value in node.values:
+            candidate = _eval_static_path(value, script, assignments, _seen)
+            if candidate is not None:
+                resolved.extend(candidate)
+        return resolved or None
+
     if isinstance(node, ast.Name):
         if node.id == "__file__" or node.id in _seen or node.id not in assignments:
             return None
@@ -648,6 +685,17 @@ def _eval_static_path(
             return None
         if isinstance(node.right, ast.Constant) and isinstance(node.right.value, str):
             return [path / node.right.value for path in left]
+        # AC BP-900g-8-ii: the right operand may itself be a statically
+        # resolvable path FRAGMENT rather than a bare string literal -- e.g.
+        # ``validate_ac_schema.py``'s ``repo_root / _SCHEMA_REL`` where
+        # ``_SCHEMA_REL = Path("config") / "ac_store_schema.json"`` is a
+        # module-level RELATIVE path built the same way. Resolving the right
+        # side through the same evaluator (rather than requiring a bare
+        # Constant) lets one level of this "build a relative fragment, then
+        # anchor it later" indirection resolve without a special case per shape.
+        right = _eval_static_path(node.right, script, assignments, _seen)
+        if right is not None:
+            return [lp / rp for lp in left for rp in right]
         return None
 
     if isinstance(node, ast.Attribute) and node.attr == "parent":
@@ -671,6 +719,19 @@ def _eval_static_path(
             and node.args[0].id == "__file__"
         ):
             return [script]
+        # AC BP-900g-8-ii: a bare ``Path("<literal>")`` seed -- e.g.
+        # ``validate_ac_schema.py``'s ``_SCHEMA_REL = Path("config") / ...``.
+        # This produces a RELATIVE path fragment (never anchored at *script*),
+        # meaningful only when later combined via ``/`` with something that IS
+        # anchored (handled by the BinOp branch above).
+        if (
+            isinstance(node.func, ast.Name)
+            and node.func.id == "Path"
+            and len(node.args) == 1
+            and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)
+        ):
+            return [Path(node.args[0].value)]
 
     return None
 
@@ -1016,8 +1077,323 @@ def _dynamic_import_module_name(node: ast.Call) -> str | None:
     return None
 
 
-def _closure_walk(script: Path, root: Path, visited: set[Path], closure: set[str]) -> None:
-    """Recursively add *script*'s resolvable intra-package dependencies to *closure*."""
+# ---------------------------------------------------------------------------
+# Non-code (data/config) dependency detection (AC BP-900g-8-ii)
+# ---------------------------------------------------------------------------
+#
+# Widens the closure BP-900g-8 computes for MODULES so it treats a non-code
+# file a deployed script reads at runtime -- a schema, a vocabulary, a
+# registry, a data table -- as the SAME kind of dependency, on the SAME terms:
+# derived from the code (never a hand-maintained list of known filenames) and
+# reported through the SAME ``closure`` set the module half already populates,
+# so a single containment check (``find_uncovered_closure_dependencies``)
+# gives both classes the same enforcement force.
+#
+# Three complementary detectors, because a data read is an ordinary function
+# call against a path that may be constructed -- unlike an import, which is
+# always a single, syntactically-fixed declaration a static reader can see:
+#
+#   1. _extract_data_file_read_candidates(): the direct-idiom case --
+#      ``open(<path-expr>)``, ``<path-expr>.read_text()``,
+#      ``<path-expr>.read_bytes()``, ``<path-expr>.open()`` -- resolved via
+#      the SAME ``_eval_static_path`` evaluator the module closure already
+#      uses for ``spec_from_file_location`` targets and ``sys.path`` pushes.
+#      An argument that does not reduce is logged as a WARNING naming the
+#      file and line (the AC's "resolution: underivable" requirement) rather
+#      than silently dropped -- mirroring the existing dynamic-loader and
+#      sys.path disclosure behaviour.
+#   2. _extract_resolvable_binop_paths(): the interprocedural-construction
+#      case -- e.g. ``injection_builders.py``'s
+#      ``registry_path = root / "config" / "agent_registry.json"``, where the
+#      concrete path is BUILT in one function/module scope but actually READ
+#      inside a different function (``_load_registry(registry_path)``) that
+#      this module's single-scope evaluator cannot trace into. Rather than
+#      requiring the read call and the path construction to share a scope,
+#      every statically-resolvable ``/`` (Path division) expression anywhere
+#      in the script is evaluated; only entries that successfully resolve
+#      contribute a candidate, so a routine numeric division (which never
+#      reduces to a ``Path(__file__)``-rooted or ``Path("literal")``-rooted
+#      expression) is silently excluded rather than warned on -- warning on
+#      every unresolvable ``/`` in a script would be indistinguishable from
+#      warning on ordinary arithmetic.
+#   3. _extract_data_file_literal_candidates(): the ancestor-walk case --
+#      e.g. ``doc_type_validators.py``'s ``_find_doc_types_json()``, which
+#      builds ``candidate = ancestor / rel`` inside a ``for ancestor in
+#      [script_dir, *script_dir.parents]`` / ``for rel in (...)`` double loop.
+#      Neither loop variable is a plain assignment ``_build_local_assignments``
+#      captures, so no single-expression evaluator can reduce this. Instead,
+#      every STANDALONE string literal in the script that already looks like a
+#      package-relative data file path (``"config/doc_types.json"``) is
+#      checked directly for existence under *root*. Requiring the ENTIRE
+#      literal to match (not a substring search) is what keeps this from
+#      matching prose mentions of the same path inside a docstring -- a
+#      multi-line docstring's Constant value is the whole docstring text, which
+#      does not fullmatch the tight relative-path pattern.
+#
+# All three report through the SAME ``closure`` set _closure_walk populates,
+# and a discovered data file is NEVER itself recursed into (it is not
+# parseable Python) -- unlike a resolved module candidate.
+
+_DATA_FILE_EXTENSIONS = frozenset({
+    ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".csv", ".txt",
+})
+
+# Matches a bare, package-relative, multi-segment path ending in a recognised
+# non-code extension: e.g. "config/doc_types.json". Deliberately excludes:
+#   - a leading "/" (an absolute, OS-owned path -- AC's boundary clause)
+#   - a leading "~" (an external-tool path such as "~/.gitconfig")
+#   - a single segment with no "/" (too weak a signal on its own; every real
+#     regression instance named in this AC is at least "config/<file>")
+#   - a ".py" suffix (that half of the closure is the existing module scan)
+_RELATIVE_DATA_PATH_RE = re.compile(
+    r"^[A-Za-z0-9_][\w.\-]*(?:/[A-Za-z0-9_][\w.\-]*)+"
+    r"\.(?:json|yaml|yml|toml|ini|cfg|csv|txt)$"
+)
+
+
+def _is_data_read_call_target(node: ast.Call) -> ast.AST | None:
+    """Return the path-argument node of a recognised file-read call, or None.
+
+    Recognises the builtin ``open(<path>, ...)`` (path is the first positional
+    argument) and the pathlib method forms ``<path>.read_text(...)``,
+    ``<path>.read_bytes(...)``, ``<path>.open(...)`` (path is the attribute's
+    receiver, ``node.func.value``). A method name collision with an unrelated
+    object (e.g. some other type's own ``.open()``) is harmless here: the
+    receiver only contributes a closure entry if it ALSO resolves via
+    ``_eval_static_path`` to a real file under the package root, which a
+    non-Path receiver never does.
+    """
+    func = node.func
+    if isinstance(func, ast.Name) and func.id == "open" and node.args:
+        return node.args[0]
+    if isinstance(func, ast.Attribute) and func.attr in ("read_text", "read_bytes", "open"):
+        return func.value
+    return None
+
+
+def _extract_data_file_read_candidates(tree: ast.AST, script: Path) -> list[Path]:
+    """Return resolvable path candidates from every recognised file-read call.
+
+    A target that is a BARE, unassigned identifier (no matching entry in this
+    call's own scope+module assignments) is skipped WITHOUT a warning -- this
+    is overwhelmingly a function parameter or other caller-supplied value
+    (e.g. ``open(file_path, encoding=...)`` where ``file_path`` is an
+    argument), not an attempted package-relative path construction. Warning on
+    every one of these would drown real signal: measured directly against
+    this package's own ~150 deployable scripts, treating every unresolvable
+    bare name as reportable produced 400+ warnings on a single build, none of
+    which named an actual intra-package dependency. A target that IS some
+    other expression shape (an attribute chain, a call, a division, or a name
+    that resolves to one of those but still fails to reduce) is a genuine
+    path-construction ATTEMPT this module could not finish resolving, and is
+    logged as a WARNING naming the file and line -- per AC BP-900g-8-ii's
+    disclosure requirement, that kind of unknown must be surfaced for a human
+    rather than silently dropped.
+    """
+    _annotate_parents(tree)
+    candidates: list[Path] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        target = _is_data_read_call_target(node)
+        if target is None:
+            continue
+        scope = _enclosing_scope(node, tree)
+        assignments = _build_local_assignments(scope, tree)
+        if isinstance(target, ast.Name) and target.id not in assignments:
+            continue
+        resolved = _eval_static_path(target, script, assignments)
+        if resolved is None:
+            _log.warning(
+                "compute_intra_package_closure: unresolvable data-file read in "
+                "%s at line %s -- static analysis could not reduce the "
+                "open()/read_text()/read_bytes()/.open() target to a concrete "
+                "path. A human should verify whether this reference is "
+                "external or needs to be deployed (AC BP-900g-8-ii).",
+                script,
+                getattr(node, "lineno", "?"),
+            )
+            continue
+        candidates.extend(resolved)
+    return candidates
+
+
+def _extract_resolvable_binop_paths(tree: ast.AST, script: Path) -> list[Path]:
+    """Return every ``/``-division expression in *tree* that resolves to a path.
+
+    Deliberately does not warn on a ``/`` expression that fails to resolve --
+    see the module-level DECISION note above this section for why a routine
+    numeric division must not be treated as an unresolvable path reference.
+    """
+    _annotate_parents(tree)
+    candidates: list[Path] = []
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div)):
+            continue
+        scope = _enclosing_scope(node, tree)
+        assignments = _build_local_assignments(scope, tree)
+        resolved = _eval_static_path(node, script, assignments)
+        if resolved is not None:
+            candidates.extend(resolved)
+    return candidates
+
+
+def _extract_data_file_literal_candidates(
+    tree: ast.AST, root: Path, data_root: Path
+) -> tuple[set[str], set[str]]:
+    """Return standalone string literals in *tree* that name a real data file.
+
+    A literal must FULLY match ``_RELATIVE_DATA_PATH_RE`` (never a substring
+    search) so a prose mention embedded in a longer docstring never matches.
+    It must also resolve to a real, existing file under *root* OR *data_root*
+    -- a plausible-looking literal that is not backed by a real file under
+    either (e.g. the workspace-layout alternate candidate
+    ``"leafcutter/config/doc_types.json"`` when run from the package's own
+    source tree) is silently excluded rather than reported, since this
+    detector cannot tell whether such a literal is a live reference or an
+    alternate-layout candidate that never applies here.
+
+    TWO ROOTS, because an ancestor-directory-walk literal (the shape this
+    detector exists for -- see the DECISION note above this section) is
+    written the way the DEPLOYED script sees it, which is relative to the
+    DEPLOY root, not necessarily the closure root a caller passes for
+    resolving this script's OWN sibling modules. ``root`` is tried first (a
+    literal that happens to sit inside the script's own family directory,
+    the same namespace a sibling module read like
+    ``commit_guardian.json`` uses); *data_root* is the fallback for a literal
+    that is genuinely deploy-root-relative (e.g. ``"config/doc_types.json"``
+    read by a commit-guardian script, whose closure root is
+    ``<package_root>/templates`` and where ``config/`` never exists).
+
+    Returns:
+        A ``(family_relative, deploy_root_relative)`` pair. A literal found
+        under *root* is reported in ``family_relative`` (the caller applies
+        the same deploy-namespace prefix a module dependency would get); one
+        found only under *data_root* is reported in ``deploy_root_relative``
+        (already expressed in final deploy-root-relative form, so the caller
+        must NOT prefix it -- prefixing it would land it, e.g.,
+        ``<family-prefix>config/doc_types.json``, a path nothing deploys).
+    """
+    family_relative: set[str] = set()
+    deploy_root_relative: set[str] = set()
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Constant) and isinstance(node.value, str)):
+            continue
+        value = node.value
+        if value.startswith(_DATA_FILE_EXCLUDED_PREFIX):
+            continue
+        if not _RELATIVE_DATA_PATH_RE.match(value):
+            continue
+        if (root / value).is_file():
+            family_relative.add(value)
+        elif data_root != root and (data_root / value).is_file():
+            deploy_root_relative.add(value)
+    return family_relative, deploy_root_relative
+
+
+# A resolved candidate whose root-relative path starts with this prefix is
+# excluded from the data-file closure (never from the pre-existing module
+# closure -- this exclusion is scoped to _add_data_file_candidates and
+# _extract_data_file_literal_candidates only). ``templates/`` is source-only
+# packaging infrastructure: no build phase ever deploys a raw ``templates/``
+# directory to a consumer install (everything under it is either compiled to a
+# different destination path or read directly from the SOURCE tree by
+# build.py itself). A deployed script that references
+# ``Path(__file__).resolve().parent.parent / "templates" / ...`` -- as
+# injection_builders.py's build_signoff_block() does, for a package-build-time
+# convenience read that is ALSO guarded by its own ``if path.exists():`` check
+# -- resolves that path against the SOURCE tree only because this closure
+# computation evaluates ``Path(__file__)`` as the SOURCE file's own location
+# (the same source-relative evaluation BP-900g-8's module closure already
+# uses). Treating that as a "this must be deployed" finding would demand the
+# build ship a directory it structurally never ships, which is the same
+# false-demand failure mode the OS/external-tool-path boundary clause forbids
+# for a different reason.
+_DATA_FILE_EXCLUDED_PREFIX = "templates/"
+
+
+def _add_data_file_candidates(
+    candidates: list[Path],
+    root: Path,
+    data_root: Path,
+    family_relative: set[str],
+    deploy_root_relative: set[str],
+) -> None:
+    """Resolve *candidates* and sort real, recognised data files into the two output sets.
+
+    Restricted to ``_DATA_FILE_EXTENSIONS`` (the same recognised non-code
+    extensions ``_RELATIVE_DATA_PATH_RE`` matches) rather than merely
+    excluding ``.py`` -- a resolvable division expression could otherwise
+    point at an arbitrary non-Python file this AC's criterion was never about
+    (a compiled cache file, a log, an unrelated binary asset). Never recurses
+    -- a data file is not parseable Python, unlike a resolved module candidate.
+
+    Each *candidate* is an ABSOLUTE path (already resolved via
+    ``_eval_static_path``, anchored at the analysed script's own real
+    location). Expressing it relative to *root* is tried FIRST -- this is
+    what a sibling-directory read (e.g. ``commit_guardian.json`` next to
+    ``config.py``) needs, and it lands the result in the same namespace a
+    module dependency would use, so the caller can apply the SAME
+    deploy-namespace prefix to it. Only when that fails (the candidate lives
+    outside *root* entirely -- e.g. a chained ``.parent`` walk that reaches
+    all the way up to the deploy root, or a data read this closure's *root*
+    was never meant to cover) is *data_root* tried as a fallback, and the
+    result recorded separately as ALREADY deploy-root-relative -- the caller
+    must not add a prefix to it, or it lands at a path nothing deploys.
+
+    The ``templates/`` source-only exclusion (see the module-level DECISION
+    note on ``_DATA_FILE_EXCLUDED_PREFIX``) is applied to whichever
+    resolution actually succeeds, since either root could in principle
+    produce a ``templates/``-prefixed result.
+    """
+    for candidate in candidates:
+        if candidate.suffix not in _DATA_FILE_EXTENSIONS or not candidate.is_file():
+            continue
+        resolved = candidate.resolve()
+        try:
+            rel = resolved.relative_to(root).as_posix()
+        except ValueError:
+            rel = None
+        if rel is not None and not rel.startswith(_DATA_FILE_EXCLUDED_PREFIX):
+            family_relative.add(rel)
+            continue
+        if data_root == root:
+            continue
+        try:
+            deploy_rel = resolved.relative_to(data_root).as_posix()
+        except ValueError:
+            continue
+        if not deploy_rel.startswith(_DATA_FILE_EXCLUDED_PREFIX):
+            deploy_root_relative.add(deploy_rel)
+
+
+def _closure_walk(
+    script: Path,
+    root: Path,
+    visited: set[Path],
+    closure: set[str],
+    deploy_root_relative: set[str],
+    data_root: Path,
+) -> None:
+    """Recursively add *script*'s resolvable intra-package dependencies to *closure*.
+
+    *root* is the closure/module root: sibling modules (and sibling data
+    files read the same way, e.g. ``commit_guardian.json`` next to
+    ``config.py``) resolve relative to it, exactly as before AC BP-900g-8-ii.
+
+    *data_root* is the DEPLOY root a non-code read is expressed against when
+    it does NOT resolve under *root* -- see the module-level DECISION note
+    above ``_add_data_file_candidates``/``_extract_data_file_literal_candidates``
+    for why a single root cannot serve both purposes for a template-sourced
+    family (e.g. the commit-guardian family, whose module root is
+    ``<package_root>/templates`` but whose repo-root-relative data reads,
+    such as ``config/doc_types.json``, are written the way the DEPLOYED
+    script sees them -- relative to the deploy root, not the family prefix).
+    Every entry this walk resolves ONLY via *data_root* is additionally
+    recorded in *deploy_root_relative* (a subset of *closure*) so a caller
+    building a deploy-namespace string knows NOT to prepend a family prefix
+    to it -- prepending one would land it at a path nothing deploys.
+    """
     if script in visited:
         return
     visited.add(script)
@@ -1056,10 +1432,27 @@ def _closure_walk(script: Path, root: Path, visited: set[Path], closure: set[str
             continue
         if rel not in closure:
             closure.add(rel)
-        _closure_walk(candidate.resolve(), root, visited, closure)
+        _closure_walk(candidate.resolve(), root, visited, closure, deploy_root_relative, data_root)
+
+    # AC BP-900g-8-ii: non-code (data/config) reads, same terms as modules,
+    # never recursed into (not parseable Python). See the DECISION note above
+    # _extract_data_file_read_candidates for why three separate detectors are
+    # needed rather than one, and the DECISION note above
+    # _add_data_file_candidates for why each detector reports into TWO sets
+    # (family-relative vs. deploy-root-relative) rather than one.
+    data_candidates = _extract_data_file_read_candidates(tree, script)
+    data_candidates.extend(_extract_resolvable_binop_paths(tree, script))
+    family_data: set[str] = set()
+    deploy_data: set[str] = set()
+    _add_data_file_candidates(data_candidates, root, data_root, family_data, deploy_data)
+    literal_family, literal_deploy = _extract_data_file_literal_candidates(tree, root, data_root)
+    family_data |= literal_family
+    deploy_data |= literal_deploy
+    closure |= family_data | deploy_data
+    deploy_root_relative |= deploy_data
 
 
-def compute_intra_package_closure(script: Path, root: Path) -> set[str]:
+def compute_intra_package_closure(script: Path, root: Path, data_root: Path | None = None) -> set[str]:
     """Return the transitive set of intra-package modules *script* resolves.
 
     Performs AST-based static analysis of *script* (and, transitively, every
@@ -1081,18 +1474,32 @@ def compute_intra_package_closure(script: Path, root: Path) -> set[str]:
             the same function works unmodified against either, which is what
             lets a caller prove a dependency is actually shipped rather than
             merely present in source by construction.
+        data_root: AC BP-900g-8-ii. The root a non-code (data/config) read is
+            expressed against when it does NOT resolve under *root* -- see
+            ``compute_intra_package_closure_with_deploy_root_relative`` for
+            why a template-sourced family needs a second root and which
+            entries land where. Defaults to *root* when omitted (module
+            resolution and data resolution then share the single root the
+            module half has always used, i.e. no behaviour change from
+            before this AC for any caller that does not pass it).
 
     Returns:
         Set of root-relative POSIX path strings (e.g.
         ``"scripts/ac_store/_component_migration_map.py"``) for every
-        intra-package module resolved, directly or transitively. Modules that
-        do not resolve to a real file under *root* (standard library,
-        third-party distributions, host-project paths) are never included --
-        no allowlist is needed because non-existence under *root* is itself
-        the discriminator.
+        intra-package module resolved, directly or transitively, UNIONED
+        with every non-code (data/config) file resolved under *root* or
+        *data_root* (AC BP-900g-8-ii). Modules that do not resolve to a real
+        file under *root* (standard library, third-party distributions,
+        host-project paths) are never included -- no allowlist is needed
+        because non-existence under *root* is itself the discriminator.
 
         An empty set means the script genuinely resolves no intra-package
         modules. It never means the analysis failed -- that raises.
+
+        This is a plain UNION: it does not tell a caller which entries came
+        from *root* versus *data_root*, which a deploy-namespace-prefixing
+        caller (``build.py``) needs to know. Use
+        ``compute_intra_package_closure_with_deploy_root_relative`` for that.
 
     Raises:
         ClosureAnalysisError: If *script*, or any module reached transitively
@@ -1101,13 +1508,65 @@ def compute_intra_package_closure(script: Path, root: Path) -> set[str]:
             and a script about to be deployed whose dependencies cannot be
             determined has not been checked.
     """
-    closure: set[str] = set()
-    _closure_walk(script.resolve(), root.resolve(), set(), closure)
+    closure, _deploy_root_relative = compute_intra_package_closure_with_deploy_root_relative(
+        script, root, data_root
+    )
     return closure
 
 
+def compute_intra_package_closure_with_deploy_root_relative(
+    script: Path, root: Path, data_root: Path | None = None
+) -> tuple[set[str], set[str]]:
+    """Compute the closure like ``compute_intra_package_closure``, tagging deploy-root-only entries.
+
+    AC BP-900g-8-ii's central-case regression: for a template-sourced family
+    (e.g. commit-guardian, whose closure *root* is ``<package_root>/templates``
+    so its sibling modules resolve correctly) a repo-root-relative data read
+    such as ``config/doc_types.json`` is written the way the DEPLOYED script
+    sees it -- relative to the deploy root, not the family's own source
+    prefix. Resolving it against *root* alone makes it land at
+    ``templates/config/doc_types.json``, which never exists, so it is
+    silently dropped. Resolving it against *data_root* (the deploy root, e.g.
+    *package_root*) instead makes it resolve correctly -- but a caller that
+    then applies the family's deploy-namespace prefix uniformly (as
+    ``build.py`` did before this fix) corrupts it a second way, turning
+    ``config/doc_types.json`` into ``<family-prefix>config/doc_types.json``,
+    a path nothing deploys either.
+
+    This function reports which of the two roots produced each entry so a
+    namespacing caller can treat them differently: prefix the *root*-relative
+    ones (they need the SAME prefix a module dependency needs), and use the
+    *data_root*-relative ones AS-IS (they are already expressed in final
+    deploy-root-relative form).
+
+    Args:
+        script: Absolute path to the script to analyse.
+        root: The module/family closure root (see ``compute_intra_package_closure``).
+        data_root: The deploy root a data read resolves against when it does
+            not resolve under *root*. Defaults to *root* (no split -- every
+            entry is reported as family-relative, matching every caller's
+            behaviour before this AC).
+
+    Returns:
+        A ``(closure, deploy_root_relative)`` pair. ``closure`` is the same
+        union ``compute_intra_package_closure`` returns.
+        ``deploy_root_relative`` is the subset of ``closure`` that resolved
+        ONLY under *data_root*, never under *root*.
+
+    Raises:
+        ClosureAnalysisError: See ``compute_intra_package_closure``.
+    """
+    closure: set[str] = set()
+    deploy_root_relative: set[str] = set()
+    resolved_data_root = (data_root or root).resolve()
+    _closure_walk(
+        script.resolve(), root.resolve(), set(), closure, deploy_root_relative, resolved_data_root
+    )
+    return closure, deploy_root_relative
+
+
 def find_uncovered_closure_dependencies(
-    script_rel_path: str, root: Path, declared: set[str]
+    script_rel_path: str, root: Path, declared: set[str], data_root: Path | None = None
 ) -> set[str]:
     """Return closure entries for *script_rel_path* that are absent from *declared*.
 
@@ -1123,13 +1582,15 @@ def find_uncovered_closure_dependencies(
         root: The directory *script_rel_path* is relative to, and that closure
             entries are expressed relative to (see ``compute_intra_package_closure``).
         declared: The declared/deployed set to check the closure against (Set B).
+        data_root: AC BP-900g-8-ii. See ``compute_intra_package_closure``.
+            Defaults to *root* when omitted.
 
     Returns:
         Set of root-relative path strings present in the script's closure but
         absent from *declared*. Empty when *declared* already contains the
         full closure.
     """
-    closure = compute_intra_package_closure(root / script_rel_path, root)
+    closure = compute_intra_package_closure(root / script_rel_path, root, data_root=data_root)
     return closure - declared
 
 
