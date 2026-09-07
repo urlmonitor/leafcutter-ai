@@ -102,39 +102,26 @@ from test_enforcement import COVERS_TAG_RE
 #     <repo>/scripts/ac_store/done_proof.py           -> ../commit_guardian
 #     <repo>/.leafcutter/scripts/ac_store/done_proof.py -> ../commit_guardian
 # (the same sibling-directory relationship check_done_proof.py already
-# relies on to reach ac_store/ from the other side). Resolved lazily inside
-# _load_reachability_seam() rather than at module import time so a
-# templates/ source layout missing the deployed commit_guardian/ sibling
-# (or an as-yet-unbuilt worktree) degrades to "no exemptions" rather than
-# crashing every import of this module.
+# relies on to reach ac_store/ from the other side). The import itself is
+# guarded by try/except ImportError directly at its call site inside
+# _apply_reachability_gate() below (the codebase's own optional-dependency
+# idiom — see check_ac_schema.py's _ac_store_index and
+# check_done_proof.py's own module-level guard of this same module) rather
+# than behind an unguarded helper function: a helper that merely wraps the
+# import and lets ImportError propagate to its caller reads, to static
+# analysis, as an unconditional dependency on a file this module does not
+# actually require to exist (BP-900h-4's declaring-files scan treats a bare
+# import of a leading-underscore name as declaring a sibling file the
+# importing script "cannot run without" UNLESS the import itself sits
+# inside a try/except ImportError — confirmed missing from a genuine
+# consumer install by that scan on 2026-09-07 while this indirection was in
+# place). Guarding at the true import site is not just scanner-compliance:
+# it also degrades to "no exemptions" (fail-open per the error-handling
+# policy: an unreadable/absent exemption mechanism must never itself grant
+# a pass, and must never crash the eligibility oracle) without ever raising
+# out of this module at all, one indirection layer thinner.
 # ---------------------------------------------------------------------------
 _COMMIT_GUARDIAN_DIR = Path(__file__).resolve().parent.parent / "commit_guardian"
-
-
-def _load_reachability_seam():
-    """Import and return the shared reachability-exemption seam.
-
-    Returns:
-        A ``(load_exemptions, is_exempt, ReachabilityRegistryError)`` tuple
-        from ``_reachability_inventory`` when importable.
-
-    Raises:
-        ImportError: the sibling ``commit_guardian/_reachability_inventory.py``
-            module is not present in this layout. Callers treat this the
-            same as "no exemptions recorded" (fail-open per the
-            error-handling policy: an unreadable/absent exemption mechanism
-            must never itself grant a pass, and must never crash the
-            eligibility oracle).
-    """
-    if str(_COMMIT_GUARDIAN_DIR) not in sys.path:
-        sys.path.insert(0, str(_COMMIT_GUARDIAN_DIR))
-    from _reachability_inventory import (
-        ReachabilityRegistryError,
-        is_exempt,
-        load_exemptions,
-    )
-
-    return load_exemptions, is_exempt, ReachabilityRegistryError
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -1977,8 +1964,14 @@ def _apply_reachability_gate(
 
     exemptions: list[dict] = []
     exempt_verdict = False
+    if str(_COMMIT_GUARDIAN_DIR) not in sys.path:
+        sys.path.insert(0, str(_COMMIT_GUARDIAN_DIR))
     try:
-        load_exemptions, is_exempt, registry_error_cls = _load_reachability_seam()
+        from _reachability_inventory import (
+            ReachabilityRegistryError,
+            is_exempt,
+            load_exemptions,
+        )
     except ImportError as exc:
         print(
             f"WARNING: done_proof: reachability-exemption seam unavailable, "
@@ -1989,7 +1982,7 @@ def _apply_reachability_gate(
         registry_path = project_root / "config" / "reachability_exemptions.yaml"
         try:
             exemptions = load_exemptions(registry_path)
-        except registry_error_cls as exc:
+        except ReachabilityRegistryError as exc:
             print(
                 f"WARNING: done_proof: cannot load {registry_path}: {exc}",
                 file=sys.stderr,
