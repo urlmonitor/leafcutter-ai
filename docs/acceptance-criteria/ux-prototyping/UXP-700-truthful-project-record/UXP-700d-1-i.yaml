@@ -1,0 +1,67 @@
+id: UXP-700d-1-i
+title: "A newly added example artifact is excluded by where it lives, not by a list of names"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a new example journey added under the example product root after the separation rule
+    was built,
+  When the project's own record is enumerated,
+  Then the new journey is absent from it, and no list of artifact names was edited to make that
+    so,
+  And the new journey is returned when the example product is asked for by name,
+  And the stated count of artifacts set aside as example content is one greater than before the
+    journey was added.
+depends_on:
+  - UXP-700d-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700d-1.yaml"
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700d-1
+  contract: "The ownership predicate whose derivation this record proves."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_rationale: |
+  A hardcoded exclusion list satisfies every clause of UXP-700d-1 against today's ten mockups
+  and three flows, and then silently stops working the first time someone adds an example. The
+  varying-population clause is the only assertion no name list can satisfy, and it has to be
+  its own record because UXP-700d-1's tests stay green when the list is hardcoded.
+test_spec:
+  - name: test_newly_added_example_artifact_is_excluded_without_a_list_edit
+    target_dir: unit_tests/product_truth/
+    description: "An example journey created inside the test is absent from the project's record with no configuration change."
+    type: integration
+    angle: seam
+    framework: unittest
+  - name: test_set_aside_count_rises_by_one_when_an_example_artifact_is_added
+    target_dir: unit_tests/product_truth/
+    description: "The stated count of artifacts set aside as example content rises from N to N+1."
+    type: integration
+    angle: seam
+    framework: unittest
+notes: |
+  Named mutation: replace the location predicate with a literal list of the current example
+  artifact ids. UXP-700d-1 stays green; only this record turns red.

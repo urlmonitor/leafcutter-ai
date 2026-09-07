@@ -39,7 +39,7 @@ Each AC file is a single YAML document with the following fields.
 | `created_by_ticket` | string or null | no | Path to the ticket that introduced this criterion. Used by newer authoring flows (10 % of records) alongside `created`. |
 | `superseded_by` | string, list of strings, or null | no | AC ID of the replacement criterion. Null when not superseded. A list form (`[ID-1, ID-2]`) is accepted when an AC is split into multiple successors. Must be set when `status` is `superseded_by`; null otherwise. |
 | `amended_by` | list | no | Amendment history. Items may be plain strings (ticket paths or free-form notes) or objects with a `reason` key (structured records produced by agent workflows). Default: `[]`. |
-| `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) or child AC IDs that verify or cover this criterion. Default: `[]`. |
+| `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) or **direct-child** AC IDs that verify or cover this criterion. Direct children only — never grandchildren or deeper descendants; see [covered_by — Scope Convention](#covered_by--scope-convention). Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
 | `depends_on` | list of strings or null | no | List of AC IDs that this AC depends on. Used for two purposes: (1) parent-child hierarchy links — a child AC lists its structural parent ID so the hierarchy is navigable from the child direction; (2) pattern composition — a composite pattern AC lists the atomic pattern AC IDs it wires together. **Must not form a cycle.** The `check_ac_circular_deps` pre-commit hook enforces a directed-acyclic-graph (DAG) invariant on all `depends_on` edges and blocks commits that would introduce a cycle. Default: `[]`. |
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
@@ -67,7 +67,7 @@ Each AC file is a single YAML document with the following fields.
 | `documentation_rationale` | string or null | no | Explains why no documentation is needed when `documentation_triggers` is empty on an L1 AC. |
 | `change_target` | string or list of strings | no | Classification of what kind of artifact this AC targets (ADR-017 blast-radius vocabulary). Used by the computed quality-gates pipeline (`_build_agents_map`) to look up mandatory guardrail agents. Accepts a single value OR a list when the AC spans multiple targets. Valid values: `code`, `schema`, `ui`, `infrastructure`, `pipeline`, `prompt`, `model`, `config`, `docs`, `dependency`. Optional — absent on ACs that predate the computed-gates pipeline (ticket 10 will backfill). |
 | `risk_surface` | string | no | Classification of the blast-radius / risk exposure of this AC (ADR-017 blast-radius vocabulary). Combined with `change_target` to select mandatory guardrail agents. Valid values: `internal`, `contract_boundary`, `auth`, `privacy`, `safety`, `cost`. Optional — absent on pre-computed-gates ACs. |
-| `declares_side_effect` | boolean or null | no | Declares that this AC's work produces a durable, observable side-effect on a user-facing surface (a file written, a record persisted, a state-changing command) rather than only returning a value. Set it to true whenever the `Then` clause asserts something observable outside the process. Effect: `generate_ticket_from_ac.py` routes the `user-surface-smoker` phase agent into the generated ticket's `agents` map as `needed` and propagates the flag to the ticket frontmatter (BP-1100f-5). The gate is **non-overridable** — an explicit `user-surface-smoker: not_needed` is ignored while this is true. Absent/false/null means no side-effect claim and no force-routing (BP-1100f-5-i). |
+| `declares_side_effect` | boolean or null | no | **DERIVED, not authored by opinion.** Declares that this AC's work produces a durable, observable side-effect (a file written, a record persisted, a state-changing command) rather than only returning a value. `check_ac_schema.py` computes the value from the record's **own `Then` clause** and blocks the commit when the authored value disagrees or is missing — you do not get to choose it. See [declares_side_effect is derived from the Then clause](#declares_side_effect-is-derived-from-the-then-clause) for the exact rule. Effect once set: `generate_ticket_from_ac.py` routes the `user-surface-smoker` phase agent into the generated ticket's `agents` map as `needed` and propagates the flag to the ticket frontmatter (BP-1100f-5). The gate is **non-overridable** — an explicit `user-surface-smoker: not_needed` is ignored while this is true. Absent/false/null means no side-effect claim and no force-routing (BP-1100f-5-i). |
 | `test_spec` | list or null | no | Source-of-truth test contract for this AC — the AC, not the ticket, owns what must be tested. Authored by it-po on L2/L3 code ACs; `generate_ticket_from_ac.py` derives the ticket's `## Test Requirements` section from it. Null/absent means "no contract authored yet" and the generator falls back to deriving one descriptor per Gherkin `Then` clause plus a mandatory reachability descriptor; an empty list is **not** permitted (use `test_required: false` for genuinely test-free ACs). See the item fields below. |
 | `test_required` | boolean or null | no | Whether `test-writer` must produce failing tests. Distinguishes "intentionally no tests" (`false`) from "contract not yet authored" (null/absent). Defaults to true for code/schema ACs. When `false` the generator omits the `## Test Requirements` section entirely and `test-writer` skips with an accurate reason. |
 | `test_rationale` | string or null | no | Prose justification for the shape of `test_spec`: why this coverage is right and why a weaker shape (typically a direct-import unit test) would not be. Must be a string, never a list. |
@@ -230,6 +230,74 @@ hooks, store-wide scans, agent auto-updates).
 
 Use `derive_parent_id(ac_id)` from `scripts/ac_store/ac_parent_id.py` rather than
 re-implementing this logic inline.
+
+---
+
+## covered_by — Scope Convention
+
+**`covered_by` is a DIRECT-CHILDREN list, not a subtree list.**
+
+A parent AC lists its immediate children only. It does **not** list
+grandchildren or any deeper descendant. A descendant is reached by following
+the chain one link at a time: `L0.covered_by → L1.covered_by → L2.covered_by → L3`.
+
+```yaml
+# CORRECT — ACS-100 lists only its L1s
+id: ACS-100        # L0
+covered_by:
+  - ACS-100a       # L1 (direct child)
+  - ACS-100b       # L1 (direct child)
+
+id: ACS-100a       # L1
+covered_by:
+  - ACS-100a-1     # L2 (direct child)
+
+# WRONG — ACS-100a-1 is a grandchild of ACS-100 and must NOT appear here
+id: ACS-100
+covered_by:
+  - ACS-100a
+  - ACS-100a-1     # <-- remove; ACS-100a already carries this link
+```
+
+Alongside child AC IDs, a **leaf** AC's `covered_by` may hold test file paths
+(`unit_tests/test_x.py`, optionally `::test_function`). Mixing the two on one
+record is legal and occurs in the store today; only AC-ID entries are subject
+to the direct-children rule.
+
+### Why direct children — derived from tool behaviour, not preference
+
+This convention is not a style choice. Every tool that reads `covered_by`
+already assumes single-link semantics; a subtree list breaks or degrades each
+of them:
+
+| Tool | Behaviour | What it implies |
+|---|---|---|
+| `check_ac_parent_covered_by.py` (pre-commit, blocking) | For a staged child, computes `derive_parent_id(child_id)` and requires the child to appear in **that one record's** `covered_by`. It never inspects a grandparent. Its ACS-100i-3 decision entry states it explicitly: *"grandparent ACs are not required to list grandchildren directly"*, with six `TestThreeLevelAncestryChain` tests pinning that behaviour. | A grandchild entry satisfies nothing. It is dead weight the hook cannot read. |
+| `scan_ac_orphans.py` (store-wide scan) | `find_orphaned_children()` does the same single-hop check for **every** record on disk, at every level including L2→L3. | Same conclusion, applied store-wide: only the immediate parent's list can clear an orphan. |
+| `done_proof.py` `_resolve_all_child_ids()` | Flattens a composite to its leaves by **recursing** into each entry's own `covered_by`. The recursion is only well-formed if each level lists direct children; a subtree list makes the same descendant reachable by two paths (survivable only because of the `_seen` cycle guard). | The traversal is designed around direct-children lists. |
+| `approve_acs.py` | Iterates a goal AC's `covered_by` and treats **every entry as a leaf** to promote `reviewed → approved`. | A subtree list would sweep intermediate nodes into a leaf-only promotion. |
+| `check_ac_limits.py` | Counts children via `_derive_parent_id` ID-string derivation, deliberately **not** via `covered_by` (GE-106, so cross-links cannot game the caps). | `covered_by` carries no cap weight either way — so a subtree list buys nothing and only adds ambiguity. |
+
+The decisive asymmetry: under direct-children semantics every entry is
+load-bearing and machine-checkable. Under subtree semantics a grandchild entry
+is unverifiable — no tool requires it, no tool reads it, and no tool would
+notice if it went stale or named a record that no longer exists.
+
+### Consequences
+
+1. **Do not add a descendant to an ancestor's `covered_by`.** If you find one,
+   remove it — but first confirm the descendant's own immediate parent lists
+   it, so the link is preserved rather than lost.
+2. **Do not "repair" a missing grandchild link by promoting it upward.** The
+   repair is to add it to its immediate parent, which is the only record any
+   tool consults.
+3. **A record whose ID does not follow the canonical scheme above cannot be
+   linked structurally at all.** `derive_parent_id` is purely lexical, so a
+   child whose declared `depends_on` parent is not its ID-derived parent is
+   invisible to both the hook and the scan, in both directions. Prefer
+   canonical child IDs (`ACS-100a-1`, not a numeric sibling like `ACS-101`
+   standing in as a child of `ACS-100`) so the link the store records is the
+   link the tooling can see.
 
 ---
 
@@ -444,6 +512,81 @@ or unauthorized removal at commit time.
 **Fail-open behaviour:** Any unexpected exception (I/O error, git subprocess
 failure, parse error) causes the hook to exit `0` with a warning on stderr
 so a script error never hard-blocks an unrelated commit.
+
+#### `declares_side_effect` is derived from the Then clause
+
+`declares_side_effect` is **not an ordinary authored boolean.** For every
+staged AC file, `check_ac_schema.py` calls
+`validate_declares_side_effect()` in
+`templates/scripts/commit_guardian/_ac_schema_validators.py`, which computes
+the value from the record's own `criteria` text (`derive_declares_side_effect()`)
+and compares it against whatever you wrote. The commit is blocked in two shapes
+(BO-2900g-2 — *"a derived value must never be silently overwritten and a
+disagreement must never be silently ignored"*):
+
+| Shape | Message |
+|---|---|
+| Criteria derive `true`, field absent/null | `criteria assert a durable, observable effect ... but declares_side_effect is not set — add declares_side_effect: true` |
+| Field authored, derivation disagrees (either direction) | `declares_side_effect is authored as <x> but this AC's own Then clause derives <y> — the two disagree` |
+
+Writing `declares_side_effect: false` on a record whose `Then` clause matches
+the durable-effect pattern will therefore block the commit. So will omitting
+the field. The only fixes are to set the derived value, or to change the
+criteria text so it no longer asserts a durable effect.
+
+**Scope:** staged files only — a forward ratchet. The existing store is not
+retroactively validated (same posture as `validate_test_contract`).
+
+**What text is searched.** In order:
+
+1. `criteria` must be a non-empty string, else the derivation is `false`.
+2. Every `Because` clause is **stripped first** — a `Because` states why a
+   criterion exists and routinely cites effects owned by other work, so it is
+   not something this record asserts (BO-2900g-2-ii). The strip is
+   case-sensitive on purpose: a line-initial capitalised `Because` is a Gherkin
+   clause; a wrapped line beginning lowercase `because` is mid-sentence prose.
+3. The search then runs from the **first `Then`** to the end of the remaining
+   text — so an `And` continuing that `Then` counts, while a durable-effect
+   phrase appearing only in a `Given` does not.
+4. If there is no `Then` at all, the derivation is `false`.
+
+> **Known gap, deliberate.** Because the window runs from the first `Then` to
+> the end of the text, on a **multi-scenario** record every *later* scenario's
+> `Given`/`When` is inside the window too. A durable-effect phrase in a later
+> `Given` therefore still counts, contrary to rule 3. Bounding each scenario
+> was implemented, measured, and reverted — it moved three more records into
+> disagreement with their authored value, so it was left to its own change.
+
+**What makes a `Then` clause qualify.** The matcher
+(`_DURABLE_EFFECT_RE`) is deliberately phrase-based and narrow — it marks a
+strict subset of the store (~3.6% of records with a `Then` clause at
+calibration time), because a derivation that marks everything is
+indistinguishable from one that marks nothing. It matches:
+
+- `written to disk`, `written to a file`, `a file is written`
+- a **durable noun** governing the verb: `<file|files|record|records|artifact|artifacts|entry|entries|document|documents|index|manifest|AC|criterion|ticket|log> is/are written`
+- `is/are written to|into|under <destination>` — **unless** the destination is
+  transient: `the error stream`, `standard output`, `either stream`,
+  `both streams`, `stdout`, `stderr`, `the terminal`, `the console`, `screen`
+- `writes a/the/an file|record`, `saves a/the/an file|record`
+- `persisted` / `persists` / `persist`, `a record is persisted`, `record is persisted`
+- `saved to disk`, `is saved`, `are saved`
+- `created on disk`, `removed from disk`, `deletes a/the/an file`
+- `state-changing command`, `leaves the system in a different state`,
+  `changes the system's state`
+- `commits a/the change|transaction`, `pushed to`, `deployed to`,
+  `updates the database|store`
+
+Matching is case-insensitive. The discriminator is the **object written, not
+the verb** — "a record file is written" persists; "before any test is written"
+describes a human authoring a test later. Bare words such as *created* or
+*recorded* in isolation do **not** match.
+
+**Practical guidance.** Say what durably happens, in the `Then`, in these
+words when it is true — and do not reach for them when the effect is only a
+returned value, an in-memory result, or a message on a stream. If a criterion
+genuinely writes a file, `declares_side_effect: true` is not optional; the hook
+will insist on it.
 
 ### `check_test_ac_tags.py` (configurable)
 

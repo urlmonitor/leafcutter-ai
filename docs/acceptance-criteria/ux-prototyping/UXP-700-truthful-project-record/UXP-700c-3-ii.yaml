@@ -1,0 +1,78 @@
+id: UXP-700c-3-ii
+title: "A gate that did not run is reported, and never counts as a gate that passed"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - precommit_hooks
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the record's checker is registered among the project's automatic checks,
+  When a change is offered and the checker does not execute, whether because it was skipped,
+    because it was disabled, or because it could not start,
+  Then the automatic checks report that the record was not checked, naming which of those three
+    reasons applied,
+  And that report is not the report produced when the record was checked and found sound,
+  And the report names the checker, so a reader can tell which check is missing rather than
+    only that one is.
+depends_on:
+  - UXP-700c-3
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c-3.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700c-3
+  contract: "The registration this record makes observable when it fails to fire."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  Registration proved once at build time decays silently: a check can be disabled in
+  configuration, or fail to start in a worktree, long after its registration test went green.
+  The three reasons are asserted separately because they have different fixes and an
+  implementation that collapses them into one message tells the reader nothing actionable.
+test_spec:
+  - name: test_disabled_record_checker_is_reported_as_not_run
+    target_dir: unit_tests/product_truth/
+    description: "With the checker disabled in configuration, the run reports the record as not checked, naming the checker and the disabled reason."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_unstartable_record_checker_is_reported_as_not_run
+    target_dir: unit_tests/product_truth/
+    description: "With the checker unable to start, the run reports the record as not checked, naming the start failure."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_not_run_report_differs_from_the_checked_and_sound_report
+    target_dir: unit_tests/product_truth/
+    description: "A not-run report is distinguishable by a caller from a checked-and-sound report."
+    type: integration
+    angle: boundary
+    framework: unittest
+notes: |
+  PRIOR ART, same defect class, already reproduced in this repository: GE-120's evidence records
+  check_ac_parent_covered_by.py printing "cannot import derive_parent_id ...; skipping check
+  (fail-open)" and exiting 0, while the same check on the same staged files blocked with six
+  violations once the layout was right. Same check, same repo, opposite verdicts decided purely
+  by workspace layout. Reuse GE-120's vocabulary here; do not mint a second one.
