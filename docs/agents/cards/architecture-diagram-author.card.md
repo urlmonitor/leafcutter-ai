@@ -223,6 +223,8 @@ flowchart TD
 - GE-122d-4: The three-stage arrangement is drawn, showing which stage owns which promise
 - GE-124c-5: A sequence diagram shows the ordering that keeps the four verdicts distinguishable
 - GE-124f-4: A component diagram shows the chain across the four stores it crosses
+- GE-126e-4: A diagram shows where the census sits and what it reads to decide who is in scope
+- INF-700b-4: A sequence diagram shows the capture path end to end, including the branch taken when capture cannot complete
 - KM-KGS-100a-4: Component diagram shows the acceptance-criteria store as a knowledge-map surface
 - KM-KGS-100b-4: Sequence diagram of a requirement-to-code traversal
 - PER-100c-4: Sequence diagram for persona capability query workflow

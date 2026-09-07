@@ -275,7 +275,16 @@ flowchart TD
 - GE-124d-4: A how-to shows how to record an opt-out and how an area gets onto the warn list
 - GE-124e-5: A how-to separates 'nothing claims this' from 'nothing proves this' for the person who hit the gate
 - GE-124g-5: A reference doc states what each kind of evidence is worth, for every future check
+- GE-126a-4: The written procedure for interrogating a check yourself is one you can follow and trust
+- GE-126a-5: The target contract a check owes its caller is written down once
+- GE-126b-4: The three answers a check can give are written down with the evidence that produced them
+- GE-126c-4: Which copy of a check is the one that enforces is written down where an author will read it
+- GE-126d-4: Following the procedure for adding a check leaves nothing to discover later
+- GE-126d-5: What each registration leg buys you is written down beside the list of legs
+- GE-126e-5: The first measured answer is published with the question that produced it
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
+- INF-700b-5: Reference documentation states what the capture step requires of an agent, and names only steps that exist
+- INF-700c-3: Reference documentation states what may be written as knowledge and what the waiting count means
 - KM-KGS-100b-3: How-to guide for tracing a requirement to its code and tests
 - KM-KGS-100c-3: How-to guide for declaring a new knowledge surface
 - KM-KGS-100e-7: How-to guide: declare a component on a knowledge item and query it back

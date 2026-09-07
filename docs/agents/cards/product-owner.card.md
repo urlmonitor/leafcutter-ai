@@ -83,6 +83,7 @@ flowchart TD
 |------|
 | `Read` |
 | `Write` |
+| `Edit` |
 | `Bash` |
 | `Skill` |
 ---

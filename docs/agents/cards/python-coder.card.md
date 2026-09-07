@@ -635,7 +635,8 @@ flowchart TD
 - BO-1000b-2: The end-of-run summary is composed from the recorded per-step outcomes
 - BO-1000b-2-i: On HALT the recap reports which steps completed, which step halted, and why
 - BO-1000b-3: Step outcomes and the recap carry concrete result data, never a content-free 'done'
-- BO-1000c-1a: A background finalize run leaves a durable, in-flight-readable record of its progress that the workflow body does not write itself
+- BO-1000c-1a: A background finalize run leaves a durable, ordered record of each agent dispatch that remains readable after the run process exits, which the workflow body does not write itself
+- BO-1000c-4: The run-progress journal is readable by an outside caller while the run is still in flight
 - BO-100a: Dependencies are resolved automatically so nothing runs out of order
 - BO-100a-1: Empty epic folder produces an empty graph and immediate completion
 - BO-100a-2: Linear dependency chain produces one-at-a-time sequential dispatch
@@ -972,7 +973,7 @@ flowchart TD
 - BO-300a-2-1: Zero files_touched across all tickets still renders the manual_tests section
 - BO-300a-3: build-feature.md On-ok block renders all four sections from the return value
 - BO-300a-4: build-feature.md inline fallback template includes all four sections with placeholders
-- BO-300a-5: The epic's work is re-read before the drive reports, and anything added after planning is named
+- BO-300a-5: The epic's work is re-read before the drive reports, and work the drive did not build is named as not built, with a cause stated only where the drive can establish one
 - BO-300a-5-i: An epic whose work set is not affirmatively confirmed re-read is reported unverified, and pre-existing or removed work raises no false alarm
 - BO-300a-5-ii: The epic's machine-readable outcome never says success while the epic itself is reported not complete
 - BO-300a-5-iii: Work that vanished from the epic is judged against what the drive actually completed, so no output calls the same work both completed and not built
@@ -1145,6 +1146,13 @@ flowchart TD
 - BP-100k-2: Every deployed output the build produces is recorded in the manifest's output mapping, so the output-drift gate has something to compare
 - BP-100k-3: An artifact the build deliberately does not police is a declared exemption; an unrecorded, undeclared artifact is a reported gap, never a pass
 - BP-100k-3-i: A freshly built, unmodified tree yields zero uncomparable artifacts and a clean drift run — the stricter reporting raises no false alarms
+- BP-100k-4: A registered commit gate whose activation condition can never match anything the repository is able to stage is reported as unreachable and blocks — a gate that cannot fire is not protection
+- BP-100k-4-i: The reachability check raises no false alarm on gates that can fire, and fails rather than passing when it cannot determine reachability at all
+- BP-100k-5: The drift gate examines the deployed surface the build actually wrote, and reports the size of the population it did not examine — a verified count with no denominator is not a pass
+- BP-100k-5-i: The unexamined deployed population reaches zero by registering the deploy surface, never by exempting it, and the newly covered files are provably drift-checked
+- BP-100k-6: A deployed output the build recorded writing but that is absent from disk is reported and fails the run — deletion is the most complete drift there is, and it is the only kind the gate ignores
+- BP-100k-7: A guard skips a check only because the configuration declares the capability off — never because the capability's output happens to be absent, which is the failure the guard exists to catch
+- BP-100k-8: The build-equality guard covers every platform the build can emit, taken from the build's own platform set — a guard that proves equality only for the platforms it chose to enable proves nothing about the rest
 - BP-100m-1: Two source templates deploying to the same command path fail the build, naming both sources and the target
 - BP-100m-1-i: A same-target collision still fails even when the two colliding sources are byte-identical
 - BP-100m-2: Any set of two or more sources mapping to one target is detected, with every colliding source named
@@ -1608,6 +1616,26 @@ flowchart TD
 - GE-125d-3: Silence means nothing was withheld, and a run that withheld a great deal still speaks only once
 - GE-125d-4: You can ask the check what it declines to look at, and the answer describes what it does rather than what it meant to do
 - GE-125d-4-i: The self-description follows the decision, so a reduction cannot be widened or narrowed without the answer changing
+- GE-126a-1: A record you name on the command line is the record that gets judged
+- GE-126a-2: A target you named that resolves to nothing is a caller error and never a pass
+- GE-126a-2-i: Naming no target at all in an empty scope is still an ordinary pass
+- GE-126a-3: Naming your targets through the test seam carries the same promise as the command line
+- GE-126b-1: No way out of the check exists that has not first said where it looked and how much it examined
+- GE-126b-1-i: The statement arrives without being asked for and nothing can switch it off
+- GE-126b-2: A store that was never found and a store with nothing to look at are two different answers
+- GE-126b-3: The check finds the same store from wherever you happen to be standing
+- GE-126c-1: The build-source copy refuses the same record the deployed copy blocks
+- GE-126c-1-i: The copy the build produces does not inherit the refusal
+- GE-126c-2: The refusal names the copy you ran and the copy that works
+- GE-126c-3: The refusal follows from what the copy is and not from whether a dependency happened to load
+- GE-126d-1: A check registered on every documented leg but missing from the autofix roster is named
+- GE-126d-1-i: A roster entry naming a check that no longer exists is named too
+- GE-126d-2: Recording a deliberate exclusion silences the report for that check and no other
+- GE-126d-3: The legs of registration are one list that the procedure and the parity check both read
+- GE-126e-1: Every check is classified by running it and not by reading it
+- GE-126e-2: The census says how many checks it examined beside how many it found
+- GE-126e-2-i: A list too long to act on in one pass is a successful run and never a blocked commit
+- GE-126e-3: A new check joins the census by being registered rather than by being remembered
 - INF-1000a-1: Detect stale fixtures when a required field is added to a schema
 - INF-1000a-1-i: Schema file with no required-field changes passes without scanning fixtures
 - INF-1000a-1-ii: Fixture files that already contain the new field are not flagged
@@ -1633,15 +1661,14 @@ flowchart TD
 - INF-200a-5: Customer opts into leafcutter dev rules during onboarding — skipped rules skip their hooks
 - INF-200b-1: [Phase 2] Convention detector scans customer codebase and presents findings
 - INF-200b-2: [Phase 2] Hook generator produces project-specific pre-commit template
+- INF-400b-2-i: Two learnings captured the same day to the same place are never mistaken for one
 - INF-400c-2: A harvester agent reads learning emissions and routes each to the correct knowledge surface
 - INF-400c-2-ii: An event the harvester cannot route stays unprocessed and is surfaced, never marked done
 - INF-400c-3: The harvester is idempotent: re-running it does not duplicate persisted learnings
 - INF-400c-4: Emitters and the harvester resolve the same knowledge-emission sink from one declared location
-- INF-400c-4-ii: Knowledge events already stranded in the telemetry sink are recovered, not abandoned
 - INF-400c-4-iii: Phase telemetry and knowledge emissions are separate streams, and the harvester drains only its own
 - INF-400c-5: One declared entry_kind vocabulary is shared by the classifier and the harvester and enforced where the event is emitted
 - INF-400c-5-i: Separator and case variants of one entry_kind normalise to a single canonical value
-- INF-400c-5-ii: Every entry_kind already in flight has a declared mapping into the canonical vocabulary
 - INF-400c-5-iii: A rejected entry_kind is reported to the agent and does not fail the agent's run
 - INF-400d-1: Each component's AC directory has a README.md that accumulates domain conventions
 - INF-400d-2: Skill-scoped PROJECT_CONTEXT.md files grow with each agent run that discovers skill-relevant learnings
@@ -1691,6 +1718,14 @@ flowchart TD
 - INF-600l-1-i: When agent cards are absent, the mirror check no-ops instead of false-failing
 - INF-600l-1-ii: When the agent registry is absent, the mirror check no-ops instead of false-failing
 - INF-600l-2: The mirror check is opt-in to the leafcutter agent subsystem and resolves the card path from convention, not a hardcode
+- INF-700b-2: A template that names a step which does not exist is refused by the repository's own gating
+- INF-700b-2-i: The reference gate still refuses from a fresh consumer install, not only from the package's own checkout
+- INF-700b-3: A period with no captured learnings tells a reader which kind of quiet it was
+- INF-700c-1: A record with no learning in it is never turned into a line on a curated knowledge file
+- INF-700c-1-i: A line that is not a record does not derail the run and is never written as knowledge
+- INF-700c-2: Knowledge history that has already been honoured stops being reported as work outstanding
+- INF-700c-2-i: The disposition of an honoured record is auditable afterwards, and the record itself survives
+- INF-700c-2-ii: The waiting count stays truthful in the other direction — a real unwritten learning still raises it
 - KM-KGS-100a-1: The acceptance-criteria store is a declared surface in the surfaces config
 - KM-KGS-100a-2: Each acceptance-criterion file becomes one node in the knowledge map
 - KM-KGS-100a-2-i: Non-criterion and unparseable files under the acs surface produce no spurious nodes
