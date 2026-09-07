@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-26
+last_updated: 2026-09-07
 components:
   - build_orchestration
 related_docs:
@@ -3339,14 +3339,92 @@ closed correctly, on a field the other side of its own contract was never told t
 
 ---
 
-### KI-BO-20260831-1520 — The fast lane's green gate runs only the AC's own tests, so a build that breaks 19 other tests reaches review reporting "gates green"
+### KI-BO-20260831-1520 — The fast lane's green gate runs only the AC's own tests, so a build that breaks unrelated suites reaches review — and now a PR — reporting "gates green"
 
 - **Severity:** high
 - **Status:** open — no AC
-- **Occurrences:** 1
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Occurrences:** 2
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07
 - **Where:** `templates/workflows-js/fast-lane-ship.js` — the `greenCoverageInvocation`
-  string, and the absence of any full-suite step anywhere in the lane
+  string, the terminal payload built at `:1518`, and the absence of any full-suite step
+  anywhere in the lane
+
+**Title widened at the second occurrence.** It previously read *"breaks 19 other tests"*.
+Two occurrences now report two different counts, so a count in the title reads as the
+defect's size when it is only the size of one instance. The mechanism is the title now; the
+per-occurrence counts are below. (Grepped 2026-09-07: the id is cited nowhere outside this
+heading, so the rename breaks no reference.)
+
+---
+
+> **SECOND OCCURRENCE, 2026-09-07 — and this one reached a pull request. The first stopped
+> at review.**
+>
+> The lane built `BP-1500d-3` and opened **PR #689** (`fast-lane/bp-1500d-3`, still open).
+> Its terminal payload reported `unsatisfied_required_checks: []` and *"no required check
+> is, to the run's own knowledge, unsatisfied."* CI then failed.
+>
+> **Measured, same command both sides, `unit_tests/portability/`:**
+>
+> ```text
+> control (origin/main + unrelated commits) : 70 passed,  0 failed
+> with the lane's change                    :  7 failed, 11 errors, 56 passed
+> ```
+>
+> 18 regressed outcomes across 6 files — including `test_consumer_simulation.py`, the
+> repo's own consumer-install harness. The first occurrence's damage was a wasted review
+> cycle; this one is a PR that looks landable and is not.
+>
+> **Verification note on the control figure, because it will not reproduce naively.** The
+> 70-outcome total is confirmed at `origin/main` (`e2b1eb7ea`) — measured 2026-09-07,
+> `8 failed, 62 passed in 157.83s`. The eight are `test_ge_120e_2.py` failing on
+> `scripts.commit_guardian.change_set_source` being absent; the module exists at
+> `templates/scripts/commit_guardian/change_set_source.py` and is missing only from the
+> *deployed* `scripts/` tree, so they are the standard un-built-worktree false-RED, not
+> real reds. **Run `build.py` before using this suite as a control** — an unbuilt worktree
+> reports 8 phantom failures and a `70 passed` control is a built one. (The test's own
+> failure message claims it "checked both `templates/…` source and the `scripts/…`
+> deployed copy", which it did not: a dotted `scripts.commit_guardian.…` import can only
+> ever reach the deployed copy.)
+>
+> **What CI caught it with, and what it did not.** Of PR #689's ten checks, **nine were
+> SUCCESS** — including `Consumer install simulation (BP-900h-1)`, which passed while the
+> unit-level consumer-simulation tests were red, because it runs
+> `check_consumer_install.py` rather than that file. The sole failure was
+> `Test suite (pytest)`. One required check out of six stands between this defect and main.
+>
+> **The scope limitation is real, documented, and total — read this before "fixing" the
+> report.** The phrase *"to the run's own knowledge"* is doing real work and should be
+> preserved. It is not a false claim the lane makes; it is a limit the lane states. The
+> docblock at `:438-440` says the parameter carries *"required checks the run itself knows
+> are unsatisfied"*, and the comment at `:1510-1515` names the full extent of that
+> knowledge: *"Every required check this run can evaluate (today: the changelog-presence
+> check)"*. Exactly **one** of the six required checks is evaluable by the run, and it is
+> not the suite.
+>
+> Which makes the call site the thing to look at:
+>
+> ```js
+> const deliveryOutcome = buildFastLaneDeliveryOutcome(prResult.pr_url || null, []);
+> ```
+>
+> `fast-lane-ship.js:1518`, the only call site. The list is a **hard-coded empty array
+> literal**, so `unsatisfied_required_checks: []` is a constant rather than a result, and
+> the `status: "blocked"` branch of that function is unreachable in the shipped lane. That
+> is deliberate and the comment above it explains why — every check the run *can* evaluate
+> already halted earlier, so nothing survives to populate the list. It is still worth
+> stating plainly, because a reader who sees `unsatisfied_required_checks: []` in a payload
+> will read it as "checked, none unsatisfied" rather than "not a computed field".
+>
+> **Do NOT close this by making the message more honest and stopping there.** Fix (2)
+> below (state the scope) is still the floor and is still worth doing. But this occurrence
+> is the demonstration that (2) alone is insufficient: the message here was *already*
+> honest, precisely qualified, and it did not prevent a broken PR. Only fix (1) — one
+> full-suite run after the coder loop settles — would have.
+
+---
+
+**FIRST OCCURRENCE, 2026-08-31.**
 
 **Symptom.** A fast-lane build of `BO-100e-1` / `BO-100e-1-i` widened `build-feature.js`'s
 single planner dispatch into a multi-look loop. Its own new tests passed. The lane's payload
