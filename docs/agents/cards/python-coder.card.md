@@ -1216,6 +1216,7 @@ flowchart TD
 - BP-100k-3-i: A freshly built, unmodified tree yields zero uncomparable artifacts and a clean drift run — the stricter reporting raises no false alarms
 - BP-100k-4: A registered commit gate whose activation condition can never match anything the repository is able to stage is reported as unreachable and blocks — a gate that cannot fire is not protection
 - BP-100k-4-i: The reachability check raises no false alarm on gates that can fire, and fails rather than passing when it cannot determine reachability at all
+- BP-100k-4-ii: A trigger that matches nothing because the project holds no file of that kind is a gate with nothing to do, not a gate that cannot fire — the two are told apart by what a checkout could ever produce, never by what it holds today
 - BP-100k-5: The drift gate examines the deployed surface the build actually wrote, and reports the size of the population it did not examine — a verified count with no denominator is not a pass
 - BP-100k-5-i: The unexamined deployed population reaches zero by registering the deploy surface, never by exempting it, and the newly covered files are provably drift-checked
 - BP-100m-1: Two source templates deploying to the same command path fail the build, naming both sources and the target
@@ -1257,6 +1258,7 @@ flowchart TD
 - BP-1100g-3-ii: The set of taught proof kinds resolves to the same set wherever the scanner runs from
 - BP-1100g-4: A kind of proof that was promised and never claimed is refused by name
 - BP-1100g-4-i: A claim is taken at face value: the promise-versus-claim check never judges whether a test does what it says
+- BP-1100g-4-ii: A plan is not yet a hand-off: work still declared as only planned is not refused for a proof it has not reached the point of owing, and anything that cannot be read as still-planned is
 - BP-1100g-5-i: A missing, reasonless, or contradictory seam answer is reported, while a reasoned no is not
 - BP-1200a-1: Full test suite passes on a fresh clone using the documented CI test command
 - BP-1200a-1-ii: No test fails at collection time because a build-generated dependency is missing from the fresh clone
@@ -1427,6 +1429,7 @@ flowchart TD
 - BP-900h-6: The simulation uses the install, not just builds it — a first commit is attempted
 - BP-900h-6-i: The use-the-install step mutates only a target it is entitled to destroy, and refuses anything else untouched
 - BP-900h-6-ii: The executed-guard record accounts for the guard population the adopter would face, and a narrowed run cannot report an unqualified pass
+- BP-900h-6-iii: The simulated adopter tracks no file of at least one kind the deployed guards watch for, so a guard that only misfires in a project unlike this one is exercised rather than assumed absent
 - BP-901: goal_to_epic.py main() only resolves the worktree root when a default path is actually needed
 - CR-100a-1: Structural bucket names exactly its six Modern smells
 - CR-100a-2: Design bucket names exactly its six Modern smells
