@@ -27,85 +27,154 @@ doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
     status: planned
-    relevance: "The reference page authored by ACD-2100d-4 must state that the startup check is a local read, so an operator hitting a transport error knows it is not this check."
+    relevance: "The reference page authored by ACD-2100d-4 must state that the startup check is a local read performed by the skill's pre-flight before the workflow is invoked, so an operator hitting a transport error knows it is not this check."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes
     status: exists
     relevance: "KI-ACD-009 cause 2 -- '[resolve-workspace-setup-permission] failed: API Error: Connection lost mid-response', and the third fix direction."
-  - path: templates/workflows-js/plan-feature.js
-    relationship: implements
+  - path: scripts/worktree/check_workspace_setup_permission.py
+    relationship: creates
+    status: planned
+    relevance: "New primary landing site. The executable pre-flight that reads config/agent_registry.json locally and emits the workspace-setup permission verdict. Runs from the skill in the main agent loop, which has real Bash/Read access; the workflow body does not. Precedent for a skill-invoked pre-flight script: scripts/ac_store/scan_ac_orphans.py behind SKILL.md sec-PRR."
+  - path: templates/skills/plan-feature/SKILL.md
+    relationship: modifies
     status: exists
-    relevance: "Canonical source. The resolve-workspace-setup-permission step dispatches an agent to read a static local file."
+    relevance: "The skill gains a pre-flight section that runs the script above before the workflow is invoked and passes its verdict into the workflow. Mirrors the existing sec-PRR pre-flight, which already invokes a Python script by absolute path from this same surface."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "No longer the landing site for the check itself. This record removes the resolve-workspace-setup-permission dispatch (lines ~2190-2273) and replaces it with a read of the pre-flight verdict carried in args, plus the fail-closed guard for a caller who invokes the workflow directly without one."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+    relevance: "The ADR-030 injected-globals contract -- agent, parallel, pipeline, phase, log, args, workflow, budget -- which is why args is the only channel a locally-computed verdict can reach the workflow body through."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "The constraint that forced this surface change: the E2 engine contextifies the workflow body with no module loader and no filesystem primitive, so a workflow body physically cannot read a local file."
   - path: docs/architecture/components/agent-registry.md
     relationship: describes
     status: exists
-    relevance: "Component doc for the registry the check reads locally once the round-trip is removed."
+    relevance: "Component doc for the registry the pre-flight reads locally once the round-trip is removed."
   - path: docs/architecture/components/ac-driven-dev.md
     relationship: describes
     status: exists
     relevance: "Component doc for the route whose startup path loses a failure source here."
 assigned_agent: python-coder
-estimated_complexity: M
+estimated_complexity: L
 it_requirements:
-  - "The change must land under templates/. The deployed workflow is build output and does not carry this step at all today."
-  - "The verdict must be a function of the registry contents alone. It must be identical whether dispatch is available or not -- 'skip the check when dispatch is unavailable' is a fail-open regression wearing this record's clothes and is explicitly forbidden."
+  - "The check must land as a real executable pre-flight script invoked by the plan-feature skill BEFORE the workflow is invoked -- not as prose instruction in SKILL.md, and not in the workflow body. The E2 engine contextifies the workflow body with exactly the injected globals agent, parallel, pipeline, phase, log, args, workflow and budget, with no module loader and no filesystem primitive reachable (ADR-030; canonical statement in the unit_tests/_workflow_engine_harness.py docstring, ENGINE FIDELITY section). A workflow body therefore cannot read config/agent_registry.json at all -- the agent round-trip exists precisely because the sandbox has no filesystem. The skill runs in the main agent loop with real Bash and Read access, so a script invoked from there can perform the local read."
+  - "All source changes must land under templates/ and scripts/. The deployed workflow and the deployed skill are build output."
+  - "The verdict must be a function of the registry contents alone. It must be identical whether dispatch is available or not -- 'skip the check when dispatch is unavailable' is a fail-open regression wearing this record's clothes and is explicitly forbidden. There must be no code path anywhere in the check that branches on dispatch availability."
   - "The startup path must reach this check and pass it with no network available."
-  - "Removing the round-trip must not remove the halt: the four outcomes ACD-2100b-1 through -3 specify still stop the run, and ACD-2100b-4 still holds over them."
+  - "Removing the round-trip must not remove the halt: the four outcomes ACD-2100b-1 through -3 specify still stop the run, and ACD-2100b-4 still holds over them. Moving the check into the skill must additionally not open a bypass -- the workflow must fail closed when no pre-flight verdict reaches it. A caller that invokes the workflow directly, for example Workflow({scriptPath: '.leafcutter/workflows/plan-feature.js'}), which is a real and currently-used invocation path, supplies no verdict and must be stopped before any authoring agent is dispatched, with a report that names the missing pre-flight rather than asserting a permission cause the run never established."
+  - "The verdict must cross from the pre-flight into the workflow through args -- the only injected global that carries caller-supplied data -- and must carry enough structure to keep the outcomes ACD-2100b-1, -2 and -3 own distinguishable from one another. A single boolean collapses them and re-creates the defect those records exist to fix."
+  - "The registry-location semantics must not fork. The pre-flight must resolve the registry the same way ACD-2100a-1 and ACD-2100a-3 already established -- repository-anchored, so it reaches the project's real registry when the run starts inside a linked git worktree that holds no .leafcutter/ of its own -- rather than a second, independent, cwd-relative resolution."
   - "If a helper that dispatches for this purpose remains in the source for another caller, this behaviour is not satisfied by its absence from the file -- what must be observable is that no dispatch is made on the check's behalf during a run."
-  - "Must satisfy the repository error-handling policy: the local read replaces a network call, so its failure paths are the ones ACD-2100b-1 and ACD-2100b-2 own and must not be swallowed."
+  - "Must satisfy the repository error-handling policy: the local read replaces a network call, so its failure paths are the ones ACD-2100b-1 and ACD-2100b-2 own. Those are external I/O and must be wrapped, must name a specific exception type, and must never be swallowed into an unqualified denial."
+  - "A new script under scripts/ that the DEPLOYED skill invokes must be added to the build deploy manifest in the same change. The deployed skill runs against the deployed layout, so a script that exists only in the source tree makes the pre-flight fail at runtime while every source-tree test passes."
   - "Must not add a per-run cost beyond a single local file read -- this record removes latency from startup and must not reintroduce it elsewhere."
 test_spec:
-  - name: test_startup_check_passes_with_every_dispatch_attempt_failing
+  - name: test_preflight_returns_the_permitted_verdict_from_the_registry_alone
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "the pre-flight script executed as a subprocess in a fresh process, against a temporary repository whose config/agent_registry.json lists the worktree-creation agent with permission to run repository commands"
+    description: >-
+      With no agent dispatch reachable and no network, the pre-flight emits the permitted
+      verdict from the registry file alone.
+  - name: test_run_reaches_and_passes_the_startup_check_with_every_dispatch_attempt_failing
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: criterion
+    surface_invoked: "the plan-feature workflow driven through the E2 harness with every agent() call failing immediately with a transport error, and the permitted verdict the pre-flight produced supplied in args"
     description: >-
-      Dispatch made impossible -- every attempt fails immediately with a transport
-      error -- and a registry that permits the worktree-creation agent; the check
-      completes with the permitted verdict and the run proceeds to the next step.
+      Dispatch made impossible; the check completes with the permitted verdict and the run
+      proceeds to the next step rather than halting on a transport error.
   - name: test_no_dispatch_is_made_on_the_checks_behalf_during_a_run
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: reachability
-    surface_invoked: "the plan-feature workflow driven through the workflow runner, with the run's own dispatch record read back afterwards"
+    surface_invoked: "the plan-feature workflow driven through the E2 harness, with the harness's own recorded agent-call list read back afterwards"
     description: >-
-      The run's record of what it dispatched contains no entry attributable to the
-      startup check -- observed from the record the run produced, not from the absence
-      of a call in the source.
+      The run's record of what it dispatched contains no entry attributable to the startup
+      check -- no call carrying the resolve-workspace-setup-permission label and none whose
+      prompt reads the registry. Observed from the record the run produced, never from the
+      absence of a call in the source.
   - name: test_verdict_is_identical_with_and_without_dispatch_available
-    target_dir: unit_tests/workflows/
+    target_dir: unit_tests/ac_driven_dev/
     framework: unittest
     type: integration
     angle: seam
+    surface_invoked: "the pre-flight script run twice against the same registry -- once in an environment where dispatch is impossible, once where it is available"
     description: >-
-      The same registry produces the same verdict in two runs, one with dispatch made
-      impossible and one with dispatch available -- so the verdict comes from the file
-      rather than from the transport.
-  - name: test_removing_the_round_trip_does_not_remove_the_halt
+      The same registry produces the same verdict in both runs, so the verdict comes from
+      the file rather than from the transport, and no path in the check is keyed on dispatch
+      availability.
+  - name: test_withheld_permission_still_halts_the_run
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: failure
+    surface_invoked: "the plan-feature workflow driven through the E2 harness with dispatch impossible and the denying verdict the pre-flight produced from a registry that withholds permission"
     description: >-
-      With dispatch impossible and a registry that withholds permission, the run still
-      stops at the check -- the local read is not a bypass.
+      The run still stops at the check before any authoring agent is dispatched -- the local
+      read is not a bypass.
+  - name: test_direct_workflow_invocation_with_no_preflight_verdict_halts
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "the plan-feature workflow driven through the E2 harness with NO pre-flight verdict present in args, standing in for a caller that invokes the deployed script directly via Workflow({scriptPath: '.leafcutter/workflows/plan-feature.js'})"
+    description: >-
+      The run halts before any authoring agent is dispatched, and its report names the
+      missing pre-flight rather than asserting a permission cause. Moving the check into the
+      skill must not leave the direct-invocation path unguarded.
+  - name: test_preflight_is_reachable_and_runnable_from_the_deployed_layout
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: "the deployed layout produced by the build, invoking the pre-flight at exactly the path the deployed SKILL.md names"
+    description: >-
+      The pre-flight exists at the deployed path the skill invokes and produces a verdict
+      when run there -- a source-tree-only script would pass every other test in this set
+      and still fail on first real use.
 test_rationale: >-
   Making dispatch impossible and requiring the run to get past the check anyway is the
   only Given that cannot be satisfied by a source scan. A test that greps for the
   absence of a dispatch call passes on a call that is present but unreachable, and fails
   on a correct implementation that keeps the helper for another purpose -- so the
-  evidence has to be the run's own dispatch record. The third assertion is what stops
-  the fix being "skip the check when dispatch is unavailable": the verdict must be the
-  same either way because it comes from the file, not from the transport. The fourth
-  keeps the halt, because a local read that always returns permitted would pass the
-  first three.
+  evidence has to be the run's own dispatch record, read back from the harness after the
+  run. That is unchanged by the surface move: the check now lives in a script the skill
+  runs, but the assertion that no dispatch was made on its behalf is still made against
+  the run, not against the file. The seam test is what stops the fix being "skip the check
+  when dispatch is unavailable": the verdict must be the same either way because it comes
+  from the file, not from the transport. The two failure-angle tests keep the halt -- a
+  local read that always returns permitted would pass everything above them, and so would
+  a move that quietly exempts the direct-invocation path. The deployed-angle test exists
+  because a skill-invoked script is only as real as its deploy manifest entry.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-07
+    note: "Surface change only -- criteria untouched. Re-derived it_requirements, doc_links,
+      test_spec, test_rationale and estimated_complexity (M -> L) for the new landing site
+      after the user decided the check moves out of the workflow body and into the
+      plan-feature skill as a pre-flight. Retargeted the ownership doc_link from
+      templates/workflows-js/plan-feature.js (relationship: implements) to a new
+      scripts/worktree/check_workspace_setup_permission.py (relationship: creates), with
+      plan-feature.js and templates/skills/plan-feature/SKILL.md retained as
+      relationship: modifies. assigned_agent stays python-coder. Added an explicit
+      fail-closed requirement and a covering test for direct workflow invocation, which the
+      move would otherwise have left as a bypass."
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -145,4 +214,54 @@ notes: |
   edge with no depends_on mirror would create a contract the build sequencer cannot see
   (KI-ACD-015, open) and that nothing enforces. The interactions are stated in
   it_requirements instead, where the coder will actually read them.
+
+  2026-09-07 (it-po): SURFACE CHANGE -- THE CHECK MOVES TO THE SKILL PRE-FLIGHT.
+  The criteria are untouched and the observable behaviour is identical; only the place
+  the check lives has changed. This is the blocker that halted the build on
+  12_TICKET-20260826-ACD-2100b-5, and it is a hard engine constraint rather than a
+  preference. The E2 workflow engine (ADR-030) contextifies the workflow body with
+  exactly the injected globals agent, parallel, pipeline, phase, log, args, workflow and
+  budget -- no `require`, no `module`, no `exports`, no `process`, no `__dirname`, and no
+  filesystem primitive of any kind. The canonical statement is the ENGINE FIDELITY
+  section of the unit_tests/_workflow_engine_harness.py docstring, which was read and
+  confirmed before this amendment was written. So a workflow body physically CANNOT read
+  config/agent_registry.json: the agent round-trip this record exists to delete is there
+  precisely because the sandbox has no filesystem, and "the check reads the registry
+  itself" is unimplementable inside templates/workflows-js/plan-feature.js. The skill
+  runs in the main agent loop with real Bash and Read tools, so a pre-flight script
+  invoked from the skill can do the local read. The precedent is already in this same
+  file: SKILL.md sec-PRR invokes scripts/ac_store/scan_ac_orphans.py by path from the
+  skill for exactly the same reason.
+
+  2026-09-07 (it-po): THE DIRECT-INVOCATION FAIL-OPEN, AND HOW IT IS CLOSED.
+  Moving the check into the skill introduces a hole the previous design did not have.
+  If the check exists ONLY in the skill pre-flight, then any caller who invokes the
+  workflow directly -- Workflow({scriptPath: ".leafcutter/workflows/plan-feature.js"}),
+  a real path that is used in practice, including as the documented way to defeat the
+  workflow name-cache -- skips the check entirely and gets a run with no charter gate at
+  all. That is strictly worse than the false halt this record removes.
+
+  RESOLVED, not merely recorded: the halt is preserved by making the workflow fail
+  closed on an ABSENT verdict. The pre-flight computes the verdict locally and passes it
+  into the workflow through `args`, which is the only injected global that carries
+  caller-supplied data and is therefore the only channel available under ADR-030. The
+  workflow body reads that arg and nothing else -- no dispatch, no filesystem -- and
+  halts before any authoring agent when the verdict is absent, malformed, or not the
+  permitted verdict. A direct invocation supplies no verdict, so it halts. The
+  requirement is written into it_requirements and covered by
+  test_direct_workflow_invocation_with_no_preflight_verdict_halts.
+
+  TWO RESIDUALS a reader should know about, neither of them blocking:
+  (1) The guard is fail-CLOSED, not tamper-proof. A caller who fabricates a permitted
+  verdict in args bypasses the registry read. This is the same trust boundary the
+  pre-existing design had -- it trusted a status-checker agent's returned stdout -- so
+  the move neither improves nor worsens it. It is not in scope here.
+  (2) The absent-verdict halt is a NEW outcome of the startup path, and it is not one
+  of the outcomes enumerated by ACD-2100b-1, -2 or -3. It satisfies ACD-2100b-4 (it
+  stops the run before authoring work begins) but it widens the space those three
+  records partition. Their reports must not be reused for it: an absent pre-flight is
+  neither an unreadable registry, nor an uninterpretable one, nor a denied agent, and
+  reporting it as any of those would re-commit the exact collapse KI-ACD-009 records.
+  Whoever implements this should expect ACD-2100b-3-i's "the space is not closed by
+  enumeration alone" point to apply here too.
 target_epic: EPIC-StartingNewWorkTheProperWayAlways
