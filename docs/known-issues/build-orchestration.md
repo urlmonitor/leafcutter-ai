@@ -3577,3 +3577,69 @@ is the mechanism that entry's parallel-safety question depends on).
 **Pattern:** a permission field with a documented tri-state, no enforcement, and two of ~40
 records populated — so the first person to consult it reasoned from the populated cases and got
 the default backwards, in a comment that now teaches the error.
+
+---
+
+### KI-BO-20260907-0955 — The fast lane cannot complete any AC whose tests build a real clone, because its green gate runs before its commit phase
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/workflows-js/fast-lane-ship.js` phase order (green gate before commit)
+  vs. `unit_tests/portability/_bp900h4_layout_helpers.py` (`git clone --local`,
+  `git worktree add --detach <dest> HEAD`)
+
+**Not a flaky run and not a code defect — a structural impossibility.** The fast lane runs
+`verify_green_and_coverage` before its commit phase. `BP-900h-4-i`'s fixtures build their four
+adopter layouts with a real `git clone --local` and a real `git worktree add --detach <dest>
+HEAD`, because the AC explicitly requires a real worktree rather than a copy (a copy
+reproduces neither the trigger nor the defect it exists to catch). **Both git operations see
+only COMMITTED state.**
+
+So a change to `scripts/build_phases.py` is invisible inside every cloned layout until it is
+committed, the layouts are built from the pre-change tree, and the green gate fails. Red then
+green inside one working tree is impossible for such an AC. Retrying the gate cannot help,
+because nothing about the retry changes what `HEAD` contains.
+
+**Observed.** Driving `BP-900h-4` on 2026-09-07, the lane halted at `python-coder` with
+`green:false` and released both ACs back to `todo`, having reproduced the same result across
+three gate runs. The diagnosis was confirmed by reading the fixture and then causally: the
+implementation was committed by hand and the identical test command returned **9/9 green**.
+Nothing else changed.
+
+**Why this is not "just commit first".** Committing before green means committing unverified
+work, which is the order the lane exists to prevent. It was acceptable in that instance only
+because the sibling `BP-900h-4` had five tests already green against the live worktree, so the
+uncommitted change was not unverified — merely unverifiable *by the child AC*. That reasoning
+does not generalise; an AC with only clone-based tests has no such fallback.
+
+**It will recur.** Nothing marks an AC as clone-based, so the next one lands the same way:
+the lane halts with `green:false`, the payload blames the coder phase, and the real cause is
+one phase boundary away. The failure names the wrong culprit, which is what makes it worth an
+entry rather than a comment.
+
+**Fix direction, in preference order.**
+
+1. Let the lane detect this rather than the human. A test that shells out to `git clone` or
+   `git worktree add` against the repo under test is statically recognisable; when the build
+   set contains one, the lane should say so and route it rather than reporting a coder
+   blocker.
+2. Give clone-based fixtures a committed-state source that is not `HEAD` — e.g. build the
+   layouts from a temporary commit or a stash-free `git stash create` tree object, so the
+   working tree's changes are visible without altering branch history.
+3. Failing both, permit an explicitly-marked AC to run its green gate after a provisional
+   commit on the lane's own branch, which is reversible and never reaches `main`.
+
+**Do NOT "fix" this by relaxing the AC to use a copied tree.** `BP-900h-4-i` requires a real
+worktree precisely because the KI-BP-003 trigger — a submodule directory unpopulated in a
+worktree — cannot be reproduced by copying. Weakening the fixture would make the lane green
+and the coverage worthless.
+
+**Related.** `KI-BO-20260901-1450` (the fast lane's isolation stops at the worktree boundary)
+is the same seam from the other side. `KI-TQ-20260901-1310` is the sibling case of a lane gate
+shaping the work rather than judging it.
+
+**Pattern:** a pipeline whose verification step reads committed state while its commit step
+runs later — so any test that consults git history can never be satisfied by the pipeline that
+is supposed to satisfy it, and the resulting failure is attributed to the last agent that ran.

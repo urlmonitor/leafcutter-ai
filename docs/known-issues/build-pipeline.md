@@ -253,9 +253,49 @@ is also easy to mistake for another author's work. Restore with
 > occurrence of the same shape; see KI-BP-018. Unblock adopters that way if you must, but
 > the entry closes with BP-900g-8.
 
-- **Severity:** blocker.
-- **Status:** **OPEN. Reopened 2026-09-01 — the 2026-08-31 closure was wrong, and the way
-  it was wrong is the more useful half of this entry.**
+- **Severity:** was blocker.
+- **Status:** **RESOLVED 2026-09-07 — and this time the evidence is a run, not a reading.**
+
+  > Fixed by two merged changes, deliberately split because they fail independently:
+  > **PR #694** (`078b862b`) widened the deployed-dependency closure so a non-code file a
+  > deployed script READS is a dependency on the same terms as a module it imports, and
+  > **PR #708** (`0b765b3c`) added the consumer-simulation inspection that proves, in a
+  > real adopter-layout install, that the declaring files actually arrived.
+  >
+  > **The evidence, stated as commands and outputs rather than as a conclusion** — because
+  > the previous closure of this entry argued from source and was wrong:
+  >
+  > - A clean `python scripts/build.py --target-dir /tmp/<scratch>` exits 0 and
+  >   `.leafcutter/config/` now contains `doc_types.json` alongside `diagram_types.json`,
+  >   `skill_registry.json`, `agent_registry.json`, `guardrail_gates.yaml`, `paths.json`,
+  >   `phase_deferral.yaml` and `ac_store_schema.json`. Before this it held three files.
+  > - `env -u PYTHONPATH python <scratch>/.leafcutter/scripts/commit_guardian/check_doc_frontmatter.py <doc>.md`
+  >   runs clean. That is the adopter's exact reproduction, executed from the deployed
+  >   tree, and it no longer raises `FileNotFoundError`.
+  > - CI on both PRs is green, including `Consumer install simulation (BP-900h-1)`.
+  >
+  > **What the fix was NOT.** Deploying `doc_types.json` alone would have closed the
+  > symptom and left the mechanism — that is what this entry warned against for four
+  > occurrences. The closure guard is now derived: it reads what deployed guardrails
+  > actually read. Turning it on surfaced five further undeclared dependencies nobody had
+  > noticed — `config/diagram_types.json`, `config/skill_registry.json` (present in source,
+  > deployed nowhere), `docs/components.json`, `docs/roadmap.json`, and
+  > `config/phase_deferral.yaml` (deployed by TKT-600b but never declared). Each was fixed,
+  > none by hand-listing.
+  >
+  > **A defect it caught on contact.** Merging `origin/main` into the fix branch made the
+  > build abort on `config/phase_deferral.yaml` — shipped but undeclared. The guard found
+  > a real gap in main the first time it met one, which is the behaviour this entry has
+  > wanted since 2026-08-18.
+  >
+  > **Residual, so this closure is not read as wider than it is.** A clean build emits
+  > ~409 `unresolvable data-file read` warnings. Those are the guard's blind spots made
+  > visible, which the AC requires — but each is a dependency static analysis cannot see.
+  > `submit_feedback.py` reaching `config/feedback_categories.yaml` through
+  > `_find_config_root()` is the same shape as the defect fixed here and remains
+  > underivable. That is tracked as its own entry, not folded into this closure.
+  > `diagram_type_validators`'s silent fallback to a built-in constant (KI-CG-002) is also
+  > untouched: shipping the file fixes the symptom, not the silence.
 
   > **THE FALSE CLOSURE, recorded rather than deleted.** From 2026-08-31 to 2026-09-01 this
   > entry read `RESOLVED — verified 2026-08-31`. The closure argued that
@@ -3620,3 +3660,62 @@ defect in the code under test, not in the fixture.
 **Related.** User-memory `feedback_test_isolation_pitfalls` and `KI-TQ-012` (a fixture that
 sandboxes the filesystem while leaking into shared state) are the same family: tests here
 treat the runner's environment as private scratch space with weaker guarantees than assumed.
+
+---
+
+### KI-BP-20260907-0940 — There is no orphan sweep, and the step called "Stale file cleanup" says "no stale files found" while one sits in the tree
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build.py:1844` (`_cleanup_stale_paths`) and its fixed input list
+  `_PRE_CONSOLIDATION_PATHS` at `scripts/build.py:1769`
+
+**A deployed file whose source template no longer exists is never removed, and never
+reported.** `build.py` prints a `Stale file cleanup` heading and, on a tree containing an
+orphan, printed `(no stale files found)`. That reads as "I looked and the tree is clean".
+It is not what happened.
+
+`_cleanup_stale_paths` iterates `_PRE_CONSOLIDATION_PATHS` — a hardcoded list of **eleven**
+paths (`.claude/agents`, `.claude/skills`, `.claude/commands`, `.claude/hooks`,
+`.claude/settings.json`, `.pre-commit-config.yaml`, `.gemini`, `scripts/commit_guardian`,
+`scripts/doc_compliance`, `scripts/feedback`, `scripts/sync_platforms`). It is a **one-time
+migration helper** for a historical layout change, not a sweep. Nothing in the build compares
+the deployed tree against the set of files the build can currently produce, so an output
+whose template was deleted survives every subsequent build indefinitely.
+
+**Observed.** A worktree created by the fast-lane workflow carried
+`.leafcutter/workflows/fast-lane-build.js`, for which no template exists on `main` —
+`templates/workflows-js/` holds eight files and that is not one of them. A worktree I created
+myself minutes earlier from the same ref had eight deployed workflows; the fast-lane-created
+one had nine. `build.py --force` reported `(no stale files found)` against it. The orphan was
+caught only by `check-output-drift` at commit time, which refused the commit with
+`GAP .claude/workflows/fast-lane-build.js action=run build.py to register it` — advice that
+cannot work, because running `build.py` is exactly what does not remove it.
+
+**Why it matters beyond tidiness.** A stale deployed script is executable and reachable. A
+consumer install that once shipped a command keeps shipping it after the package drops it,
+and an agent or workflow that resolves by name can bind to the dead copy — the shape already
+recorded in `project_workflow_name_cache_stale` (a by-name workflow invocation running a
+stale session-cached script). It also means `check-output-drift` is doing the build's job at
+a later, more expensive point: the failure surfaces as a blocked commit rather than a build
+that cleaned up after itself.
+
+**Fix direction.** Derive the removable set rather than extending the list — the same
+correction `BP-900g-8-ii` just applied to the deploy side. The build already computes what it
+produces (`.build_manifest.json` carries 174 template + 481 output_mappings entries); a
+deployed path under the output root that is in neither, and is not a shim symlink, is an
+orphan. Report every one and remove or explicitly retain it. Keep `_PRE_CONSOLIDATION_PATHS`
+as the migration list it is, and stop calling the step "stale file cleanup" while it only
+covers eleven historical paths — the name is what made the message trustworthy.
+
+**Trap.** Do not simply add `workflows/` to the hardcoded list. That fixes the instance and
+leaves the mechanism, which is the failure `KI-BP-018` records for this exact class and which
+this register has now watched play out five times on the deploy side before it was fixed
+properly.
+
+**Pattern:** a maintenance step whose name promises a sweep and whose implementation is a
+fixed migration list — so its clean report is indistinguishable from a clean tree. Same shape
+as the bare-directory AC validator and the stale-ref merge audit recorded in `CLAUDE.md`: a
+check that examined nothing must not look like a check that found nothing.
