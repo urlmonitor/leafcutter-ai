@@ -103,7 +103,11 @@ amended_by: []
 superseded_by: null
 covered_by:
   - BO-2900d-1-i
-implemented_by: []
+implemented_by:
+  - "scripts/ac_store/done_proof.py"
+  - "templates/scripts/commit_guardian/_reachability_inventory.py"
+  - "config/reachability_exemptions.yaml"
+  - "scripts/build_config_scaffolds.py"
 change_target: pipeline
 risk_surface: internal
 notes: |
