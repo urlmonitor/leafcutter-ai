@@ -111,11 +111,11 @@ expects_from:
   ac_id: BP-900h-6
   contract: "The use-the-install simulation that attempts a first commit and fails on a guard blocking over what a new project legitimately lacks — whose adopter fixture this edge case requires to vary in language shape, so that clause is actually exercised."
 origin_agent: BrainCandy
-created: 2026-09-01
+created: 2026-09-07
 amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
-notes: "Detection half of the KI-CG-20260831-0713 pair; the gate-side correction is BP-100k-4-ii. The parent BP-900h-6 and its two edge cases are all work_status done, and their criteria are genuinely met — the defect they missed lies outside what they specify, which is why this is filed as a new constraint rather than as a reopening. Measured context on 2026-09-01: the reachability gate is always_run true with pass_filenames false, so it runs on every adopter commit, and two registered conditions select Python files. A fresh TypeScript consumer exits 1 with total=52 unreachable=27 exempt=9."
+notes: "Detection half of the KI-CG-20260831-0713 pair; the gate-side correction is BP-100k-4-ii. The parent BP-900h-6 and its two edge cases are all work_status done, and their criteria are genuinely met — the defect they missed lies outside what they specify, which is why this is filed as a new constraint rather than as a reopening. Measured context on 2026-09-07: the reachability gate is always_run true with pass_filenames false, so it runs on every adopter commit, and two registered conditions select Python files. A fresh TypeScript consumer exits 1 with total=52 unreachable=27 exempt=9."
