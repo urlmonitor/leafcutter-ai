@@ -1,0 +1,252 @@
+id: INF-700a-5
+components:
+  - infrastructure
+  - knowledge_system
+  - build_orchestration
+  - worktree_manager
+title: "A learning written while work was in flight is still readable after the place that work ran in is gone"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a.yaml"
+criteria: |
+  Given the destinations a routing step writes to are memory files and
+    documentation pages that version control tracks, and four of the five ways
+    this package completes a unit of work run inside an isolated working
+    directory that is removed once the work has been merged,
+  And a routing step that runs at a driver's completion step inside such a
+    directory changes those files there and nowhere else,
+  When the working directory that unit of work ran in has been removed and a
+    person opens the destination in the tree the work merged into,
+  Then the learning text is written into the destination file, at the path the
+    record named,
+  And it arrived through a commit the completion path already makes for its
+    own output — the routing step introduces no commit the path would not
+    otherwise have made, and the number of commits a unit of work produces is
+    the same whether or not there was anything to route,
+  And a routing step whose writes exist only inside a working directory that
+    is later removed has not written those records: they are reported as still
+    unwritten and a later run writes them, rather than counted as written and
+    then discarded,
+  And the bookkeeping that stops a record being routed twice does not outlive
+    the publication it rode: where the branch carrying a routing write never
+    reaches the merged tree — the pull request is abandoned, the branch is
+    discarded, the merge never happens — the record is eligible again, and a
+    later completed unit of work puts the learning in the merged tree and puts
+    it there once. A record marked as routed on the strength of a write no
+    merged tree ever received is worse than an unrouted one, because nothing
+    will look for it again,
+  And a completion path on which the learning text is present at the moment
+    the driver reports the work finished and absent from the merged tree
+    afterwards fails this criterion, whatever the driver reported at the time.
+depends_on:
+  - INF-700a
+  - INF-700a-1
+  - INF-400c-4
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: planned
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: true
+it_requirements:
+  - "THE DISPATCH POINT IS NAMED PER PATH SO IT IS NOT RE-DERIVED FIVE TIMES. The contract in every case is the same sentence — immediately before the commit the path already makes, on the same branch, in the same working directory — and the sites are: fast-lane-ship.js, before the commit dispatch that begins at line 1371 (its agentType: commit is at line 1392); quick-fix.js, before the FIRST commit dispatch, the fix commit whose options object is at line 918, and NOT before the changelog commit at line 988; finalize-feature.js, before step 3.5's closure commit, whose command is composed at line 1646; build-ticket.js, inside the sequential phase loop that begins at line 1258, immediately before the iteration whose phase name is commit, guarded to fire at most once per drive. Line numbers locate the site; they are not the contract, and a builder who finds them shifted should re-anchor on the named commit rather than on the number."
+  - "DO NOT WIRE build-ticket.js BY ADDING knowledge-harvester TO THE phaseOrder ARRAY — IT PO correction, and this one is load-bearing rather than stylistic. phaseOrder (lines 201-226) is a SORT KEY, not a dispatch list: line 1181 sorts orderedPhases filtered to status needed, and orderedPhases comes from the TICKET's own agents: frontmatter map. An agent absent from that map is never dispatched however it sorts. config/agent_registry.json gives knowledge-harvester is_ticket_phase false and selection_criteria null, so no ticket generator will ever emit it into an agents map. A phaseOrder entry therefore routes nothing while making the wiring look present in a diff and in any structural test — which is the precise shape (a gate defined, ordered and never executed) this repository shipped in fast-lane-build.js and that this whole family exists to close. If the entry is added anyway to silence the PHASE-ORDER GAP diagnostic at line 255, it is cosmetic and must not be counted as the wiring."
+  - "THE EPIC PATH DOES NOT INHERIT THE build-ticket.js CHANGE. build-epic.js line 388 dispatches the ticket-supervisor AGENT rather than calling build-ticket.js, and that agent drives phases from templates/skills/building-epics/SKILL.md, whose Canonical Phase Ordering Table in section 2.1.1 is a second independent copy of the ordering. Whichever surface is edited, coverage must be shown for the epic drive as well as the single-ticket drive; a green single-ticket test over an unwired epic path is the partial wiring INF-700a-1-i names."
+  - "THE HARVESTER MUST RETURN A MACHINE-READABLE MANIFEST OF THE PATHS IT WROTE. This is the load-bearing gap in the whole decision — larger than the choice of carrier, because every carrier fails without it. scripts/knowledge/harvest_learnings.py returns an int exit code (0/3/4) and prints result.summary() as prose; nothing in its output enumerates the files it touched. The commit agent stages BY NAME and is forbidden from git add -A (templates/agents/commit.md line 412), so with no manifest it cannot learn what to stage, the routing writes are left in the working directory, and the run reports them written while no merged tree ever receives them — which is this AC's defined failure, produced by the implementation of this AC. REQUIRED PROPERTIES: a list of paths in a parseable form, on a channel the caller reads; every destination ACTUALLY written, not every destination attempted; and an EMPTY list rather than an absent field when nothing was written, so 'nothing to stage' is distinguishable from 'the manifest is missing'. TWO NEAR-MISSES THAT ARE NOT SUBSTITUTES: building-epics SKILL.md section 5.9 requires the commit agent to sweep in-scope modifications before committing, but in-scope means the ticket's files_touched and no ticket names memory/*.md or a knowledge documentation surface; and fast-lane-ship.js's commit prompt does instruct git add -A at line 1384, in contradiction of the agent template it dispatches under, so that ONE path would work by accident. Neither generalises and neither should be relied on."
+  - "THE HARVESTER NEEDS AN EXPLICIT WORKING-DIRECTORY PARAMETER. It accepts --sink, --state, --dry-run and --verbose only, and resolves everything else against the invoking process's current directory. It is moving from a standalone tool to a step invoked mid-sequence by four orchestrated workflows, each of which already holds the worktree path as a variable. Requiring the caller to pass it explicitly is what stops the routing step writing into whichever directory the driver's shell happened to be standing in — the same defect class INF-400c-4 is closing one layer down for the sink, and it would be an odd outcome to fix the sink's resolution and leave the destinations' resolution implicit."
+  - "THE HARVESTER'S STATE FILE IS A THIRD UNDECLARED RELATIVE PATH — RAISED, NOT SETTLED HERE. --state defaults to debugging/logs/harvest_state.json. INF-400c-4 declares the sink at build time and INF-400c-4-iii extends that to the operational stream; neither names the state file. It is the bookkeeping this AC's own criteria forbid outliving the publication they rode, and the bookkeeping INF-700a-5-iii arbitrates over. Left relative it fragments per working directory — which happens to satisfy this AC's bookkeeping clause by accident, because a per-branch mark dies with the branch, while breaking idempotence across drives so completely that every fresh working directory re-routes the entire sink. Do not solve the bookkeeping clause by leaving the state file relative; that is a coincidence, not a design."
+  - "finalize-feature STEP 3.5 IS ACCEPTED AS A CARRIER AND IS THE ARCHITECTURALLY WEAKEST OF THE FOUR. Its closure commit has a recorded history of operating store-wide rather than epic-scoped — the workflow carries a SCOPE VIOLATION abort at line 1682 for exactly that reason — so folding knowledge writes into it widens the blast radius of any future recurrence from acceptance criteria to curated memory and documentation files. It is accepted because the only alternative available under this AC's own rejected-alternatives list is a new unattended commit inside the routing step, which is worse. RECOMMENDED FOLLOW-UP, to be raised as its own AC and NOT absorbed here: evaluate a narrow purpose-scoped commit on the finalize path carrying only the routing writes. It is a follow-up rather than an it_requirement because it is in direct tension with this record's own same-number-of-commits clause, which such a commit would fail as written — so it cannot be adopted without amending a criterion, and that is the BA's decision, not mine."
+  - "DO NOT ABSORB THE REVIEW-SEMANTICS PROBLEM INTO THIS FAMILY. The 15 inconsistent entry_kind values in the existing corpus are cited on INF-400c-4 as evidence for keeping learnings inside a reviewed pull request, and it is tempting to read them as an argument about WHICH publication path to choose. They are not: no publication path solves them. A separate pull request carrying only knowledge writes attracts exactly as little scrutiny as a paragraph inside a feature pull request, so the choice of carrier buys nothing here in either direction. What fixes them is validation BEFORE the write, on the emitting and writing side, and it belongs in its own AC there — INF-400c-5's validating emission helper is the nearest existing home. Nothing in this record makes the routing step responsible for record quality, and no it_requirement here may be read that way."
+  - "THE PUBLICATION MECHANISM IS NOT UNIFORM ACROSS THE FIVE PATHS — verified, so that no constraint written here assumes it is. templates/agents/pull-request.md step 1 reads git log origin/<base>..HEAD and takes no alternate-branch parameter, so it can only ever describe the CURRENT branch; and quick-fix.js's Close phase (lines 1010-1044) inlines git push and gh pr create in a prompt with no agentType at all, so it does not use that template. Neither blocks the decision recorded here, because the requirement is that the writes ride a COMMIT the path already makes and every path makes one. What it does mean is that any requirement phrased in terms of 'the pull request' is false on at least one path, and any verification written against the pull-request agent covers at most three of the five. Phrase constraints and tests against the commit."
+  - "Must handle errors gracefully per the project error handling policy. A routing failure, a manifest failure or a staging failure must never fail the unit of work; the fail-open behaviour and its reporting are INF-700a-5-i's and must not be re-specified here."
+delivers_to:
+  - agent: python-coder
+    contract: "The durability obligation on the routing step's writes: they are published by the completion path's own existing commit, and a record whose write is not published is reported unwritten rather than counted"
+  - agent: documentation-expert
+    contract: "The fact that a learning reaches its surface through the same publication as the work itself, which INF-700a-3's how-to and INF-700a-4's reference must state alongside the trigger point"
+expects_from:
+  - ac_id: INF-700a-1
+    contract: "The per-completion routing invocation and its read/written/unwritten figures, which this AC constrains to mean durably written"
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+  - reason: "BA amendment, 2026-09-07, following BrainCandy's approved decision that the knowledge-emission sink resolves against the repository and is therefore shared by every working directory of it. ONE CLAUSE ADDED TO CRITERIA, plus one test descriptor, plus two rewritten entries in the rejected-alternatives list. THE ADDED CLAUSE — and it exists because the sink decision CREATES this hazard rather than merely leaving it: with a repository-scoped sink, the record of having already routed something can now outlive the branch the routing write went to. Four of the five completion paths publish to a branch that may never merge. Before the decision, an abandoned branch took the write AND the sink AND its bookkeeping down together, so the record was simply lost and nothing claimed otherwise. After it, the write dies with the branch while the routed-already mark survives in the shared location — a durable claim that a learning was written, with no merged tree that holds it, and nothing that will ever look again. That is the phantom-done shape, newly reachable, inside the AC written to stop it. The clause requires the bookkeeping not to outlive the publication it rode. REJECTED-ALTERNATIVES LIST: item 2 (writing destinations to the main checkout) is UNCHANGED in substance and reaffirmed explicitly, because the sink moving is easily misread as licence for the destinations to move — the sink is untracked runtime data, the destinations are tracked files whose value is that they are reviewed. Item 4 (durable emission with deferred routing) is REOPENED and re-decided: its original rejection rested on the sink dying with the working directory, which is the fact being fixed, so the old reason is void. On the merits it is now adopted for the residual and rejected as the whole mechanism, on an unbounded and invisible tail (the last unit of work in a repository has no successor to route it) rather than on the retired fact. Item 5 was added to name the database and immediate-commit-to-main options and point at where their reasons are recorded. WHAT DID NOT CHANGE: the outcome, the requirement that the writes ride the path's own commit, the rejection of an unattended commit inside the routing step, and the rejection of post-merge-only routing."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA addition, 2026-09-07, same day. CRITERIA UNCHANGED — this entry records a third L3 (INF-700a-5-iii) and re-foots two words of context, nothing in this record's own criteria is edited and the bookkeeping clause added above stands exactly as written. WHAT THE THIRD L3 CLOSES: making one sink serve a whole install creates a race that could not previously exist. Each working directory used to have its own sink and its own bookkeeping, so two drives never saw the same record; now two units of work completing near each other both read the same sink, and parallel working directories are routine here rather than theoretical — three at once has been observed. INF-700a-5-iii states the outcome (the learning is written once, by exactly one of them, and is not left unwritten by both), requires the bookkeeping to survive two runs updating it at once, and fixes the ASYMMETRY that makes the choice of mechanism judgeable: where both branches merge the failure is a visible duplicate, where one does not it is a learning lost while marked as routed, and only the second is unacceptable. The mechanism is left to the IT PO. IT IS AN L3 UNDER THIS RECORD, NOT A NEW L2, because both failure shapes are this record's own written-means-published rule breaking under a second stress — a duplicate is one learning published twice, a loss is a record marked routed against a publication that never arrived. INF-700a remains at five children and no split is needed. ALSO NOTE, for whoever implements the bookkeeping: the clause added in the entry above (bookkeeping must not outlive the publication it rode) and INF-700a-5-iii's arbitration are the same state under two different pressures. Solving them separately is how they end up contradicting each other."
+    by: business-analyst
+    at: 2026-09-07
+superseded_by: null
+covered_by:
+  - INF-700a-5-i
+  - INF-700a-5-ii
+  - INF-700a-5-iii
+implemented_by: []
+test_spec:
+  - name: test_the_learning_survives_removal_of_the_working_directory_the_work_ran_in
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The whole AC in one test. Drive a completion path to completion inside an isolated working directory whose declared sink holds one record naming a tracked destination; publish and merge as that path does; remove the working directory; then read the destination IN THE MERGED TREE and assert it holds the learning text. The assertion is made after the removal and against a different directory from the one the routing step wrote in — a test that reads the destination before teardown passes on the defect this AC exists to close."
+  - name: test_a_unit_of_work_produces_the_same_number_of_commits_with_and_without_records_to_route
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive the same completion path twice, once with an empty declared sink and once with three routable records, and assert the branch's commit count is equal between the two runs while the destination contents differ. This is the no-new-commit clause as a number: an implementation that appends a commit of its own goes red here even though the durability test above is green."
+  - name: test_a_write_that_is_never_published_is_reported_unwritten_and_rerouted_later
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Drive a completion path whose publication step does not happen (the path is stopped between the routing write and the commit that would carry it). Assert the reported result counts the record as unwritten, that the record is still eligible afterwards, and that a second completed unit of work over the same sink puts the learning in the merged tree exactly once. Proves 'written' means published, not written-somewhere."
+  - name: test_a_record_routed_on_a_branch_that_never_merges_is_routed_again_by_a_later_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "The bookkeeping clause, and the loss mode a repository-scoped sink introduces. Drive a completion path to publication on a branch with one routable record; discard that branch without merging it; then drive a second unit of work in the same repository and assert the learning reaches the merged tree, and reaches it exactly once. A run whose routed-already bookkeeping lives beside the sink rather than beside the write suppresses the second run and goes red here while passing every other descriptor on this AC — the write really did happen, on a branch nobody kept."
+  - name: test_the_destination_is_absent_from_the_merged_tree_when_the_routing_write_is_not_carried
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The must-fail negative control for the criterion's last clause. Wire a completion path that writes the destinations into the working directory and does not carry them into the publication; assert the test suite reports failure — the learning is present before teardown and absent after. Without this control, the durability test can be satisfied by a fixture that never tears anything down."
+test_rationale: |
+  Every descriptor asserts across the teardown boundary, because that boundary
+  is the criterion. A test that drives a completion path and then reads the
+  destination in the same directory the path ran in passes on precisely the
+  implementation this AC rejects, and would have passed on INF-700a-1 as
+  written — the destination files really do contain the text, for as long as
+  the directory exists. The commit-count descriptor exists because the
+  durability outcome has two candidate implementations that are
+  indistinguishable by the artefact alone: riding the path's own commit, and
+  adding an unattended commit inside the routing step. The criteria require the
+  first and forbid the second, so something has to count commits. The last
+  descriptor is the negative control: without a wiring in which the write is
+  deliberately not carried, a green suite proves the fixture tore nothing down
+  rather than that the implementation is durable.
+notes: |
+  WHY THIS AC EXISTS. INF-700a-1 settled WHEN the routing step runs and said
+  nothing about WHERE its writes end up. Four of the five completion paths run
+  in an isolated working directory, and finalize-feature removes its own at
+  step 7 after merging the pull request at step 4. A routing step that writes
+  memory files and documentation pages into that directory at the driver's
+  completion step satisfies INF-700a-1's "those three destination files each
+  contain the learning text" for as long as the directory exists, and its tests
+  pass. Production loses every learning. That is the phantom-done shape the
+  whole INF-700 family exists to eliminate, reappearing inside it, and it is
+  why the durability obligation is stated as an outcome here rather than left
+  to an implementation note.
+
+  THE DECISION, AND THE THREE OPTIONS IT REJECTS. The criteria require the
+  routing step's writes to be published by the commit the completion path
+  already makes for its own output. The alternatives were weighed and are
+  rejected for stated reasons, so nobody re-opens them on a hunch:
+
+  1. A NEW COMMIT INSIDE THE ROUTING STEP is rejected, and this is the loudest
+     line in this record. This repository requires commits to go through the
+     commit agent, and enforce_commit_delegation blocks a direct git commit
+     that does not originate there. A workflow that silently commits curated,
+     tracked files during a teardown sequence is a change in blast radius, not
+     a wiring detail. The precedent is not encouraging: finalize-feature's
+     step 3.5 already makes an unattended closure commit, and it has previously
+     flipped acceptance criteria across the entire store rather than the epic
+     in front of it. If the IT PO concludes that no completion path has a
+     commit that can carry the routing writes, then a new unattended commit is
+     the only remaining answer — and it must be raised for review in its own
+     right, not written into an it_requirements line under this AC.
+  2. WRITING THE DESTINATIONS TO THE MAIN CHECKOUT INSTEAD OF THE WORKING
+     DIRECTORY is rejected. It leaves the shared tree dirty with tracked-file
+     modifications nobody staged, which blocks the fast-forward that
+     finalization depends on, and it is an isolated drive reaching outside its
+     own directory — the thing isolation exists to prevent. It also does not
+     make the learning durable; it moves the uncommitted write to a place where
+     a later reset destroys it instead of a teardown. THIS REJECTION SURVIVES
+     THE 2026-09-07 SINK DECISION AND IS NOT WEAKENED BY IT. That decision fixes
+     the SINK at an install-wide location; it does not move the DESTINATIONS.
+     The sink is untracked runtime data with one copy per install, and
+     writing to it from an isolated directory is fine. The destinations are
+     tracked files whose whole value is that they are reviewed and merged, and
+     writing to them outside the branch doing the work is exactly as wrong
+     today as it was before. Anyone who reads "the sink is shared now" as
+     licence to write memory files into the main checkout has read the decision
+     backwards.
+  3. RUNNING THE ROUTING STEP AFTER THE MERGE, ON MAIN, is rejected on
+     coverage. Only finalize-feature merges. The fast lane, quick-fix,
+     single-ticket and epic drives complete without it, so this wires one path
+     of five and reproduces the partial-wiring failure INF-700a-1-i exists to
+     catch. It also has problem 2's dirty-main consequence.
+  4. DURABLE EMISSION WITH DEFERRED ROUTING — REOPENED AND RE-DECIDED
+     2026-09-07, ON A NEW FOOTING. The original rejection rested on a fact that
+     is being fixed: the sink did not outlive the working directory, so
+     deferring the routing discarded the record rather than delaying it. Under
+     the settled decision the sink is an absolute path fixed when the package is
+     built into the project, and one copy is shared by every working directory
+     of that install, so deferral now genuinely defers. The old reason is void
+     and is not reused.
+
+     RE-DECIDED ON THE MERITS, and the answer is the same with a different
+     shape: deferral is ADOPTED FOR THE RESIDUAL and REJECTED AS THE WHOLE
+     MECHANISM. As the whole mechanism it means no unit of work ever routes its
+     own learnings; every learning lands one completed unit of work late, and
+     the last unit of work in any repository — the end of a project, the end of
+     a week, the change a person makes and then stops — never has a successor
+     to route it, so its learnings sit in the sink indefinitely with nothing
+     wrong showing anywhere. That tail is unbounded and invisible, and this
+     family exists to close exactly that shape. Nor does deferral buy anything
+     on durability: whenever the routing does run, it still runs inside some
+     unit of work's working directory and its writes still have to ride that
+     unit's publication, which is this AC's requirement either way. What it
+     buys is only that nobody has to order the routing step ahead of the
+     publishing phases — and INF-700a-1 has now made that ordering, so the
+     purchase is unnecessary.
+
+     WHERE IT IS ADOPTED: the records emitted after this unit of work's routing
+     step has read the sink — the publishing phases emit too — are deferred to
+     the next completed unit of work rather than lost, and that is now a true
+     statement rather than a hopeful one. INF-700a-5-ii owns what a run says
+     about them and, since 2026-09-07, states them as delayed rather than gone.
+
+     WHAT WOULD REOPEN IT AS THE WHOLE MECHANISM: evidence that no completion
+     path can order its routing step before its publishing phases. That is an
+     ordering question, and if the answer turns out to be no, deferral plus a
+     named owner for the tail is the fallback to argue for — not an unattended
+     commit, which stays rejected under point 1.
+
+  5. A DATABASE, INSTALLED OR EMBEDDED, AND AN API THAT COMMITS LEARNINGS TO
+     THE DEFAULT BRANCH ON EMISSION were both weighed and rejected in the
+     2026-09-07 decision, at the sink layer rather than here. Their reasons are
+     recorded on INF-400c-4 and are not restated: portability and reviewability
+     for the first, branch protection and the value of review for the second.
+     They are named here only so a reader of this list does not conclude the
+     durability question was settled without considering them.
+
+  WHAT THIS AC DOES NOT DECIDE. It does not decide at which line of which
+  workflow the routing step is invoked. It requires only that, wherever it is
+  invoked, the writes are carried by the path's own publication. Whether that
+  is achievable at the driver's completion step as INF-700a-1 words it, or
+  requires the invocation to sit earlier in the path, is an ordering question
+  for the IT PO — and if it turns out to require moving the invocation, that is
+  a refinement of INF-700a-1's trigger point and belongs back with the BA and
+  the PO rather than being absorbed silently.
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
