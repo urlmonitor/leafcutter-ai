@@ -14,11 +14,22 @@ criteria: |
   Given the deliverable-checklist model of ACD-1800a is implemented,
   When the AC reference documentation is read,
   Then it describes that a requirement carries an explicit deliverable checklist,
-  And it defines the allowed deliverable kinds (code, tests, docs, diagram, config)
-    and the responsible-craft attribute on each item,
+  And it describes the responsible-craft attribute on each item,
+  And it does not define a list of deliverable kinds of its own: it names the
+    vocabulary this store already uses to declare what a requirement changes as the one
+    the checklist draws its kinds from, and records the single value added to that
+    vocabulary for a diagram,
+  And it states that a test is a proof of a deliverable rather than a deliverable, and
+    that no kind for tests exists,
   And it explains how the checklist is validated against the requirement's change
     surface,
   And it includes a worked example of a complete checklist.
+
+  Given a reader who needs to know which kinds are allowed,
+  When they follow this reference documentation,
+  Then it sends them to the one place that vocabulary is defined,
+  And a kind added to or removed from that vocabulary does not require this reference
+    documentation to be edited for the two to agree.
 depends_on: [ACD-1800a, ACD-1800a-1]
 doc_links:
   - path: docs/reference/ac-schema.md
@@ -30,16 +41,29 @@ doc_links:
 assigned_agent: documentation-expert
 estimated_complexity: S
 it_requirements:
-  - "Document in docs/reference/ac-schema.md (the canonical AC-schema reference): the deliverable-checklist field, the allowed kinds {code, tests, docs, diagram, config}, the responsible-craft attribute, how the checklist is validated against the change surface, and a worked complete-checklist example."
-  - "This reference section is the SINGLE NORMATIVE definition that both the AC-store schema (ACD-1800a-1 / ACD-1800a-2-i) and the signoff skill mirror (spec-parity, since a Python validator and a markdown skill cannot share a code import)."
+  - "Document in docs/reference/ac-schema.md (the canonical AC-schema reference): the deliverable-checklist field, the responsible-craft attribute, how the checklist is validated against the requirement's change surface, and a worked complete-checklist example."
+  - "DEFINE NO LIST OF KINDS IN THIS SECTION (user decisions D1/D2/D3, 2026-08-31). It must POINT AT the store's existing change-target vocabulary as the source the checklist draws its kinds from, record that `diagram` is the single value added to that vocabulary, and state that a test is a proof of a code deliverable rather than a deliverable, so no `tests` kind exists. Do NOT enumerate the values in prose: cross-reference the change_target section of this same document, which is itself the reader's route to the shared enum in config/ac_store_schema.json."
+  - "THE POINTER MUST BE MECHANICAL, NOT EDITORIAL. Adding or removing a value from the change-target vocabulary must not require this section to be edited for the two to agree. A prose sentence listing the values fails that property the day the enum changes -- and it fails it silently, because a stale correct-looking list reads exactly like a current one."
+  - "This section REMAINS the single normative definition that the AC-store schema (ACD-1800a-1 / ACD-1800a-2-i) and the signoff skill mirror -- spec-parity, since a Python validator and a markdown skill cannot share a code import. What it is normative ABOUT is narrowed: it is normative for the checklist's shape, the craft attribute, the tests-are-not-a-kind rule, and the FACT that kinds come from the change-target vocabulary. It is NOT the definition of that vocabulary's values; that definition lives in config/ac_store_schema.json and this document's own change_target section."
+  - "State the value of the narrowing explicitly for the next author: the previous arrangement made this section the origin every other surface copied from, so a wrong list here would have propagated into the schema and the skill and each copy would then have been correct-by-construction against it. Pointing rather than copying removes that failure mode without weakening spec-parity -- the schema and the skill still mirror one definition."
+  - "Canonical source only: docs/reference/ac-schema.md in the package repo; never a deployed .claude/ copy or the workspace-parent build-output mirror (ADR-001)."
 delivers_to: null
 expects_from:
   ac_id: ACD-1800a-1
-  contract: "The implemented deliverable-checklist field, kind enum, and responsible-craft attribute to document."
+  contract: "The implemented deliverable-checklist field ({kind, craft}), the responsible-craft attribute, and -- crucially -- the fact that the kind enum is a $ref to the SHARED change-target enum definition (eleven values: the existing ten plus `diagram`, with no `tests`) rather than a list of its own. This record documents that indirection; it does not restate the values."
 test_required: false
 origin_agent: BrainCandy
 created: 2026-08-11
-amended_by: []
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "User decisions D1, D2 and D3, and this record was the most dangerous carrier of the superseded list. Its criteria required the reference documentation to DEFINE the allowed kinds as (code, tests, docs, diagram, config), and its it_requirements designate that section as the SINGLE NORMATIVE definition that the store schema and the signoff skill both mirror -- so the wrong list would have shipped into the one place every other surface copies from, and each copy would then have been correct-by-construction against it. Amended so the documentation defines no list of its own: it points at the vocabulary the store already uses to declare what a requirement changes (D1), records the one value added for a diagram (D2), and states that a test is a proof rather than a deliverable and that no tests kind exists (D3). A second scenario makes the pointer-not-copy property testable: adding or removing a kind must not require this documentation to be edited for the two to agree."
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "NOT AMENDED, AND CONTRADICTS THE CRITERIA ABOVE UNTIL THE IT PO RE-DERIVES IT. This record is readiness: reviewed and it_requirements is the IT PO's field, so it was left untouched: its first entry still instructs the author to document 'the allowed kinds {code, tests, docs, diagram, config}', which is exactly the list the amendment removes. A documentation-expert reading it_requirements rather than criteria will write the superseded list into the normative section. This needs the IT PO before the record is built."
+  - date: 2026-08-31
+    agent: it-po
+    reason: "RESOLVES THE CONTRADICTION THE ENTRY ABOVE FLAGGED, on the record the BA correctly identified as the most dangerous carrier. criteria untouched. it_requirements: the instruction to document 'the allowed kinds {code, tests, docs, diagram, config}' is DELETED and replaced by an instruction to define no list at all -- point at the change-target vocabulary, record `diagram` as the one value added to it, and state that a test is a proof and no `tests` kind exists. A separate entry makes the pointer property an obligation rather than a style preference: adding or removing a value must not require this section to be edited, so a prose enumeration is forbidden even when currently accurate, because a stale correct-looking list is indistinguishable from a current one. The spec-parity entry is kept but its scope narrowed in writing: this section stays the single normative definition of the checklist's SHAPE and of the fact that kinds come from the change-target vocabulary, and stops being the definition of that vocabulary's VALUES. expects_from restated so the documentation-expert receives the indirection ($ref to the shared enum) rather than a list to transcribe. test_required stays false -- this is a prose surface -- and the mechanical guard for the pointer property is deliberately attached to ACD-1800a-1's schema tests (test_kind_added_in_one_place_appears_in_both_enums) rather than invented here as a doc grep, which this repo rejects as coverage."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -51,3 +75,13 @@ notes: |
 
   IT-PO enrichment (2026-08-12): test_required: false (docs surface, no executable
   behaviour); serves as the normative spec-parity source for the schema + skill.
+
+  2026-08-31 (BA). Being the normative spec-parity source is exactly why this record
+  had to change. A wrong list here does not stay here -- the schema and the signoff
+  skill are specified to mirror it, so it propagates into every surface and each copy
+  is then correct against the wrong original. The fix is to make this section a POINTER
+  to the store's existing change-target vocabulary rather than a second definition of
+  the same thing. Note that this does not weaken spec-parity: the schema and the skill
+  still mirror one definition, they just mirror the one that already exists and is
+  already carried by the overwhelming majority of records, instead of a list authored
+  here. See amended_by, and the stale it_requirements entry flagged there.

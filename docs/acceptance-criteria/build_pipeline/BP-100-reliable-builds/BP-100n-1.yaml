@@ -1,0 +1,135 @@
+id: BP-100n-1
+components:
+  - build_pipeline
+title: "A deployed output the build recorded writing but that is absent from disk is reported and fails the run — deletion is the most complete drift there is, and it is the only kind the gate ignores"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a deployed output that the build recorded as having been written,
+  And that output has since been removed from the project,
+  When the output-drift gate runs,
+  Then it names that output, states that the build recorded it and that it is no
+    longer present, and fails the run,
+  And the missing output is counted in the run summary as its own reported
+    condition rather than appearing only as a passing informational remark,
+  And the missing output is not counted among the outputs the gate verified,
+  And the run is not described as clean and does not exit as though every
+    recorded output were present,
+  And given the same output is restored unchanged,
+  When the gate runs again,
+  Then it is reported as matching its recorded source and the run passes.
+depends_on:
+  - BP-100n
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "templates/scripts/commit_guardian/check_output_drift.py"
+    relationship: modifies
+    status: exists
+    relevance: "the gate whose file-scanning step currently prints an informational line for a recorded output that is missing on disk and then moves on — the file is counted as neither verified, nor uncomparable, nor a gap, and does not affect the exit status"
+  - path: "templates/scripts/commit_guardian/check_build_drift.py"
+    relationship: modifies
+    status: exists
+    relevance: "sibling gate — the missing-artifact verdict must be shared, otherwise an absence caught by one gate and ignored by the other reproduces the ambiguity BP-100k-3 removed"
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    drift_gate_missing_output_verdict:
+      type: object
+      description: "Fifth per-artifact verdict — recorded-but-absent — added alongside compared-and-matched, compared-and-drifted, declared-exempt and could-not-compare, counted in the run summary and affecting the exit status, so deleting a deployed artifact is reported rather than skipped."
+  reference_file_path: "templates/scripts/commit_guardian/check_output_drift.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The missing-output condition must be a distinct verdict, not folded into the could-not-compare bucket: an artifact that was deliberately deleted and one the gate merely lacks a record for demand different remedies and must be distinguishable in the output."
+    - "Both drift gates must emit the same missing-artifact verdict; a verdict honoured by one gate and ignored by its sibling reintroduces the ambiguity BP-100k-3 removed."
+    - "A deliberate removal is expressed by removing the artifact from the build's records in the same change — not by teaching the gate to tolerate absences. Absence with the record still present is always a reported condition."
+    - "Verify behaviorally — execute the gate as a process against a real tree from which one recorded deployed output has been deleted, and assert on the named verdict, the summary count and the exit status; do not grep the gate source or import the scanning helper."
+    - "Must follow the repo error-handling policy: specific-exception try/except around file and JSON I/O, log at WARNING or higher or re-raise; no bare or blind excepts."
+    - "A build.py re-run is required after editing anything under templates/; the gate runs from its deployed copy, so a template-only edit leaves the running hook unchanged."
+    - "This AC and BP-100k-5 both edit check_output_drift.py and must land as one reviewable diff; they must not run concurrently."
+test_spec:
+  - name: test_deleted_recorded_output_is_named_and_fails_the_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Executing the gate as a process over a tree from which one recorded deployed output has been deleted names that output, states that the build recorded it, and terminates with a non-zero exit status."
+  - name: test_missing_output_is_counted_in_the_run_summary
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The executed run's summary reports a non-zero count for recorded-but-absent outputs as its own figure, distinct from the compared, drifted, exempt and could-not-compare counts."
+  - name: test_missing_output_is_not_counted_among_verified_outputs
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The verified count from the executed run with one output deleted is exactly one lower than the verified count from the same run with the output present — an absence is never credited as a verification."
+  - name: test_run_with_a_missing_output_is_not_described_as_clean
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The executed gate does not describe a run containing a recorded-but-absent output as clean, and its exit status differs from that of a run in which every recorded output is present."
+  - name: test_restoring_the_output_unchanged_returns_the_run_to_passing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "After the deleted output is restored byte-for-byte, the executed gate reports it as matching its recorded source and exits zero — the new verdict raises no lasting false alarm."
+  - name: test_both_gates_emit_the_same_missing_artifact_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Both drift gates, each executed as a process against the same deleted recorded artifact, report it as recorded-but-absent — neither tolerates an absence the other reports."
+test_rationale: "The incumbent gate already prints a line for this case and then continues: the file is counted as neither verified, nor uncomparable, nor a gap, and the exit status is untouched. Deleting a deployed artifact outright — the most complete drift possible — therefore passes silently. Any test that reads the gate source, or that imports the scanning helper and inspects its return value, stays green on exactly that behaviour, and per the standing rule in CLAUDE.md ('Gate / Workflow ACs — Verify Behaviorally, Not by Grep') such a test is forbidden here and will be rejected. Each descriptor therefore deletes a real recorded output, executes the gate as a process, and asserts on the emitted verdict, the summary counts and the exit status — including a paired restore run so the new verdict is shown not to over-fire."
+delivers_to:
+  agent: python-coder
+  contract: "A recorded-but-absent per-artifact verdict shared by both drift gates, counted in the run summary and reflected in the exit status."
+expects_from:
+  ac_id: BP-100k-3
+  contract: "The per-artifact verdict vocabulary and run-summary counting model this AC extends with a fifth, deletion-specific verdict."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - by: ac-reconcile
+    at: 2026-08-26
+    note: >-
+      work_status set to done from verified evidence. A test carrying
+      "# covers: BP-100k-6" exists in
+      unit_tests/commit_guardian/test_bp_100k_6.py and passes under
+      AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests run clean
+      apart from the unrelated test_ge_122e_1.py failure from another branch).
+  - by: ac-tree-split
+    at: 2026-08-26
+    note: >-
+      Renamed BP-100k-6 -> BP-100n-1 and reparented from BP-100k to BP-100n
+      (Pattern C, split of BP-100k 8 children -> 5 + 3). The rename is forced,
+      not cosmetic: check_ac_limits.py derives a child's parent from its ID
+      string rather than from covered_by (GE-106), so a child that kept the
+      BP-100k- prefix would still count against BP-100k's cap. The covering
+      test moved with it — unit_tests/commit_guardian/test_bp_100k_6.py is now
+      unit_tests/commit_guardian/test_bp_100n_1.py and its "# covers:" tags
+      read BP-100n-1, so the ac-reconcile entry above names the pre-split
+      filename and tag. Criteria, title, work_status and evidence unchanged;
+      this AC's substance is untouched by the split.
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_bp_100n_1.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_output_drift.py
+  - templates/scripts/commit_guardian/check_build_drift.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: "Verified defect, 2026-08-25. In the output-drift gate's file-scanning step, a key that IS present in the build's output records but whose file is missing on disk produces an informational line and a continue: not counted as verified, not counted as uncomparable, not counted as a gap, and with no effect on the exit status. Deleting a deployed artifact entirely therefore passes the gate silently. It is the most complete form of drift there is and the only one the gate ignores — another instance of this epic's thesis, a check that cannot perform its check reporting a pass."

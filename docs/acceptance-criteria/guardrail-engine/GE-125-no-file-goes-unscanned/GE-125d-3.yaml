@@ -90,7 +90,7 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-declares_side_effect: true
+declares_side_effect: false
 it_requirements:
   - "ANNOUNCE ON EFFECT, NEVER ON APPLICATION. The notice fires only when at least one finding was actually withheld. It must NOT fire because the reduction applied to a staged file. The reduced locations include the acceptance-criteria store, the ticket tree, the retrospectives and the skill prompts, so an announce-on-application implementation would print on nearly every commit in this repository — and a notice printed on nearly every commit is read on none. This is the single decision that separates a useful notice from noise, and it must not be revisited as a configuration option."
   - "GENUINE SILENCE on a run that withheld nothing: nothing at all on the error stream — no header, no zero count, no per-file line — and nothing added to the output stream. Measured today, main() in templates/scripts/commit_guardian/check_secrets.py already returns 0 before producing any output on such a run; that property must be PRESERVED, not re-achieved by emitting an empty or zero-valued block."

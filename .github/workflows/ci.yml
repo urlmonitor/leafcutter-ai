@@ -29,7 +29,14 @@
 #   done-proof — proof-of-done coverage (BO-2500b). BLOCKING, diff-scoped.
 #
 #   ac-store-valid — the AC store passes its schema and governance hooks.
-#                BLOCKING.
+#                BLOCKING. Diff-scoped to the pull request (ACS-200g).
+#
+#   ac-store-valid-whole-store — the merge-vector backstop (ACS-200h): the same
+#                hook set applied to EVERY record, on push to main. Catches the
+#                cross-PR breakage a diff-scoped check cannot see (two PRs each
+#                valid alone that together break a cross-record rule).
+#                INFORMATIONAL while a 512-finding backlog is burned down; see
+#                the job's own comment for the single line that flips it.
 #
 #   changelog-presence — a changelogs/ entry accompanies the change. BLOCKING.
 #
@@ -291,6 +298,167 @@ jobs:
           pre-commit run check-ac-circular-deps
           pre-commit run check-ac-pattern-refs
 
+  ac-store-valid-whole-store:
+    name: AC store valid (whole store, push to main)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    # INFORMATIONAL, NOT BLOCKING (ACS-200h). The merge-vector backstop for the
+    # PR-scoped `ac-store-valid` job above. That job only ever sees the files
+    # one pull request changed, and several store rules are cross-record — the
+    # per-parent child limit, dependency acyclicity, the parent/child back-link
+    # — so two PRs that are each individually valid can together break one, and
+    # a diff-scoped check is structurally blind to it.
+    #
+    # WHY IT DOES NOT BLOCK, AND WHAT WOULD CHANGE THAT.
+    # Measured on main 2026-09-02: this hook set reports 512 findings (437 ACs
+    # missing a test_spec, 70 missing declares_side_effect, 5 contradicting it).
+    # Not one was introduced by the push that would surface it — they are a
+    # standing backlog that no gate has ever been able to see. Blocking on day
+    # one would fail every push to main for drift nobody in that push caused,
+    # and a permanently-red required gate gets switched off, which would lose
+    # the backstop entirely. So it reports.
+    #
+    # Flip `continue-on-error` to false once the reporter prints REMAINING: 0.
+    # That is a one-line change and it is the whole point of the countdown.
+    #
+    # NOTE the deliberate difference from `validate_ac_schema.py`: that script
+    # reports the store clean today. This hook set is strictly stricter (it adds
+    # the BO-2900g-2 derivation rules and the test-contract requirement), so
+    # "the store validates" is true of one tool and false of the other. Do not
+    # substitute one for the other when judging whether this can block.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — deploy .leafcutter so the guardian hooks resolve
+        run: python scripts/build.py --target-dir .
+
+      # WHY THIS STEP EXISTS — do not remove it as redundant.
+      # Every check-ac-* hook sets `pass_filenames: false` and discovers its own
+      # file set from `git diff --cached --name-only --diff-filter=AM`. So
+      # `--all-files` NEVER reaches these scripts, and on a fresh checkout with
+      # a clean index they validate ZERO records and exit 0 — a permanently
+      # green job that inspects nothing. Verified by hand on 2026-09-02: the
+      # hook reported "Passed" on a tree the real validator failed with 8
+      # errors.
+      #
+      # `git add -A` does NOT fix this: the files are unmodified, so nothing is
+      # staged and `git diff --cached` is still empty. The index must be made to
+      # DIFFER from HEAD. Pointing HEAD at an empty root commit makes every
+      # tracked file read as newly added — the same manufactured-diff trick the
+      # PR-scoped job uses with `origin/${{ github.base_ref }}`, but with
+      # nothing as the base so the scope is the whole store instead of one PR.
+      #
+      # Staging is scoped to docs/acceptance-criteria/ on purpose: staging
+      # everything also sweeps in leafcutter-web/fixtures/docs/acceptance-criteria/,
+      # which holds DELIBERATELY invalid records used as test fixtures, and the
+      # job would fail on its own fixtures.
+      - name: Stage the whole store so the index-driven hooks can see it
+        run: |
+          git reset --soft "$(git commit-tree "$(git hash-object -t tree /dev/null)" -m 'empty base for whole-store staging')"
+          git reset -q
+          git add -- docs/acceptance-criteria/
+          echo "staged records: $(git diff --cached --name-only --diff-filter=AM -- docs/acceptance-criteria/ | wc -l)"
+
+      # Same hook set, same order, as the PR-scoped job (ACS-200i parity).
+      # `|| true` per hook: this job reports the FULL backlog in one run rather
+      # than stopping at the first failing rule, and its blocking posture is
+      # owned by continue-on-error above, not by these exit codes.
+      - name: Check AC store (whole store — every record, not diff-scoped)
+        run: |
+          pre-commit run check-ac-schema           > /tmp/ac-whole-store.txt 2>&1 || true
+          pre-commit run check-ac-tree-limits      >> /tmp/ac-whole-store.txt 2>&1 || true
+          pre-commit run check-ac-governance       >> /tmp/ac-whole-store.txt 2>&1 || true
+          pre-commit run check-ac-parent-covered-by >> /tmp/ac-whole-store.txt 2>&1 || true
+          pre-commit run check-ac-circular-deps    >> /tmp/ac-whole-store.txt 2>&1 || true
+          pre-commit run check-ac-pattern-refs     >> /tmp/ac-whole-store.txt 2>&1 || true
+
+      # Groups findings by the component that owns them and states one
+      # finishable ask, because a 512-line dump is scrolled past rather than
+      # acted on.
+      - name: Report the backlog by owning component
+        run: python scripts/ac_store/whole_store_report.py --input /tmp/ac-whole-store.txt
+
+  numbering-guarantee-valid:
+    name: Numbering guarantee valid (GE-122d-1)
+    runs-on: ubuntu-latest
+    # Shared-build stage for GE-122's whole-collection numbering rule
+    # (GE-122d-1). This is a SEPARATE job from ac-store-valid on purpose:
+    # test_acs200i_ac_gate_rule_parity.py asserts ac-store-valid runs ONLY
+    # hooks scoped to the docs/acceptance-criteria/*.yaml files: pattern in
+    # the manifest, and check-identifier-uniqueness is not one of them (it
+    # is always_run / pass_filenames: false, scoped to the whole collection,
+    # not to AC YAML files) — folding it into that job would break that
+    # parity guard.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history required so the base ref (PR) / pre-push SHA (push)
+          # is reachable for the reset below — same requirement as
+          # ac-store-valid, and for the same reason (see the staging steps).
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — deploy .leafcutter so the guardian hooks resolve
+        run: python scripts/build.py --target-dir .
+
+      - name: Stage the PR's changes so a contested number is attributed (PR)
+        # WHY THE reset --soft: this hook's *inspection* is genuinely
+        # whole-collection and always_run: true / pass_filenames: false at
+        # the pre-commit level — that half of the old comment here was
+        # correct. What it missed is that the hook's EXIT CODE is not
+        # whole-collection: main() (check_identifier_uniqueness.py) calls
+        # _get_staged_paths() (`git diff --cached --name-only`) and, via
+        # compute_commit_disposition, blocks ONLY on a finding with a
+        # claimant in that staged set — every other finding is printed as
+        # "reported-but-unattributed ... not blocking" and the hook exits 0.
+        # In a CI checkout the PR's files are committed, not staged, so with
+        # no reset the staged set is genuinely empty (git ran fine — this is
+        # not the "could not be determined" fallback path) and EVERY
+        # contested number, including one the PR itself introduces, comes
+        # back unattributed. Moving HEAD back to the base ref makes exactly
+        # the PR's added/modified files appear staged, the identical
+        # technique ac-store-valid already documents for the AC guardrails
+        # and the technique this AC's (GE-122d-1) own it_requirements names
+        # explicitly. Verified both ways in a scratch clone: with the reset,
+        # a deliberately contested ADR number introduced by the diff fails
+        # the job (exit 1); without it, the same collision passes (exit 0).
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          git reset --soft "origin/${{ github.base_ref }}"
+
+      - name: Stage the push's changes so a contested number is attributed (push)
+        # Same requirement as the PR step above, for a direct push to main:
+        # reset to the pre-push SHA (github.event.before) so the commit(s)
+        # just pushed appear staged and a contested number introduced by the
+        # push is attributed rather than silently reported-but-unattributed.
+        if: github.event_name != 'pull_request'
+        run: git reset --soft "${{ github.event.before }}"
+
+      - name: Check numbering uniqueness (GE-122d-1 shared-build stage)
+        # Run through pre-commit rather than calling the script directly, so
+        # the shared-build and commit-time rule sets are literally the same
+        # config and cannot drift apart (same technique the ac-store-valid
+        # job already uses for the AC guardrails, per this AC's
+        # it_requirements).
+        run: pre-commit run check-identifier-uniqueness
+
   changelog-presence:
     name: "Changelog entry present"
     runs-on: ubuntu-latest
@@ -386,4 +554,22 @@ jobs:
         # AC BP-900h-6 for merge-gate tooling). --target-dir . is
         # github.workspace itself, which holds only the leafcutter-ai/
         # checkout at this point.
-        run: python leafcutter-ai/scripts/ci/check_consumer_install.py --package-dir leafcutter-ai --target-dir .
+        run: python leafcutter-ai/scripts/ci/check_consumer_install.py --package-dir leafcutter-ai --target-dir . --use-install
+
+      - name: Check declaring files resolve from the deployed output root
+        # AC BP-900h-4. .leafcutter is the deployed output root the step
+        # above just built as a sibling of the leafcutter-ai/ checkout.
+        # Non-zero here is a real, load-bearing failure — this step
+        # deliberately carries no continue-on-error.
+        run: python leafcutter-ai/scripts/ci/check_declaring_files.py --deployed-root .leafcutter
+
+      - name: Check declaring files resolve across every install layout
+        # AC BP-900h-4-i. Layout (a) — the prescribed leafcutter-ai/ package
+        # directory name, main checkout — is this job's own already-built
+        # install; the layout-set config names it as one entry so this same
+        # multi-layout entry point (never a second, single-layout-only path)
+        # covers the self-hosted-shape control this job already stands up.
+        # Non-zero here is likewise load-bearing; no continue-on-error.
+        run: |
+          python -c "import json; json.dump([{'layout': 'prescribed-name', 'deployed_root': '.leafcutter', 'package_dir_name': 'leafcutter-ai', 'is_worktree': False}], open('layout_set.json', 'w'))"
+          python leafcutter-ai/scripts/ci/check_declaring_files.py --layout-set layout_set.json

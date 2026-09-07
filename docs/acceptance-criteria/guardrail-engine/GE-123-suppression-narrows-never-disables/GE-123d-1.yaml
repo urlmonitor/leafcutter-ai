@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -118,11 +118,26 @@ test_rationale: "Every entry runs the canonical templates/ copy of the pre-commi
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18)"
-    detail: "Criteria untouched. Complexity S->M: the AC introduces a shared value-shape vocabulary consumed by three siblings and must reach two entry points, and the matched value has to survive the 120-character excerpt truncation that the pre-commit post-filter reads today. Authored nine policy-level it_requirements, of which three are facts the BA could not see: the excerpt truncation, the hook-versus-scanner-CLI drift risk, and the requirement to measure the blast radius of a global narrowing against the real tracked tree. Added an ADR-001 doc_link because both edited files are templates/ canonical copies. Authored a seven-entry test_spec plus test_rationale, all exercised through the real pre-commit path in a throwaway git repository; the harness was verified working and the three-finding red baseline measured before the contract was written. readiness draft->reviewed; work_status and priority untouched."
+- reason: it-po-v3 technical enrichment (2026-08-18)
+  detail: 'Criteria untouched. Complexity S->M: the AC introduces a shared value-shape
+    vocabulary consumed by three siblings and must reach two entry points, and the
+    matched value has to survive the 120-character excerpt truncation that the pre-commit
+    post-filter reads today. Authored nine policy-level it_requirements, of which
+    three are facts the BA could not see: the excerpt truncation, the hook-versus-scanner-CLI
+    drift risk, and the requirement to measure the blast radius of a global narrowing
+    against the real tracked tree. Added an ADR-001 doc_link because both edited files
+    are templates/ canonical copies. Authored a seven-entry test_spec plus test_rationale,
+    all exercised through the real pre-commit path in a throwaway git repository;
+    the harness was verified working and the three-finding red baseline measured before
+    the contract was written. readiness draft->reviewed; work_status and priority
+    untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/21_TICKET-20260831-GE-123d-1.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -170,3 +185,4 @@ notes: |
   from git rev-parse in the working directory, and its own directory-relative
   scanner lookup finds the canonical templates/ scanner without any deployed
   copy being present.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

@@ -311,3 +311,29 @@ Create `tests/test_config_driven_build_paths.py`:
 - Risk of regressions: medium. `build_ticket_lifecycle()` is called by `build.py`'s
   main orchestration loop; a bug here skips ticket scaffold for new installs. Test suite
   must explicitly cover the consumer-project default-path case.
+
+## Repair Resolution (GE-122e-2)
+
+- resolution: kept the 'done' copy (previously held by 99_done) and removed the 'todo' copy (held by 00_inbox)
+- reason: tickets/ticket_lifecycle.json permits status 'done' only in a terminal, permanent archive folder (99_done), while status 'todo' is only permitted in non-terminal, still-in-flight folders, so the 'done' declaration records the later, completed state.
+
+### Recovered content from the deleted copy
+
+- [ ] test-writer
+- [ ] python-coder
+- [ ] test-runner
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request
+## AC Traceability
+| AC ID | Level | Title | Agent |
+|-------|-------|-------|-------|
+| BP-100c-1 | L2 | Ticket lifecycle scaffold uses config-driven inbox path instead of hardcoded default | python-coder |
+| BP-100c-2 | L2 | Ticket lifecycle skips scaffold when manifest already exists | python-coder |
+| BP-100c-3 | L2 | Project paths table overlays config values onto paths.json defaults | python-coder |
+| BP-100c-4 | L2 | Template compiler threads config to project paths table generation | python-coder |
+| BP-100c-5 | L2 | Consumer project with no config override gets standard default paths | python-coder |
+| BP-100c-1-i | L3 | Folder remap applies config overrides to all lifecycle subdirectories | python-coder |
+| BP-100c-2-i | L3 | Force flag bypasses the skip guard and overwrites existing manifest | python-coder |
+| BP-100c-3-i | L3 | Partial config overlay leaves unspecified paths at their defaults | python-coder |
+AC files: `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100c-*.yaml`

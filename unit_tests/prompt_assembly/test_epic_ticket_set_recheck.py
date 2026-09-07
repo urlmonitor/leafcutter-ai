@@ -151,6 +151,12 @@ class TestWorkAddedAfterPlanningIsNamed(_EpicRecheckCase):
         epic_path, paths = self.build_epic(worktree, planned + added)
         reads = [
             {"present": self.present(paths, planned)},
+            # Terminating look (BO-100e-1): both planned tickets are already
+            # driven to completion by look 1, and the run set is frozen to
+            # what look 1 enumerated, so look 2 must release nothing — the
+            # additions are surfaced only by the completion-time re-read below,
+            # never by a later look silently absorbing them.
+            {"batches": [], "present": self.present(paths, planned)},
             {"present": self.present(paths, planned + added)},
         ]
         observation = self.drive_epic(worktree, epic_path, paths, reads)
@@ -223,6 +229,8 @@ class TestWorkAddedAfterPlanningIsNamed(_EpicRecheckCase):
         epic_path, paths = self.build_epic(worktree, planned)
         reads = [
             {"present": self.present(paths, planned)},
+            # Terminating look — nothing further is eligible.
+            {"batches": [], "present": self.present(paths, planned)},
             {"present": self.present(paths, planned)},
         ]
         result = self.drive_epic(worktree, epic_path, paths, reads)["result"]
@@ -250,6 +258,11 @@ class TestWorkAddedAfterPlanningIsNamed(_EpicRecheckCase):
         epic_path, paths = self.build_epic(worktree, planned + ["03_new.md"])
         reads = [
             {"present": self.present(paths, planned)},
+            # Terminating look (BO-100e-1): 03_new.md is not part of the run
+            # set look 1 froze, so it must NOT be silently absorbed by a later
+            # look — it can only be surfaced by the completion-time re-read
+            # below, which is exactly what this test is about.
+            {"batches": [], "present": self.present(paths, planned)},
             # 02_b.md removed, 03_new.md added — count is still 2.
             {"present": self.present(paths, ["01_a.md", "03_new.md"])},
         ]
@@ -386,6 +399,10 @@ class TestRecheckFailsClosedAndRaisesNoFalseAlarm(_EpicRecheckCase):
         epic_path, paths = self.build_epic(worktree, planned)
         reads = [
             {"present": self.present(paths, planned)},
+            # Terminating look (BO-100e-1): both tickets are already driven to
+            # completion by look 1, so look 2 must release nothing to end the
+            # search before the completion-time re-read below.
+            {"batches": [], "present": self.present(paths, planned)},
             {"present": self.present(paths, ["01_a.md"])},
         ]
         result = self.drive_epic(worktree, epic_path, paths, reads)["result"]

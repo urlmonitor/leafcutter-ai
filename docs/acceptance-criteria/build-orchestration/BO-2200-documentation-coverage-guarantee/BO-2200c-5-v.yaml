@@ -1,0 +1,64 @@
+id: BO-2200c-5-v
+components:
+  - build_orchestration
+  - documentation_system
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "Writer and verifier agree on what 'satisfied' means -- a doc already correct passes without a diff"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a ticket whose contract line names an owned target, and the target already exists on disk
+    and already states what the content constraint requires, and the writer reported it as
+    "already satisfied" having changed nothing -- so the target appears in neither the
+    branch-range diff nor the working-tree diff,
+  When documentation-verifier asserts coverage,
+  Then the target is satisfied and no blocker is produced.
+  And the verdict names it as satisfied-without-change, distinct from satisfied-by-this-ticket, so
+    reading the sign-off tells you whether this ticket wrote anything.
+
+  And given a target likewise absent from both diffs, but whose contents on disk do NOT state what
+    the content constraint requires -- or are placeholder text,
+  When the verifier asserts coverage,
+  Then a blocker is produced naming that target.
+  And given a target absent from both diffs and absent from disk,
+  Then a blocker is produced naming that target, exactly as today.
+
+  And the satisfied-without-change verdict is reached by the verifier reading the file itself and
+    applying the same content and placeholder checks it applies to a document that IS in the diff
+    -- never by accepting the writer's report. A writer that claims "already satisfied" for a
+    target that is missing, empty, or placeholder is blocked, so the claim is a hint about where to
+    look and not a way past the gate.
+depends_on: [BO-2200c-5, BO-2200c-5-iv]
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  NOT IN THE ORIGINAL FOUR -- added because without it the idempotency behaviour (BO-2200c-5-iv)
+  cannot ship. The verifier's coverage step satisfies a required document only when its path
+  appears in the union of the branch-range diff and the working-tree diff. A writer that correctly
+  determines a document already says enough, and therefore writes nothing, produces no entry in
+  either. The document is right, the writer is right, and the ticket is blocked. Shipping -iv
+  alone converts a documentation gap into a hard stop on every already-documented target.
+
+  This belongs under BO-2200c-5 rather than under the verifier's own L1 because it is precisely
+  what that criterion asserts: the writer's brief and the verifier's enforcement are one artifact
+  read by two agents, and they must move together. An outcome vocabulary the writer can emit and
+  the verifier cannot act on is the same drift, in the same block, as the format mismatch this
+  criterion was reopened for.
+
+  The last clause is the reason this does not weaken the coverage guarantee. Accepting "in the
+  diff OR present on disk" would let any pre-existing file pass unread, which is the placeholder
+  hole the verifier exists to close. Accepting the writer's word would make the gate
+  self-certifying. Requiring the verifier to read the file and run its own content and placeholder
+  checks keeps the three-way outcome -- satisfied-without-change, blocked-on-content,
+  blocked-on-absence -- decided by evidence the verifier gathered itself, and makes the behaviour
+  testable as three fixtures with three different verdicts rather than as the absence of a
+  blocker.

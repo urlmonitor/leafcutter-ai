@@ -219,7 +219,7 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260817-GE-122e-1.md
+- tickets/99_done/TICKET-20260817-GE-122e-1.md
 change_target: docs
 risk_surface: internal
 notes: |

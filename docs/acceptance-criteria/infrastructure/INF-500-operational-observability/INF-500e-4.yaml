@@ -1,0 +1,193 @@
+id: INF-500e-4
+components:
+  - infrastructure
+title: "Volume written is attributed to a language and to a kind, so building is distinguishable from bookkeeping"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the changed file scripts/build.py,
+  When it is attributed for the code-volume section,
+  Then it is attributed to Python and to the kind "code".
+
+  Given the changed file
+    docs/acceptance-criteria/ac-store/ACS-100.yaml,
+  When it is attributed for the code-volume section,
+  Then it is attributed to YAML and to the kind "spec",
+  So that a week spent writing acceptance criteria is not reported as a week spent
+    building capability.
+
+  Given the changed file docs/known-issues/ac-store.md,
+  When it is attributed for the code-volume section,
+  Then it is attributed to Markdown and to the kind "prose".
+
+  Given the changed file deploy/Dockerfile, which carries no extension at all,
+  When it is attributed for the code-volume section,
+  Then it is attributed to Docker and to the kind "spec",
+  So that a build definition is not discarded into the unclassified bucket merely for
+    being named by convention rather than by suffix.
+
+  Given the changed file notes/README.MD, whose suffix is upper case,
+  When it is attributed for the code-volume section,
+  Then it is attributed to Markdown and to the kind "prose",
+  So that attribution does not depend on how a contributor happened to capitalise the
+    filename.
+
+  Given the changed file assets/logo.qqq, whose suffix matches no known language, and
+    the changed file .gitignore, whose leading dot is not a suffix,
+  When each is attributed for the code-volume section,
+  Then both are attributed to "Other" and to the kind "other",
+  And neither is attributed to a language it does not belong to,
+  So that an unrecognised file is visibly unclassified rather than silently folded
+    into a real language's totals.
+
+  Given the changed files unit_tests/agent_health/test_x.py and
+    scripts/foo/tests/test_bar.py,
+  When each is examined for whether it belongs to a test surface,
+  Then both are identified as test surfaces, including the one nested several
+    directories deep.
+
+  Given the changed file scripts/agent-health/weekly_health.py,
+  When it is examined for whether it belongs to a test surface,
+  Then it is identified as production code,
+  So that the production and test line counts the velocity tier reports as capability
+    density are genuinely separated rather than both counting the same lines.
+depends_on:
+  - INF-500e
+doc_links:
+  - path: scripts/agent-health/weekly_health.py
+    relationship: implements
+    status: exists
+  - path: scripts/agent-health/README.md
+    relationship: describes
+    status: exists
+  - path: unit_tests/agent_health/test_weekly_health.py
+    relationship: related
+    status: exists
+    relevance: "Passes each literal path through the attribution and the test-surface check and asserts the returned pair, so every branch — extension table, extensionless build file, case folding, unknown suffix, dotfile — is executed."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Attribution is scripts/agent-health/weekly_health.py::classify_path(path) -> tuple[str, str] returning (language, kind) with kind drawn from exactly code, spec, prose and other. It must be pure over the path string — no filesystem stat, no repository access — so every scenario is executable from a literal path and a file that no longer exists on disk is still attributable from the diff."
+  - "The two lookup tables (_EXTENSION_LANGUAGE mapping suffix to language, _LANGUAGE_KIND mapping language to kind) must remain the single source of the mapping, and the kind must be derived from the language rather than restated per suffix. A second per-suffix kind table would drift the moment a language gains an extension."
+  - "Extension matching must be case-folded, and the match must be on the final suffix of the FILENAME, not of the whole path. A leading dot is not a suffix: a dotfile whose name has no other dot must fall to (Other, other) rather than having its whole name read as an extension."
+  - "The extensionless build-file case must be recognised by filename convention before the suffix lookup runs, so a Dockerfile is not discarded into the unclassified bucket. This is the one convention-based branch permitted; do not extend it into a general filename allowlist without a criterion covering the new names."
+  - "An unrecognised suffix must resolve to the explicit (Other, other) pair and must NEVER be folded into a real language's totals. The other row is the audit surface for attribution defects and only works if it is honest — a misattribution here is small in volume and permanent in effect, because nobody audits a language row that looks plausible."
+  - "The test-surface predicate is weekly_health.py::is_test_path(path) -> bool and must recognise a nested test directory as readily as a top-level one, so scripts/foo/tests/test_bar.py is a test surface and scripts/agent-health/weekly_health.py is not. The markers must live in one module-level constant (_TEST_PATH_MARKERS) rather than being inlined at the call sites, and the prod_loc and test_loc totals must be disjoint — a line counted as test must not also be counted as production."
+test_spec:
+  - name: TestClassifyPath::test_python_source_is_code
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "scripts/build.py attributes to (Python, code)."
+  - name: TestClassifyPath::test_yaml_is_spec
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "docs/acceptance-criteria/ac-store/ACS-100.yaml attributes to (YAML, spec), so AC authoring is not reported as capability building."
+  - name: TestClassifyPath::test_markdown_is_prose
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "docs/known-issues/ac-store.md attributes to (Markdown, prose)."
+  - name: TestClassifyPath::test_dockerfile_without_extension_is_recognised
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "deploy/Dockerfile, carrying no extension, attributes to (Docker, spec) rather than falling into the unclassified bucket."
+  - name: TestClassifyPath::test_extension_match_is_case_insensitive
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "notes/README.MD attributes to (Markdown, prose), so attribution does not depend on capitalisation."
+  - name: TestClassifyPath::test_unknown_extension_falls_through_to_other
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "assets/logo.qqq attributes to (Other, other) and to no real language."
+  - name: TestClassifyPath::test_dotfile_is_not_read_as_an_extension
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: ".gitignore attributes to (Other, other) — the leading dot is not read as a suffix."
+  - name: TestIsTestPath::test_unit_tests_directory
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "unit_tests/agent_health/test_x.py is identified as a test surface."
+  - name: TestIsTestPath::test_nested_tests_directory
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "scripts/foo/tests/test_bar.py, nested several directories deep, is identified as a test surface."
+  - name: TestIsTestPath::test_production_module_is_not_a_test
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "scripts/agent-health/weekly_health.py is identified as production code, keeping the production and test line counts genuinely separate."
+test_rationale: |
+  Both functions are pure string classifiers, so a direct-import unit test per
+  branch is the strongest available proof and the cheapest: each descriptor
+  passes a literal path and asserts the exact returned pair, which means the
+  extension table, the extensionless-convention branch, the case fold, the
+  unknown suffix and the dotfile are each executed rather than inspected. The
+  margins are what matter here — a misattribution at the margin is small in
+  volume, permanent in effect, and never audited, because the other row is the
+  only place it shows and nobody reads it. The negative descriptors
+  (test_unknown_extension_falls_through_to_other, test_dotfile_is_not_read_as_an
+  _extension, test_production_module_is_not_a_test) are therefore as load-bearing
+  as the positive ones.
+delivers_to:
+  agent: python-coder
+  contract: "Per-file attribution consumed by collect_commit_stats and the code-volume table: classify_path(path: str) -> tuple[language: str, kind: str] with kind in {code, spec, prose, other} and an unrecognised path returning the explicit pair (Other, other); is_test_path(path: str) -> bool partitioning changed lines into the disjoint prod_loc and test_loc totals the velocity tier reports as capability density."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. The capability had already shipped (scripts/agent-health/weekly_health.py, merged as d0fa881c / PR #608), so the test contract binds each criterion to the real passing test in unit_tests/agent_health/test_weekly_health.py rather than commissioning new coverage. Added assigned_agent, estimated_complexity, it_requirements, test_spec, test_rationale and the classify_path/is_test_path delivers_to contract. Criteria unchanged; work_status deliberately left todo for a separate evidence-bound step."
+    by: it-po
+    at: 2026-08-26
+  - reason: "Reconciliation pass, 2026-08-31 (python-coder, evidence audit) -- FINDING 5 + covered_by backfill. work_status was flipped from the deliberately-left-todo state recorded in the entry above to done, with nothing recording when or on what evidence; recording it now. Evidence: all 10 tests named in test_spec (TestClassifyPath x7, TestIsTestPath x3) exist in unit_tests/agent_health/test_weekly_health.py and pass under AC_ENFORCE_STRICT=1. Also backfilled covered_by, previously empty despite two directly-tagged tests in the suite: TestClassifyPath::test_python_source_is_code and TestIsTestPath::test_unit_tests_directory (both tagged '# covers: INF-500e-4')."
+    by: python-coder
+    at: 2026-08-31
+superseded_by: null
+covered_by:
+  - unit_tests/agent_health/test_weekly_health.py::TestClassifyPath::test_python_source_is_code
+  - unit_tests/agent_health/test_weekly_health.py::TestIsTestPath::test_unit_tests_directory
+implemented_by:
+  - d0fa881ca111665a8ae10b3bb46773c73325c85c
+  - scripts/agent-health/weekly_health.py
+change_target: code
+risk_surface: internal
+notes: |
+  The code / spec / prose split is what makes the velocity tier readable rather
+  than merely large. Without it a week of 20,000 added lines is a single number;
+  with it, the same week resolves into capability, specification and
+  documentation, and a falling production-code figure against a rising pull
+  request count reads as the work moving from building to bookkeeping.
+
+  Two of the scenarios above are the ones that decide whether the split is
+  trustworthy at the margins. A file named by convention rather than by suffix
+  would otherwise vanish into the unclassified bucket, and a dotfile would
+  otherwise have its whole name read as an extension. Both misattributions are
+  small in volume and permanent in effect, because nobody audits the "other" row.
+
+  The production-versus-test separation is stated here rather than with the
+  velocity metrics because it is the same attribution pass: the distinction only
+  means anything if a deeply nested test directory is recognised as readily as a
+  top-level one.

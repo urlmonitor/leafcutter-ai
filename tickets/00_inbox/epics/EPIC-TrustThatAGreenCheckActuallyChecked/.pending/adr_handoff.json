@@ -1,0 +1,12 @@
+{
+  "adr_id": "ADR-038",
+  "affected_files": [
+    "scripts/ac_store",
+    "scripts/build_phases.py",
+    "templates/scripts/commit_guardian",
+    "templates/scripts/commit_guardian/_resolve_root.py",
+    "templates/scripts/commit_guardian/check_contract_shrinking.py",
+    "templates/scripts/commit_guardian/check_doc_frontmatter.py"
+  ],
+  "one_line_summary": "All self-deriving commit-guardian checks must consume the shared _resolve_change_set.get_change_set() derivation instead of a private git diff, with no fallback-to-whole-tree on failure."
+}

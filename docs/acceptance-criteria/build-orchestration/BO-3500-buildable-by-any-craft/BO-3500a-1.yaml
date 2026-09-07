@@ -1,0 +1,120 @@
+id: BO-3500a-1
+components:
+  - build_orchestration
+  - agent_registry
+title: "Each member of a build set is produced by the craft that member declares"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run has resolved a build set whose members declare different producing
+    crafts — one member declaring the craft that writes source code, one declaring
+    the craft that writes documentation pages, and one declaring the craft that
+    draws architecture diagrams,
+  When the run builds that set,
+  Then each member is handed to the craft that member declares,
+  And no member is handed to a craft other than the one it declares,
+  And the artifact each member declares is produced by that member's own hand-off, so
+    a hand-off that was recorded but produced nothing does not satisfy this criterion.
+
+  Given the same set,
+  When the run has finished,
+  Then the run's own account of what it did shows one hand-off per member naming the
+    craft that member declared, so which craft produced which piece of work is
+    readable from the run without inspecting the artifacts and guessing.
+
+  Given a build set every member of which declares the craft that writes source code,
+  When the run builds it,
+  Then the run behaves exactly as it did before crafts were read from the members —
+    reading the declared craft adds no step, no ending and no output to a set that was
+    already buildable.
+depends_on: [BO-3500a]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "The operator-facing description of pointing at a requirement. It currently reads as if the answer depends on which kind of work you aimed at; once this criterion holds, the declared craft is what determines who does the work."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Where the run's fixed phase order is described. Reading the declared craft per member is a change to how that order is populated, not a new ending."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "THE TWO HARD-CODED SURFACES ARE THE WORK. The run's phase list is a literal sequence in templates/workflows-js/fast-lane-ship.js (Phase 3 test-writer, Phase 4 python-coder, with RELEASE_EXECUTOR_AGENT_TYPE pinned to python-coder), and the roster it is judged against is the literal frozenset `_ROSTER_BUILD_AGENTS = frozenset({\"python-coder\", \"test-writer\"})` at scripts/build_orchestration/fast_lane.py:802. Both must become DATA: one declared roster the run reads, and a phase populated per member from that member's declared craft. Adding a craft must be a data edit, never a code edit."
+  - "The declared craft is the AC record's EXISTING `assigned_agent`, resolved against config/agent_registry.json by `agents[].id`. Do not introduce a second producer field; ACD-1800a-1 validates the same field against the same registry store-side, and a second source is how a record passes one gate and fails the other."
+  - "Hand-off and artifact must be asserted as a PAIR, never separately. A recorded dispatch that wrote no file, and a file that no recorded dispatch produced, must each fail. Either alone can be faked — this component has already shipped a runner whose gates were recorded and never executed (CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep')."
+  - "The run's account is the per-step outcome record the workflow already keeps (stepOutcomes in fast-lane-ship.js): exactly one entry per member per non-halt path, naming the craft that member declared. When adding a per-member outcome call inside a branch, conditionalise the pre-existing unconditional call rather than adding a second — the skip-branch double-recording defect is documented in CLAUDE.md and its structural test was blind to template-literal calls."
+  - "THIRD SCENARIO IS A REGRESSION BUDGET, NOT A COURTESY. An all-code set must reach the same ending with the same phase sequence and the same recorded outcomes as the pre-change run. Capture a baseline of the current run's outcome sequence BEFORE the change and diff against it; asserting 'no error' does not satisfy this and the all-code set is the overwhelmingly common case, so any added step is paid on every run."
+  - "DEPLOY MANIFEST: any new module fast_lane.py, a hook or a CI gate imports MUST be added to the deploy list in scripts/build_phases.py (AC_STORE_DEPLOY_MAP or the matching phase map), or the deployed code raises ModuleNotFoundError at runtime and — once required — blocks every merge. Verify by running the DEPLOYED entry point; the unit tests import from the source tree and mask the gap (the done_proof.py incident verbatim)."
+  - "NO PRESENCE-ONLY ASSERTIONS. check_presence_only_assertions.py is a live ratchet over staged hunks. Every test here must execute the run or assert the result is consumed in control flow; a test that greps fast_lane.py or fast-lane-ship.js for a craft name, a mapping table or a phase ordering passes unchanged when the mapping is built and never consulted."
+delivers_to:
+  agent: python-coder
+  contract: "Per-member dispatch plan emitted by scripts/build_orchestration/fast_lane.py and consumed by the phase loop in templates/workflows-js/fast-lane-ship.js: an ordered list of {ac_id: str, craft: <config/agent_registry.json agents[].id>, source: 'declared'|'default'} plus the run-scoped roster set the verdict was computed against. Also consumed by the two refusal paths (BO-3500a-2, BO-3500a-3) and by the group accounting of BO-3500b-1."
+expects_from:
+  ac_id: ACD-1800a-1
+  contract: "The record's declared producer — `assigned_agent`, an id in config/agent_registry.json — and, once the deliverable checklist lands, the per-deliverable {kind, craft} items whose craft is validated store-side against that same registry. The build side must not re-derive the craft from anything else."
+test_spec:
+  - name: test_each_member_dispatched_to_its_declared_craft
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Execute a run over a fixture store whose three members declare python-coder, documentation-expert and architecture-diagram-author; assert the recorded dispatches map member to declared craft one-to-one."
+  - name: test_dispatch_and_artifact_asserted_as_a_pair
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "For each member, assert BOTH that a dispatch was recorded for its declared craft AND that the declared artifact exists on disk afterwards; a recorded dispatch with no file, and a file with no dispatch, each fail."
+  - name: test_run_account_names_one_handoff_per_member
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The run's stepOutcomes contain exactly one entry per member, each naming that member's declared craft — no member missing, none recorded twice."
+  - name: test_all_code_set_run_is_unchanged_from_baseline
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Run an all-code set and diff the full outcome sequence and ending against a captured pre-change baseline; any added step, ending or output fails."
+  - name: test_roster_is_data_not_a_literal_frozenset
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Supply a run-scoped roster containing a craft name absent from today's _ROSTER_BUILD_AGENTS and assert a member declaring it is dispatched — a literal frozenset cannot pass this."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: [BO-3500a-1-i, BO-3500a-1-ii]
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  This is the growth criterion of BO-3500a: it is the record that makes documentation,
+  diagram, screen and prompt work actually get produced rather than merely not
+  refused. Everything else under this L1 is about the two ways it can be asked for
+  something it cannot do.
+
+  THE THIRD SCENARIO IS NOT PADDING. A change that routes by declared craft is easy to
+  build in a way that also perturbs the all-code case — an extra hand-off, an extra
+  recorded outcome, a changed ending. The all-code set is the overwhelmingly common
+  one today and its behaviour is already covered by the BO-2400f family; a regression
+  there would be paid for on every run. Stated as a criterion so it is tested rather
+  than hoped for.
+
+  TESTABILITY. Provable only by executing a run and reading the hand-offs it actually
+  made, together with the artifacts on disk afterwards. A test that inspects the source
+  of the run for a craft name, a mapping table or a phase ordering is not evidence
+  here — it passes unchanged when the mapping is built and never consulted, which is
+  the exact failure this component has already shipped once (CLAUDE.md, "Gate /
+  Workflow ACs — Verify Behaviorally, Not by Grep"). The load-bearing assertion is the
+  pairing of hand-off and artifact: either alone can be faked.

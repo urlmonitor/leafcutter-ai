@@ -1,0 +1,47 @@
+id: BO-3500b
+components:
+  - build_orchestration
+title: "A mixed batch of work builds in one go"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  One page of documentation no longer makes a whole area unbuildable.
+
+  When the work you pointed at pulls in code, tests, a written page and a diagram
+  together, all of it is produced in the one run — rather than the whole batch
+  being turned away because one member is not code.
+depends_on: [BO-3500]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013 is exactly this shape: 'a single documentation child anywhere in a subtree makes that whole subtree unbuildable by the lane', and the operator cannot avoid it because sets are resolved from the store rather than chosen."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: [BO-3500b-1, BO-3500b-2, BO-3500b-3]
+implemented_by: []
+documentation_triggers: [sequence-diagram]
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the facet that makes the goal worth having rather than merely tidy. A
+  run builds the connected group it resolves, not the one requirement it was
+  aimed at, so the fraction of STARTING POINTS that refuse is higher than the
+  fraction of records that are unbuildable. Fixing routing alone (BO-3500a)
+  without this would leave that unchanged for any group that mixes kinds.
+
+  EXPLICITLY FORBIDDEN AS A SOLUTION, inherited from KI-BO-013 and from
+  BO-2400f-12: building the code members and dropping the rest. A member removed
+  from a group and left unfinished is indistinguishable, from the store, from a
+  member nobody ever asked for. Partial success is not success here, and any
+  decomposition that produces one has missed the criterion.

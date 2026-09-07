@@ -1,0 +1,126 @@
+id: BO-3500d-2
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "The unbuildable share is grouped by reason, largest group first, and the groups add up"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a backlog containing requirements the automation cannot build for several
+    different reasons — a craft it does not have, a kind of artifact with no defined
+    proof, and a declaration it cannot resolve,
+  When the buildability report is produced,
+  Then the requirements it cannot build are grouped by the reason it cannot build them,
+  And each group names the specific craft or kind of artifact involved, not just the
+    category of reason,
+  And each group states how many requirements are waiting on it,
+  And the groups are ordered largest first, so the single change that would unblock the
+    most work is the first thing read.
+
+  Given the same report,
+  When the group sizes are added together,
+  Then they equal the total the report gave for requirements it cannot build — every
+    such requirement appears in exactly one group, none is counted twice and none is
+    left out.
+
+  Given a backlog in which the largest reason is a craft the automation does not have,
+  When that craft is added and the report is produced again,
+  Then that group is gone from the report and the buildable total has risen by its
+    size — so the report can be used to decide what to build next and to check
+    afterwards that it worked.
+depends_on: [BO-3500d]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: related
+    status: exists
+    relevance: "The report's reasons must use the same vocabulary an operator meets in a refusal, or the standing view and the individual refusal will describe the same situation in two languages."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ONE REASON VOCABULARY FOR THE STANDING VIEW AND THE INDIVIDUAL REFUSAL. Group by the SAME reason codes the run emits: `unresolvable_craft` (BO-3500a-2), `capability_gap` (BO-3500a-3), `no_proof_defined` and `proof_unavailable_here` (BO-3500c-4), `unclassifiable` (BO-3500d-2-i). Two vocabularies means the report and the refusal describe the same situation in two languages, and an operator cannot connect them."
+  - "NAME THE SPECIFIC CRAFT OR KIND, NOT THE CATEGORY. '440 requirements need a craft you do not have' is a fact; '463 need the prompt craft' is a decision. The group key carries the craft id or the kind value, not just the reason code."
+  - "EXACTLY ONE GROUP PER REQUIREMENT, chosen DETERMINISTICALLY by a stated precedence when a record has two reasons. Never double-counted (which overstates the problem and discredits the report) and never dropped (which hides work). The precedence must be data, stated once, so the same store yields the same grouping on any day."
+  - "THE ADD-UP INVARIANT IS AN ASSERTION IN THE CODE, NOT ONLY IN A TEST: sum of group sizes == the unbuildable total. It is the only check that catches the commonest reporting bug."
+  - "ORDER LARGEST FIRST WITH A DETERMINISTIC TIE-BREAK, so the report is diffable across days and 'the single change that would unblock the most work' is stable rather than shuffling between equal groups."
+  - "THIRD SCENARIO IS THE POINT OF THE WHOLE L1 and is testable in exactly the shape BO-3500a-3's second scenario is: run the same store against two different rosters and assert the report changes with nothing else changing. It is the only assertion here that proves the figure tracks reality rather than being computed once and cached."
+  - "NO PRESENCE-ONLY ASSERTIONS. Every test produces a real report over a fixture store and reads the returned groups."
+delivers_to:
+  agent: python-coder
+  contract: "groups: [{reason_code, subject: <craft id or kind value>, count, ac_ids?}], ordered by count descending with a deterministic tie-break, summing to the unbuildable total. Consumed by the report structure of BO-3500d-1 and read by the operator as a work list."
+expects_from:
+  ac_id: BO-3500d-1
+  contract: "The single store-reading pass, the shared not-yet-done predicate, and the unbuildable total the group sizes must sum to. Grouping must add no second read (BO-3500d-1-i)."
+test_spec:
+  - name: test_groups_named_by_specific_craft_or_kind
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Each group's subject is a craft id or a kind value, never only the reason category."
+  - name: test_group_sizes_sum_to_the_unbuildable_total
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The integrity check: the summed group counts equal the report's unbuildable count exactly."
+  - name: test_record_with_two_reasons_lands_in_exactly_one_group
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A record carrying both an out-of-roster craft and a kind with no defined proof appears in one group only, chosen by the stated precedence, and the same group on a repeat run."
+  - name: test_groups_ordered_largest_first_with_deterministic_ties
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Groups are descending by count, and two equal-sized groups order identically across repeated runs."
+  - name: test_adding_the_largest_missing_craft_removes_its_group_and_raises_buildable
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "THE TRACKS-REALITY TEST. Produce the report, add the largest missing craft to the roster, produce it again; assert the group is gone and the buildable total has risen by exactly its former size."
+  - name: test_report_reason_codes_are_the_same_set_the_refusals_emit
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Collect the reason codes the run's refusal paths actually emit and the codes the report's groups use; assert the report's set is a subset of the refusal set — one vocabulary, established at runtime rather than by inspection."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: [BO-3500d-2-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  A SINGLE PERCENTAGE IS NOT ACTIONABLE and would satisfy BO-3500d-1 completely. The
+  reason the hand count on BO-3500 was useful is that it was broken down — prompts 463,
+  written pages 152, diagrams 119, screens 80, workflows 44 — and that breakdown says
+  immediately which capability to build first. A report that lost it would be a worse
+  artifact than the one-off count it replaces.
+
+  THE ADD-UP CLAUSE IS THE INTEGRITY CHECK and is the only assertion here that catches
+  the commonest reporting bug, which is a requirement with two reasons counted in both
+  groups. Group sizes that overstate the problem discredit the report; group sizes that
+  understate it hide work. Exactly-one-group is the rule, and where a requirement
+  genuinely has two reasons the report must choose deterministically rather than
+  double-count.
+
+  THE THIRD SCENARIO IS THE POINT OF THE WHOLE L1 and is the only assertion in it that
+  proves the figure tracks reality rather than being computed once and cached. It is
+  also testable in exactly the shape BO-3500a-3's second scenario is: run the same
+  backlog against two different sets of available crafts and assert the report changes,
+  with nothing else changing.
+
+  NAMING THE SPECIFIC CRAFT, not the category, is what makes the report a work list.
+  "440 requirements need a craft you do not have" is a fact; "463 need the prompt
+  craft" is a decision.

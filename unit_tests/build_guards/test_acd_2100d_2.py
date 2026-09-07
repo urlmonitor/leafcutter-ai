@@ -137,6 +137,7 @@ class TestInstalledRepairIsReportedAndNamed(unittest.TestCase):
 
     def test_installed_file_carrying_a_repair_its_source_lacks_is_reported(self) -> None:
         # covers: ACD-2100d-2
+        # angle: criterion
         self.bp2._deploy_agents_and_write_manifest(self.workspace, self.pkg_root)
 
         deployed_file = self.workspace / ".claude" / "agents" / "README.md"
@@ -198,6 +199,7 @@ class TestDivergenceIsNotReportedAsDelivered(unittest.TestCase):
 
     def test_change_is_not_reported_as_delivered_while_the_divergence_stands(self) -> None:
         # covers: ACD-2100d-2
+        # angle: reachability
         self.bp2._deploy_agents_and_write_manifest(self.workspace, self.pkg_root)
         deployed_file = self.workspace / ".claude" / "agents" / "README.md"
         deployed_file.resolve().write_bytes(
@@ -270,6 +272,7 @@ class TestInstallerRunConfirmsReportByRemovingRepair(unittest.TestCase):
 
     def test_running_the_installer_confirms_the_report_by_removing_the_repair(self) -> None:
         # covers: ACD-2100d-2
+        # angle: real_artifact
         config, output_root = self.bp2._deploy_agents_and_write_manifest(
             self.workspace, self.pkg_root
         )
@@ -345,6 +348,7 @@ class TestGenerationOnlyDifferenceIsNotReported(unittest.TestCase):
 
     def test_a_generated_file_that_only_differs_by_generation_is_not_reported(self) -> None:
         # covers: ACD-2100d-2
+        # angle: boundary
         self.bp2._deploy_agents_and_write_manifest(self.workspace, self.pkg_root)
 
         # architect-review.md is a real template known to contain

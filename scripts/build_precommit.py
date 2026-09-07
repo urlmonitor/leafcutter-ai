@@ -26,7 +26,7 @@ _log = logging.getLogger(__name__)
 
 _HOOK_FIELD_PREFIXES = frozenset([
     "- id:", "name:", "entry:", "language:", "types", "files:",
-    "stages:", "pass_filenames:", "always_run:",
+    "stages:", "pass_filenames:", "always_run:", "verbose:",
 ])
 
 
@@ -174,6 +174,8 @@ def _render_hook_yaml(hook: dict[str, Any]) -> str:
     lines.append(f"        pass_filenames: {str(pf).lower()}")
     if hook.get("always_run"):
         lines.append("        always_run: true")
+    if hook.get("verbose"):
+        lines.append("        verbose: true")
     return "\n".join(lines)
 
 

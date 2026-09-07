@@ -25,7 +25,7 @@ agents:
   test-runner: needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 01: Fix AC-schema drift (components required + axis fields)

@@ -60,4 +60,4 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by:
-  - "templates/workflows-js/fast-lane-build.js"
+  - "templates/workflows-js/fast-lane-ship.js"

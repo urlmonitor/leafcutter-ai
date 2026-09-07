@@ -1,0 +1,55 @@
+id: AGC-100b-2-i
+title: "Malformed or incomplete compatibility mappings fail without fallback"
+component: agent-compatibility
+components: [agent_registry, build_pipeline, testing_quality]
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the source catalog contains model aliases haiku, sonnet, opus, and aurora
+    and capability aliases Read, Write, Bash, Agent, Skill, and Deploy,
+  And the version-1 compatibility policy has no entry for aurora or Deploy,
+  When compatibility validation runs,
+  Then the build returns an unsuccessful outcome naming aurora, Deploy, and every
+    affected specialist,
+  And the diagnostic identifies the missing model-mapping and capability-policy
+    locations,
+  And neither alias is silently discarded, mapped to a default, or changed to
+    inherit-parent.
+depends_on: [AGC-100b-2]
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - Compare policy keys with aliases discovered from the canonical registry and templates.
+  - Fail before staging publication and name every affected agent and missing policy path.
+  - Never default, discard, or implicitly inherit an unknown alias.
+test_required: true
+test_spec:
+  - name: test_missing_model_and_capability_mappings_fail_closed
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: Missing model and capability aliases fail and identify aliases, agents, and policy paths.
+test_rationale: "Cross-catalog validation is required because JSON Schema cannot know which aliases the current source corpus uses."
+delivers_to:
+  agent: python-coder
+  contract: "PolicyValidationErrorV1 with missing models, missing capabilities, affected agents, and policy paths."
+expects_from: {ac_id: AGC-100b-2, contract: Version-1 policy schema and package policy}
+doc_links:
+  - {path: docs/architecture/components/agent-registry.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [schema, config, pipeline, model]
+risk_surface: contract_boundary

@@ -185,6 +185,62 @@ _XFAIL_BODY = (
     '    assert False, "independently xfailed"\n'
 )
 
+# ---------------------------------------------------------------------------
+# Parametrized variants — TICKET-20260901-CoverageBackfill / done_proof.py:1043
+#
+# ``_find_nodeid_for_test`` matches a covering test's bare function name
+# against pytest nodeid keys via ``suffix = f"::{func_name}"`` +
+# ``str.endswith(suffix)``.  A parametrized test's real pytest nodeid is
+# ``path::test_synthetic_covering_test[synthetic_case]`` — it ends with
+# ``]``, never with ``::test_synthetic_covering_test`` — so the lookup misses
+# entirely and the function returns ``None`` regardless of the test's real
+# outcome.  These bodies are the parametrized siblings of the bodies above,
+# used to prove that defect through the REAL gate (verify_done_eligible) and
+# the REAL CLI (mark_ac_done.py), not just against the pure function in
+# isolation (see unit_tests/ac_store/test_find_nodeid_for_test.py for that).
+# ---------------------------------------------------------------------------
+
+_PARAMETRIZED_PASSING_BODY = """\
+    import pytest
+
+    @pytest.mark.parametrize("case_id", ["synthetic_case"])
+    def test_synthetic_covering_test(case_id):
+        # covers: {ac_id}
+        assert case_id == "synthetic_case"
+"""
+
+_PARAMETRIZED_FAILING_BODY = """\
+    import pytest
+
+    @pytest.mark.parametrize("case_id", ["synthetic_case"])
+    def test_synthetic_covering_test(case_id):
+        # covers: {ac_id}
+        assert case_id != "synthetic_case", "deliberate genuine failure"
+"""
+
+_PARAMETRIZED_SKIPPED_BODY = """\
+    import pytest
+
+    @pytest.mark.parametrize("case_id", ["synthetic_case"])
+    @pytest.mark.skip(reason="deliberately skipped for its own reasons")
+    def test_synthetic_covering_test(case_id):
+        # covers: {ac_id}
+        assert True
+"""
+
+# Assembled rather than written out literally for the same reason as
+# _XFAIL_BODY above — see the "Deliberate narrowing" note next to
+# _XFAIL_DECORATOR: a line-anchored contract-shrinking guard cannot tell
+# these lines live inside a runtime-generated string constant.
+_PARAMETRIZED_XFAIL_BODY = (
+    "import pytest\n\n"
+    '@pytest.mark.parametrize("case_id", ["synthetic_case"])\n'
+    + _XFAIL_DECORATOR
+    + "\ndef test_synthetic_covering_test(case_id):\n"
+    "    # covers: {ac_id}\n"
+    '    assert False, "independently xfailed"\n'
+)
+
 
 class _GateFixture(unittest.TestCase):
     """Base fixture: a synthetic store plus a test tree, torn down per test."""
@@ -446,6 +502,210 @@ class TestGateStillRefusesEveryNonPassingCase(_GateFixture):
             0,
             "A failing covering test must produce a non-zero exit.\n"
             f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}",
+        )
+        self.assertEqual(
+            ac_path.read_bytes(),
+            before,
+            "A refused run rewrote part of the AC record.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# TICKET-20260901-CoverageBackfill — the gate must handle PARAMETRIZED
+# covering tests, whose real pytest nodeid carries a bracket suffix
+# ---------------------------------------------------------------------------
+
+
+class TestGateHandlesParametrizedCoveringTests(_GateFixture):
+    """``_find_nodeid_for_test`` must match a bracket-suffixed nodeid.
+
+    Every test in this class writes a REAL parametrized ``.py`` test file and
+    runs the REAL gate (``verify_done_eligible`` or the ``mark_ac_done.py``
+    CLI as a subprocess) against it — no outcome is mocked, and nothing here
+    greps the source of the module under test.
+    """
+
+    def test_acs200f_parametrized_passing_covering_test_is_eligible(self) -> None:
+        # covers: ACS-200f
+        # angle: seam
+        """A parametrized covering test that genuinely passes must satisfy
+        the gate.
+
+        This pipes the REAL pytest subprocess's own nodeid shape —
+        ``path::test_synthetic_covering_test[synthetic_case]`` — into the
+        real ``_find_nodeid_for_test`` / ``_classify_outcomes`` matching
+        logic inside ``verify_done_eligible``. Without the fix, the
+        bracket-suffixed nodeid never matches the bare function-name suffix
+        the oracle looks for, the function returns ``None``, and the gate
+        wrongly reports the test as "linked test not run" even though it
+        genuinely passed.
+        """
+        verdict = self._verdict_for(
+            "ACS-TEST-200F-PARAM-PASS", _PARAMETRIZED_PASSING_BODY
+        )
+
+        self.assertTrue(
+            verdict["eligible"],
+            "A genuinely passing PARAMETRIZED covering test must satisfy "
+            f"the gate. Reason given: {verdict['reason']}",
+        )
+        self.assertEqual(verdict["reason"], "")
+
+    def test_acs200f_parametrized_covering_test_marks_done_via_cli(self) -> None:
+        # covers: ACS-200f
+        # angle: reachability
+        """End-to-end via the real CLI: a parametrized covering test that
+        genuinely passes must mark the AC done through the documented,
+        unprefixed invocation — not only through a direct call to
+        ``verify_done_eligible``.
+        """
+        ac_id = "ACS-TEST-200F-PARAM-CLI"
+        ac_path = _write_ac(self.ac_root, ac_id)
+        _write_test_file(
+            self.test_root,
+            "test_acs_test_200f_param_cli.py",
+            _PARAMETRIZED_PASSING_BODY.format(ac_id=ac_id),
+        )
+
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(_MARK_AC_DONE_CLI),
+                "--ac",
+                ac_id,
+                "--ac-root",
+                str(self.ac_root),
+                "--test-root",
+                str(self.test_root),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            cwd=str(_REPO_ROOT),
+            env=_gate_env(self.ac_root),
+            check=False,
+        )
+
+        self.assertEqual(
+            proc.returncode,
+            0,
+            "A genuinely passing parametrized covering test must mark the "
+            f"AC done through the real CLI.\nstdout:\n{proc.stdout}\n"
+            f"stderr:\n{proc.stderr}",
+        )
+        written = yaml.safe_load(ac_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            written["work_status"],
+            "done",
+            "The CLI reported success but the store was not updated.",
+        )
+
+    def test_acs200f1_parametrized_failing_covering_test_is_refused(self) -> None:
+        # covers: ACS-200f-1
+        # angle: failure
+        """A parametrized covering test that genuinely fails must still be
+        refused, and refused BY NAME.
+
+        The naive fix for the bracket-suffix defect above is to stop
+        refusing whenever no exact-suffix match is found — that would let a
+        genuinely failing parametrized test silently satisfy the gate. It
+        must not: this asserts both the refusal and that the stated cause is
+        the real one (failed), not a fallback "not run".
+        """
+        verdict = self._verdict_for(
+            "ACS-TEST-200F1-PARAM-FAIL", _PARAMETRIZED_FAILING_BODY
+        )
+
+        self.assertFalse(verdict["eligible"])
+        self.assertTrue(
+            verdict["failing_tests"],
+            "The failing parametrized test must be listed in failing_tests.",
+        )
+        self.assertIn(
+            "failed",
+            verdict["reason"].lower(),
+            "The gate must name the real outcome (failed), not a fallback "
+            f"'not run'. Got: {verdict['reason']}",
+        )
+
+    def test_acs200f1_parametrized_skipped_covering_test_is_refused(self) -> None:
+        # covers: ACS-200f-1
+        # angle: failure
+        """A parametrized covering test that is genuinely skipped is still
+        not proof of done, and the refusal must name the skip."""
+        verdict = self._verdict_for(
+            "ACS-TEST-200F1-PARAM-SKIP", _PARAMETRIZED_SKIPPED_BODY
+        )
+
+        self.assertFalse(verdict["eligible"])
+        self.assertIn(
+            "skipped",
+            verdict["reason"].lower(),
+            f"The refusal must name the skip. Got: {verdict['reason']}",
+        )
+
+    def test_acs200f1_parametrized_xfailed_covering_test_is_refused(self) -> None:
+        # covers: ACS-200f-1
+        # angle: failure
+        """A parametrized covering test that is independently xfailed on its
+        own merits is still not proof of done, and the refusal must name the
+        xfail — disabling the not-yet-done masking override must not disable
+        pytest's native xfail handling (BO-2500a-2-i)."""
+        verdict = self._verdict_for(
+            "ACS-TEST-200F1-PARAM-XFAIL", _PARAMETRIZED_XFAIL_BODY
+        )
+
+        self.assertFalse(verdict["eligible"])
+        self.assertIn(
+            "xfail",
+            verdict["reason"].lower(),
+            f"The refusal must name the xfail. Got: {verdict['reason']}",
+        )
+
+    def test_acs200f1_parametrized_failing_test_refused_by_cli_leaves_record_unchanged(
+        self,
+    ) -> None:
+        # covers: ACS-200f-1
+        # angle: failure
+        """End-to-end: a genuinely failing PARAMETRIZED covering test must
+        produce a non-zero CLI exit and leave the AC record byte-identical —
+        the anti-rubber-stamp control in the same run as the CLI positive
+        case above, so the fix cannot pass by simply always granting
+        eligibility once a bracket-suffixed nodeid is involved.
+        """
+        ac_id = "ACS-TEST-200F1-PARAM-CLI-FAIL"
+        ac_path = _write_ac(self.ac_root, ac_id)
+        _write_test_file(
+            self.test_root,
+            "test_acs_test_200f1_param_cli_fail.py",
+            _PARAMETRIZED_FAILING_BODY.format(ac_id=ac_id),
+        )
+        before = ac_path.read_bytes()
+
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(_MARK_AC_DONE_CLI),
+                "--ac",
+                ac_id,
+                "--ac-root",
+                str(self.ac_root),
+                "--test-root",
+                str(self.test_root),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            cwd=str(_REPO_ROOT),
+            env=_gate_env(self.ac_root),
+            check=False,
+        )
+
+        self.assertNotEqual(
+            proc.returncode,
+            0,
+            "A genuinely failing parametrized covering test must produce a "
+            f"non-zero exit.\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}",
         )
         self.assertEqual(
             ac_path.read_bytes(),

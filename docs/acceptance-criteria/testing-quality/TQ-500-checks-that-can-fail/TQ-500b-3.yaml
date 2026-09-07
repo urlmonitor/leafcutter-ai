@@ -1,0 +1,130 @@
+id: TQ-500b-3
+components:
+  - testing_quality
+  - build_pipeline
+title: "A state diagram showing the five recorded states and which of them mean incomplete"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who must know what each recorded state of a falsifiability answer
+      means, and how a piece of work moves between them,
+  When they consult the project's architecture documentation for this behaviour,
+  Then a state diagram shows the states a piece of work's falsifiability answer can
+    hold — no record, answer not owed, answer owed and absent, reasoned negative,
+    and answer taken — and the transitions between them,
+    And the diagram marks which states cause the work to be reported incomplete and
+      which do not,
+    And the diagram shows the no-record state as distinct from the answer-owed-and-
+      absent state, and names the two ways the no-record state arises: a run that
+      stopped before the work was handed on, and work finished before the answer
+      existed,
+    And the diagram shows the reasoned negative terminating in the answer-taken
+      state rather than in a failure state.
+depends_on:
+  - TQ-500b
+  - TQ-500b-1
+doc_links:
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The neighbouring component documentation the diagram sits alongside, and where
+      the surrounding mark-time gates are already drawn.
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500b-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The authority for the state names and the incomplete-versus-not distinction the
+      diagram must reproduce. The diagram documents that behaviour; it does not
+      define it.
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - >-
+    The diagram belongs beside the existing mark-time gates in
+    docs/architecture/components/phantom-done-prevention.md, not in a new
+    component document. The falsifiability answer is a second key on a reading
+    that already exists there; a separate page would present it as a separate
+    mechanism.
+  - >-
+    STATE NAMES ARE COPIED, NOT COINED. Use TQ-500b-1's five names verbatim —
+    no_record, answer_not_owed, answer_owed_absent, reasoned_negative,
+    answer_taken. A diagram that renames a state creates a second vocabulary for
+    the reader trying to interpret an output.
+  - >-
+    The no-record state must be drawn as distinct from answer_owed_absent, with
+    both of its entry paths labelled: a run that stopped before hand-off, and
+    work finished before the answer existed. Three of these five states present
+    identically today, so the collapse must be visible as separate nodes rather
+    than as a footnote.
+  - >-
+    Must show the reasoned negative terminating in answer_taken, not in a failure
+    state. A diagram that draws it as a failure contradicts TQ-500a-2 and will be
+    followed in preference to the template text.
+  - >-
+    Must satisfy the project's Mermaid conventions and the check-mermaid-drift
+    and check-mermaid-parent-link commit hooks. It is a state diagram, so it must
+    not restate the component's C4 decomposition.
+  - >-
+    THE DELIVERABLE IS THE DOCUMENT AND ONLY THE DOCUMENT. No behavioural AC in
+    this tree may be closed by pointing at this diagram, and a state appearing in
+    it is not evidence that anything produces that state.
+delivers_to: null
+expects_from:
+  ac_id: TQ-500b-1
+  contract: >-
+    The state names and the rule for which states report the work incomplete. The
+    diagram must match them and must be corrected if they change; it is not an
+    independent definition.
+test_required: false
+test_rationale: |
+  change_target is docs and the deliverable is a Mermaid state diagram; there is
+  no executable behaviour to constrain. Recorded explicitly rather than left
+  absent so test-writer skips with an accurate reason.
+
+  Deliberately NOT given a presence test. A test asserting the diagram contains
+  five state names would be green the moment the file is written, could never
+  fail for any reason connected to the behaviour, and would then be citable as
+  evidence that the states exist in the system — the exact substitution
+  KI-TQ-010 records. The diagram's correctness is enforced by
+  check-mermaid-drift and by review against TQ-500b-1, which owns the state
+  names.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept architecture-diagram-author and change_target docs. Placed the diagram
+      in docs/architecture/components/phantom-done-prevention.md beside the
+      existing mark-time gates, required the five state names be copied verbatim
+      from TQ-500b-1, and set test_required false with an explicit rationale for
+      why a presence test would itself be an unfalsifiable check. criteria
+      untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Authored to satisfy TQ-500b's state-diagram documentation trigger. The trigger is
+  well placed: three of these five states present identically today, and a reader
+  who cannot see the state space has no way to notice that two of them have
+  collapsed into one.
+
+  THIS AC'S DELIVERABLE IS THE DOCUMENT, AND ONLY THE DOCUMENT. It is deliberately
+  not a proxy for any behavioural check in this tree. No behavioural AC here may be
+  closed by pointing at this diagram, and the presence of a state in the diagram is
+  not evidence that the state is produced by anything — that evidence is TQ-500b-1
+  and TQ-500b-1-i.
+
+  Also satisfies TQ-500a's and TQ-500d's need for a picture of the state space; they
+  carry their own documentation triggers, answered by the how-to at TQ-500d-2 and the
+  reference at TQ-500e-3 rather than by further copies of this diagram.

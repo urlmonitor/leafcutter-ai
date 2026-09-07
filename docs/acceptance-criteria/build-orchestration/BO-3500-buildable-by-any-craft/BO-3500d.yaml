@@ -1,0 +1,57 @@
+id: BO-3500d
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "See how much of your backlog can actually be built"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A number you can watch, not a surprise one refusal at a time.
+
+  You can see how much of the backlog the automation cannot build and for what
+  reason, so the coverage of the promise is something you track and improve
+  deliberately rather than discover by aiming at things and being turned away.
+depends_on: [BO-3500]
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: [BO-3500d-1, BO-3500d-2, BO-3500d-3, BO-3500d-4]
+implemented_by: []
+documentation_triggers: [how-to, reference-doc]
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS EXISTS AS A REQUIREMENT AND NOT AS A ONE-OFF MEASUREMENT. The figure
+  on BO-3500 — 660 not-yet-done requirements naming a craft the automation does
+  not have — was obtained by hand on 2026-08-31 and is already going stale. A
+  number that only exists because somebody counted it once cannot be used to
+  tell whether this goal is being met, and its absence is why the gap went
+  unnoticed until an operator hit it: the promise "point at a requirement and get
+  a pull request" has never had a coverage figure attached to it.
+
+  SHAPED AFTER BO-2400d ("See what each build costs and how long it takes"),
+  which is the same idea applied to time and money — the fast lane is expected to
+  report on itself rather than be taken on trust. Distinct from it: that measures
+  runs that happened, this measures work that cannot start.
+
+  BOUNDARY vs BO-2400f-12. That criterion makes an individual refusal legible at
+  the moment it happens, before the operator has paid for anything. This one is
+  the standing view across the whole store, available without aiming at anything.
+  A perfect per-run refusal message still leaves you unable to answer "how much
+  of my backlog is stuck".
+
+  FOR THE BA / IT PO: resist making this a live gate. It is a view, not a
+  verdict. A coverage figure that starts blocking things is a different
+  requirement and needs its own conversation with the user. Note also BO-2400c-6
+  / KI-BO-016 — traversing the whole store is not cheap, and the measured cost
+  of producing this number is a real design constraint rather than an afterthought.

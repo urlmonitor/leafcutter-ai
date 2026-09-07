@@ -1,0 +1,257 @@
+id: TKT-600b-4
+title: "The drive never edits a ticket's phase record to make it agree with the drive's own behaviour"
+component: ticket-creation
+components:
+  - build_orchestration
+  - ticket_creation_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical   # owner decision at the approval gate, 2026-09-01
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket already on disk whose phase record requires a phase the drive will not
+    dispatch for that ticket's location,
+  When the drive runs that ticket,
+  Then the drive changes no phase status in that ticket's record,
+  And the record after the run is identical to the record before it, apart from entries
+    written by phases that actually ran,
+  And the drive surfaces the disagreement, naming both the phase the record requires and
+    the phases the drive will run,
+  And the ticket is not recorded complete.
+
+  Given instead a drive that reconciles the disagreement by rewriting that entry to
+    match what it decided to dispatch,
+  When the ticket is then read,
+  Then that is a failure of this criterion even though the drive completed and the
+    ticket reads done, and it is observable as the ticket's record differing before and
+    after a run by a phase that never ran.
+
+  The reason this remedy is excluded rather than merely unpreferred: the completion gate
+  decides whether a ticket is finished by reading the ticket's own record. That decision
+  is worth something only while the record is written by someone other than the party
+  the gate is checking. A drive that edits the record to agree with itself makes the
+  ticket agree by construction, and the gate then confirms nothing. Clearing the observed
+  halt this way costs the trustworthiness of every completion decision the gate makes
+  afterwards, including the ones about tickets that are genuinely unfinished.
+depends_on: [TKT-600b]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-20260831-1930 explicitly rejects the runtime-reconciliation alternative for this reason."
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "The record-stops-being-independent-evidence shape this criterion forbids."
+  - path: scripts/set_ticket_status.py
+    relationship: related
+    status: exists
+    relevance: "The completion write whose agents-parity check produced the observed refusal — the reader whose independence this criterion protects."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The drive's dispatch and completion topology."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy the test_spec entries below are drawn from."
+assigned_agent: python-coder
+estimated_complexity: M
+# Derived from the Then clauses, not opinion (BO-2900g-2): "the drive changes no
+# phase status in that ticket's record", "the record after the run is identical
+# to the record before it", and the excluded remedy is "observable as the
+# ticket's record differing before and after a run". All are claims about a
+# persisted record — the criterion is entirely ABOUT a durable write, even
+# though what it requires is that one not happen.
+declares_side_effect: true
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: >-
+      The disagreement report the drive must produce instead of a write. Both sides
+      of the disagreement are named, so the halt is diagnosable without re-reading
+      the source — which the observed halt was not.
+    properties:
+      record_requires:
+        type: array
+        items:
+          type: string
+        description: Phases the ticket's own record names as needed.
+      drive_will_run:
+        type: array
+        items:
+          type: string
+        description: Phases the drive will dispatch for this ticket's location.
+      disagreement:
+        type: array
+        items:
+          type: string
+        description: The non-empty difference that caused the hold-back.
+    required:
+      - record_requires
+      - drive_will_run
+      - disagreement
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: >-
+    1 prohibition applied across every write path the drive owns. The concrete
+    surfaces are writeTicketCompletion (:870) and concludeTicket (:1037), plus the
+    no-phases-to-run exit at :1396 which is the path the observed halt actually took.
+    The prohibition is on authorship, not on a particular function, so an
+    implementation that guards one write path and leaves another able to touch a
+    non-dispatched entry has not satisfied it.
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - python -m pytest unit_tests/workflows/ -q
+  constraints:
+    - >-
+      The drive must not write any status for a phase it did not dispatch — not the
+      passing value, not the exclusion value, not a cleared value. Rewriting the
+      entry to the exclusion value looks like a correction and is the same violation
+      as marking it passed: it is the drive making the record agree with the drive.
+    - >-
+      python-coder is the correct assignee for this .js surface. config/agent_registry.json
+      records .py and .js under python-coder with an explicit rationale for
+      templates/workflows-js/, and the covering tests are pytest driving a Node
+      harness, so the executable contract is Python. This is stated so the
+      intent-vs-surface check is answered in the record rather than re-litigated.
+    - >-
+      The disagreement must be surfaced with both sides named, and the ticket must
+      not be recorded complete. A silent skip is as damaging as a rewrite: it leaves
+      no evidence that the two sides disagreed.
+    - >-
+      The wording of the halt message is explicitly OUT of scope. The observed
+      message contradicted itself — zero outstanding phases, and a refusal anyway —
+      and that diagnosability defect belongs to build-orchestration, not here. This
+      AC requires only that the disagreement be reported and both sides named.
+    - >-
+      Must not weaken the refusal. The lenient completion path recorded in
+      KI-BO-20260831-1932, which flipped two tickets to done on the same condition
+      that refused a third, is the failure this criterion is protecting the refusing
+      path against. Any change here must leave the refusing path strictly no more
+      permissive than it is today.
+    - >-
+      Once TKT-600b-1 lands, this disagreement should stop occurring for newly
+      generated tickets. It must still be detected and refused, because tickets
+      already on disk carry the old record and because a future divergence between
+      the two sides is exactly what this criterion exists to catch. Do not make the
+      check conditional on the generator's version.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A drive whose only writes to a ticket's phase record are the sign-offs of phases
+    it actually dispatched, and which on any record-versus-dispatch disagreement
+    reports both sides and holds the ticket open. What is delivered downstream is a
+    record whose completion evidence was written by someone other than the party the
+    completion gate is checking.
+expects_from:
+  ac_id: TKT-600b-1
+  contract: >-
+    The location-keyed deferred phase set the drive compares against the record.
+    Without a shared declaration the drive has no principled statement of what it
+    will run to name in the disagreement report.
+test_spec:
+  - name: test_record_is_unchanged_apart_from_phases_that_ran
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Snapshot the ticket's phase record before a drive of a ticket whose record
+      requires a phase the drive will not dispatch, and diff it after. Every entry
+      belonging to a phase that did not run must be byte-identical. Asserted as a
+      diff over the whole map, not as a check on one named entry.
+  - name: test_disagreement_is_reported_naming_both_sides
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      On the same disagreement, the drive holds the ticket open and emits a report
+      naming the phases the record requires and the phases it will run. Assert the
+      ticket is not recorded complete and the report's two lists are both populated
+      and correct.
+  - name: test_refusal_is_produced_by_consumed_control_flow
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Execute the real completion path through the node harness with a disagreeing
+      record and assert the refusal follows from the comparison being consumed in a
+      branch — vary the record so the same code path yields BOTH outcomes. A test
+      that only observes a refusal cannot tell a live comparison from a constant, and
+      this repo has shipped a runner whose gates were defined and never executed.
+  - name: test_a_reconciling_drive_is_detected_and_rejected
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Run the before/after comparison against a variant that rewrites the disagreeing
+      entry to match what it dispatched. The record then differs before and after by a
+      phase that never ran, and the test must fail. This is the cheapest fix for the
+      observed blocker — one write, no cross-side agreement needed, and it repairs
+      every ticket already on disk — so it must be held red explicitly.
+test_rationale: >-
+  Runtime reconciliation passes TKT-600b-1 through TKT-600b-3 without ever making the
+  two sides agree, so this criterion cannot be left to a notes field or to reviewer
+  vigilance; it needs a test that fails on it. The boundary entry is that test, and it
+  is framed as a before/after diff because the violation is observable only as a
+  change to the artifact, never as a wrong value at any single moment. The seam entry
+  is required by CLAUDE.md's gate/workflow rule and is written to demand BOTH outcomes
+  from the same path, because a refusal that is always produced is indistinguishable
+  from a gate that is hard-wired shut, and the fast-lane runner shipped exactly that.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-01
+    note: >-
+      Added it_requirements, test_spec, test_rationale, contracts and doc_links.
+      Recorded that the prohibition covers the exclusion value too, not only the
+      passing value, and answered the intent-vs-surface question in the record
+      (python-coder owns .js per config/agent_registry.json, tests are pytest over a
+      Node harness). Criteria untouched.
+superseded_by: null
+covered_by:
+  - TKT-600b-4-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE EXCLUSION IS IN THE CRITERIA ON PURPOSE, not only here. Runtime reconciliation is
+  the cheapest implementation that clears the observed blocker: it is one write, it needs
+  no agreement between the generator and the drive, and it fixes every ticket already on
+  disk as a side effect. If the exclusion lived only in a notes field, that is the
+  implementation a coder would reasonably choose, and it would pass TKT-600b-1 through
+  TKT-600b-3 without ever making the two sides agree. Stated as criteria it is testable:
+  compare the record before and after a run.
+
+  WHAT THIS DOES NOT FORBID is bounded by TKT-600b-4-i — a phase that actually ran
+  records its own outcome, and that is a write to the record which must remain legal.
+  The line is authorship: the party that performed the work records it; the drive does
+  not record work on behalf of a phase it declined to run.
+
+  ADJACENT AND NOT ABSORBED — KI-BO-20260831-1932. In one drive the completion guard
+  refused ticket 01 and flipped tickets 03 and 20 to done on identical conditions. That
+  lenient path is a second and separate way the record stops being evidence, and its fix
+  direction (take the phase list from the ticket, not from the caller's request) is a
+  change to the completion write rather than to the drive's record-editing behaviour. It
+  is left out of this AC deliberately. It matters here only as confirmation that the
+  refusing path is the correct one, which is what this criterion is protecting.
+
+  THE HALT ITSELF IS IN SCOPE HERE; THE WORDING OF THE HALT IS NOT. This criterion
+  requires that the disagreement be surfaced and that both sides be named. Whether the
+  message can state its own cause without contradicting itself — the "0 needed phases
+  outstanding, and a refusal anyway" shape — is a diagnosability property recommended
+  out to build-orchestration in TKT-600b's notes, because a generator fix would make
+  that message stop appearing for this cause while leaving it able to mislead about the
+  next one.

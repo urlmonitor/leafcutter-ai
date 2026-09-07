@@ -1,0 +1,100 @@
+id: BO-3500d-2-i
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "A requirement the report cannot classify is counted as unbuildable and listed, never as buildable"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement the report cannot classify — its declaration is absent,
+    malformed, or names something the report does not recognise,
+  When the report is produced,
+  Then that requirement is counted as one the automation cannot build, under a reason
+    stating that it could not be classified,
+  And it is not counted as buildable,
+  And it is not omitted from the totals, so the buildable and unbuildable counts still
+    add up to the backlog the report says it counted.
+
+  Given a report in which some requirements could not be classified,
+  When an operator reads it,
+  Then those requirements are listed individually, so the group can be worked through
+    and emptied rather than only observed.
+depends_on: [BO-3500d-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Most fields a requirement carries are optional, so a record the report cannot classify is an ordinary state of the backlog rather than a corruption — which is why the report must have a defined answer for it rather than an exception."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE UNMATCHED BRANCH MUST BE AN EXPLICIT `unclassifiable` GROUP, NEVER A FALL-THROUGH TO BUILDABLE. Fail-closed. This is the same shape that has made several of this project's own gates report clean while checking nothing — a validator that matched no files and exited zero, a hook that was never given the file it was meant to check. A report is a gate whose output is a number, and silence is not a pass."
+  - "COUNTING THE UNCLASSIFIABLE AS UNBUILDABLE IS THE DELIBERATE CONSERVATIVE CHOICE. If it is wrong the figure is pessimistic and somebody investigates; the other way round the figure is flattering and nobody does. Do not add a 'probably fine' heuristic that reclassifies them."
+  - "THE TOTALS INVARIANT IS ASSERTED IN CODE, not only in a test: buildable + unbuildable == backlog_counted. It is what makes the unclassifiable group impossible to quietly omit."
+  - "THE UNCLASSIFIABLE GROUP LISTS ITS ac_ids INDIVIDUALLY. Unlike the other reasons this one is fixed by editing records, and it cannot be fixed by anyone who cannot see which records — so `ac_ids` is required on this group, whatever the report does for the others."
+  - "An absent declaration is NOT unclassifiable: BO-3500a-1-ii routes it by the standing default and it is buildable. Reserve this group for a declaration that is malformed or names something the report does not recognise, or the group swallows the ~312 undeclared records and the report becomes useless."
+  - "NO PRESENCE-ONLY ASSERTIONS. Every test produces a real report over a fixture store containing unclassifiable records."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500d-2
+  contract: "The grouped-by-reason structure and its add-up invariant. This record adds the `unclassifiable` reason code to that vocabulary and requires its group to carry ac_ids."
+test_spec:
+  - name: test_unclassifiable_record_counted_as_unbuildable
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A record whose declaration is malformed or unrecognised appears in the unclassifiable group and in the unbuildable count."
+  - name: test_unclassifiable_record_never_counted_as_buildable
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The unmatched branch does not fall through to the buildable side; assert the buildable count excludes it."
+  - name: test_totals_still_add_up_with_unclassifiable_records_present
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "buildable + unbuildable == backlog_counted with unclassifiable records in the fixture — none omitted from the totals."
+  - name: test_unclassifiable_records_listed_individually_by_id
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The unclassifiable group carries the ac_ids of its members so the group can be worked through and emptied."
+  - name: test_undeclared_producer_is_buildable_not_unclassifiable
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A record with assigned_agent absent is counted buildable via the standing default, not swept into the unclassifiable group."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE DEFAULT A REPORT DRIFTS TOWARDS IS OPTIMISM. Anything it cannot classify falls
+  through to the buildable side, because that is what an unmatched branch does, and the
+  figure improves for no reason. This is the same fail-open shape that has made several
+  of this project's own gates report clean while checking nothing — a validator that
+  matched no files and exited zero, a hook that was never given the file it was meant
+  to check. Silence is not a pass, and a report is a gate whose output is a number.
+
+  COUNTING THE UNCLASSIFIABLE AS UNBUILDABLE IS THE CONSERVATIVE CHOICE AND IS
+  DELIBERATE. If it is wrong, the figure is pessimistic and somebody investigates. The
+  other way round, the figure is flattering and nobody does.
+
+  THE LISTING CLAUSE turns this group into work rather than noise. Unlike the other
+  reasons, this one is fixed by editing records, and it cannot be fixed by anyone who
+  cannot see which records.

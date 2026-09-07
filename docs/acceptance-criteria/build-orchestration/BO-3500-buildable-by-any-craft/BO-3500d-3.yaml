@@ -1,0 +1,137 @@
+id: BO-3500d-3
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "The report gives starting points as well as records, both from the one reading of the backlog"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a backlog in which some requirements are individually buildable but sit in a
+    connected group that also contains an unbuildable one,
+  When the buildability report is produced,
+  Then the report states, separately from the count of buildable requirements, how many
+    requirements an operator could point at and get a build from,
+  And the second figure is lower than the first whenever an unbuildable requirement is
+    reachable from a buildable one,
+  And the report presents both figures rather than a single number that hides the
+    difference between them,
+  And it says which of the two is the one that describes what an operator experiences.
+
+  Given a backlog of several thousand requirements,
+  When the report produces the starting-point figure covering every requirement in the
+    backlog,
+  Then it is derived from the same single reading of the backlog that the other figures
+    come from,
+  And no requirement's connected group is worked out by a separate reading — reporting
+    on every possible starting point costs the same reading as reporting on one.
+
+  Given a backlog in which one unbuildable requirement is reachable from many buildable
+    ones,
+  When the report is produced,
+  Then the gap between the two figures reflects that reach, so the requirement whose
+    unbuildability costs the most starting points is identifiable.
+depends_on: [BO-3500d]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-016 is why the second scenario is written as a constraint rather than left to implementation: working each starting point's group out separately means one full reading of the backlog per starting point, at tens of seconds each."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "BUILD THE GRAPH ONCE FROM THE ONE READ, THEN COMPUTE REACHABILITY OVER IT IN MEMORY. Never call resolve_connected_build_set per starting point: at the measured cost of a full store read (27-39 s after BO-2400c-6, per KI-BO-016) a few thousand starting points is not a slow report, it is a report nobody will ever run. Reach over a graph already in hand is cheap; obtaining the graph is the expensive part and it is already paid for."
+  - "ASSERT THE NUMBER OF READS, NEVER A DURATION — the same rule as BO-3500d-1-i, and for the same reason: KI-BO-016's own fix was tested with a parse-count assertion because a wall-clock bound is flaky by construction. The read count must be independent of the number of starting points covered."
+  - "BOTH FIGURES ARE PRESENT AND LABELLED, and the report states WHICH describes what an operator experiences: the starting-point figure. A single number hiding the difference is the failure this record exists to prevent, and it understates the problem by an unknown amount."
+  - "REACH ATTRIBUTION IS PART OF THE DELIVERABLE: for each unbuildable record, how many starting points it blocks. A single record blocking two hundred starting points is worth more attention than fifty blocking one each, and only this figure separates them."
+  - "THE FALLBACK IS DOCUMENTED AND DELIBERATE, NOT SILENT. If whole-backlog reach proves infeasible, report the starting-point figure over a STATED sample and say so on the report. Dropping the figure and letting the record count stand in for it is not an option — that is the understatement this record forbids."
+  - "The graph edges are the same relations the resolver uses (depends_on plus subtree containment). Do not invent a second notion of connectedness, or the report's starting-point figure and the lane's actual behaviour will disagree."
+  - "NO PRESENCE-ONLY ASSERTIONS. Every test produces a real report over a fixture store and instruments the read count."
+delivers_to:
+  agent: python-coder
+  contract: "Extends the report structure with {startable: {count, share}, buildable_records: {count, share}, operator_facing_figure: 'startable', blockers: [{ac_id, starting_points_blocked: int}]} — all derived from the same single store read that produced the other figures."
+expects_from:
+  ac_id: BO-3500d-1
+  contract: "The single store-reading pass and the record-level buildability verdict. This record adds the graph build and the reachability computation over it, and must add no further read (BO-3500d-1-i)."
+test_spec:
+  - name: test_startable_figure_lower_when_an_unbuildable_is_reachable
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "In a fixture where buildable records sit in a group containing an unbuildable one, assert the startable count is strictly lower than the buildable-record count."
+  - name: test_both_figures_present_and_labelled
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The report carries both figures under distinct labels rather than one number."
+  - name: test_report_names_which_figure_describes_operator_experience
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "operator_facing_figure identifies the startable figure, as a field a reader and a caller can both use."
+  - name: test_startable_figure_derived_from_a_single_read
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Instrument the store read; produce the report covering every starting point in a multi-thousand-record fixture and assert the read count is 1."
+  - name: test_read_count_independent_of_starting_point_count
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Reports over fixtures with 10 and 1,000 starting points perform the same number of reads."
+  - name: test_blocker_reach_attribution_identifies_the_worst_record
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With one unbuildable record reachable from many buildable ones, assert blockers ranks it first with the correct starting_points_blocked count."
+  - name: test_graph_edges_match_the_resolvers_notion_of_connectedness
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "For a sample of starting points, assert the in-memory graph's reachable set equals resolve_connected_build_set's output for the same id — one notion of connectedness, checked behaviourally on a sample rather than assumed."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE FIGURE THAT MATTERS AND THE FIGURE THAT IS EASY TO GET ARE NOT THE SAME, which is
+  the whole content of this criterion. BO-3500 states the underlying fact: because
+  groups are resolved from the backlog rather than chosen, one unbuildable member
+  anywhere in a subtree takes the whole subtree with it, so the share of refused
+  STARTING POINTS is higher than the share of unbuildable records. A report giving only
+  the second understates the problem, and understates it by an unknown amount.
+
+  THE SECOND SCENARIO IS THE PRODUCT OWNER'S THIRD DEFERRED QUESTION APPLIED TO ITS
+  HARDEST CASE. The obvious way to count startable points is to resolve each one's
+  group and see. At the measured cost of a full reading — thirty to forty seconds after
+  BO-2400c-6, per KI-BO-016 — doing that a few thousand times is not a slow report, it
+  is a report nobody will ever run. So it is specified out: both figures come from one
+  reading, and reachability is worked out over the whole backlog at once rather than
+  per starting point. That is affordable, because reach over a graph already in hand is
+  cheap, and it is testable in the shape KI-BO-016's own fix was tested — assert the
+  number of readings, never a duration.
+
+  IF THAT PROVES IMPOSSIBLE, the honest fallback is to report the starting-point figure
+  over a stated sample and say so, not to drop it and let the record count stand in for
+  it. Recorded here so the fallback is a deliberate choice rather than a silent one.
+
+  THE THIRD SCENARIO turns the gap into a work list, the way BO-3500d-2 turns the
+  unbuildable count into one. A single requirement blocking two hundred starting points
+  is worth more attention than fifty requirements blocking one each, and only the reach
+  figure can tell them apart.

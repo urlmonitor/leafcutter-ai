@@ -1,36 +1,45 @@
 """
 MODULE: test_bp_1100b_4
 GOAL: Calibrate `_workflow_engine_harness.py` against the real E2 engine's
-    injected-globals contract (ADR-017) BEFORE any journal test is re-authored
+    injected-globals contract (ADR-030) BEFORE any journal test is re-authored
     against it — the harness fidelity fix is the prerequisite this ticket
-    mandates comes FIRST (see BP-1100b-45 ticket "ORDERING" constraint).
+    mandates comes FIRST (see BP-1100b-4's it_requirements "ORDERING"
+    constraint).
 BUSINESS CONTEXT: A reviewer executed run_workflow_under_e2() against
-    finalize-feature.js and it wrote 9 journal records in step order with
-    ZERO implementation, because the harness runs the target script as a
-    plain Node.js module — `require`, `fs`, `process`, `module`, etc. are all
-    still reachable from the workflow body, unlike the real E2 engine, which
-    injects only a fixed set of named globals into the script body and
-    exposes no module loader or filesystem primitive. Authoring the journal
-    tests against today's harness would certify a behaviour production cannot
-    perform. These tests make that gap fail loudly (red) until the harness is
-    fixed to be engine-faithful.
+    finalize-feature.js and it wrote journal records under the OLD (pre-vm)
+    harness with ZERO implementation, because the harness ran the target
+    script as a plain Node.js module — `require`, `fs`, `process`, `module`,
+    etc. were all still reachable from the workflow body, unlike the real E2
+    engine, which injects only a fixed set of named globals into the script
+    body and exposes no module loader or filesystem primitive. Authoring
+    behavioral tests against that harness would certify behaviour production
+    cannot perform. These tests prove, by execution, that the harness now
+    denies exactly what the real engine denies.
 ARCHITECTURE: Drives the REAL harness (`run_workflow_under_e2`) against small,
     synthetic workflow-script bodies (not finalize-feature.js) written to a
     temp .js file, so each test isolates exactly one fidelity property. Each
     synthetic script reports what it observed back to the Python side via a
     single `agent()` call whose `opts` dict carries the probe results — this
     is the only public channel `HarnessResult` exposes (agent_calls,
-    contract_violations, stdout/stderr/returncode/error), and using it keeps
-    these tests EXECUTED (they actually run the harness), never a
+    contract_violations, stdout/stderr/returncode/error, result), and using
+    it keeps these tests EXECUTED (they actually run the harness), never a
     presence-only grep of `_workflow_engine_harness.py` itself — the exact
     defect class BP-1100b-5 exists to reject.
-TICKET: 09_bp1100b45_presence_only_assertions_stop_counting.md
+
+    MODULE SPLIT: the calibration tests (filesystem-dependent journaling
+    produces zero records; a run that cannot append fails rather than
+    passing) moved to test_bp_1100b_4_calibration.py, and the sandbox-escape
+    / strict-mode regression tests moved to
+    test_bp_1100b_4_sandbox_fidelity.py, once this file grew past the
+    project's 400-line new-file guideline. `_write_script()` and `_TIMEOUT`
+    are re-exported (imported) by both sibling files rather than duplicated.
 AC: BP-1100b-4
 """
 
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -42,27 +51,31 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    ADR_030_INJECTED_GLOBALS,
+    SANDBOX_BACK_COMPAT_GLOBALS,
+    run_workflow_under_e2,
+)
 
 _TIMEOUT = 15
 
-# The exact set of globals the real E2 engine injects into a workflow script's
-# top-level body (per ADR-017 and the AC-5 test_spec). The harness must expose
-# EXACTLY this set — no more, no less.
-_ENGINE_INJECTED_GLOBALS = [
-    "agent",
-    "parallel",
-    "pipeline",
-    "phase",
-    "log",
-    "args",
-    "workflow",
-    "budget",
-]
+# F7 FIX: the injected-globals set is NO LONGER hand-typed a second time here.
+# ADR_030_INJECTED_GLOBALS and SANDBOX_BACK_COMPAT_GLOBALS are imported
+# directly from _workflow_engine_harness — the SAME constants the harness
+# uses to build the actual vm sandbox object (_SANDBOX_ENTRIES_JS) — so this
+# test can never independently drift from what the harness really exposes.
+# An adversarial review found the previous local copy
+# (_ENGINE_INJECTED_GLOBALS) was exactly the "second hand-typed copy" that
+# BP-1100b-4's own it_requirements constraint forbids, despite this file's
+# own docstring claiming the opposite ("not asserted against a copy of the
+# list taken from the harness source").
 
 # Names that must NOT be reachable from the workflow body: module loaders and
 # filesystem primitives that a plain (un-sandboxed) Node.js module always
-# exposes, but the real E2 engine does not.
+# exposes, but the real E2 engine does not. This list is intentionally local
+# (not part of the ADR-030 contract the harness constants declare) — it
+# enumerates what the DENIAL side of the fidelity property must cover, not
+# what the sandbox positively exposes.
 _FORBIDDEN_NAMES = [
     "require",
     "module",
@@ -89,48 +102,117 @@ def _write_script(tmp_dir: Path, body: str) -> Path:
     return script_path
 
 
+def _compute_bare_vm_context_baseline_names(timeout: int = _TIMEOUT) -> set[str]:
+    """Return the own-property-name set of a FRESH, empty, null-prototype
+    `vm.createContext()` global object, ENUMERATED FROM INSIDE THAT CONTEXT
+    (via `vm.runInContext`) — i.e. exactly the JS intrinsics (`Object`,
+    `Array`, `Function`, `eval`, `globalThis`, ...) that any contextified
+    realm carries for free, with nothing added.
+
+    "From inside" matters and is not a stylistic choice: enumerating the
+    sandbox object from the OUTSIDE (`Object.getOwnPropertyNames(ctx)` in the
+    driver realm, without ever running code in the context) returns only the
+    explicitly-set own properties of the plain shell object — none of V8's
+    global intrinsics, because `vm.createContext()` associates a context with
+    an internal global object lazily; the intrinsics only become visible
+    through `globalThis` as seen BY CODE RUNNING IN THAT CONTEXT. Enumerating
+    from outside first (an earlier version of this probe) produced a baseline
+    of ~2 names against a real sandbox enumeration of ~70, which would have
+    misattributed every JS intrinsic to this harness's own sandbox additions.
+    Matching the measurement technique to how the real enumeration test below
+    measures the sandbox (also via `vm.runInContext`, from inside) is what
+    makes the diff meaningful.
+
+    F6 FIX support: rather than hardcoding a list of "known JS intrinsics"
+    (which would silently go stale across Node versions and re-introduce the
+    same drift problem F7 exists to prevent), this measures the baseline
+    EMPIRICALLY on whatever Node the test actually runs under, so the
+    enumeration test below can compute a version-independent DIFF: sandbox
+    names minus baseline names must equal exactly the declared globals.
+
+    Raises:
+        RuntimeError: if the node subprocess fails or its output cannot be
+            parsed as a JSON array of strings.
+    """
+    script = (
+        "const vm = require('vm');\n"
+        "const ctx = Object.create(null);\n"
+        "vm.createContext(ctx);\n"
+        "const names = vm.runInContext("
+        "'Object.getOwnPropertyNames(globalThis)', ctx);\n"
+        "process.stdout.write(JSON.stringify(names));\n"
+    )
+    try:
+        proc = subprocess.run(
+            ["node", "-e", script],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        raise RuntimeError(f"Could not compute vm baseline: {exc}") from exc
+
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"node -e baseline probe exited {proc.returncode}: {proc.stderr}"
+        )
+    try:
+        names = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"Could not parse baseline probe output as JSON: {proc.stdout!r}"
+        ) from exc
+    return set(names)
+
+
 class TestHarnessExposesOnlyEngineInjectedGlobals(unittest.TestCase):
-    """AC-5 (BP-1100b-4): the harness exposes exactly the engine-injected
-    globals and no module loader or filesystem primitive.
+    """BP-1100b-4: the harness exposes exactly the engine-injected globals and
+    no module loader or filesystem primitive.
     """
 
     def test_harness_exposes_only_the_engine_injected_globals(self):
         # covers: BP-1100b-4
         """A workflow body run under run_workflow_under_e2() can reach
-        exactly the globals the real engine injects (agent, parallel,
-        pipeline, phase, log, args, workflow, budget) and nothing else —
-        enumerated from the workflow body AT RUNTIME (typeof checks inside
-        the executed script), not asserted against a copy of the list taken
-        from the harness source.
+        EXACTLY the globals the real engine injects (agent, parallel,
+        pipeline, phase, log, args, workflow, budget) plus the documented
+        `console` back-compat exception, and nothing else — a true
+        ENUMERATION of the sandbox's namespace, not a spot-check.
 
-        FAILS TODAY for two independent reasons, either one of which is
-        sufficient to prove the harness is not yet engine-faithful:
-          1. `pipeline`, `workflow`, and `budget` are not defined anywhere in
-             the current harness shim — `typeof pipeline` etc. report
-             'undefined' when they should report 'function'/'object'.
-          2. `require`, `module`, `process`, `__dirname`, `__filename` are
-             ALL still reachable, because the harness runs the target script
-             as a plain (un-sandboxed) Node.js module.
+        F6 FIX: the previous version checked 8 names present and 6 names
+        absent — an allowlist/denylist spot-check over 14 identifiers, which
+        an adversarial review correctly noted is not what "EXACTLY this set —
+        no more, no less" (this class's own docstring) or "nothing else"
+        (the module docstring) claim. It could not catch a future accidental
+        addition to the sandbox object, because it never looked at the whole
+        namespace.
 
-        Must be implemented to make this test green:
-          Sandbox script execution (e.g. via the `vm` module or an explicit
-          Function() parameter list) so ONLY the named E2 globals are in
-          scope for the workflow body, and add `pipeline`, `workflow`,
-          `budget` mocks alongside the existing agent/parallel/phase/log/args.
+        This version enumerates `Object.getOwnPropertyNames(globalThis)`
+        from INSIDE the sandboxed body and diffs it against the same
+        enumeration of a bare, empty, null-prototype `vm.createContext()`
+        (computed fresh by `_compute_bare_vm_context_baseline_names()` on
+        whatever Node this test actually runs under, never a hardcoded
+        intrinsics list that could go stale across Node versions). The
+        result of that diff — what the sandbox adds BEYOND a bare context —
+        must equal EXACTLY `ADR_030_INJECTED_GLOBALS`, imported directly from
+        the harness (F7 fix: no second hand-typed copy).
+
+        `console` is checked SEPARATELY, not folded into the diff: measured
+        empirically, `console` is already present on a bare, un-augmented
+        `vm.createContext()` — it is a Node vm intrinsic, not something the
+        harness's `__sandbox__` object literal actually adds. The harness's
+        `console: console` entry overrides which `console` object the
+        sandbox sees (the driver's, not the context's own default one) but
+        does not add a new NAME to the namespace, so it would never appear in
+        an "added beyond baseline" diff regardless of whether the harness
+        code exists at all. The property this AC actually cares about —
+        `console` remains reachable — is asserted directly against
+        `sandbox_names`, which is true unconditionally on today's Node and
+        would only ever need the harness's explicit override to keep being
+        true if some future Node version stopped providing it for free.
         """
-        probe_lines = []
-        for name in _ENGINE_INJECTED_GLOBALS:
-            probe_lines.append(
-                f"__probe__['{name}'] = (typeof {name} !== 'undefined');"
-            )
-        for name in _FORBIDDEN_NAMES:
-            probe_lines.append(
-                f"__probe__['{name}'] = (typeof {name} !== 'undefined');"
-            )
         body = (
-            "const __probe__ = {};\n"
-            + "\n".join(probe_lines)
-            + "\nawait agent('probe', { label: 'probe', reachable: __probe__ });\n"
+            "await agent('probe', { label: 'probe', "
+            "names: Object.getOwnPropertyNames(globalThis) });\n"
         )
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -150,30 +232,92 @@ class TestHarnessExposesOnlyEngineInjectedGlobals(unittest.TestCase):
                 f"stderr: {result.stderr}"
             ),
         )
-        reachable = result.agent_calls[0].opts.get("reachable", {})
+        sandbox_names = set(result.agent_calls[0].opts.get("names", []))
+        baseline_names = _compute_bare_vm_context_baseline_names()
 
-        missing_expected = [
-            name for name in _ENGINE_INJECTED_GLOBALS if not reachable.get(name)
-        ]
-        unexpectedly_reachable = [
-            name for name in _FORBIDDEN_NAMES if reachable.get(name)
-        ]
+        # What the sandbox adds BEYOND a bare vm context must be exactly the
+        # 8 ADR-030 globals — no more, no less. `console` is intentionally
+        # excluded from this side of the check: measured empirically (see
+        # this test's own docstring), it is already present in
+        # `baseline_names` as a Node vm intrinsic, so it never appears in a
+        # "beyond baseline" diff regardless of the harness's own code.
+        added_names = sandbox_names - baseline_names
+        expected_added = set(ADR_030_INJECTED_GLOBALS)
 
         self.assertEqual(
-            missing_expected,
-            [],
+            added_names,
+            expected_added,
             msg=(
-                f"Engine-injected globals not reachable in the harness: {missing_expected}. "
-                f"Full reachability map: {reachable}"
+                f"The sandbox's namespace, minus a bare empty vm context's own "
+                f"intrinsics, is {added_names}. The ADR-030 contract declares "
+                f"exactly {expected_added}. Missing: "
+                f"{expected_added - added_names}. Unexpected extra (a "
+                f"namespace leak): {added_names - expected_added}."
+            ),
+        )
+
+        # `console` (the documented back-compat exception) must still be
+        # reachable — checked directly against the full enumeration, not via
+        # the baseline diff, since it is not a name the sandbox "adds".
+        missing_back_compat = set(SANDBOX_BACK_COMPAT_GLOBALS) - sandbox_names
+        self.assertEqual(
+            missing_back_compat,
+            set(),
+            msg=(
+                f"Documented back-compat global(s) not reachable in the "
+                f"sandbox: {missing_back_compat}."
+            ),
+        )
+
+        # VACUOUS-ASSERTION FIX (2026-08-26): the `missing_back_compat` check
+        # above can never fail — `console` is already present on a bare,
+        # un-augmented `vm.createContext()` (this test's own docstring says
+        # so), so `console` being IN sandbox_names is true whether or not the
+        # harness's own console entry exists at all. The property that
+        # actually matters, and that the round-1 harness got wrong, is
+        # BEHAVIORAL: `console.log()` must be a true no-op that never writes
+        # to the SAME stdout stream the driver uses to serialise
+        # `HarnessResult` as JSON. Round 1 assigned the DRIVER's own live
+        # `console` object into the sandbox (`console: console`); calling
+        # `console.log()` from the sandboxed body therefore wrote real text
+        # to the driver's stdout ahead of the JSON payload, which did not
+        # raise a parse error but silently corrupted `dispatch_count` (a
+        # script that dispatched exactly one `agent()` call read back as
+        # zero). Round 2 replaced it with a sandbox-realm no-op stub (see
+        # `_MOCK_GLOBAL_JS_SNIPPETS["console"]` in `_workflow_engine_harness.
+        # py`). Confirmed by direct execution: RED against the round-1-only
+        # harness (the marker text leaked into `result.stdout` and
+        # `dispatch_count` read 0), GREEN against the current one.
+        console_probe_body = (
+            "console.log('BP_1100B_4_CONSOLE_NOOP_MARKER');\n"
+            "await agent('probe2', { label: 'probe2' });\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp2:
+            probe_script = _write_script(Path(tmp2), console_probe_body)
+            probe_result = run_workflow_under_e2(probe_script, timeout=_TIMEOUT)
+
+        self.assertEqual(
+            probe_result.error,
+            "",
+            msg=f"Harness errored on console no-op probe: {probe_result.error}",
+        )
+        self.assertNotIn(
+            "BP_1100B_4_CONSOLE_NOOP_MARKER",
+            probe_result.stdout,
+            msg=(
+                "console.log() output leaked into the driver's own JSON "
+                "stdout channel — the sandboxed console is not a true "
+                f"no-op. stdout: {probe_result.stdout!r}"
             ),
         )
         self.assertEqual(
-            unexpectedly_reachable,
-            [],
+            probe_result.dispatch_count,
+            1,
             msg=(
-                f"Forbidden module-loader/process globals ARE reachable in the harness: "
-                f"{unexpectedly_reachable}. The real E2 engine does not expose these to a "
-                f"workflow script's top-level body. Full reachability map: {reachable}"
+                "console.log() output corrupted parsing of the captured "
+                f"agent() dispatch (got {probe_result.dispatch_count}, "
+                "expected 1) — the exact silent-corruption failure mode a "
+                "leaking console causes."
             ),
         )
 
@@ -183,14 +327,6 @@ class TestHarnessExposesOnlyEngineInjectedGlobals(unittest.TestCase):
         filesystem primitive under the harness is refused exactly as the
         real engine refuses it — i.e. `require('fs')` throws a
         ReferenceError (require is not defined), not a successful import.
-
-        FAILS TODAY: the harness runs the script as a plain Node.js module,
-        so `require('fs')` succeeds and no error is thrown at all.
-
-        Must be implemented to make this test green:
-          Sandbox script execution so `require` is not a defined identifier
-          in the workflow body's scope (ReferenceError on reference), the
-          same failure mode the real E2 engine produces.
         """
         body = (
             "let __requireThrew__ = false;\n"
@@ -233,80 +369,6 @@ class TestHarnessExposesOnlyEngineInjectedGlobals(unittest.TestCase):
                 f"produce for an undefined identifier. Got: {opts.get('errorType')!r}. opts: {opts}"
             ),
         )
-
-
-class TestFilesystemDependentJournalingProducesZeroRecordsUnderHarness(
-    unittest.TestCase
-):
-    """AC (calibration, BP-1100b-4): a workflow whose journaling depends on a
-    filesystem primitive produces ZERO journal records under the
-    engine-faithful harness — proving the harness reproduces the production
-    failure rather than masking it.
-    """
-
-    def test_filesystem_dependent_journaling_produces_zero_records_under_the_harness(
-        self,
-    ):
-        # covers: BP-1100b-4
-        """A synthetic workflow body that journals via
-        `require('fs').appendFileSync(journalPath, line)` wrapped in a
-        try/catch that swallows the error (mirroring finalize-feature.js's
-        own append-inside-a-try pattern) must produce ZERO bytes in the
-        journal file when run under the harness — because the real engine
-        exposes no filesystem primitive, so the append can never succeed in
-        production.
-
-        FAILS TODAY: the harness runs the script as a plain Node.js module,
-        so `require('fs').appendFileSync` succeeds and the journal file
-        contains the record — a false green for a journal mechanism that
-        cannot work in production.
-
-        Must be implemented to make this test green:
-          Sandbox script execution (see the two tests above) so that
-          `require` is unreachable, which makes the append throw and be
-          swallowed by the try/catch, leaving the journal file empty/absent —
-          matching the real production failure mode this AC exists to catch.
-        """
-        with tempfile.TemporaryDirectory() as tmp:
-            journal_path = Path(tmp) / "journal.jsonl"
-            journal_path_js = json.dumps(str(journal_path))
-            body = (
-                f"const __journalPath__ = {journal_path_js};\n"
-                "try {\n"
-                "  const __fs__ = require('fs');\n"
-                "  __fs__.appendFileSync(__journalPath__, "
-                "JSON.stringify({ step: 'probe' }) + '\\n');\n"
-                "} catch (__e__) {\n"
-                "  // swallowed — mirrors finalize-feature.js's append-inside-a-try\n"
-                "}\n"
-                "await agent('probe', { label: 'probe' });\n"
-            )
-            script_path = _write_script(Path(tmp), body)
-            result = run_workflow_under_e2(script_path, timeout=_TIMEOUT)
-
-            self.assertEqual(
-                result.error,
-                "",
-                msg=f"Harness itself errored (stderr: {result.stderr}): {result.error}",
-            )
-            self.assertEqual(result.dispatch_count, 1, msg=f"stderr: {result.stderr}")
-
-            journal_records = 0
-            if journal_path.exists():
-                content = journal_path.read_text(encoding="utf-8")
-                journal_records = len([ln for ln in content.splitlines() if ln.strip()])
-
-            self.assertEqual(
-                journal_records,
-                0,
-                msg=(
-                    "Expected ZERO journal records under the engine-faithful harness "
-                    "(the real engine exposes no filesystem primitive, so the append "
-                    f"can never succeed in production). Found {journal_records} record(s) "
-                    "— the harness is still letting `require('fs')` succeed, which is "
-                    "the exact phantom-done trap this AC exists to close."
-                ),
-            )
 
 
 if __name__ == "__main__":

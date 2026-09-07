@@ -1,0 +1,133 @@
+id: BO-3500a-3
+components:
+  - build_orchestration
+  - agent_registry
+title: "A craft that exists but is absent from this run is reported as a capability gap, judged against the run's own crafts"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a not-yet-done requirement whose declared producing craft is one this project
+    has, and a run whose available crafts do not include it,
+  When the run resolves a build set containing that requirement,
+  Then the run stops before any craft is dispatched,
+  And it reports a capability gap, naming the requirement, the craft it declares, and
+    the fact that this run has no place for that craft,
+  And the report says the requirement is correct and the automation is behind — it does
+    not suggest the requirement is wrong or should be edited.
+
+  Given the same requirement,
+  When it is built by a run whose available crafts do include the craft it declares,
+  Then the run proceeds and no capability-gap report is produced,
+  And this holds without the requirement being edited and without any list of refused
+    crafts being edited — the verdict is read from the crafts the run actually has, so
+    adding a craft to a run makes the requirements that declare it build, by itself.
+
+  Given a run and any craft this project has,
+  When an operator asks what that run can produce,
+  Then the crafts the run can dispatch are readable from the run itself, so an operator
+    can tell before starting whether a capability gap is coming.
+depends_on: [BO-3500a]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "The two honest endings are documented here. This criterion narrows the second of them — the up-front reason why not — into the case where the answer is 'not yet', and it is the ending that should become rare as this tree lands."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013 fix direction 1 — give the run a phase for the craft — is exactly the change this criterion must not require re-specifying. The second scenario is written so that adding the phase turns the refusal off with no edit to this criterion."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE HARD-CODED SET IS THE DEFECT THIS RECORD REMOVES, and it exists today in two places: `_ROSTER_BUILD_AGENTS = frozenset({\"python-coder\", \"test-writer\"})` at scripts/build_orchestration/fast_lane.py:802, and the literal phase sequence in templates/workflows-js/fast-lane-ship.js. The verdict must be computed from a run-scoped roster the run reads, so adding a craft to a run flips the verdict with no code edit and no edit to any refused-craft list."
+  - "DATA-DRIVEN, NEVER BY NAME. There must be no allow-list or deny-list of craft names anywhere on this path. A craft is available iff the run's roster contains it — so a craft nobody has heard of yet inherits the rule automatically. This is the hinge the whole L0 turns on: an implementation that hard-codes a refused-craft list satisfies BO-2400f-12's text and makes this tree unbuildable in the ordinary sense."
+  - "Reason code `capability_gap` with remedy `add-capability`, distinct from BO-3500a-2's `unresolvable_craft` / `fix-record`. Machine-readable and branched on; the 'the requirement is correct and the automation is behind' property is carried by the remedy field, not by wording."
+  - "THIRD SCENARIO IS A QUERY MODE, NOT A SECOND ENTRY POINT. fast_lane.py already has _build_cli_parser and main; add a subcommand that reports the run's roster without executing a build. An operator must be able to see the roster before paying for anything."
+  - "The verdict is computed over the whole resolved set (resolve_connected_build_set), per member, exactly as BO-3500a-2's is — a capability gap on a reachable member must name that member."
+  - "READ-ONLY, preserving BO-2400f-12-i. No writes on the refusal path."
+  - "NO PRESENCE-ONLY ASSERTIONS. The load-bearing test runs the SAME store twice against two rosters and asserts the outcome changes with nothing else changing; a test that greps for the absence of a literal list proves nothing."
+delivers_to:
+  agent: python-coder
+  contract: "Capability-gap outcome: {reason_code: 'capability_gap', ac_id, declared_producer: <agent_registry id>, roster: <the run's available crafts>, remedy: 'add-capability'}, plus a roster query result {crafts: [<agent_registry id>, ...]} from the CLI subcommand. Consumed by the run's ending, by the operator-facing pre-flight, and by BO-3500d-2's grouping, which must use these same reason codes."
+expects_from:
+  ac_id: BO-3500a-1
+  contract: "The run-scoped roster set (the crafts this run can dispatch, as data rather than a literal) and the per-member dispatch plan, so the verdict is computed against the run's own crafts."
+test_spec:
+  - name: test_capability_gap_reported_when_roster_lacks_the_declared_craft
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A member declaring documentation-expert against a roster without it produces a capability_gap outcome naming the member, the craft and the roster, with zero dispatches."
+  - name: test_same_store_builds_once_the_roster_gains_the_craft
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "THE LOAD-BEARING TEST. Run the identical store twice, changing only the run's roster; assert refusal then success, with no edit to the record and no edit to any list."
+  - name: test_verdict_holds_for_a_craft_name_never_seen_before
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Put an arbitrary new craft id in both the record and the roster and assert the member is producible — a hard-coded name set cannot pass this, however it is spelled."
+  - name: test_run_reports_its_roster_without_building
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/build_orchestration/fast_lane.py roster subcommand"
+    description: "Invoke the CLI subcommand and assert the returned craft set equals the configured roster and that no build step executed."
+  - name: test_capability_gap_carries_the_add_capability_remedy
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Assert remedy == 'add-capability' and that a consumer branching on it routes differently from the 'fix-record' remedy of BO-3500a-2."
+  - name: test_store_byte_identical_after_capability_gap_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Hash every member of the resolved set before and after; assert all unchanged."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE SECOND OF THE TWO SITUATIONS the Product Owner left to decomposition. Its sibling
+  BO-3500a-2 is the data-defect case; BO-3500a-1-i forbids substitution in both.
+
+  RELATIONSHIP TO BO-2400f-12, which is done and working, and is NOT being redone.
+  That criterion already refuses a resolved set containing a member the roster cannot
+  produce, before any work, naming each member. What is added here is one distinction
+  it does not make — between a craft that is absent and a name that means nothing —
+  and one property it states as a constraint rather than as a criterion: that the
+  verdict is computed against the run's own crafts, so the refusal stops firing when a
+  craft is added, with no amendment. BO-2400f-12's it_requirements say precisely this
+  ("Do NOT presuppose a documentation phase... doc-only members become producible and
+  the refusal stops firing with no change to this criterion"). This criterion promotes
+  that constraint to something a test asserts, because it is the hinge the whole L0
+  turns on and an implementation that hard-codes a refused-craft list would satisfy
+  BO-2400f-12's text while making this tree unbuildable in the ordinary sense.
+
+  THE SECOND SCENARIO IS THE LOAD-BEARING ONE. It is the only assertion in this tree
+  that fails against a hard-coded list of crafts the run refuses, and hard-coding is
+  the obvious implementation. Test it by running the same store twice against runs
+  whose available crafts differ, and asserting the outcome changes with nothing else
+  changing.
+
+  THE THIRD SCENARIO — the run can say what it can produce — is small and cheap and
+  prevents the commonest operator complaint about the current lane, which is that you
+  discover the roster by being refused by it. It is distinct from BO-3500d: that is a
+  standing view over the whole backlog, this is one run describing itself.

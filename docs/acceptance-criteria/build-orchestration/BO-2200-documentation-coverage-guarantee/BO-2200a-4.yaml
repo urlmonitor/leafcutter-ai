@@ -64,7 +64,35 @@ test_spec:
     description: "change_target=[config, ui] yields documentation-expert (union semantics — any element in the triggering set triggers)."
 origin_agent: business-analyst
 created: 2026-07-15
-amended_by: []
+amended_by:
+  - reason: |
+      NARROWED BY BO-2200c-5-iii (recorded 2026-08-31 by business-analyst), in its positive
+      half only. A triggering element in a list-valued `change_target` is now NECESSARY BUT NO
+      LONGER SUFFICIENT for a documentation demand.
+
+      The union semantics this record specifies are unchanged: a list-valued `change_target` is
+      still evaluated as the union of its elements, and `[config, ui]` still satisfies the
+      trigger dimension while `[config, code]` still does not. What changes is that satisfying
+      the trigger dimension no longer settles the question. Under BO-2200c-5-iii the record
+      must ALSO own a document -- a `doc_links` entry whose relationship is `creates` or
+      `modifies` -- before `documentation-expert` is required. So the criterion "when
+      `change_target` is `[config, ui]` ... the generated agents map DOES include
+      `documentation-expert`" now holds only for a record that owns a document.
+
+      The negative half of this record is NOT narrowed and needs no reconciliation: ownership
+      gating can only remove demands, never add one, so `[config, code]` with
+      `risk_surface: internal` yields no `documentation-expert` under either version of the
+      policy.
+
+      IMPLEMENTER NOTE -- belongs to whoever builds BO-2200c-5-iii, NOT to this record.
+      `test_list_change_target_any_triggering_element_requires_doc_expert` asserts that
+      `documentation-expert` IS present and will fail once ownership gating lands unless its
+      fixture AC is given an owning `doc_links` entry with relationship `creates` (or
+      `modifies`). That fixture change was deliberately NOT made here. Note also that
+      `test_list_change_target_no_triggering_element_no_doc_expert` (the negative) will start
+      passing for two independent reasons once ownership gating lands; if its fixture owns no
+      document it no longer proves anything about union semantics, so give it an owning
+      doc_link too and keep it evidential.
 superseded_by: null
 covered_by: []
 implemented_by:

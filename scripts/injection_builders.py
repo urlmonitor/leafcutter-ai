@@ -561,9 +561,7 @@ If you were invoked with a `ticket_path` argument:
 def assemble_context_bundle(
     *,
     architecture: str,
-    conventions: str,
     high_level: str,
-    acs: str,
     prior_tests: str,
     prior_outputs: str | None = None,
     working_diff: str | None = None,
@@ -576,30 +574,52 @@ def assemble_context_bundle(
     so that an LLM KV cache can anchor on the stable prefix. Exactly one
     ``breakpoint_marker`` separates the stable prefix from the volatile suffix.
 
+    The bundle carries only content the receiving agent does not otherwise
+    have (BO-2400c-1-vi). Two layers were removed rather than made optional:
+
+    - ``conventions`` — the harness already injects the workspace's CLAUDE.md
+      into every agent dispatched into that workspace, so this layer was a
+      second copy of text the receiving agent is handed anyway. Measured on
+      the run that failed, it was byte-identical to CLAUDE.md at 38,291 bytes.
+    - ``acs`` — the run's acceptance-criteria store sits inside the run's own
+      isolated workspace, where any agent working there can open it. Each
+      context-carrying dispatch now instructs its agent to read each id's
+      record from that store instead. That was 90,887 bytes for five records.
+
+    Together those were 129,178 of 148,891 bytes — 87% of a bundle that had
+    grown too large to cross an agent boundary as text in a return value.
+    They are REMOVED, not defaulted to None: an optional layer leaves a live
+    path by which the largest duplicate in the payload gets reintroduced by a
+    caller who does not know better.
+
+    The resulting size (on the order of 20 KB for a realistic target) is a
+    consequence of this layer set, never of a cap. Do not add a byte limit, a
+    truncation step, or chunking here — the transport check in BO-2400c-1-iii
+    is a belt over an already-small payload, and a cap here would invert the
+    two.
+
     Stable prefix (before breakpoint, in order):
         1. ``architecture`` — rarely-changing architecture docs.
-        2. ``conventions`` — project coding/workflow conventions.
-        3. ``high_level`` — L0/L1 parent ACs describing the big picture.
+        2. ``high_level`` — L0/L1 parent ACs describing the big picture.
 
     Volatile suffix (after breakpoint, in order):
-        4. ``acs`` — per-batch L2/L3 ACs.
-        5. ``prior_tests`` — tests already written for the same area.
-        6. ``prior_outputs`` — prior-phase distilled outputs (omitted when None).
-        7. ``working_diff`` — current working diff, most volatile (omitted when None).
+        3. ``prior_tests`` — tests already written for the same area.
+        4. ``prior_outputs`` — prior-phase distilled outputs (omitted when None).
+        5. ``working_diff`` — current working diff, most volatile (omitted when None).
 
     The stable prefix is byte-identical across invocations whenever
-    ``architecture``, ``conventions``, ``high_level``, and ``breakpoint_marker``
-    are unchanged, regardless of volatile inputs. This is the cacheable-prefix
-    property (BO-2400c-1).
+    ``architecture``, ``high_level``, and ``breakpoint_marker`` are unchanged,
+    regardless of volatile inputs. This is the cacheable-prefix property
+    (BO-2400c-1), and it survives the loss of the conventions layer
+    (BO-2400c-1-iv).
 
     This function is pure: no I/O, no external calls, no shared-state mutation.
 
     Args:
         architecture: Architecture documentation content (most stable layer).
-        conventions: Project coding and workflow conventions content.
         high_level: L0/L1 parent AC content describing the big picture.
-        acs: Per-batch L2/L3 AC content (first volatile layer).
-        prior_tests: Tests already written for the same component or area.
+        prior_tests: Tests already written for the same component or area
+            (first volatile layer).
         prior_outputs: Distilled outputs carried forward from a prior phase.
             Placed in the volatile suffix only. Omitted when ``None``.
         working_diff: Current working diff (most volatile layer). Placed last
@@ -611,10 +631,10 @@ def assemble_context_bundle(
         A single string with stable layers, exactly one ``breakpoint_marker``,
         and then volatile layers, all separated by double newlines.
     """
-    stable_prefix = "\n\n".join([architecture, conventions, high_level])
+    stable_prefix = "\n\n".join([architecture, high_level])
     stable_prefix = stable_prefix + "\n\n" + breakpoint_marker
 
-    volatile_layers = [acs, prior_tests]
+    volatile_layers = [prior_tests]
     if prior_outputs is not None:
         volatile_layers.append(prior_outputs)
     if working_diff is not None:
@@ -650,21 +670,18 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "assemble-bundle",
         help="Assemble the layered LLM context bundle and print it to stdout.",
     )
+    # --conventions and --acs were REMOVED here by BO-2400c-1-vi rather than
+    # made optional, so that an agent cannot pass a layer the bundle is no
+    # longer meant to carry: argparse rejects an unknown flag outright. See
+    # assemble_context_bundle()'s docstring for why those two layers were
+    # duplicates of content the receiving agent already has.
     assemble.add_argument(
         "--architecture", required=True,
         help="Path to a UTF-8 file holding the architecture layer content.",
     )
     assemble.add_argument(
-        "--conventions", required=True,
-        help="Path to a UTF-8 file holding the conventions layer content.",
-    )
-    assemble.add_argument(
         "--high-level", required=True,
         help="Path to a UTF-8 file holding the L0/L1 high-level AC content.",
-    )
-    assemble.add_argument(
-        "--acs", required=True,
-        help="Path to a UTF-8 file holding the per-batch L2/L3 AC content.",
     )
     assemble.add_argument(
         "--prior-tests", required=True,
@@ -725,31 +742,72 @@ def _cmd_assemble_bundle(parsed: argparse.Namespace) -> int:
         Process exit code: 0 on success. 1 when a required layer is missing
         or unreadable — never a zero exit with a partial or empty bundle.
     """
-    layer_paths = (
+    # Required and optional layers are read in separate passes so their types
+    # differ honestly: a required layer is a str, an optional one is str|None.
+    # A single pass over both produced a dict[str, str | None] whose required
+    # entries were then passed to str parameters — which type-checks as an
+    # error even though it cannot happen at runtime, because argparse marks
+    # these three required=True and _read_optional_layer only returns None for
+    # a None path.
+    required_layer_paths = (
         ("architecture", parsed.architecture),
-        ("conventions", parsed.conventions),
         ("high_level", parsed.high_level),
-        ("acs", parsed.acs),
         ("prior_tests", parsed.prior_tests),
+    )
+    optional_layer_paths = (
         ("prior_outputs", parsed.prior_outputs),
         ("working_diff", parsed.working_diff),
     )
-    contents: dict[str, str | None] = {}
-    for layer_name, path_str in layer_paths:
+
+    required: dict[str, str] = {}
+    for layer_name, path_str in required_layer_paths:
         content, error = _read_optional_layer(path_str, layer_name)
         if error is not None:
             print(f"injection_builders assemble-bundle: {error}", file=sys.stderr)
             return 1
-        contents[layer_name] = content
+        if content is None:
+            # Unreachable while argparse marks this layer required=True. Kept
+            # as a fail-closed guard rather than an assert: were that flag ever
+            # relaxed, the alternative is None reaching the "\n\n".join() and
+            # raising a TypeError far from its cause -- or, worse, a layer
+            # silently emptied.
+            print(
+                "injection_builders assemble-bundle: required layer "
+                f"'{layer_name}' has no path",
+                file=sys.stderr,
+            )
+            return 1
+        if not content.strip():
+            # An empty required layer is refused HERE, at assembly time, because
+            # this is the only place the fact is knowable. Downstream the layers
+            # are concatenated into one string and the boundaries are gone, so a
+            # consumer can only guess at emptiness from formatting -- which is
+            # exactly what the lane used to do, by looking for a run of 4+
+            # newlines, and exactly why it refused perfectly good bundles whose
+            # architecture layer happened to end in a blank line. Refusing here
+            # names the layer and needs no heuristic.
+            print(
+                "injection_builders assemble-bundle: required layer "
+                f"'{layer_name}' at {path_str!r} is empty",
+                file=sys.stderr,
+            )
+            return 1
+        required[layer_name] = content
+
+    optional: dict[str, str | None] = {}
+    for layer_name, path_str in optional_layer_paths:
+        content, error = _read_optional_layer(path_str, layer_name)
+        if error is not None:
+            print(f"injection_builders assemble-bundle: {error}", file=sys.stderr)
+            return 1
+        optional[layer_name] = content
 
     bundle = assemble_context_bundle(
-        architecture=contents["architecture"],
-        conventions=contents["conventions"],
-        high_level=contents["high_level"],
-        acs=contents["acs"],
-        prior_tests=contents["prior_tests"],
-        prior_outputs=contents["prior_outputs"],
-        working_diff=contents["working_diff"],
+        architecture=required["architecture"],
+        high_level=required["high_level"],
+        prior_tests=required["prior_tests"],
+        prior_outputs=optional["prior_outputs"],
+        working_diff=optional["working_diff"],
         breakpoint_marker=parsed.breakpoint_marker,
     )
     print(bundle)

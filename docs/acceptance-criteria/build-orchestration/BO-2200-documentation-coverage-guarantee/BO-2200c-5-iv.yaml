@@ -1,0 +1,63 @@
+id: BO-2200c-5-iv
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "The writer reads the target before writing it, and reports which of three things it did"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given documentation-expert is dispatched against a contract line naming an owned target, and
+    that target already exists and already states what the line's content constraint requires,
+  When it runs,
+  Then it reads the target before deciding to write anything, makes no edit to it -- the file's
+    bytes are identical before and after the run -- and reports the outcome as
+    "target already satisfied".
+
+  And given the same contract line but a target that exists and is missing only the cross-links
+    the contract requires,
+  Then only those cross-links are added; the rest of the file is unchanged, and the outcome is
+    reported as "target updated", naming what was added.
+
+  And given the same contract line but a target that does not exist, or that exists without the
+    information the content constraint requires,
+  Then the document is authored or extended so it states that information, and the outcome is
+    reported as "target authored".
+
+  And the three outcomes are distinguishable from the sign-off alone -- "already satisfied",
+    "updated", and "authored" are three states, not two. The existing binary record of whether a
+    document was written cannot express the first one, and collapsing it into either neighbour
+    loses the distinction the verifier needs.
+
+  And "I decline to write this because another record owns it" is not among the outcomes and is
+    not a valid sign-off: a contract line only reaches this agent for a target the record owns, so
+    an owned, unsatisfied target that goes unwritten is a failure, reported through the failed
+    sign-off path rather than raised as an open question and left green.
+depends_on: [BO-2200c-5, BO-2200c-5-iii]
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "Does that document exist and already say enough?" is a fact about disk at the moment the agent
+  runs, so it belongs to the agent, not to the author of the AC -- the run-time half of the split
+  whose author-time half is BO-2200c-5-i to -iii.
+
+  Today the writer has no existence check at all: on a contract block it dispatches a specialist to
+  write, and its only escape is to surface the problem as an open question. On ACD-2100a-1 it used
+  that escape to decline on ownership grounds its own instructions never mention -- it inferred a
+  rule nobody had given it, and the sign-off stayed green. Once ownership is decided at authoring
+  time (BO-2200c-5-i), that inference is both unnecessary and wrong, which is why the last clause
+  closes the hatch rather than leaving it as a fallback.
+
+  The three-outcome requirement is load-bearing for BO-2200c-5-v, not bookkeeping: the verifier
+  currently treats "the document is in this ticket's diff" as the definition of satisfied, so an
+  idempotent writer that correctly changes nothing produces no diff entry and fails the coverage
+  check. Without a distinct "already satisfied" outcome for the verifier to act on, this AC makes
+  the build worse. The two must ship together.

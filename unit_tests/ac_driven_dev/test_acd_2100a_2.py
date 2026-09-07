@@ -190,6 +190,7 @@ class TestRepositoryResolvedBySearchWhenScriptLivesOutsideAnyRepo(_IsolatedNonRe
 
     def test_repository_resolved_by_search_when_script_lives_outside_any_repo(self):
         # covers: ACD-2100a-2
+        # angle: criterion
         """AC-1/AC-2/AC-3: resolves to the one candidate repo; worktree exists on disk under it.
 
         Invokes ``create-only`` from the non-repository *base_dir* with no
@@ -237,6 +238,7 @@ class TestSetupStepResolvesFromItsRealCommandLineEntryPoint(_IsolatedNonRepoScen
 
     def test_setup_step_resolves_from_its_real_command_line_entry_point(self):
         # covers: ACD-2100a-2
+        # angle: reachability
         """AC-2/AC-3: the script's own CLI entry point (subprocess, real argv) exits 0.
 
         Deliberately does NOT import any resolver function -- per the AC's
@@ -271,6 +273,7 @@ class TestSearchFallbackAnnouncesTheRepositoryItSelected(_IsolatedNonRepoScenari
 
     def test_search_fallback_announces_the_repository_it_selected(self):
         # covers: ACD-2100a-2
+        # angle: criterion
         """AC-4: the diagnostic stream names the repository and attributes it to a search.
 
         The AC text is explicit that a silent fallback is unacceptable: the
@@ -330,6 +333,7 @@ class TestExplicitRepositoryLocationBypassesTheSearchUnchanged(_IsolatedNonRepoS
 
     def test_explicit_repository_location_bypasses_the_search_unchanged(self):
         # covers: ACD-2100a-2
+        # angle: boundary
         """AC boundary: --repo-root wins over search; no search announcement is made.
 
         Assumes the interface contract documented in the module docstring:

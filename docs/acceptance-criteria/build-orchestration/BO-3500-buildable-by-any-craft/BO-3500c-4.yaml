@@ -1,0 +1,165 @@
+id: BO-3500c-4
+components:
+  - build_orchestration
+  - testing_quality
+title: "A kind of artifact with no defined proof is refused up front, never waived"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement declaring an artifact of a kind for which no proof is defined,
+  When a run resolves a group containing that requirement,
+  Then the run stops before any craft is dispatched and names the kind that has no
+    defined proof,
+  And it does not proceed and then finish that member on the strength of the artifact
+    having been produced,
+  And it does not treat the absence of a defined proof as the absence of a proof
+    obligation.
+
+  Given the same requirement,
+  When a proof for that kind is subsequently defined,
+  Then the same requirement builds, with no edit to the requirement itself and no edit
+    to any list of refused kinds.
+
+  Given a run whose proof for some kind cannot be established because the means of
+    establishing it is unavailable in that run,
+  When the run resolves a group containing a member of that kind,
+  Then the run refuses before any craft is dispatched, stating that the proof cannot be
+    established here,
+  And it does not dispatch the craft, produce the artifact, and then discover at the
+    end that it cannot prove it.
+
+  Given a requirement that states for itself which proof applies to its deliverable,
+  When a run resolves a group containing it,
+  Then that statement does not decide which proof is applied: the kind is determined
+    from where the deliverable sits and which of this project's registers claims it,
+  And where the stated kind differs from the determined one, the run reports the
+    requirement as carrying a defective declaration rather than adopting what it
+    states,
+  And a kind with no defined proof is therefore not something a requirement can put
+    itself into — so this criterion's refusal cannot be turned into an exemption by
+    declaring one.
+depends_on: [BO-3500c]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013 in one sentence: the run cannot produce the artifact and cannot exclude it, so a correct refusal arrives at the end, after both crafts have been paid for. This criterion moves the same correct refusal to the front for the proof-shaped version of the problem."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "The endings an operator can expect. A refusal on the grounds that a kind has no proof yet is a new reason for an existing ending and belongs in that list."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "NO REFUSED-KINDS LIST ANYWHERE. The verdict is 'this kind has an entry in BO-3500c-2's proof table' — data-driven, so DEFINING a proof makes the kind buildable with no edit to any list and no edit to the requirement. A deny-list satisfies the first scenario and fails the second, and a deny-list is the likely implementation. This mirrors BO-3500a-3's roster hinge on the other axis; the two must be built the same way."
+  - "TWO DISTINCT REASON CODES, MACHINE-READABLE AND BRANCHED ON: `no_proof_defined` (fixed by defining something) and `proof_unavailable_here` (fixed by provisioning something — a missing vitest binary, an absent model credential). They will be conflated otherwise, and getting it wrong reproduces KI-BO-013 exactly: work is done, and the refusal arrives at the end."
+  - "THE CHECK RUNS BEFORE DISPATCH, EXTENDING compute_producibility_verdict IN scripts/build_orchestration/fast_lane.py — not as a second gate at the end of the run. Extend that function's per-member finding structure rather than adding a parallel path; it is already read-only and already returns {ac_id, declared_producer, declared_proof, reason} per member."
+  - "FOURTH SCENARIO (user decision D4): the kind is DERIVED per BO-3500c-2's resolution table; a record stating its own kind is reported as a defective declaration, not honoured. Without it, this criterion's refusal converts into an exemption obtainable by typing — the cheapest route to an exemption in the whole tree, cheaper than any already forbidden."
+  - "DERIVE IN EXACTLY ONE PLACE. An implementation that derives the kind in the proof selector and reads a field in the refusal path has satisfied neither BO-3500c-1's last scenario, BO-3500c-2's fourth, nor this one. BO-3500c-2 delivers a single derive_proof_kind call site; this record must call it, not re-derive."
+  - "PRESERVE BO-2400f-12's PROPERTIES rather than redoing them: the refusal performs no writes (BO-2400f-12-i), and the verdict is computed against the run's own capabilities (BO-2400f-12-ii). What is added is the case it cannot see — a member whose proof obligation is well formed and simply has no instrument behind it."
+  - "NO PRESENCE-ONLY ASSERTIONS. The extensibility test must ADD a proof to the table and re-run; a test asserting the absence of a deny-list literal proves nothing."
+delivers_to:
+  agent: python-coder
+  contract: "Up-front refusal outcome: {reason_code: 'no_proof_defined'|'proof_unavailable_here', ac_id, kind: <derived>, remedy: 'define-proof'|'provision'}. Emitted by the extended compute_producibility_verdict before any dispatch; consumed by the run's ending and by BO-3500d-2, which groups the standing backlog view by these same codes."
+expects_from:
+  ac_id: BO-3500c-2
+  contract: "The single derive_proof_kind call site and the proof table it keys — including its no-match sentinel for an unclaimed path, and its explicit no-proof-defined entries for vocabulary values (such as `model` and `dependency`) that currently have no instrument."
+test_spec:
+  - name: test_kind_with_no_defined_proof_refuses_before_any_dispatch
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A member whose derived kind has no proof entry causes the run to stop with zero dispatches, naming the kind."
+  - name: test_defining_a_proof_makes_the_same_record_build
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "THE EXTENSIBILITY HINGE. Add an entry for that kind to the proof table and re-run the identical store; assert the same record now builds, with no edit to the record and no edit to any list."
+  - name: test_no_proof_defined_and_proof_unavailable_here_have_distinct_reason_codes
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Produce both refusals from the same harness and assert a consumer branching on reason_code and remedy routes them differently."
+  - name: test_proof_unavailable_here_refuses_before_work_not_at_the_end
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "With the screen proof's runner absent, assert the refusal occurs before any craft is dispatched and no artifact was produced first."
+  - name: test_declared_kind_is_ignored_and_reported_as_defective
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A record declaring a kind with no defined proof, whose derived kind has one, builds — and the declaration is reported as a defect. The refusal cannot be obtained by typing."
+  - name: test_refusal_path_and_proof_selector_derive_the_same_kind
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "For a record whose declared kind contradicts its derived one, assert the refusal path and the proof selector report the identical derived kind — behavioural equivalence, proving one call site, not a source scan."
+  - name: test_up_front_refusal_performs_no_writes
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Hash every member of the resolved set before and after the refusing run and assert all unchanged, preserving BO-2400f-12-i."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "User decision D4 — derive the proof class, never let a record declare it. A fourth scenario is added: the first three constrain what happens once a member's kind is known, and are worth nothing if the member gets to state its own kind. Declaring a kind with no defined proof would have converted this criterion's refusal into an exemption obtainable by typing. The kind is now determined from where the deliverable sits and which register claims it, and a contrary declaration is reported as a defect rather than honoured."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE LOOPHOLE-CLOSING CRITERION. Every other record in BO-3500c constrains the kinds
+  that have a defined proof. Without this one, the way to make any awkward requirement
+  pass is to declare its artifact to be a kind nobody has defined a proof for — and
+  then "no proof defined" quietly becomes "no proof needed", which is the phantom-done
+  the whole L0 was written to avoid, reached by declaration rather than by argument.
+
+  THE FOURTH SCENARIO CLOSES THE LOOPHOLE IN THE LOOPHOLE-CLOSER (added 2026-08-31, user
+  decision D4). The first three scenarios are all about what happens once a member's kind
+  is known — and they are worth nothing if the member gets to say what its kind is. That
+  is the cheapest route to an exemption in this whole tree, cheaper than any of the ones
+  already forbidden: not an argument, not an implementation shortcut, just a value typed
+  into a record. Deriving the kind from where the deliverable sits and which register
+  claims it is what makes this criterion's refusal reachable only by the truth about the
+  artifact. It is the same decision recorded on BO-3500c-2's fourth scenario and on
+  BO-3500c-1's last one; all three are the same rule seen from three angles, and an
+  implementation that derives in one place and reads a field in another has not
+  satisfied any of them.
+
+  THE SECOND SCENARIO IS THE EXTENSIBILITY HINGE and mirrors BO-3500a-3's. The pair
+  make the same promise about two different axes: adding a craft makes the requirements
+  declaring it buildable, and defining a proof makes the requirements of that kind
+  provable, in both cases with nothing edited but the automation. An implementation
+  that keeps a list of refused kinds satisfies the first scenario and fails this one,
+  and it is the likely implementation.
+
+  THE THIRD SCENARIO exists because "no proof is defined" and "the proof is defined but
+  cannot be run here" will be conflated, and they behave differently. A screen proof
+  needs a running surface; a run without one has a defined proof it cannot establish.
+  The correct answer is the same — refuse before work — and the reason must differ,
+  because one is fixed by defining something and the other by provisioning something.
+  Getting this wrong reproduces KI-BO-013 exactly: work is done, and the refusal
+  arrives at the end.
+
+  RELATIONSHIP TO BO-2400f-12, which is done. That criterion's refusal already covers a
+  member whose declared proof is not a passing test. What is added here is the case it
+  cannot see: a member whose proof obligation is well formed and simply has no
+  instrument behind it. Its constraint that the verdict be computed against the run's
+  own capabilities is preserved and extended to proofs.

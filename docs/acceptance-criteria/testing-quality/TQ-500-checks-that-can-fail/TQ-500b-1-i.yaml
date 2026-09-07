@@ -1,0 +1,202 @@
+id: TQ-500b-1-i
+components:
+  - testing_quality
+  - build_pipeline
+title: "No record and a bad record are different states, and the carve-out is not a blanket silence"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given four pieces of finished work:
+      piece D, handed on before the falsifiability answer existed anywhere, whose
+        hand-off record carries no machine-checkable answers of any kind,
+      piece E, whose run stopped before the work was handed on, leaving no hand-off
+        record for it,
+      piece F, whose record carries a reasoned negative answer,
+      and piece G, whose record carries the other machine-checkable answers the run
+        requires but no falsifiability answer,
+  When those records are read,
+  Then none of D, E or F is reported as a shortfall,
+    And D and E are each placed in the no-record state rather than the answer-owed
+      state,
+    And F is placed in the answer-taken state, because a reasoned negative is an
+      answer,
+    And G is reported as answer owed and absent,
+    And the fourth result is what shows the carve-out for D and E is a boundary
+      rather than a blanket silence: the same reading, over the same run, still
+      reports a piece of work whose record exists and omits the answer.
+depends_on:
+  - TQ-500b-1
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The Legacy Compatibility rule in section 2b: pre-epoch sign-offs carry no
+      completion manifest at all and their absence is accepted without back-fill.
+      Piece D must fall under it, or the check false-fails every historical piece of
+      work on its first run.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Carries the identical carve-out for the seam answer. Reusing its legacy
+      handling rather than writing a parallel one is the point of the shared reader.
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The originating discipline for bounding a carve-out: a run that never reached
+      a piece of work produced no record for it, and reporting that as a bad answer
+      generates false shortfalls.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE CARVE-OUT KEYS ON THE ABSENCE OF A RECORD, NEVER ON A DATE. Piece D
+    (pre-epoch, no completion_manifest at all) and piece E (run halted, no
+    hand-off record at all) both reach the no-record state by the same rule:
+    nothing was emitted. A date-keyed carve-out is the obvious shortcut and it
+    fails in both directions — it hides answers older work genuinely recorded and
+    grants amnesty to newer work whose date can be made to look old.
+  - >-
+    PIECE G IS THE ANTI-VACUITY CONTROL AND MUST NOT BE WEAKENED. Every clause
+    about D, E and F asserts that nothing is reported, and a reader that reports
+    nothing at all satisfies all of them. G is the only clause in this AC that can
+    object. Do not narrow, skip, or fixture-special-case it.
+  - >-
+    A REASONED NEGATIVE IS AN ANSWER. Piece F lands in answer_taken, not in a
+    third "soft shortfall" bucket. Any treatment of F as a lesser outcome
+    recreates the pressure to fabricate a proof that TQ-500a-2 exists to remove.
+  - >-
+    THE ANTI-GREP CLAUSE IS BINDING. All four results must be established from
+    the records the run actually emitted, over one reading of one run.
+  - >-
+    Adds no behaviour. This is a regression test over TQ-500b-1's reading and
+    must not be closed by a change that special-cases the four fixture records.
+delivers_to: null
+expects_from:
+  ac_id: TQ-500b-1
+  contract: >-
+    The per-piece-of-work state entries. This AC asserts D and E resolve to the
+    no-record state, F to answer taken, and G to answer owed and absent, from one
+    reading over one run.
+test_spec:
+  - name: test_tq500b_1_i_piece_g_is_reported_as_answer_owed_and_absent
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      THE ONLY CLAUSE IN THIS AC THAT CAN OBJECT ON ARRIVAL. Piece G — a record
+      carrying the run's other required answers but no falsifiability answer — is
+      reported as answer_owed_absent. This is the anti-vacuity control for the
+      four descriptors below; if it is ever weakened, this AC becomes a test that
+      cannot fail.
+  - name: test_tq500b_1_i_pieces_d_e_and_f_are_not_reported_as_shortfalls
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      D (pre-epoch, no manifest), E (halted run, no record) and F (reasoned
+      negative) each produce no shortfall. NAMED MUTATION (this descriptor
+      asserts an absence): narrow the legacy carve-out so it accepts only records
+      whose ticket predates a hard-coded epoch DATE. Under that injection piece E
+      — a present-day halted run — is reported as answer_owed_absent and THIS
+      TEST MUST GO RED; restore the presence-of-record rule and it returns to
+      green.
+  - name: test_tq500b_1_i_the_carve_out_is_a_boundary_not_a_blanket_silence
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      THE CONTROL THE BA WROTE INTO THE CRITERIA. Over the SAME run and the SAME
+      reading that leaves D, E and F unreported, piece G is still reported.
+      NAMED MUTATION: widen the no-record carve-out from "the record carries no
+      completion_manifest at all" to "the record carries no falsifiability_answer
+      key", which sweeps G into the no-record state. THIS TEST MUST GO RED under
+      that widening and green again on revert. This is the alteration this AC's
+      own falsifiability answer must name — record it and the per-test outcomes
+      under it.
+  - name: test_tq500b_1_i_d_and_e_land_in_no_record_and_f_lands_in_answer_taken
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      State placement, distinct from the shortfall assertion above: D and E in
+      no_record, F in answer_taken. NAMED MUTATION: place a reasoned negative in
+      a third bucket separate from answer_taken; the F half of this test must go
+      RED under it.
+  - name: test_tq500b_1_i_the_four_records_are_built_by_the_projects_own_writer_and_read_once
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py
+    description: >-
+      Build D, E, F and G on disk — D with no completion_manifest block at all, E
+      as a ticket file with no sign-off comment, F and G via yaml.safe_dump per
+      the signoff §2b recipe — and read all four through the registered hook in
+      one subprocess invocation. Hand-typed fixtures reproduced the bias that hid
+      a parser no-op here twice.
+test_rationale: |
+  Four pieces of work rather than three, and the fourth is the whole point. Every
+  clause about D, E and F asserts that nothing is reported, so a reader that
+  reports nothing at all satisfies them completely — it is a negative control in
+  exactly the sense KI-TQ-010 describes: green on arrival, incapable of failing,
+  and later cited as proof the carve-out is correctly bounded. Piece G is what
+  makes the scenario able to object.
+
+  Three of the five descriptors assert an absence and each therefore names a
+  concrete injection. The load-bearing one is the carve-out widening: change the
+  no-record rule from "no completion_manifest at all" to "no falsifiability_answer
+  key" and G is swallowed. That single alteration must turn the boundary
+  descriptor RED while leaving the D/E/F descriptors green — which is precisely
+  the asymmetry that proves the carve-out is a boundary rather than a blanket
+  silence. This AC's falsifiability answer must be of the substitute kind naming
+  that alteration.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      change_target verified as code (parent is already code). Added a
+      five-descriptor test_spec. The BA flagged this AC as a negative control;
+      three descriptors assert absences and each names its injection — a
+      date-keyed carve-out (piece E goes red), the carve-out widening from
+      "no manifest" to "no falsifiability_answer key" (piece G swallowed, the
+      load-bearing one), and a third bucket for reasoned negatives. Each requires
+      RED-under-injection and green-on-revert. criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE LAST CLAUSE IS THE ANTI-VACUITY CONTROL ON THE CARVE-OUT, and it is the reason
+  this AC has four pieces of work rather than three. Every clause about D, E and F
+  asserts that nothing is reported. A reader that reports nothing at all satisfies
+  all of them — it is a negative control in exactly the sense KI-TQ-010 describes,
+  green on arrival and unable to fail. Piece G is what makes the scenario able to
+  object.
+
+  This AC is therefore a worked example of the tree's own subject, and its own
+  falsifiability answer should be the substitute kind: the natural alteration is to
+  widen the legacy carve-out until it swallows G, and these clauses must object
+  under it.
+
+  BOUNDARY. Adds no behaviour. It is satisfied only by a regression test over
+  TQ-500b-1's reading and must not be closed by a change that special-cases the four
+  fixture records.

@@ -1,0 +1,65 @@
+id: AGC-100b-1
+title: "One canonical specialist definition feeds Claude, Gemini, and Codex"
+component: agent-compatibility
+components: [agent_registry, build_pipeline, template_compiler]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given one canonical specialist definition contains the role statement Review
+    structural impact before implementation,
+  And no platform-specific copy is treated as an authoring source,
+  When the normal build produces Claude, Gemini, and Codex outputs,
+  Then each platform's specialist exposes that same role statement after its
+    declared platform translation,
+  And when the canonical statement is changed once to Review structural and
+    operational impact before implementation and the build is repeated,
+  Then all three platform outputs contain the changed statement without a
+    hand-maintained platform edit.
+depends_on: [AGC-100b]
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - Compile canonical role text once before platform-specific serialization.
+  - Stage and validate Claude, Gemini, and Codex together before atomic publication.
+  - Preserve prior outputs and manifest byte-for-byte on any platform failure.
+  - Parse every native Codex TOML before publication.
+test_required: true
+test_spec:
+  - name: test_all_platforms_compile_same_canonical_role_statement
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: All three platform outputs expose the same canonical role statement after translation.
+  - name: test_failed_codex_validation_preserves_all_prior_platform_outputs
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: A Codex validation failure publishes no partial platform, report, or manifest update.
+test_rationale: "Cross-platform compilation and the failed staging path must be exercised to detect drift and partial publication."
+delivers_to:
+  agent: python-coder
+  contract: "NativeAgentBundleV1 with staged platform bytes, parsed Codex TOML, and canonical source hashes."
+expects_from:
+  - {ac_id: AGC-100a-1, contract: ResolvedIdentityCatalogV1}
+  - {ac_id: AGC-100b-2, contract: ValidatedCompatibilityPolicyV1}
+doc_links:
+  - {path: docs/architecture/components/template-compiler.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: [AGC-100b-1-i]
+implemented_by: []
+change_target: [code, pipeline, prompt, model]
+risk_surface: contract_boundary
+declares_side_effect: false

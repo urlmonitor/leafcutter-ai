@@ -1,0 +1,133 @@
+id: GE-120f-4-i
+title: "A check that was already registered when the requirement arrived is subject to it identically, and a ground that is a fact about when a check was registered is no ground at all"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given protective checks that were already registered before the declaration became a
+    condition of registration,
+  When the registration surface is read and the run examines the population,
+  Then each of them is subject to the requirement in the same way as one registered
+    afterwards: one carrying no declaration is named as carrying none, and one carrying a
+    declaration whose rejection has not been observed is named as not demonstrated,
+  And a claimed exemption whose stated ground is a fact about when the check was registered
+    — that it predates the requirement, that it is inherited, that it is long-standing — is
+    refused in the same way as an exemption stating no ground at all, because a ground must
+    be about what the check does,
+  And a record that exempts a group of checks at once, by when they were registered or by
+    where they live rather than by a ground stated for each check, is refused, and every
+    check it names stays in the class its own record puts it in,
+  And the run's first report over the population as it stands is not made quiet by any such
+    record, and the checks that report as never demonstrated on that first run are reported
+    by name rather than summarised.
+depends_on:
+  - GE-120f-4
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-4.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5-i.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING AND THE OWNER OF THE EXEMPTION RULE — READ BEFORE BUILDING EITHER. It
+      owns the grounded exemption for a check that genuinely counts or measures, owns that a
+      groundless exemption is reported and fails, and owns that a postponement is not a
+      ground. None of that is restated here. This record adds two further forms that are not
+      postponements and would otherwise slip through: a ground that is a fact about WHEN the
+      check was registered rather than about what it does, and a single record exempting a
+      group rather than a check. Keep one exemption vocabulary; do not build a second.
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-i.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECEDENT TO COPY, INCLUDING ITS WORDING. It establishes for a neighbouring register
+      that a stated ground is honoured, that a record with no ground is itself refused and the
+      thing it names stays reported, and its parent states that a ground saying only that
+      triage is deferred is a suppression under another name. The two registers should read
+      alike even where they stay separate.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-6.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      The rule this record is the temporal case of: an exemption must be a property read from
+      the candidate or from a declared record, never a match against an identifier written
+      into the sweep, so nothing inherits an exemption by resemblance. Registration date is
+      resemblance by another name — it says nothing about whether the check can refuse.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      READ-ONLY. The recorded case of a detector that already existed, reported unreachable
+      checks, and was skipped rather than acted on because its verdict arrived as a blocker,
+      is why a grandfathering hatch is the most likely way this regime is neutralised on the
+      day it lands.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-126b-5-i
+  contract: >-
+    The exempt disposition, the requirement that a ground be stated, and the rule by which a
+    groundless or postponing ground falls back into the not-demonstrated class. This record
+    adds two further groundless forms and adds nothing to the disposition itself.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE RECORD AND WHY IT IS THE ONE MOST LIKELY TO BE QUIETLY DROPPED. Its
+  parent is fully satisfiable by a gate that polices new registrations and leaves the existing
+  family alone, and that reading is attractive precisely because it makes the first run quiet.
+  It also makes the regime worthless: the checks that cannot refuse are the ones already
+  registered. A rule that applies only to what comes next certifies everything that is
+  already broken.
+
+  DAY-ONE BLAST RADIUS IS THE CORRECT OUTCOME, AND THIS RECORD IS WHERE THAT IS MADE
+  MECHANICAL RATHER THAN ADVISORY. On the commit that lands this family most checks will
+  report that no refusal has ever been demonstrated, because none has. That is the true state.
+  It must not be pre-suppressed by seeding exemption records, by a dated cut-off, or by a
+  single record covering everything registered so far. The natural remedy for the resulting
+  noise is to weaken the rule until it goes quiet, and that remedy is the failure mode this
+  whole tree is designed against. Repairing, declaring, or honestly exempting each check is
+  the work, not a follow-up.
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "The first report is not made quiet by any
+  such record, and the checks that report as never demonstrated are reported by name."
+  ARRIVAL COLOUR: GREEN, vacuously — no report exists, so none is currently being quietened.
+  INJECTION: accept an exemption record naming a group of checks by when they were registered.
+  Under that injection the entire pre-existing family disappears from the failing classes and
+  the run passes on the commit that lands it; this clause must go RED naming the checks the
+  group record covered, and must return to green on revert. This is the single injection that
+  would make the whole tree ship green and useless, so run it rather than describing it.
+
+  SECOND NAMED MUTATION, FOR THE TEMPORAL-GROUND CLAUSE. INJECTION: accept any ground that is
+  a non-empty statement — which is what the vocabulary's own minimum-length rule permits today
+  and is the same weakness the postponement rule already has to defeat one form over. Under
+  that injection a ground reading that the check predates the requirement is honoured and the
+  check leaves every failing class; this clause must go RED. Hold the vocabulary of refused
+  grounds as data a fixture can extend, not as a fixed set the test also carries, or the test
+  and the implementation will agree with each other and with nothing else.
+
+  ARRIVAL COLOURS FOR THE REMAINING CLAUSES. The first Then — pre-existing checks are subject
+  identically — is RED on arrival, because no check is subject to anything today. Both
+  refusal clauses are RED on arrival for the same reason. The two clauses above are the only
+  greens and both are vacuous.
+
+  NO COUNT OF INSTANCES IS STATED OR IMPLIED, per the parent's disputed-count rule. How many
+  checks the first run names is exactly what the run measures.

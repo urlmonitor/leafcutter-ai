@@ -60,7 +60,7 @@ ARCHITECTURE: Reads the ``output_mappings`` section of the
     (``REJECTED EXEMPTION ENTRY: <key> reason=no ground stated``) and falls
     through to the GAP form.
 
-    MISSING-OUTPUT REPORTING (BP-100k-6): an output_mappings key whose file
+    MISSING-OUTPUT REPORTING (BP-100n-1): an output_mappings key whose file
     has been deleted from disk is a THIRD, distinct case from the two above
     — the key is neither ungrounded (no exemption question applies) nor
     unregistered (it IS in output_mappings). It is reported as
@@ -434,7 +434,7 @@ def _scan_output_files(
         The scan outcome (see ``_ScanResult``). Prints one ``UNCOMPARABLE:``
         line per output absent from output_mappings, one
         ``UNCOMPARABLE: MISSING`` line per output_mappings key recorded but
-        absent from disk (BP-100k-6), and one ``UNCOMPARABLE: UNREADABLE``
+        absent from disk (BP-100n-1), and one ``UNCOMPARABLE: UNREADABLE``
         line per recorded key present on disk but not hash-comparable (B-2).
     """
     # --- Pass 1: gap / exempt detection over real files found on disk ------
@@ -487,7 +487,7 @@ def _scan_output_files(
         out_path = repo_root / out_key
 
         if not out_path.exists():
-            # BP-100k-6: deletion is the most complete form of drift there is.
+            # BP-100n-1: deletion is the most complete form of drift there is.
             missing += 1
             print(
                 f"UNCOMPARABLE: MISSING {out_key} reason=recorded but not found on disk",
@@ -634,7 +634,7 @@ def check_output_drift(
     line ``main()`` prints — this function prints it directly so a direct
     caller sees the identical summary a pre-commit run would. A key IN
     output_mappings whose file is absent from disk is reported as its own
-    ``UNCOMPARABLE: MISSING`` verdict (BP-100k-6) — deletion is drift too,
+    ``UNCOMPARABLE: MISSING`` verdict (BP-100n-1) — deletion is drift too,
     and the most complete form of it: never folded into ``verified`` (it
     plainly was not verified) or into ``uncomparable``/``gaps`` (a declared
     exemption or coverage gap is a registration question; a deleted,
@@ -652,7 +652,7 @@ def check_output_drift(
       ``check_hook_trigger_reachability.py`` already uses for the identical
       condition.
     - Output file in output_mappings but missing on disk: reported as
-      ``UNCOMPARABLE: MISSING`` and counted in ``missing`` (BP-100k-6); never
+      ``UNCOMPARABLE: MISSING`` and counted in ``missing`` (BP-100n-1); never
       described as clean, never counted as verified.
     - Output file in output_mappings, present on disk, but unreadable
       (permission error) or not a regular file (directory/FIFO/symlink to a
@@ -676,7 +676,7 @@ def check_output_drift(
         0 when gaps == 0, drifted == 0, missing == 0, and unreadable == 0
         (clean — a declared, grounded exemption does NOT block; see module
         docstring); 1 when drifted > 0, missing > 0, or unreadable > 0
-        (BLOCKED — a recorded-but-absent output is drift (BP-100k-6), and a
+        (BLOCKED — a recorded-but-absent output is drift (BP-100n-1), and a
         recorded-but-uncomparable output is treated with the same severity
         (B-2)); 2 when none of the above and gaps > 0 (an undeclared
         uncomparable artifact — AC-4), or when the scan verified zero
@@ -739,7 +739,7 @@ def check_output_drift(
     exempt_count = result.uncomparable - result.gaps
     # ``drifted`` is the total count of artifacts whose on-disk content no
     # longer matches what was recorded — a hash mismatch (changed in place)
-    # AND a deletion (missing entirely) are both instances of that (BP-100k-6:
+    # AND a deletion (missing entirely) are both instances of that (BP-100n-1:
     # "deletion is the most complete form of drift there is"). ``missing`` is
     # then reported as its own field breaking that total down, mirroring the
     # existing ``uncomparable = gaps + exempt`` breakdown pattern (BP-100k-3)
@@ -754,7 +754,7 @@ def check_output_drift(
     )
 
     if result.violations or result.missing or result.unreadable:
-        # A deleted, still-recorded output (BP-100k-6) and an unreadable,
+        # A deleted, still-recorded output (BP-100n-1) and an unreadable,
         # still-recorded output (B-2) are both the most complete forms of
         # "could not vouch for this content" there is — reported with the
         # same BLOCKED severity as a hash-mismatch violation, never merely
@@ -822,7 +822,7 @@ def main() -> int:
         0 when gaps == 0, drifted == 0, missing == 0, and unreadable == 0
         (clean — a declared, grounded exemption does NOT block; see module
         docstring); 1 when drifted > 0, missing > 0, or unreadable > 0
-        (BLOCKED — a recorded-but-absent output is drift (BP-100k-6), and a
+        (BLOCKED — a recorded-but-absent output is drift (BP-100n-1), and a
         recorded-but-uncomparable output is drift too (B-2)); 2 in every
         other non-clean case — gaps > 0 (an undeclared uncomparable artifact
         — AC-4), the scan verified zero artifacts (B-1), build.py recorded

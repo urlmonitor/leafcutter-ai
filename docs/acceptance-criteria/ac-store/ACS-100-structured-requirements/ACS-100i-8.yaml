@@ -153,6 +153,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - ACS-100i-8-i
+  - ACS-100i-8-ii
 implemented_by: []
 change_target:
   - code

@@ -143,6 +143,12 @@ N learnings routed: K1 kind1, K2 kind2 (M previously processed); P unroutable: K
 - `N learnings routed` — number of new knowledge events written to surfaces.
 - `K1 kind1` — breakdown by entry_kind (e.g. `1 memory-project, 1 per-folder-readme`).
 - `M previously processed` — events skipped because they were already handled.
+- `R no learning text` — records that carried no learning body (key absent,
+  null, blank, or a restatement of the record's own metadata). **Nothing was
+  written for these and they are NOT unroutable**, so they do not raise the
+  exit code. They are left unprocessed and re-derived every run. Over the real
+  sink today this is all 28 records — a run that exits `0` having written
+  nothing. Report the count; never report such a run as "clean".
 - `P unroutable` — events the harvester could not route, with a count per
   distinct `entry_kind`. **This segment appears only when P is nonzero.**
 - `Q write failures` — events whose destination write raised an I/O error,
@@ -159,7 +165,7 @@ Read the exit code, not just the summary:
 
 | Exit | Meaning |
 |------|---------|
-| `0` | Drained cleanly — nothing left behind. |
+| `0` | Drained with nothing left to **route**. **This does NOT mean every record was written.** Records classified `no learning text` are deliberately not written and are not counted as unroutable, so a wholly-textless corpus exits `0` having written nothing. Read the `no learning text` segment before calling a `0` clean. |
 | `1` | Sink file not found or unreadable. |
 | `2` | State file exists but cannot be parsed (corrupted). |
 | `3` | Drained, but unroutable events remain. Not a failure — see below. |
@@ -213,14 +219,23 @@ After running the harvester, emit a brief report:
 ## Knowledge Harvest Complete
 
 - Summary: <one-line output from the script>
-- Exit code: <0 clean | 3 unroutable events retained | 4 write and/or state failure | 1 sink missing | 2 state corrupt>
+- Exit code: <0 nothing left to route | 3 unroutable events retained | 4 write and/or state failure | 1 sink missing | 2 state corrupt>
 - Sink path: debugging/logs/knowledge_emissions.jsonl
 - State path: debugging/logs/harvest_state.json
 - Warnings: <any WARNING lines from the run, or "none">
+- No learning text: <count and per-kind breakdown from the summary's `no learning text` segment, else "none">
 - Retained for a later run: <count and per-kind breakdown when exit is 3, else "none">
 - Failed writes: <count and per-kind breakdown when exit is 4, else "none">
+- Malformed lines: <count and line numbers from the summary, else "none">
 - Duplication risk: <"yes — state was not persisted, the next run will re-append this run's learnings" when the summary says state NOT persisted, else "no">
+- Wrote nothing? <"yes" when `N learnings routed` is 0 — and say WHY, using the counts above — else "no">
 ```
+
+**Do not report a run as clean on exit `0` alone.** Exit `0` means nothing was
+left to *route*; it does not mean anything was *written*. A run over a wholly
+textless corpus — the state of the real sink today, all 28 records — exits `0`,
+writes nothing, and is a correct outcome that must still be reported as
+"wrote nothing, 28 no learning text", never as "drained cleanly, none retained".
 
 ## Constraints
 

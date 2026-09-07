@@ -1,0 +1,137 @@
+id: TQ-500e-1
+components:
+  - testing_quality
+  - ac_store
+title: "The record says what was altered and what each test did, in the record's own words"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work finished months earlier whose substitute evidence was recorded
+      at the time, and a reader who was not present when it was taken,
+  When that reader reads the record,
+  Then the record states which behaviour was altered and what it was altered to, in
+    terms specific enough for the reader to apply the same alteration again without
+    asking the original writer,
+    And it states, for each test, what that test did under the alteration,
+    And it states these in the record's own words, rather than by reference to a run
+      log, a console transcript, or a working copy that no longer exists,
+    And a record stating only that the behaviour was broken and the tests objected is
+      distinguishable from one meeting the three clauses above.
+depends_on:
+  - TQ-500e
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The record the evidence rides, and the precedent for self-contained content: the
+      existing red_baseline block already requires the actual error text from the run
+      rather than a pointer to where the run output went.
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-010's account of why self-certified non-vacuity is not falsifiability. The
+      recorded tests carried explicit assertions that they proved something; what no
+      later reader could see was what they had been shown to catch.
+  - path: docs/reference/ac-schema.md
+    relationship: relates-to
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE RECORD MUST BE SELF-CONTAINED, AND THE TEMPLATE MUST SAY WHAT THAT
+    EXCLUDES. Name the disallowed forms explicitly: a reference to a run log, a
+    console transcript, a CI job URL, a branch, a working copy, or "see the
+    verification output". Each of those is complete the moment it is written and
+    empty six weeks later when the run output is gone and the branch is deleted.
+    Stating the rule positively is not enough; writers reach for the pointer
+    because it is true at the time.
+  - >-
+    FOLLOW THE PRECEDENT ALREADY IN THE TEMPLATE. templates/agents/test-writer.md's
+    red_baseline block already requires the ACTUAL error text from the
+    verification run rather than a paraphrase or a pointer. Set the same bar for
+    the alteration and the per-test outcomes, and cite that block as the model so
+    the two do not diverge.
+  - >-
+    THE AUDIENCE IS A STRANGER MONTHS LATER. The specificity bar is that a reader
+    who was not present can apply the same alteration without asking the original
+    writer. Show a non-example — "broke the behaviour and the tests went red" —
+    alongside a conforming example, because that sentence reads identically
+    whether the alteration was the leak the requirement guards or something
+    incidental that happened to break the suite.
+  - >-
+    Must not require the record to carry raw run output or diffs. Durability is
+    about the answer being legible without external artifacts, not about
+    embedding transcripts; an unbounded requirement collides with
+    check-doc-length and pushes writers back to pointers.
+  - >-
+    This is the same statement TQ-500a-3 asks for, at a later moment. Do not
+    define a second field or a second shape — add the durability bar to the shape
+    TQ-500a-3 establishes.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500e-2
+    contract: >-
+      A self-contained substitute answer — named alteration, per-test outcomes, and the
+      revert result — held entirely within the record, so retrieval requires no run,
+      no working copy, and no external log.
+expects_from:
+  ac_id: TQ-500a-3
+  contract: >-
+    The named alteration and revert confirmation. This AC adds the durability
+    requirement: what TQ-500a-3 asks the writer to state must remain legible and
+    actionable to someone who arrives long afterwards.
+test_required: false
+test_rationale: |
+  Genuinely test-free at this AC's boundary, on the BP-1100g-5 precedent. The
+  deliverable is template prose setting a durability bar on the shape TQ-500a-3
+  already establishes. A test asserting the bar is described in a template is
+  source-presence evidence and passes on an implementation that records nothing.
+
+  The observable half is TQ-500e-2 and TQ-500e-2-i, which assert that the
+  recorded answer is retrievable later without re-running anything — which is the
+  only way self-containment can actually be checked.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept llm-expert and change_target prompt. Required the template to name the
+      DISALLOWED pointer forms explicitly (run log, console transcript, CI URL,
+      branch, working copy) rather than only stating the rule positively — a
+      writer reaches for the pointer because it is true at the time. Bounded the
+      requirement so it does not demand embedded transcripts, which would collide
+      with check-doc-length and push writers back to pointers. test_required
+      false; the observable half is TQ-500e-2 / TQ-500e-2-i. criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+notes: |
+  THE THIRD CLAUSE IS THE DURABILITY CLAUSE AND IT IS EASY TO LOSE. A record that says
+  "see the verification run output" is complete at the moment it is written and empty
+  six weeks later, when the run output is gone and the branch is deleted. The harm this
+  L1 closes is a green result being quoted as proof a rule holds with no way for anyone
+  to check whether the test could ever have said otherwise — and a dangling pointer
+  closes nothing.
+
+  BOUNDARY WITH TQ-500a-3. That AC requires the alteration be named specifically enough
+  to reapply; this AC requires the naming to survive the run that produced it and to be
+  legible to a stranger. They are the same sentence at two different moments, and the
+  second is the one a later citation depends on.
+
+  BOUNDARY WITH TQ-400. TQ-400 re-examines finished work on a rhythm and withdraws the
+  done badge when the evidence has lapsed. This AC does no re-examination — it makes the
+  original demonstration legible at the time it is taken, so that a later reader, human
+  or a TQ-400 sweep, has something to read.

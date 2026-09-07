@@ -1,0 +1,101 @@
+id: TQ-500
+components:
+  - testing_quality
+  - build_orchestration
+title: "Know that a passing test would actually have caught the problem"
+component: testing-quality
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A pass counts as proof only once the test is shown it could have failed.
+
+  Today the only sign that a test constrains anything is that it failed before
+  the work was done. For a whole family of work that evidence cannot exist — the
+  test is correct and passing from the moment it is written — and nothing else
+  ever asks whether it is capable of failing at all. So a test with no possible
+  failure mode sails through every stage and every gate, stays green forever,
+  and is later quoted as proof that the rule it names is holding. After this
+  goal, a pass is accepted as evidence only when something has demonstrated the
+  test would object if the thing it guards were broken; where that demonstration
+  is missing, the work reads as unfinished rather than approved.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: "Entry KI-TQ-010 — the observed defect this goal answers, including the worked case where three of four sibling tests noticed an injected fault and the fourth, carrying the headline clause, did not."
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500a
+  - TQ-500b
+  - TQ-500c
+  - TQ-500d
+  - TQ-500e
+implemented_by: []
+change_target:
+  - pipeline
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  FOURTH HONESTY AXIS — deliberately distinct from the three already recorded in
+  TQ-400's notes. Do not fold this work into any of them:
+
+    - BO-2500 (mechanical done proof) asks IS THERE A PASSING TEST, on real data,
+      at the moment work is declared done. It never asks whether that test has a
+      failure mode.
+    - BP-1100 (phantom-done prevention) asks DOES THE DELIVERED CHANGE ACTUALLY
+      EXECUTE before a ticket is called done. Same mark-time question, one
+      altitude up; still says nothing about the test's discriminating power.
+    - TQ-400 (durable done proof) asks DOES THE PROOF STILL HOLD later. It
+      presupposes the proof was worth something on day one.
+    - TQ-500 (this goal) asks WOULD THE TEST EVER SAY NO. A test that cannot fail
+      satisfies all three neighbours perfectly and forever: it is present, it
+      passes, the code it names runs, and it will still pass at every future
+      re-check. This is the one question none of them is shaped to ask.
+
+  WHY THIS IS THE FOUNDING DEFECT, INVERTED. This repository exists to stop work
+  being marked done that never runs. A check that cannot fail is that same defect
+  living inside the instrument built to detect it, and it is self-concealing in
+  the worst way: it is green, it stays green, and its greenness is later cited as
+  evidence the rule it names is being kept.
+
+  SEVERITY SIGNAL — THE REGISTER UNDERSTATES IT. KI-TQ-010 records one
+  occurrence. Three are known, all within a single day, and the last two occurred
+  AFTER the issue was filed and were produced by someone actively looking for the
+  pattern. Do not read the recorded count as a measure of rarity; read it as
+  evidence that knowing about the pattern does not prevent it. Correcting the
+  register is out of scope for this AC tree.
+
+  DELIBERATE NON-GOAL — DO NOT SPECIFY AUTOMATIC CLASSIFICATION. The source entry
+  is explicit that the family of work this applies to cannot be reliably spotted
+  from the text of a requirement; every candidate signal is suggestive and none
+  is dependable. The obligation is therefore declared by whoever does the work
+  (TQ-500a), not inferred. A downstream author who reintroduces automatic
+  detection as the primary mechanism has reopened the defect.
+
+  NAMESPACE RATIONALE. Filed under testing-quality (test-suite trustworthiness)
+  as a sibling of TQ-100 (which tests gate main), TQ-300 (does the tooling have
+  tests at all) and TQ-400 (does the evidence still hold). The subject is whether
+  a green result is worth anything as evidence — not drive-time sequencing, which
+  is build-orchestration's charter. Searched the store first for an existing L0
+  or L1 covering "a test that proves what it claims": the nearest neighbours are
+  BO-2500c ("tests check the real thing, not convenient fakes" — fixture realism,
+  not failure capability) and BO-2900 ("work only counts as done when it is
+  actually reachable" — reachability of the code, not sensitivity of the test).
+  Neither hosts this without distorting its own subject. TQ-500 was the next free
+  id in the namespace.

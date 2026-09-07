@@ -1,0 +1,201 @@
+id: BO-2400c-1-vii
+components:
+  - build_orchestration
+  - injection_builder
+title: "The bundle's reference page describes the function that exists"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the reference page for the context-bundle assembler is the page a reader consults
+    before calling it or changing it,
+  And that page currently states a parameter count, a required-parameter count, a
+    signature, a parameter table, an ordering contract, a return-value expression and
+    three worked examples,
+  When the page is read against the function as it actually exists,
+  Then every one of those statements matches the function — the parameter count, which
+    parameters are required, the order the layers are assembled in, and what the return
+    value is composed of,
+  And no worked example on the page passes an argument the function would reject, so a
+    reader who copies an example gets a call that runs.
+
+  Given the two layers the assembler no longer carries were removed rather than made
+    optional, because an optional layer leaves a live path by which the largest duplicate
+    in the payload is reintroduced by a caller who does not know better,
+  When the page explains the layer set,
+  Then it records that those two layers were removed and why the receiving agent does not
+    need them — the conventions text is already injected into every agent dispatched into
+    the workspace, and the acceptance-criteria records sit in the run's own workspace where
+    that agent can open them,
+  And it states that each context-carrying dispatch instead instructs its agent to read
+    those records from the store, so a reader who notices the layers are gone can tell
+    the content was RELOCATED rather than dropped,
+  And a reader who is deciding whether to add a layer can find the rule that decides it:
+    the bundle carries only what the receiving agent does not otherwise have.
+
+  Given the page also documents a cache TTL as a knob configured in the API or harness
+    layer, and attributes that knob to an acceptance criterion,
+  And no such knob exists — verified 2026-08-18 and again 2026-08-26, the string
+    cache_control appears nowhere in scripts, templates or config; the breakpoint marker
+    is a literal HTML comment inside a prompt string, a textual convention; and leafcutter
+    never issues the model API call, so there is no request on which a TTL could be set,
+  And the criterion it cites was re-specified away from configuration to measurement,
+  When the page describes anything about caching,
+  Then it does not describe a knob that cannot be set, and does not attribute a claim to
+    an acceptance criterion that no longer makes it,
+  And where the page describes the stable prefix, it distinguishes the property the
+    function actually guarantees — that the prefix is byte-identical across calls with
+    unchanged stable inputs — from the provider-side cache hit that property was HOPED to
+    enable and which nothing in this system observes,
+  And a reader cannot come away believing leafcutter configures, primes, or measures a
+    provider cache.
+
+  Given a reference page whose statements about a function can drift the moment that
+    function changes,
+  When this page is corrected,
+  Then the correction names the specific record that changed the layer set, so the next
+    reader can find the reasoning rather than only the outcome,
+  And the page's own last_updated metadata reflects the date of the correction rather
+    than the date the now-wrong text was written.
+depends_on: [BO-2400c-1, BO-2400c-1-vi]
+doc_links:
+  - path: docs/reference/fast-lane-prompt-caching.md
+    relationship: modifies
+    status: exists
+    relevance: "The page this criterion is about, and the only file it changes. 223 lines as of 2026-08-26. The drift is not one line: the parameter count sentence (29-30), the Parameter Overview table (32-41), the signature block (49-61), the Parameters table (69-78), BOTH halves of the Ordering Contract (84-104), the Cacheable-Prefix Guarantee paragraph (117-120), the Return Value expression (138), all three worked examples (156-199), and the Related Knob: Cache TTL section (207-215)."
+  - path: scripts/injection_builders.py
+    relationship: related
+    status: exists
+    relevance: "The function the page documents. Its assemble_context_bundle() docstring was rewritten by BO-2400c-1-vi and already carries the correct layer set, the removed-not-defaulted reasoning, and the measured byte counts — so the page can be corrected against the source rather than against a description of it. Read the docstring, not this criterion, for the authoritative layer list."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400c-1-vi.yaml
+    relationship: related
+    status: exists
+    relevance: "The record that removed the two layers, and the one the corrected page should name. Its notes carry the measurement (conventions 38,291 bytes byte-identical to CLAUDE.md; acs 90,887 bytes; 129,178 of 148,891 = 87%) and the product decision that the split line is DUPLICATE vs ADDITIVE rather than stable vs volatile."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400c-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The criterion the page's TTL section cites. It was re-specified from configuration to MEASUREMENT and now asks for a context-reuse statement on the terminal record — it does not ask anyone to set a TTL. The citation on the page is therefore wrong about what that record says, which is worse than being merely out of date."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: related
+    status: exists
+    relevance: "Carries the read-your-records-from-the-store instruction in BOTH context-carrying dispatches after BO-2400c-1-vi. That instruction is the thing the page must describe as the replacement for the dropped acs layer — the content moved, it did not vanish."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "SURFACE: docs/reference/fast-lane-prompt-caching.md, and only that file. Agent: documentation-expert. Location rule: ALL drifted regions, not the first one found — they are enumerated below. No post-write build step: a docs/reference page is not deployed by build.py, so nothing needs regenerating."
+  - "SCHEMA NOTE ON THIS FIELD'S SHAPE: it_requirements is authored here as a LIST rather than the structured object form deliberately. The object branch of config/ac_store_schema.json requires all five of config_schema_fragment, reference_file_path, n_location_rule, required_skills and post_write_commands for EVERY record that uses it — the schema says so explicitly, so that narrowing the trigger cannot become a way to file a half-populated spec. This record registers no config key, so a config_schema_fragment would have to be invented to satisfy the validator. Filling a field with a fiction to make a gate pass is the failure this repo exists to prevent, so the list form is used instead and the same content is carried in full."
+  - "SINGLE-FILE SCOPE. This criterion changes docs/reference/fast-lane-prompt-caching.md and nothing else. It does NOT change scripts/injection_builders.py or templates/workflows-js/fast-lane-ship.js — both are already correct as of BO-2400c-1-vi, and re-editing them here would put a documentation record on a code surface it does not own. If the page and the code disagree, the CODE is right and the page is what changes."
+  - "CORRECT AGAINST THE SOURCE, NOT AGAINST THIS RECORD. Read the actual assemble_context_bundle() signature and docstring in scripts/injection_builders.py and transcribe from it. Do not transcribe the layer list out of this criterion's prose — a second-hand description is exactly how the page drifted the first time. If a statement on the page cannot be checked against the function, it does not belong on the page."
+  - "ALL TEN DRIFTED REGIONS — the drift is in TEN separate regions, and correcting the signature block alone leaves nine wrong. As of 2026-08-26 they are: the 'accepts eight keyword-only parameters ... first five are required' sentence (lines 29-30); the Parameter Overview table rows for conventions and acs and the change-frequency ranks of everything after them (32-41); the signature code block (49-61); the Parameters table rows (69-78); the stable-prefix ordering block (84-92); the volatile-suffix ordering block (94-104); the Cacheable-Prefix Guarantee paragraph, which names conventions as a stable input (117-120); the Return Value expression, which reads '\\n\\n'.join([acs, prior_tests, *optional_layers]) (138); all three worked examples (156-199); and the Related Knob: Cache TTL section (207-215)."
+  - "THE THREE EXAMPLES MUST BE RUNNABLE, NOT MERELY EDITED. Every worked example currently passes conventions= and acs=, which the function now rejects with TypeError. A reader copies examples. After the correction, paste each example into a Python process against the real module and confirm it runs — a reference page whose examples raise on the first call is worse than one that is simply terse."
+  - "THE TTL SECTION IS NOT STALE — IT IS FALSE, and that is a stronger claim needing a different fix. Stale text describes something that used to be true. This section describes a knob that has never existed: verified 2026-08-18 and re-verified 2026-08-26 that the string cache_control appears nowhere in scripts/, templates/ or config/; the cache breakpoint is a literal HTML comment inside a prompt string; and leafcutter never issues the model API call (the workflow engine's agent() does, and it is handed plain prompt text), so there is no request on which a TTL could be set. Do not soften it to 'not yet configured' or 'planned' — that preserves the false impression that setting it is a matter of turning something on."
+  - "DO NOT OVERCORRECT THE CACHE FRAMING INTO A CLAIM THAT THE ORDERING IS POINTLESS. The byte-identical stable prefix is a real, tested property of the function (BO-2400c-1, BO-2400c-1-iv) and the page should keep documenting it as such. What must go is the assertion that a provider cache is configured, primed, or observed. Distinguish the property the code guarantees from the benefit it was hoped to unlock — that distinction is the whole correction, and collapsing it in either direction gets the page wrong again."
+  - "STATE THE RULE, NOT ONLY THE NEW LIST. A reader who learns only that there are now three layers will add a fourth the next time something seems useful. The rule that decides membership — the bundle carries only what the receiving agent does not otherwise have — is what stops the page going stale again, and it is the reason both removed layers were removed."
+  - "SAY THAT THE CONTENT MOVED. The acs layer's content was not dropped; every context-carrying dispatch now instructs its agent to read each id's record from the run's own store. A page that says only 'the acs parameter was removed' invites the reader to conclude the coder no longer sees its ACs, which is false and would prompt someone to add the layer back."
+  - "GENRE GUARD — THIS STAYS A REFERENCE PAGE. Diataxis reference is lookup-oriented: tables, signatures, contracts, enumerated behaviour. The reasoning belongs in one or two sentences of orientation and in the pointer to BO-2400c-1-vi, not in an essay about the 87% duplication. If the explanation grows past a short paragraph, that is a signal it belongs in an explanation doc and should be raised as its own record rather than absorbed here."
+  - "FRONTMATTER: last_updated is 2026-07-21 and must move to the correction date. Leave title, type, status, created and the components list alone — the page is still a reference, still active, and still owned by build_orchestration + injection_builder."
+delivers_to:
+  - agent: python-coder
+    contract: "A reference page whose signature, parameter table, ordering contract, return-value expression and worked examples match assemble_context_bundle() as it exists, so a coder reading it before a call or a change is not led into passing an argument the function rejects."
+expects_from:
+  ac_id: BO-2400c-1-vi
+  contract: "The narrowed three-layer signature (architecture, high_level, prior_tests, plus the optional prior_outputs, working_diff and breakpoint_marker), the removal of --conventions and --acs from the assemble-bundle subcommand, and the read-your-records-from-the-store instruction on both context-carrying dispatches. This record documents that outcome and does not re-litigate it."
+test_required: true
+test_spec:
+  - name: test_ac1vii_each_documented_example_executes_against_the_real_function
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "docs/reference/fast-lane-prompt-caching.md worked examples"
+    description: "Parametrized over the page's fenced python example blocks: each is EXECUTED against the real assemble_context_bundle. An example passing a parameter the function no longer accepts raises TypeError and fails the test. Red before this record: all three examples passed conventions= and acs=."
+  - name: test_ac1vii_the_minimal_example_produces_exactly_one_breakpoint_marker
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The page asserts its minimal example yields one breakpoint marker dividing two stable layers from one volatile layer. That is a factual claim about output, so it is checked against the executed output rather than trusted."
+  - name: test_ac1vii_the_page_still_carries_worked_examples
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Guards the guard. Deleting the Examples section entirely would make every execute-the-examples test vacuously green, so the example count is pinned at >= 3. Without this the suite rewards removing the examples rather than fixing them."
+test_rationale: |
+  CORRECTED FROM AN EARLIER JUDGEMENT ON THIS RECORD, and the correction is worth stating
+  because the first answer was wrong in an instructive way.
+
+  This record was first authored test_required: false, on the argument that the only
+  mechanically checkable claim — that the worked examples run — was already covered by the
+  real-subprocess tests in unit_tests/workflows/test_bo2400c1vi_bundle_layer_set.py. That
+  conflated two different subjects. Those tests constrain the CODE. Nothing in them looks
+  at the PAGE, so every one of them stays green while the page describes a signature the
+  code does not have — which is precisely the situation that produced this record.
+
+  Executing the page's own examples is not grep-shaped evidence and does not share the
+  weakness that made a test look pointless. A test asserting the string "conventions" is
+  absent from the page passes the moment somebody deletes a word, and is equally satisfied
+  by a page with no examples at all. Executing them cannot be satisfied either way: an
+  example that passes a removed parameter raises TypeError, and an example that drifts from
+  the signature in any other direction raises too. The subject under test is the document,
+  the assertion is on real behaviour, and the failure mode is the real one — a reader
+  copying an example and getting an exception.
+
+  Verified as a genuine red baseline rather than assumed: with the corrected page stashed
+  and the pre-fix page restored, the suite reports 4 failed / 1 passed, each failure the
+  TypeError on conventions=. The one test that stays green in that state is the
+  example-count guard, which is correct — the old page did carry three examples; they were
+  simply wrong.
+
+  What remains outside any assertion is unchanged and still true: whether the removal reads
+  as a relocation rather than a loss, whether the membership rule is discoverable, and
+  whether the caching text separates a guaranteed property from an unobserved benefit are
+  judgements settled by review, not by a test. The tests here cover the part a machine can
+  settle honestly, and the review covers the rest — rather than the earlier all-or-nothing
+  conclusion that because some of it could not be tested, none of it should be.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-08-26
+superseded_by: null
+covered_by:
+  - "unit_tests/workflows/test_bo2400c1vii_reference_examples.py"
+implemented_by:
+  - "docs/reference/fast-lane-prompt-caching.md"
+change_target: docs
+risk_surface: internal
+notes: |
+  WHY THIS IS ITS OWN RECORD RATHER THAN PART OF BO-2400c-1-vi. That record's own
+  it_requirements say so explicitly: a .md reference page is documentation-expert's
+  surface, and config/agent_registry.json gives python-coder .py and .js only. So -vi was
+  authored NOT to include the doc, and its implementer was instructed to report the
+  divergence so a companion record could be raised. This is that record. Keeping them
+  separate also keeps the sign-offs attributable: if the page drifts again, the history
+  says whether the code change or the documentation pass was responsible.
+
+  A SECOND DEFECT WAS FOUND WHILE SCOPING THIS, AND IT DOES NOT COME FROM -vi.
+  The page's "Related Knob: Cache TTL" section describes an extended 1-hour cache TTL
+  "configured in the API or harness layer (AC BO-2400c-2)". That was already false before
+  the layer removal. Verified twice — 2026-08-18 during the BO-2400c-2 re-spec, and again
+  2026-08-26 while scoping this record — the string cache_control appears nowhere in
+  scripts/, templates/ or config/; the cache breakpoint is a literal HTML comment inside a
+  prompt string, a textual convention rather than a provider cache-control block; and
+  leafcutter never issues the model API call, so there is no request on which a TTL could
+  be set. BO-2400c-2 itself was re-specified from configuration to MEASUREMENT and now
+  asks for a context-reuse statement on the drive's terminal record.
+
+  So the page cites a criterion for a claim that criterion no longer makes, about a knob
+  that does not exist. That is a different and worse failure than the signature drift: the
+  signature drift is a page that has fallen behind, while the TTL section is a page that
+  was never right. Both are in scope here because a reader does not distinguish them — they
+  are on the same page, under the same title, and one lends credibility to the other.
+
+  WHAT THIS RECORD DELIBERATELY DOES NOT DO. It does not touch the code. It does not
+  re-open whether the two layers should have been removed. It does not rewrite the page
+  into an explanation of the 87% duplication — that framing belongs in an explanation doc
+  if anyone wants it, and should be raised separately rather than smuggled into a reference
+  page under the genre guard.

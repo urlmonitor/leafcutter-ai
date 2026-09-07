@@ -55,7 +55,7 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/04_TICKET-20260721-BP-1400a-2-i.md
+- tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/04_TICKET-20260721-BP-1400a-2-i.md
 notes: |
   Boundary edge for the path-scoping rule: a mixed pull request must not let a
   web-app change slip through unchecked just because it is bundled with backend

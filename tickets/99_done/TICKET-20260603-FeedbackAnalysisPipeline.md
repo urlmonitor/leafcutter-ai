@@ -398,3 +398,23 @@ Pushed branch feature/feedbackanalysispipeline to origin. Created PR #39: https:
 - Naming conflict? `templates/workflows/feedback-report.md` deploys to
   `.claude/commands/feedback-report.md`. Verify no existing command with that name
   exists before writing (current command list: see `templates/workflows/`).
+
+## Repair Resolution (GE-122e-2)
+
+- resolution: kept the 'done' copy (previously held by 99_done) and removed the 'todo' copy (held by 00_inbox)
+- reason: tickets/ticket_lifecycle.json permits status 'done' only in a terminal, permanent archive folder (99_done), while status 'todo' is only permitted in non-terminal, still-in-flight folders, so the 'done' declaration records the later, completed state.
+
+### Recovered content from the deleted copy
+
+- [ ] test-writer
+- [ ] python-coder
+- [ ] test-runner
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request
+- [ ] user-surface-smoker
+- [ ] Create `templates/skills/feedback-analysis/scripts/trend_report.py` with
+- [ ] Create `templates/skills/feedback-analysis/SKILL.md` with:
+- [ ] Create `templates/agents/feedback-analyst.md` with:
+- [ ] Create `templates/workflows/feedback-report.md` with:
+- [ ] Write unit tests for `trend_report.py` in

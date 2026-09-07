@@ -635,10 +635,29 @@ def _check_unchecked_tasks(
     return violations
 
 
+# ---------------------------------------------------------------------------
+# Cross-layer seam answer checks (BP-1100g-5-i) — re-exported from the
+# dedicated _cross_layer_seam_checks module so this file stays under its
+# 400-line budget. `from _signoff_parity_checks import
+# check_cross_layer_seam_answer` (the import surface test-writer built
+# against) keeps working via this re-export.
+# ---------------------------------------------------------------------------
+
+from _cross_layer_seam_checks import (  # noqa: E402, F401
+    check_cross_layer_seam_answer,
+    extract_cross_layer_seam_answers,
+)
+
+
 """
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-31 [python-coder/BP-1100g-5-i]: Re-exported check_cross_layer_seam_answer
+  and extract_cross_layer_seam_answers from the new _cross_layer_seam_checks.py
+  module (kept out of this file to preserve its 400-line budget — it was
+  already at 414 stripped lines before this ticket). Wired into
+  check_ticket_signoff_parity.py's _validate_ticket_content().
 - 2026-07-14 [python-coder/BO-400c-3]: Extended _check_done_folder_prohibition
   with an ``old_path`` keyword-only argument for move-based detection (BO-400c-3-i),
   added ``/99_done/`` detection (BO-400c-3-ii), and added the

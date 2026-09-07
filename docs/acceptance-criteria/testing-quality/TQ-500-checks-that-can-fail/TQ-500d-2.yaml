@@ -1,0 +1,149 @@
+id: TQ-500d-2
+components:
+  - testing_quality
+  - build_orchestration
+title: "A how-to that names the exception and walks through taking the substitute evidence"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a person about to write tests for a piece of work whose tests will be correct
+      and passing the moment they are written,
+  When they consult the project's how-to guidance for writing tests,
+  Then the guidance names that case explicitly, states that an immediate pass is the
+    expected result for it rather than a sign the work was done out of order, and
+    points at the substitute evidence required in its place,
+    And the guidance sets out the steps of taking that substitute evidence: choose and
+      name the alteration, re-run the tests, record the outcome of each test under it,
+      revert the alteration, and confirm the tests returned to their earlier outcomes,
+    And the guidance states that a reasoned negative — no substitute evidence was
+      obtainable, and here is what was attempted — is a valid answer, and shows what a
+      conforming one contains,
+    And the guidance states that the writer declares which kind of evidence applies,
+      and that nothing infers it from the wording of the requirement,
+    And a reader following the guidance from the existing rule about immediate passes
+      through to this exception arrives at one instruction for the case rather than
+      two that conflict.
+depends_on:
+  - TQ-500d
+  - TQ-500d-1
+doc_links:
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Holds the rule the last clause must reconcile with: the TDD Order section, which
+      states that a green test-writer phase is an ordering violation and not a pass.
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Holds the same rule in its verification-outcome table. Both surfaces must agree
+      with the how-to, or the reader gets two instructions.
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      The neighbouring guidance on which proof-of-done question a test answers. The
+      how-to sits beside it and must not restate its taxonomy.
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE LAST CLAUSE IS AN EDIT TO TWO OTHER FILES, NOT A CROSS-REFERENCE. "One
+    instruction rather than two that conflict" is only satisfiable by amending
+    the conflicting text. CLAUDE.md's "TDD Order — test-writer Must Precede
+    python-coder" section is THIS AC's to reconcile; the corresponding row in
+    templates/agents/test-writer.md's verification-outcome table is TQ-500d-1's.
+    A how-to that adds a third document while both existing surfaces still assert
+    the inverse produces three documents and no resolution.
+  - >-
+    THE HOW-TO GOES UNDER docs/how-to/ and must be registered in the doc index;
+    it must satisfy check-doc-frontmatter and check-doc-length. It sits beside
+    docs/testing/test-angles.md and must not restate that document's angle
+    taxonomy — the two axes are distinct and conflating them is a known failure.
+  - >-
+    THE PROCEDURE MUST BE WRITTEN AS ORDERED STEPS, all five: choose and name the
+    alteration, re-run, record the outcome of each test under it, revert, and
+    confirm the tests returned to their earlier outcomes. The revert and the
+    post-revert confirmation are two separate steps — this is the only procedure
+    in the pipeline that deliberately breaks working behaviour, and an
+    unconfirmed revert leaves a live defect introduced by the act of proving the
+    tests catch defects.
+  - >-
+    NO CLASSIFIER, INCLUDING IN PROSE. State that the writer declares which kind
+    applies and that nothing infers it from the requirement's wording. Do NOT
+    supply a checklist of signals for recognising the family — a list of
+    "signs your tests will be green on arrival" is automatic detection in prose
+    and reopens the defect TQ-500a-1-i exists to close.
+  - >-
+    Must show a conforming reasoned negative as a worked example, not merely
+    state that one is valid. A writer who cannot see the shape will either
+    fabricate a proof or write a bare no, and both are worse than the honest
+    answer.
+  - >-
+    THE DELIVERABLE IS THE DOCUMENT AND ONLY THE DOCUMENT. No behavioural AC in
+    this tree may be closed by pointing at this guidance, and an instruction
+    appearing in it is not evidence that anything records or reads anything.
+delivers_to: null
+expects_from:
+  ac_id: TQ-500d-1
+  contract: >-
+    The rule that green on arrival is the expected result for this family and is not
+    itself the answer. The how-to explains how to comply with that rule; it does not
+    define it.
+test_required: false
+test_rationale: |
+  change_target is docs; the deliverable is a how-to page plus the reconciling
+  edit to CLAUDE.md's TDD Order section. There is no executable behaviour to
+  constrain.
+
+  Deliberately NOT given a presence test. A test asserting the how-to contains
+  the five procedure steps, or that CLAUDE.md no longer says an immediate pass is
+  a violation, would be green the moment the text is written and could never fail
+  for any reason connected to a run — and would then be citable as evidence that
+  the procedure is being followed. That is precisely the substitution KI-TQ-010
+  records. Conflict-freedom is verified by review against TQ-500d-1's amended
+  surfaces, and the behaviour the guidance describes is asserted over emitted
+  records by TQ-500b-1, TQ-500b-2 and TQ-500d-1-i.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept documentation-expert and change_target docs. Made the last Then clause
+      concrete: this AC OWNS the reconciling edit to CLAUDE.md's TDD Order
+      section, while TQ-500d-1 owns the test-writer.md table row — the two must
+      land together or the reader gets three documents and no resolution. Added
+      the no-classifier-in-prose constraint (a "signs your tests will be green on
+      arrival" checklist would reopen the defect). test_required false with an
+      explicit rationale for why a presence test would itself be unfalsifiable.
+      criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Authored to satisfy TQ-500d's how-to documentation trigger, and also standing in for
+  TQ-500a's how-to trigger: both name the same procedure for the same reader, and two
+  copies of it would drift.
+
+  THIS AC'S DELIVERABLE IS THE DOCUMENT, AND ONLY THE DOCUMENT. It is deliberately not
+  a proxy for any behavioural check in this tree. No behavioural AC here may be closed
+  by pointing at this guidance, and the presence of an instruction in it is not
+  evidence that anything records or reads anything — that evidence is TQ-500b-1,
+  TQ-500b-2 and TQ-500d-1-i, all of which assert over emitted records.
+
+  THE LAST CLAUSE IS THE ONE WORTH REVIEWING FOR. Adding a correct how-to while leaving
+  the two existing surfaces asserting the inverse produces three documents and no
+  resolution, and the reader will follow whichever they met first — which, for everyone
+  involved in the recorded incident, was the rule that said an immediate pass is a
+  problem.

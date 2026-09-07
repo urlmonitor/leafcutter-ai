@@ -60,4 +60,4 @@ superseded_by: null
 covered_by:
   - BO-1900d-1-i
 implemented_by:
-- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-DispatchPreflightGate/16_TICKET-20260708-BO-1900d-1.md
+- tickets/00_inbox/epics/EPIC-DispatchPreflightGate/16_TICKET-20260708-BO-1900d-1.md

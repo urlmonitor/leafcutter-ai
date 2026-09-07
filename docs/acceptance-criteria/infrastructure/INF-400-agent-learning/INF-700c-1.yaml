@@ -7,7 +7,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c.yaml"
@@ -121,7 +121,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - INF-700c-1-i
-implemented_by: []
+implemented_by:
+  - "scripts/knowledge/harvest_learnings.py"
 notes: |
   This closes the substitution the harvester performs today: when learning text
   is absent it composes a placeholder from the kind and the ticket, and the

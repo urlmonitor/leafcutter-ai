@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a run over a body of work of thirty-seven pieces whose own record of what it
@@ -48,13 +48,98 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The established shape for an unconfirmed read: only an affirmative confirmation counts, and a check that never claims it could read the set is treated exactly as one that says it could not. This record applies the same rule to the run's account of its OWN work rather than to the body of work."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- the epic completion path. Two conditions meet here: epicRecheckReport() (deployed ~1952) must be reached and must emit even when the run's own record of completed work is empty or partial, and the whole unbuilt section must be absent when it is complete. Both poles are one predicate at one location; implementing them in two places is how they end up contradicting each other."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_unbuilt_work_self_account.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_ticket_done_recording.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_vacuous_completion_decision.py"
+  constraints:
+    - "ABSENCE OF EVIDENCE IS NOT SUCCESS, AND IT IS NOT A REASON TO SKIP THE REPORT. An empty completed record must not short-circuit the reporting path. The failing shape here is not a badly worded report -- it is no report at all, which no assertion about wording can reach. The report must be produced, must state that the run's own account was empty, and must not read as finished."
+    - "ONLY AN AFFIRMATIVE ACCOUNT COUNTS. Follow the polarity rule BO-300a-5-i established: a completed record that never affirmatively says it covers a piece is treated exactly as one that says it does not. Do not default an unknown to accounted-for -- that is the same fail-open that turns silence into a finished claim."
+    - "A PARTIAL ACCOUNT IS STATED AS PARTIAL AND QUANTIFIED. The report says the account was incomplete and how many pieces it could not account for, and those pieces are named and counted among the unbuilt via BO-300d-1's count. Unaccounted work must not be silently merged into the built set nor silently dropped from both sets."
+    - "THE CLEAN CONTROL IS LOAD-BEARING, NOT A NICETY. A run that built and accounted for everything emits no unbuilt section, no count, no names and no action, and reports the work as finished. Without this, warning on every run passes every other descriptor in this family, and a permanent banner trains the operator to ignore exactly the sentence this work exists to make them read."
+    - "BOTH POLES IN ONE CHANGE. The residual section appears exactly when there is residual or unaccounted work. Implement it as one condition with two outcomes; two independently written branches can each be right and jointly wrong."
+    - "DEPLOYED COVERAGE IS CHARGED ONCE FOR THE FAMILY, at BO-300d-2, on the shared build-feature.js surface. Do not duplicate a build-and-run descriptor here; do confirm in the sign-off that the change shipped in the same pass."
+    - "ASSERT BY EXECUTION. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep'. The empty-account case cannot be reached by inspecting report wording, because in the failing version there is no report to inspect -- drive the workflow with an empty completed record and assert something was emitted."
+delivers_to:
+  - agent: reference-author
+    contract: "The positive meaning of an absent unbuilt-work section -- that the run accounted for every piece and built them all -- which BO-300d-5's reference entry must state, and the fact that an empty or partial self-account is reported rather than resolved to finished."
+expects_from:
+  - ac_id: BO-300d-1
+    contract: "The stated unbuilt count, which must still be present in the empty- and partial-account cases and must be absent entirely in the clean case."
+  - ac_id: BO-300a-5
+    contract: "The completion-time re-read of the body of work and the withheld finished claim, plus the affirmative-confirmation polarity rule BO-300a-5-i fixed for an unconfirmed read -- applied here to the run's account of its OWN work rather than to the body of work."
+test_spec:
+  - name: test_an_empty_completed_record_still_produces_a_report_that_says_the_run_knows_nothing
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Drive the workflow over thirty-seven pieces with the run's completed record empty. Assert a report is emitted at all, that it states an unbuilt count, that it states the run's own account of what it did was empty, and that it does not report the work as finished. Fail-closed: holding no record of having worked must read as knowing nothing, never as having nothing left to do."
+  - name: test_a_partial_completed_record_is_stated_as_incomplete_and_the_unaccounted_are_named_and_counted
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The completed record covers only some of the pieces worked on. Assert the report says the account was incomplete, states how many pieces it could not account for, names each of them among the unbuilt, and does not report the work as finished."
+  - name: test_a_fully_built_and_fully_accounted_run_emits_no_unbuilt_section_at_all
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The mandatory control. Every piece built and accounted for: assert the emitted message contains no unbuilt-work section, states no unbuilt count, names no piece as unbuilt, states no action, and reports the work as finished. An implementation that warns on every run must go red here."
+  - name: test_the_report_is_reached_and_its_verdict_consumed_even_when_the_run_can_account_for_nothing
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "From the workflow's real completion entry point with an empty completed record, assert the reporting path is reached and that its verdict is consumed in control flow -- the finished claim is withheld and the archive/finalize step is not offered. Asserting only that a string was produced cannot distinguish a report that was emitted and ignored from one that governs the run's own conclusion."
+  - name: test_zero_one_and_all_pieces_unaccounted_are_each_reported_correctly
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The three shapes of the unaccounted set: none, exactly one, and every piece. Assert the section is absent at zero, present and singular at one, and covers the whole body of work at all -- an off-by-one in the presence condition is invisible in the many case."
+test_rationale: |
+  This record's first two scenarios are the only ones in the family a report-wording
+  test cannot reach, because in the failing version the report does not exist. That
+  is why the empty-account descriptor is charged as failure rather than criterion:
+  the assertion is that the path is reached and fails closed, not that a sentence is
+  worded well. The clean-run control is a separate descriptor and is deliberately the
+  inverse assertion -- the cheapest way to pass every other descriptor in BO-300d is
+  to emit the unbuilt section unconditionally, and that fix is worse than the defect
+  because a banner on every run is read by no one. Reachability is charged because
+  the verdict has a consumer: a report that is emitted while the run still offers to
+  archive the work is a report nothing acted on. The boundary descriptor covers the
+  presence condition at zero and one, where an off-by-one hides.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-08-31'
+  note: Assigned python-coder, epic completion path in templates/workflows-js/build-feature.js.
+    Added estimated_complexity M, a structured it_requirements mapping requiring both
+    poles of the predicate in one change, forbidding a fail-open default on an unaccounted
+    piece and stating why the clean-run control is load-bearing, a delivers_to contract
+    to reference-author for the meaning of an absent section, expects_from against
+    BO-300d-1 and BO-300a-5, a five-descriptor test_spec over four angles (failure,
+    criterion, reachability, boundary) with test_rationale, and change_target/risk_surface.
+    Deployed coverage is charged once for the family at BO-300d-2 and deliberately
+    not duplicated here. criteria untouched; readiness and priority left for the approval
+    gate.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []

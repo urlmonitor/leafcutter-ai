@@ -1,0 +1,209 @@
+id: INF-500e-2
+components:
+  - infrastructure
+  - agent_telemetry
+title: "A figure the report could not obtain reads as unknown, while a measured zero still reads as zero"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reporting week whose merged pull-request count could not be obtained, in a
+    row that also carries genuinely measured figures — 69 commits, 6435 lines of
+    production code,
+  When the machine-readable tab-separated rendering is produced,
+  Then the pull-request column for that week is empty rather than 0,
+  And the column recording whether pull-request data was available reads False,
+  And the commits column still reads 69,
+  So that one unobtainable figure does not cast doubt on the measured ones beside it.
+
+  Given a reporting week in which the pull-request count was genuinely obtained and
+    was zero, and in which no criterion was closed so there is no cycle time to
+    report,
+  When the machine-readable tab-separated rendering is produced,
+  Then the pull-request column reads 0,
+  And the median-cycle column is empty,
+  So that "nothing merged" and "not measured" occupy visibly different cells in the
+    same row.
+
+  Given a count of 0 and a count that is unknown,
+  When each is formatted for the human-readable report,
+  Then the 0 renders as "0" and the unknown renders as a dash.
+
+  Given a ratio whose numerator is unknown, and a ratio whose denominator is unknown,
+  When each ratio is computed for display,
+  Then both are unknown,
+  And a ratio of 5 over 10 is computed as 0.5,
+  So that an unknown input propagates through a derived figure instead of being
+    silently treated as zero part-way down the calculation.
+
+  Given a telemetry sink holding two recorded events, neither of which is a lane-run
+    start event,
+  When the autonomy section is summarised,
+  Then the section reports itself unavailable,
+  And the completion rate is unknown rather than 0%,
+  And the summary states that the sink holds 2 events but none are lane-run events,
+  So that an unwired emitter is never presented as runs that were attempted and all
+    failed.
+
+  Given no telemetry sink exists at the configured location,
+  When the autonomy section is summarised,
+  Then it reports itself unavailable with a reason stating the sink is absent.
+
+  Given a telemetry sink holding two lane-run starts, one run that reached a merged
+    pull request, and one halt,
+  When the autonomy section is summarised,
+  Then it reports itself available with 2 starts, 1 success, 1 halt and a completion
+    rate of 50%,
+  So that the unavailable path is a genuine absence of data and not the only path the
+    summary can take.
+
+  Given a telemetry sink in which one line is not parseable as a record, sitting
+    between one lane-run start and one successful run,
+  When the autonomy section is summarised,
+  Then the unparseable line is skipped, the summary reports 1 start and 1 success, and
+    no error is raised.
+depends_on:
+  - INF-500e
+doc_links:
+  - path: scripts/agent-health/weekly_health.py
+    relationship: implements
+    status: exists
+  - path: scripts/agent-health/generate_health_report.py
+    relationship: related
+    status: exists
+    relevance: "Supplies the per-lane aggregates the autonomy section reuses, so the two reports cannot disagree about the same sink."
+  - path: scripts/agent-health/README.md
+    relationship: describes
+    status: exists
+  - path: unit_tests/agent_health/test_weekly_health.py
+    relationship: related
+    status: exists
+    relevance: "Renders real report payloads and reads back the named cells, and drives the autonomy summary against temporary sink files — the assertions execute the rendering and the sink read, not the source text."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Unknown must be represented as Python None all the way from collection to rendering, and never as 0, -1 or an empty string in the payload. The three formatters in scripts/agent-health/weekly_health.py are the single choke point: _int(value) renders None as an em dash and 0 as the string 0; _num and _pct follow the same rule; _render_tsv(report) emits an EMPTY cell for None and the literal digits for a measured value."
+  - "Every derived figure must propagate unknown rather than absorbing it. weekly_health.py::_ratio_of(numerator, denominator) must return None when EITHER operand is None and must compute normally when both are known. A derived figure that silently substitutes 0 for an unknown operand is the defect this record exists to prevent, and it is invisible in the rendered output."
+  - "The machine-readable rendering must carry the availability fact as its own column (prs_available) alongside the empty cell, so a consumer of the TSV can distinguish unknown from zero without parsing a dash. Do not encode availability only in the human-readable Markdown."
+  - "The autonomy summary is weekly_health.py::collect_lane_health(telemetry_path) and must return available, reason, lanes, starts, successes, halts, completion_rate and event_total. available must be derived from starts > 0, NOT from the sink file merely existing: a sink holding events none of which are lane-run events is unavailable, and its reason must state the total event count and that none are lane-run events. Reporting 0% completion there would assert that runs were attempted and all failed, which is a different and false claim."
+  - "The absent-sink and no-lane-event branches must give DIFFERENT reasons, and both reasons must be non-empty. The absent-sink reason must name the path. An operator reading only the reason must be able to tell an unwired emitter from a missing file."
+  - "Reading the sink must tolerate a corrupt line: a line that fails json.loads is skipped and the surrounding records still count. Per the project error-handling policy the file read is wrapped and any OSError is logged at WARNING rather than swallowed, and a malformed line must never abort the section."
+  - "The per-lane aggregates must be obtained by reusing build_lane_comparison_report from scripts/agent-health/generate_health_report.py rather than re-reading the sink, so the two reports cannot disagree about the same file. Keep that import if the lane schema changes."
+  - "The lane-event vocabularies (_LANE_START_EVENTS, _LANE_SUCCESS_EVENTS, _LANE_HALT_EVENTS) are provisional: nothing has ever emitted a lane event, so they are unverified against real data. Treat a change to them as a change to the meaning of the autonomy tier, and confirm them against what the fast lane actually writes before relying on the section — a drift makes the tier report no lane data while events are arriving."
+test_spec:
+  - name: TestUnknownIsNotZero::test_tsv_renders_unknown_pr_counts_as_empty_not_zero
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Renders a real report payload through _render_tsv and reads back the named cells: prs is empty, prs_available is False, and the measured commits cell still reads 69."
+  - name: TestUnknownIsNotZero::test_tsv_renders_a_real_zero_as_zero
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A genuinely-obtained zero renders the prs cell as 0 while the unobtained cycle_median cell renders empty, in the same row."
+  - name: TestUnknownIsNotZero::test_int_formatter_distinguishes_unknown_from_zero
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "_int(0) is the string 0 and _int(None) is a dash."
+  - name: TestUnknownIsNotZero::test_ratio_of_propagates_unknown_numerator
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "_ratio_of(None, 10) is None — an unknown numerator propagates instead of being read as zero."
+  - name: TestUnknownIsNotZero::test_ratio_of_propagates_unknown_denominator
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "_ratio_of(5, None) is None — an unknown denominator propagates instead of being read as zero."
+  - name: TestUnknownIsNotZero::test_ratio_of_computes_when_both_known
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "_ratio_of(5, 10) is 0.5, so propagation is a real branch and not a blanket None."
+  - name: TestCollectLaneHealth::test_sink_with_no_lane_events_is_unavailable_not_zero_percent
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "A temporary sink holding two non-lane events reports available False, completion_rate None, event_total 2, and a reason naming that none are lane-run events."
+  - name: TestCollectLaneHealth::test_absent_sink_reports_unavailable_with_a_reason
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A non-existent sink path reports available False with a reason stating the sink is absent."
+  - name: TestCollectLaneHealth::test_lane_events_produce_a_completion_rate
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A sink with 2 starts, 1 success and 1 halt reports available True and a completion rate of 0.5, proving the unavailable path is not the only reachable one."
+  - name: TestCollectLaneHealth::test_malformed_line_is_skipped_without_raising
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "An unparseable line between one start and one success is skipped; the summary reports 1 start and 1 success and raises nothing."
+test_rationale: |
+  The rendering descriptors drive _render_tsv with a real report payload and read
+  back named cells by header index, rather than asserting on the source of the
+  formatter. That matters here because the defect this record guards against —
+  an unknown printed as 0 — is only observable in the rendered row; a test that
+  inspected the formatter in isolation would pass on a renderer that never called
+  it. The lane descriptors write actual temporary JSONL sinks and read them back
+  through collect_lane_health, so the absent-file, no-lane-event, healthy and
+  corrupt-line branches are each executed against a real file rather than a
+  mocked reader. Each unknown assertion is paired with a measured-value assertion
+  in the same test or the same class, because an implementation that rendered
+  everything as a dash would satisfy an unknown-only contract and destroy the
+  report.
+delivers_to: null
+expects_from:
+  ac_id: INF-500e-2-i
+  contract: "The truncation verdict for the merged-pull-request page, as returned by weekly_health.py::pr_coverage_floor and carried on the collect_pull_requests result as covered_from: date | None and reason: str. covered_from None means the page reaches every reporting week; a date means every week starting before it must be rendered unknown (empty TSV cell, prs_available False) rather than carrying an undercounted number."
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. The capability had already shipped (scripts/agent-health/weekly_health.py, merged as d0fa881c / PR #608), so the test contract binds each criterion to the real passing test in unit_tests/agent_health/test_weekly_health.py rather than commissioning new coverage. Added assigned_agent, estimated_complexity, it_requirements, test_spec, test_rationale and the expects_from contract against INF-500e-2-i. Recorded the provisional, never-verified lane-event vocabularies as a standing constraint. Criteria unchanged; work_status deliberately left todo for a separate evidence-bound step."
+    by: it-po
+    at: 2026-08-26
+  - reason: "Reconciliation pass, 2026-08-31 (python-coder, evidence audit) -- FINDING 5. work_status was flipped from the deliberately-left-todo state recorded in the entry above to done, with nothing recording when or on what evidence; recording it now. Evidence: all 10 tests named in test_spec (TestUnknownIsNotZero x5, TestCollectLaneHealth x4, plus their siblings) exist in unit_tests/agent_health/test_weekly_health.py and pass under AC_ENFORCE_STRICT=1. covered_by already correctly names the child INF-500e-2-i and is unchanged; two tests are also tagged directly to this record (TestCollectLaneHealth::test_sink_with_no_lane_events_is_unavailable_not_zero_percent, TestUnknownIsNotZero::test_int_formatter_distinguishes_unknown_from_zero), both present and passing."
+    by: python-coder
+    at: 2026-08-31
+superseded_by: null
+covered_by:
+  - INF-500e-2-i
+implemented_by:
+  - d0fa881ca111665a8ae10b3bb46773c73325c85c
+  - scripts/agent-health/weekly_health.py
+change_target: code
+risk_surface: internal
+notes: |
+  Zero-as-unknown is the same false-green shape the trust tier exists to surface,
+  one layer down in the rendering. A transient failure of the pull-request query
+  once produced a row reading 0 merged pull requests for every week; nothing in
+  that output distinguished it from a genuinely quiet fortnight.
+
+  The scenarios deliberately pair each unknown with a measured value in the same
+  row or the same run. An implementation that renders everything as a dash would
+  satisfy an unknown-only scenario and destroy the report; the measured-zero and
+  measured-69 assertions are what stop that.
+
+  Three independent sources of unknown are covered here because they share one
+  rule and one rendering: an unobtainable pull-request count, a truncated result
+  page (specified separately in INF-500e-2-i, where the mechanism is subtle
+  enough to deserve its own record), and a telemetry sink carrying no lane-run
+  events. The availability flag travels with the figure so a consumer of the
+  machine-readable form can tell the two apart without parsing a dash.

@@ -52,15 +52,37 @@ test_spec:
     target_dir: unit_tests/
     framework: unittest
     type: behavioral
-    description: "change_target=code, risk_surface=internal yields an agents map WITHOUT documentation-expert."
+    description: "change_target=code, risk_surface=internal yields an agents map WITHOUT documentation-expert. FIXTURE CONSTRAINT -- the fixture AC MUST own a document: give it a doc_links entry with relationship `creates` (or `modifies`). Once BO-2200c-5-iii lands, ownership is a second necessary condition for a documentation demand, so a fixture owning NO document yields no documentation-expert whatever its classification -- this assertion would then pass without ever exercising the non_triggering_classifications rule it exists to pin down, satisfied by the ownership gate alone, and could no longer detect a regression that over-triggers on an internal refactor. An owning fixture keeps the classification the ONLY reason the assertion holds. REQUIRED CONTROL, in this same test -- after asserting the absence, flip ONLY the classification on that same owning fixture to a triggering one (e.g. change_target=pipeline) and assert documentation-expert NOW appears. Without that second half the test cannot distinguish 'the classification rule works' from 'the fixture was never going to trigger anything', and it goes quiet in exactly the case it exists to catch."
   - name: test_config_prompt_infrastructure_internal_do_not_trigger
     target_dir: unit_tests/
     framework: unittest
     type: behavioral
-    description: "change_target in {config, prompt, infrastructure} with risk_surface=internal each yields no documentation-expert."
+    description: "change_target in {config, prompt, infrastructure} with risk_surface=internal each yields no documentation-expert. FIXTURE CONSTRAINT -- same as the sibling above: every one of the three fixture ACs MUST own a document (doc_links relationship `creates` or `modifies`), or the assertion becomes vacuous under BO-2200c-5-iii's ownership gate and stops testing the classification rule."
 origin_agent: business-analyst
 created: 2026-07-15
-amended_by: []
+amended_by:
+  - reason: |
+      CHECKED AGAINST BO-2200c-5-iii AND NOT NARROWED (recorded 2026-08-31 by
+      business-analyst). This entry is an audit record, not an amendment -- no criterion here
+      is weakened, retracted, or made conditional.
+
+      BO-2200c-5-iii makes document ownership an additional necessary condition for a
+      documentation demand, which can only ever remove demands, never add one. Every assertion
+      in this record is negative -- `code`, `config`, `prompt`, `infrastructure` paired with
+      `risk_surface: internal` yield no `documentation-expert` -- so all of them remain true
+      under the narrowed policy. Its siblings BO-2200a-1, BO-2200a-2 and BO-2200a-4 assert
+      positive triggers and DO carry narrowing amendments; this one does not.
+
+      IMPLEMENTER NOTE -- belongs to whoever builds BO-2200c-5-iii, NOT to this record. There
+      is a false-green risk here even though the criteria survive. Once ownership gating
+      lands, a fixture AC that owns no document produces no `documentation-expert` regardless
+      of its classification, so `test_code_internal_does_not_trigger_doc_expert` and
+      `test_config_prompt_infrastructure_internal_do_not_trigger` would pass without
+      exercising the classification rule they exist to pin down -- they would be satisfied by
+      the ownership gate alone and would no longer detect a regression that over-triggers on
+      an internal refactor. Give these negative fixtures an owning `doc_links` entry with
+      relationship `creates` (or `modifies`) so the classification remains the only reason the
+      assertion holds. That fixture change was deliberately NOT made here.
 superseded_by: null
 covered_by:
   - BO-2200a-3-i

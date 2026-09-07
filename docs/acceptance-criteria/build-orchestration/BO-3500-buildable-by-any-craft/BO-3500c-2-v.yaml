@@ -1,0 +1,108 @@
+id: BO-3500c-2-v
+components:
+  - build_orchestration
+  - config_loader
+title: "Proof for a configuration setting: the component that reads it is run, and a different value changes what it does"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a member whose artifact is a configuration setting,
+  When its proof is established,
+  Then the component the setting configures is run as part of establishing the proof,
+    with that setting in place,
+  And the component behaves as the requirement says the setting makes it behave,
+  And running the same component with a different value for that setting produces
+    different behaviour — so a setting that is read and ignored does not pass.
+
+  Given a setting that was written and which no component reads,
+  When its proof is established,
+  Then the proof fails, and the reason given is that nothing reads it.
+depends_on: [BO-3500c-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Configuration is one of the deliverable kinds a requirement may declare, so this proof is the build-side counterpart of a declaration the store already supports."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "COMPARING CLASS, AND THE DIFFERENTIAL IS THE WHOLE PROOF. Run the reading component twice, with two different values for the setting, and require the observable behaviour to differ. Running once with the value in place proves nothing: a component with the value hard-coded, or one that ignores the setting and happens to do the right thing by default, passes."
+  - "THE DIFFERENTIAL MUST BE OBSERVED IN BEHAVIOUR, NEVER IN THE LOADED VALUE. Asserting that the config loader returned the new value proves the loader works, not that the setting is honoured. This project has paid for exactly that distinction three times — a gate defined and never reached, an allowlist read from the wrong root so every entry was ignored, a hook whose dependency was not deployed so it never ran. Each was correct, present, reviewed and had no effect; each would have been caught by a behavioural differential and by nothing weaker."
+  - "THE READING COMPONENT IS DERIVED, NOT NAMED BY THE RECORD (user decision D4). Resolve the setting's consumer through BO-3500c-2's table: the hooks_manifest in templates/scripts/commit_guardian/commit_guardian.json for a hook-read key, AC_STORE_DEPLOY_MAP in scripts/build_phases.py or components[].primary_code in docs/components.json for a module-read key. A record may not nominate its own consumer — that is the same by-declaration escape D4 forbids for the proof class."
+  - "'NOTHING READS IT' IS A REGISTRY-RESOLUTION FAILURE and is reported as such: no consumer claims the key. Do not establish it by grepping the tree for the key name; a key referenced in a comment or in dead code would pass."
+  - "RECEIPT: condition_a is the run with value A, condition_b the run with value B, and difference the observed behavioural delta. Identical conditions are rejected at write time by BO-3500c-1 — which is exactly how a setting that is read and ignored is caught, since it produces the same behaviour for both values."
+  - "SMALLEST KIND BY COUNT, MOST DECEPTIVE BY NATURE: a setting that works and a setting nothing reads are byte-for-byte identical as artifacts. No reading of the file, however careful, distinguishes them, so no clause of this proof may be satisfied by reading the file."
+  - "NO PRESENCE-ONLY ASSERTIONS. Each test runs the consuming component twice and compares observed behaviour."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500c-2
+  contract: "derive_proof_kind(path) resolving a config/** or repo-root settings file to kind `config`, class `comparing`, at position 8 of the resolution table, together with the claiming registry entry that identifies WHICH component reads the key — the component this proof runs twice."
+test_spec:
+  - name: test_honoured_setting_produces_different_behaviour_for_two_values
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Run the resolved consuming component with value A and value B and assert the observed behaviour differs in the direction the requirement describes."
+  - name: test_component_ignoring_the_setting_fails_the_differential
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A consumer with the behaviour hard-coded behaves identically for both values; assert the proof fails and the member is not finished."
+  - name: test_loader_returning_the_value_is_not_accepted_as_the_differential
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A consumer that loads the setting correctly and then does nothing with it fails; asserting the loaded value is explicitly not sufficient evidence."
+  - name: test_setting_with_no_resolvable_consumer_fails_naming_it
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A key no registry entry claims fails with 'nothing reads it'; a key mentioned only in a comment or in unreachable code must not rescue it."
+  - name: test_consumer_is_derived_not_nominated_by_the_record
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "A record nominating a different consumer than the registries claim is proved against the derived one, and the nomination is reported as a defective declaration."
+  - name: test_config_receipt_with_identical_conditions_is_rejected
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "NO RUN. A config-proof receipt whose two value-runs produced the same observed behaviour is refused at write time."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE SMALLEST KIND BY COUNT AND THE MOST DECEPTIVE BY NATURE. A configuration setting
+  that works and a configuration setting that nothing reads are byte-for-byte identical
+  as artifacts. There is no reading of the file, however careful, that distinguishes
+  them. Only running the thing it configures does.
+
+  THE DIFFERENTIAL CLAUSE IS THE WHOLE PROOF. Running the component with the setting in
+  place and observing correct behaviour proves nothing on its own: a component with the
+  setting hard-coded, or one that ignores it and happens to do the right thing by
+  default, passes. Changing the value and requiring the behaviour to change is what
+  separates a setting that is honoured from one that is merely present. This is the
+  same shape as the prompt proof and for the same reason.
+
+  THIS PROJECT HAS PAID FOR IT REPEATEDLY. A gate configured but never reached, a hook
+  whose dependency was not deployed so it never ran, an allowlist read from the wrong
+  root so every entry in it was ignored — in each case the configuration was correct,
+  present, reviewed, and had no effect. Every one of them would have been caught by the
+  differential clause and by nothing weaker.

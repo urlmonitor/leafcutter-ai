@@ -1,0 +1,247 @@
+id: TQ-500e-2
+components:
+  - testing_quality
+  - ac_store
+title: "A later reader retrieves what a test was shown to catch, without re-running anything"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store of finished work in which some pieces carry substitute evidence, some
+      carry a reasoned negative, some carry ordinary before-and-after evidence, and
+      some were finished before any falsifiability answer was recorded,
+  When a later reader asks, for one named piece of finished work, what its tests were
+    shown to catch,
+  Then the answer recorded at the time is returned, without re-running any test and
+    without re-deriving the answer from the tests as they stand now,
+    And a piece carrying a reasoned negative returns that negative together with its
+      reason, which is distinguishable from returning nothing,
+    And a piece finished before any answer was recorded returns no answer recorded,
+      which is distinguishable from a reasoned negative,
+    And the answer returned is the one the run emitted, so a piece of work whose run
+      recorded nothing returns nothing regardless of how its tests behave today.
+depends_on:
+  - TQ-500e
+  - BP-1100g-5-i
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      DEPENDENCY. The mechanical reader over the hand-off record, including its legacy
+      carve-out for records predating the manifest. Retrieval here reads the same
+      records through the same reading rather than introducing a second parser or a
+      second store of evidence.
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the retained record lives, and the Legacy Compatibility rule that produces
+      the no-answer-recorded case in the third clause.
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY. TQ-400a-1 sweeps finished work and re-derives a verdict. This AC returns
+      what was recorded at the time and derives nothing. A sweep may consume this; it
+      must not be mistaken for it.
+  - path: docs/reference/ac-schema.md
+    relationship: relates-to
+    status: exists
+  - path: templates/scripts/commit_guardian/_signoff_parity_checks.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      PINNED BY IT-PO AS THE RETRIEVAL HOST — the same parser TQ-500b-1 extends,
+      exposed as a lookup rather than as a check. Retrieval reads the same
+      completion_manifest through the same reading; a second parser would drift
+      from the one that assigned the state, and the drift would land on the
+      reader trying to check an answer.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE STORE IS PINNED AND IT IS NOT A NEW ONE. The durable record is the
+    ticket markdown's ## Comments completion_manifest block, in its final resting
+    place under tickets/99_done/** — including epic subfolders. That file is
+    git-tracked, moves with the work through its lifecycle, and already holds the
+    answer TQ-500b-1 read at hand-off time. Nothing is copied anywhere.
+  - >-
+    EXPLICITLY FORBIDDEN: A SECOND STORE. Do not mirror the answer into the AC
+    YAML record, do not write a JSON sidecar, do not build an index file, and do
+    not add a database. A second copy is a drift surface, and when the two
+    disagree the reader has no way to tell which was the answer the run emitted —
+    which is the one thing this AC exists to return.
+  - >-
+    RESOLUTION BY NAME REUSES THE LINKS THAT ALREADY EXIST. A caller naming an AC
+    reaches its ticket through the AC record's implemented_by and the ticket
+    frontmatter's source_ac; a caller naming a ticket addresses it directly. Do
+    not invent a new identifier or a new mapping table.
+  - >-
+    RETRIEVAL DERIVES NOTHING. It must not run a test, invoke a test runner,
+    consult a coverage record, or call verify_done_eligible in
+    scripts/ac_store/done_proof.py. Returning a freshly-computed answer that
+    looks exactly like recovered evidence is the specific failure the first and
+    last Then clauses forbid — what a later citation needs is the answer the run
+    emitted, however stale, precisely so its staleness is visible.
+  - >-
+    THE TQ-400a-1 BOUNDARY, KEPT AS THE BA WROTE IT. TQ-400a-1 sweeps finished
+    work and RE-DERIVES a verdict through verify_done_eligible. This AC RETURNS
+    what was recorded and derives nothing. A TQ-400 sweep may consume this
+    retrieval; this retrieval must never call one, and the two must not share a
+    verdict function. Neither absorbs the other.
+  - >-
+    THREE RETURN OUTCOMES, ALL DISTINGUISHABLE: the recorded answer (of whichever
+    conforming shape), a reasoned negative returned WITH its reason, and
+    no-answer-recorded. A reasoned negative and no record at all are both honest
+    and mean opposite things — one says the question was put and could not be
+    answered, the other says nobody asked. Returning them identically is how a
+    green result gets quoted as proof of a rule.
+  - >-
+    THE ANSWER MUST SURVIVE THE PROCESS. An implementation satisfying TQ-500b-1
+    with an in-memory report that ends with the run fails here. Assert retrieval
+    from a fresh process against files on disk.
+  - >-
+    Same host and same mirroring rule as TQ-500b-1:
+    templates/scripts/commit_guardian/_signoff_parity_checks.py, mirrored into
+    scripts/commit_guardian/ in the same change. If the retrieval entry point
+    lives outside templates/scripts/commit_guardian/, its import must be added to
+    the deploy map in scripts/build_phases.py.
+  - >-
+    Must handle errors gracefully per the project error handling policy; an
+    unreadable ticket file must be reported as unreadable, never returned as
+    no-answer-recorded — those are the two outcomes TQ-500e-2-i's boundary
+    depends on staying distinct.
+delivers_to: null
+expects_from:
+  ac_id: TQ-500b-1
+  contract: >-
+    The per-piece-of-work state entries and the answers behind them, retained with the
+    finished work. Retrieval reads those retained entries; it does not recompute a
+    state.
+test_spec:
+  - name: test_tq500e_2_the_recorded_answer_is_returned_for_a_named_work_item
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Over a store of finished tickets under tickets/99_done/ carrying substitute
+      evidence, reasoned negatives, ordinary before-and-after answers and no
+      answer at all, retrieval by name returns the answer recorded at the time
+      for each, in the shape it was recorded.
+  - name: test_tq500e_2_a_reasoned_negative_returns_with_its_reason_and_is_not_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      A work item carrying a reasoned negative returns that negative together
+      with its reason, and the result is distinguishable in the return value from
+      no-answer-recorded. A retrieval that returns an empty result for both fails
+      this test.
+  - name: test_tq500e_2_retrieval_runs_no_test_and_re_derives_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      THE CLAUSE THAT DEFINES THIS AC, and it asserts an absence. Retrieve for a
+      work item whose recorded answer says its tests objected, while the tests as
+      they stand TODAY do not — the recorded answer is returned unchanged. NAMED
+      MUTATION: make retrieval fall back to re-deriving the answer from the
+      current tests (or from verify_done_eligible) when the recorded answer looks
+      stale. Under that injection a fresh green is returned in place of the
+      recorded answer and THIS TEST MUST GO RED; remove the fallback and it
+      returns to green. Assert additionally that no test runner and no
+      verify_done_eligible call occurs during retrieval. This is the alteration
+      this AC's own falsifiability answer must name.
+  - name: test_tq500e_2_a_work_item_whose_run_recorded_nothing_returns_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      A work item whose run recorded no answer returns no-answer-recorded
+      regardless of how its tests behave today — including when its tests
+      currently pass and when they currently fail. NAMED MUTATION (this
+      descriptor asserts an absence): let a currently-green suite be reported as
+      an ordinary before-and-after answer when none was recorded. THIS TEST MUST
+      GO RED under it.
+  - name: test_tq500e_2_the_answer_survives_the_process_that_produced_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Write the hand-off records in one process via yaml.safe_dump into the
+      ## Comments completion_manifest block per the signoff §2b recipe, move the
+      tickets into tickets/99_done/ as the lifecycle does, then retrieve in a
+      FRESH subprocess. An in-memory report that ends with the run satisfies
+      TQ-500b-1 and must fail here — this is the boundary between the two ACs.
+  - name: test_tq500e_2_retrieval_reads_the_same_records_through_the_same_parser
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      Over one identical ticket file, the state TQ-500b-1's reading assigns and
+      the answer this retrieval returns agree. A disagreement is the signature of
+      a second parser, which is what pinning the shared host exists to prevent.
+test_rationale: |
+  The first and last criteria clauses together are the whole point, and only a
+  mutation shows they hold: retrieval that re-derives from the tests as they
+  stand today answers a different question — "would these tests catch it now" —
+  and returns a fresh green that looks exactly like recovered evidence. A test
+  that merely retrieves a recorded answer and finds it present cannot tell the
+  two apart, because on a well-behaved store they agree. The re-derivation
+  injection is what separates them.
+
+  The real_artifact descriptor carries the boundary with TQ-500b-1: write in one
+  process, move the ticket through its lifecycle, retrieve in a fresh subprocess.
+  An implementation satisfying b-1 with an in-memory report passes every other
+  descriptor here and fails that one, which is exactly the distinction the AC's
+  notes draw.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      RETRIEVAL SURFACE PINNED (the hand-off's open item 3): the store is the
+      ticket markdown's ## Comments completion_manifest in its resting place under
+      tickets/99_done/**, read through the SAME
+      templates/scripts/commit_guardian/_signoff_parity_checks.py parser TQ-500b-1
+      extends. Mirroring the answer into AC YAML, a JSON sidecar, or an index is
+      explicitly forbidden — a second copy is a drift surface. AC-id resolution
+      reuses the existing implemented_by / source_ac links. The TQ-400a-1 boundary
+      is kept as the BA wrote it: TQ-400a-1 re-derives via verify_done_eligible,
+      this returns what was recorded and must never call it. criteria untouched.
+superseded_by: null
+covered_by:
+  - TQ-500e-2-i
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE FIRST AND LAST CLAUSES TOGETHER ARE THE WHOLE POINT. Retrieval that re-derives the
+  answer from the tests as they stand today answers a different question — "would these
+  tests catch it now" — and returns a fresh green that looks exactly like recovered
+  evidence. What a later citation needs is the answer the run actually emitted, however
+  stale, precisely so that its staleness is visible.
+
+  THE SECOND AND THIRD CLAUSES ARE THE COLLAPSE THIS L1 CLOSES, SEEN FROM THE FUTURE. A
+  reasoned negative and no record at all are both honest and they mean opposite things:
+  one says the question was put and could not be answered, the other says nobody asked.
+  Returning them identically is how a green result gets quoted as proof of a rule.
+
+  BOUNDARY WITH TQ-500b-1. That AC assigns states during the run, at hand-off. This one
+  makes the assignment survive the run and be addressable afterwards by name. An
+  implementation satisfying b-1 with an in-memory report that ends with the process
+  fails here.

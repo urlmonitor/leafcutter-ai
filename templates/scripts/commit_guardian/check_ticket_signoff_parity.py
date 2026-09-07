@@ -56,6 +56,7 @@ from _signoff_parity_checks import (  # noqa: E402
     _parse_frontmatter,
     _parse_impl_tasks_section,
     _parse_signoffs_section,
+    check_cross_layer_seam_answer,
     load_agent_registry,
     load_components_registry,
     validate_ticket_components,
@@ -83,6 +84,7 @@ __all__ = [
     "_parse_frontmatter",
     "_parse_impl_tasks_section",
     "_parse_signoffs_section",
+    "check_cross_layer_seam_answer",
     "load_agent_registry",
     "load_components_registry",
     "validate_ticket_components",
@@ -137,6 +139,15 @@ def _validate_ticket_content(
     violations.extend(validate_ticket_status_enum(fm))
     violations.extend(validate_ticket_components(fm, valid_components))
     violations.extend(validate_ticket_files_touched_shape(fm))
+
+    # BP-1100g-5-i: cross_layer_seam_answer shortfall — a record-shape
+    # observation over the ## Comments completion_manifest: block(s), run
+    # regardless of whether the ticket has an `agents:` map.
+    seam_shortfall = check_cross_layer_seam_answer(content, ticket_path)
+    if seam_shortfall is not None:
+        violations.append(
+            f"cross_layer_seam_answer {seam_shortfall['kind']}: {seam_shortfall['detail']}"
+        )
 
     agents = fm.get("agents")
     if agents is None:
@@ -330,6 +341,15 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-31 [python-coder/BP-1100g-5-i]: Wired check_cross_layer_seam_answer()
+  (new in _cross_layer_seam_checks.py, re-exported via _signoff_parity_checks.py)
+  into _validate_ticket_content(). Runs
+  unconditionally (before the `agents:` presence check) since it is a
+  record-shape observation over ## Comments, independent of the ## Sign-offs
+  parity checks. Also registered the pre-existing but never-wired
+  check-ticket-signoff-parity hook id in commit_guardian.json's
+  hooks_manifest.hooks (reachability requirement — an unregistered hook
+  never runs).
 - 2026-07-14 [python-coder/BO-400c-3-callsite]: Threaded old_path through the
   production call chain to fix the in-place edit false positive (BO-400c-3-i)
   in production (not just in unit tests). Added import subprocess; added

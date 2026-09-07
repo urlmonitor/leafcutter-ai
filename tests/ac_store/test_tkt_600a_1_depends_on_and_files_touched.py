@@ -34,6 +34,7 @@ import sys
 import textwrap
 from pathlib import Path
 
+import pytest
 import yaml
 
 WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -285,3 +286,159 @@ class TestDependsOnIsGuardValid:
         fm_full = guard.parse_frontmatter(child_ticket.read_text(encoding="utf-8"))
         errors = guard._check_depends_on(fm_full, child_ticket)
         assert errors == [], f"ticket_frontmatter_guard depends_on errors: {errors}"
+
+
+# ---------------------------------------------------------------------------
+# REOPENED 2026-08-31 (safety-security-expert amended_by note on TKT-600a-1):
+# the four tests above pass against the UNFIXED extractor because the shipped
+# "fix" is an on-disk-existence gate, not the structured-source-only
+# restriction the AC actually asks for. An existence gate cannot distinguish a
+# real edit surface from an illustrative mention of a path that also happens
+# to exist on disk, and Path.exists() is True for directories, so bare
+# directory mentions pass it too. The three tests below use fixture paths that
+# ARE present on this worktree (measured directly against the shipped
+# function on 2026-08-31, per the amended_by note) so an existence-gate-only
+# "fix" cannot pass them by proxy -- only the structured-source-only
+# restriction (it_requirements.reference_file_path + edit-surface doc_links,
+# nothing extracted from prose) can. This is also the required mutation
+# proof: these tests are red against the current on-disk-existence-gate
+# implementation, and reverting a genuine structured-source-only fix back to
+# the existence-gate approach must turn them red again.
+# ---------------------------------------------------------------------------
+
+
+class TestFilesTouchedExcludesRealOnDiskProseIllustrationPaths:
+    """AC TKT-600a-1 (REOPENED): on-disk existence is not sufficient to
+    qualify a prose-mentioned path as a real edit surface."""
+
+    def test_files_touched_excludes_prose_paths_that_exist_on_disk(self):
+        # covers: TKT-600a-1
+        # angle: criterion
+        """Reproduces the exact bullet (paraphrased) and exact real, existing
+        repo paths (``docs/acceptance-criteria``, ``docs/retrospectives``,
+        ``templates/skills``) that the 2026-08-31 amended_by note measured
+        directly against the shipped function: it returned all three as
+        files_touched even though none of them is the AC's structured
+        reference_file_path or an edit-surface doc_link. All three paths are
+        real, on-disk directories in THIS worktree (verified at test-write
+        time), so an existence-only gate cannot exclude them the way this
+        test requires.
+
+        What makes this pass (amended 2026-09-01): the prose-path gate asks
+        ``is_file()`` rather than ``exists()``. All three tokens name
+        DIRECTORIES, and a directory is never an edit surface, so all three
+        are excluded without any appeal to what the sentence meant.
+
+        Note the mechanism this test does NOT require, though an earlier
+        revision of this docstring prescribed it: dropping prose harvesting
+        altogether. That was tried and rejected -- it also excludes a real
+        source file named only in prose, which contradicts TKT-500f-8-i
+        (approved, done). See TKT-600a-1's amended_by entry of 2026-09-01.
+        """
+        ac = {
+            "it_requirements": [
+                (
+                    "The reduced scrutiny applies under docs/acceptance-criteria, "
+                    "docs/retrospectives and templates/skills, which is the defect: "
+                    "templates/skills holds executable Python."
+                ),
+            ],
+        }
+        files_touched = gen_module._build_files_touched(ac)
+
+        assert "docs/acceptance-criteria" not in files_touched, (
+            f"real on-disk directory leaked into files_touched via prose "
+            f"mention despite not being a structured edit surface: {files_touched}"
+        )
+        assert "docs/retrospectives" not in files_touched, (
+            f"real on-disk directory leaked into files_touched via prose "
+            f"mention despite not being a structured edit surface: {files_touched}"
+        )
+        assert "templates/skills" not in files_touched, (
+            f"real on-disk directory leaked into files_touched via prose "
+            f"mention despite not being a structured edit surface: {files_touched}"
+        )
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason=(
+            "KNOWN AND ACCEPTED GAP, not a pending fix. An illustrative path that "
+            "both has an extension and exists on disk is still harvested. Excluding "
+            "it requires reading authorial intent out of English prose; the two "
+            "mechanisms tried for that (a cue blocklist, and dropping prose "
+            "harvesting entirely) are recorded as rejected in TKT-600a-1's "
+            "amended_by entry of 2026-09-01 -- the first fired on no cue in the real "
+            "failing bullet, the second falsified TKT-500f-8-i (approved, done). "
+            "strict=True on purpose: if this ever starts passing, the run goes red "
+            "and that amended_by note must be revisited rather than quietly "
+            "outlived."
+        ),
+    )
+    def test_files_touched_excludes_context_only_real_file_mentioned_in_prose(self):
+        # NO "covers:" TAG ON PURPOSE. This test does not cover TKT-600a-1 -- it
+        # records a case the AC's 2026-09-01 criteria deliberately place OUT of
+        # scope. A covers-tag here would claim an xfail as proof of done, and
+        # check_done_proof correctly refuses that: it reads these tags, not the
+        # record's covered_by list, so leaving the tag while omitting the record
+        # entry states two different things in two places.
+        """Retained as the executable statement of what TKT-600a-1 does NOT do.
+
+        A prose bullet explicitly saying a real, existing file is CONTEXT ONLY
+        and must NOT be edited (``templates/skills/security-scanner/SKILL.md``,
+        which exists in this worktree) still yields that file as an edit
+        surface. This is the sharpest case from the 2026-08-31 amended_by note,
+        and it remains true.
+
+        It is kept rather than deleted because a deleted test is an invisible
+        gap: nothing in the suite would then record that this case was
+        considered, measured, and consciously left open. See the xfail reason
+        above for why it is left open rather than fixed.
+        """
+        ac = {
+            "it_requirements": [
+                "Do not edit templates/skills/security-scanner/SKILL.md here; "
+                "it is context only.",
+            ],
+        }
+        files_touched = gen_module._build_files_touched(ac)
+
+        assert "templates/skills/security-scanner/SKILL.md" not in files_touched, (
+            f"a file explicitly marked 'context only, do not edit' in prose "
+            f"became a declared edit surface merely because it exists on "
+            f"disk: {files_touched}"
+        )
+
+
+class TestFilesTouchedRejectsBareDirectories:
+    """AC TKT-600a-1 (REOPENED): bare directories (no file extension) are
+    never edit surfaces, even when named via a known path prefix and
+    verified to exist on disk -- Path.exists() is True for directories, so an
+    existence-only gate cannot reject them the way the AC requires."""
+
+    def test_files_touched_rejects_bare_directory_prose_mention(self):
+        # covers: TKT-600a-1
+        # angle: boundary
+        """A bare directory path (``templates/skills``, no file extension,
+        real and present in this worktree) named in a plain, cue-free prose
+        sentence must never appear in files_touched. This is the boundary an
+        existence-only gate cannot express: a directory passes
+        ``Path.exists()`` just as readily as a file does, so only a
+        structured-source-only restriction (never deriving files_touched
+        from prose at all) rejects it correctly.
+
+        To make this pass: _build_files_touched must not extract any path
+        from list-form it_requirements prose -- this subsumes the bare-
+        directory case without needing a separate extension check on
+        prose-derived tokens.
+        """
+        ac = {
+            "it_requirements": [
+                "See templates/skills for the relevant skill authoring conventions.",
+            ],
+        }
+        files_touched = gen_module._build_files_touched(ac)
+
+        assert "templates/skills" not in files_touched, (
+            f"bare directory (no file extension) leaked into files_touched "
+            f"via prose mention: {files_touched}"
+        )

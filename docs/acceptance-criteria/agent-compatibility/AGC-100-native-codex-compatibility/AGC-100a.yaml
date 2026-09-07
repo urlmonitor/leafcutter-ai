@@ -1,0 +1,36 @@
+id: AGC-100a
+title: "Find and start every specialist in Codex"
+component: agent-compatibility
+components:
+  - agent_registry
+  - build_pipeline
+  - template_compiler
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Every specialist and supported specialist variant offered by Leafcutter is
+  discoverable and startable in Codex without manual setup. One hundred percent
+  of the current launchable catalog and every future addition is included.
+depends_on:
+  - AGC-100
+documentation_triggers:
+  - how-to
+  - reference-doc
+covered_by:
+  - AGC-100a-1
+  - AGC-100a-2
+  - AGC-100a-3
+  - AGC-100c-2
+  - AGC-100f-2
+implemented_by: []
+origin_agent: product-owner
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null

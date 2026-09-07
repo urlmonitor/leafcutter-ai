@@ -65,7 +65,6 @@ covered_by: []
 implemented_by:
   - "scripts/build_orchestration/fast_lane.py"
   - "templates/workflows-js/fast-lane-ship.js"
-  - "templates/workflows-js/fast-lane-build.js"
 change_target: pipeline
 risk_surface: internal
 notes: |

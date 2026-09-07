@@ -324,7 +324,7 @@ class TestNameFormRegistryTargetPasses:
             registered_workflow_names=["build-feature"],
         )
 
-        # BP-100k-7: the skip decision is taken from the declared
+        # BP-100n-2: the skip decision is taken from the declared
         # config["workflows"]["enabled"] value, not from filesystem presence.
         # An explicit enabled=True declaration is required here so this
         # assertion actually exercises registry-membership resolution rather
@@ -362,7 +362,7 @@ class TestNameFormRegistryTargetPasses:
             registered_workflow_names=["build-feature"],  # a different name registered
         )
 
-        # BP-100k-7: the skip decision is taken from the declared
+        # BP-100n-2: the skip decision is taken from the declared
         # config["workflows"]["enabled"] value, not from filesystem presence.
         # An explicit enabled=True declaration is required here so this
         # negative case actually reaches registry-membership resolution

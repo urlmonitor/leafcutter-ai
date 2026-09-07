@@ -7,7 +7,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: reviewed
 priority: high
 roadmap_phase: phase_1
@@ -248,8 +248,11 @@ amended_by:
     date: "2026-08-25"
     reason: "TECHNICAL ENRICHMENT ONLY — no criteria, title, depends_on, covered_by, declares_side_effect, work_status or test_rationale text was touched. Set assigned_agent python-coder, estimated_complexity L, it_requirements, delivers_to, expects_from and test_spec; added three call-site doc_links and this note. WHY L RATHER THAN M: the visible change is small, but it alters what a shared function and a shared CLI subcommand ACCEPT, which makes it a call-site audit. The audit found six caller sites, two of which are non-obvious — a MODULE-SCOPE call at unit_tests/workflows/test_bo2400c_prompt_cache_wiring.py:404 that will fail at pytest COLLECTION rather than at assertion, and roughly fourteen calls in unit_tests/workflows/test_bo2400c_context_bundle.py, every one passing conventions= and acs=. A seventh reference, templates/workflows-js/fast-lane-build.js:121, is already dead (it names `assemble_context_bundle` with underscores, which was never a subcommand) and is deliberately left alone: the grep test at unit_tests/workflows/test_bo2400a_runner_wiring.py:401 asserts that string is present in that file, so removing it here would turn a test red for a reason unrelated to this criterion, and its removal is BO-2400c-1-v's. reference_file_path is scripts/injection_builders.py rather than the workflow because the Python signature is what makes the removal ENFORCEABLE — an agent cannot pass a layer the CLI rejects — and n_location_rule is 'all' because seven separate regions of that file mention the two dropped layers. SOURCE-VS-GENERATED, CHECKED BECAUSE scripts/ IS SOMETIMES A BUILD OUTPUT HERE: it is not for this file. scripts/injection_builders.py is git-tracked source, deployed verbatim by build_agent_support_scripts (AGENT_SUPPORT_SCRIPT_FILES, build_phases.py:2377), and has no templates/scripts/ counterpart. NOT DECIDED HERE, AND FLAGGED: docs/reference/fast-lane-prompt-caching.md will contradict the code once two parameters disappear. A .md reference page is documentation-expert's surface — python-coder owns .py and .js per config/agent_registry.json — so the record is not split for it and the doc is not in the declared surface; the implementer must report the divergence so a companion documentation AC can be raised."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/workflows/test_bo2400c1vi_bundle_layer_set.py"
+implemented_by:
+  - "scripts/injection_builders.py"
+  - "templates/workflows-js/fast-lane-ship.js"
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -299,3 +302,43 @@ notes: |
   small enough to cross in-band but nothing yet distinguishes a returned locator from
   returned content. Build them together, and keep the two sign-offs separate so a later
   regression is attributable.
+
+  IMPLEMENTER NOTE, 2026-08-26 — WHAT THE ARCHITECTURE PIN RESOLVED TO, AND WHY.
+  The pinned path is docs/architecture/diagrams/c1-001-command-map.md, verified present and
+  carrying frontmatter diagram_type: context, flight_level: L1 — the system-context diagram,
+  which is what "architecture overview" means. The obvious alternative,
+  docs/architecture/agent_delivery_workflows.md, is the most RELEVANT document to this lane
+  and was rejected on size alone: at 103,895 bytes it would have blown the ~20 KB target by
+  itself and re-created the exact transport failure this record exists to remove. The other
+  three loose documents in docs/architecture/ are subsystem deep-dives, not overviews. If a
+  real architecture index is ever written, repoint the pin at it — but keep it a pin.
+
+  MEASURED, NOT ASSUMED — the ~20 KB claim was checked by running the real CLI over real
+  on-disk files, not fixtures: architecture 11,468 (the pinned C1 diagram) + high_level 4,145
+  (BO-2400.yaml + BO-2400c.yaml) + prior_tests ~5,000 produced a 20,645-byte bundle, against
+  148,891 for the run that failed. Confirmed on that same real output: the workspace
+  CLAUDE.md text is absent, the build set's own AC text is absent, and exactly one STRUCTURAL
+  breakpoint marker is present. Note for anyone re-measuring: a naive grep counts three
+  marker hits, because the high_level AC prose and the prior_tests content each discuss the
+  marker by name. The gate uses a presence check rather than a count, so incidental mentions
+  are harmless — and the mention-is-not-presence trap is already pinned by -iii's
+  HTML-escaped-mention test.
+
+  A REGRESSION THIS RECORD EXPOSED IN -iii's GUARD, FIXED HERE. -iii detects an empty layer
+  by looking for a run of 4+ newlines, which is what two back-to-back joins produce. That
+  only ever occurs for an INTERIOR empty layer. Before this record the last-position case was
+  unreachable, because "acs" always sat between the marker and "prior_tests". Removing "acs"
+  makes "prior_tests" the entire volatile suffix, so emptying it leaves a single trailing
+  "\n\n" that the newline rule cannot see — and prior_tests is precisely the layer most
+  likely to arrive empty, since the bundle prompt tells the agent a short placeholder is fine
+  when no prior tests exist. classifyContextBundle() now also checks that the text after the
+  marker is non-empty. This touches -iii's surface deliberately: shipping the layer removal
+  without it would have silently widened a hole -iii had just closed.
+
+  DOCUMENTATION DIVERGENCE — REPORTED, NOT ABSORBED, exactly as this record's constraint
+  requires. docs/reference/fast-lane-prompt-caching.md still documents the eight-parameter
+  signature, a layer table listing conventions and acs, and three worked examples whose
+  command lines pass --conventions and --acs. All of that now contradicts the code. A .md
+  reference page is documentation-expert's surface, not python-coder's, so it was left
+  untouched and a companion documentation AC should be raised. Leaving a reference doc
+  describing a signature that no longer exists is how the next reader reintroduces the layers.

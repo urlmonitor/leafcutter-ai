@@ -50,7 +50,7 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/11_TICKET-20260721-BP-1400c-2.md
+- tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/11_TICKET-20260721-BP-1400c-2.md
 notes: |
   Satisfies the documentation_triggers [sequence-diagram] declared on BP-1400c.
   Distinct from BP-1400a-3 (which depicts the shared build/type-check pull-request

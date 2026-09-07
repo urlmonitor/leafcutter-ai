@@ -1,0 +1,64 @@
+id: AGC-100a-2
+title: "Incremental rebuilds mirror registry additions, removals, and renames"
+component: agent-compatibility
+components: [agent_registry, build_pipeline, template_compiler]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a completed build contains native Codex identities named market-analyst,
+    legacy-analyst, and risk-reviewer,
+  And the canonical registry is changed by adding macro-analyst, removing
+    legacy-analyst, and renaming risk-reviewer to portfolio-risk-reviewer,
+  When an incremental build completes,
+  Then Codex discovers market-analyst, macro-analyst, and
+    portfolio-risk-reviewer exactly once,
+  And neither legacy-analyst nor risk-reviewer remains discoverable or present
+    as a stale generated identity,
+  And a second build with unchanged inputs produces no content changes.
+depends_on: [AGC-100a, AGC-100a-1]
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - Reconcile additions, removals, and renames against the manifest-owned Codex identity set.
+  - Remove stale generated identities without touching user-owned files.
+  - Keep no-change agents, the report, and the manifest byte-stable.
+test_required: true
+test_spec:
+  - name: test_incremental_build_applies_add_remove_rename_without_stale_agents
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Incremental catalog changes produce the exact current native identity set.
+  - name: test_incremental_rebuild_is_byte_stable
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: A second unchanged build changes no generated identity, report, or manifest bytes.
+test_rationale: "A real incremental build is required to reveal stale files and nondeterministic output."
+delivers_to:
+  agent: python-coder
+  contract: "CurrentIdentitySnapshotV1 with manifest-owned paths and content hashes."
+expects_from:
+  - {ac_id: AGC-100a-1, contract: ResolvedIdentityCatalogV1}
+  - {ac_id: AGC-100b-1, contract: NativeAgentBundleV1}
+doc_links:
+  - {path: docs/architecture/components/template-compiler.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: [AGC-100a-2-i]
+implemented_by: []
+change_target: [code, config, pipeline, prompt]
+risk_surface: contract_boundary
+declares_side_effect: false

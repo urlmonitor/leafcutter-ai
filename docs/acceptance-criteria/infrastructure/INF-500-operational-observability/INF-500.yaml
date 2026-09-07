@@ -25,7 +25,7 @@ created: 2026-06-05
 amended_by:
   - "split: INF-500b -> INF-500b + INF-500c, 2026-06-05"
 superseded_by: null
-covered_by: [INF-500a, INF-500b, INF-500c, INF-500d]
+covered_by: [INF-500a, INF-500b, INF-500c, INF-500d, INF-500e]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

@@ -1,0 +1,136 @@
+id: INF-500e-2-i
+components:
+  - infrastructure
+  - agent_telemetry
+title: "A truncated merge history is reported as unknown for the weeks it cannot reach, not as a quiet period"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a merged-pull-request query issued with a budget of 120 results that returned
+    exactly 120 — the budget was reached — whose oldest returned merge is dated
+    2026-08-17, while the oldest reporting week begins 2026-07-06,
+  When the trustworthy reach of that result page is determined,
+  Then the page is judged to reach back only to 2026-08-17,
+  And the stated reason names the 120-result cap and the date 2026-08-17,
+  So that every reporting week starting before that date is rendered as unknown
+    instead of carrying a count the query never had the room to collect.
+
+  Given a query issued with a budget of 480 results that returned only 120,
+  When the trustworthy reach of that result page is determined,
+  Then the page is judged to reach every reporting week and no reason is stated,
+  Because a query that came back under its budget has already returned every merge
+    there was.
+
+  Given a query that returned exactly its 480-result budget but whose oldest returned
+    merge, 2026-07-01, is older than the oldest reporting week of 2026-07-06,
+  When the trustworthy reach of that result page is determined,
+  Then the page is judged to reach every reporting week and no reason is stated,
+  So that hitting the budget is not by itself treated as truncation when the results
+    already span the whole reporting range.
+
+  Given a query that returned no merges at all against a budget of 480,
+  When the trustworthy reach of that result page is determined,
+  Then the page is judged to reach every reporting week and no reason is stated,
+  So that a repository with no merged pull requests reports zero rather than unknown.
+depends_on:
+  - INF-500e-2
+doc_links:
+  - path: scripts/agent-health/weekly_health.py
+    relationship: implements
+    status: exists
+  - path: scripts/agent-health/README.md
+    relationship: describes
+    status: exists
+  - path: unit_tests/agent_health/test_weekly_health.py
+    relationship: related
+    status: exists
+    relevance: "Calls the reach determination with literal result counts, budgets and merge dates and asserts both returned values, so each of the four branches is executed rather than inspected."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The reach determination is scripts/agent-health/weekly_health.py::pr_coverage_floor(returned, limit, merged_dates, earliest_week) and must return a two-element tuple (covered_from: date | None, reason: str). It must stay pure — no network call, no subprocess — so all four branches are executable from literal integers and dates. The caller, collect_pull_requests, is the only place the gh subprocess lives."
+  - "Truncation must be judged on TWO conditions together, never on the cap alone: the page came back AT its budget (returned >= limit) AND its oldest merge is newer than the oldest reporting week. Declaring truncation on the cap alone would mark every week unknown on a busy repository, which is the over-correction the last two scenarios exist to block."
+  - "An empty result page must be treated as complete coverage, not as truncation, so a repository with no merged pull requests gets the honest zero INF-500e-2 guarantees it. A zero-length page combined with a reached budget must still return (None, empty string)."
+  - "The reason string must name both the numeric cap and the ISO date the page reaches back to, because it is the only artefact an operator has to distinguish a genuinely quiet oldest week from a query that stopped short. When coverage is complete the reason must be the empty string, not a placeholder such as ok or none."
+  - "The budget the caller issues must scale with the number of reporting weeks rather than being a fixed literal, and must be passed to pr_coverage_floor as the same value used in the gh query. A hard-coded budget on either side re-opens the defect: an eight-week run and a two-week run reported different counts for the SAME week (59 against 51 for the week of 2026-08-17) purely because of the limit."
+  - "The report must never treat a truncated week as zero. Weeks starting before covered_from must be rendered through the unknown path owned by INF-500e-2 (empty TSV cell plus prs_available False), not as a low number."
+test_spec:
+  - name: TestPrCoverageFloor::test_capped_page_stopping_short_reports_a_floor
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "returned 120 against a 120 budget whose oldest merge is 2026-08-17, with the oldest week 2026-07-06, returns the floor 2026-08-17 and a reason naming both the cap and the date."
+  - name: TestPrCoverageFloor::test_uncapped_page_covers_every_week
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "returned 120 against a 480 budget returns floor None and an empty reason, and the returned tuple has exactly two elements."
+  - name: TestPrCoverageFloor::test_capped_page_reaching_far_enough_still_covers
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "returned 480 against a 480 budget whose oldest merge 2026-07-01 predates the oldest week 2026-07-06 returns floor None and an empty reason, so hitting the cap alone is not truncation."
+  - name: TestPrCoverageFloor::test_empty_page_is_not_treated_as_truncated
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A page returning no merges at all against a 480 budget returns floor None and an empty reason, so a quiet repository keeps its honest zero."
+test_rationale: |
+  This failure is silent by construction: the query does not error, it stops
+  short, and the oldest weeks then carry a low count indistinguishable from a
+  genuine lull. No amount of reading the rendered report would find it, so the
+  contract has to execute the verdict function itself across all four branches.
+  Direct-import unit tests with literal counts, budgets and dates are the right
+  shape precisely because they remove the network: a test that issued a real
+  gh query could not reproduce a capped page deterministically, and a mocked
+  gh call would prove only that the mock was configured. Both returned values
+  are asserted in every branch, since a correct floor paired with a silent
+  reason would leave the operator with nothing to read.
+delivers_to:
+  agent: python-coder
+  contract: "pr_coverage_floor(returned: int, limit: int, merged_dates: list[date], earliest_week: date) -> tuple[date | None, str]. Consumed by collect_pull_requests and surfaced on its result as covered_from and reason, which INF-500e-2's renderers use to decide which weeks render as unknown. covered_from None with an empty reason means complete coverage; a date with a non-empty reason means every week starting before it is unknown."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. The capability had already shipped (scripts/agent-health/weekly_health.py, merged as d0fa881c / PR #608), so the test contract binds each of the four branches to the real passing test in unit_tests/agent_health/test_weekly_health.py rather than commissioning new coverage. Added assigned_agent, estimated_complexity, it_requirements, test_spec, test_rationale, the pr_coverage_floor delivers_to contract, and the scripts/agent-health/README.md doc link. Criteria unchanged; work_status deliberately left todo for a separate evidence-bound step."
+    by: it-po
+    at: 2026-08-26
+  - reason: "Reconciliation pass, 2026-08-31 (python-coder, evidence audit) -- FINDING 5 + covered_by backfill. work_status was flipped from the deliberately-left-todo state recorded in the entry above to done, with nothing recording when or on what evidence; recording it now. Evidence: all 4 tests named in test_spec (TestPrCoverageFloor) exist in unit_tests/agent_health/test_weekly_health.py and pass under AC_ENFORCE_STRICT=1. Also backfilled covered_by, previously empty despite one directly-tagged test in the suite: TestPrCoverageFloor::test_capped_page_stopping_short_reports_a_floor (tagged '# covers: INF-500e-2-i')."
+    by: python-coder
+    at: 2026-08-31
+superseded_by: null
+covered_by:
+  - unit_tests/agent_health/test_weekly_health.py::TestPrCoverageFloor::test_capped_page_stopping_short_reports_a_floor
+implemented_by:
+  - d0fa881ca111665a8ae10b3bb46773c73325c85c
+  - scripts/agent-health/weekly_health.py
+change_target: code
+risk_surface: internal
+notes: |
+  Authored as an L3 because this failure is silent by construction and would not
+  be found by reading the output. The merge-history query returns the most
+  recently merged pull requests repository-wide; an under-provisioned budget does
+  not error, it stops short, and the oldest weeks then show a low count that is
+  indistinguishable from a genuine lull.
+
+  Observed on this repository: a two-week run budgeted 120 results and reported
+  51 pull requests for the week of 2026-08-17, while an eight-week run budgeted
+  480 and reported 59 for that same week. Both runs looked entirely healthy. The
+  only way to tell them apart is to ask whether the page reached back far enough,
+  which is what this record specifies.
+
+  The last two scenarios exist to stop the obvious over-correction. Declaring
+  truncation whenever the budget is reached would mark every week unknown on a
+  busy repository, and treating an empty page as truncated would deny a quiet
+  repository the honest zero that INF-500e-2 guarantees it.

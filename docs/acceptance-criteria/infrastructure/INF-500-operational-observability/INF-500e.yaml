@@ -1,0 +1,104 @@
+id: INF-500e
+readiness: approved
+priority: medium
+components:
+  - infrastructure
+  - agent_telemetry
+title: "One command tells you whether delivery is getting healthier — and whether it is getting faster"
+component: infrastructure
+level: L1
+status: active
+work_status: done
+criteria: |
+  Ask once, and get both readings: are we healthier than last week, and are we picking up speed?
+
+  An operator gets a week-over-week read on the health and the pace of the whole
+  system from a single request, over as many weeks back as they care to look, and
+  in whichever form they need to read it, hand on, or feed into something else.
+  Nobody has to assemble the picture by hand from scattered sources to answer
+  either question.
+
+  The figures are worth acting on because they come from evidence the delivery
+  system cannot award itself — what was genuinely merged, what had to be reopened,
+  and what the recorded history of the work actually shows — rather than from the
+  system's own claim that a piece of work is finished, a claim with a documented
+  history of being wrong. Anything the report could not measure is shown as
+  unknown and never as a zero, so "we measured nothing" always stays
+  distinguishable from "we measured, and it was nothing". Trust comes first in the
+  reading order, because a speed figure taken over numbers you cannot trust tells
+  you nothing at all.
+depends_on:
+  - INF-500
+doc_links:
+  - path: scripts/agent-health/weekly_health.py
+    relationship: implements
+    status: exists
+  - path: scripts/agent-health/README.md
+    relationship: describes
+    status: exists
+    relevance: "Documents the command surface (--weeks, --format tsv, --no-gh, --today), the three-tier reading order, and the unknown-is-never-zero rule this L1 promises."
+  - path: unit_tests/agent_health/test_weekly_health.py
+    relationship: related
+    status: exists
+    relevance: "The suite the five child criteria bind their test contracts to, and also the source of this record's own end-to-end test contract (TestReportEndToEnd) covering composed behaviour no single child exercises alone."
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Added doc_links only, pointing at the shipped script, its README and the test suite. Deliberately NOT given assigned_agent, estimated_complexity, it_requirements or a test contract: the sibling L1s in this folder (INF-500b, INF-500d) carry none, and the implementable technical detail belongs on the five L2/L3 children. Criteria unchanged."
+    by: it-po
+    at: 2026-08-26
+  - reason: "Reconciliation pass, 2026-08-31 (python-coder, evidence audit) -- FINDING 7. This record was marked done with covered_by listing its 5 children (INF-500e-1..5, all now independently confirmed done with their own test contracts and now-populated covered_by), yet had no test_spec of its own, while four tests in unit_tests/agent_health/test_weekly_health.py (class TestReportEndToEnd) are tagged '# covers: INF-500e' directly and were, in practice, functioning as this record's only direct done-evidence -- a contradiction with the 2026-08-26 entry's stated position that this L1 carries no test contract. Resolved honestly rather than picking one story: this record's done status legitimately derives from its five children all being done (the composite/L1 pattern) -- covered_by already reflects that and is left unchanged -- AND it separately needed its own contract, because the four TestReportEndToEnd tests exercise composed, L1-only behaviour that no single child's contract covers: the full build_report/_render_markdown pipeline run end to end against a real temporary repository, the trust-tier-before-velocity-tier ordering across the assembled sections, and the absent-telemetry-renders-a-named-reason guarantee holding through the full render rather than just at collect_lane_health in isolation. Added test_spec below naming those four tests, turning the previously implicit direct evidence into an explicit contract."
+    by: python-coder
+    at: 2026-08-31
+superseded_by: null
+covered_by:
+  - INF-500e-1
+  - INF-500e-2
+  - INF-500e-3
+  - INF-500e-4
+  - INF-500e-5
+implemented_by:
+  - d0fa881ca111665a8ae10b3bb46773c73325c85c
+  - scripts/agent-health/weekly_health.py
+test_spec:
+  - name: TestReportEndToEnd::test_one_run_answers_both_health_and_speed
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "build_report run once against a real temporary git repository, then rendered to markdown, contains all four section headings (Tier 1 -- Trust, Tier 2 -- Autonomy, Tier 3 -- Velocity, Code volume by language) in one output, proving one command answers both the health and the speed reading."
+  - name: TestReportEndToEnd::test_trust_tier_is_rendered_before_the_velocity_tier
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In the rendered markdown, Tier 1 -- Trust appears before Tier 3 -- Velocity, so a speed figure is never read before the trust figures that qualify it."
+  - name: TestReportEndToEnd::test_the_closed_criterion_is_counted_in_the_period_it_closed
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A criterion closed inside the current reporting period is attributed to that period's ac_done and ac_reopened figures in the fully assembled report, not to an adjacent period."
+  - name: TestReportEndToEnd::test_absent_telemetry_renders_a_named_reason_not_a_zero_rate
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With no telemetry sink present, the rendered report states 'No lane data' rather than 'Completion rate: 0%', so an unwired emitter is never presented as a measured zero, end to end through the whole render."
+test_rationale: |
+  These four descriptors are this L1's own contract, not a restatement of any
+  child's. Each child (INF-500e-1..5) proves one computation in isolation over
+  literal or single-purpose fixture inputs; none of them runs build_report and
+  _render_markdown together against a real temporary repository, and none of
+  them asserts the cross-section reading order or the fully-assembled-report
+  shape of the absent-telemetry guarantee. TestReportEndToEnd is therefore the
+  only place the L1-level promise -- "one command, both readings, trust read
+  first" -- is actually exercised as a whole. This record's done status is
+  additionally supported by all five children being independently done with
+  their own passing test contracts, per the composite/L1 pattern; covered_by
+  reflects that relationship and is unchanged by this contract.
+documentation_triggers:
+  - how-to
+  - reference-doc
+change_target: code
+risk_surface: internal

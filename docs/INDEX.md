@@ -3,7 +3,7 @@ title: "Documentation Index"
 type: reference
 status: active
 created: 2026-08-11
-last_updated: 2026-08-11
+last_updated: 2026-08-26
 components: []
 description: "Auto-generated index of all documentation files in the docs/ directory."
 ---
@@ -103,6 +103,8 @@ task, then pull only those files.
 | ADR 034 knowledge write ownership | [docs/architecture/adrs/ADR-034-knowledge-write-ownership.md](docs/architecture/adrs/ADR-034-knowledge-write-ownership.md) | Resolves three contradictory answers to who persists a captured learning by confirming ADR-011's deferred-harvest model as authoritative, demoting inline agent-side capture from deferred to rejected, and retiring the route-learning and capture-learning skill names. |
 | ADR 035 fast lane closed producer roster | [docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md](docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md) | Replaces the fast lane's hardcoded literal agentType strings with a declared allowlist of producer agents selected by the criterion's assigned_agent, requires a declared-artifact diff plus a content assertion as the proof obligation for non-code deliverables, and sequences the work behind assigned_agent validation and a lane that can finish one run end to end. |
 | ADR 036 documentation dispatch caller boundary | [docs/architecture/adrs/ADR-036-documentation-dispatch-caller-boundary.md](docs/architecture/adrs/ADR-036-documentation-dispatch-caller-boundary.md) | Records that both routes into documentation work are legitimate and serve different callers: documentation-expert remains a supported convenience router for a person working in the main session, while an acceptance criterion's assigned_agent MUST name the leaf author directly. Generalises to the rule that an AC may not assign work to any agent whose own role is to dispatch other agents, because a subagent cannot await what it spawns. |
+| ADR 037 whole collection uniqueness pass | [docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md](docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md) | Decision to express numbered-artifact uniqueness as one importable whole-collection pass returning a fixed verdict object — one finding per contested number, with a mandatory per-namespace inspected count — to adopt rather than reimplement the existing decision-number comparison, and to separate whole-collection inspection from diff-scoped commit disposition. |
+| ADR 038 commit guardian shared change set derivation | [docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md](docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md) | Self-deriving commit-guardian checks MUST consume one shared module for the authored change set instead of each computing its own private git diff, so a mainline merge cannot make one check block on content its author never wrote while another passes. |
 
 ## How-To Guides
 
@@ -123,6 +125,7 @@ task, then pull only those files.
 | declare a knowledge surface | [docs/how-to/declare-a-knowledge-surface.md](docs/how-to/declare-a-knowledge-surface.md) | Step-by-step guide for registering a new source of knowledge in config/paths.json so it participates in the cross-surface knowledge map. |
 | declare component membership | [docs/how-to/declare-component-membership.md](docs/how-to/declare-component-membership.md) | Step-by-step guide for adding a components list to a knowledge item so it joins the cross-surface component view, and for querying a component back to its criteria, source files, and tests. |
 | deprecating or removing artifacts | [docs/how-to/deprecating-or-removing-artifacts.md](docs/how-to/deprecating-or-removing-artifacts.md) | Step-by-step guide for safely deprecating or deleting agents, skills, hooks, and scripts from the leafcutter package without breaking consumer builds. |
+| write adr | [docs/how-to/documentation/write-adr.md](docs/how-to/documentation/write-adr.md) | Canonical guide for authoring ADRs in this repo: genre definition, filename and numbering handoff, required frontmatter, the mandatory section order, Status lifecycle values, decision-clarity language rules, Alternatives presentation, cross-linking conventions, and the post-write handoff file adr-author writes for downstream coders. |
 | write reference | [docs/how-to/documentation/write-reference.md](docs/how-to/documentation/write-reference.md) | Canonical guide for authoring reference documents in this repo: genre definition, when to choose reference over other genres, required frontmatter, canonical skeleton, voice conventions, placement rule, and cross-linking. |
 | done proof enforcement | [docs/how-to/done-proof-enforcement.md](docs/how-to/done-proof-enforcement.md) | Explains the two-layer proof-of-done enforcement system: the fast local pre-commit check and the authoritative CI gate that blocks merge on unproven work. |
 | drain backlog with build backlog | [docs/how-to/drain-backlog-with-build-backlog.md](docs/how-to/drain-backlog-with-build-backlog.md) | How to drain the backlog automatically with /build-backlog |
@@ -163,6 +166,7 @@ task, then pull only those files.
 | feedback concurrency | [docs/reference/feedback-concurrency.md](docs/reference/feedback-concurrency.md) | Reference: Feedback Client Concurrency Limitation |
 | fixture policy | [docs/reference/fixture-policy.md](docs/reference/fixture-policy.md) | Lookup reference for the fixture authenticity rules: which data kinds must use the real serializer, what fixture forms are rejected, and the round-trip requirement for parser and validator tests. |
 | frontend coder capabilities | [docs/reference/frontend-coder-capabilities.md](docs/reference/frontend-coder-capabilities.md) | frontend-coder Unified Agent — Preserved Capabilities Reference |
+| proof claims and completeness | [docs/reference/proof-claims-and-completeness.md](docs/reference/proof-claims-and-completeness.md) | For each of the seven kinds of proof a test can claim, states what the claim asserts, what it does NOT entitle a reader to conclude, and where the excluded question is actually settled. |
 | skill frontmatter | [docs/reference/skill-frontmatter.md](docs/reference/skill-frontmatter.md) | Overview of Reference: SKILL.md Frontmatter Fields. |
 | skills config fields | [docs/reference/skills-config-fields.md](docs/reference/skills-config-fields.md) | Overview of Reference: skills_config.json Fields. |
 | workflow authoring contract | [docs/reference/workflow-authoring-contract.md](docs/reference/workflow-authoring-contract.md) | Copy-paste reference for workflow script authors covering the E2 canonical execution contract, E1-wrap shim pattern, primitive mapping table, and non-transparent edge handling conventions. |
@@ -173,6 +177,7 @@ task, then pull only those files.
 | Name | Path | Description |
 |------|------|-------------|
 | consolidated output root | [docs/explanation/consolidated-output-root.md](docs/explanation/consolidated-output-root.md) | The Consolidated Output Root |
+| documentation coverage flow | [docs/explanation/documentation-coverage-flow.md](docs/explanation/documentation-coverage-flow.md) | End-to-end trace of the documentation-coverage mechanism — which agent writes which field, which component reads it, and the four places where the writing side and the reading side disagree. |
 | tdd workflow | [docs/explanation/tdd-workflow.md](docs/explanation/tdd-workflow.md) | This explanation describes how Test-Driven Development works inside leafcutter's |
 | traceability guardrails | [docs/explanation/traceability-guardrails.md](docs/explanation/traceability-guardrails.md) | Which mechanical guardrails currently enforce the links between acceptance criteria, code, tests, documentation and product-truth flows; which layer each one runs in; where the holes are; and which AC families are planned to close them. |
 

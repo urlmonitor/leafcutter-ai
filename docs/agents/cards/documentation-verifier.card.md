@@ -118,7 +118,7 @@ flowchart TD
 | Pattern | Trigger | Behavior | Related Agent |
 |---------|---------|----------|---------------|
 | Stop-and-Ask | condition requiring user decision or out-of-scope action | Do not proceed. | `None` |
-| Fail on missing doc | any required documentation file named in the Agent Contracts brief is absent from git diff HEAD | emit `(status: blocker)` naming each required doc absent from the git diff | `None` |
+| Fail on missing doc | any required documentation file named in the Agent Contracts brief is absent from the union of the branch-range diff (integration_target...HEAD) and the working-tree diff (Step 4b) | emit `(status: blocker)` naming each required doc absent from the git diff | `None` |
 | Fail-closed on parse error | Agent Contracts block is absent on a v2 ticket, malformed, or raises an exception during parse | emit `(status: blocker)` — never status: ok on ambiguous or failed parse | `None` |
-| Fail on placeholder content | a required doc is present in the diff but contains TODO/PLACEHOLDER/Replace with/FIXME/QUESTION/TBD markers, unfilled {token} patterns, or is an empty or heading-only stub | emit `(status: blocker)` naming each file and the placeholder marker found | `None` |
+| Fail on placeholder content | a required doc is present in the diff but contains TODO/PLACEHOLDER/Replace with/FIXME/QUESTION/TBD markers, unfilled single-identifier {token}-style placeholders such as {summary} (empty {}, JSON/dict-shape {"a" b} content, and ${VAR} interpolation are excluded by design), or is an empty or heading-only stub | emit `(status: blocker)` naming each file and the placeholder marker found | `None` |
 | Fail-closed on script error | python3 invocation of scripts/build_placeholder_detection.py exits non-zero or cannot be imported | emit `(status: blocker)` — never status: ok when the helper script exits non-zero or raises an exception | `None` |

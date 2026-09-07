@@ -1,0 +1,172 @@
+id: ACS-1300c-3
+components:
+  - ac_store
+title: "Evidence the run cannot judge produces a stated abstention, never a silent skip and never a write"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a store containing a record whose file cannot be parsed, a coverage tag in the
+    test tree naming an id that no record in the store carries, and a record whose
+    coverage entry resolves to neither a test path nor a requirement id,
+  And, in the same store, a record whose evidence the run can judge and which needs a
+    coverage entry restored,
+  When the repair tool is invoked out of process with the apply request,
+  Then each of the three unjudgeable cases appears in the report as its own abstention,
+    naming the record or the tag and stating the reason it could not be judged,
+  And none of the three has its file changed by the run,
+  And the run does not stop at the first of them: all three are reported by that single
+    invocation,
+  And the fourth record was repaired in that same invocation, so abstaining is a decision
+    this run reached rather than the whole of what it did,
+  And the run's outcome reports that abstentions occurred rather than reporting a clean
+    result, so a run that could not judge part of the store is distinguishable from one
+    that found nothing to judge,
+  And the count of records the run examined includes the three it abstained on, so an
+    abstention subtracts from what was decided and never from what was looked at.
+depends_on:
+  - ACS-1300c
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-2.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The same guarantee one tree over — evidence the check cannot trust produces an abstention, never a demotion. Read it and its L3 TQ-400e-2-i before choosing how an abstention is represented, so the two trees do not invent two abstention formats for one concept. The direction differs (that tree abstains from taking away, this one from writing) and the representation should not."
+  - path: scripts/ac_store/done_proof.py
+    relationship: relates-to
+    status: exists
+    relevance: "THE PRECEDENT FOR THE 'REPORT WHY, DO NOT GUESS' POSTURE, already in this file. find_unrecognised_angle_tags reports NOTHING when its permitted set could not be loaded and says loudly that this is 'could not check', NOT 'everything checked out' — because a check that fires on everything carries no signal. The fifth clause here is that distinction applied to the run's overall outcome."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100c.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "An unexplained gap stops the answer instead of passing it on. The final clause here is the arithmetic that keeps this run's report reconcilable under that standing contract: examined equals decided plus abstained, with nothing quietly absent from either side."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ONE ABSTENTION CHANNEL FOR THE WHOLE TREE, DEFINED HERE. ACS-1300a-2-i (an entry the removal rule cannot classify), ACS-1300a-3 (a coverage list holding child requirement ids) and ACS-1300b-1-i (an unresolved delivery path) all report through this representation. Read `TQ-400e-2` and `TQ-400e-2-i` before choosing the shape, so the adjacent tree and this one do not invent two abstention formats for one concept — the direction differs, the representation should not."
+  - "AN ABSTENTION IS A CLASSIFICATION THE DETECTION PASS PRODUCES, NOT AN EXCEPTION THE WRITE STEP CATCHES. A try/except wrapped around the write loop collapses three distinct failures — an unparseable file, a tag naming no record, an unresolvable coverage entry — into one, and it makes 'abstained' indistinguishable from 'crashed partway'."
+  - "THE RUN DOES NOT STOP AT THE FIRST UNJUDGEABLE CASE. All abstentions from a single invocation must be reported by that invocation. A run that halts on the first bad record forces one repair run per defect over a store with a measured backlog in the hundreds."
+  - "THE PROCESS OUTCOME MUST SAY ABSTENTIONS OCCURRED — NOT ONLY THE BODY OF THE REPORT. An operator reading only the outcome of a run that could not judge part of the store must not conclude the store is fine. This is the same shape as a hook that could not run reporting success, which GE-120 exists to forbid, and it is the clause people drop."
+  - "EXAMINED EQUALS DECIDED PLUS ABSTAINED, WITH NOTHING QUIETLY ABSENT FROM EITHER SIDE. An abstention subtracts from what was decided and never from what was looked at. If abstained records dropped out of the examined total the run's own coverage figure would improve every time it understood less — the answer getting more confident as it saw less, which is exactly what ACS-1100 was written against."
+  - "NO FILE BELONGING TO AN ABSTAINED-ON RECORD IS OPENED FOR WRITING. This follows structurally from abstention being a detection-pass classification: an abstained record never enters the write set, so ACS-1300c-2's byte and mtime guarantees hold for it without a second guard."
+  - "NEVER WRITES THE FINISHED-STATE FIELD, INCLUDING FOR AN ABSTAINED RECORD. The tree-wide refusal applies."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md rules 1-4). Every abstention carries the reason it could not be judged; 'unknown error' is not a reason, and an abstention a reader cannot act on degrades to noise that gets switched off."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300a-1
+  contract: "The finding set, including the records and tags the join could not classify. An abstention is a classification the detection step produces, not an error the write step discovers."
+test_spec:
+  - name: test_acs_1300c_3_three_unjudgeable_cases_are_each_reported_as_their_own_abstention_with_a_reason
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "One out-of-process apply run over a store holding an unparseable record file, a tag naming an id no record carries, and a coverage entry resolving to neither a test path nor a requirement id. Assert three distinct abstentions, each naming the record or the tag and stating its own reason — not one collapsed 'could not process' line."
+  - name: test_acs_1300c_3_the_run_does_not_stop_at_the_first_unjudgeable_case
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "All three abstentions come from that SINGLE invocation. Order the fixture so the unparseable file is encountered first; a run that halts there reports one of three."
+  - name: test_acs_1300c_3_a_judgeable_record_is_repaired_in_the_same_invocation
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "THE ANTI-NO-OP PAIRING, AND IT MUST STAY INSIDE THE SAME GIVEN. Every clause above is an absence, so on its own this criterion is green on arrival — the easiest green in the tree, satisfied by a tool that does nothing. Assert the fourth record gained its coverage entry in the same run that produced the three abstentions, and assert none of the three abstained files changed."
+  - name: test_acs_1300c_3_the_run_outcome_reports_abstentions_rather_than_a_clean_result
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "GE-120, AT THE OUTCOME AND NOT ONLY IN THE BODY. Assert the run's overall outcome for the abstaining fixture is distinguishable from the outcome of a run over a store with nothing to judge. Reporting each abstention in the output while exiting as though clean means an operator reading only the outcome concludes the store is fine."
+  - name: test_acs_1300c_3_examined_total_includes_the_abstained_records
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Assert examined equals decided plus abstained for the run, and that the three abstained records are counted in examined. If they dropped out, the run's coverage figure would improve every time it understood less."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+- reason: measured-population-recorded
+  by: business-analyst
+  at: 2026-09-01
+  note: >-
+    NOTES ONLY; criteria, it_requirements and test_spec UNCHANGED, so the approval
+    above still covers what it was granted against. Recorded that this AC's second
+    unjudgeable case — a coverage tag naming a record that does not exist — has a
+    measured population of roughly 87, from 937 distinct tag ids of which 850
+    resolve (2026-09-01, whole tree, no sampling), and that done_proof already
+    computes exactly that set as dangling_tags so no new traversal is needed.
+    Noted the practical consequence: at that volume the abstention list is this
+    AC's primary output and must be grouped and named rather than 87 flat lines.
+    Recorded that the population is NOT fallout from the BP-100k to BP-100n split
+    (no -6/-7/-8 tags survive; every remaining BP-100k-* tag resolves). Flagged
+    that some of the 87 are artefacts of tag-token capture — `BO-560,` resolves to
+    nothing — which ACS-1300a-1-i's normalisation will reduce, so 87 is not a fixed
+    target. Left the question of whether phantom tags deserve their own repair
+    direction explicitly OPEN, per the L0.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  A SKIPPED RECORD IS INVISIBLE, AND INVISIBILITY IS THE DEFECT THIS WHOLE TREE EXISTS TO
+  REMOVE, ONE LEVEL DOWN. The store forgot proof that existed and nothing said so; a
+  repair that quietly passes over what it cannot read reproduces that exact failure inside
+  the fix.
+
+  THREE UNJUDGEABLE CASES, NOT ONE, and they are different failures that a single
+  try-and-continue block would collapse. An unparseable file is an input problem, a tag
+  naming no record is a reference problem, and an unresolvable coverage entry is an
+  ambiguity problem — and the third is the common one, because the coverage field holds
+  two kinds of thing with no discriminator (see ACS-1300a-3). Naming all three in one
+  scenario also enforces the do-not-stop-at-the-first clause, which a single-case
+  scenario cannot express.
+
+  EVERY CLAUSE ABOVE THE FOURTH IS AN ABSENCE, so on its own this criterion is green on
+  arrival — the easiest green in the tree, satisfied by a tool that does nothing. The
+  fourth clause is the adversarial case that makes it fail, and it must stay inside the
+  same Given rather than becoming a separate scenario.
+
+  THE FIFTH CLAUSE IS THE ONE PEOPLE DROP. Reporting each abstention in a body of output
+  while exiting as though the run were clean means an operator reading only the outcome
+  concludes the store is fine. That is the same shape as a hook that could not run
+  reporting success, which GE-120 exists to forbid.
+
+  THE SECOND UNJUDGEABLE CASE HAS A MEASURED POPULATION, AND IT IS NOT SMALL. Of 937
+  distinct tag ids in the test tree, 850 resolve to a record — so roughly 87 tags name a
+  record that does not exist (measured 2026-09-01, whole tree, no sampling). That is the
+  mirror of inverse rot and it was uncounted until then. Two things follow for this AC.
+  First, done_proof already computes exactly this set as its dangling_tags output, so the
+  abstention needs no new traversal — take it from the reader ACS-1300a-1 already uses.
+  Second, at that volume the abstention list is the primary output of this AC in practice,
+  so its formatting has to be usable in bulk: grouped and named, not 87 undifferentiated
+  lines. Verified NOT to be fallout from the BP-100k to BP-100n split — no -6/-7/-8 tags
+  survive and every remaining BP-100k-* tag resolves — so this is a standing population,
+  not a one-off from a recent rename.
+
+  WHETHER PHANTOM TAGS DESERVE A REPAIR DIRECTION IS OPEN, AND THIS AC MUST NOT SETTLE IT.
+  Reporting them as abstentions is right; deciding whether the tag should be deleted, the
+  record created, or the tag re-pointed is a judgement none of this tree's records make.
+  The L0 records it as undecided. Do not resolve it by quietly widening this AC.
+
+  ONE CAUSE OF PHANTOM TAGS IS A DEFECT THIS TREE IS FIXING ELSEWHERE. A tag written
+  `# covers: BO-560, BO-560-1` yields the captured token `BO-560,`, which resolves to no
+  record and lands in this abstention list — while BO-560 itself goes unmatched. So some
+  of the 87 are artefacts of tag-token capture rather than genuinely missing records, and
+  ACS-1300a-1-i's normalisation will reduce the count. Re-measure after it lands rather
+  than treating 87 as a fixed target.
+
+  THE FINAL CLAUSE KEEPS THE DENOMINATOR HONEST. If abstained records dropped out of the
+  examined total, the run's own coverage figure would silently improve every time it
+  understood less — the answer getting more confident as it saw less, which is precisely
+  what ACS-1100 was written against.

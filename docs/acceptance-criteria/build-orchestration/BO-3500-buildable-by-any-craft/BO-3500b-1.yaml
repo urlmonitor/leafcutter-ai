@@ -1,0 +1,132 @@
+id: BO-3500b-1
+components:
+  - build_orchestration
+title: "A set mixing code, tests, a page and a diagram is accepted and delivered in one pull request"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an operator points at one requirement whose connected group contains a source
+    code member, a documentation page member and a diagram member,
+  When the run builds that group,
+  Then the run is not turned away for containing members that are not code,
+  And each member's declared artifact is produced within that one run,
+  And the tests that prove the code member are produced as part of that member rather
+    than as a member of their own,
+  And all of those artifacts arrive together in the single pull request that run opens,
+    so a reviewer sees the change, the tests that prove it, and the page and the diagram
+    that go with it in one review rather than in three,
+  And the operator gave one instruction naming one requirement and made no further
+    choice about which members were included or which were left out.
+
+  Given the same group,
+  When the run has finished,
+  Then every member of the group is accounted for in the run's ending — each one either
+    delivered or named as the reason the run did not deliver,
+  And no member is absent from that account.
+depends_on: [BO-3500b]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013 is this criterion's live counterexample: one documentation child anywhere in a group makes the whole group unbuildable, and the operator cannot avoid it because groups are resolved from the backlog rather than chosen."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Describes what an operator gets from pointing at one requirement. The single-pull-request property is the operator-visible half of this criterion and belongs in that description."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "ONE WORKTREE, ONE COMMIT PATH, ONE PULL REQUEST. templates/workflows-js/fast-lane-ship.js already opens exactly one PR at the end of the arc; the change is that the non-code phases write into that SAME worktree, not that a second publication path is added. Do not add a per-craft commit or a per-craft PR — splitting them re-creates the drift this component keeps paying for (a page describing code that never landed)."
+  - "THE ENDING'S PER-MEMBER ACCOUNT MUST BE DERIVED FROM resolve_connected_build_set's OUTPUT, NEVER FROM THE LIST OF MEMBERS THAT WERE DISPATCHED. Deriving it from the dispatched list makes a dropped member structurally invisible, which is exactly the second scenario's failure. Assert cardinality against the resolved set."
+  - "TESTS TRAVEL WITH THE CODE MEMBER (user decision D3, 2026-08-31). No test member is enumerated in a group. verify_red_baseline and verify_green_and_coverage in scripts/build_orchestration/fast_lane.py remain the code member's proof, keyed off that record's `test_spec` / `test_required`; they must not be modelled as a member of their own or the group accounting will show a signed-off code deliverable beside an unstarted tests deliverable."
+  - "EVIDENCE IS ARTIFACTS PLUS PULL-REQUEST CONTENTS, NOT HAND-OFF COUNTS. This criterion claims the artifacts ARRIVE TOGETHER; counting dispatches cannot establish that. Assert on the files in the single commit/PR diff."
+  - "The operator's instruction is one AC id and nothing else — no member-selection argument may be consulted, defaulted or inferred. That is part of the criterion, not ergonomics."
+  - "DEPLOY MANIFEST: any new module the run imports goes into the deploy list in scripts/build_phases.py; verify by running the DEPLOYED entry point, not source-tree unit tests."
+  - "NO PRESENCE-ONLY ASSERTIONS: check_presence_only_assertions.py is a live ratchet. Execute the run over a real mixed fixture store and read the working tree and the PR diff."
+delivers_to:
+  agent: python-coder
+  contract: "Group-completion account emitted at the run's ending: one entry per member of the RESOLVED set, each {ac_id, craft, artifact_path, outcome: 'delivered'|'blocked', reason?}, plus the single pull-request reference containing every delivered artifact. Consumed by BO-3500b-2 (which forbids a successful ending for a reduced group) and by BO-3500c-1's done gate."
+expects_from:
+  ac_id: BO-3500a-1
+  contract: "The per-member dispatch plan {ac_id, craft, source} over the fully resolved connected set, so every member of a mixed group is routed rather than the group being refused for containing non-code members."
+test_spec:
+  - name: test_mixed_group_is_not_refused_for_containing_non_code_members
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Point at one AC whose connected group contains a code member, a docs member and a diagram member; assert the run proceeds past the producibility gate."
+  - name: test_every_declared_artifact_exists_after_the_run
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "After the run, each member's declared artifact path exists in the worktree with non-empty content."
+  - name: test_single_pull_request_contains_code_docs_and_diagram
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Exactly one PR/commit is produced and its diff contains all three members' paths; two PRs, or a diff missing one path, fails."
+  - name: test_code_members_tests_ship_in_the_same_pull_request
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The tests proving the code member appear in the same diff as the code member and are attributed to that member, not enumerated as a member of their own."
+  - name: test_ending_accounts_for_every_resolved_member
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Resolve N members, then assert the ending's account has exactly N entries whose ids equal the resolved set — an account built from the dispatched list fails when a member is dropped."
+  - name: test_operator_supplies_one_ac_id_and_no_member_selection
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "/fast-lane-build (templates/workflows-js/fast-lane-ship.js)"
+    description: "Invoke the entry point with a single AC id and assert no member-inclusion/exclusion argument was read or defaulted."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "User decision D3 — a test is a proof, not a deliverable of its own, so the mixed group no longer enumerates a separate test member. The single-pull-request property is unchanged and now says explicitly that the tests proving the code member travel with that member. Amended because the original wording read as endorsing tests-as-a-kind, which D3 rejects: with independent per-deliverable sign-off slots (ACD-1800b-1a) a tests kind permits a signed-off code deliverable beside an unstarted tests deliverable — a code deliverable declared finished with its own proof unwritten."
+superseded_by: null
+covered_by: [BO-3500b-1-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE CRITERION THE WHOLE L0 IS MEASURED BY. Routing every member correctly
+  (BO-3500a-1) and proving every non-code deliverable (BO-3500c) are both necessary
+  and neither is visible to an operator. This is the one an operator can check: aim at
+  a mixed area, get a pull request containing all of it.
+
+  WHY THE SINGLE PULL REQUEST IS PART OF THE CRITERION AND NOT AN IMPLEMENTATION
+  CHOICE. A run that produced the page in one pull request and the code in another
+  would satisfy "every member was produced" while destroying the property the operator
+  wanted: that the documentation and the code it documents are reviewed, merged and
+  reverted as one thing. Splitting them re-creates the drift this component keeps
+  finding — a page describing code that never landed, or code landing without the page
+  that was asked for.
+
+  THE SECOND SCENARIO is the anti-quiet-narrowing clause. Its sibling BO-3500b-2 covers
+  what happens when a member fails; this one covers a member that simply does not
+  appear in the ending at all, which is how a dropped member actually looks from
+  outside. BO-2400f-12 makes the same point for the refusal path ("a member removed
+  from the set and left todo is indistinguishable, from the store, from a member that
+  was never asked for"); the same is true of a member removed from a run that
+  succeeded, and there it is far harder to notice.
+
+  TESTABILITY. Execute a run over a store fixture whose resolved group genuinely mixes
+  kinds, then assert on the artifacts on disk and on the contents of the single pull
+  request the run opened. Counting hand-offs is not sufficient evidence for this
+  criterion — it is the artifacts arriving together that is being claimed.

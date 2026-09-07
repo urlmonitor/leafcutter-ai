@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -117,10 +117,28 @@ test_rationale: "GE-123b's title says no single line, and the literal reading of
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18): authored it_requirements requiring the decision to be computed against the whole set of entries in force for the file, with determinism keyed on the SET (noting that _load_allowlist returns an unordered set today, so the ordering hazard appears only once GE-123b-1-i's provenance plumbing makes the container ordered); recorded in it_requirements that arm 2 passes vacuously today and must be asserted in the same test method as arm 1, never as a standalone pass; named the constraint that eliminates the naive resolution — two of the six rules fire zero times on an ordinary source file, so restoring one of those leaves the file nominally covered and silent, failing arm 1 — and stated the three constraints any resolution must satisfy without prescribing one; required the collapse threshold to follow the single declared rule inventory rather than a hard-coded six, and added a data-driven test descriptor that fails a hard-coded count. Authored a 5-entry test_spec plus test_rationale; labelled arm 3 as a green-on-arrival regression guard. Baselines re-verified through the real entry point: 0 in both orders, 1 for the five-entry arm. Criteria unchanged."
+- reason: 'it-po-v3 technical enrichment (2026-08-18): authored it_requirements requiring
+    the decision to be computed against the whole set of entries in force for the
+    file, with determinism keyed on the SET (noting that _load_allowlist returns an
+    unordered set today, so the ordering hazard appears only once GE-123b-1-i''s provenance
+    plumbing makes the container ordered); recorded in it_requirements that arm 2
+    passes vacuously today and must be asserted in the same test method as arm 1,
+    never as a standalone pass; named the constraint that eliminates the naive resolution
+    — two of the six rules fire zero times on an ordinary source file, so restoring
+    one of those leaves the file nominally covered and silent, failing arm 1 — and
+    stated the three constraints any resolution must satisfy without prescribing one;
+    required the collapse threshold to follow the single declared rule inventory rather
+    than a hard-coded six, and added a data-driven test descriptor that fails a hard-coded
+    count. Authored a 5-entry test_spec plus test_rationale; labelled arm 3 as a green-on-arrival
+    regression guard. Baselines re-verified through the real entry point: 0 in both
+    orders, 1 for the five-entry arm. Criteria unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/10_TICKET-20260831-GE-123b-4.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -173,3 +191,4 @@ notes: |
   affected file satisfies all three with no ordering hazard; it is offered as a
   worked shape, not mandated. Baselines re-verified before enrichment: 0 in both
   orders, and 1 for the five-entry arm.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

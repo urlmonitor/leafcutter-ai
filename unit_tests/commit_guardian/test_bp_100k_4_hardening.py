@@ -246,6 +246,7 @@ class TestUnknownSentinelExemptionCannotSilenceIdLessGates(unittest.TestCase):
         )
         match = _RESULT_LINE_RE.search(combined)
         self.assertIsNotNone(match, msg=f"No RESULT line emitted. Output:\n{combined}")
+        assert match is not None  # narrowing for mypy; assertIsNotNone above is the real check
         self.assertGreaterEqual(
             int(match.group(2)),
             2,
@@ -532,7 +533,7 @@ class TestCatastrophicBacktrackingRegexIsBoundedNotAHang(unittest.TestCase):
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmpdir.cleanup)
-        self.repo = self.repo = Path(self._tmpdir.name) / "repo"
+        self.repo = Path(self._tmpdir.name) / "repo"
         _init_repo(self.repo)
         # A filename engineered to trigger catastrophic backtracking against
         # ^(a+)+$: many 'a' characters followed by one non-matching char.

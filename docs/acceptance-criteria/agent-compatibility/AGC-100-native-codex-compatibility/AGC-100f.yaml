@@ -1,0 +1,34 @@
+id: AGC-100f
+title: "Know the package is complete before relying on it"
+component: agent-compatibility
+components:
+  - agent_registry
+  - build_pipeline
+  - skills_system
+  - testing_quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Compatibility is reported as complete only when the full specialist catalog,
+  required project guidance, and supporting playbooks can be used in every
+  supported workspace. Omissions, unsupported capabilities, and inconsistencies
+  identify the affected specialist clearly.
+depends_on:
+  - AGC-100
+documentation_triggers:
+  - reference-doc
+covered_by:
+  - AGC-100f-1
+  - AGC-100f-2
+implemented_by: []
+origin_agent: product-owner
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null

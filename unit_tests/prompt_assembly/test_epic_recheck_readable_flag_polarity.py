@@ -147,6 +147,11 @@ class TestRecheckFlagPolarity(_FlagPolarityCase):
         }
         reads = [
             {"present": [{"path": paths[n], "status": "todo"} for n in names]},
+            # Terminating look (BO-100e-1): every offered ticket is already
+            # driven to completion by look 1, so look 2 must release nothing
+            # to end the search before the completion-time re-check below —
+            # the one this scenario is actually about — is attempted.
+            {"batches": [], "present": [{"path": paths[n], "status": "todo"} for n in names]},
             {
                 "present": [{"path": paths[n], "status": "todo"} for n in recheck_names],
                 "omit_readable": True,
@@ -260,7 +265,15 @@ class TestRecheckFlagPolarity(_FlagPolarityCase):
         observation = H.run_driver(
             H.BUILD_FEATURE_JS,
             H.epic_scenario(
-                worktree, epic_path, tickets, [{"present": present}, {"present": present}]
+                worktree,
+                epic_path,
+                tickets,
+                [
+                    {"present": present},
+                    # Terminating look — nothing further is eligible.
+                    {"batches": [], "present": present},
+                    {"present": present},
+                ],
             ),
         )
         result = observation["result"]

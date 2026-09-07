@@ -1,0 +1,139 @@
+id: ACS-1300b-2
+components:
+  - ac_store
+  - build_orchestration
+title: "A bypassing path records the link by reaching the existing writer, not a second one"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a delivery path the enumeration classifies as bypassing,
+  And work completed through that path for a requirement that a present, passing,
+    coverage-tagged test names,
+  When that path runs to completion out of process,
+  Then the requirement's record holds that test's path in its coverage list afterwards,
+  And the entry it holds is compared entry to entry against the entry the ticket route's
+    own link-recording step produces for the same requirement and the same test, and the
+    two are the same,
+  And removing the single hand-off from that path to the existing link-recording step
+    leaves the requirement's coverage list unchanged after the same run, so the entry
+    observed above came from that step rather than from a writer added alongside it,
+  And the record's finished-state field is character-for-character identical before and
+    after the run,
+  And a requirement named by no passing test is left with its coverage list unchanged in
+    that same run, so the path records evidence that exists rather than every requirement
+    it touches.
+depends_on:
+  - ACS-1300b
+doc_links:
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: relates-to
+    status: exists
+    relevance: "THE EXISTING WRITER. §3c is the link-recording behaviour every path must reach rather than reimplement. Note its trigger condition at :82-89 — absent ac_traceability means silent skip — which is what makes a bypassing path bypassing, and what the hand-off has to satisfy."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: relates-to
+    status: exists
+    relevance: "Emits the two-key ac_traceability block (:2367) that the gate keys on. Whether the right hand-off is producing that key on a bypassing path, or invoking the step directly, is an implementation choice this AC deliberately leaves open — it constrains the outcome and the single-writer property, not the mechanism."
+  - path: scripts/ac_store/ac_coverage_resolver.py
+    relationship: relates-to
+    status: exists
+    relevance: "ANTI-DUPLICATION. The declared single resolution seam for the ticket-to-record direction, created specifically because a second reader of the same traceability data had drifted from the first (ACD-1900b-5-i). Its module docstring carries the EXACTLY ONE RESOLVER constraint. Extend that seam if resolution is needed; do not add a parallel one."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The seam angle — real producer into real consumer. The entry-to-entry comparison against the ticket route's own output is that angle, and it is why the comparison is per entry rather than by count: matching counts hide two offsetting differences."
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "GOVERNS THE LIKELIEST BYPASSING PATH. It names fast-lane-ship.js, build-feature.js and done_proof.py together and establishes the declared-but-closed roster posture. A hand-off wired into the fast lane must respect that decision rather than reopening the roster as a side effect."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The dispatch topology the hand-off is inserted into, and the vocabulary the ACS-1300b-4 sequence diagram will use for the same actors. Read it before choosing where in a path the hand-off sits."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "EXACTLY ONE WRITER OF THE COVERAGE FIELD ON THIS PATH, AND IT IS THE EXISTING ONE. The bypassing path must REACH `templates/agents/ac-fulfillment-gate.md` §3c's link-recording behaviour; it must not contain, import, or inline a second implementation of it. Two writers of the same field drift, and the drift is invisible precisely because both write something plausible. The single-line-deletion mutation in the criteria is the only available proof of this and must be preserved as a runnable mutation, not restated as an assertion."
+  - "CHANGE_TARGET INCLUDES `prompt` CONDITIONALLY, AND THAT HALF IS NOT THIS AGENT'S SURFACE. The criteria and doc_links deliberately leave the mechanism open: producing the `ac_traceability` key on the bypassing path (workflow code only) and broadening the gate's trigger condition (an agent-template edit) both satisfy the outcome. Per `config/agent_registry.json`, `templates/agents/*.md` is `llm-expert`'s owned surface and `python-coder` owns `.py` and `.js`. If the chosen mechanism requires editing the fulfillment-gate template, that edit must be dispatched to `llm-expert` within the same ticket — it must not be made by the coder, and it must not silently expand into a rewrite of the gate's search behaviour."
+  - "PREFER THE WORKFLOW-SIDE HAND-OFF OVER A TEMPLATE CHANGE, PER THE L1's 'RECOGNITION, NOT A SECOND GATE'. Making a bypassing path produce the condition the existing gate already keys on changes nothing about the gate and therefore cannot regress the ticket route. Loosening the gate's trigger changes behaviour for every path at once, including paths this AC never examined."
+  - "THE ENTRY WRITTEN MUST BE CHARACTER-IDENTICAL TO THE ENTRY THE TICKET ROUTE PRODUCES FOR THE SAME REQUIREMENT AND THE SAME TEST. `docs/reference/ac-schema.md` permits both `path` and `path::test_function` forms; a path emitting one where the ticket route emits the other satisfies 'the link is recorded' while leaving two spellings of the same fact in the store for every downstream reader to disagree about. Compare per entry, never by count."
+  - "NEVER WRITES THE FINISHED-STATE FIELD, AND THIS IS THE SURFACE WHERE THAT IS HARDEST. Unlike the repair tool, a delivery path already flips finished state through other steps, so the badge write is one line away from the link write and will look consistent with its surroundings. The record's `work_status` line must be character-for-character identical across the run. Refused, not deferred."
+  - "RECORDS EVIDENCE THAT EXISTS, NEVER EVERY REQUIREMENT IN SCOPE. A requirement named by no present, passing, coverage-tagged test must end the run with its coverage list unchanged. A path that writes an entry for everything it touches manufactures exactly the false evidence this tree calls worse than the missing evidence it replaces."
+  - "IF RESOLUTION FROM A TICKET OR RUN CONTEXT TO RECORDS IS NEEDED, EXTEND `scripts/ac_store/ac_coverage_resolver.py` — DO NOT ADD A PARALLEL RESOLVER. Its module docstring carries an EXACTLY ONE RESOLVER constraint that exists because a second reader of the same traceability data already drifted from the first (ACD-1900b-5-i)."
+  - "SCOPE FENCE. `templates/agents/ac-fulfillment-gate.md` §3c already searches `tests/ unit_tests/` and §2f already declines to skip L3 — both shipped 2026-08-26, verified on this branch 2026-09-01. This AC is about WHEN the step runs. Re-fixing what it searches goes green against work it did not do."
+  - "Must handle errors gracefully per the project error handling policy. A hand-off that fails must be visible in the path's own output — a swallowed hand-off failure is indistinguishable from a path that was never wired, which is the condition ACS-1300b-3 then reports as clean."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300b-1
+  contract: "The classified enumeration. This AC wires the paths that enumeration marks bypassing; it does not decide which those are."
+test_spec:
+  - name: test_acs_1300b_2_a_bypassing_path_run_to_completion_records_the_link
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the bypassing delivery path's own entry point, run to completion as a subprocess against a temporary store and test tree"
+    description: "Run the path itself out of process — not a helper it calls — for a requirement named by a present, passing, coverage-tagged test. Assert the record holds that test's path afterwards. Invoking an internal function here would pass on a hand-off that no real run reaches, which is the fast-lane-build.js failure mode verbatim."
+  - name: test_acs_1300b_2_the_entry_matches_the_ticket_route_s_entry_character_for_character
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER. Drive the same requirement and the same test through the ticket route and through the bypassing path against identical store copies, then compare the resulting coverage entries entry to entry. Compare the entry TEXT, not the count: a parallel writer emitting `unit_tests/x/test_y.py` where the gate emits `unit_tests/x/test_y.py::test_z` passes a count comparison and leaves two spellings of one fact in the store."
+  - name: test_acs_1300b_2_deleting_the_single_hand_off_stops_the_link_appearing
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "THE SINGLE-WRITER MUTATION, AND IT IS THE ONLY PROOF AVAILABLE. 'No second writer exists' cannot be observed; 'removing one line makes the link stop appearing' can. Remove the hand-off, re-run the same path, assert the coverage list is unchanged. If the link still appears, a second writer exists."
+  - name: test_acs_1300b_2_the_finished_state_line_is_unchanged_while_the_link_is_written
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "PAIRING INSIDE ONE RUN — DO NOT SPLIT. In the same invocation that writes the coverage entry, assert the record's `work_status` line is character-for-character identical to its pre-run content. Both halves together: unchanged finished state alone is satisfied by a path that wired nothing. This is the surface where the badge write is most tempting, because the path already flips finished state elsewhere."
+  - name: test_acs_1300b_2_an_untested_requirement_touched_by_the_same_run_gains_no_entry
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE OVER-EAGER-FIX GUARD, ASSERTED IN THE SAME RUN as the successful write above. A requirement in the path's scope that no passing coverage-tagged test names must end with its coverage list unchanged. A path that writes an entry for every requirement it touches satisfies every other clause and manufactures false evidence."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  RECOGNITION, NOT A SECOND GATE — the product owner's instruction in ACS-1300b's notes,
+  and the reason the third clause is a mutation rather than an assertion. "No second
+  writer exists" cannot be observed; "deleting one line makes the link stop appearing"
+  can. Two writers of the same field drift, and the drift is invisible precisely because
+  both of them write something plausible.
+
+  THE ENTRY-TO-ENTRY COMPARISON IS THE ONE THAT CATCHES NEAR-MISSES. A parallel writer
+  that produces `unit_tests/x/test_y.py` where the gate produces
+  `unit_tests/x/test_y.py::test_z` satisfies "the link is recorded" and still leaves two
+  spellings of the same fact in the store for every reader downstream to disagree about.
+
+  THE FINISHED-STATE CLAUSE IS HERE AND NOT ONLY IN ACS-1300c-1 ON PURPOSE. This is the
+  one L1 in the tree whose surface is a delivery path that already flips finished state
+  through other steps. An implementer wiring a link into that flow is one line away from
+  wiring the badge with it, and the refusal has to be observable at this surface rather
+  than only at the repair tool's.
+
+  THE FINAL CLAUSE STOPS THE OVER-EAGER FIX. A path that writes a coverage entry for
+  every requirement in scope, tested or not, satisfies every clause above it and
+  manufactures exactly the false evidence ACS-1300a's notes call worse than the missing
+  evidence it replaces.

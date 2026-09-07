@@ -1,0 +1,51 @@
+id: AGC-100a-2-i
+title: "Colliding Codex identity names stop the build without choosing a winner"
+component: agent-compatibility
+components: [agent_registry, build_pipeline]
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given two launchable registry entries whose names both normalize to risk-analyst
+    for Codex,
+  When the build resolves the native identity set,
+  Then the build returns an unsuccessful outcome,
+  And the diagnostic names both registry entries and the colliding Codex identity,
+  And no native risk-analyst definition is published from either entry.
+depends_on: [AGC-100a-2]
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - Normalize identities before publication and reject all collisions.
+  - Name every source entry, normalized identity, and registry location in the error.
+  - Preserve every previously published platform artifact and manifest on failure.
+test_required: true
+test_spec:
+  - name: test_normalized_identity_collision_fails_without_partial_publication
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: A collision identifies both sources and publishes no partial native agent.
+test_rationale: "The publication boundary must be exercised so a correct diagnostic cannot mask a leaked partial file."
+delivers_to:
+  agent: python-coder
+  contract: "CollisionValidationResultV1 naming the normalized identity, registry IDs, and source locations."
+expects_from: {ac_id: AGC-100a-2, contract: Manifest-owned identity reconciliation}
+doc_links:
+  - {path: docs/architecture/components/agent-registry.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, config, pipeline]
+risk_surface: contract_boundary

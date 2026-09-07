@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -151,7 +151,13 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-122a-1-i
-implemented_by: []
+  - GE-122a-1-ii
+implemented_by:
+- tickets/00_inbox/epics/EPIC-GE122UniquenessPassAndRepair/01_TICKET-20260818-GE-122a-1.md
+- templates/scripts/commit_guardian/check_identifier_uniqueness.py
+- templates/scripts/commit_guardian/check_adr_collision.py
+- templates/scripts/commit_guardian/commit_guardian.json
+- unit_tests/commit_guardian/test_ge_122a_1.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

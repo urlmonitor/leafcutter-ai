@@ -1,0 +1,211 @@
+id: BO-3500c-2
+components:
+  - build_orchestration
+  - testing_quality
+title: "The proof is chosen by the kind of artifact, and the weakest kind's proof is never borrowed by a stronger one"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given members whose artifacts are of different kinds — a written page, a diagram, a
+    screen, a prompt and a configuration setting,
+  When each member's proof is established,
+  Then the proof applied to a member is the one defined for that member's kind of
+    artifact,
+  And a member of one kind is never finished on the strength of the proof defined for a
+    different kind.
+
+  Given the proof defined for a written page, which is the least demanding of the
+    defined proofs,
+  When it is applied to a member whose artifact is a screen, a prompt or a
+    configuration setting,
+  Then it is rejected as insufficient for that member and the member is not finished,
+  And the rejection names the kind and the proof that kind requires — so an
+    implementer reads which stronger check is owed rather than that something failed.
+
+  Given a member and the kinds of artifact this project's requirements already declare
+    they change,
+  When the kind of that member's artifact is determined,
+  Then it is determined from that existing declared vocabulary, extended by the single
+    value this project lacks and needs — a diagram,
+  And no second, parallel vocabulary of artifact kinds is introduced for the purpose of
+    choosing a proof,
+  And a test is not one of the kinds — the obligation to test a code deliverable travels
+    with that deliverable and is never a deliverable of its own.
+
+  Given a member whose artifact is of a kind whose proof runs or renders something, and
+    a requirement that states its own proof is the reading kind,
+  When the class of proof for that member is determined,
+  Then the class is derived from where the deliverable sits and which of this project's
+    registries claims it, and the requirement's own statement of its class is not
+    honoured,
+  And the run reports the declared class as a defective declaration rather than adopting
+    it — so a stronger proof cannot be escaped by typing a weaker one.
+
+  Given every kind of artifact this project's requirements can ask for,
+  When the defined proofs are enumerated,
+  Then each kind has a proof defined for it, or is refused up front for having none,
+  And no kind's proof is "the artifact exists", except where existence together with
+    the further checks defined for that kind is the whole of what that kind can be
+    held to.
+depends_on: [BO-3500c]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013 fix direction 2 proposes the written-page proof — 'the named doc file exists and changed in the diff'. This criterion adopts that as the floor for one kind and forbids it becoming the ceiling for the rest."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The kinds a requirement may declare its deliverables to be. The vocabulary this criterion keys off is the change-target one already defined there and already carried by the large majority of records — it has a value for a screen and a value for a prompt. The one value it lacks is a diagram, which is the single addition this tree asks for."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "THE KIND VOCABULARY IS THE STORE'S EXISTING change_target ENUM PLUS ONE VALUE (user decisions D1/D2/D3). config/ac_store_schema.json already defines it: code, schema, ui, infrastructure, pipeline, prompt, model, config, docs, dependency — ten values on 3,381 of 3,694 records (code 1241, pipeline 884, prompt 449, docs 260, config 90, schema 73, infrastructure 32, ui 10). Add `diagram`, giving eleven. `tests` is NOT among them. Resolve the enum through the SAME shared $defs $ref ACD-1800a-1 introduces; do not copy the list into the proof selector, or proof selection and the store drift and each is then correct against itself."
+  - "THE PROOF CLASS IS DERIVED FROM PATH + CLAIMING REGISTRY, NEVER DECLARED (user decision D4). Deterministic, single pass, FIRST MATCH WINS, held as ONE ordered table — not a chain of ifs spread across the per-kind proof modules. The order, and the registries that resolve it: (1) config/agent_registry.json — agents[].template_path claims templates/agents/*.md -> prompt; (2) config/skill_registry.json — skills[].template_path claims templates/skills/<id>/ -> prompt; (3) templates/scripts/commit_guardian/commit_guardian.json — hooks_manifest entries claim their hook script paths -> pipeline; (4) scripts/build_phases.py — AC_STORE_DEPLOY_MAP and the sibling phase deploy maps claim deployed modules -> pipeline; (5) leafcutter-web/vitest.config.ts — the include globs (**/*.test.{ts,tsx}) and the leafcutter-web/ root claim front-end sources -> ui; (6) docs/components.json — components[].primary_code claims remaining source paths -> code, or schema for .sql; (7) docs/components.json — components[].detail_ref and docs/**/*.md -> docs, and a doc whose frontmatter declares a diagram_type from config/diagram_types.json, or a structured diagram source, -> diagram; (8) config/** and repo-root *.json|*.yaml|*.toml|*.ini not claimed above -> config; (9) NO MATCH -> no derived kind, which is BO-3500c-4's up-front refusal and NEVER a default to the cheapest class."
+  - "WHY FIRST-MATCH-WINS AND WHY THE ORDER IS THAT ONE: the earlier entries are the narrower, more authoritative claims (a file a registry names explicitly) and the later ones are broad path patterns. A templates/agents/*.md file is also under a components[].primary_code glob for some components; without a fixed order it would resolve to two kinds on two runs. State the order as data so it is auditable, and make the ordering itself testable."
+  - "A RECORD THAT STATES ITS OWN PROOF CLASS IS A DEFECTIVE DECLARATION, reported in the same reason-code family as BO-3500a-2 and never honoured. This is the record's fourth scenario and it is the one most likely to be dropped as pedantry: the second scenario — the load-bearing one — is otherwise defeated by an author typing a weaker class."
+  - "PROOF STRENGTHS ARE ORDERED AND THE REJECTION MUST NAME THE OWED PROOF. Applying the written-page proof to a screen, a prompt or a config member is rejected with 'this kind owes the <named> proof', not 'failed' — an implementer must read which stronger check is due."
+  - "EVERY ONE OF THE ELEVEN VALUES NEEDS AN ENTRY IN THE PROOF TABLE, INCLUDING `model` AND `dependency`, WHICH CURRENTLY HAVE ZERO LIVE RECORDS. 'Refused up front, no proof defined' is a legitimate entry; a MISSING entry is a fall-through, and a fall-through defaults to optimism (the fail-open shape BO-3500d-2-i names). Iterate the resolved enum in the test so a value added later cannot slip through unmapped."
+  - "NO KIND'S PROOF IS 'THE ARTIFACT EXISTS'. Existence may be a clause only where the further checks defined for that kind are also applied."
+  - "DEPLOY MANIFEST: the derivation table module will be imported by both the lane and the commit-guardian receipt validator; add it to the deploy list in scripts/build_phases.py and verify by running the DEPLOYED hook, not the source-tree unit tests."
+  - "NO PRESENCE-ONLY ASSERTIONS. Every test below resolves a real path against the real registries or executes a proof; a test that greps the table for a kind name passes on a table nothing consults."
+delivers_to:
+  agent: python-coder
+  contract: "derive_proof_kind(path) -> {kind: <one of the eleven change-target values plus diagram>, claimed_by: <registry id>, class: 'reading'|'comparing'} or a no-match sentinel that routes to BO-3500c-4's refusal. Single ordered resolution table, consumed by every per-kind proof (BO-3500c-2-i..v), by BO-3500c-1's receipt-shape validator (which checks the receipt against the DERIVED class), by BO-3500c-3's hollow guard and by BO-3500c-4's up-front refusal. One derivation call site for all of them."
+expects_from:
+  ac_id: ACD-1800a-1
+  contract: "The shared change-target enum definition in config/ac_store_schema.json, reached by $ref rather than copied, already extended with `diagram` and already excluding `tests`. This record consumes that one definition; it must not restate the values."
+test_spec:
+  - name: test_kind_vocabulary_equals_change_target_enum_plus_diagram
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Resolve the proof table's key set and the schema's change_target enum at runtime and assert the first equals the second union {diagram}; the test must not carry a literal list of its own."
+  - name: test_tests_is_not_a_selectable_kind
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "`tests` resolves to no kind and selects no proof; a member attempting it is rejected rather than routed."
+  - name: test_proof_class_derived_from_path_and_claiming_registry
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A path under leafcutter-web matched by the vitest include globs derives to ui/comparing; a templates/agents/*.md path named by agent_registry derives to prompt/comparing; a docs/**/*.md path derives to docs/reading. Assert kind, claimed_by and class."
+  - name: test_resolution_order_is_first_match_wins
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Construct a path claimed by two registries at different table positions and assert it resolves to the earlier one, deterministically across repeated calls."
+  - name: test_declared_proof_class_is_ignored_and_reported_as_a_defect
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A screen member declaring itself reading-class still gets the screen proof applied; assert both the applied proof and the emitted defective-declaration reason code."
+  - name: test_written_page_proof_applied_to_a_screen_is_rejected
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "THE SECOND SCENARIO'S TEST. Produce a screen member whose file exists and changed in the diff and assert the member is NOT finished — the implementation that applies the page proof to everything fails only here."
+  - name: test_rejection_names_the_owed_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The rejection carries the member's kind and the name of the proof that kind requires, as fields."
+  - name: test_unclaimed_path_yields_no_kind_and_routes_to_the_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "A path no registry claims returns the no-match sentinel and the caller routes it to BO-3500c-4's refusal — assert the routing, not merely the sentinel."
+  - name: test_every_vocabulary_value_maps_to_a_proof_or_an_explicit_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Iterate the resolved eleven-value enum and assert each has a table entry — a defined proof or an explicit no-proof-defined refusal. A value with no entry fails, so a later addition cannot fall through."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - date: 2026-08-31
+    agent: business-analyst
+    reason: "User decisions D1, D2, D3 and D4. The record's flagged seam defect is resolved: proof selection keys off the store's EXISTING change-target vocabulary (ten values, already carrying a screen value and a prompt value, on 3,381 of 3,694 records) extended by `diagram`, rather than off a new five-value kind enum — which would have been the fourth overlapping artifact vocabulary in the repo (D1, D2). `tests` is dropped as a kind: it is a proof, not an artifact, and with ACD-1800b-1a's independent per-deliverable slots a `tests` kind permits a signed-off code deliverable beside an unstarted tests deliverable (D3). A fourth scenario is added requiring the class of proof to be DERIVED rather than declared, because the second scenario — this record's load-bearing assertion — is otherwise defeated by an author typing a weaker class (D4)."
+superseded_by: null
+covered_by: [BO-3500c-2-i, BO-3500c-2-ii, BO-3500c-2-iii, BO-3500c-2-iv, BO-3500c-2-v]
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE PRODUCT OWNER'S FIRST DEFERRED QUESTION, ANSWERED HERE AND IN THE FIVE CHILDREN.
+  The warning was precise: KI-BO-013's suggestion is a defensible floor for a written
+  page and clearly insufficient for a screen or a prompt, and the floor for the easiest
+  deliverable must not become the ceiling for all of them. This criterion states that
+  as a rule; each child defines one kind's instrument.
+
+  STRUCTURE, AND WHY THE FIVE ARE CHILDREN RATHER THAN SIBLINGS OF THIS RECORD. A
+  requirement's children are capped at five, and BO-3500c already needs four for the
+  invariant, the per-kind rule, the hollow-artifact guard and the undefined-kind
+  refusal. One record per kind at that level would exceed the cap and force either a
+  waiver or a split of a tree that is one day old. Below it there is no cap, and the
+  five belong together anyway: they are five instantiations of one rule, and a reader
+  who wants to know how proofs work should find them in one place.
+
+  THE FIVE KINDS ARE CHOSEN BY WHERE THE BACKLOG ACTUALLY IS, not by symmetry. Measured
+  on 2026-08-31 over not-yet-done requirements declaring a craft outside the current
+  roster: prompts 463, written pages 152, diagrams 119, screens 80, workflows 44. Those
+  are the five children, plus configuration, which is small in count but is the kind
+  most likely to be finished on a hollow proof because a setting that nothing reads
+  looks identical to a setting that works.
+
+  THE SEAM DEFECT FOUND WHILE WRITING THIS IS NOW RESOLVED — user decision, 2026-08-31,
+  and it went the other way from what this record originally assumed. The record said
+  ACD-1800a-1 fixes a five-value kind enum (code, tests, docs, diagram, config) with no
+  value for a screen and none for a prompt, and that either that enum grows or proof
+  selection is keyed off something else. The user's answer is the second, and the reason
+  is that the enum was never the right place to look:
+
+    - DO NOT MINT A NEW KIND VOCABULARY (D1). A fifth-and-parallel artifact vocabulary is
+      what that enum would have been. The store ALREADY carries a change-target
+      vocabulary of ten values, carried by 3,381 of 3,694 records, and it already has a
+      value for a screen and a value for a prompt and a value for a schema. Verified
+      counts in live use: code 1241, pipeline 884, prompt 449, docs 260, config 90,
+      schema 73, infrastructure 32, ui 10. Proof selection keys off that.
+    - ADD ONE VALUE (D2). A diagram is the one kind genuinely missing from it, and the
+      user's reason for needing it changes the diagram proof itself — see BO-3500c-2-ii.
+    - DROP `tests` (D3). It is a proof, not an artifact. The lane's red-baseline check
+      already IS the differential applied to a code deliverable, and — the load-bearing
+      reason — with ACD-1800b-1a's independent per-deliverable sign-off slots, a `tests`
+      kind lets one record hold a signed-off code deliverable beside an unstarted tests
+      deliverable. That is a code deliverable declared finished with its own proof
+      unwritten: the exact phantom-done shape, encoded in the field meant to prevent it.
+      A code deliverable's test obligation already has its own home on the record.
+
+  THE FOURTH SCENARIO IS D4 AND IS THE ONE MOST LIKELY TO BE DROPPED AS PEDANTRY. If the
+  class of proof is a field an author types, the second scenario of this criterion — the
+  load-bearing one, the whole point of the record — is defeated by typing: declare the
+  screen deliverable to be a reading-class one and the written-page proof becomes the
+  correct proof for it by declaration. So the class is DERIVED from where the deliverable
+  sits and which registry claims it, and a contrary declaration is a defect to report,
+  not an override to honour. Which registries those are is named in this tree's
+  discussion and is the IT PO's to make concrete; the criterion states only that the
+  answer is computed, never typed.
+
+  TESTABILITY. The second and fourth scenarios are the load-bearing ones and they fail
+  against different cheap implementations. The second fails the implementation that
+  applies the written-page proof to everything and calls the kinds a documentation
+  matter — test it by producing a screen member whose file exists and changed, and
+  asserting the member is NOT finished. The fourth fails the implementation that reads a
+  proof-class field off the record — test it by authoring a screen member that declares
+  itself reading-class and asserting the screen proof is still the one applied.

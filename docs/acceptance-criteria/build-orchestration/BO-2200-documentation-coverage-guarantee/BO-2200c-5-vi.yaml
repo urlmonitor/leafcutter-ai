@@ -1,0 +1,66 @@
+id: BO-2200c-5-vi
+components:
+  - build_orchestration
+  - documentation_system
+readiness: approved
+priority: medium
+title: "A doc_link's status never changes what is demanded -- it is a stale snapshot, not a decision input"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given two leaf ACs identical in every field, each owning `docs/how-to/thing.md` with
+    `relationship: creates`, differing only in that the first declares `status: exists` on that
+    entry and the second declares `status: planned`,
+  When a ticket is generated from each,
+  Then the two generated `## Agent Contracts` blocks are identical apart from the rendered status
+    text itself: the same agents are dispatched, the same target is named, the same content
+    constraint is written, and the same documentation demand is made or not made.
+  And the same holds when the status is absent entirely, and when it holds a value the schema does
+    not define -- an unrecognised or missing status changes nothing about the demand and does not
+    produce an error.
+
+  And given a doc_link declaring `status: exists` for a document that is absent from disk, and
+    another declaring `status: planned` for a document that is present,
+  When the documentation phase runs,
+  Then in both cases what happens is decided by reading the disk, not by reading the declared
+    status: the absent document is authored and the present one is checked against its content
+    constraint, so a status that contradicts reality changes no outcome.
+
+  And the status value continues to be rendered in the existing-docs cross-link list alongside its
+    path and relationship, as an author's note to the writer -- it is demoted from input to
+    annotation, not deleted.
+depends_on: [BO-2200c-5, BO-2200c-5-iv]
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Written as a differential pair on purpose. "Status is not a decision input" describes the code as
+  it stands -- nothing consumes it beyond rendering it as prose, and no validation constrains its
+  value -- so asserted directly it is an AC about the absence of a behaviour that already does not
+  exist, and any test of it passes on day one and keeps passing on dead code. Stated as "these two
+  records must produce identical output", it becomes an executable invariant that pins the field
+  down while BO-2200c-5-i and -ii rework the neighbouring selection logic, which is the moment
+  someone would reasonably reach for it.
+
+  Why it must be pinned: status is a hand-authored snapshot of the filesystem that nothing
+  refreshes, and it is already wrong in the store -- ticket 22 of the
+  EPIC-StartingNewWorkTheProperWayAlways drive carries `describes` / `exists` for a page that has
+  to change inside its own diff. Nothing detects that; the schema validator performs no doc_links
+  validation of any kind, no enum for status or relationship and no shape check.
+
+  Retaining the rendering keeps this compatible with BO-2200c-4 (approved, done), which requires
+  relationship, status and relevance to survive into the Agent Contracts block rather than being
+  reduced to bare paths. There is a real tension in showing a writer a field known to be
+  unreliable, and BO-2200c-5-iv resolves it rather than this AC: once the writer checks the target
+  on disk before acting, a stale status misinforms nobody, because nobody acts on it.
+
+  Adjacent gap, deliberately not covered here: `relationship` is about to carry the whole
+  documentation-ownership decision (BO-2200c-5-i) and is equally unvalidated -- a typo silently
+  removes a document from the build. Validating the doc_links vocabulary belongs to the ac-store
+  component, which owns the schema validator; see the handoff.

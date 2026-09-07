@@ -1,0 +1,65 @@
+id: AGC-100d-2
+title: "Windows copy fallback provides the same skill catalog as symbolic links"
+component: agent-compatibility
+components: [build_pipeline, skills_system, testing_quality]
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given one target permits symbolic-link creation and a Windows target rejects
+    symbolic-link creation with an access-denied result,
+  And both targets use the same canonical skill sources,
+  When the normal build completes using automatic shim selection,
+  Then Codex discovers the same skill names and skill contents in both targets,
+  And the build report records link for the first target and copy-fallback for the
+    Windows target,
+  And after a canonical skill is renamed, updated, or removed and both targets are
+    rebuilt, each target contains exactly the current skill set with no stale prior
+    name or content,
+  And a second unchanged rebuild produces no content changes.
+depends_on: [AGC-100d, AGC-100d-1]
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - Prefer repository-relative links and use a managed copy fallback when link creation is denied.
+  - Publish identical skill names and bytes in link and copy modes.
+  - Reconcile only manifest-owned stale copies and preserve user files.
+  - Record the selected mode and fallback reason deterministically.
+test_required: true
+test_spec:
+  - name: test_symlink_and_windows_copy_fallback_publish_identical_skill_catalogs
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Link and forced access-denied copy fallback expose identical skill names and bytes.
+  - name: test_copy_fallback_reconciles_stale_skills_and_is_byte_stable
+    target_dir: unit_tests/agent_compatibility/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Copy fallback cleans managed stale skills and an unchanged rebuild changes no bytes.
+test_rationale: "Forced filesystem fallback tests the Windows deployment seam and stale cleanup behavior."
+delivers_to:
+  agent: python-coder
+  contract: "PublishedSkillCatalogV1 with mode, skill paths and hashes, and stale removals."
+expects_from: {ac_id: AGC-100d-1, contract: Canonical declared-skill set}
+doc_links:
+  - {path: docs/architecture/components/skill-registry.md, relationship: describes, status: exists}
+  - {path: docs/architecture/components/template-compiler.md, relationship: describes, status: exists}
+origin_agent: business-analyst
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, config, pipeline]
+risk_surface: contract_boundary
+declares_side_effect: false

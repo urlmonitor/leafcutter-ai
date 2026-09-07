@@ -1,0 +1,190 @@
+id: TQ-500c-3
+components:
+  - testing_quality
+title: "An alteration no test objected to is visible, even when every test objected to some other"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a hand-off record in which one test objected under the first alteration and
+      not under the second, while a different test objected under the second and not
+      the first, both having been exposed to both,
+  When that record is read,
+  Then each test is reported as not having objected under the specific alteration it
+    slept through, and as having objected under the other,
+    And neither test's objection under one alteration is reported in place of its
+      silence under the other,
+    And an alteration that no exposed test objected to is reported as such, even when
+      every one of those tests objected under some other alteration,
+    And the report distinguishes an alteration to which no test objected from an
+      alteration to which no test was exposed.
+depends_on:
+  - TQ-500c
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The evidence table read column-wise rather than row-wise. Reading it by row
+      finds the inert test; reading it by column finds the alteration nothing
+      noticed. Both readings are needed and only the row-wise one is obvious.
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500c-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The row-wise reading this complements. A test objecting under one alteration
+      and not another satisfies that AC and is caught only here.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE COLUMN-WISE REDUCTION MUST READ THE CELL, NOT THE ROW. For a given
+    alteration, consider only the cells belonging to that alteration. Reducing
+    over the whole row — "this test objected somewhere, so it is not blind here"
+    — is the natural mistake and it silently makes the entire second Then clause
+    unenforceable.
+  - >-
+    AN ALTERATION NOBODY WAS EXPOSED TO IS NOT AN UNNOTICED ALTERATION. Keep the
+    two sets separate in the output: alterations to which no EXPOSED test
+    objected, and alterations to which no test was exposed. Collapsing them
+    produces findings whose only natural remedy is to stop reporting.
+  - >-
+    THIS READING IS NOT DERIVABLE FROM TQ-500c-2's. The two partition
+    differently and neither implies the other: a suite in which every test
+    objects to at least one alteration passes TQ-500c-2 completely while leaving
+    an entire alteration unobserved. Implementing one and deriving the other is a
+    defect.
+  - >-
+    Consume TQ-500c-1's per-pair outcomes. Without the per-alteration axis this
+    reading cannot exist, which is why TQ-500c-1 records the pair rather than one
+    value per test.
+  - >-
+    Same host as TQ-500b-1 and TQ-500c-2 —
+    templates/scripts/commit_guardian/_signoff_parity_checks.py, mirrored into
+    scripts/commit_guardian/ in the same change.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500b-2
+    contract: >-
+      Per piece of work, the set of alterations to which no exposed test objected,
+      each named, kept separate from the set of alterations to which no test was
+      exposed. The first set feeds the completion decision on the same terms as the
+      inert-test set from TQ-500c-2.
+expects_from:
+  ac_id: TQ-500c-1
+  contract: >-
+    One outcome per test per alteration — objected, did not object, or not exposed.
+    Without the per-alteration axis this reading cannot exist, which is why TQ-500c-1
+    records the pair rather than one value per test.
+test_spec:
+  - name: test_tq500c_3_each_test_is_reported_against_the_specific_alteration_it_slept_through
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Two tests both exposed to both alterations, the first objecting under
+      alteration one only and the second under alteration two only: each is
+      reported as not objecting under the specific alteration it slept through
+      and as objecting under the other.
+  - name: test_tq500c_3_an_objection_elsewhere_is_not_reported_in_place_of_a_silence_here
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Neither test's objection under one alteration substitutes for its silence
+      under the other. NAMED MUTATION (this descriptor asserts an absence):
+      change the column-wise reduction to read the whole row — treat a test that
+      objected under any alteration as having objected under this one. Under that
+      injection both silences vanish from the report and THIS TEST MUST GO RED,
+      as does the criterion descriptor above; revert to the per-cell read and
+      both return to green. This is the alteration this AC's own falsifiability
+      answer must name.
+  - name: test_tq500c_3_an_alteration_no_exposed_test_objected_to_is_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Over a record in which every test objected under some other alteration, an
+      alteration to which no exposed test objected is still reported as such —
+      the column-wise finding surviving full row-wise coverage. This is the
+      descriptor the row-wise mutation above is designed to kill.
+  - name: test_tq500c_3_an_unexposed_alteration_is_distinguished_from_an_unnoticed_one
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      The false-finding control. An alteration to which no test was exposed
+      appears in the not-exposed set and NOT in the no-test-objected set. NAMED
+      MUTATION (this descriptor asserts an absence): collapse not_exposed into
+      did_not_object in the column reducer. Under that injection the unexposed
+      alteration is reported as unnoticed and THIS TEST MUST GO RED; revert and
+      it returns to green.
+  - name: test_tq500c_3_the_column_reading_is_not_derived_from_the_row_reading
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      THE PARTITION CONTROL. Over one record in which every test objected to at
+      least one alteration — so TQ-500c-2's reading reports nobody — this reading
+      still reports the alteration nothing noticed. A single record on which the
+      two readings disagree is the only assertion that distinguishes two genuine
+      readings from one reading called twice.
+test_rationale: |
+  TQ-500c is naturally read as "report each test separately", and an
+  implementation that does only that is defensible and still leaves the hole this
+  AC closes: in the recorded incident the first alteration was noticed by exactly
+  one of four tests, and had that one test not existed, three tests each
+  objecting under the second alteration would have made the first look covered.
+
+  The partition descriptor is what makes this AC more than a restatement of
+  TQ-500c-2 — one record on which the two readings disagree. Two descriptors
+  assert an absence and each names its injection: reading the row instead of the
+  cell (which kills the whole column axis at once, and is therefore the
+  alteration to record), and collapsing not_exposed into did_not_object. Both
+  must be shown RED under injection and green on revert.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept python-coder and change_target code. Pinned the column reduction to
+      read the CELL rather than the row — the natural mistake, and one that makes
+      the second Then clause silently unenforceable. Added a partition descriptor
+      asserting a record on which this reading and TQ-500c-2's disagree, which is
+      the only assertion distinguishing two readings from one called twice. Two
+      absence-asserting descriptors, each naming its injection. criteria
+      untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE NON-OBVIOUS HALF OF THE PER-ITEM AXIS. TQ-500c is naturally read as "report each
+  test separately", and an implementation that does only that is defensible and still
+  leaves a hole: an alteration that nothing noticed disappears the moment the tests
+  that were blind to it objected to something else. In the recorded incident the first
+  alteration was noticed by exactly one of four tests; had that one test not existed,
+  three tests each objecting under the second alteration would have made the first
+  alteration look covered.
+
+  WHY THIS IS NOT A DUPLICATE OF TQ-500c-2. The two readings partition differently and
+  neither implies the other. A suite in which every test objects to at least one
+  alteration passes TQ-500c-2 completely while leaving an entire alteration
+  unobserved.
+
+  THE FOURTH CLAUSE IS THE FALSE-FINDING CONTROL. An alteration nobody was exposed to
+  says nothing about the tests, and reporting it as unnoticed produces findings whose
+  only natural remedy is to stop reporting.

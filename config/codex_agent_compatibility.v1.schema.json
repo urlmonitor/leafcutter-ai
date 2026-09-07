@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config/codex_agent_compatibility.v1.schema.json",
+  "title": "Leafcutter Claude-to-Codex agent compatibility policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_platform",
+    "target_platform",
+    "unknown_alias_policy",
+    "missing_source_model",
+    "models",
+    "capabilities",
+    "references"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "source_platform": { "const": "claude" },
+    "target_platform": { "const": "codex" },
+    "unknown_alias_policy": { "const": "reject" },
+    "missing_source_model": { "$ref": "#/$defs/modelDecision" },
+    "models": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/modelDecision" }
+    },
+    "capabilities": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/capabilityDecision" }
+    },
+    "references": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/referenceDecision" }
+    }
+  },
+  "$defs": {
+    "modelDecision": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["decision", "model", "model_reasoning_effort"],
+          "properties": {
+            "decision": { "const": "map" },
+            "model": { "type": "string", "minLength": 1 },
+            "model_reasoning_effort": {
+              "enum": ["low", "medium", "high", "xhigh", "max", "ultra"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["decision", "explicitly_allowed"],
+          "properties": {
+            "decision": { "const": "inherit_parent" },
+            "explicitly_allowed": { "const": true }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["decision", "reason"],
+          "properties": {
+            "decision": { "const": "reject" },
+            "reason": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "capabilityDecision": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["decision", "target", "equivalence"],
+          "properties": {
+            "decision": { "const": "map" },
+            "target": { "type": "string", "minLength": 1 },
+            "equivalence": { "enum": ["exact", "behavioral"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["decision", "reason"],
+          "properties": {
+            "decision": { "const": "reject" },
+            "reason": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "referenceDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "target"],
+      "properties": {
+        "decision": { "enum": ["map", "map_if_skill_exists"] },
+        "target": { "type": "string", "minLength": 1 },
+        "otherwise": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

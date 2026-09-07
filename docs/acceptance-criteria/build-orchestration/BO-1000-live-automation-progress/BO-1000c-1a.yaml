@@ -163,6 +163,96 @@ amended_by:
       restored. That is M1 in docs/reference/false-green-mechanisms.md, and it is
       why the replacement is an ABSENCE assertion: a presence assertion stays green
       on dead code, an absence assertion cannot.
+  - reason: "work_status flipped to done — harness (BP-1100b-4) landed, all five test_spec descriptors implemented and green"
+    by: python-coder
+    at: 2026-08-26
+    note: >-
+      BP-1100b-4's vm-sandboxed run_workflow_under_e2() harness landed in the same
+      change (unit_tests/_workflow_engine_harness.py). All five test_spec
+      descriptors for this AC are now implemented in
+      unit_tests/workflows/test_bo_1000c_1a.py:
+      test_no_module_loader_or_custom_journal_helper_remains (absence guard, from
+      #573, unchanged), test_every_reached_step_has_at_least_one_agent_dispatch,
+      test_agent_dispatches_appear_in_step_order,
+      test_agent_dispatch_records_are_still_readable_after_the_run_ends, and
+      test_renaming_narrate_does_not_change_dispatch_based_coverage. The four
+      executed tests run the real, unmodified templates/workflows-js/
+      finalize-feature.js under the engine-faithful harness and assert on the
+      harness's own agent_calls capture (call_index order, phase_name tagging) —
+      the same per-agent-dispatch signal the E2 engine's own journal.jsonl is
+      keyed on. Verified green under AC_ENFORCE_STRICT=1 (all 8 tests across
+      test_bo_1000c_1a.py and test_bp_1100b_4.py pass; full unit_tests/workflows/
+      suite: 468 passed = 461 pre-existing + 3 BP-1100b-4 harness-fidelity tests +
+      4 newly-implemented BO-1000c-1a executed tests, zero regressions).
+      covered_by extended to name unit_tests/_workflow_engine_harness.py and
+      unit_tests/workflows/test_bp_1100b_4.py alongside the existing
+      test_bo_1000c_1a.py entry, since the harness fidelity is a load-bearing
+      part of what makes the four executed tests meaningful evidence rather than
+      a false green (see BP-1100b-4's own test_rationale).
+  - reason: "correction — covered_by must list files that genuinely carry # covers: BO-1000c-1a tags, not files that merely relate"
+    by: python-coder
+    at: 2026-08-26
+    note: >-
+      Per coordinator review: covered_by had been extended to name
+      unit_tests/_workflow_engine_harness.py (a production module, not a test —
+      it cannot carry a `# covers:` tag at all) and
+      unit_tests/workflows/test_bp_1100b_4.py (which carries only
+      `# covers: BP-1100b-4` tags, none for this AC). Both are removed.
+      covered_by is now unit_tests/workflows/test_bo_1000c_1a.py only — the
+      single file that genuinely contains `# covers: BO-1000c-1a` tags (5:
+      the absence guard plus the four executed tests). The harness's role as a
+      load-bearing dependency is real but is a doc_links relationship
+      ("modifies"/"describes"), not a covers-tag claim; conflating the two is
+      exactly the imprecision this correction removes.
+  - reason: "work_status reverted to in_progress — an independent adversarial review (Fable-5) found the harness-landing gate was satisfied on a false premise, and the AC's central in-flight-readability clause has zero coverage"
+    by: python-coder
+    at: 2026-08-26
+    note: >-
+      The immediately preceding entry flipped work_status to done on the premise
+      that BP-1100b-4's vm-sandboxed harness was a real PREREQUISITE for this AC's
+      four executed test_spec descriptors — i.e. that they were "unblocked" by the
+      harness landing, per this file's own 2026-08-26 20:05-equivalent gate: "Flip
+      to done when the harness and the remaining four land." An independent review
+      falsified that premise by direct execution: it loaded the PRE-vm harness
+      (the one that ran a workflow body as a plain CommonJS module, letting
+      require('fs') resolve) and ran all five of this AC's tests against it. All
+      five passed, including all four "unblocked" ones. Only BP-1100b-4's OWN
+      three harness-fidelity tests were red against the old harness. The four
+      executed BO-1000c-1a tests are therefore *indifferent* to whether the
+      harness is vm-sandboxed at all — they assert on agent-dispatch capture
+      (call_index, phase_name), a signal the harness recorded correctly even
+      before the fidelity fix. The dependency was real for the ORIGINAL
+      per-step-journal-file test_spec (deleted by the 2026-08-18 redefinition);
+      once the criterion moved onto agent-dispatch capture, the dependency
+      evaporated and nobody re-derived the gate.
+
+      This does not make the four tests worthless — they are real, executed,
+      falsifiable coverage of finalize-feature.js's step-dispatch behavior (and,
+      separately, an additional review finding — since fixed — that the original
+      versions tolerated losing two-thirds of that signal to a suppressed phase
+      tag; see BP-1100b-4's own amended_by for the fix, applied to the same
+      functions via dual `# covers:` tagging). They stay in covered_by. What they
+      are NOT is evidence that this AC's own criterion is satisfied, because that
+      criterion was never about whether finalize-feature.js dispatches agents
+      correctly — it is about IN-FLIGHT visibility: "readable by a caller outside
+      the background run while the run is still in flight" and "accumulate over
+      the run rather than appearing only once it ends." `HarnessResult` — the only
+      thing any test in this file can inspect — is constructed exclusively AFTER
+      `subprocess.run()` returns, i.e. after the run has already ended. Every test
+      in this file inspects a POST-EXIT snapshot. Zero executed coverage exists,
+      or can exist at the unit level, for the actual in-flight-accumulation
+      property this AC's criteria demand — the file's own "HONEST LIMITATION"
+      docstring block says so directly. That gap, not a harness dependency that
+      turned out not to exist, is the reason work_status reverts to in_progress.
+      Closing it for real requires an integration-level harness around the actual
+      E2 engine (able to poll <transcriptDir>/journal.jsonl DURING a live run),
+      which does not exist and is out of scope for BP-1100b-4 or this correction.
+
+      No file or test-spec name changes accompany this entry: the five
+      descriptors and their five implementing tests are unchanged and remain a
+      literal 5/5 match (independently re-derived by the same review via AST +
+      YAML parsing). Only the work_status conclusion drawn from that match is
+      corrected.
   - reason: "re-scope — the load-bearing clause was untestable at this level"
     by: BrainCandy
     at: 2026-08-25
@@ -224,6 +314,41 @@ amended_by:
       criteria and would misstate this AC's scope now that the in-flight clause
       has moved out; retitled again accordingly rather than restoring main's
       wording verbatim.
+  - reason: "merge reconciliation — this branch's in_progress revert is superseded by main's re-scope, and its evidence is retained"
+    by: manual
+    at: 2026-08-26
+    note: >-
+      GOVERNING VALUES, stated once so no later reader has to infer them from
+      entry order: work_status is done, against the NARROWED criteria recorded
+      in the 2026-08-25 re-scope entry — durability after process exit,
+      dispatch order, and the require()/appendJournal/journalPath absence
+      guard. The in-flight-pollability clause is NOT claimed here.
+
+      Two independent same-day corrections are preserved above and they reach
+      opposite work_status conclusions, so the conflict is recorded rather than
+      flattened. This branch (feat/harness-e2-sandbox, PR #577) reverted to
+      in_progress on the ground that "the AC's central in-flight-readability
+      clause has zero coverage, and can have none at the unit level." That
+      observation is CORRECT and is not withdrawn. Its CONCLUSION is superseded:
+      it was authored without visibility into main's 2026-08-25 re-scope, which
+      had already moved that clause out to a new sibling AC. BO-1000c-4 ("The
+      run-progress journal is readable by an outside caller while the run is
+      still in flight") exists on main with work_status: todo, so the gap the
+      revert protects against is held open by a dedicated AC rather than by
+      this one's status field. Reverting here as well would double-count a
+      single gap and reopen an AC whose narrowed criteria are genuinely met.
+
+      Retained from this branch's entries because main does not have it and it
+      is load-bearing for anyone re-deriving this AC: the falsification, by
+      direct execution, of the harness-landing gate. The premise that
+      BP-1100b-4's vm sandbox was a PREREQUISITE for this AC's four executed
+      descriptors is false — all four pass against the PRE-vm harness. Only
+      BP-1100b-4's own three fidelity tests were red against it. So "flip to
+      done when the harness lands" was never a meaningful gate for this AC once
+      the criterion moved onto agent-dispatch capture; the dependency evaporated
+      at the 2026-08-18 redefinition and nobody re-derived it. Anyone tempted to
+      re-introduce a harness-landing gate on a BO-1000c AC should read that
+      entry first.
 superseded_by: null
 covered_by:
   - unit_tests/workflows/test_bo_1000c_1a.py

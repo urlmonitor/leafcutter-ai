@@ -2,7 +2,7 @@ id: BO-2400d-1
 components:
   - build_orchestration
   - agent_telemetry
-title: "Each agent invocation records duration and token counts to the telemetry sink"
+title: "A recorded agent invocation carries its duration and token counts"
 component: build-orchestration
 level: L2
 status: active
@@ -60,7 +60,10 @@ test_spec:
     description: "The record contains duration, input token count, output token count, and cache-read token count."
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-31"
+    reason: "TITLE ONLY — no criteria, work_status, covered_by or implemented_by changed, and this record remains correctly done. The old title read 'Each agent invocation records duration and token counts to the telemetry sink', which is an UNCONDITIONAL claim this record's own Gherkin does not make: the criteria are 'Given an agent invocation completes, WHEN ITS TELEMETRY IS RECORDED, Then exactly one record is appended [with] duration, input token count, output token count, and cache-read token count'. Recording is the precondition, not the obligation. The record specifies what a telemetry entry contains once written; it does not oblige any lane to write one. Retitled to match. WHY THIS MATTERED ENOUGH TO FIX: on 2026-08-31 a fast-lane coder refused to build BO-2400c-1-v (delete the orphaned runner) on the grounds that doing so would regress this record and its siblings, because the only fast-lane telemetry emission lives in that orphan. Reading the Gherkin shows the blocker does not hold — no criterion here requires any lane to emit — but the TITLE says otherwise, and scanners, roadmap views and readers surface titles rather than criteria. An honest record with a dishonest title cost a build. The genuine gap the coder was circling is real and is recorded as KI-BO-012: the live lane emits no telemetry at all, so the comparison report of BO-2400d-3 can never contain fast-lane data. That gap is an UNWRITTEN REQUIREMENT, not a false done, and needs an AC of its own rather than a reset of this one."
 superseded_by: null
 covered_by:
   - BO-2400d-1-i

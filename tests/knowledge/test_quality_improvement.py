@@ -678,6 +678,13 @@ class TestEndToEndLearningCapture(unittest.TestCase):
                 "event": "knowledge_captured",
                 "timestamp": "2026-06-05T10:00:00Z",
                 "ticket": "tickets/00_inbox/epics/EPIC-AgentLearningLoop/04_quality_improvement_verification.md",
+                # agent/component are required by _event_hash per the
+                # reconciled record shape (INF-400b-2-ii / INF-400b-2-i);
+                # this event predates that reconciliation and only carried
+                # `ticket`. Values reflect the BA standing-rule scenario this
+                # test simulates.
+                "agent": "business-analyst",
+                "component": "ac_pipeline",
                 "destination": str(ctx_path),
                 "entry_kind": "per-folder-readme",
                 "text": f"Standing rule: {standing_rule_text}",

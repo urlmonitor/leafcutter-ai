@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c-2.yaml"
@@ -85,6 +85,18 @@ test_spec:
     type: unit
     angle: boundary
     description: "An unroutable record carrying real text is counted as outstanding, so the resting state was reached by correcting the definition rather than by narrowing what counts."
+  - name: test_record_with_text_missing_a_digest_field_is_counted_as_outstanding
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A record carrying real, non-empty text that is also missing one of _REQUIRED_DIGEST_FIELDS must still count as outstanding -- the except KeyError branch around _event_hash must not let its continue skip the count."
+  - name: test_record_without_text_missing_a_digest_field_does_not_count
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Negative control for the digest-field regression: a record missing a required digest field AND carrying no real learning text must remain ineligible and contribute zero to outstanding."
 test_rationale: |
   The sixth descriptor is the anti-cheat this AC exists for, sharpened: the
   obvious way to make the 28 disappear is to count only records the routing
@@ -106,8 +118,10 @@ amended_by:
     by: it-po
     at: 2026-08-26
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "tests/knowledge/test_inf_700c_2_ii_count_rises_for_real_learning.py"
+implemented_by:
+  - "scripts/knowledge/harvest_learnings.py"
 notes: |
   This is the anti-cheat clause for INF-700c-2. The cheapest way to make a
   permanently non-zero backlog go to zero is to stop counting, and that would

@@ -1,0 +1,234 @@
+id: BP-900c-4
+components:
+  - build_pipeline
+title: "A broken reference whose path a deploy declaration already names is told to restore the source or drop the declaration, never to add a deploy phase"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c.yaml"
+criteria: |
+  Given a package tree in which the deployable script
+    scripts/knowledge/harvest_learnings.py has been deleted from the source tree,
+  And that exact path is still named, individually, by a deploy declaration the
+    build ships from (the knowledge-scripts deploy list),
+  And that exact path is still referenced by the deployable template
+    agents/knowledge-harvester.md,
+  When the build is run against that tree and the broken-reference report is read,
+  Then the entry for scripts/knowledge/harvest_learnings.py carries a remediation
+    that names the deploy declaration already claiming that path and states the two
+    resolutions that exist for it — restore the source at the declared path, or
+    remove the path from the declaration,
+  And that entry's remediation is NOT the add-a-deploy-phase remediation, because a
+    deploy declaration for that exact path already exists and adding a second one
+    resolves nothing,
+  And in the SAME run and the SAME report, a broken reference to
+    scripts/brandnewtool/run.py — a path no deploy declaration names and whose
+    source directory does not exist — still carries the add-a-deploy-phase
+    remediation, and a broken reference whose source directory and directory-shipping
+    phase both already exist still carries the commit-the-source remediation of
+    BP-900c-3, so three states are told apart entry by entry inside one report and
+    the remediation is demonstrably a function of the entry's state rather than a
+    constant,
+  And the three entries are read from the report the build itself produced when
+    invoked through its real entry point against that tree — a demonstration that
+    calls the remediation selector directly does not satisfy this criterion, because
+    the selector can be correct in isolation while the report the build emits is not
+    the one it produced,
+  Because on 2026-08-31 deleting scripts/knowledge/harvest_learnings.py produced the
+    entry {missing_path: scripts/knowledge/harvest_learnings.py,
+    referencing_template: agents/knowledge-harvester.md, suggested_action: "add a
+    deploy phase in build_phases.py"} while a deploy declaration already named that
+    exact path. The advice sends the author to declare something already declared,
+    and neither resolution that would actually fix it is named anywhere in the
+    report. BP-900c-3 and BP-900c-3-i branch on whether a source DIRECTORY and a
+    phase that ships that directory exist; a path named INDIVIDUALLY by a deploy
+    list is a third state neither branch recognises, so it falls through to the
+    default and is diagnosed as a brand-new capability.
+depends_on:
+  - BP-900c
+  - BP-900c-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-3.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Owns the state-based remediation selector this AC extends: source directory present AND a directory-shipping deploy phase present -> commit-the-source. Read it before adding a branch; this AC adds a third state, it does not restate that rule."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-3-i.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Owns the default branch (no source directory, no deploy phase -> add-a-deploy-phase) that currently swallows the individually-declared state. Its per-entry-discrimination clause is the shape this AC's three-state clause extends to three."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-1.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Fixes the three-field entry shape. This AC changes which remediation value is chosen for one state; it must not change the entry schema, and BP-900c-2 constrains the key set to exactly three."
+  - path: scripts/build_propagation_audit.py
+    relationship: extends
+    status: exists
+    relevance: "Holds the remediation selector whose branches BP-900c-3 and BP-900c-3-i already pin. The third state is added here, in the same selector, not in a parallel one."
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+    relevance: "Holds the deploy declarations the selector must consult — including the file-list declarations (knowledge scripts, workflow tools, agent-support scripts) that name individual paths rather than shipping a directory. A directory-only predicate cannot see these."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary, and the grep-shaped-false-green warning: a remediation asserted by string presence is green against a constant, which is why the three-state discrimination inside one report is load-bearing here."
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the guard that emits this report; the same doc BP-900c-2 and BP-900c-3 link. Read for the guard's place in the build, not for the selector's internals."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/build_propagation_audit.py
+  n_location_rule: "1 — the suggested-action selector already branched by BP-900c-3 and BP-900c-3-i. The third state is added as a branch in that same selector, evaluated ahead of its default; a parallel selector satisfies no clause of this AC."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m pytest unit_tests/test_build_tracked_source_guard.py unit_tests/test_build_guard_real_package.py -q"
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "When the missing path is already named by a deploy declaration the build ships from, the selector must choose the declaration-already-exists remediation and must never choose the add-a-deploy-phase remediation for that state."
+    - "The remediation must name the declaration that already claims the path AND both resolutions available for it (restore the source at the declared path, or remove the path from the declaration). Naming one resolution only leaves the author at the same dead end the 2026-08-31 observation recorded."
+    - "The two branches BP-900c-3 and BP-900c-3-i already own must keep their current outcomes for their own states — adding the third branch must not change what either existing state is told, and unit_tests/test_build_tracked_source_guard.py must stay green unmodified."
+    - "Preserve the entry schema fixed by BP-900c-2 (work_status done, readiness approved): exactly the keys missing_path, referencing_template, suggested_action. Do NOT add a fourth key naming which check produced the finding — entries are told apart by missing_path, which is sufficient for every assertion this AC requires. That idea belongs to the cross-guard L1 named in this record's notes, where amending BP-900c-2 can be decided in the open."
+    - "Resolve the set of declared paths once per build run. The guard already walks the tree; the new state must not add a per-entry rescan of the deploy declarations or of the filesystem."
+    - "If the deploy declarations cannot be read, the guard must surface that condition per the project error-handling policy rather than silently degrading to the default remediation — a swallowed read failure reproduces the exact wrong advice this AC exists to remove, with nothing in the report to say so."
+delivers_to: null
+expects_from:
+  ac_id: BP-900c-3
+  contract: "The state-based remediation selector and its two existing branches (commit-the-source when the source directory and its directory-shipping phase exist; add-a-deploy-phase otherwise). This AC adds a third branch keyed on the deploy declarations naming the path individually, chosen ahead of the default, and leaves the three-field entry shape from BP-900c-1 untouched."
+test_spec:
+  - name: test_one_report_assigns_three_remediations_by_entry_state
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "One build run over a tree seeded with all three states emits three entries whose suggested_action values are three DIFFERENT strings, each matched to its own missing_path: the individually-declared deleted path carries the declaration-already-exists remediation (naming the declaration and both resolutions), the source-directory-plus-directory-phase path carries BP-900c-3's commit-the-source remediation, and scripts/brandnewtool/run.py carries BP-900c-3-i's add-a-deploy-phase remediation; the declared path's entry must NOT carry the add-a-deploy-phase text. All three are asserted from the one report, so an implementation emitting the corrected text unconditionally fails."
+  - name: test_three_entries_are_parsed_from_build_py_stderr_jsonl_subprocess
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/build.py --target-dir <seeded tree>, run as a subprocess"
+    description: "The entries under assertion are parsed as JSONL objects from the stderr the build itself wrote when invoked through its real entry point, and the run exits non-zero. Calling the remediation selector directly, reading a log line, or asserting only that a finding was emitted does not satisfy this test — the current implementation already emits a well-formed record with an accurate missing_path, so those assertions are green against the broken code."
+  - name: test_declared_path_case_reproduces_against_the_real_knowledge_scripts_declaration
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The declared-path fixture is the real 2026-08-31 case: a copy of the actual package tree with scripts/knowledge/harvest_learnings.py deleted, the real knowledge-scripts declaration in scripts/build_phases.py still naming that exact path, and the real template agents/knowledge-harvester.md still referencing it — not a hand-authored declaration module, which would reproduce the directory-shaped bias that hid this defect."
+  - name: test_every_emitted_entry_still_has_exactly_the_three_keys
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Every entry in that same run has exactly the key set {missing_path, referencing_template, suggested_action}, asserted as set equality rather than containment, so the new branch is proven to change a value and not the schema BP-900c-2 fixed — and no check-identifying fourth key has been added."
+test_rationale: |
+  Two false-green shapes have to be excluded, and each needs a specific test shape.
+
+  A test that asserts "a finding was emitted", or that the corrected remediation text
+  appears somewhere in the report, is green against BOTH the current broken code and the
+  fixed code: the build already emits a well-formed JSONL record with an accurate
+  missing_path for this path, and only the VALUE of suggested_action is wrong. So the
+  emitted record must be parsed from a real build invocation (the reachability entry) and
+  the assertion must be on which value landed on which entry.
+
+  A single-entry assertion is green against an implementation that emits the corrected
+  text unconditionally — which would silently make the other two states wrong while every
+  existing BP-900c test stayed green, because each of those inspects only its own entry.
+  So the unit of assertion is one run containing all three states with three distinct
+  values (the criterion entry).
+
+  real_artifact is charged because the incumbent predicate's defect IS a fixture-shape
+  bias: it recognises directory-shipping phases, and a hand-written declaration stub would
+  most likely be written in that same shape. boundary is charged for the exact-three-key
+  set equality, which is the only assertion that would fail if a coder resolved the state
+  by adding a fourth key instead of by consulting the declarations.
+origin_agent: business-analyst
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Added it_requirements (structured mapping form, six constraints), test_spec (four
+      descriptors: criterion / reachability / real_artifact / boundary), test_rationale,
+      and a template-compiler.md doc_link; readiness draft -> reviewed. assigned_agent,
+      estimated_complexity and expects_from were already authored by the BA and are
+      unchanged. criteria is unchanged. A fourth entry key naming the producing check was
+      considered and deliberately NOT added — it would contradict BP-900c-2 (done,
+      approved) and the three states are separable by missing_path alone; it is left to
+      the cross-guard L1 this record's notes point at.
+superseded_by: null
+covered_by:
+  - BP-900c-4-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  SCOPE — THIS IS THE WRONG-ADVICE HALF OF THE 2026-08-31 FINDING, NOT THE WHOLE OF IT.
+
+  The observation that produced this AC had two consequences. Only the first is
+  authored here, because only the first is inside BP-900c's promise ("broken-reference
+  errors name the file, the referencing template, and the fix").
+
+  The SECOND consequence has no home in this tree and must not be forced into one.
+  The build's preflight guards run as a chain that returns on the first failure, so
+  one underlying condition — a declared deploy source absent from the tree — is
+  diagnosed differently depending on an unrelated property of the file: a
+  template-referenced path is reported by the script-reference guard, an
+  unreferenced one reaches the deploy loop and is reported as a deploy-declaration
+  failure, and in the first case the later check never runs. That property spans the
+  script-reference guard (BP-900b/BP-900c), the deploy loop (BP-900g-9) and the
+  registry-completeness check (BP-900e-4) — each of which independently requires
+  "every finding, not only the first" WITHIN its own scope, and none of which owns
+  the property ACROSS scopes. It needs a PO-authored L1. See the sign-off report
+  accompanying this record.
+
+  WHY THIS IS A THIRD STATE AND NOT A RESTATEMENT OF BP-900c-3.
+
+  BP-900c-3's Given is "the script's containing source directory already exists AND
+  the corresponding deploy phase THAT SHIPS THAT DIRECTORY already exists". Its
+  remedy is "commit the source under templates/scripts/". Both halves miss the
+  observed case. The knowledge-scripts declaration is a list of individual file
+  paths, not a directory-shipping phase, so a directory-keyed predicate does not
+  recognise it; and the file was DELETED rather than left uncommitted, so
+  "commit it under templates/scripts/" is not the resolution either — restoring the
+  source or dropping the declaration is. Three deploy-declaration shapes exist in
+  the build today: directory-shipping phases, file-list declarations naming
+  individual paths, and mapping-table declarations. Only the first is visible to the
+  incumbent predicate.
+
+  IF THE IMPLEMENTER FINDS BP-900c-3'S PREDICATE ALREADY DECLARATION-BASED, that
+  changes this from a missing branch into a defect in a record marked work_status:
+  done, and the correct action is to say so in the sign-off rather than to widen
+  this AC. Either way the observable and the negative controls below are unchanged.
+
+  WHY THE THREE-STATE CLAUSE IS IN THE CRITERIA AND NOT IN NOTES. The remediation is
+  a string in a structured record. A test that asserts the corrected text is present
+  is green against an implementation that emits that text unconditionally — which
+  would make the OTHER two states wrong and every existing BP-900c test still pass,
+  because each of those tests only inspects its own entry. Requiring all three
+  remediations to appear, correctly assigned, in ONE report is the only assertion
+  that distinguishes a state-based selector from a changed constant.
+
+  ENTRY SCHEMA IS OUT OF SCOPE. BP-900c-2 (done, approved) constrains the emitted
+  record to exactly the keys missing_path, referencing_template, suggested_action.
+  This AC changes a value, never the key set. A related idea considered and
+  deliberately NOT authored: adding a fourth key naming the check that produced the
+  finding, so a must_block test can assert WHICH guard fired. That would contradict
+  BP-900c-2's exact-three-keys constraint and belongs with the cross-guard L1 above,
+  where the amendment to BP-900c-2 can be decided in the open.
+
+  PRIORITY DEVIATION, RECORDED. Parent BP-900c is priority: critical; this record is
+  high, matching sibling BP-900c-3. The defect misdirects an author; it does not
+  admit a broken install, which is what the critical siblings guard.

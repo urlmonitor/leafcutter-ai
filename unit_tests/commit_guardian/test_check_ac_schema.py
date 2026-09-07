@@ -2409,5 +2409,125 @@ class TestAcAxesVocabularyContractAc3(unittest.TestCase):
         )
 
 
+class TestPlaywrightFrameworkEnumWidening(unittest.TestCase):
+    """ACS-100a-3-i: test_spec[].framework must admit 'playwright' — a
+    framework this project genuinely ships a runner/skill for (the
+    Playwright-driven webapp-testing skill) — while still refusing any
+    framework this repo ships nothing for.
+
+    The enum at config/ac_store_schema.json (test_spec.framework, ~line 412)
+    was widened from ["unittest", "pytest"] to ["unittest", "pytest",
+    "playwright"], because the narrower enum refused two approved,
+    high-priority records (BP-1400c-1, BP-1400c-1-i) that legitimately
+    declare framework: playwright for a headless route-render check.
+
+    Both halves are asserted in ONE test per the AC's test_spec descriptor
+    name and its coverage note: a test that only asserts playwright is
+    accepted would pass equally against a schema that deleted the enum
+    altogether (making the field free-text) — the opposite of what this
+    criterion asks for. Half 2 only asserts that an unshipped value is
+    still refused (exit 1); it deliberately does NOT assert anything about
+    the diagnostic's content (naming the offending value, listing the
+    accepted members). ACS-100a-3-i's second criteria block originally
+    demanded that content, but delivering it requires restructuring
+    test_spec's `oneOf: [<array>, <null>]` shape into a plain
+    `type: ["array", "null"]` union — a shape twelve tests across four
+    other modules depend on (they index the schema via `["oneOf"]` to
+    reach the test_spec item schema). The AC was amended to drop that
+    requirement (see its `amended_by` entry) rather than win one
+    diagnostic-quality improvement at the cost of twelve other ACs'
+    coverage; this test was narrowed to match.
+    """
+
+    def _make_content(self, framework_value: str, ac_id: str) -> str:
+        """Return a minimal valid AC YAML string with the given test_spec framework value.
+
+        Args:
+            framework_value: The value to place in test_spec[0].framework.
+            ac_id: The AC id to use for this fixture record.
+
+        Returns:
+            YAML content string suitable for writing to a temporary file.
+        """
+        return textwrap.dedent(f"""\
+            id: {ac_id}
+            title: "Playwright framework enum widening test fixture"
+            component: build_pipeline
+            components:
+              - build_pipeline
+            status: active
+            created_by: "tickets/test.md"
+            criteria: |
+              Given a headless route-render check
+              When the schema validator checks the record
+              Then the record validates
+            priority: medium
+            readiness: draft
+            test_spec:
+              - name: test_route_renders_headless
+                target_dir: unit_tests/build_pipeline/
+                framework: "{framework_value}"
+                type: unit
+                description: "Renders the route headlessly and asserts content is present."
+        """)
+
+    def test_playwright_framework_is_accepted_and_unknown_framework_still_refused(self) -> None:
+        # covers: ACS-100a-3-i
+        # angle: boundary
+        """Both criteria blocks of ACS-100a-3-i, in one test.
+
+        1. A record declaring framework: playwright must VALIDATE (exit 0).
+        2. Records declaring a framework this repo ships nothing for
+           ("jasmine", and the empty string) must STILL FAIL (exit 1). This
+           is the discriminating half: a schema that merely deleted the enum
+           (turning framework into free text) would pass half 1 but would
+           NOT reject an unshipped value here, so this half alone rules
+           that "fix" out.
+
+        This test deliberately does NOT assert anything about the failure
+        diagnostic's content (naming the offending value, or listing the
+        accepted members). ACS-100a-3-i's second criteria block originally
+        required that, but delivering it needs a test_spec schema-shape
+        change (oneOf -> plain type union) that a separate set of twelve
+        tests in four other modules depends on being absent; the AC was
+        amended to drop that requirement (see its amended_by entry) and
+        this test was narrowed to match — see ACS-100a-3-i's amended_by
+        entry for the full rationale and deferred-work pointer.
+        """
+        # --- Half 1: framework: playwright must validate. ---
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_ac_file(root, "BP-1400c-1.yaml", self._make_content("playwright", "BP-1400c-1"))
+            result = _run_hook(root)
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "A test_spec entry declaring framework: playwright must validate — "
+                "the package ships a Playwright-driven webapp-testing skill and two "
+                "approved, high-priority records (BP-1400c-1, BP-1400c-1-i) already "
+                f"declare it for a headless route-render check. Stderr: {result.stderr}"
+            ),
+        )
+
+        # --- Half 2: an unshipped framework is still refused. ---
+        for bad_value, fixture_id in (("jasmine", "BP-9998"), ("", "BP-9999")):
+            with self.subTest(framework=bad_value):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    _write_ac_file(root, f"{fixture_id}.yaml", self._make_content(bad_value, fixture_id))
+                    result = _run_hook(root)
+                self.assertEqual(
+                    result.returncode,
+                    1,
+                    msg=(
+                        f"A test_spec entry declaring framework: {bad_value!r} — a "
+                        "framework this repo ships nothing for — must still fail "
+                        f"validation. Widening the enum must not turn the field "
+                        f"into an unconstrained free-text box. Stderr: {result.stderr}"
+                    ),
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

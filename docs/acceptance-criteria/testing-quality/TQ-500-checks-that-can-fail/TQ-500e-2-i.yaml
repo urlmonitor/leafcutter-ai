@@ -1,0 +1,197 @@
+id: TQ-500e-2-i
+components:
+  - testing_quality
+  - ac_store
+title: "Work predating the record returns no answer, and the boundary is the record, not the date"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given finished work from before the falsifiability answer existed alongside finished
+      work from after it, and, among the older work, one piece that does carry an
+      answer,
+  When a later reader retrieves answers for all of them,
+  Then the older work carrying no answer returns no answer recorded, and is returned
+    neither as a reasoned negative nor as a shortfall,
+    And the newer work returns whatever its run recorded,
+    And the older piece that does carry an answer returns it, so the boundary between
+      the two outcomes is the presence of a record rather than the date the work was
+      finished,
+    And a later sweep over this finished work can tell the no-answer-recorded case
+      apart from the answered cases without inspecting a test,
+    And a newer piece of work whose run recorded no answer is returned as no answer
+      recorded and not as older work, so the carve-out does not silently absorb
+      present-day gaps.
+depends_on:
+  - TQ-500e-2
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The Legacy Compatibility rule that produces this case: records written before the
+      manifest epoch carry no manifest at all, and their absence is accepted without
+      back-fill.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Carries the same carve-out for the seam answer, and the same warning: applied
+      without a boundary it false-fails every historical piece of work on its first
+      run; applied too widely it swallows present-day gaps.
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The sweep referred to in the fourth clause, and the precedent for asserting that
+      two readings differ only in scope over one identical store.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE CARVE-OUT KEYS ON THE PRESENCE OF A RECORD, NEVER ON A DATE. A date-keyed
+    carve-out is the obvious shortcut and it fails twice over: it hides an answer
+    that older work genuinely recorded, and it grants amnesty to any newer work
+    whose date can be made to look old. Keying on the record is the only form of
+    the rule that stays true as the epoch recedes.
+  - >-
+    BOTH SIDES OF THE BOUNDARY ARE LOAD-BEARING. The older-work-that-did-answer
+    case and the newer-work-that-did-not case are separate assertions requiring
+    separate fixtures, and an implementation commonly satisfies one. Neither may
+    be dropped.
+  - >-
+    THE FIFTH CLAUSE IS THE ANTI-VACUITY CONTROL. Every other clause here is
+    satisfied by a retrieval that returns no-answer-recorded for everything —
+    green on arrival and incapable of failing. The present-day gap is the case
+    the scenario must answer differently.
+  - >-
+    A LATER SWEEP MUST BE ABLE TO PARTITION WITHOUT INSPECTING A TEST. The
+    no-answer-recorded result must be distinguishable from the answered results
+    from the returned value alone. A sweep forced to open a test to tell them
+    apart has re-derived, which TQ-500e-2 forbids.
+  - >-
+    Adds no behaviour. This is a regression test over TQ-500e-2's retrieval and
+    must not be closed by a change that special-cases these fixtures.
+delivers_to: null
+expects_from:
+  ac_id: TQ-500e-2
+  contract: >-
+    Retrieval by name over retained records. This AC asserts the no-answer-recorded
+    result is reached from the absence of a record and never from the age of the work.
+test_spec:
+  - name: test_tq500e_2_i_older_work_with_no_record_returns_no_answer_recorded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Finished work predating the answer, carrying no record, returns
+      no-answer-recorded — returned neither as a reasoned negative nor as a
+      shortfall. Three outcomes, all distinct.
+  - name: test_tq500e_2_i_older_work_that_did_record_an_answer_still_returns_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      THE FIRST HALF OF THE BOUNDARY, and it asserts that the carve-out does NOT
+      apply. An old work item that does carry an answer returns it. NAMED
+      MUTATION: key the carve-out on the work item's completion date rather than
+      on the presence of a record. Under that injection this item's genuine
+      answer is suppressed as no-answer-recorded and THIS TEST MUST GO RED;
+      restore the presence-of-record rule and it returns to green.
+  - name: test_tq500e_2_i_a_present_day_gap_is_not_absorbed_by_the_carve_out
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      THE SECOND HALF OF THE BOUNDARY AND THE ANTI-VACUITY CONTROL. A newer work
+      item whose run recorded no answer is returned as no-answer-recorded AND is
+      not classified as older work, so the carve-out does not silently absorb
+      present-day gaps. NAMED MUTATION: the SAME date-keyed carve-out injected
+      above also turns this test RED, because the newer item's date can be shifted
+      to fall inside the carve-out. One injection kills both boundary clauses,
+      which is precisely why the date shortcut is the alteration this AC's own
+      falsifiability answer must name. Revert and both return to green.
+  - name: test_tq500e_2_i_newer_work_returns_whatever_its_run_recorded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Newer work returns its recorded answer verbatim, of whichever conforming
+      shape, with no substitution or normalisation.
+  - name: test_tq500e_2_i_a_sweep_can_partition_the_store_without_inspecting_a_test
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      Over the full mixed store, partition into no-answer-recorded and answered
+      from the returned values alone, asserting no test file is opened and no
+      test runner is invoked during the partition. This is the TQ-400a-1-i seam:
+      a sweep may consume this retrieval, and consuming it must not require
+      re-derivation.
+  - name: test_tq500e_2_i_the_mixed_store_is_built_by_the_projects_own_writer
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Build the store from real tickets copied verbatim out of tickets/99_done/
+      for the pre-epoch cases, and via yaml.safe_dump per the signoff §2b recipe
+      for the rest, then retrieve in a fresh subprocess. Pre-epoch tickets are the
+      one fixture that cannot be synthesised faithfully — copy them.
+test_rationale: |
+  Every clause except the fifth is satisfied by a retrieval that returns
+  no-answer-recorded for everything: green on arrival, incapable of failing, and
+  the exact defect this tree exists to catch, reproduced inside it. The
+  present-day-gap case is what gives the scenario something it must answer
+  differently.
+
+  The two boundary halves share one injection, and that is the finding worth
+  recording: keying the carve-out on a completion DATE rather than on the
+  presence of a record turns BOTH the older-work-that-answered descriptor and
+  the present-day-gap descriptor red at once, while every other descriptor stays
+  green. That asymmetry is the proof that the boundary is bounded from both
+  sides. This AC's falsifiability answer must be of the substitute kind naming
+  the date-keyed carve-out and recording each descriptor's outcome under it.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      change_target verified as code (parent is already code). Six descriptors.
+      The BA flagged this AC as a negative control; the named injection is a
+      date-keyed carve-out, which turns BOTH boundary descriptors red at once
+      while leaving the rest green — one alteration, two clauses, which is what
+      makes it the right one to record. Added a seam descriptor for the
+      TQ-400a-1-i sweep consuming this retrieval without re-deriving. criteria
+      untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE THIRD AND FIFTH CLAUSES BOUND THE CARVE-OUT FROM BOTH SIDES, and both are needed.
+  An implementation that keys the carve-out on a date is the obvious shortcut and it
+  fails twice over: it hides an answer that older work genuinely recorded, and it grants
+  amnesty to any newer work whose date can be made to look old. Keying on the presence
+  of a record is the only form of the rule that stays true as the epoch recedes.
+
+  THE FIFTH CLAUSE IS THE ANTI-VACUITY CONTROL. Every other clause here can be satisfied
+  by a retrieval that returns no answer recorded for everything. That reading is green on
+  arrival and cannot fail — the exact defect this tree exists to catch — so the scenario
+  needs a case it must answer differently.
+
+  BOUNDARY. Adds no behaviour. It is satisfied only by a regression test over TQ-500e-2's
+  retrieval and must not be closed by a change that special-cases these fixtures.

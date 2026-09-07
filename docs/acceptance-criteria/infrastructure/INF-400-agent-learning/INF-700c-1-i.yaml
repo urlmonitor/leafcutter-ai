@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c-1.yaml"
@@ -114,8 +114,10 @@ amended_by:
     by: it-po
     at: 2026-08-26
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "tests/knowledge/test_harvest_learnings.py"
+implemented_by:
+  - "scripts/knowledge/harvest_learnings.py"
 notes: |
   Not hypothetical. Line 19 of the live sink is the literal string
   "</content>" — free-hand appending by agents has already put a non-parseable

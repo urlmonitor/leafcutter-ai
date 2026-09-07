@@ -1,0 +1,65 @@
+id: BO-3500c
+components:
+  - build_orchestration
+  - testing_quality
+title: "Work a test cannot prove still finishes with something you can check"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The thing you asked for exists and is shown — never quietly skipped.
+
+  Where the result is a page, a diagram or a setting rather than code, the run
+  produces it and shows you it was produced. Having no test to point at never
+  becomes permission to skip the work, and never becomes permission to call it
+  finished.
+depends_on: [BO-3500]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013's second fix direction, and its warning: 'Note the failure is half-correct, which is why it should not be fixed by loosening the gate. Refusing to mark a doc AC done when no doc was written is right.'"
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: [BO-3500c-1, BO-3500c-2, BO-3500c-3, BO-3500c-4]
+implemented_by: []
+documentation_triggers: [reference-doc]
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE DANGEROUS ONE, and it is stated as a requirement rather than left
+  as an assumption for exactly that reason. Every cheap way to make BO-3500a and
+  BO-3500b pass runs through weakening what "finished" means: waive the proof for
+  anything without a test, or mark the non-code member done because a run touched
+  it. Either is phantom-done arriving through the front door of the tool built
+  hardest against it. The bar this L1 sets is a proof obligation of comparable
+  strength in a form that suits the deliverable — not an exemption.
+
+  BOUNDARY vs BO-2500 ("Trust that a feature is done because a test proves it").
+  BO-2500 is not narrowed and not contradicted. Its subject is that no opinion
+  may confer done-ness; only a mechanical check may. This L1 keeps that and asks
+  only that the mechanical check be the right instrument for a deliverable that
+  is not code. If a decomposition here ever reads as "some work is done without
+  a mechanical check", it has drifted and should be rejected.
+
+  BOUNDARY vs ACD-1800a / ACD-1800b. Those own what a requirement declares it
+  needs and how completion is counted from per-deliverable sign-offs — the store
+  side. This owns whether a run can produce the artifact and evidence it — the
+  build side. The two must agree at the seam and neither may be built as though
+  it covers the other; ACD-1800b is currently ahead of this one in the roadmap
+  (phase_acbuild_2a), so treat its accounting as the target, not as a rival.
+
+  FOR THE BA: the concrete instrument is deliberately left open. KI-BO-013
+  suggests one ("the named doc file exists and changed in the diff"), which is a
+  reasonable floor for a written page and clearly insufficient for a screen or a
+  prompt. Do not let the floor for the easiest deliverable become the ceiling for
+  all of them.

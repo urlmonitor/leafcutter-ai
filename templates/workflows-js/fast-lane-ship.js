@@ -14,7 +14,7 @@
  *   3. Lean loop     — the two-agent test-writer → python-coder loop, INLINED
  *                      and scoped to the resolved id list, gated by
  *                      verify_red_baseline and verify_green_and_coverage
- *                      (the same deterministic gates as fast-lane-build.js).
+ *                      (deterministic script gates, not agent judgment).
  *   4. Commit + PR   — a commit agent marks the built ACs done and commits on
  *                      the worktree branch; a pull-request agent opens the PR
  *                      against main (gh pr create + EMU REST fallback) — the
@@ -319,22 +319,47 @@ function classifyContextBundle(bundleResult, marker) {
     };
   }
 
-  // Real content, not a locator — but still incomplete when the breakpoint
-  // marker is absent, or when a layer was empty. assemble_context_bundle()
-  // joins every layer with exactly one blank line ("\n\n"); an empty layer
-  // collapses two such joins back-to-back, producing a run of 4+ consecutive
-  // newline characters that never occurs when every layer is non-empty. This
-  // is a property of the real, on-disk assembly function's own layering
-  // rule, not a hand-typed re-implementation of it.
-  var hasEmptyLayerGap = /\n{4,}/.test(bundleText);
-  if (bundleText.length === 0 || !bundleText.includes(marker) || hasEmptyLayerGap) {
+  // Real content, not a locator — but still incomplete when it did not
+  // survive the crossing intact. What remains here is deliberately only a
+  // TRANSPORT check. Whether a layer was EMPTY is an assembly-time fact, and
+  // it is now refused at assembly time by injection_builders.py, which is the
+  // only place the layer boundaries still exist.
+  //
+  // This used to also test /\n{4,}/, on the theory that an empty layer
+  // collapses two "\n\n" joins into a run of 4+ newlines "that never occurs
+  // when every layer is non-empty". That premise is false: a layer whose own
+  // content ends in a blank line produces the same run. It cost a real run —
+  // the architecture layer (a markdown document ending in an HTML comment and
+  // a trailing blank line) yielded five consecutive newlines, and a complete
+  // 16,442-byte bundle with its marker present exactly once was refused as
+  // incomplete. The signal is genuinely ambiguous in this direction, so no
+  // textual rule here can be sound; the check belongs upstream and now lives
+  // there.
+  var markerIndex = bundleText.indexOf(marker);
+
+  // Truncation after the marker. This is NOT the empty-layer rule wearing a
+  // different hat: assembly guarantees a non-empty prior_tests layer follows
+  // the marker, so an empty suffix means the text was cut in transit rather
+  // than assembled that way. Unambiguous, and it cannot fire on real content.
+  var truncatedAfterMarker =
+    markerIndex >= 0 &&
+    bundleText.slice(markerIndex + marker.length).trim().length === 0;
+
+  if (
+    bundleText.length === 0 ||
+    markerIndex < 0 ||
+    truncatedAfterMarker
+  ) {
     return {
       state: CONTEXT_BUNDLE_STATE_INCOMPLETE,
       message:
-        "The context bundle was obtained but is incomplete: the cache " +
-        "breakpoint marker is absent, or one of its layers is empty. The " +
-        "run halts rather than falling back to prompts composed some other " +
-        `way (BO-2400c-1-iii). Detail: ${JSON.stringify(bundleResult)}`,
+        "The context bundle was obtained but is incomplete — it did not " +
+        "arrive intact: the cache breakpoint marker is absent, or nothing " +
+        "follows it. The run halts rather than falling back to prompts " +
+        "composed some other way (BO-2400c-1-iii). An EMPTY layer is a " +
+        "separate failure and is refused earlier, by injection_builders.py " +
+        "at assembly time, naming the layer. Detail: " +
+        `${JSON.stringify(bundleResult)}`,
     };
   }
 
@@ -852,18 +877,19 @@ const bundleResult = await agent(
   `AC store: ${acStoreRoot}\n` +
   `Connected build set (dependency order): ${batchIds}\n\n` +
   `Step 1 — Write each layer's content to a real UTF-8 temp file:\n` +
-  `  - architecture: this repo's architecture overview (e.g. ` +
-  `${worktreePath}/docs/architecture/README.md, or the nearest architecture ` +
-  `index if that exact path does not exist)\n` +
-  `  - conventions: ${worktreePath}/CLAUDE.md\n` +
+  `  - architecture: ${worktreePath}/docs/architecture/diagrams/c1-001-command-map.md\n` +
   `  - high_level: the L0/L1 parent AC(s) covering ${targetAc}, read from ${acStoreRoot}\n` +
-  `  - acs: the L2/L3 AC YAML content for the connected build set (${batchIds}), ` +
-  `read from ${acStoreRoot}\n` +
   `  - prior_tests: any existing tests already covering this component/area ` +
   `(a short placeholder note is fine when none exist yet)\n\n` +
+  `The architecture path above is pinned, and it is the only architecture ` +
+  `source this bundle may carry. Use it exactly as written. Should reading ` +
+  `it fail, stop and report that the pinned path could not be opened. ` +
+  `Reaching for some other document instead would let two runs aimed at the ` +
+  `same target compose different bundles, and then no comparison across runs ` +
+  `means anything.\n\n` +
   `Step 2 — Run this single Bash command:\n` +
   `   python3 ${bundleScript} assemble-bundle --architecture <path> ` +
-  `--conventions <path> --high-level <path> --acs <path> --prior-tests <path>\n\n` +
+  `--high-level <path> --prior-tests <path>\n\n` +
   `SIZE EXPECTATION: the assembled bundle is roughly twenty kilobytes (~20 KB) ` +
   `of text — small enough to return in full. The ask is to return that text ` +
   `ITSELF, as text, in the "bundle" field below — NOT a path to it, NOT a ` +
@@ -1033,6 +1059,10 @@ const coderResult = await agent(
   `AC store: ${acStoreRoot}\n` +
   `Connected build set (dependency order): ${batchIds}\n\n` +
   `Step 1 — Implement:\n` +
+  `For each AC id above, read its YAML from ${acStoreRoot} — the full record, ` +
+  `including its constraints and notes. The context bundle above does NOT ` +
+  `carry that text; the store is inside this run's own worktree and is the ` +
+  `place to read it from.\n` +
   `The test-writer has written failing stubs. Run the suite to see the failures, ` +
   `then implement the minimum production code to make every scoped test PASS. ` +
   `Build the ACs in the order listed (prerequisites first).\n\n` +

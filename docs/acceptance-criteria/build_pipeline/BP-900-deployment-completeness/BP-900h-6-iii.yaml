@@ -1,0 +1,121 @@
+id: BP-900h-6-iii
+components:
+  - build_pipeline
+title: "The simulated adopter tracks no file of at least one kind the deployed guards watch for, so a guard that only misfires in a project unlike this one is exercised rather than assumed absent"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the consumer-simulation project that attempts a first commit,
+  And the set of file kinds that the deployed guards' activation conditions
+    select between them,
+  When the simulation is prepared,
+  Then the project it commits in tracks no file of at least one of those kinds,
+    chosen from that set as it stands at run time rather than from a kind named
+    in the job,
+  And the job states which kind it left absent, so the coverage it claims is
+    readable in its own output instead of inferred from the job passing,
+  And given the install step deploys files of a watched kind into the project,
+  When the project is prepared for the commit,
+  Then whether those deployed files are tracked is decided deliberately and
+    stated, because a simulation that silently tracks the package's own
+    deployed sources presents every language-conditional guard with exactly the
+    files it wants and can never observe their absence,
+  And given a guard that blocks a commit whenever the project tracks no file of
+    the kind it watches for,
+  When the simulation runs against that guard,
+  Then the job fails and names it — the negative case that establishes this
+    coverage can actually turn the job red,
+  And given no such guard is present,
+  When the simulation runs,
+  Then the first commit completes and the job passes,
+  And the set of watched kinds is read from the deployed guard configuration at
+    run time, so a guard registered later that watches a new kind is covered by
+    this simulation without the job being edited.
+depends_on:
+  - BP-900h-6
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-6.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4-ii.yaml"
+    relationship: relates_to
+    status: exists
+    relevance: "the gate-side correction this simulation is the detection half of; built together so neither ships alone"
+  - path: ".github/workflows/ci.yml"
+    relationship: modifies
+    status: exists
+    relevance: "carries the consumer-install simulation job whose adopter fixture this constrains"
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: describes
+    status: exists
+    relevance: "the deployed guard configuration the watched-kind set must be read from at run time"
+  - path: "docs/known-issues/commit-guardian.md"
+    relationship: describes
+    status: exists
+    relevance: "KI-CG-20260831-0713 — the blocker that reached main while this simulation was green"
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    consumer_simulation_absent_kind:
+      type: object
+      description: "The coverage record the consumer-install simulation emits for its adopter fixture: which file kinds the deployed guard configuration watches for, which of those the simulated project deliberately tracks none of, and whether the install's own deployed files of a watched kind were tracked. Makes the language shape the simulation actually exercised readable in the job's output, so coverage is stated rather than inferred from the job passing."
+  reference_file_path: ".github/workflows/ci.yml"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "WHY THE PARENT DID NOT CATCH IT. BP-900h-6 already requires the job to fail when a guard blocks the commit 'over an artifact a brand-new project legitimately does not yet have'. That clause is right and was not enough: the simulated adopter tracks the package's own deployed Python, so every condition selecting Python files matches and the language-absence case is never presented. The gap is in the fixture's shape, not in the parent's rule."
+    - "Choose the absent kind from the deployed configuration at run time. A job that hardcodes 'no Python' passes for exactly as long as Python is the only watched kind, and goes quietly stale the day another is registered — the same staleness that produced this defect."
+    - "Do not satisfy this by deleting the deployed guard sources from the project. They must be deployed, because the guards have to run; what is being varied is which files the project TRACKS, which is what an activation condition is evaluated against."
+    - "The negative case is mandatory and is the point. Without a fixture guard that turns the job red, this AC adds a step that cannot fail, which is the defect class this repository exists to prevent and would make the coverage claim worse than no claim."
+    - "This is the detection half of BP-100k-4-ii. Landing detection without the gate correction leaves adopters blocked and the job red; landing the correction without detection lets the blocker return unobserved. Build both."
+    - "Must follow the repo error-handling policy in any Python added: specific-exception try/except around file, JSON and subprocess I/O, log at WARNING or higher or re-raise; no bare or blind excepts."
+test_spec:
+  - name: test_simulated_adopter_tracks_no_file_of_a_watched_kind
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The prepared simulation project is inspected for its tracked file set and holds no file of at least one kind drawn from the deployed guard configuration, with the chosen kind named in the job's own output."
+  - name: test_watched_kind_set_is_read_from_the_deployed_configuration
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Registering a guard that watches a new file kind changes the set the simulation selects from, without the job being edited — establishing the set is read at run time rather than recited."
+  - name: test_adopter_hostile_language_guard_turns_the_job_red
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With a fixture guard that blocks whenever the project tracks no file of its watched kind, the simulation fails and names that guard — the negative case proving this coverage can fail."
+  - name: test_first_commit_completes_when_no_such_guard_is_present
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Against the real deployed guard set with the gate correction in place, the first commit in the language-absent adopter completes and the job passes — the coverage is not permanently red."
+  - name: test_deployed_source_tracking_decision_is_explicit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Whether the install's deployed files of a watched kind are tracked in the simulation project is stated in the job's output, so the fixture cannot silently drift back to tracking the package's own sources."
+test_rationale: "This AC exists because a correctly-specified, done parent stayed green through a blocker it was written to catch. BP-900h-6 performs a real commit and fails on an adopter-hostile guard, and both properties held — the simulation simply never presented the condition, because its adopter tracks the package's own deployed Python and every language-conditional guard therefore finds what it is looking for. So the assertions here are about the FIXTURE's shape, and each is made by inspecting the prepared project and the job's emitted record rather than by reading the workflow file: a job that declares the right intent and prepares the wrong tree is source-shaped exactly like one that does neither. The adopter-hostile-guard descriptor is load-bearing per CLAUDE.md's rule that a gate must be shown capable of failing; without it this reduces to a step that always passes, which is how the parent came to be green over a live blocker."
+delivers_to: null
+expects_from:
+  ac_id: BP-900h-6
+  contract: "The use-the-install simulation that attempts a first commit and fails on a guard blocking over what a new project legitimately lacks — whose adopter fixture this edge case requires to vary in language shape, so that clause is actually exercised."
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: "Detection half of the KI-CG-20260831-0713 pair; the gate-side correction is BP-100k-4-ii. The parent BP-900h-6 and its two edge cases are all work_status done, and their criteria are genuinely met — the defect they missed lies outside what they specify, which is why this is filed as a new constraint rather than as a reopening. Measured context on 2026-09-07: the reachability gate is always_run true with pass_filenames false, so it runs on every adopter commit, and two registered conditions select Python files. A fresh TypeScript consumer exits 1 with total=52 unreachable=27 exempt=9."

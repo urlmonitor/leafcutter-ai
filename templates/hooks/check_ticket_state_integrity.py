@@ -21,6 +21,29 @@ ARCHITECTURE: Post-merge hook. Reads no stdin. Uses only ``pathlib``, ``re``,
     (post-merge hooks cannot abort a merge, and blocking post-merge hooks cause
     user confusion).
 
+SUPERSEDED FOR ENFORCEMENT (2026-08-18, GE-122a-2): the duplicate-basename-
+    across-lifecycle-folders detection this hook performs is now canonically
+    and bindingly implemented by
+    ``templates/scripts/commit_guardian/_work_items_scanner.py``, feeding the
+    "work-items" namespace of
+    ``templates/scripts/commit_guardian/check_identifier_uniqueness.py``'s
+    ``run_uniqueness_pass`` -- which, unlike this script, FAILS (non-zero)
+    when a collision is found rather than only printing an informational
+    warning. That module is the one to extend or consult for this rule going
+    forward (GE-122d-1 forbids two independent definitions of one rule).
+    This script's own ``_detect_duplicates`` / ``_detect_folder_mismatches`` /
+    always-exit-0 ``main()`` contract is intentionally left UNCHANGED here:
+    it has its own committed, behavior-pinning unit test suite
+    (``tests/test_check_ticket_state_integrity.py``) that asserts the exact
+    always-exit-0 output this module's own Implementation Notes ask to
+    retire, and this ticket's implementer (python-coder, GE-122a-2) does not
+    own test authorship (see CLAUDE.md "Test Delegation"). Retiring this
+    script's independent implementation in favor of a thin delegation to
+    ``_work_items_scanner`` (or removing it outright once nothing still
+    depends on its post-merge, non-blocking behavior) is flagged as follow-up
+    work for `test-writer` + `python-coder` together, so its test suite can
+    be revised in the same change that changes its contract.
+
 Post-merge hook contract:
 - Reads nothing from stdin; scans the working tree directly.
 - exit 0 always (informational, non-blocking).
@@ -32,6 +55,15 @@ DECISION HISTORY
   ``ticket_lifecycle.json`` for allowed-status-per-folder mapping; graceful
   fallback when config is missing. Designed to run in < 2 seconds on repos
   with up to 200 ticket files.
+- 2026-08-18 [python-coder/GE-122a-2]: Documented (no behavior change) that
+  this script's detection is superseded for ENFORCEMENT by the new
+  "work-items" namespace in check_identifier_uniqueness.py, which is now the
+  single binding definition of this rule. This script's own always-exit-0
+  behavior and internal duplicate/mismatch detection are left as-is because
+  they are pinned by tests/test_check_ticket_state_integrity.py, which this
+  ticket's implementer does not have license to modify (CLAUDE.md, "Test
+  Delegation"); retiring this script's contract is flagged as follow-up work
+  requiring test-writer.
 """
 from __future__ import annotations
 

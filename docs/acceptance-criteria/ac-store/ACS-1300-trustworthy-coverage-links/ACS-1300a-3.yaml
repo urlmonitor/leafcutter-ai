@@ -1,0 +1,166 @@
+id: ACS-1300a-3
+components:
+  - ac_store
+title: "A coverage list holding child requirement ids is left alone, and the run says why"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a store containing a parent record whose coverage list holds the ids of its own
+    child records and which is itself named by a coverage tag in a test file,
+  And, in the same store, a record whose coverage list holds only test paths and is
+    missing one,
+  When the repair tool is invoked out of process with the apply request,
+  Then the parent record's file is byte-for-byte identical to its content before the run,
+  And the parent is reported as an abstention naming the record and stating that its
+    coverage list carries child requirement ids,
+  And the second record gained its missing test path in that same invocation, so the
+    abstention was a decision this run reached rather than the whole of what it did,
+  And the classification a done-proof verdict reaches for the parent — deriving its
+    proof from its children rather than requiring a test of its own — is the same when
+    computed before the run and after it,
+  And the back-link check that requires a parent to name each of its children still
+    passes for that parent after the run.
+depends_on:
+  - ACS-1300a
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: "WHY THIS IS NOT COSMETIC. _has_resolvable_child decides composite-versus-leaf by whether ANY coverage entry resolves to a real record in the store, and verify_done_eligible routes on that decision: a composite derives its proof from its children, a leaf must carry its own tagged test. Appending a test path to a list that holds child ids changes what that list is, and the two 'classification unchanged' clauses are how this AC is falsified if it does."
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: relates-to
+    status: exists
+    relevance: "THE SECOND READER OF THE SAME FIELD. It requires a parent's coverage list to name each of its children; a repair that rewrites that list is one edit away from tripping the back-link gate on records it was supposed to help. The final clause binds the outcome to this check's real verdict."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "States the dual purpose outright: the coverage field holds test file paths OR child requirement ids. One field, two meanings, no discriminator — which is the whole reason this AC exists."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE COMPOSITE/LEAF DECISION MUST BE THE ONE `done_proof` ALREADY MAKES, NOT A SECOND ONE. `_has_resolvable_child` decides it by whether ANY coverage entry resolves to a real record in the store, and `verify_done_eligible` routes on that decision. Do not re-derive it from the `level` field, from the id string, or from entry shape — a legacy record holds test-file paths where child ids would go, and `derive_parent_id` returns None for bare `PREFIX-NNN` ids, so both proxies are wrong for exactly the records this AC protects."
+  - "THE ABSTENTION IS AN OUTCOME OF THE DETECTION PASS, NOT A GUARD BOLTED ONTO THE WRITE PATH. A record classified as carrying child requirement ids must never enter the write set at all, so byte stability for it follows from the file never being opened rather than from a check that declined to change anything."
+  - "ABSTAIN, DO NOT DISAMBIGUATE. There is no reliable discriminator between a child-id list and a test-path list, and inventing one writes false evidence. The abstention must name the record and state the reason; it is reported through the single abstention channel ACS-1300c-3 defines, not a second format."
+  - "THE OUTCOME IS BOUND TO TWO EXISTING READERS' REAL VERDICTS, NOT TO FILE IDENTITY. Byte identity alone is satisfied by a tool that does nothing. The `done_proof` classification for the parent computed before and after the run must be equal, AND `templates/scripts/commit_guardian/check_ac_parent_covered_by.py`'s verdict for that parent must still pass after the run. Compute both against the real readers on the real post-run store, not against a re-implementation of their rules."
+  - "MIND HOW THE BACK-LINK GATE IS ACTUALLY INVOKED. `check_ac_parent_covered_by.py` reads the git index or `HOOK_TEST_FILES` rather than argv, so passing a path on the command line does not make it check that path. Any verification of its verdict must confirm the hook actually saw the parent file — a silent exit 0 from a hook that was handed nothing is not a pass."
+  - "NEVER WRITES THE FINISHED-STATE FIELD. A composite whose coverage list holds child ids is precisely the population the originating investigation was about — records marked finished with unfinished children — which makes this the record where reconciling the badge looks most defensible. Refused, not deferred."
+  - "THE SCHEMA CHANGE THAT WOULD DISSOLVE THIS IS OUT OF SCOPE. Splitting the field into a child-id field and a test-link field is the real fix and is not in this tree; do not begin it here, and do not add a discriminator field to the schema as a side effect of implementing the abstention."
+  - "Must handle errors gracefully per the project error handling policy and must fail toward abstaining: if the composite/leaf classification cannot be obtained for a record, the record is abstained on and reported, never written to."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300a-1
+  contract: "The finding set, including the classification of each record's existing coverage entries, so the write step can recognise a child-id list without re-reading the store."
+test_spec:
+  - name: test_acs_1300a_3_parent_with_child_ids_is_byte_identical_while_a_leaf_is_repaired
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "THE PAIRING TEST — KEEP BOTH HALVES IN ONE INVOCATION. One out-of-process apply run over a store holding (a) a parent whose coverage list is its own child ids and which is itself named by a coverage tag, and (b) a leaf whose coverage list is test paths and is missing one. Assert the parent's file is byte-for-byte identical AND the leaf gained its missing test path, in that same run. Split apart, the parent half is satisfied by a tool that does nothing."
+  - name: test_acs_1300a_3_the_parent_is_reported_as_an_abstention_with_its_reason
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The parent appears in the report as an abstention naming the record and stating that its coverage list carries child requirement ids. Assert presence and reason text, not merely that the file was unchanged — an unchanged file with no report line is the invisibility defect this tree exists to remove."
+  - name: test_acs_1300a_3_done_proof_composite_classification_is_unchanged_across_the_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL CONSUMER, REAL VERDICT. Call `done_proof`'s own composite/leaf routing for the parent before the run and again after it, and assert the two verdicts are equal. Use the real function — a re-implementation of its rule inside the test would pass while the production tool used a different rule."
+  - name: test_acs_1300a_3_parent_back_link_check_still_passes_after_the_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run the real `check_ac_parent_covered_by` against the post-run parent and assert it passes. The hook reads the index or `HOOK_TEST_FILES` rather than argv, so the test must first confirm the hook actually saw the parent file; an exit 0 from a hook handed no files proves nothing."
+  - name: test_acs_1300a_3_a_legacy_record_holding_test_paths_where_child_ids_would_go_is_classified_by_resolution_not_shape
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A record whose coverage entries look like child ids but resolve to no record in the store must NOT be abstained on as a composite, and a record whose entries look like paths but resolve to real records MUST be. Pins the decision to entry resolution — done_proof's actual rule — rather than to entry shape or to the level field."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+- reason: significance-and-figure-correction
+  by: business-analyst
+  at: 2026-09-01
+  note: >-
+    NOTES ONLY; criteria, it_requirements and test_spec UNCHANGED, so the approval
+    above still covers what it was granted against. Recorded that the 2026-09-01
+    re-measurement makes this the ONE record in the tree with downstream
+    eligibility consequences: verify_done_eligible reads the coverage field only
+    on the composite path, so a parent's child list is the single case where
+    coverage rot can change what the store believes is finished, while every leaf
+    case is traceability only (527 of 549 rotted records already eligible). That
+    makes the abstention more important, not less — appending a test path here is
+    the only write in the tree with teeth. Added the measured parent-relation
+    figures (118 parents with differing child sets; 1,312 vs 1,286 parents; 60
+    parents under one relation only) and corrected the composite slice to 12 of 25.
+    Added an explicit boundary: repairing a stale child list is NOT this tree's
+    job, already has a tool in fix_ac_orphans.py, and this AC must not grow into it.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PROMOTED FROM L3 TO L2 on the coordinator's and the product owner's instruction, and
+  the reason is the population rather than the principle. The investigation that started
+  this work was a sweep of composites marked finished with at least one unfinished
+  child — records whose coverage list holds child ids by definition. For the population
+  that motivated the repair, this is the common case, not an edge one.
+
+  THE TWO "UNCHANGED CLASSIFICATION" CLAUSES ARE THE FALSIFIABLE PART, and they are
+  deliberately bound to two DIFFERENT existing readers. A criterion that only said "the
+  file is unchanged" is satisfied by a tool that does nothing; a criterion that only
+  said "abstain on parents" is satisfied by a tool that recognises parents by their
+  level field and gets it wrong for a legacy record. Binding to the verdict
+  done_proof actually reaches, and to the verdict the back-link gate actually reaches,
+  ties the outcome to how the field is really consumed.
+
+  ABSTAIN, DO NOT DISAMBIGUATE. There is no reliable discriminator: a legacy record can
+  hold test-file paths where child ids would go (see _has_resolvable_child's own note on
+  that case), so entry shape does not settle meaning, and inventing a rule that decides
+  it would write false evidence. Abstention with a stated reason keeps the record
+  visible for a human without the tool guessing.
+
+  THIS IS WHERE THE TREE'S ELIGIBILITY TEETH ACTUALLY ARE — established 2026-09-01 and
+  worth understanding before anyone judges this AC's importance. Everywhere else in this
+  tree, restoring a coverage link changes nothing about whether a record can be marked
+  finished: verify_done_eligible resolves from the direct `# covers:` tag first, and every
+  rotted record has a direct tag by construction, so the field is never read for it (527
+  of 549 rotted records are already eligible). The ONE place the field is read is the
+  composite path — a PARENT whose proof is derived from its child list. So a stale or
+  wrong child list is the single case where coverage rot has downstream consequences for
+  what the store believes is finished, and that is exactly the population this AC governs.
+  Measured the same day: 118 parents have a differing child set between the coverage
+  relation and ID-derivation; 1,312 ids are a parent under the coverage relation against
+  1,286 under ID-derivation, and 60 ids are a parent under one relation only.
+
+  WHICH MAKES THE ABSTENTION MORE IMPORTANT, NOT LESS. Appending a test path to a parent's
+  child list is the one write in this whole tree that could change a done-proof verdict —
+  it is the only write with teeth, and the teeth point the wrong way. That is the argument
+  for abstaining rather than a reason to reconsider it.
+
+  AND A BOUNDARY, BECAUSE THE ADJACENT REPAIR IS TEMPTING FROM HERE. Repairing a stale
+  child list is NOT this tree's job. It is a different operation on a different relation,
+  it already has a tool in scripts/ac_store/fix_ac_orphans.py, and the 118 disagreements
+  above are its population, not ours. This AC abstains and reports; it must not grow a
+  child-list repair, and the 12-of-25 composite slice in the L0 notes is evidence for the
+  problem's existence, not a work item for this record.
+
+  A SEPARATE FIELD WOULD DISSOLVE THIS ENTIRELY — a distinct place for child ids and for
+  test links, so neither reader has to infer which it is looking at. That is a schema
+  change well outside this tree's scope and is recorded here only so the next author
+  knows the abstention is a consequence of the field's shape, not a preference.

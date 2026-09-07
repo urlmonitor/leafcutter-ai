@@ -75,6 +75,41 @@ from typing import Any
 
 _log = logging.getLogger(__name__)
 
+
+class ClosureAnalysisError(Exception):
+    """A deployable script's dependency closure could not be determined.
+
+    Raised when :func:`compute_intra_package_closure` cannot read or parse a
+    script it was asked to analyse. This exists so that "I could not look" is
+    a DIFFERENT outcome from "I looked and found nothing" (KI-BP-022).
+
+    Before this, both were an empty set. The containment check reads an empty
+    closure as "no dependencies are missing", so a script whose source could
+    not be parsed came back indistinguishable from a genuine leaf module and
+    the build reported it clean. A WARNING was logged, but it did not change
+    the exit status and nothing downstream could tell the two apart — which is
+    the entire value the guard is supposed to provide.
+
+    The guard is a deployment preflight, so there is no legitimate build in
+    which one of the scripts about to be deployed cannot be parsed. Failing
+    closed and naming the file is the only honest response.
+
+    Args:
+        script: The script whose analysis failed.
+        reason: Human-readable cause (the underlying exception's message).
+    """
+
+    def __init__(self, script: Path, reason: str) -> None:
+        self.script = script
+        self.reason = reason
+        super().__init__(
+            f"cannot determine the intra-package dependency closure of "
+            f"{script}: {reason}. This is NOT the same as the script having no "
+            f"dependencies — the guard could not analyse it, so nothing is "
+            f"known about what it needs deployed alongside it."
+        )
+
+
 # ---------------------------------------------------------------------------
 # Patterns for script path extraction (AC BP-900b-1)
 # ---------------------------------------------------------------------------
@@ -536,6 +571,16 @@ def _build_local_assignments(
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     assignments[target.id] = node.value
+        # KI-BP-021: an ANNOTATED assignment (``_dir: Path = ...``) is an
+        # ast.AnnAssign, a different node type that this loop used to skip
+        # entirely -- so the name never entered the map and every reference
+        # through it was reported unresolvable. In a codebase that annotates
+        # as heavily as this one, that is the form most likely to appear.
+        # ``value`` is None for a bare declaration (``_dir: Path``), which
+        # binds no value and must not enter the map.
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            if isinstance(node.target, ast.Name):
+                assignments[node.target.id] = node.value
     return assignments
 
 
@@ -688,42 +733,98 @@ def _extract_dynamic_loader_paths(tree: ast.AST, script: Path) -> list[Path]:
     return candidates
 
 
-def _is_syspath_mutation_call(node: ast.Call) -> bool:
-    """Return True when *node* calls ``sys.path.insert(...)`` or ``sys.path.append(...)``.
-
-    Matches only the attribute form reached through a bare ``sys`` name
-    (``sys.path.insert``/``sys.path.append``) -- the only form this codebase
-    uses for the sibling-directory-on-sys.path pattern this function exists
-    to resolve.
-    """
-    func = node.func
-    if not isinstance(func, ast.Attribute) or func.attr not in ("insert", "append"):
-        return False
-    path_attr = func.value
+def _is_syspath_expression(node: ast.AST) -> bool:
+    """Return True when *node* is the ``sys.path`` attribute expression itself."""
     return (
-        isinstance(path_attr, ast.Attribute)
-        and path_attr.attr == "path"
-        and isinstance(path_attr.value, ast.Name)
-        and path_attr.value.id == "sys"
+        isinstance(node, ast.Attribute)
+        and node.attr == "path"
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "sys"
     )
 
 
-def _syspath_pushed_path_node(node: ast.Call) -> ast.AST | None:
-    """Return the pushed-path argument node of a ``sys.path`` insert/append call.
+def _is_syspath_mutation_call(node: ast.Call) -> bool:
+    """Return True when *node* mutates ``sys.path`` via insert/append/extend.
 
-    ``sys.path.append(path)`` takes the path as the sole positional argument;
-    ``sys.path.insert(index, path)`` takes it as the second. Returns None when
-    the call does not carry enough positional arguments to identify one
-    (e.g. built entirely from ``**kwargs``, which this codebase never does).
+    Matches only the attribute form reached through a bare ``sys`` name.
+
+    ``extend`` was added for KI-BP-021. It was previously absent, so
+    ``sys.path.extend([...])`` produced no candidate directory and every plain
+    import that depended on it was dropped -- and dropped SILENTLY, because the
+    caller's ``continue`` fires before the disclosure warning, so the idiom was
+    invisible at every log level.
+    """
+    func = node.func
+    if not isinstance(func, ast.Attribute):
+        return False
+    if func.attr not in ("insert", "append", "extend"):
+        return False
+    return _is_syspath_expression(func.value)
+
+
+def _syspath_pushed_path_nodes(node: ast.Call) -> list[ast.AST]:
+    """Return the pushed-path argument nodes of a ``sys.path`` mutation call.
+
+    ``append(path)`` takes the path as its sole positional argument;
+    ``insert(index, path)`` as its second; ``extend(paths)`` takes a SEQUENCE
+    rather than a path.
+
+    That last distinction is why KI-BP-021 needs both halves of the fix.
+    Widening ``_is_syspath_mutation_call`` alone would hand the extend call's
+    ``ast.List`` to ``_eval_static_path``, which cannot reduce a list to a
+    directory and returns None -- converting a silent drop into a spurious
+    "unresolvable" warning rather than a resolution. A list literal is
+    therefore unpacked into its elements here.
+
+    A non-literal argument (``sys.path.extend(some_var)``) yields the single
+    node unchanged, so it reaches the evaluator and, failing to reduce, is
+    disclosed as a warning. That is the correct outcome: unknown, and said out
+    loud.
+
+    Returns:
+        Zero or more nodes, each a candidate pushed-path expression. Empty when
+        the call carries too few positional arguments to identify one.
     """
     func = node.func
     if not isinstance(func, ast.Attribute):
         # Unreachable in practice: callers only pass nodes that already
         # passed _is_syspath_mutation_call, which requires this shape.
-        return None
+        return []
+    if func.attr == "extend":
+        if not node.args:
+            return []
+        first = node.args[0]
+        if isinstance(first, (ast.List, ast.Tuple)):
+            return list(first.elts)
+        return [first]
     if func.attr == "append":
-        return node.args[0] if node.args else None
-    return node.args[1] if len(node.args) >= 2 else None
+        return [node.args[0]] if node.args else []
+    return [node.args[1]] if len(node.args) >= 2 else []
+
+
+def _syspath_slice_assignment_nodes(node: ast.Assign) -> list[ast.AST]:
+    """Return pushed-path nodes from a ``sys.path[:0] = [...]`` slice assignment.
+
+    KI-BP-021: this form is an ``ast.Assign`` whose target is an
+    ``ast.Subscript``, never an ``ast.Call``. The walk loop filters to
+    ``ast.Call`` before testing anything, so no amount of widening the
+    call predicate can reach it -- it needs its own branch.
+
+    Returns:
+        The assigned sequence's elements, or a single-element list holding the
+        assigned value when it is not a literal sequence (so it still reaches
+        the evaluator and is disclosed if it cannot be reduced). Empty when
+        this is not a ``sys.path`` slice assignment.
+    """
+    if not any(
+        isinstance(t, ast.Subscript) and _is_syspath_expression(t.value)
+        for t in node.targets
+    ):
+        return []
+    value = node.value
+    if isinstance(value, (ast.List, ast.Tuple)):
+        return list(value.elts)
+    return [value]
 
 
 def _extract_syspath_directories(tree: ast.AST, script: Path) -> list[Path]:
@@ -753,32 +854,44 @@ def _extract_syspath_directories(tree: ast.AST, script: Path) -> list[Path]:
     NOT reduce statically is logged as a WARNING naming the file and line --
     never silently dropped. This mirrors the treatment
     ``_extract_dynamic_loader_paths`` already gives an unresolvable dynamic
-    loader call, so no path through this module produces an unresolved
-    intra-package reference with zero log output.
+    loader call.
+
+    The scope of that guarantee, stated precisely (KI-BP-021): it holds for a
+    mutation this function RECOGNISES and cannot evaluate. It has never held
+    for a mutation it does not recognise at all -- an unrecognised form is
+    skipped before any logging runs, at every log level. The docstring
+    previously claimed "no path through this module produces an unresolved
+    intra-package reference with zero log output", which read as coverage this
+    code did not have. The four recognised forms are now ``insert``,
+    ``append``, ``extend``, and slice assignment; anything else is still
+    silent, and that is the honest description.
     """
     _annotate_parents(tree)
     directories: list[Path] = []
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Call) or not _is_syspath_mutation_call(node):
+        if isinstance(node, ast.Call) and _is_syspath_mutation_call(node):
+            path_nodes = _syspath_pushed_path_nodes(node)
+        elif isinstance(node, ast.Assign):
+            path_nodes = _syspath_slice_assignment_nodes(node)
+        else:
             continue
-        path_node = _syspath_pushed_path_node(node)
-        if path_node is None:
-            continue
-        scope = _enclosing_scope(node, tree)
-        assignments = _build_local_assignments(scope, tree)
-        resolved = _eval_static_path(path_node, script, assignments)
-        if resolved is None:
-            _log.warning(
-                "compute_intra_package_closure: unresolvable sys.path mutation "
-                "in %s at line %s -- static analysis could not reduce the "
-                "pushed path argument to a concrete directory. A human should "
-                "verify whether an import that follows resolves an "
-                "intra-package module via this path (AC BP-900g-8).",
-                script,
-                getattr(node, "lineno", "?"),
-            )
-            continue
-        directories.extend(resolved)
+        for path_node in path_nodes:
+            scope = _enclosing_scope(node, tree)
+            assignments = _build_local_assignments(scope, tree)
+            resolved = _eval_static_path(path_node, script, assignments)
+            if resolved is None:
+                _log.warning(
+                    "compute_intra_package_closure: unresolvable sys.path "
+                    "mutation in %s at line %s -- static analysis could not "
+                    "reduce the pushed path argument to a concrete directory. "
+                    "A human should verify whether an import that follows "
+                    "resolves an intra-package module via this path "
+                    "(AC BP-900g-8).",
+                    script,
+                    getattr(node, "lineno", "?"),
+                )
+                continue
+            directories.extend(resolved)
     return directories
 
 
@@ -830,6 +943,17 @@ def _extract_static_import_candidates(
     see ``_extract_syspath_directories``) is applied only to ABSOLUTE imports
     -- a relative import (``from . import foo``) is resolved purely from the
     script's own package location and is never affected by ``sys.path``.
+
+    KI-BP-021 added two shapes this missed. ``importlib.import_module("x")``
+    and ``__import__("x")`` are imports by any reasonable reading of the
+    criterion, but matched neither this function (which tested only
+    ``ast.Import``/``ast.ImportFrom``) nor the dynamic-loader lens (which
+    matches only ``spec_from_file_location``), so they produced no candidate
+    and no log line. And ``from . import sub`` offered only ``sub.py`` as a
+    candidate, never ``sub/__init__.py`` -- so a relative import of a
+    SUBPACKAGE resolved to nothing and was classified external by the
+    resolve-or-it-is-third-party rule, which is right for a real third-party
+    module and wrong for a subpackage shipping in this very tree.
     """
     candidates: list[Path] = []
     for node in ast.walk(tree):
@@ -846,12 +970,50 @@ def _extract_static_import_candidates(
                 if node.module:
                     candidates.extend(_module_name_candidates(node.module, base, root))
                 else:
-                    candidates.extend(base / f"{alias.name}.py" for alias in node.names)
+                    for alias in node.names:
+                        candidates.append(base / f"{alias.name}.py")
+                        candidates.append(base / alias.name / "__init__.py")
             elif node.module:
                 candidates.extend(
                     _module_name_candidates(node.module, script_dir, root, extra_dirs)
                 )
+        elif isinstance(node, ast.Call):
+            name = _dynamic_import_module_name(node)
+            if name is not None:
+                candidates.extend(
+                    _module_name_candidates(name, script_dir, root, extra_dirs)
+                )
     return candidates
+
+
+def _dynamic_import_module_name(node: ast.Call) -> str | None:
+    """Return the module name of an ``importlib.import_module`` / ``__import__`` call.
+
+    Only a literal string argument is resolved. A computed name
+    (``import_module(f"pkg.{which}")``) is genuinely undecidable statically, so
+    None is returned and the call contributes nothing -- the same treatment any
+    other unresolvable reference gets.
+
+    Args:
+        node: A call node to inspect.
+
+    Returns:
+        The imported module name, or None when *node* is not one of these two
+        calls or its argument is not a literal string.
+    """
+    func = node.func
+    is_import_module = (
+        isinstance(func, ast.Attribute) and func.attr == "import_module"
+    ) or (isinstance(func, ast.Name) and func.id == "import_module")
+    is_dunder_import = isinstance(func, ast.Name) and func.id == "__import__"
+    if not (is_import_module or is_dunder_import):
+        return None
+    if not node.args:
+        return None
+    first = node.args[0]
+    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+        return first.value
+    return None
 
 
 def _closure_walk(script: Path, root: Path, visited: set[Path], closure: set[str]) -> None:
@@ -860,17 +1022,24 @@ def _closure_walk(script: Path, root: Path, visited: set[Path], closure: set[str
         return
     visited.add(script)
 
+    # KI-BP-022: both handlers used to log a WARNING and return, leaving the
+    # closure empty. An empty closure means "nothing missing" to the caller, so
+    # an unreadable or unparseable script was reported CLEAN. Raise instead —
+    # see ClosureAnalysisError for why silence is not an option here.
+    #
+    # UnicodeDecodeError subclasses ValueError, not OSError, so it escaped the
+    # read handler entirely and surfaced as a raw traceback out of build.py.
+    # That failed closed by accident, which was the right outcome for the wrong
+    # reason; it is caught explicitly now.
     try:
         text = script.read_text(encoding="utf-8")
-    except OSError as exc:
-        _log.warning("compute_intra_package_closure: cannot read %s: %s", script, exc)
-        return
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ClosureAnalysisError(script, f"cannot read: {exc}") from exc
 
     try:
         tree = ast.parse(text, filename=str(script))
     except SyntaxError as exc:
-        _log.warning("compute_intra_package_closure: cannot parse %s: %s", script, exc)
-        return
+        raise ClosureAnalysisError(script, f"cannot parse: {exc}") from exc
 
     syspath_dirs = tuple(_extract_syspath_directories(tree, script))
     candidates = _extract_static_import_candidates(
@@ -921,6 +1090,16 @@ def compute_intra_package_closure(script: Path, root: Path) -> set[str]:
         third-party distributions, host-project paths) are never included --
         no allowlist is needed because non-existence under *root* is itself
         the discriminator.
+
+        An empty set means the script genuinely resolves no intra-package
+        modules. It never means the analysis failed -- that raises.
+
+    Raises:
+        ClosureAnalysisError: If *script*, or any module reached transitively
+            from it, cannot be read or parsed. Callers must not treat this as
+            an empty closure (KI-BP-022): the guard is a deployment preflight,
+            and a script about to be deployed whose dependencies cannot be
+            determined has not been checked.
     """
     closure: set[str] = set()
     _closure_walk(script.resolve(), root.resolve(), set(), closure)
@@ -1002,6 +1181,12 @@ def find_uncovered_closure_dependencies(
 #   "this JS variable mirrors the output root" from "this JS variable is an
 #   arbitrary runtime path" — real static analysis, not a text regex — so it is
 #   left as a documented follow-up rather than bolted on here. (#BP-900g-6)
+#   [2026-09-01, BO-2400c-1-v: the example file fast-lane-build.js was an
+#   orphaned second runner and has been deleted. The dated text above is left
+#   as written. The residual gap it describes is still OPEN and still
+#   unexercised by this guard — read the example as fast-lane-ship.js, which
+#   carries the same `${worktreePath}/.leafcutter/scripts/injection_builders.py`
+#   shape and is the lane that actually runs.]
 # - 2026-08-18 [python-coder/EPIC-DeploymentCompleteness/05_BP-900b-1]: Added
 #   extract_compiled_script_path_refs(), the post-compile counterpart to
 #   extract_script_path_refs()/extract_script_path_refs_with_sources(). Those two

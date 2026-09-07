@@ -1,0 +1,55 @@
+id: TQ-500e
+components:
+  - testing_quality
+  - ac_store
+title: "The evidence stays with the work, so a later reader need not take it on faith"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Anyone citing a pass later can see what that test was shown to catch.
+
+  What was demonstrated — and what was deliberately broken to demonstrate it —
+  is recorded alongside the work in plain language, so a reader months later can
+  tell real evidence from a formality. The harm this closes is a green result
+  being quoted as proof a rule holds, with no way for anyone to check whether
+  that test could ever have said otherwise.
+depends_on:
+  - TQ-500
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: relates-to
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500e-1
+  - TQ-500e-2
+  - TQ-500e-3
+implemented_by: []
+change_target:
+  - pipeline
+  - docs
+risk_surface: internal
+documentation_triggers:
+  - reference-doc
+notes: |
+  Boundary with TQ-400 (durable done proof): TQ-400 re-examines finished work on
+  a rhythm and withdraws the done badge when the evidence has lapsed. This L1
+  does no re-examination — it makes the original demonstration legible at the
+  time it is taken, so that a later reader (human or automated, including a
+  TQ-400 sweep) has something to read. Neither absorbs the other.

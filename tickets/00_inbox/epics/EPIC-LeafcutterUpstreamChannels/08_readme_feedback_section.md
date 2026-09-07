@@ -18,7 +18,7 @@ agents:
   documentation-expert: needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
   sql-coder: not_needed
 ---
 
@@ -56,7 +56,6 @@ And each link points to the correct template or Discussions category
 - [ ] documentation-expert
 - [ ] pr-reviewer
 - [ ] commit
-- [ ] pull-request
 
 ## Comments
 

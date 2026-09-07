@@ -21,7 +21,7 @@ agents:
   test-runner: needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 02: Create the missing check_ac_done_on_merge hook

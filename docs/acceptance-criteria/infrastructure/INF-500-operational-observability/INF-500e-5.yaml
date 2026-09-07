@@ -1,0 +1,146 @@
+id: INF-500e-5
+components:
+  - infrastructure
+title: "The weeks compared are whole calendar weeks, oldest first, ending with the one in progress"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a report asked for 4 weeks relative to Wednesday 2026-08-26,
+  When the reporting periods are constructed,
+  Then exactly 4 periods are produced,
+  And every period begins on a Monday,
+  So that week-over-week comparison is between like calendar weeks rather than
+    between arbitrary seven-day windows that shift with the day the report is run.
+
+  Given a report asked for 3 weeks relative to Wednesday 2026-08-26,
+  When the reporting periods are constructed,
+  Then the last period begins on Monday 2026-08-24 — the week containing the
+    reference date,
+  And that period is therefore the current, still-incomplete week rather than the
+    last completed one,
+  So that an operator asking today about this week is answered about this week.
+
+  Given a report asked for 3 weeks relative to 2026-08-26,
+  When the reporting periods are constructed,
+  Then they are ordered oldest first,
+  So that the direction of every trend in the report is read left to right without
+    the reader checking which end is recent.
+
+  Given a report asked for 1 week relative to Monday 2026-08-24,
+  When the reporting periods are constructed,
+  Then the single period begins on 2026-08-24 itself,
+  So that a reference date that is already a Monday is not pushed back into the
+    previous week.
+
+  Given a report asked for 0 weeks,
+  When the reporting periods are constructed,
+  Then exactly 1 period is produced,
+  So that a nonsensical request yields the smallest meaningful report rather than an
+    empty one that would leave the report with no most-recent period to describe.
+depends_on:
+  - INF-500e
+doc_links:
+  - path: scripts/agent-health/weekly_health.py
+    relationship: implements
+    status: exists
+  - path: scripts/agent-health/README.md
+    relationship: describes
+    status: exists
+  - path: unit_tests/agent_health/test_weekly_health.py
+    relationship: related
+    status: exists
+    relevance: "Constructs the periods against fixed reference dates — a Wednesday and a Monday — and asserts the count, the weekday of every entry, the final entry and the ordering, so no scenario depends on the day the suite runs."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Period construction is scripts/agent-health/weekly_health.py::iso_week_starts(today, weeks) -> list[date] and must take the reference date as an ARGUMENT rather than reading the clock. The command-line surface must expose that argument (the --today flag documented in scripts/agent-health/README.md) so any run is reproducible; a function that called date.today() internally would make every scenario above untestable without freezing time."
+  - "Every returned date must be a Monday, derived by subtracting the reference date's own weekday index. A reference date that is already a Monday must map to itself and must not be pushed back a week."
+  - "The list must be ordered oldest first and its last element must be the Monday of the week CONTAINING the reference date, so the most recent period is the current, still-incomplete week rather than the last completed one. Both properties are consumed by the renderers, which read left to right and describe the final period's partial day count in the header."
+  - "A weeks argument below 1 must be clamped to 1 rather than returning an empty list or raising. Every downstream section indexes the most recent period, so an empty period list would leave the report with nothing to describe."
+  - "A defect here corrupts all four report sections at once and does so invisibly — the tables still render and the trends still move, they are simply about the wrong days. Any change to this function must be accompanied by assertions against FIXED reference dates; a test that derives its expectation from the current date passes every day of the week while asserting nothing about the Monday rule, and is exactly the shape that lets an off-by-one week survive."
+test_spec:
+  - name: TestIsoWeekStarts::test_returns_requested_number_of_mondays
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "4 weeks relative to Wednesday 2026-08-26 produces exactly 4 periods and every one of them begins on a Monday."
+  - name: TestIsoWeekStarts::test_last_entry_is_the_monday_of_the_reference_week
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "3 weeks relative to Wednesday 2026-08-26 ends on Monday 2026-08-24 — the current, still-incomplete week."
+  - name: TestIsoWeekStarts::test_ordered_oldest_first
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The returned periods equal their own sorted order, so every trend reads left to right."
+  - name: TestIsoWeekStarts::test_a_monday_reference_maps_to_itself
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "1 week relative to Monday 2026-08-24 yields exactly [2026-08-24], not the preceding Monday."
+  - name: TestIsoWeekStarts::test_zero_weeks_is_clamped_to_one
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A request for 0 weeks produces exactly 1 period rather than an empty list."
+test_rationale: |
+  Every descriptor pins a FIXED reference date — Wednesday 2026-08-26 and Monday
+  2026-08-24 — rather than deriving one from the clock. That is the whole point
+  of the contract: a test built on the current date would pass on six days out of
+  seven while asserting nothing about the Monday rule, and an off-by-one week
+  would survive it indefinitely. Because iso_week_starts takes the reference date
+  as an argument, direct-import unit tests can reach both boundary cases (a
+  mid-week reference and a Monday reference) with no time freezing and no
+  fixtures. The count, the weekday of every entry, the final entry and the
+  ordering are asserted separately, since a function that returned the right
+  number of wrong days would satisfy any one of them alone.
+delivers_to:
+  agent: python-coder
+  contract: "iso_week_starts(today: date, weeks: int) -> list[date]: the reporting periods every other section is computed per, as Monday dates ascending, length max(1, weeks), last element the Monday of the week containing today. Consumed by build_report and, through it, by INF-500e-1's movement computation, INF-500e-2's renderers and INF-500e-2-i's coverage floor, which takes the FIRST element as the oldest reporting week."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. The capability had already shipped (scripts/agent-health/weekly_health.py, merged as d0fa881c / PR #608), so the test contract binds each criterion to the real passing test in unit_tests/agent_health/test_weekly_health.py rather than commissioning new coverage. Added assigned_agent, estimated_complexity, it_requirements, test_spec, test_rationale and the iso_week_starts delivers_to contract naming the three downstream consumers. Criteria unchanged; work_status deliberately left todo for a separate evidence-bound step."
+    by: it-po
+    at: 2026-08-26
+  - reason: "Reconciliation pass, 2026-08-31 (python-coder, evidence audit) -- FINDING 5 + covered_by backfill. work_status was flipped from the deliberately-left-todo state recorded in the entry above to done, with nothing recording when or on what evidence; recording it now. Evidence: all 5 tests named in test_spec (TestIsoWeekStarts) exist in unit_tests/agent_health/test_weekly_health.py and pass under AC_ENFORCE_STRICT=1. Also backfilled covered_by, previously empty despite two directly-tagged tests in the suite: TestIsoWeekStarts::test_last_entry_is_the_monday_of_the_reference_week and ::test_ordered_oldest_first (both tagged '# covers: INF-500e-5')."
+    by: python-coder
+    at: 2026-08-31
+superseded_by: null
+covered_by:
+  - unit_tests/agent_health/test_weekly_health.py::TestIsoWeekStarts::test_last_entry_is_the_monday_of_the_reference_week
+  - unit_tests/agent_health/test_weekly_health.py::TestIsoWeekStarts::test_ordered_oldest_first
+implemented_by:
+  - d0fa881ca111665a8ae10b3bb46773c73325c85c
+  - scripts/agent-health/weekly_health.py
+change_target: code
+risk_surface: internal
+notes: |
+  Every figure in this report is a per-period figure, so a defect in period
+  construction corrupts all four sections at once and does so invisibly — the
+  tables still render, the trends still move, and the numbers are simply about
+  the wrong days. That is why the periods get a criterion of their own rather
+  than being assumed by the metric criteria that consume them.
+
+  Both boundary scenarios are written against fixed dates. A test that derives
+  its expectation from the current date would pass every day of the week while
+  asserting nothing about the Monday rule, and would be exactly the shape of
+  test that lets an off-by-one week survive.
+
+  The final period being partial is intended and is stated as a scenario rather
+  than left as a caveat: a reader comparing this week's three days against last
+  week's seven needs the report to have told them so, which is why the rendered
+  header states how many days the last period covers.

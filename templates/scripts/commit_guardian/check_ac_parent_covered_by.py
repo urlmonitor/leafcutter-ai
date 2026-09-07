@@ -73,6 +73,23 @@ DECISION HISTORY:
     _ac_store_index.get_ac_index(). The rich id->dict index is used to derive the
     id->abs_path mapping that _build_parent_index previously built. The O(store_size)
     walk is now shared across all four AC guardrail hooks via the mtime cache.
+  - 2026-08-25 [python-coder/GE-120a-1]: Replaced the silent fail-open branch in
+    main() (previously: catch bare ImportError around _get_derive_parent_id(),
+    print "cannot import derive_parent_id ...; skipping check (fail-open)", return
+    an ordinary success). Now catches (ImportError, OSError) -- the OSError arm
+    closes a second, previously-uncaught cannot-run shape where ac_parent_id.py
+    exists as a directory (a corrupted/partial deploy), which used to fall through
+    to the generic bottom-of-file catch-all. Both arms now call the new
+    _emit_could_not_check() helper, which names the unreachable prerequisite and
+    the number of staged files left unevaluated on stderr, and emits a
+    machine-readable "RESULT: could_not_check" line via the new shared
+    check_outcome module (OUTCOME_COULD_NOT_CHECK) -- independent of exit code,
+    since GE-120a-2 may still choose to exit 0 for an "announce" disposition.
+    The legacy "skipping check (fail-open)" line is no longer produced. The
+    reachable-prerequisite path (main-checkout behaviour) is unchanged: the same
+    staged set still blocks with the same violations. This criterion does not by
+    itself decide block-vs-announce; that remains GE-120a-2's concern.
+    (#EPIC-TrustThatAGreenCheckActuallyChecked/01)
 """
 
 from __future__ import annotations
@@ -87,6 +104,21 @@ try:
     _AC_STORE_INDEX_AVAILABLE = True
 except ImportError:
     _AC_STORE_INDEX_AVAILABLE = False
+
+try:
+    from check_outcome import OUTCOME_COULD_NOT_CHECK, emit_result  # type: ignore[import]
+except ImportError:
+    # check_outcome.py is deployed alongside this file in every real layout
+    # (build.py copies the whole templates/scripts/commit_guardian/ tree), so
+    # this fallback exists only for a working copy that exposes this check
+    # script in isolation (e.g. a test fixture) -- exactly the kind of
+    # partially-deployed layout GE-120a-1 is about. The values here MUST stay
+    # in sync with check_outcome.py.
+    OUTCOME_COULD_NOT_CHECK = "could_not_check"
+
+    def emit_result(outcome: str) -> None:
+        """Fallback RESULT-line emitter used when check_outcome is absent."""
+        print(f"RESULT: {outcome}", file=sys.stdout)
 
 _HOOK_PREFIX = "[check-ac-parent-covered-by]"
 _AC_STORE_DIR = "docs/acceptance-criteria"
@@ -635,22 +667,49 @@ def _emit_violations(violations: list[str]) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _emit_could_not_check(prerequisite: str, reason: str, unevaluated_count: int) -> None:
+    """Emit the could-not-check outcome for a cannot-run condition.
+
+    Prints a reader-actionable WARNING to stderr naming both the unreachable
+    prerequisite and the unverified scope, then emits the shared
+    machine-readable RESULT line so a caller can distinguish this from an
+    ordinary clean pass without parsing prose or relying on exit code
+    (GE-120a-2 may still exit 0 for an "announce" disposition).
+
+    Args:
+        prerequisite: Name of the unreachable prerequisite (e.g.
+            "derive_parent_id").
+        reason: The underlying exception message.
+        unevaluated_count: Number of staged files left unevaluated as a
+            result.
+    """
+    print(
+        f"{_HOOK_PREFIX} WARNING: could not reach prerequisite "
+        f"'{prerequisite}' ({reason}); parent covered_by links were not "
+        f"evaluated for {unevaluated_count} staged files",
+        file=sys.stderr,
+    )
+    emit_result(OUTCOME_COULD_NOT_CHECK)
+
+
 def main() -> int:
     """Run the AC parent covered_by check.
 
     Returns:
-        0 when all staged AC YAML files pass the check (or no files staged).
+        0 when all staged AC YAML files pass the check (or no files staged,
+        or the check could not reach its prerequisite -- see
+        _emit_could_not_check).
         1 when one or more violations are detected.
     """
+    # Staged files are needed both for the normal path and, if the
+    # prerequisite below cannot be reached, to name the unverified scope.
+    staged_paths = _get_staged_ac_paths()
+
     # Discover derive_parent_id
     try:
         derive_parent_id = _get_derive_parent_id()
-    except ImportError as exc:
-        print(
-            f"{_HOOK_PREFIX} WARNING: cannot import derive_parent_id: {exc}; "
-            "skipping check (fail-open)",
-            file=sys.stderr,
-        )
+    except (ImportError, OSError) as exc:
+        _emit_could_not_check("derive_parent_id", str(exc), len(staged_paths))
         return 0
 
     # Discover AC store
@@ -664,8 +723,6 @@ def main() -> int:
         # No AC store — nothing to check
         return 0
 
-    # Get staged AC YAML files
-    staged_paths = _get_staged_ac_paths()
     if not staged_paths:
         return 0
 

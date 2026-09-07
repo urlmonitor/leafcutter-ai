@@ -45,7 +45,7 @@ class ScanResult(NamedTuple):
         verified: Count of artifacts found in the manifest/output_mappings
             and hash-compared (regardless of match/drift outcome). Never
             includes uncomparable artifacts (AC-4) or missing artifacts
-            (BP-100k-6).
+            (BP-100n-1).
         uncomparable: Count of artifacts neither found in the manifest
             (coverage gap) nor validly declared exempt — i.e.
             ``gaps + exempt_count``. Reported transparently in the RESULT
@@ -54,7 +54,7 @@ class ScanResult(NamedTuple):
             IS in the manifest/output_mappings but absent from disk, which
             demands a different remedy (restore or deliberately un-record
             it) than a coverage gap (register it) or a declared exemption,
-            and the two must stay distinguishable (BP-100k-6).
+            and the two must stay distinguishable (BP-100n-1).
         gaps: Count of uncomparable artifacts that are NOT validly declared
             exempt (a subset of ``uncomparable``). This is what the exit
             verdict is keyed on: BP-100k-3's own three-way distinction (gap /
@@ -64,7 +64,7 @@ class ScanResult(NamedTuple):
             is reported (the ``UNCOMPARABLE: EXEMPT`` line and the
             ``uncomparable`` count) but never blocks the commit on its own.
         missing: Count of artifacts recorded in the manifest/output_mappings
-            whose file is absent from disk (BP-100k-6) — deletion is the
+            whose file is absent from disk (BP-100n-1) — deletion is the
             most complete form of drift there is. Reported as its own
             ``UNCOMPARABLE: MISSING <key> reason=recorded but not found on
             disk`` line and its own ``missing=<X>`` RESULT field; never

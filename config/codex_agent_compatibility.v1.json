@@ -1,0 +1,70 @@
+{
+  "$schema": "./codex_agent_compatibility.v1.schema.json",
+  "schema_version": 1,
+  "source_platform": "claude",
+  "target_platform": "codex",
+  "unknown_alias_policy": "reject",
+  "missing_source_model": {
+    "decision": "reject",
+    "reason": "Source model metadata is required unless a schema-valid policy explicitly enables parent inheritance."
+  },
+  "models": {
+    "haiku": {
+      "decision": "map",
+      "model": "gpt-5.6-luna",
+      "model_reasoning_effort": "low"
+    },
+    "sonnet": {
+      "decision": "map",
+      "model": "gpt-5.6-terra",
+      "model_reasoning_effort": "medium"
+    },
+    "opus": {
+      "decision": "map",
+      "model": "gpt-5.6-sol",
+      "model_reasoning_effort": "high"
+    }
+  },
+  "capabilities": {
+    "Read": { "decision": "map", "target": "codex.builtin.workspace_read", "equivalence": "exact" },
+    "Write": { "decision": "map", "target": "codex.sandbox.workspace_write", "equivalence": "exact" },
+    "Edit": { "decision": "map", "target": "codex.sandbox.workspace_write", "equivalence": "exact" },
+    "Bash": { "decision": "map", "target": "codex.builtin.local_shell", "equivalence": "exact" },
+    "Grep": { "decision": "map", "target": "codex.builtin.workspace_search", "equivalence": "exact" },
+    "Glob": { "decision": "map", "target": "codex.builtin.workspace_search", "equivalence": "exact" },
+    "Agent": { "decision": "map", "target": "codex.native.subagent_workflow", "equivalence": "exact" },
+    "Skill": { "decision": "map", "target": "codex.repo_skills:.agents/skills", "equivalence": "exact" },
+    "mcp__jcodemunch__get_blast_radius": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.blast_radius", "equivalence": "behavioral" },
+    "mcp__jcodemunch__get_dependency_graph": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.dependency_graph", "equivalence": "behavioral" },
+    "mcp__jcodemunch__get_class_hierarchy": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.class_hierarchy", "equivalence": "behavioral" },
+    "mcp__jcodemunch__get_context_bundle": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.context_bundle", "equivalence": "behavioral" },
+    "mcp__jcodemunch__find_references": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.find_references", "equivalence": "behavioral" },
+    "mcp__jcodemunch__find_importers": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.find_importers", "equivalence": "behavioral" },
+    "mcp__jcodemunch__search_symbols": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.search_symbols", "equivalence": "behavioral" },
+    "mcp__jcodemunch__search_text": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.search_text", "equivalence": "behavioral" },
+    "mcp__jcodemunch__get_symbol": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.get_symbol", "equivalence": "behavioral" },
+    "mcp__jcodemunch__get_file_outline": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.file_outline", "equivalence": "behavioral" },
+    "mcp__jcodemunch__get_related_symbols": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.related_symbols", "equivalence": "behavioral" },
+    "mcp__jcodemunch__get_ranked_context": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.ranked_context", "equivalence": "behavioral" },
+    "mcp__plugin_serena_serena__find_symbol": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.get_symbol", "equivalence": "behavioral" },
+    "mcp__plugin_serena_serena__find_declaration": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.find_declaration", "equivalence": "behavioral" },
+    "mcp__plugin_serena_serena__find_implementations": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.find_implementations", "equivalence": "behavioral" },
+    "mcp__plugin_serena_serena__find_referencing_symbols": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.find_references", "equivalence": "behavioral" },
+    "mcp__plugin_serena_serena__search_for_pattern": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.search_text", "equivalence": "behavioral" },
+    "mcp__plugin_serena_serena__get_symbols_overview": { "decision": "map", "target": "codex.behavioral_adapter.workspace_analysis.symbols_overview", "equivalence": "behavioral" },
+    "mcp__plugin_context7_context7__resolve-library-id": { "decision": "map", "target": "codex.behavioral_adapter.documentation.resolve_library", "equivalence": "behavioral" },
+    "mcp__plugin_context7_context7__query-docs": { "decision": "map", "target": "codex.behavioral_adapter.documentation.query_primary_docs", "equivalence": "behavioral" }
+  },
+  "references": {
+    "CLAUDE.md": { "decision": "map", "target": "AGENTS.md" },
+    ".claude/agents/": { "decision": "map", "target": ".codex/agents/" },
+    ".claude/skills/": { "decision": "map", "target": ".agents/skills/" },
+    "Agent tool": { "decision": "map", "target": "native Codex subagent workflow" },
+    "Skill tool": { "decision": "map", "target": "repository-scoped Codex skill invocation" },
+    "slash_command": {
+      "decision": "map_if_skill_exists",
+      "target": "$<same-skill-id>",
+      "otherwise": "Reject with the command, source agent, and unresolved reference."
+    }
+  }
+}

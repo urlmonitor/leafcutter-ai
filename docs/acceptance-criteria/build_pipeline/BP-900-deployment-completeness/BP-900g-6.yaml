@@ -113,6 +113,5 @@ implemented_by:
   - scripts/build_referential_integrity.py
   - scripts/build_phases.py
   - templates/workflows-js/fast-lane-ship.js
-  - templates/workflows-js/fast-lane-build.js
   - templates/workflows-js/plan-feature.js
   - templates/workflows-js/finalize-feature.js

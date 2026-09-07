@@ -127,3 +127,21 @@ completion_manifest:
   pr_opened: true
 PR #57 opened: https://github.com/urlmonitor/leafcutter-ai/pull/57. Branch `feature/contractshrinkingselfexclusion` pushed to origin and tracking set.
 
+## Repair Resolution (GE-122e-2)
+
+- resolution: kept the 'done' copy (previously held by 99_done) and removed the 'todo' copy (held by 00_inbox)
+- reason: tickets/ticket_lifecycle.json permits status 'done' only in a terminal, permanent archive folder (99_done), while status 'todo' is only permitted in non-terminal, still-in-flight folders, so the 'done' declaration records the later, completed state.
+
+### Recovered content from the deleted copy
+
+- [ ] AC BP-100d-1: `check_contract_shrinking.py`'s `_TEST_PATH_RE` is extended to exclude paths containing `commit_guardian/` (covering both `scripts/commit_guardian/check_*.py` and `templates/scripts/commit_guardian/check_*.py`). The same change is applied to both the canonical template and the legacy copy.
+- [ ] AC BP-100d-1-i: Unit test verifies that a diff modifying `templates/scripts/commit_guardian/check_contract_shrinking.py` alongside a `pytest.mark.xfail` removal is NOT classified as contract-shrinking.
+| BP-100d-1 | L2 | Contract-shrinking hook excludes commit_guardian paths from production classification | python-coder |
+| BP-100d-1-i | L3 | Test verifies commit_guardian paths are excluded from production file classification | test-writer |
+AC files: `docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100d-*.yaml`
+- [ ] test-writer
+- [ ] python-coder
+- [ ] test-runner
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request

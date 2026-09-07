@@ -55,6 +55,14 @@ components:
     directory_patterns:
       - "config/agent_registry.json"
       - "templates/agents/*.md"
+  - id: agent-compatibility
+    prefix: AGC
+    description: "ACs for compiling the canonical Leafcutter agent and skill catalog into native Codex, Claude, and Gemini surfaces without drift"
+    owner: build_pipeline
+    directory_patterns:
+      - "config/codex_agent_compatibility*.json"
+      - "scripts/build*.py"
+      - "templates/agents/*.md"
   - id: infrastructure
     prefix: INF
     description: "ACs for cross-cutting infrastructure: agent context injection, pre-commit hooks, and project conventions"

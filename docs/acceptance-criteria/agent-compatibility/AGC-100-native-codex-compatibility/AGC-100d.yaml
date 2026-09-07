@@ -1,0 +1,35 @@
+id: AGC-100d
+title: "Let specialists use their supporting playbooks"
+component: agent-compatibility
+components:
+  - agent_registry
+  - skill_registry
+  - skills_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  When a specialist relies on reusable guidance, that guidance is available in
+  Codex with the same intended outcome. Missing support is made explicit rather
+  than silently reducing the specialist's capability.
+depends_on:
+  - AGC-100
+documentation_triggers:
+  - how-to
+  - reference-doc
+covered_by:
+  - AGC-100d-1
+  - AGC-100d-2
+  - AGC-100c-2
+  - AGC-100f-2
+implemented_by: []
+origin_agent: product-owner
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null

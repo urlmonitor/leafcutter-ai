@@ -1,0 +1,118 @@
+id: BO-3500d-1
+components:
+  - build_orchestration
+  - agent_telemetry
+title: "An on-demand report states how much of the backlog the automation can and cannot build"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the project's whole backlog of not-yet-done requirements,
+  When an operator asks for the buildability report,
+  Then the report states how many of those requirements the automation can build and
+    how many it cannot,
+  And it states each figure as a count and as a share of the backlog it counted, so the
+    same report run on a different day is comparable with this one,
+  And it states the date it was produced and the size of the backlog it counted, so a
+    saved copy is recognisable as stale rather than mistaken for current,
+  And producing it requires no argument but the request — the operator names no
+    requirement, no component and no craft.
+
+  Given a backlog that has changed since the last report,
+  When the report is asked for again,
+  Then the figures reflect the backlog as it now stands, read at that moment.
+depends_on: [BO-3500d]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: related
+    status: exists
+    relevance: "Where the promise this report measures is described to operators. A coverage figure for that promise belongs beside it."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "A SUBCOMMAND ON THE EXISTING CLI, NOT A SECOND ENTRY POINT. scripts/build_orchestration/fast_lane.py already has _build_cli_parser and main; the report is a subcommand there. A separate script would need its own store-reading path and would immediately be a second definition of 'not yet done'."
+  - "ONE READ OF THE STORE, reusing the existing index/parse pass (_build_ac_id_to_path_index and the resolver's record load). The read-count obligation is BO-3500d-1-i's and is not restated here, but the report must be BUILT so it can hold: classify from records already in hand, never re-open a file per classification."
+  - "produced_at AND THE COUNTED BACKLOG SIZE ARE FIELDS ON THE REPORT, not prose in a header. A coverage figure is quoted long after it is produced — in a roadmap, a retrospective, an argument about priorities — and this repository has a documented history of stale evidence surviving because nothing on the artifact said when it was true."
+  - "EACH FIGURE AS BOTH A COUNT AND A SHARE, with the denominator stated as the counted backlog, so two reports from different days are comparable rather than merely both true."
+  - "NO ARGUMENTS BUT THE REQUEST. No component, no craft, no AC id — accepted, defaulted or inferred. An operator who must know which component to worry about cannot answer the question this report exists to answer."
+  - "'NOT YET DONE' IS DEFINED ONCE, IN ONE PREDICATE, SHARED WITH THE REASON GROUPING OF BO-3500d-2 and with the starting-point computation of BO-3500d-3. Three copies of the predicate is three figures that quietly disagree."
+  - "READ-ONLY, ENFORCED HERE AND ASSERTED BY BO-3500d-4: the report writes nothing, anywhere."
+  - "NO PRESENCE-ONLY ASSERTIONS. Every test invokes the subcommand over a fixture store and reads the returned structure."
+delivers_to:
+  agent: python-coder
+  contract: "Buildability report structure: {produced_at: ISO-8601, backlog_counted: int, buildable: {count, share}, unbuildable: {count, share}, duration_seconds: float, groups: [...]}. Consumed by BO-3500d-2 (which fills groups), by BO-3500d-3 (which adds the starting-point figures) and by the operator directly. Nothing in the automation may consume it as an instruction (BO-3500d-4)."
+expects_from:
+  ac_id: BO-3500a-3
+  contract: "The per-member producibility verdict and its reason codes (capability_gap, unresolvable_craft from BO-3500a-2, no_proof_defined / proof_unavailable_here from BO-3500c-4), computed against a run's roster. The report applies the same verdict function over the whole store so the standing view and an individual refusal can never disagree."
+test_spec:
+  - name: test_report_states_buildable_and_unbuildable_counts
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Over a fixture store with a known split, the report's counts match the hand-computed split exactly."
+  - name: test_report_states_each_figure_as_count_and_share
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Both figures carry a count and a share, and the shares are taken over backlog_counted."
+  - name: test_report_carries_produced_at_and_backlog_size
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "produced_at and backlog_counted are present as fields on the returned structure, so a saved copy is recognisable as stale."
+  - name: test_report_takes_no_argument_but_the_request
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/build_orchestration/fast_lane.py buildability-report subcommand"
+    description: "Invoke the subcommand with no arguments and assert it produces the whole-backlog report; assert no component/craft/id argument is read or defaulted."
+  - name: test_report_reflects_a_changed_backlog_on_re_run
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Mutate the fixture store between two invocations and assert the second report's figures reflect the new state, read at that moment rather than cached."
+  - name: test_not_yet_done_predicate_shared_across_the_report
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Change the predicate in its single definition and assert the total, the reason groups and the starting-point figure all move together — three copies fail this."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: [BO-3500d-1-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE FIGURE ON BO-3500 — 660 not-yet-done requirements naming a craft the automation
+  does not have — was counted by hand on 2026-08-31 and started going stale the same
+  day. This criterion is the difference between a number somebody once produced and a
+  number the project has.
+
+  THE DATE-AND-SIZE CLAUSE IS NOT BOOKKEEPING. A coverage figure is quoted long after
+  it is produced — in a roadmap, in a retrospective, in an argument about priorities —
+  and this repository has a documented history of stale evidence surviving because
+  nothing on the artifact said when it was true. A report that carries its own date and
+  denominator makes staleness visible at the point of quotation.
+
+  NO-ARGUMENT IS PART OF THE CRITERION. A report that must be pointed at a component
+  answers a different question and cannot answer this one, because the operator would
+  have to know which component to be worried about, which is precisely what they do not
+  know. It is the standing whole-backlog view or it is not this requirement.
+
+  BOUNDARY vs BO-2400f-12 and BO-3500a-3, restated from the Product Owner's note: those
+  make one refusal legible at the moment it happens. This is the view across the whole
+  backlog, available without aiming at anything. A perfect refusal message still leaves
+  the question "how much of my backlog is stuck" unanswered.

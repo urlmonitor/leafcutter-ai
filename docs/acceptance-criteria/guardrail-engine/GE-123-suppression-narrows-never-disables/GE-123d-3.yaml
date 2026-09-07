@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -54,6 +54,10 @@ criteria: |
 depends_on:
   - GE-123d
 doc_links:
+  - path: templates/scripts/commit_guardian/check_secrets.py
+    relationship: modifies
+    status: exists
+    relevance: "THE EDIT SURFACE. Every scenario here is asserted through the exit status of this module, and the two constraints that can force a code change — the whitespace shape being a run-of-ordinary-words test rather than a contains-a-space test, and the exemption never being granted at file level — both bear on the prose post-filter that lives here. The expected production diff may be small or empty (this criterion's weight is its test contract), but this module is where any change for it lands. Canonical copy per ADR-001."
   - path: templates/skills/security-scanner/SKILL.md
     relationship: related
     status: exists
@@ -72,7 +76,7 @@ it_requirements:
   - "No rule other than the generic-credential rule may be narrowed anywhere by this feature. The private-key, cloud-access-key, exchange-API-key and high-entropy rules must keep full strength inside every prose location."
   - "The exemption must never be granted at file level. A staged file holding one exempt finding and one reported finding must still block, and the reported count must be exactly one — a count of zero and a count of two are both failures, and both are reachable from plausible implementations."
   - "Every scenario must be red before the implementation lands. In particular, each must fail against an implementation that grants the exemption per file and against one built on a naive contains-whitespace test — those are the two cheapest wrong implementations, and a test suite that cannot distinguish them does not discharge this AC."
-  - "The pre-existing file-level high-entropy exemption (KI-CG-004 in docs/known-issues/commit-guardian.md) is explicitly out of scope. Do not close it, do not extend it, and do not cite it as precedent for a file-level generic-credential exemption. The two must remain separately tracked."
+  - "The pre-existing file-level high-entropy exemption (KI-CG-004, recorded in the commit-guardian known-issues register) is explicitly out of scope. Do not close it, do not extend it, and do not cite it as precedent for a file-level generic-credential exemption. The two must remain separately tracked. The register is a live document, not an edit surface for this work — it is linked from this record's doc_links at relationship related for exactly that reason."
   - "The exemption must be unreachable for any value the shape vocabulary cannot classify: unclassifiable defaults to reported, and that default must be exercised, not merely intended."
   - "ADR-001 parity: any code this AC causes to change lives in the canonical copies under templates/; verify through the build.py round-trip."
 delivers_to: null
@@ -114,11 +118,59 @@ test_rationale: "This is the counter-arm for the whole GE-123d widening, so the 
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18)"
-    detail: "Criteria untouched. Complexity held at S — this AC adds little code of its own; its weight is in the test contract. Authored eight policy-level it_requirements, including the two cheapest wrong implementations the red baseline must exclude (file-level exemption; naive contains-whitespace) and an explicit out-of-scope fence around KI-CG-004 so the pre-existing file-level high-entropy hole is never cited as precedent. Added a known-issues doc_link for the same reason. Authored a five-entry test_spec plus test_rationale, every entry asserting on the real process exit status rather than a predicate return. readiness draft->reviewed; work_status and priority untouched."
+- reason: it-po-v3 technical enrichment (2026-08-18)
+  detail: Criteria untouched. Complexity held at S — this AC adds little code of its
+    own; its weight is in the test contract. Authored eight policy-level it_requirements,
+    including the two cheapest wrong implementations the red baseline must exclude
+    (file-level exemption; naive contains-whitespace) and an explicit out-of-scope
+    fence around KI-CG-004 so the pre-existing file-level high-entropy hole is never
+    cited as precedent. Added a known-issues doc_link for the same reason. Authored
+    a five-entry test_spec plus test_rationale, every entry asserting on the real
+    process exit status rather than a predicate return. readiness draft->reviewed;
+    work_status and priority untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
+- reason: 'it-po edit-surface declaration (2026-08-31): added one doc_link,
+    templates/scripts/commit_guardian/check_secrets.py with relationship modifies. Nothing
+    else changed; all pre-existing doc_links kept at their original relationships,
+    including the known-issues link at related — KI-CG-004 is fenced as out of scope by
+    this record''s own requirements and must never be treated as a file this work edits.
+    WHY: this record declared no edit surface, leaving the ticket generator to harvest
+    paths out of prose (KI-ACD-023). check_secrets.py is the surface — every scenario here
+    is asserted through that module''s exit status, and the two constraints that can force
+    a code change (the whitespace shape being a run-of-ordinary-words test rather than a
+    contains-a-space test, and the exemption never being granted at file level) both bear
+    on the prose post-filter living there. STATED PLAINLY: the expected production diff
+    may be small or empty. This is the negative arm for the whole GE-123d widening and its
+    weight is in the test contract, as its own enrichment records. The surface is declared
+    because it is where any change for it lands, and because an empty files_touched is
+    what blocked the epic.'
+- reason: fenced-register-named-not-pathed
+  date: '2026-09-01'
+  by: business-analyst
+  entry: 'CRITERIA UNTOUCHED. title, req_status, depends_on, doc_links, test_spec and
+    notes are all unchanged. One it_requirements bullet was reworded: the sixth bullet
+    now refers to "the commit-guardian known-issues register" by name and keeps the
+    KI-CG-004 id, where it previously spelled out that register''s repository path.
+
+    WHY: the path was being harvested into the generated ticket''s files_touched as an
+    edit surface, so this record — whose whole point is that KI-CG-004 is OUT of scope —
+    presented that live document to a coder as a file to modify. Measured against the
+    shipped _build_files_touched on 2026-09-01: before, ["docs/known-issues/commit-guardian.md",
+    "templates/scripts/commit_guardian/check_secrets.py"]; after, only the check_secrets.py
+    surface. The doc_link stays at relationship related, which is correct and is what keeps
+    the fence discoverable — the harvest came from the prose mention, not from the link.
+    The record is no less clear to a human reader: the register is still named, and the
+    KI id, which is the part a reader actually needs, is retained.
+
+    This is a working-around of a generator defect, not a fix for it. The durable fix is
+    specified in TKT-600a-2: a path a record declares at a non-edit-surface relationship
+    must not be harvested out of that same record''s prose.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/23_TICKET-20260831-GE-123d-3.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -167,3 +219,4 @@ notes: |
   the guarantee that the NEW generic-credential exemption does not acquire the
   same shape. The fence is now also an it_requirement so a coder cannot reach
   for the existing file-level exemption as a template.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

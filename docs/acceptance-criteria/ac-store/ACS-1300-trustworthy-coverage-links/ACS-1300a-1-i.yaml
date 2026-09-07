@@ -1,0 +1,180 @@
+id: ACS-1300a-1-i
+components:
+  - ac_store
+title: "A tag token is normalised before matching, so a multi-id tag names every record on the line"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given a test file whose coverage tag names two records on one line, separated by a
+    comma, and both records exist in the store,
+  And a second test file whose coverage tag names a single record and is followed by no
+    punctuation,
+  When the repair tool is invoked out of process against that store and that tree,
+  Then both records named on the multi-id line are matched to that test and both are
+    reported as missing links,
+  And the record named on the single-id line is matched as well, so the handling of the
+    multi-id line did not come at the cost of the ordinary one,
+  And no tag is reported as naming an id that no record carries, in particular no
+    finding naming the first id with its separator still attached,
+  And a record whose id appears in no coverage tag is still reported as unmatched in the
+    same run, so the normalisation widens the match rather than matching everything,
+  And normalising a token does not make two different records match one tag: a tag
+    naming one record is not attributed to another whose id differs from it only by
+    letter case or by a hierarchy suffix.
+depends_on:
+  - ACS-1300a-1
+doc_links:
+  - path: unit_tests/test_generate_ticket_from_ac.py
+    relationship: relates-to
+    status: exists
+    relevance: "THE MEASURED FAILING CASE, LIVE IN THE REPO 2026-09-01. Line 71 is `# covers: BO-560, BO-560-1` and line 308 is `# covers: BO-530, BO-530-1`. Against the canonical rule these capture `BO-560,` and `BO-530,` — separator attached — so BO-530 and BO-560 match nothing, and the second id on each line is dropped entirely. Two records unmatched and two phantom unresolved tags, from two lines. Use these exact lines as the fixture rather than inventing one."
+  - path: scripts/ac_store/test_enforcement.py
+    relationship: implements
+    status: exists
+    relevance: "WHY THE DEFECT EXISTS. COVERS_TAG_RE at :57 captures `(\\S+)`, which takes everything up to whitespace — so a comma, a closing bracket or a quotation mark travels with the id, and only the FIRST id on a multi-id line is captured at all. Normalisation on the tag side is a consequence of reusing the canonical rule, which ACS-1300a-1's final clause requires; it is not optional hardening."
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-4.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "SEQUENCING HAZARD — READ BEFORE BUILDING EITHER. TQ-100b-4 narrows the canonical reader so that captured values which resolve to no record must be id-SHAPED, and requires that it 'removes nothing from the resolved list'. `BO-560,` is not id-shaped and was never in the resolved list, so TQ-100b-4 is fully satisfied by DISCARDING it — which entrenches this miss and removes the only signal of it. Land this normalisation before, or together with, that narrowing; afterwards the evidence is gone."
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    relationship: relates-to
+    status: exists
+    relevance: "THE ORIGINAL LESSON, RETAINED FOR THE SECONDARY CASE ONLY. Its _strip_quotes helper exists because a RAW-TEXT store reader treated quoted ids as distinct from their bare-token tags. Measured 2026-09-01: six store ids are written quoted (GE-114-1/-2/-3/-4, GE-115, GE-118c) but a YAML-parsing reader resolves all six correctly, so the store side of this join needs no stripping. The tag side still does — hence quotation is one case of the general normalisation this AC requires, not its subject."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "NORMALISATION IS APPLIED TO BOTH SIDES OF THE JOIN, AT ONE PLACE. The store-side id and the tag-side captured token must pass through the same normalisation before comparison. A second copy of the rule on the tag side is the drift shape ACS-1300a-1's final clause forbids. Note the two sides need it for different reasons: the store side is already normalised in practice because the reader parses YAML (measured: all six quoted ids resolve), while the tag side is raw text straight out of `(\\S+)`."
+  - "CORRECTED 2026-09-01, AND THIS SUPERSEDES THE EARLIER 'MUST NOT TRIM A TRAILING PUNCTUATION CHARACTER' REQUIREMENT, WHICH WAS WRONG AND CONTRADICTED ITS OWN NEIGHBOUR. A trailing separator MUST be trimmed — `BO-560,` must normalise to `BO-560` — because two real records depend on it. What must NOT happen is widening: no case-folding, no truncation of a hierarchy suffix, no trimming of a character that is part of an id. Trim the separator, keep the id intact."
+  - "A MULTI-ID TAG NAMES EVERY RECORD ON THE LINE, NOT JUST THE FIRST. This is a capture change, not only a normalisation one: `(\\S+)` stops at the first whitespace, so `# covers: BO-560, BO-560-1` never sees BO-560-1 at all. Whether that is solved by splitting the captured token on separators or by widening the capture is an implementation choice; both ids must end up matched either way, and whichever is chosen must keep ACS-1300a-1's no-fifth-reader clause satisfied."
+  - "SEQUENCING IS BINDING, NOT ADVISORY: THIS LANDS BEFORE TQ-100b-4 OR IN THE SAME CHANGE, NEVER AFTER — CHECK BEFORE STARTING. TQ-100b-4 narrows the canonical reader so that a capture resolving to no record must be id-SHAPED, and it requires only that the narrowing 'removes nothing from the resolved list'. `BO-560,` is not id-shaped and was never in the resolved list, so TQ-100b-4 is FULLY SATISFIED by discarding it. Nothing about TQ-100b-4 is wrong; the ORDER is the hazard, and it is asymmetric — landing this first costs nothing, landing it second costs everything. Afterwards the two records stay missed permanently AND the unresolvable token disappears from the phantom-tag list, which is the only observable trace the miss leaves, so the defect becomes unfindable by the measurement that found it. PRE-FLIGHT, BEFORE WRITING ANY CODE: determine whether TQ-100b-4 has already landed. If it has, this AC's first test is no longer red for the original reason and a quiet phantom-tag list is NOT evidence of health — re-establish the signal, or measure the miss directly against `unit_tests/test_generate_ticket_from_ac.py:71` and `:308`, before proceeding."
+  - "THIS AC WRITES NOTHING. It constrains a key-normalisation step inside the read-only detection pass; no code path reachable from it may open a store file for writing or assign work_status."
+  - "Must handle errors gracefully per the project error handling policy. A token that normalises to the empty string is a reported abstention (ACS-1300c-3), never a silent drop and never a match."
+test_spec:
+  - name: test_acs_1300a_1_i_both_ids_on_a_comma_separated_tag_are_matched
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE MEASURED REGRESSION, AGAINST THE REAL LINES. A store holding BO-530, BO-530-1, BO-560 and BO-560-1, and a test file carrying `# covers: BO-560, BO-560-1` and `# covers: BO-530, BO-530-1` exactly as unit_tests/test_generate_ticket_from_ac.py:71 and :308 write them. Assert all four records are matched after one out-of-process run. This is RED today: the canonical rule captures `BO-560,` and `BO-530,`."
+  - name: test_acs_1300a_1_i_no_finding_names_an_id_with_its_separator_attached
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In the same run, assert no unresolved-tag finding names `BO-560,` or `BO-530,`. Without this, an implementation that matches the ids while still emitting the raw token as an unresolved tag passes the test above and doubles the phantom-tag count."
+  - name: test_acs_1300a_1_i_a_genuinely_unnamed_record_stays_unmatched_in_the_same_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE ANTI-OVER-REACH PAIRING, ASSERTED IN THE SAME INVOCATION as the matches above. A record whose id appears in no tag is still reported unmatched. Split apart, 'the multi-id tag matches' is satisfied by a join that matches everything."
+  - name: test_acs_1300a_1_i_normalisation_does_not_case_fold_or_truncate_a_suffix
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Directly exercise the normalisation helper: `BO-560,` and `BO-560` normalise equal; `\"ACS-1300a-1\"` and `ACS-1300a-1` normalise equal; `BO-560A` and `BO-560-1` do NOT normalise equal to `BO-560`. Guards the widening that would write a link onto the wrong record — worse than the missing link it replaces."
+  - name: test_acs_1300a_1_i_quoted_tag_token_matches_its_bare_store_id
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "THE SECONDARY CASE, KEPT CHEAP. A tag written `# covers: \"GE-115\"` matches the store record whose id is GE-115. Measured 2026-09-01: no such tag exists in the tree today and the six quoted store ids all resolve through the YAML reader, so this is a regression guard against a future tag, not a live defect. One unit assertion is the right size for it."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300a-1
+  contract: "The join whose key normalisation and tag-token splitting this AC constrains."
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+- reason: retargeted-onto-the-measured-defect-criteria-changed-reapproval-required
+  by: business-analyst
+  at: 2026-09-01
+  note: >-
+    RETARGETED; criteria, title and test_spec rewritten on an already-approved
+    record, readiness demoted approved to draft so the approval gate is re-run.
+    WHY THE OLD SUBJECT WAS INERT: the record was justified by KM-ADM-005's
+    quote-stripping lesson, and re-measurement 2026-09-01 shows that lesson does
+    not apply to this join. Six store ids are written quoted (GE-114-1/-2/-3/-4,
+    GE-115, GE-118c) and a YAML-parsing reader resolves every one of them, so the
+    store side needs no stripping; and a grep of the whole test tree found ZERO
+    real quoted tags — all 22 hits are prose mentions of the tag syntax inside
+    docstrings and assertion strings. WHAT THE 2 IDS ACTUALLY ARE: BO-530 and
+    BO-560 are missed for a different reason entirely. Their tags are multi-id —
+    `# covers: BO-560, BO-560-1` at unit_tests/test_generate_ticket_from_ac.py:71
+    and the BO-530 equivalent at :308 — and COVERS_TAG_RE's `(\S+)` captures
+    `BO-560,` with the separator attached while dropping the second id on the line
+    unseen. Verified by running the real regex. So the slot covers a real,
+    reproducible, currently-RED defect that also inflates the phantom-tag count;
+    dropping it would discard that, and burying it in an it_requirement would lose
+    the test_spec. ALSO RESOLVED: an internal contradiction in the prior
+    enrichment, where it_requirement 2 forbade trimming a trailing punctuation
+    character while it_requirement 3 named the trailing comma as a reason
+    normalisation is required. The comma must be trimmed; widening must not
+    happen. ADDED: the TQ-100b-4 sequencing hazard — that narrowing discards
+    non-id-shaped captures, so landing it first silently entrenches this miss and
+    removes its only signal.
+- reason: technical-layer-re-read-from-scratch-against-the-retargeted-subject
+  by: it-po
+  at: 2026-09-01
+  note: >-
+    RE-ENRICHED AFTER RETARGETING. The whole technical layer was re-read against the new
+    subject (multi-id tag tokens) rather than amended against the old one
+    (quote-stripping); the five existing it_requirements, the test_spec, both contracts,
+    assigned_agent and complexity were checked clause by clause and are correct for the
+    retargeted criteria — no change was needed to them and none was made. ONE ADDITION:
+    the TQ-100b-4 sequencing hazard is now an it_requirement, not only a doc_link. An
+    implementer who reads only the technical layer previously could not see it, and it is
+    the one constraint on this record that a correct implementation can still be defeated
+    by — TQ-100b-4 is fully satisfied by discarding `BO-560,`, so if it lands first the
+    miss is permanent and its only signal is gone. The requirement carries a pre-flight
+    check (has TQ-100b-4 landed?) and the fallback measurement, so it is actionable rather
+    than a caution. NOT REOPENED: the trim-the-separator / do-not-widen resolution the BA
+    recorded is left exactly as written; the earlier enrichment's contradiction between
+    "must not trim a trailing punctuation character" and "a trailing comma ... requires
+    normalisation" is not reintroduced, and nothing added here trims, folds or truncates
+    anything beyond the separator.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  RETARGETED 2026-09-01 FROM QUOTE-STRIPPING TO TAG-TOKEN NORMALISATION. The record kept
+  its slot because the measurement did not say "this is worth nothing" — it said the
+  attributed cause was wrong. Two records are genuinely unmatched today, and the reason is
+  a separator, not a quotation mark.
+
+  WHY THE INHERITED LESSON DID NOT TRANSFER. KM-ADM-005 needed _strip_quotes because its
+  reader scanned raw YAML text with a regex, so `id: "GE-114-1"` arrived with the quotes
+  attached. This join reads the store through a YAML parser, which strips them as a matter
+  of course — measured: six ids are written quoted and all six resolve. Inheriting a lesson
+  is not the same as inheriting its cause, and this is a clean worked example of the
+  difference: the same words, a different reader, no defect.
+
+  THE DEFECT THAT IS REAL, AND IT IS TWO DEFECTS IN ONE LINE. `(\S+)` takes everything up
+  to whitespace, so on `# covers: BO-560, BO-560-1` it captures `BO-560,` — which matches
+  no record — and never sees `BO-560-1` at all. The first failure loses a link and adds a
+  phantom unresolved tag; the second loses a link silently, with nothing emitted at all.
+  The second is the worse of the two because it leaves no trace to notice.
+
+  DO NOT SOLVE THIS BY WIDENING THE MATCH. A normaliser that strips trailing non-alphanumeric
+  characters generally, or that case-folds, will start attributing tags to records they do
+  not name — and a link written onto the wrong record is worse than the missing link it
+  replaced, which is the line ACS-1300a's notes draw around this whole tree. The final
+  criterion clause and the fourth test are the falsifiers for that over-reach.
+
+  SEQUENCE THIS BEFORE TQ-100b-4, OR WITH IT. That AC narrows the canonical reader so
+  unresolved captures must be id-shaped, and explicitly requires that it "removes nothing
+  from the resolved list". `BO-560,` is not id-shaped and is not in the resolved list, so
+  TQ-100b-4 is satisfied by discarding it — the miss becomes permanent and its only signal
+  disappears. Nothing about TQ-100b-4 is wrong; the two simply must not land in the wrong
+  order.

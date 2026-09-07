@@ -1,0 +1,114 @@
+id: BO-3500b-3
+components:
+  - build_orchestration
+title: "Members are produced in dependency order across crafts, so a page describes the code that run produced"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a mixed group in which the documentation page member depends on the source code
+    member it describes,
+  When the run builds the group,
+  Then the craft that writes the page is dispatched after the craft that produced that
+    code has finished,
+  And the code as that run produced it is available to the page craft as its input, so
+    the page can describe what this run made rather than what stood there before it.
+
+  Given a mixed group in which two members declare different crafts and neither depends
+    on the other,
+  When the run builds the group,
+  Then whichever order those two are produced in, the run reaches the same ending and
+    produces the same artifacts — the outcome does not depend on an order the operator
+    did not ask for.
+
+  Given a mixed group in which a source code member depends on a configuration member,
+  When the run builds the group,
+  Then the configuration is produced before the code that depends on it, by the same
+    rule — dependency order is read from the requirements themselves and is not a fixed
+    sequence of crafts.
+depends_on: [BO-3500b]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The run's phase order is fixed and code-shaped — tests, then code. Ordering by declared dependency across crafts is a different rule and needs describing alongside it, including where the two interact."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ORDER COMES FROM THE MEMBERS' OWN depends_on, VIA THE EXISTING _topo_order_build_set IN scripts/build_orchestration/fast_lane.py. Do NOT introduce a fixed craft order (all code, then all docs, then all diagrams). That implementation is right about eighty per cent of the time by accident and the third scenario — a code member depending on a config member — is written to fail it."
+  - "THE PAGE CRAFT'S INPUT IS THE WORKTREE AS THIS RUN LEFT IT after the code member's phase, not the base ref and not a cached snapshot taken at run start. The observable being asserted is WHAT THE CRAFT WAS GIVEN — never a judgement about the prose, which would be untestable and would be quietly satisfied by anything."
+  - "ORDER-INDEPENDENCE FOR UNRELATED MEMBERS IS WHAT KEEPS THE COVERING TESTS NON-FLAKY. Assert equal ending and equal artifact set under two forced interleavings; never assert one particular interleaving, or the test starts failing the moment anything is parallelised."
+  - "The topological order must be computed once over the whole mixed set, including members whose crafts differ. Dependency resolution already exists and is not being re-specified — what is new is that it must survive members being produced by different crafts, so the ordering key must be the member, never the craft."
+  - "A cycle across crafts must fail the same way a code-only cycle does today; do not add a craft-based tie-break that silently breaks a cycle."
+  - "NO PRESENCE-ONLY ASSERTIONS. Execute runs and assert on the recorded dispatch sequence and on the content handed to each craft."
+delivers_to: null
+expects_from:
+  ac_id: BO-3500b-1
+  contract: "The resolved mixed group plus the per-member dispatch plan. This record fixes the ORDER in which those dispatches occur: the topological order of the members' own depends_on, computed by _topo_order_build_set over the whole set irrespective of craft."
+test_spec:
+  - name: test_dependent_page_craft_dispatched_after_its_code_member
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "In a group where the docs member depends_on the code member, assert the recorded dispatch index of the docs craft is greater than the code craft's and that the code phase had completed."
+  - name: test_page_craft_input_contains_this_runs_code_change
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Capture the content handed to the docs craft and assert it contains the code as this run produced it, not the base-ref version."
+  - name: test_code_member_depending_on_config_member_is_produced_second
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "THE FIXED-CRAFT-ORDER KILLER. A code member depends_on a config member; assert the config craft is dispatched first. An all-code-then-everything-else ordering fails here and nowhere else."
+  - name: test_unrelated_members_reach_the_same_ending_under_both_orders
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Force both interleavings of two independent members and assert identical ending and identical artifact set — the order-independence property that keeps every other test in this tree non-flaky."
+  - name: test_ordering_key_is_the_member_not_the_craft
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Feed _topo_order_build_set a mixed set and assert the returned order depends only on depends_on — permuting the members' crafts with the dependencies unchanged yields the same order."
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE OBVIOUS IMPLEMENTATION OF A MIXED RUN IS A FIXED CRAFT ORDER — all the code, then
+  all the documentation, then all the diagrams — and it is right about eighty per cent
+  of the time by accident, which is what makes it worth a criterion. It is wrong exactly
+  when a code member depends on something a non-code craft produces, and the third
+  scenario is there to fail it.
+
+  WHY THE PAGE ORDERING IS NOT COSMETIC. A page produced before the code it documents
+  can only describe the intention, and this repository has an expensive history of
+  documentation that describes an intention as though it were the state of the system.
+  The observable being claimed is what the page craft was given, not a judgement about
+  the prose — that keeps the criterion testable without anybody grading writing.
+
+  THE SECOND SCENARIO — order-independence for unrelated members — is what makes the
+  covering tests non-flaky. Without it, any test of a mixed run implicitly asserts one
+  particular interleaving and starts failing the moment anything is parallelised.
+  Stated as a criterion, it becomes the thing that must hold rather than an accident
+  that will not.
+
+  BOUNDARY. This is about order within an accepted group. Whether the group is accepted
+  at all is BO-3500b-1; what happens when a member fails is BO-3500b-2. Dependency
+  resolution itself already exists and is not being re-specified — what is new is that
+  it must survive members being produced by different crafts.

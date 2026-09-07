@@ -1,0 +1,113 @@
+id: BP-100n-5-i
+title: "A declaration whose shape the check cannot interpret, and a named file it cannot open, are each reported as their own unresolved condition — never folded into the conforming class and never into each other"
+component: build-pipeline
+components:
+  - build_pipeline
+  - ac_store
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given two shapes of declaration are in use against the same configuration file: one
+    whose keys are the names of parts of that file, and one whose keys are the
+    vocabulary of a schema language and therefore name nothing in that file,
+  And at the time of writing one record whose work is recorded as finished uses the
+    second shape, alongside three that are unfinished,
+  When the check reads a declaration,
+  Then a declaration whose shape it can interpret is looked up against the file and
+    reported under the finding classes its parent defines,
+  And a declaration whose shape it cannot interpret is reported by name as a
+    declaration it could not interpret, is counted under a figure of its own stated
+    alongside the others, and the run fails,
+  And a declaration naming a file that cannot be opened is reported by name as a file
+    it could not open, is counted under a further figure of its own, and the run fails
+    — this is a different condition from a file that was opened and found not to contain
+    the named part, and the two are reported with different wording,
+  And no declaration is counted under more than one figure, and the figures sum to the
+    stated number of declarations read,
+  And a declaration whose shape the check can interpret is not reported as one it could
+    not interpret.
+depends_on:
+  - BP-100n-5
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-5.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The rule this record is a direct instance of: a guard states what it could not find
+      and why, counts it as its own reported condition, and fails the run. Three of that
+      L1's Then clauses are reproduced here against a new pair of unresolved conditions.
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The reason two shapes coexist. The schema permits config_schema_fragment as a free
+      object, so a record may put part names at the top level or a JSON-Schema document
+      there, and both validate. Whether to narrow the schema is out of scope for this
+      record and must not be assumed by its implementation — a check that presumes only
+      one shape is legal will misreport the other as contradicted.
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  ac_id: BP-100n-5
+  contract: >-
+    The per-declaration finding classes and the two stated figures. This record adds the
+    uninterpretable and unopenable classes and requires the figures to partition the
+    declarations read.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: >-
+  MEASURED IN THIS WORKTREE, 2026-09-01. Four records declare a config_schema_fragment
+  against commit_guardian.json whose top-level keys are schema vocabulary — type,
+  properties, required, description — rather than part names: BP-1100g-4 (work_status
+  done), and ACS-100i-8, BP-1100g-4-i and INF-700b-2 (all todo). A check that treats every
+  fragment key as a part name reports all four as contradicted, which is wrong about all
+  four; a check that quietly skips what it cannot parse reports nothing, which is the
+  fail-open shape this whole tree exists to make impossible. Neither is acceptable, which
+  is why the third class exists.
+
+
+  THE UNOPENABLE CASE IS SEPARATE FOR A REASON, NOT FOR SYMMETRY. A file that cannot be
+  opened and a file that was opened and lacks the named part produce the same answer to
+  "is the part there" — no — and opposite answers to "did we check". Folding them together
+  means a mistyped filename, a moved file, or a permissions failure reports as a
+  contradicted declaration, sending someone to correct a record that was right. This is
+  the same distinction GE-126b-2 draws between a store that was never found and a store
+  with nothing in it, and the wording should not diverge from it.
+
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "A declaration whose shape the check
+  can interpret is not reported as one it could not interpret" asserts an absence and is
+  green on arrival. INJECTION: classify as uninterpretable any declaration none of whose
+  keys are found in the file. Under that injection the four contradicted records the
+  parent names move out of the contradicted class and into the uninterpretable one, the
+  contradicted figure falls to zero, and the run still fails — so the parent's own clauses
+  stay green and only this clause goes RED. Revert must move them back. That asymmetry is
+  the whole reason this record exists as a separate file rather than a clause of its
+  parent.
+
+
+  SECOND NAMED MUTATION, FOR THE PARTITION CLAUSE. Count a declaration under every class
+  it matches instead of exactly one. Under that injection the stated figures exceed the
+  stated number of declarations read; this clause must go RED. A check whose figures do
+  not partition its population can report a reassuring zero in one class while the same
+  records sit in another, which is how a stated count stops meaning anything.

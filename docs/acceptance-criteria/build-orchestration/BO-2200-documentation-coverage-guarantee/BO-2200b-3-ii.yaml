@@ -1,0 +1,121 @@
+id: BO-2200b-3-ii
+components:
+  - build_orchestration
+  - doc_compliance
+readiness: approved
+priority: medium
+title: "Text that quotes a marker is not the same as text that carries one"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: not_started
+created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200b.yaml"
+criteria: |
+  Given placeholder-marker detection running over a markdown file,
+  When a marker word appears inside a fenced code block -- the block form of the inline-code
+    exemption the detector already applies to backticks,
+  Then it is not reported, because a fenced block is quoted material and quoting a marker is
+    not carrying one.
+
+  And given a marker word appearing in a markdown heading,
+  When it sits after other heading text rather than at the start of the heading,
+  Then it is not reported, because it is part of a title rather than a scaffolding marker --
+    and when it DOES open the heading text, it is still reported, so a genuinely stubbed
+    heading is not excused.
+
+  And given the PLACEHOLDER positional rule, which requires a preceding list bullet,
+  When the character before the word is a markdown emphasis marker rather than a list bullet
+    -- `*Placeholder*` -- then it is not reported; the rule must key on a bullet FOLLOWED BY
+    WHITESPACE, so that emphasis and list syntax are distinguished rather than conflated.
+
+  And the false-positive cost of every change here is measured PER MARKER and recorded next
+    to the rule, never as a single aggregate figure across all markers.
+
+  Coverage note: the last clause is the load-bearing one and is why this AC exists as a
+  separate record. The defect being corrected was not primarily a bad regex -- it was a
+  measurement taken for one marker (PLACEHOLDER, 2 repo-wide hits) and asserted for all six,
+  which left the marker responsible for the overwhelming majority of hits untightened while
+  the comment claimed there was no cost to leave it alone. A fix that corrects the regexes
+  and repeats the aggregate measurement has reproduced the defect in a new place.
+depends_on: [BO-2200b-3]
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-033 records both regex defects and the mis-scoped measurement, with the per-marker distribution that motivates this AC."
+  - path: scripts/build_placeholder_detection.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/doc-compliance.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/build_placeholder_detection.py
+  n_location_rule: "1 -- the shared scan loop plus the PLACEHOLDER positional regex"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "DO NOT apply a positional rule to the colon markers. `TODO:` is matched anywhere on the line by design, and the canonical true positive -- `Current outcome: TODO: Replace with the single must-achieve outcome` in a freshly installed CLAUDE.md -- has the marker mid-line after ordinary prose. Any rule requiring TODO: to sit at line start, after a bullet, or after a comment introducer silently drops the flagship case the gate exists for. This was checked against the real file before the fix was chosen."
+    - "The fenced-block rule must track state across lines and skip the fence delimiters themselves. A per-line regex cannot see a fence."
+    - "The heading rule must keep a marker that OPENS the heading text. Excluding headings wholesale would let a genuinely stubbed `## TODO: fill in` through."
+    - "Measure per marker, before and after, and write the per-marker counts into the source next to the rule. An aggregate count is the defect, not the evidence."
+delivers_to: null
+expects_from:
+  ac_id: BO-2200b-3
+  contract: "The marker-signature detection whose false-positive boundary this record tightens."
+test_spec:
+  - name: test_marker_inside_fenced_code_block_is_not_reported
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A TODO: inside a ``` fenced block is not reported, while an identical TODO: outside the block on the same file still is -- so the rule is shown to suppress by context rather than to suppress the marker."
+  - name: test_marker_after_heading_text_is_not_reported_but_opening_one_is
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "`### KI-BO-021 — TODO: ...` is not reported; `## TODO: fill this in` IS reported. Both halves in one test, because a heading rule demonstrated from only the suppressing side cannot distinguish a correct rule from a blanket heading exclusion."
+  - name: test_emphasis_is_not_a_list_bullet_for_placeholder
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "`*Placeholder* text is shown when empty.` is not reported, `**Placeholder** ...` is not reported, and `- PLACEHOLDER: fill in` still IS -- pinning the bullet-plus-whitespace rule and the recall it must preserve."
+  - name: test_canonical_mid_line_todo_marker_still_reported
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The real `Current outcome: TODO: Replace with ...` sentinel is still reported. This is the must-not-regress case: the tempting fix for the heading false positive is a positional rule on TODO:, which would silently drop the single most important true positive the gate has."
+  - name: test_real_known_issues_registers_scan_clean
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "Every real docs/known-issues/*.md register scans clean, asserted against the on-disk files rather than fixtures -- these registers describe the markers and so are the natural home of quoted-marker false positives."
+test_rationale: "Each descriptor pairs a suppression with a retention, because every defect in this area has been a rule that suppressed too much or too little and was measured from one side only. The fenced-block and heading descriptors each assert both the negative and the positive in the same test so a blanket exclusion cannot pass. The canonical-sentinel descriptor exists solely as a regression guard on the fix direction NOT taken -- a positional rule on TODO: would make the heading test pass and would break the gate's flagship case, and without an explicit test nothing would catch that. The real-artifact descriptor uses the on-disk registers rather than fixtures because a hand-written fixture reproduces the author's assumption about what a false positive looks like, which is exactly the bias that produced the original mis-measurement."
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHY THIS IS A SEPARATE RECORD RATHER THAN AN AMENDMENT TO BO-2200b-3. That record's
+  criteria are about signature-vs-length judgement -- whether a short doc is a stub. This
+  one is about context: whether text that mentions a marker is carrying one. They are
+  different boundaries and the second was not contemplated by the first.
+
+  THE MEASUREMENT CLAUSE IS THE POINT. Filed alongside KI-CG-033, which records that the
+  claim of "no repo-wide false-positive cost" for TODO/FIXME/"Replace with" was measured on
+  PLACEHOLDER alone. A per-marker scan of 5,634 md/yaml files gives todo: 31, todo 16,
+  <!-- question: 16, replace with 3, placeholder 2 -- so TODO accounts for 47 of 68 hits and
+  PLACEHOLDER for 2, and the tightening landed on PLACEHOLDER.

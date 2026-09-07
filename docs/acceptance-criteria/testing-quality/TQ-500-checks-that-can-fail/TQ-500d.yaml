@@ -1,0 +1,53 @@
+id: TQ-500d
+components:
+  - testing_quality
+  - build_orchestration
+title: "The written rules never tell you the missing check is unnecessary"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Guidance that says when an early pass is expected, and what to prove instead.
+
+  The rules today treat a test that passes straight away as a sign the work was
+  done in the wrong order. For this family of work that reading is exactly
+  inverted — passing straight away is the correct result — so the one question
+  worth asking looks like it has already been answered. After this, the guidance
+  names the exception plainly and points at the substitute proof it requires.
+depends_on:
+  - TQ-500
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500d-1
+  - TQ-500d-2
+  - TQ-500d-3
+implemented_by: []
+change_target:
+  - prompt
+  - docs
+risk_surface: internal
+documentation_triggers:
+  - how-to
+  - reference-doc
+notes: |
+  The sharpest part of the recorded defect is not that a check is absent — it is
+  that its absence is currently documented as correct. Everyone who followed the
+  written rule behaved properly and none of them had reason to ask the next
+  question. Until the guidance stops asserting the inverse, every other part of
+  this goal is advice competing with a rule.

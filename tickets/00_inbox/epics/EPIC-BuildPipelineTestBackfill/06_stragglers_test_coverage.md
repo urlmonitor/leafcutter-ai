@@ -29,7 +29,7 @@ agents:
   documentation-expert: not_needed
   pr-reviewer: needed
   commit: needed
-  pull-request: needed
+  pull-request: not_needed
 ---
 
 # 06: Green test coverage for BP-400 / BP-900 stragglers
@@ -96,7 +96,6 @@ tests:
 - [x] test-runner — 2026-07-15 12:00
 - [ ] pr-reviewer
 - [ ] commit
-- [ ] pull-request
 
 ## Comments
 

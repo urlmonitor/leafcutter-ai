@@ -1,0 +1,97 @@
+id: ACS-1300c-4
+components:
+  - ac_store
+title: "The refusal is written down beside the field it protects, where the next tool author will find it"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a tool author who intends to write a coverage entry from derived evidence, and
+    who has read the reference documentation for the coverage field and nothing else,
+  When they read the section covering that field,
+  Then it states that restoring a coverage entry never promotes a record's finished
+    state, names the tool that owns that promotion, and says the rule is a standing
+    refusal rather than a feature not yet built,
+  And it states the byte-stability rule in the form that forbids rewriting an untouched
+    record at all, rather than the form that permits rewriting it with unchanged values,
+  And it states that evidence the writer cannot judge is reported as an abstention rather
+    than skipped,
+  And a tool built by applying only what that section says satisfies the finished-state
+    check, the byte-stability check and the abstention check without its author having
+    read any acceptance criterion,
+  And the section is reachable from the reference page for the coverage field itself, not
+    only from a page about this repair, so an author who never heard of the repair still
+    meets the rule.
+depends_on:
+  - ACS-1300c
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: relates-to
+    status: exists
+    relevance: "THE HOME. This is the page a tool author reads to learn what the coverage field is, so it is where a rule about writing that field has to live. The page currently documents the field's dual purpose and the parent back-link protocol; the refusal belongs alongside them."
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300c-1.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Guarantee 1, whose wording this section must carry. The refusal is documented here in the reference, not restated in the ACS-1300a how-to, so it has exactly one authoritative home and the how-to points at it."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Owns the byte-stability rule and states it in the exact form the second clause requires. Quote its distinction rather than paraphrasing it — the paraphrase that loses 'do not write' in favour of 'write the same' is the whole failure this clause guards."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "THE WRITTEN RULE AND THE ENFORCED RULE MUST BE THE SAME RULE. Write this section against ACS-1300c-1 AS IMPLEMENTED, after it lands, not against its criteria. A reference stating a rule the code does not enforce is the contradiction ACS-1200a had to correct on this very page, and the reference is the copy people believe."
+  - "STATE THE BYTE-STABILITY RULE IN THE DO-NOT-WRITE FORM, QUOTING TQ-400e-1's DISTINCTION RATHER THAN PARAPHRASING IT. The paraphrase that loses 'do not open for writing' in favour of 'write the same values back' is the whole failure this clause guards: an author who reads the weaker form builds the bulk rewrite that ACS-1300c-2 says cannot be retrofitted."
+  - "SAY EXPLICITLY THAT THE FINISHED-STATE RULE IS A STANDING REFUSAL, NOT A FEATURE NOT YET BUILT, and name `scripts/ac_store/mark_ac_done.py` as the owner of that promotion. A rule that reads as unfinished work is an invitation to finish it — TQ-400f, authored and closed unbuilt on 2026-09-01, is the evidence that this specific rule does get re-derived."
+  - "THE SECTION MUST BE SUFFICIENT TO COMPLY, NOT MERELY TO BE INFORMED. It must state what it takes to satisfy each of the three rules, not only that they exist. 'The section mentions the refusal' is satisfied by a sentence; the criterion is a tool built from this section alone passing all three checks."
+  - "REACHABLE FROM THE COVERAGE FIELD'S OWN REFERENCE ENTRY, NOT ONLY FROM A HEADING ABOUT THIS REPAIR. The author it exists to stop is writing the next unrelated tool and has never heard of this repair. Add the cross-reference at the field definition itself in `docs/reference/ac-schema.md`."
+  - "ONE HOME, NOT THREE. This section is the authoritative statement; ACS-1300a-4's how-to and this tree's AC notes point at it and must not restate it. Three copies of a standing rule drift, and the copy the reader happens to find is the one that governs."
+  - "THE DELIVERABLE IS THE DOCUMENT. No behavioural AC in this tree may be closed by pointing at it, and in particular the refusal is enforced by ACS-1300c-1 and ACS-1300c-1-i, never by the existence of this section."
+  - "Front-matter and placement per this repository's doc conventions; the page is already tracked and indexed, so this is an amendment to an existing reference rather than a new page."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300c-1
+  contract: "The refusal as enforced, so the written rule and the enforced rule are the same rule. A reference stating a rule the code does not enforce is the contradiction ACS-1200a had to correct on this very page."
+test_required: false
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  SATISFIES ACS-1300c's documentation_triggers: [reference-doc]. The parent's notes give
+  the reason and it is evidence-backed rather than procedural: guarantee 1 is a standing
+  rule the next tool author must not re-derive, and TQ-400f — authored and then closed
+  unbuilt on 2026-09-01, partly for approaching this line — is the proof that it does get
+  re-derived. A refusal that lives only in an acceptance criterion's notes is unfindable
+  by someone who is not reading that criterion, which is everyone writing the next tool.
+
+  THE FOURTH CLAUSE IS WHAT SEPARATES THIS FROM A SUMMARY. "The section mentions the
+  refusal" is satisfied by a sentence. "A tool built from this section alone passes all
+  three checks" fails when the section states the rule but omits what it takes to comply —
+  which is the realistic defect, and the reason the byte-stability clause insists on the
+  do-not-write form. An author who reads "write the same values back" will build the
+  bulk-rewrite that ACS-1300c-2 says cannot be retrofitted.
+
+  THE FIFTH CLAUSE IS ABOUT REACHABILITY, and it is the difference between a rule and a
+  rule someone finds. Documented under a heading about this repair, the refusal is
+  invisible to the author of the next unrelated tool that writes the same field — and
+  that author is exactly the person it exists to stop.
+
+  THE FIREWALL: this AC's deliverable is the document. No behavioural AC in this tree may
+  be closed by pointing at it, and in particular the refusal is enforced by ACS-1300c-1
+  and its L3, never by the existence of this section.
+
+  ONE HOME, NOT THREE. The refusal is stated here; ACS-1300a-4's how-to points at it and
+  the tree's notes point at it. Three copies of a standing rule drift, and the copy the
+  reader happens to find is the one that governs.

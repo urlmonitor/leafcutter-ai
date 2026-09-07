@@ -26,15 +26,23 @@ amended_by:
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
   - "split: BP-100 -> BP-100 + BP-101, 2026-06-08"
   - "2026-06-22 [commit-agent/feat/ac-limits-ac-tree-split-improvements]: added child_limit_override: 13. BP-100 currently has 12 L1 children (BP-100a through BP-100l), exceeding the default cap of 7. Temporary waiver pending BP tree cleanup / horizontal split."
+  - "2026-08-26 [ac-tree-split]: covered_by CORRECTED; child_limit_override left at 13, unchanged. Two changes, recorded together because one file carries both. (1) DRIFT FIX: covered_by listed 7 L1 children (a, b, c, i, j, k, m) while 13 L1s existed on disk — d, e, f, g, h and l had never been listed. This is the stale-covered_by shape documented in CLAUDE.md under 'AC-store commits — stage the parent alongside the child': the AC hooks validate only the files present in a commit's index, so a parent that is never staged is never checked, and its silence is not a pass. Each of the six was verified level: L1, status: active, superseded_by: null before being added. (2) SPLIT: BP-100n added as a new L1 sibling, created by the Pattern C split of BP-100k (8 L2 children -> 5 + 3). ARITHMETIC, because it is not what it looks like: there are now 14 BP-100x L1 files on disk, but BP-100b carries status: superseded_by — retained as the audit trail of its own June 2026 split into BP-100j/k/l — and ACS-100c-6 excludes superseded children from the cap count. check_ac_limits.py therefore counts 13, and the pre-existing override of 13 already accommodates it. The waiver was NOT raised to make room for BP-100n; it is left at exactly the current count, so the next L1 added to BP-100 trips the gate and forces this conversation rather than sliding under a margin. covered_by lists all 14 including the superseded BP-100b, matching the pre-existing convention on this file. The override remains temporary: 13 L1s against a default cap of 7 is a Pattern A horizontal split waiting to happen, and correcting covered_by has made the real size visible rather than created it."
 superseded_by: null
 covered_by:
   - BP-100a
   - BP-100b
   - BP-100c
+  - BP-100d
+  - BP-100e
+  - BP-100f
+  - BP-100g
+  - BP-100h
   - BP-100i
   - BP-100j
   - BP-100k
+  - BP-100l
   - BP-100m
+  - BP-100n
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

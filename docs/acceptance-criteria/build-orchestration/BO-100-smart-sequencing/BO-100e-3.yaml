@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a run over a set of work fixed when the run started, containing a chain
@@ -48,13 +48,132 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "KI-BO-025 — the scope of the fix is work that was already there and never taken on, not work that arrives later."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "Where plannedTicketPaths, recheckEpicTicketSet and compareEpicTicketSets are described — the existing set-comparison machinery whose baseline this record redefines."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The real_artifact angle and the EPIC-PhantomDoneFilesTouched incident: a depends_on parser tested only against hand-typed indented fixtures was a no-op on every real ticket."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: "The run's fixed set, established once at the start and compared against on every later look."
+    properties:
+      run_set:
+        type: array
+        items: {type: string}
+        description: "Ticket paths enumerated from the epic folder at the moment the run started. Fixed for the life of the run."
+      run_set_established_at:
+        type: string
+        description: "Marker for when the enumeration was taken, so a later look can be shown to have reused it rather than re-derived it."
+      set_drift:
+        type: object
+        description: "Identity comparison of the run set against the epic folder as it stands now. Reuses the existing BO-300a-5 comparison rather than a second one."
+        properties:
+          additions: {type: array, items: {type: string}}
+          removals: {type: array, items: {type: string}}
+          verified: {type: boolean, description: "False when the re-read could not be performed. Fails closed — never an empty set."}
+        required: [additions, removals, verified]
+    required: [run_set, set_drift]
+  reference_file_path: "templates/workflows-js/build-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "SEPARATE THE SET FROM THE SCHEDULE — the load-bearing constraint of this record, and the one the criteria imply without naming. Today plannedTicketPaths (~line 2156) is derived from the planner's `batches`, so the run's 'set of work' IS the first plan's schedule. Under KI-BO-025 that meant a 37-ticket epic had a 17-ticket baseline. The run set must instead come from a single start-of-run enumeration of the epic folder — the same enumeration recheckEpicTicketSet already performs — taken ONCE and reused unchanged at every later look."
+    - "REUSE THE EXISTING COMPARISON. compareEpicTicketSets and epicRecheckReport already implement identity comparison (never by count) and already fail closed on an unreadable re-read (`readable !== true`). Feed them the new baseline; do not write a second comparison. A duplicated comparison is how the loop and the completion report come to disagree about what the run was for."
+    - "DO NOT REOPEN BO-300a-5. Work that appears after the run started is detected, reported and left outstanding — never built and never discarded. This is the false-positive control for the whole family: a fix that loops correctly but absorbs mid-run additions passes every positive assertion in BO-100e-1, BO-100e-2 and BO-100e-4 and is still wrong. Absorbing later additions would also destroy BO-100e-2's termination argument, because a growing set has no stopping point."
+    - "A VANISHED PIECE IS NOT A SATISFIED PREREQUISITE. A piece removed from the epic folder mid-run must not be begun, and work whose only prerequisite was that piece must not become eligible by its removal. This is the mirror of BO-100e-1-i: neither a failed prerequisite nor an absent one is a successful one, and the removal path must reach the same fail-closed verdict."
+    - "CHANGING THE BASELINE CHANGES WHAT COUNTS AS AN ADDITION. Under today's conflation, tickets that were present at plan time but never scheduled are already eligible to be reported as mid-run additions. Widening the baseline to the true start-of-run set must be shown not to suppress genuine additions and not to invent new ones — assert both directions against the existing BO-300a-5 behaviour."
+    - "READ THE REAL ARTIFACT. The start-of-run enumeration parses on-disk NN_*.md ticket frontmatter, including depends_on lists as the project's writer actually emits them (PyYAML block sequences at column 0). A fixture hand-typed with indented dashes reproduces the exact bias that made the files_touched parser a no-op on every real ticket."
+    - "Deployed/template parity (ADR-001) applies."
+delivers_to:
+  agent: python-coder
+  contract: "The run's fixed set { run_set, run_set_established_at, set_drift{additions, removals, verified} }, established by one start-of-run enumeration of the epic folder and reused unchanged at every look. Replaces plannedTicketPaths as the baseline that compareEpicTicketSets is given at all four epic returns. Consumed by BO-100e-2 (look ceiling derives from its cardinality), BO-100e-2-i (the relation is evaluated over it) and BO-300a-5's addition report."
+expects_from:
+  ac_id: BO-100e-1
+  contract: "The repeated-eligibility-look loop, which must take its candidate pieces from this fixed set rather than from each look's planner reply, and the sequenced-label-response harness extension needed to script an epic folder that changes mid-run."
+test_spec:
+  - name: test_three_layer_chain_present_at_the_start_is_built_in_full
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Positive baseline for this record: a three-deep chain fixed at the start is carried to the end, so the refusal below cannot be satisfied by a run that builds nothing."
+  - name: test_piece_added_after_the_run_started_is_not_built
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The mandatory false-positive control: a prerequisite-free piece appears in the epic folder mid-run and receives no phase dispatch, even though it would be eligible if it were in the set."
+  - name: test_run_set_is_identical_at_the_last_look_and_the_first
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "run_set in the terminal payload equals the start-of-run enumeration by identity, not by count, after a run during which the folder both gained and lost a piece."
+  - name: test_added_piece_is_reported_outstanding_not_discarded
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The new fixed-set baseline is piped into the REAL existing comparison (compareEpicTicketSets / epicRecheckReport): the added piece surfaces in set_drift.additions and the run withholds its completion claim, exactly as BO-300a-5 already requires."
+  - name: test_widened_baseline_does_not_suppress_or_invent_additions
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Regression guard on the baseline swap: a run with no mid-run change reports zero additions (the never-scheduled-but-present tickets are no longer misread as additions), while a run with a real addition still reports exactly that one."
+  - name: test_removed_piece_is_not_begun_and_does_not_satisfy_its_dependants
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A piece disappears from the folder mid-run: it receives no dispatch, and the work whose only prerequisite it was stays withheld rather than being released by its absence."
+  - name: test_start_of_run_set_is_read_from_real_on_disk_ticket_frontmatter
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "The epic folder fixture is written by the project's own ticket writer (PyYAML block sequences at column 0), not hand-typed; the enumeration and its depends_on parsing are exercised against those bytes in a fresh process."
+  - name: test_fixed_set_is_established_through_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "templates/workflows-js/build-feature.js (E2 top-level body, via run_workflow_under_e2)"
+    description: "The run set is shown to be established by the workflow body and consumed by the look loop and by all four epic returns — not computed in a helper whose result the loop ignores."
+test_rationale: |
+  This record is the family's false-positive control, so its tests have to be able
+  to fail on a fix that is otherwise correct. A run that loops properly but absorbs
+  a mid-run addition satisfies every positive assertion in BO-100e-1, BO-100e-2 and
+  BO-100e-4; only the refusal descriptors here can catch it.
+
+  The two seam descriptors exist because the change is a baseline swap on machinery
+  that already ships and already has behaviour someone depends on. Feeding the new
+  baseline into the real compareEpicTicketSets, in both the no-change and the
+  real-addition direction, is the only way to show the swap did not quietly change
+  what BO-300a-5 reports.
+
+  real_artifact is charged rather than assumed: the enumeration parses depends_on
+  out of ticket frontmatter, and the repo has already shipped a frontmatter parser
+  that was a complete no-op on every real ticket while passing against hand-typed
+  indented fixtures.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-31
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -66,3 +185,5 @@ notes: |
 
   The third scenario is the mirror of BO-100e-1-i: neither a failed prerequisite nor
   a vanished one may be read as a satisfied one.
+change_target: pipeline
+risk_surface: contract_boundary

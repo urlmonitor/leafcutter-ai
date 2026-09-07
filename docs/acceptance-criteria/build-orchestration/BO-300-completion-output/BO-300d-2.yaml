@@ -7,8 +7,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a run whose closing report names four unbuilt pieces,
@@ -53,13 +53,118 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Amended 2026-08-26 to read that a cause is stated for a piece of unbuilt work only where the drive can establish that cause from what it holds. This record sits on top of that clause and applies it to every unbuilt piece rather than only to the ones the re-read surfaced."
-delivers_to: null
-expects_from: null
-assigned_agent: null
-estimated_complexity: null
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- epicRecheckReport() (deployed ~1952) is where the cause is chosen and worded, and it is the single location that must change. compareEpicTicketSets() (deployed ~1838) is the SOURCE of the set and is CORRECT: its additions filter caught the twenty and set the withheld verdict. Do not rewrite it. templates/workflows-js/build-ticket.js is the TWIN and correctly carries no counterpart -- inspect and say so in the sign-off."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_unbuilt_work_cause_attribution.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_epic_ticket_set_recheck.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_epic_recheck_readable_flag_polarity.py"
+  constraints:
+    - "THE ESTABLISHABLE SET IS FIXED AND CLOSED. Plan membership plus the run's own completed record yields PLANNED AND NOT FINISHED; a recorded outcome for the piece saying the work stopped short yields STOPPED PART-WAY; everything else yields CAUSE NOT DETERMINED. Do not add a fourth label, and do not introduce a plan-time snapshot of the body of work in order to split the undetermined bucket -- BO-300a-5's amendment makes satisfiability without such a snapshot a constraint on the fix, not an oversight."
+    - "THE FALSE ATTRIBUTION IS THE THING THAT MUST FAIL, AND IT IS THE FAMILY'S SHARPEST FALSE GREEN. The code as it stands already emits a well-formed report with the right pieces and the right withheld verdict, so any test asserting merely that unbuilt work was reported passes against the BROKEN implementation as readily as the fixed one. The load-bearing assertion is on the CAUSE VALUE for a piece known never to have been selected: the emitted text must carry the undetermined wording and must NOT say the work was added to the epic after the plan was fixed."
+    - "RENAMING THE FIELD IS NOT THE FIX. The defect lives in the operator-facing sentence, not in the identifier discovered_after_planning. Changing the field name while the emitted action text still reads 'This work was added to the epic after the plan for this drive was fixed' leaves KI-BO-026 exactly where it is. Assert on the emitted text."
+    - "UNDETERMINED IS AN OBLIGATION, NOT AN ESCAPE HATCH. An implementation that labels EVERY unbuilt piece undetermined satisfies the honesty clause and destroys the two distinctions the run CAN make. The establishable cases must be pinned by their own assertions so that degenerate implementation goes red. The undetermined piece is still named, still counted (BO-300d-1) and still carries an action (BO-300d-3) -- dropping it from the report rather than labelling it fails this record."
+    - "DO NOT LOSE THE CORRECT VERDICT. compareEpicTicketSets already yields the right unbuilt set and epic_complete false. That half is the reason KI-BO-025 was caught at all rather than shipping as a false-complete. A change that fixes the label and loses the withheld claim passes every attribution assertion in this record and is a regression -- the control descriptor exists for exactly that."
+    - "FAIL CLOSED ON A MISSING INPUT. If the set the plan was built from cannot be read back, every piece goes to undetermined and the report says the plan set could not be read. Follow the polarity rule BO-300a-5-i established: only an affirmative confirmation that the set was read counts, and a read that never claims success is treated exactly as one that failed."
+    - "STALE VOCABULARY IS PROHIBITED. 'discovered after planning' survives in BO-300a-5-i and BO-300a-5-iii and must not be reintroduced in emitted text or in a new identifier."
+    - "COMPLEXITY NOTE ON THE SURFACE. templates/workflows-js/*.js is JavaScript assigned to python-coder, per the approved BO-300a-5 precedent on this same file; the workflow is exercised from unittest through the .mjs harness by subprocess. Flagged rather than split -- see the enrichment report."
+delivers_to:
+  - agent: python-coder
+    contract: "For each unbuilt piece, exactly one cause drawn from the closed set {planned and not finished, stopped part-way, cause not determined}, present in the emitted completion text -- the taxonomy BO-300d-3 attaches an action to and BO-300d-2-i partitions the count across."
+  - agent: reference-author
+    contract: "The exact, closed set of cause labels a run can emit, and for each the evidence the run relied on to establish it. BO-300d-5's reference entry is held to set-equality with this in both directions, so any label added or reworded here is a change to that document's contract."
+expects_from:
+  - ac_id: BO-300a-5
+    contract: "The set the plan was built from, the completion-time re-read of the body of work, the named unbuilt set, and the already-correct withheld completion verdict. This record changes only how a cause is chosen and worded for the pieces that set contains."
+  - ac_id: BO-300d-1
+    contract: "The stated unbuilt count, so the per-cause attribution is applied to exactly the pieces that count covers."
+test_spec:
+  - name: test_a_planned_piece_with_no_completed_record_is_reported_as_planned_and_not_finished
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Piece P is in the set the plan was built from, absent from the run's completed record, and has no recorded outcome. Assert the emitted text states that specific cause for P. This is one half of the anti-degeneracy pair: an implementation that labels everything undetermined must go red here."
+  - name: test_a_planned_piece_with_a_stopped_short_outcome_is_reported_as_stopped_part_way_naming_what_stopped_it
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Piece Q is in the set the plan was built from and the run holds a recorded outcome saying the work stopped short. Assert the emitted text states stopped part-way for Q and reproduces what that recorded outcome says stopped it. Second half of the anti-degeneracy pair."
+  - name: test_a_piece_absent_from_the_plan_is_reported_undetermined_and_never_as_added_after_the_plan_was_fixed
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Pieces R and S were not in the set the plan was built from. Assert the emitted text states their cause as not determined in those terms, and assert it does NOT claim the work was added to the epic after the plan was fixed, nor that it was passed over deliberately. THIS IS THE DESCRIPTOR THAT SEPARATES THE FIXED IMPLEMENTATION FROM THE BROKEN ONE -- the broken code emits a well-formed report with the right pieces and the right verdict and fails only here. Assert on the emitted text, not on the name of an internal field."
+  - name: test_relabelling_preserves_the_unbuilt_count_and_the_withheld_completion_claim
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Control against regression in the half that already works: in the same four-piece scenario, assert the report still states the unbuilt count and still contains no statement that the epic is complete. A fix that corrects every cause label while losing the withheld verdict passes all three descriptors above."
+  - name: test_the_stated_cause_reaches_the_operator_facing_message_and_selects_the_action
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "From the workflow's real completion entry point, assert the cause the establishability rule produced is the cause present in the emitted message AND that it is consumed in control flow -- it is what selects which action text is attached. A cause computed into a field that the message never reflects is inert; asserting it was produced cannot tell the difference."
+  - name: test_the_deployed_workflow_emits_no_fabricated_cause
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "Build the workflow into a throwaway target directory and drive the DEPLOYED copy through the same scenario, asserting the never-selected piece carries the undetermined wording there too. build-feature.js reaches real runs only through build.py, so a fixed source with a stale or unshipped deployed copy keeps emitting the fabricated cause where it matters. Build into a temp dir -- never over this workspace's install tree, per KI-BP-016."
+  - name: test_an_unreadable_plan_set_yields_all_causes_undetermined_and_says_so
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The set the plan was built from cannot be read back. Assert every unbuilt piece is reported with its cause not determined, and that the report states the plan set could not be read. A missing input must fail closed to an acknowledged gap, never to a confident cause and never to silence."
+test_rationale: |
+  The defect is not a missing report -- it is a report that is right about everything
+  except the one sentence that sends the reader somewhere. So the coverage is shaped
+  around a single discrimination: does the emitted text state a cause the run can
+  establish, and does it refuse to state one it cannot. Three descriptors are needed
+  rather than one because the two failure modes are opposite. Asserting only the
+  undetermined case is satisfied by labelling everything undetermined, which throws
+  away the two distinctions that are genuinely available; asserting only the
+  establishable cases leaves the fabricated cause in place for the never-selected
+  set, which is KI-BO-026 itself. The control descriptor is separate again because
+  the correct half of the current behaviour -- the count and the withheld finished
+  claim -- is not protected by any assertion about causes, and a relabelling that
+  drops it would read as a complete pass. Reachability is charged because a cause
+  that never reaches the text, or that reaches it without selecting an action, is
+  the internal-structure version of the same silence. The deployed angle is charged
+  once for the whole family here, on the record whose defect is a wrong operator-facing
+  string in real runs. The failure angle covers the missing-input path, where the
+  cheapest wrong answer is to guess.
 origin_agent: business-analyst
 created: 2026-08-26
-amended_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-08-31'
+  note: Assigned python-coder (epicRecheckReport() in templates/workflows-js/build-feature.js,
+    per the approved BO-300a-5 precedent). Added estimated_complexity L, a structured
+    it_requirements mapping fixing the closed cause set, naming the field-rename non-fix,
+    forbidding the degenerate all-undetermined implementation and pinning the withheld-verdict
+    regression risk, delivers_to contracts to python-coder and to reference-author
+    (BO-300d-5's taxonomy parity), expects_from against BO-300a-5 and BO-300d-1, a
+    seven-descriptor test_spec over four angles (criterion, reachability, deployed,
+    failure) with test_rationale, and change_target/risk_surface. criteria untouched;
+    readiness and priority left for the approval gate.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by:
   - BO-300d-2-i

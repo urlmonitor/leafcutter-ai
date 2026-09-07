@@ -55,7 +55,7 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/02_TICKET-20260721-BP-1400a-1-i.md
+- tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/02_TICKET-20260721-BP-1400a-1-i.md
 notes: |
   Negative acceptance scenario for the web-app build/type-check gate. The
   deliberately type-erroring change is transient/scoped to the verification (a

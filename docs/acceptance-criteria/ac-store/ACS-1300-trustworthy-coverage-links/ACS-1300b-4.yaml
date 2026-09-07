@@ -1,0 +1,89 @@
+id: ACS-1300b-4
+components:
+  - ac_store
+  - build_orchestration
+title: "A sequence diagram shows where the link gets recorded and which delivery paths miss that point"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a reader who knows a requirement's coverage link is sometimes not recorded and
+    wants to know at which point in a delivery it should have been,
+  When they read the sequence diagram,
+  Then it shows the ticket route from the completion of work through to the link being
+    written, with the link-recording step as an identified participant and the condition
+    that triggers it shown on the interaction that reaches it,
+  And it shows at least one delivery path that completes without that interaction ever
+    occurring, so the reader can see the omission rather than infer it from the absence
+    of an arrow,
+  And it distinguishes a path that reaches the step from a path that is exempt from it,
+    so the two are not read as the same outcome,
+  And the participants and the ordering it shows match the delivery paths the
+    enumeration classifies, so a reader who runs the enumeration and a reader who reads
+    the diagram reach the same picture,
+  And it does not depict the search behaviour of the link-recording step itself, which
+    is not what this L1 is about.
+depends_on:
+  - ACS-1300b
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300b-1.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The enumeration the diagram must agree with. The diagram illustrates the classification; it is not a second source for it, and where the two disagree the enumeration is right because it is derived."
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: relates-to
+    status: exists
+    relevance: "The step to draw as a participant, and its trigger condition — the ac_traceability key, absent means silent skip (:82-89). That condition is the single most load-bearing thing on the diagram."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: relates-to
+    status: exists
+    relevance: "The existing home for delivery-flow diagrams and dispatch topology. This diagram belongs in that vocabulary rather than inventing a second notation for the same actors."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "THE PARTICIPANT SET AND THE CLASSIFICATION ARE TAKEN FROM ACS-1300b-1's DERIVED ENUMERATION, NOT FROM THE AUTHOR'S READING OF THE CODE. Where the diagram and the enumeration disagree the enumeration is right, because it is derived. A diagram drawn from a reading of the source drifts the moment a path is added and there is nothing to catch it."
+  - "DRAWN IN THE EXISTING DELIVERY-FLOW VOCABULARY of `docs/architecture/agent_delivery_workflows.md` — the same actor names and the same notation. A second notation for the same actors makes the two documents describe two systems."
+  - "THE TRIGGER CONDITION IS THE LOAD-BEARING ELEMENT AND MUST BE ON THE INTERACTION, NOT IN A CAPTION. `templates/agents/ac-fulfillment-gate.md` skips silently when a ticket carries no `ac_traceability` key (:82-89). A reader who cannot see that condition on the arrow cannot see why a path misses the step."
+  - "THREE OUTCOMES MUST BE VISUALLY DISTINCT: reaching, bypassing, exempt. A bypassing path must be shown completing WITHOUT the interaction occurring — the omission drawn, not inferred from a missing arrow, because a missing arrow also looks like an incomplete diagram."
+  - "SCOPE FENCE, NOT A STYLE NOTE: do not depict what the link-recording step SEARCHES. The stale diagnosis this tree had to correct was about exactly that, and drawing it re-seeds it and puts the shipped 2026-08-26 fix back on the table as though it were open."
+  - "THE DELIVERABLE IS THE DIAGRAM AND NOTHING ELSE. No behavioural AC in this tree may be closed by pointing at it. A diagram showing a hand-off that does not exist looks exactly like a diagram showing one that does."
+  - "Placed and front-mattered to this repository's doc conventions and reachable from `docs/INDEX.md` after the doc-index build phase; mermaid, per the existing architecture-diagram convention."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1300b-1
+  contract: "The classified enumeration of delivery paths, which fixes both the participant set the diagram draws and the reaching/bypassing/exempt distinction it must show."
+test_required: false
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  SATISFIES ACS-1300b's documentation_triggers: [sequence-diagram]. The parent's notes
+  give the reason for that choice and it is worth keeping in view: the subject is WHERE
+  in a multi-actor flow the link gets written and which paths miss that point, which is
+  a question only an interaction diagram answers legibly. No how-to here — this is
+  behaviour that happens on its own, not a command anyone invokes.
+
+  THE FIREWALL: this AC's deliverable is the diagram and nothing else. No behavioural AC
+  in this tree may be closed by pointing at it. A diagram showing a hand-off that does
+  not exist looks exactly like a diagram showing one that does.
+
+  THE FOURTH CLAUSE IS THE ONE THAT KEEPS IT HONEST OVER TIME. A diagram drawn from the
+  author's reading of the code drifts the moment a path is added; a diagram required to
+  match the derived enumeration has a mechanical referent, and the mismatch is findable.
+
+  THE FINAL CLAUSE IS A SCOPE FENCE, not a style note. The stale diagnosis this tree had
+  to correct was about what the link-recording step searches. Drawing that detail here
+  would re-seed it, and would put the shipped 2026-08-26 fix back on the table as though
+  it were still open.

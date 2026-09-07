@@ -1,0 +1,40 @@
+id: AGC-100
+title: "Use the same trusted specialists wherever work happens"
+component: agent-compatibility
+components:
+  - agent_registry
+  - build_pipeline
+  - template_compiler
+  - skills_system
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Teams can choose the same trusted specialists regardless of the assistant they use.
+  Adding or improving a specialist makes that capability available everywhere
+  Leafcutter supports, without requiring multiple versions to be maintained and
+  without disrupting existing users.
+depends_on: []
+covered_by:
+  - AGC-100a
+  - AGC-100b
+  - AGC-100c
+  - AGC-100d
+  - AGC-100e
+  - AGC-100f
+implemented_by: []
+origin_agent: product-owner
+created: 2026-08-29
+amended_by:
+  - action: approved
+    agent: user
+    date: 2026-08-30
+superseded_by: null
+change_target:
+  - pipeline
+  - model
+  - config
+risk_surface: contract_boundary

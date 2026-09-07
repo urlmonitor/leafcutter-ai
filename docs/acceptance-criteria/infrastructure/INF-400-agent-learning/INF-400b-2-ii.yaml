@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400b-2.yaml"
@@ -121,8 +121,18 @@ origin_agent: BrainCandy
 created: 2026-08-26
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/agents/test_all_documented_emission_shapes_declare_the_same_key_set.py"
+  - "unit_tests/agents/test_a_divergence_planted_in_one_surface_is_reported.py"
+  - "unit_tests/agents/test_an_unparseable_emission_object_fails_rather_than_passes.py"
+  - "unit_tests/agents/test_a_newly_declared_emission_surface_is_discovered_not_ignored.py"
+  - "unit_tests/agents/test_each_restating_surface_references_the_normative_source_resolvably.py"
+  - "tests/knowledge/test_the_28_shipped_records_conform_to_the_documented_shape.py"
+implemented_by:
+  - "templates/skills/signoff/SKILL.md"
+  - "templates/agents/product-owner.md"
+  - "templates/agents/business-analyst.md"
+  - "templates/agents/it-po.md"
 notes: |
   Filed from KI-KM-010 (severity high, 2026-08-26), fix direction item 2:
   "Reconcile section 7 step 4 against the v3 templates so `ticket` versus

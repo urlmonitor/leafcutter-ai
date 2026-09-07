@@ -1,13 +1,13 @@
 ---
-title: "Project Roadmap"
+title: Project Roadmap
 type: reference
 status: active
 created: 2026-08-25
 last_updated: 2026-08-25
 components:
-  - infrastructure
+- infrastructure
+description: Overview of Project Roadmap.
 ---
-
 <!-- AUTO-GENERATED — do not edit by hand. Source: docs/roadmap.json -->
 <!-- Regenerate manually: python portable-dev-workflow/scripts/commit_guardian/regenerate_roadmap_mirror.py --manual -->
 <!-- Generated: 2026-08-25T07:02:07Z -->

@@ -50,7 +50,7 @@ ARCHITECTURE: Reads .build_manifest.json written by build.py
     ``ground`` is rejected (``REJECTED EXEMPTION ENTRY: <key> reason=no
     ground stated``) and its artifact falls through to the GAP form.
 
-    MISSING-TEMPLATE REPORTING (BP-100k-6): a manifest key that IS recorded
+    MISSING-TEMPLATE REPORTING (BP-100n-1): a manifest key that IS recorded
     but whose template file has been deleted from disk is a third, distinct
     case — reported as ``UNCOMPARABLE: MISSING <key> reason=recorded but not
     found on disk``, counted in its own ``missing=<X>`` RESULT field (never
@@ -408,7 +408,7 @@ def _scan_templates(
             tpl_path = repo_root / key
 
             if not tpl_path.exists():
-                # BP-100k-6: deletion is the most complete form of drift.
+                # BP-100n-1: deletion is the most complete form of drift.
                 missing += 1
                 print(
                     f"UNCOMPARABLE: MISSING {key} reason=recorded but not found on disk",
@@ -508,7 +508,7 @@ def main() -> int:
     against the SAME exemption registry, then prints exactly one aggregate
     ``RESULT verified=<N> uncomparable=<M> drifted=<D> missing=<X>
     unreadable=<Y>`` summary line combining both families (BP-100k-3;
-    ``missing`` added BP-100k-6; ``unreadable`` added by adversarial review
+    ``missing`` added BP-100n-1; ``unreadable`` added by adversarial review
     round 2's B-2).
 
     Returns:
@@ -519,7 +519,7 @@ def main() -> int:
         per BP-100k-3-i.yaml's own criterion, which permits any exempt count
         on a freshly built tree); 1 when drifted > 0, missing > 0, or
         unreadable > 0 (BLOCKED — a deleted, still-recorded template is
-        drift (BP-100k-6), and an unreadable, still-recorded template is
+        drift (BP-100n-1), and an unreadable, still-recorded template is
         drift too (B-2)); 2 in every other non-clean case — gaps > 0 (an
         undeclared, uncomparable artifact — the run skipped something with
         no stated ground and must not report as clean — AC-4), the manifest
@@ -649,7 +649,7 @@ def main() -> int:
     # break it down so only GAPS drive the verdict and a non-zero gaps count is
     # never described as clean. Mirrors check_output_drift.py — the two gates
     # must report in the same vocabulary or a reader cannot compare their runs.
-    # ``missing`` (BP-100k-6) breaks ``drifted`` down the same way ``exempt``
+    # ``missing`` (BP-100n-1) breaks ``drifted`` down the same way ``exempt``
     # and ``gaps`` break ``uncomparable`` down: a hash mismatch (changed in
     # place) and a deletion (missing entirely) are both instances of
     # "on-disk content no longer matches what was recorded" — deletion is
@@ -665,7 +665,7 @@ def main() -> int:
     )
 
     if violations or missing or unreadable:
-        # A deleted, still-recorded template (BP-100k-6) and an unreadable,
+        # A deleted, still-recorded template (BP-100n-1) and an unreadable,
         # still-recorded template (B-2) are both the most complete forms of
         # "could not vouch for this content" there is — BLOCKED, same
         # severity as a hash-mismatch violation, never merely an

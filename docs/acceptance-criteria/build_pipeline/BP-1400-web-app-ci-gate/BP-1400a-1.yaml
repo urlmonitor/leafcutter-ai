@@ -63,7 +63,7 @@ superseded_by: null
 covered_by:
   - BP-1400a-1-i
 implemented_by:
-- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/01_TICKET-20260721-BP-1400a-1.md
+- tickets/00_inbox/epics/EPIC-ChangesToTheWebAppCantReachUsersBroken/01_TICKET-20260721-BP-1400a-1.md
 notes: |
   Mirrors the Python test-gate check BP-1200b-1: a NEW blocking check added to
   the pull-request CI flow, distinct from any existing informational job — a

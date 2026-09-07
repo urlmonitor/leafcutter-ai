@@ -204,6 +204,10 @@ class _RemovedWorkCase(unittest.TestCase):
         epic_path, paths = self.build_epic(worktree, planned)
         reads = [
             {"present": self.present(paths, planned)},
+            # Terminating look (BO-100e-1): both tickets are already driven to
+            # completion by look 1, so look 2 must release nothing to end the
+            # search before the completion-time re-read below.
+            {"batches": [], "present": self.present(paths, planned)},
             {"present": self.present(paths, ["01_a.md"])},
         ]
         tickets = {paths[n]: self.completing_ticket(n) for n in planned}
@@ -288,6 +292,8 @@ class _RemovedWorkCase(unittest.TestCase):
         epic_path, paths = self.build_epic(worktree, planned)
         reads = [
             {"present": self.present(paths, planned)},
+            # Terminating look — nothing further is eligible.
+            {"batches": [], "present": self.present(paths, planned)},
             {"present": self.present(paths, planned)},
         ]
         tickets = {paths[n]: self.completing_ticket(n) for n in planned}

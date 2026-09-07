@@ -64,6 +64,9 @@ amended_by:
   - agent: BrainCandy
     date: "2026-08-25"
     reason: "Sixth child added: BO-2400c-1-vi, 'The bundle carries only what the receiving agent does not already have'. covered_by extended; this record's own criteria text is unchanged. Context is KI-BO-019 — the first real fast-lane run to reach this layer assembled a correct 148,891-byte bundle and could not get it across the agent boundary, because the E2 engine's only channel in is a return value and no agent reliably echoes 149 KB into a JSON string field. Measurement of that bundle showed 129,178 of its 148,891 bytes were a second copy of content the receiving agent already had: the conventions layer is byte-identical to the workspace CLAUDE.md the harness injects into every dispatch, and the acs layer is the five AC records sitting in the run's own workspace store. BO-2400c-1-vi cuts both, leaving roughly 20 KB. The sibling BO-2400c-1-iii is amended in the same change to make the lane-receives contract explicit and to distinguish a bundle that never arrived from one that arrived as a reference. CAP NOTE: no child_limit_override is added and none is needed — check_ac_limits._MAX_CHILDREN carries keys for L0 and L1 only and continues past every other level, so an L2 has no hard child cap. Adding the override here would be a silent no-op that reads to a future maintainer as a waiver that was granted."
+  - agent: BrainCandy
+    date: "2026-08-26"
+    reason: "Seventh child added: BO-2400c-1-vii, 'The bundle's reference page describes the function that exists'. covered_by extended; this record's own criteria text is unchanged. BO-2400c-1-vi's it_requirements deliberately excluded docs/reference/fast-lane-prompt-caching.md from its surface, because a .md reference page is documentation-expert's and config/agent_registry.json gives python-coder .py and .js only — and instructed its implementer to report the divergence so a companion record could be raised. This is that record. SCOPE IS WIDER THAN THE SIGNATURE DRIFT, DELIBERATELY: scoping it surfaced a second defect on the same page that predates -vi entirely. The 'Related Knob: Cache TTL' section described an extended 1-hour TTL 'configured in the API or harness layer (AC BO-2400c-2)'. No such knob exists — cache_control appears nowhere in scripts/, templates/ or config/ (verified 2026-08-18 and again 2026-08-26), the breakpoint is a literal HTML comment in a prompt string, and leafcutter never issues the model API call — and BO-2400c-2 was itself re-specified from configuration to measurement, so the page cited a criterion for a claim that criterion no longer makes. Both defects are in one record because a reader does not distinguish them: same page, same title, and the accurate half lends credibility to the false half. CAP NOTE unchanged from the -vi amendment: an L2 has no hard child cap, and adding a child_limit_override would be a silent no-op that reads as a granted waiver."
 superseded_by: null
 covered_by:
   - BO-2400c-1-i
@@ -72,5 +75,6 @@ covered_by:
   - BO-2400c-1-iv
   - BO-2400c-1-v
   - BO-2400c-1-vi
+  - BO-2400c-1-vii
 implemented_by:
   - "scripts/injection_builders.py"

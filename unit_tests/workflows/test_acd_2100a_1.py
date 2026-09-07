@@ -406,6 +406,7 @@ def _setup_calls(payload: dict) -> list:
 
 def test_worktree_step_runs_the_in_repo_copy_from_an_untracked_cwd():
     # covers: ACD-2100a-1
+    # angle: criterion
     """AC-1/AC-3: two distinguishable copies of the setup step exist on disk --
     one inside the target repository, one in the untracked parent -- and, driven
     from the untracked parent's own working directory, the marker emitted by the
@@ -447,6 +448,7 @@ def test_worktree_step_runs_the_in_repo_copy_from_an_untracked_cwd():
 
 def test_worktree_step_invocation_is_reached_from_the_workflow_entry_point():
     # covers: ACD-2100a-1
+    # angle: reachability
     """AC-4/AC-5: driving the real workflow entry point (not importing a helper)
     produces the authoring worktree on disk under the target repository with the
     expected ac-authoring/* branch checked out, and the run's own recorded
@@ -516,6 +518,7 @@ def test_worktree_step_invocation_is_reached_from_the_workflow_entry_point():
 
 def test_wrong_copy_execution_is_observable_and_blocks():
     # covers: ACD-2100a-1
+    # angle: failure
     """AC-3 (negative form): with ONLY the untracked-parent copy present and no
     copy inside the target repository, the step fails and names the location it
     could not resolve -- it must NOT silently fall back to running the parent

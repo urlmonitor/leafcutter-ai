@@ -60,7 +60,9 @@ behavioral_patterns:
 - behavior: 'emit `(status: blocker)` naming each required doc absent from the git diff'
   name: Fail on missing doc
   related_agent: null
-  trigger: any required documentation file named in the Agent Contracts brief is absent from git diff HEAD
+  trigger: any required documentation file named in the Agent Contracts brief is absent
+    from the union of the branch-range diff (integration_target...HEAD) and the
+    working-tree diff (Step 4b)
 - behavior: 'emit `(status: blocker)` — never status: ok on ambiguous or failed parse'
   name: Fail-closed on parse error
   related_agent: null
@@ -68,7 +70,7 @@ behavioral_patterns:
 - behavior: 'emit `(status: blocker)` naming each file and the placeholder marker found'
   name: Fail on placeholder content
   related_agent: null
-  trigger: a required doc is present in the diff but contains TODO/PLACEHOLDER/Replace with/FIXME/QUESTION/TBD markers, unfilled {token} patterns, or is an empty or heading-only stub
+  trigger: a required doc is present in the diff but contains TODO/PLACEHOLDER/Replace with/FIXME/QUESTION/TBD markers, unfilled single-identifier {token}-style placeholders such as {summary} (empty {}, JSON/dict-shape {"a" b} content, and ${VAR} interpolation are excluded by design), or is an empty or heading-only stub
 - behavior: 'emit `(status: blocker)` — never status: ok when the helper script exits non-zero or raises an exception'
   name: Fail-closed on script error
   related_agent: null
@@ -185,18 +187,135 @@ git rev-parse --show-toplevel exited non-zero. Verify the ticket is inside a git
 ```
 Follow the failed-path recipe (signoff §4).
 
-### Step 4 — Get Changed Files
+### Step 4 — Resolve Integration Target and Get Changed Files (Union)
 
-Run a single Bash command to get the list of files changed relative to HEAD:
+#### 4a — Resolve Integration Target
 
+Determine the branch's integration target — the upstream ref this ticket's branch will
+eventually merge into — so 4b can ask "did this BRANCH add or change this doc" rather
+than "is this doc uncommitted right now." A working-tree-vs-HEAD comparison alone is
+structurally incapable of expressing "already committed earlier on this branch" — see
+the documentation-verifier sign-off history on GE-122a-1 for a first-hand account of the
+resulting false blocker.
+
+**This resolution step has already produced two distinct false-negative defects — do
+not "simplify" it back to a naive form.** The first was the working-tree-only comparison
+above. The second was Candidate 1 (`@{upstream}`) matching the branch's own
+`origin/<branch>` push-tracking mirror — the ordinary result of `git push -u origin
+<branch>` — which diffs a ref against itself and silently produces a vacuously empty
+branch range on most feature branches. See the self-tracking rejection check under
+Candidate 1 below: it rejects by ref IDENTITY (`origin/<current-branch>`), not by
+comparing SHAs against HEAD, specifically because SHA comparison has its own false
+positive (a legitimately-equal `origin/main` on a merged or freshly-branched branch).
+A future edit that drops the self-tracking check, or that "simplifies" it into a SHA
+comparison, reintroduces one of these two already-shipped-and-fixed bugs.
+
+Try each candidate below in order via a single Bash command each; stop at the first
+candidate that exits 0, produces non-empty output, AND (for Candidate 1 only) survives
+the self-tracking rejection check described immediately below it.
+
+**Candidate 1 — configured upstream:**
+```bash
+git -C <worktree_root> rev-parse --abbrev-ref --symbolic-full-name @{upstream}
+```
+
+**Self-tracking rejection (mandatory — do not skip this check for Candidate 1).**
+`git push -u origin <branch>` sets a branch's upstream to `origin/<branch>` — its own
+remote-tracking mirror, created purely so `git push`/`git pull` know where to sync. That
+ref is NEVER a valid integration target: nothing merges a branch into its own mirror of
+itself, so using it here always yields a `<integration_target>...HEAD` range that is
+empty or near-empty by construction, at any point in the branch's life — not merely
+"empty on this specific commit." This is a defect in what the ref MEANS, not in what
+commit it currently resolves to, so **reject it by identity, not by comparing SHAs**
+against HEAD.
+
+*Why not just compare SHAs instead?* It was considered and rejected: a genuinely correct
+candidate — `origin/main` on a freshly-branched or fully-merged branch — can legitimately
+equal HEAD's commit too. Rejecting on SHA equality would misclassify that correct case as
+unresolvable, either pushing the algorithm to a worse candidate or tripping the "all
+candidates failed" blocker for a branch that has a perfectly good integration target.
+Rejecting on the ref's NAME (is this literally the current branch's own `origin/<branch>`
+mirror?) targets the actual defect without that false positive.
+
+Determine the current branch's own remote-tracking mirror name with a second command:
+```bash
+git -C <worktree_root> rev-parse --abbrev-ref HEAD
+```
+If Candidate 1's output equals `origin/` followed by this command's output verbatim
+(e.g. Candidate 1 returns `origin/feat/ge-122-integrity-guard` and this command returns
+`feat/ge-122-integrity-guard`), Candidate 1 is self-tracking: reject it — do NOT use it
+as `integration_target` even though it exited 0 with non-empty output — and fall through
+to Candidate 2. If this second command itself exits non-zero or returns the literal
+string `HEAD` (detached HEAD — see the Detached HEAD edge case below), Candidate 1 cannot
+be safety-checked and must be rejected defensively for the same reason: fall through to
+Candidate 2 rather than trust an unverifiable Candidate 1.
+
+**Candidate 2 — origin's default branch:**
+```bash
+git -C <worktree_root> symbolic-ref --short refs/remotes/origin/HEAD
+```
+
+**Candidate 3 — literal fallback, verified to exist before use:**
+```bash
+git -C <worktree_root> rev-parse --verify --quiet origin/main
+```
+Use the literal value `origin/main` as `integration_target` only if this command exits 0.
+
+Capture whichever candidate succeeds first — Candidate 1 only counts as succeeding if it
+ALSO clears the self-tracking rejection check above — as `integration_target`.
+
+**Unresolvable case (fail-closed).** If Candidate 1 fails outright or is rejected as
+self-tracking, AND Candidates 2 and 3 both exit non-zero or produce empty output — a
+detached HEAD, a fresh repo with no commits, or a worktree with no `origin` remote —
+do NOT silently fall through to an empty or partial comparison in 4b. That would either
+resurrect this defect as a false blocker (empty branch-range half masking real,
+already-committed docs) or, worse, produce a false `(status: ok)` if the missing half
+happened to be treated as vacuously satisfied. Instead emit `(status: blocker)`:
+```
+Cannot resolve an integration target for the branch-range diff. Tried, in order:
+configured upstream (@{upstream}) — rejected outright or rejected as a self-tracking
+origin/<own-branch> mirror, which is never a valid integration target — origin's
+default branch (refs/remotes/origin/HEAD), and the literal fallback origin/main —
+all failed to resolve in this worktree.
+This is a distinct blocker class from "documentation missing": the coverage check
+cannot run at all without a comparison base. Verify the worktree has a reachable
+origin remote and a resolvable default branch.
+```
+Follow the failed-path recipe (signoff §4). Do not proceed to 4b.
+
+#### 4b — Get Changed Files (Union of Branch Range and Working Tree)
+
+A required doc counts as present if EITHER the branch already committed it (relative to
+where it diverged from `integration_target`) OR it is sitting uncommitted in the working
+tree right now. Compute both halves with two separate Bash commands and take the union of
+their output lines into `changed_files` — never rely on one half alone; that is exactly
+the defect this step exists to prevent.
+
+**Half A — branch-range diff (catches docs already committed earlier on this branch):**
+```bash
+git -C <worktree_root> diff --name-only <integration_target>...HEAD
+```
+The three-dot form diffs `HEAD` against `git merge-base <integration_target> HEAD` — i.e.
+"everything this branch added or changed since it diverged," not "everything different
+from `HEAD` right now." This is what makes a doc committed earlier in the branch's own
+history still visible to this verifier.
+
+**Half B — working-tree diff (catches docs written but not yet committed):**
 ```bash
 git -C <worktree_root> diff HEAD --name-only
 ```
+This preserves the original, still-correct behaviour for a doc that was just written and
+staged or unstaged but not yet committed — that case must not regress.
 
-Capture the output lines into `changed_files`. If the command exits non-zero:
-emit `(status: blocker)`:
+Union the two output lists (deduplicate; a path appearing in both counts once) into
+`changed_files`.
+
+**Fail-closed on command error.** If EITHER command exits non-zero, do not treat that
+half as an empty result and silently fall back to the other half alone — the ambiguity
+must surface as a blocker:
 ```
-git diff HEAD --name-only exited non-zero. Cannot determine changed files.
+Changed-files command exited non-zero. Cannot determine changed files.
+Failing command: <the literal command that failed>.
 ```
 Follow the failed-path recipe (signoff §4).
 
@@ -227,7 +346,8 @@ List ONLY the paths in `missing_docs` — do NOT list paths that are present in
 `changed_files` (those are satisfied and must not appear in the blocker):
 ```
 Documentation coverage failure. The following required documentation files have
-no real change in the git diff (git diff HEAD --name-only):
+no real change in either the branch-range diff (<integration_target>...HEAD) or the
+working-tree diff (git diff HEAD --name-only):
 
   - <missing_file_1>
   - <missing_file_2>
@@ -273,6 +393,29 @@ Parse the JSON output (a list of `{"path", "line", "marker", "context"}` dicts).
 Any non-empty list means the file contains a TODO/PLACEHOLDER/FIXME/Replace-with/
 QUESTION marker. Record every hit.
 
+**Marker conventions (current — the helper was hardened, not merely re-read;
+verified 2026-08-25: this template itself scans clean).** A hit is real: the
+marker must be filled in or removed before the file counts as written.
+
+Five markers, six rules (`TODO` has two), all matched case-insensitively:
+- `TODO:` — trailing colon.
+- bare `TODO` — first real content on the line.
+- `PLACEHOLDER` — alone on its line, inside an HTML comment, or (at column 0)
+  followed by a colon.
+- `Replace with` — first real content on the line.
+- `<!-- QUESTION:` — HTML comment plus colon.
+- `FIXME:` — colon **and** first real content on the line.
+
+**The exemption.** A marker wrapped in single backticks is exempt by design —
+that is how a doc *names* a marker without tripping the scan. If a legitimate
+sentence trips it, wrap the marker in backticks; that is the fix, not
+suppressing the check or rewording the sentence.
+
+**One accepted false positive.** A list item opening with the capitalised
+word naming the `PLACEHOLDER` marker is flagged, since a genuine marker takes
+the same shape. Backticks silence it — deliberate, since a false negative
+here is a phantom-done doc, which is strictly worse.
+
 #### 6b — TBD Marker Check
 
 Run a single Bash command per file:
@@ -284,19 +427,85 @@ grep -in "\bTBD\b" <absolute_file_path>
 Any output lines mean the file contains a TBD marker. Record each line as a
 placeholder finding.
 
+**Audited, left unchanged.** This bare-word match carries the same
+self-referential-discussion risk as 6a's `PLACEHOLDER`/`Replace with` patterns
+(see the Known limitation note under 6a) — a doc that discusses the TBD-marker
+convention using the literal word "TBD" would also register. Unlike 6c, there is
+no additional structural signal here (content shape, adjacent character) that
+mechanically distinguishes a real leftover TBD marker from a self-referential
+mention, and narrowing by document identity (e.g. a path skip-list) would weaken
+the fail-closed guarantee for every other doc. The existing `\b...\b` word-boundary
+already prevents matching TBD embedded in a larger identifier (e.g.
+`no_placeholder_content` does not match 6a's `PLACEHOLDER` check for the same
+reason). Left as-is; verified behaviorally against
+`docs/known-issues/commit-guardian.md` and `docs/known-issues/testing-quality.md`
+(both currently TBD-free — see this ticket's sign-off comment for the command
+output). Note this template file itself is a live example of the residual risk:
+it uses the bare word "TBD" repeatedly in prose (including in this very note) to
+describe the convention, and would register hits under this check if it were ever
+named as a required doc — the same class of self-referential false positive as
+6a's, just with no `.py`-file dependency blocking a fix. No fix is proposed here
+because none narrows the pattern without risking a missed genuine marker; this is
+recorded so a future editor does not mistake the absence of a code change for an
+oversight.
+
 #### 6c — Unfilled Template Token Check
 
 Run a single Bash command per file:
 
 ```bash
-grep -on "{[^}]*}" <absolute_file_path>
+grep -onP '(?<!\$)\{[A-Za-z_][A-Za-z0-9_]*\}' <absolute_file_path>
 ```
 
-Any output means the file contains residual `{token}` patterns from an unfilled
-template copy. Canonical examples of residual tokens: `{summary}`, `{title}`,
-`{description}`. Angle-bracket patterns such as `<placeholder>` are also placeholder
-signatures; they are caught by sub-check 6a's PLACEHOLDER marker scan. Record each
-curly-brace match as a placeholder finding.
+This differs from a naive `{[^}]*}` scan in two ways, each narrowing FALSE positives
+without weakening detection of a genuine unfilled token:
+
+1. **Content must be a single bare identifier.** The bracketed content must consist
+   ONLY of letters, digits, and underscores (`[A-Za-z_][A-Za-z0-9_]*`) — no spaces,
+   quotes, colons, or commas. This is exactly the shape of a real residual
+   `.format()`/template token (`{summary}`, `{title}`, `{description}`,
+   `{component_name}`, `{TODO}`) and excludes an empty `{}`, a JSON object
+   (`{"key": "value"}`), and a comma-separated destructuring or dict-shape label
+   (`{agent, workflow, parallel, userInput}`, `{status: "blocked"}`) — all common,
+   legitimate Mermaid node-label and code-sample syntax, not unfilled placeholders.
+2. **The brace must not be preceded by `$`.** `(?<!\$)` rejects `${VAR}`-style
+   shell/JS string interpolation, which is not this project's template-token
+   convention (`{field}`, never `${field}`).
+
+**Why this narrowing exists — do not widen it back to `{[^}]*}`.** The naive
+`{[^}]*}` pattern was found live on
+`docs/architecture/diagrams/c3-006-whole-collection-uniqueness-pass.md`: a correct,
+fully-authored Mermaid node label — `declared_states{}` — matched as a placeholder
+purely because it contains an empty pair of braces (Mermaid's own dict-type
+shorthand), and the doc was wrongly blocked. Widening this pattern back reproduces
+that defect and reproduces closely related false positives found live in this
+repository's own `docs/architecture/diagrams/` corpus during the audit that produced
+this fix — e.g. `agent(promptString, {schema})` (JS call syntax quoted inside a
+Mermaid label and inline code) and several `{status: ..., ...}` /
+`{id, title, priority}`-shaped dict/destructuring labels — none of which are
+unfilled templates.
+
+**Known residual (found during this audit, not fixed).** A single bareword still
+matches even when it names a code construct rather than an unfilled token — e.g.
+`{schema}` in `docs/architecture/diagrams/df-001-dual-engine-workflow-build-transform.md`
+and `{token}` in
+`docs/architecture/diagrams/c3-004-documentation-coverage-phase-flow-sequence.md`
+(the latter is itself prose describing this very check). Excluding matches inside
+fenced or inline code would close this gap, but was deliberately NOT added: a
+how-to guide can legitimately carry a real residual template token inside a code
+fence for the reader to substitute (e.g. `{your_project_name}`), and a
+location-based (fence/span) exclusion cannot distinguish that intentional case from
+a genuinely broken generated doc whose unresolved token happens to land inside a
+code block. Narrowing by content shape only (this check) does not have that failure
+mode, so it is preferred even though it leaves these two bareword code-syntax cases
+unresolved. Neither file is a required doc for the ticket that motivated this fix;
+if either is later named as a required doc and blocked here, resolve it by editing
+the diagram's prose to avoid the bare-brace shorthand, not by widening this pattern.
+
+Any output means the file contains a residual, unfilled `{token}`-style placeholder.
+Angle-bracket patterns such as `<placeholder>` are also placeholder signatures; they
+are caught by sub-check 6a's PLACEHOLDER marker scan. Record each curly-brace match
+as a placeholder finding.
 
 #### 6d — Empty or Heading-Only Stub Check
 
@@ -305,13 +514,27 @@ Use the `Read` tool to read the file's full content. Examine each line:
 - **Empty stub**: the file contains no text beyond whitespace and blank lines —
   record as a placeholder finding.
 - **Heading-only stub**: the file contains ONLY Markdown heading lines
-  (`#`, `##`, `###`, etc.) and blank lines, with no prose, code blocks, or list
-  items — record as a placeholder finding.
+  (`#`, `##`, `###`, etc.) and blank lines, with no prose, code blocks, list
+  items, tables, or block quotes — record as a placeholder finding.
 
-A file passes 6d if it has at least one non-blank, non-heading line of real content.
-**Brevity is not a stub.** A short but genuine doc containing at least one real
-sentence, list item, or code block passes 6d regardless of length. Only a completely
-empty file or a file composed solely of headings and blank lines is a stub.
+A file passes 6d if it has at least one non-blank, non-heading line of real
+content — a prose sentence, a list item, a code block, a table row, or a block
+quote line all count. **Brevity is not a stub.** A short but genuine doc containing
+at least one of these passes 6d regardless of length. Only a completely empty file
+or a file composed solely of headings and blank lines is a stub.
+
+**Why "tables" and "block quotes" were added (audit finding).** The prior wording
+enumerated only "prose, code blocks, or list items" as qualifying content, leaving
+a real doc composed mainly of a Markdown table (e.g. a parameter/config reference)
+or of block-quote callouts (e.g. this repository's own
+`docs/architecture/diagrams/c3-004-documentation-coverage-phase-flow-sequence.md`,
+whose "Reading the diagram" prose is written as `>` block quotes) ambiguous: such a
+file has real, substantive content but matches none of the three enumerated types,
+so a literal reading of the old "no prose, code blocks, or list items" stub
+definition could be misapplied to flag it as heading-only. No such misfire was
+observed live (the file above still has prose paragraphs alongside its block
+quotes), but the ambiguity itself is the defect — fixed by naming both content
+types explicitly rather than waiting for a doc that trips it.
 
 #### 6e — Verdict per File
 
@@ -328,8 +551,9 @@ files appear in the git diff but contain unresolved placeholder markers:
 
   - <doc_path>: "<placeholder_marker or stub type>" at line <N>
 
-(TBD markers, unfilled {template tokens}, and empty/heading-only stubs are also
-treated as placeholder content and reported above when detected.)
+(TBD markers, unfilled single-identifier {token}-style placeholders such as
+{summary}, and empty/heading-only stubs — tables and block quotes count as real
+content — are also treated as placeholder content and reported above when detected.)
 
 The documentation must contain real content before this ticket can advance to commit.
 Responsible agent: documentation-expert (respawn to replace placeholder content).
@@ -344,7 +568,8 @@ emit `(status: ok)`:
 ```
 Documentation coverage verified.
 Required docs (N): <list>
-All required files present in git diff HEAD.
+All required files present (branch-range diff <integration_target>...HEAD, union
+working-tree diff git diff HEAD --name-only).
 No placeholder content detected.
 ```
 
@@ -377,7 +602,7 @@ completion_manifest:
   required_docs_list_parsed: true
   all_required_docs_present_in_diff: true
   no_placeholder_content_in_changed_docs: true
-Documentation coverage verified: all <N> required doc(s) present in git diff HEAD with real content.
+Documentation coverage verified: all <N> required doc(s) present (branch-range diff union working-tree diff) with real content.
 ```
 
 **Failure path — missing docs:**
@@ -403,7 +628,7 @@ completion_manifest:
   all_required_docs_present_in_diff: true
   no_placeholder_content_in_changed_docs:
     result: false
-    reason: "<doc_path>: '<placeholder_marker or stub type>' at line <N>. Types checked: TODO/PLACEHOLDER/FIXME/Replace-with/QUESTION (via build_placeholder_detection.py helper), TBD markers, unfilled {template tokens}, empty/heading-only stubs."
+    reason: "<doc_path>: '<placeholder_marker or stub type>' at line <N>. Types checked: TODO/PLACEHOLDER/FIXME/Replace-with/QUESTION (via build_placeholder_detection.py helper), TBD markers, unfilled single-identifier {token}-style placeholders, empty/heading-only stubs (tables and block quotes count as real content)."
     remediation: "Respawn documentation-expert to replace placeholder content with real documentation."
 Placeholder content detected in required documentation: <file list>. Responsible agent: documentation-expert.
 ```
@@ -420,13 +645,17 @@ template's frontmatter) form the required manifest keys:
   and all AC lines were parsed without error; `false` (expanded with `result`,
   `reason`, `remediation`) if parsing failed or the block was malformed.
 - `all_required_docs_present_in_diff` — `true` if every required doc path
-  appears in `git diff HEAD --name-only`; `false` (expanded) if any are missing,
-  with the missing paths in `reason`.
+  appears in the union of `git diff --name-only <integration_target>...HEAD`
+  (Step 4b) and `git diff HEAD --name-only`; `false` (expanded) if any are
+  missing, with the missing paths in `reason`. If the integration target could
+  not be resolved (Step 4a unresolvable case), this manifest key is not reached —
+  the phase fails before Step 4b with a distinct blocker.
 - `no_placeholder_content_in_changed_docs` — `true` if no placeholder markers
   were detected in any changed required doc file across all four sub-checks
-  (6a helper script scan, 6b TBD markers, 6c unfilled `{template tokens}`,
-  6d empty/heading-only stubs); `false` (expanded) if any were found, with
-  the file path, line, and check type in `reason`.
+  (6a helper script scan, 6b TBD markers, 6c unfilled single-identifier
+  `{token}`-style placeholders, 6d empty/heading-only stubs — tables and block
+  quotes count as real content for 6d); `false` (expanded) if any were found,
+  with the file path, line, and check type in `reason`.
 
 See signoff §2b for the required format (bare `true` for passing items; nested
 object with `result`, `reason`, `remediation` for any `false` item).
@@ -516,6 +745,131 @@ DECISION HISTORY
   section so the template satisfies the BP-300e-6 machine-parsed-producer guard
   (documentation-verifier is dispatched in the ticket phase order and its reply
   may be JSON-parsed / schema-enforced by a delivery workflow).
+- 2026-08-18 [llm-expert]: Fixed the working-tree-only coverage-check defect found live
+  on EPIC-GE122UniquenessPassAndRepair/01_TICKET-20260818-GE-122a-1.md (see that
+  ticket's 19:05 documentation-verifier blocker comment for the first-hand account).
+  The old Step 4 (`git diff HEAD --name-only`) compared the working tree against HEAD
+  only, so a doc committed earlier on the same branch (already an ancestor of HEAD)
+  produced an empty changed_files and a false blocker. Expanded Step 4 in place into
+  "Resolve Integration Target and Get Changed Files (Union)" with two lettered
+  sub-steps — 4a (Resolve Integration Target: tries @{upstream}, then origin's default
+  branch via refs/remotes/origin/HEAD, then a verified origin/main literal; unresolvable
+  is its own fail-closed blocker, distinct from "docs missing") and 4b (Get Changed
+  Files: union of the branch-range diff `<integration_target>...HEAD` and the original
+  working-tree diff `git diff HEAD --name-only`, so an uncommitted doc still counts).
+  Deliberately did NOT renumber the existing Step 5 (Assert Coverage), Step 6
+  (Placeholder Check, with its 6a-6e sub-checks), or Step 7 (Emit OK) — an initial draft
+  shifted them to 5/6/7→6/7/8 and broke
+  unit_tests/test_bo_2200b_3_i.py::TestAC1TemplateStep6ExplicitPositiveCase, which
+  locates the placeholder-detection section by a hardcoded `### Step 6` regex; llm-expert
+  may not edit .py test files, so the fix is to keep the step numbers this test depends
+  on stable and grow Step 4 with lettered sub-parts instead (mirroring the existing
+  6a-6e convention). Fail-closed posture preserved throughout: either half of the union
+  command failing, or the integration target being unresolvable, still emits
+  status: blocker, never status: ok. Updated the behavioral_patterns trigger, the Step 5
+  blocker message template, the Step 7 / signoff-schema success messages, and the
+  Completion Manifest Requirement's `all_required_docs_present_in_diff` description to
+  match. Left the frontmatter `description:` field's generic "real git diff change"
+  phrasing as-is (it does not name a specific comparison). tools: Bash, Read, Edit and
+  requires_verification: true were already correctly declared — no frontmatter change
+  needed. (#EPIC-GE122UniquenessPassAndRepair/01_TICKET-20260818-GE-122a-1.md)
+- 2026-08-19 [llm-expert]: Fixed a self-tracking-ref regression in the 2026-08-18 Step 4a
+  fix, found live on feat/ge-122-integrity-guard. Candidate 1 (`@{upstream}`) resolves to
+  `origin/<current-branch>` — the branch's own push-tracking mirror created by the
+  ordinary `git push -u origin <branch>` — on most feature branches. That ref diffs
+  against itself in Step 4b, producing a vacuously empty branch range and reintroducing
+  the exact false-negative the 2026-08-18 fix existed to eliminate, one level up; because
+  `push -u` is the ordinary topology, the fix was close to inert in practice. Added a
+  mandatory self-tracking rejection check under Candidate 1: compare Candidate 1's output
+  against `origin/` + `git rev-parse --abbrev-ref HEAD`'s output; if equal (or if the
+  branch-name command fails/returns literal `HEAD`, i.e. detached HEAD), reject Candidate
+  1 and fall through to Candidate 2, even though Candidate 1 exited 0 with non-empty
+  output. Chose identity rejection (ref name equals the branch's own `origin/<branch>`)
+  over SHA-equality rejection: SHA comparison was considered and rejected because a
+  genuinely correct candidate (`origin/main` on a freshly-branched or fully-merged
+  branch) can legitimately equal HEAD's commit too, and rejecting on that basis would
+  misclassify a correct target as unresolvable. Updated the Step 4a intro to flag this as
+  the SECOND false-negative defect in this exact resolution step and warn a future editor
+  against "simplifying" the self-tracking check back out or replacing it with SHA
+  comparison; updated the "try each candidate" framing, the "capture whichever candidate
+  succeeds" line, and the Unresolvable-case blocker message's candidate enumeration to
+  describe the self-tracking rejection outcome. Verified behaviorally (not just read for
+  coherence, per this ticket's explicit instruction after the 2026-08-18 fix was verified
+  only by reading): ran the actual candidate commands against this worktree, confirmed
+  Candidate 1 resolves to `origin/feat/ge-122-integrity-guard` (self-tracking, correctly
+  rejected) while `origin/main` is a distinct, reachable ref whose branch-range diff is
+  non-empty and includes the two docs this ticket's own Agent Contracts brief requires
+  (`docs/architecture/components/commit-guardian.md` and
+  `docs/architecture/diagrams/c3-006-whole-collection-uniqueness-pass.md`). Step 4b, Step
+  5, Step 6, Step 7, and the Unresolvable-case fail-closed posture were left unchanged —
+  this fix is scoped to which ref Step 4a accepts as Candidate 1, not to how 4b–7 consume
+  `integration_target` once resolved. (#EPIC-GE122UniquenessPassAndRepair/documentation-verifier-self-tracking-fix)
+- 2026-08-19 [llm-expert]: Third fix to this template, this time to Step 6's placeholder
+  detection — narrowed 6c's over-broad curly-brace scan and audited the rest of Step 6 for
+  the same class of defect, per explicit instruction not to repeat the "patch only the
+  reported instance" pattern of the two prior fixes. Reported defect: 6c's naive
+  `grep -on "{[^}]*}"` matched the empty `{}` in a correct Mermaid node label
+  (`declared_states{}`) on `docs/architecture/diagrams/c3-006-whole-collection-uniqueness-pass.md`
+  and blocked a fully-authored diagram. Fixed 6c's command to
+  `grep -onP '(?<!\$)\{[A-Za-z_][A-Za-z0-9_]*\}'`: (1) bracket content must be a single bare
+  identifier — excludes empty `{}`, JSON objects (`{"key": "value"}`), and comma/colon
+  dict-shape or destructuring labels (`{agent, workflow, parallel, userInput}`,
+  `{status: "blocked"}`) while still matching genuine residual tokens (`{summary}`,
+  `{component_name}`, `{TODO}`); (2) a `$`-lookbehind excludes `${VAR}`-style shell/JS
+  interpolation. Chose content-shape narrowing over excluding fenced/inline code wholesale:
+  a how-to can legitimately carry a real residual template token inside a code fence
+  (`{your_project_name}`), and a location-based exclusion cannot tell that intentional case
+  apart from a genuinely broken generated doc whose unfilled token happens to land in a code
+  block — so a fence exclusion was deliberately NOT added, accepting two known residual
+  bareword-in-code false positives instead (`{schema}` in
+  `docs/architecture/diagrams/df-001-dual-engine-workflow-build-transform.md`, `{token}` in
+  `docs/architecture/diagrams/c3-004-documentation-coverage-phase-flow-sequence.md` — neither
+  is a required doc for this ticket). Audited 6a, 6b, 6d, 6e per the same instruction: 6a's
+  `\bPLACEHOLDER\b`/`\bReplace with\b` bare-word patterns (in
+  `scripts/build_placeholder_detection.py`, a Python file outside llm-expert's edit scope)
+  verified behaviorally to produce 50+ false-positive hits against this very template's own
+  prose — documented as a known limitation with a recommendation for a follow-up coder
+  ticket, not fixed here; 6b's `\bTBD\b` grep carries the identical self-referential-doc risk
+  with no available mechanical narrowing (documented, left unchanged, verified TBD-free
+  against `docs/known-issues/commit-guardian.md` and `docs/known-issues/testing-quality.md`);
+  6d's stub definition enumerated only "prose, code blocks, or list items" as real content,
+  leaving a table-only or block-quote-only reference doc (e.g. this repo's own
+  `c3-004-documentation-coverage-phase-flow-sequence.md`, whose explanatory prose is written
+  as `>` block quotes) ambiguously classifiable as a heading-only stub — added "tables" and
+  "block quotes" to the enumerated content types to close the ambiguity (no live misfire
+  observed, but the ambiguity itself was the defect); 6e's aggregation logic needed no change.
+  Updated every place referencing the old "unfilled `{template tokens}`" phrasing to the new
+  "single-identifier `{token}`-style placeholders" wording: the frontmatter
+  `behavioral_patterns` trigger, the Step 6e blocker message, both Signoff Comment Schema
+  failure-path `reason` templates, and the Completion Manifest Requirement's
+  `no_placeholder_content_in_changed_docs` bullet. Verified behaviorally throughout (not by
+  reading alone): ran the revised 6c command against
+  `c3-006-whole-collection-uniqueness-pass.md` (zero matches, previously one) and
+  `docs/architecture/components/commit-guardian.md` (zero matches); ran the constructed
+  fixture `/tmp/placeholder_test_cases.md` containing a genuine `{summary}` token, an empty
+  `{}`, a JSON snippet, `${VAR}`, an f-string `{i}`, and a destructured Mermaid-style label —
+  confirmed only the two genuine identifier tokens (`{summary}`, `{component_name}`) still
+  match, all five non-placeholder cases do not; ran `scan_for_placeholders` (6a) against the
+  two known-issues docs and this template itself to confirm the documented 6a finding; ran
+  `python3 scripts/build.py --target-dir <worktree_root> --force` followed by the full
+  `unit_tests/commit_guardian/` suite (`AC_ENFORCE_STRICT=1`) and confirmed no regression
+  against the pre-existing baseline. (#EPIC-GE122UniquenessPassAndRepair/documentation-verifier-step6-placeholder-narrowing)
+- 2026-08-25 [llm-expert]: Removed the Step 6a "Known limitation (found during this
+  audit, not fixed here)" block — it described the PRE-FIX `scan_for_placeholders`
+  behaviour (bare-word `PLACEHOLDER`/`Replace with` matches, 50+ false-positive hits
+  against this very template) and told the reading agent that a hit here could be
+  discounted. The underlying module was fixed 2026-08-19 and hardened again on
+  2026-08-25 (see `scripts/build_placeholder_detection.py`'s own decision history);
+  a fresh scan of this template now returns zero hits. Leaving the stale note in
+  place was actively harmful: an agent reading it would treat a genuine hit as
+  known noise and wave through the exact announced-but-unwritten documentation
+  this gate exists to catch — a fail-open written in prose. Replaced it with a
+  short, current statement of the five recognised marker conventions, the
+  backtick exemption (the correct fix for a doc that legitimately discusses a
+  marker), and the one remaining accepted false positive (a list item opening
+  with the capitalised word naming the `PLACEHOLDER` marker). Left the
+  fail-closed-on-script-error instruction and the JSON parsing contract
+  (path/line/marker/context) unchanged. (#TICKETLESS reason=llm-expert-direct-dispatch-no-ticket)
 ====================================================================
 """
 

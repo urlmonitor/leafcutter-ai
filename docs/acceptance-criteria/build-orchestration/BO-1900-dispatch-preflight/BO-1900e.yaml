@@ -1,0 +1,45 @@
+id: BO-1900e
+components:
+  - build_orchestration
+  - skills_system
+title: "Every agent arrives equipped for the work it was told to do"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  An agent gets the tools its job needs -- and cannot claim a check it never ran.
+
+  Before an agent is sent in, the run confirms it can actually reach every check its own
+  instructions oblige it to perform, and holds the work back rather than sending it in
+  half-equipped. Where a run proceeds regardless, it names the capability that was out of
+  reach, and the agent's report leaves that check unanswered instead of offering an
+  outcome nothing produced. This is the fitness dimension of what the worker was GIVEN --
+  distinct from BO-1900c, which asks whether the right worker was chosen, and from
+  BO-1900a, which establishes that a fitness check happens at all.
+depends_on: [BO-1900]
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: "Enumerates the channels through which an agent receives context at invocation. The capability grant is the channel this feature makes checkable rather than incidental."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1900e-1
+  - BO-1900e-1-i
+  - BO-1900e-1-ii
+  - BO-1900e-1-iii
+  - BO-1900e-1-iv
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+  - reference-doc

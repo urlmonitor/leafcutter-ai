@@ -8,6 +8,9 @@ completion rate, and that a zero denominator never raises.
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -20,10 +23,37 @@ sys.path.insert(0, str(_SCRIPTS))
 import weekly_health as wh  # noqa: E402
 
 
+def _clean_git_env(overrides: dict[str, str] | None = None) -> dict[str, str]:
+    """Build a subprocess environment safe for git calls against a temp repo.
+
+    Inherits the ambient environment (rather than pinning `PATH` to a fixed
+    pair of directories) so `git` resolves correctly regardless of where it
+    is installed (nix, homebrew, /usr/local/bin, a conda env, ...). Strips any
+    ambient `GIT_DIR` / `GIT_WORK_TREE` / `GIT_INDEX_FILE` so a call made from
+    inside a git hook or `rebase --exec` cannot escape the fresh temp repo and
+    operate on the outer repository instead. `overrides` layers identity/date
+    pinning on top for deterministic commits.
+
+    Args:
+        overrides: Extra environment variables to set after the base
+            environment is prepared (e.g. GIT_AUTHOR_DATE, HOME).
+
+    Returns:
+        dict[str, str]: The environment to pass to subprocess.run(..., env=...).
+    """
+    env = dict(os.environ)
+    for var in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+        env.pop(var, None)
+    if overrides:
+        env.update(overrides)
+    return env
+
+
 class TestClassifyPath(unittest.TestCase):
     """classify_path buckets a repository path into (language, kind)."""
 
     def test_python_source_is_code(self):
+        # covers: INF-500e-4
         self.assertEqual(wh.classify_path("scripts/build.py"), ("Python", "code"))
 
     def test_yaml_is_spec(self):
@@ -86,6 +116,7 @@ class TestIsTestPath(unittest.TestCase):
     """is_test_path separates test surfaces from production code."""
 
     def test_unit_tests_directory(self):
+        # covers: INF-500e-4
         self.assertTrue(wh.is_test_path("unit_tests/agent_health/test_x.py"))
 
     def test_nested_tests_directory(self):
@@ -99,6 +130,7 @@ class TestAcDeltas(unittest.TestCase):
     """ac_deltas computes criterion movement between two store snapshots."""
 
     def test_counts_filed_done_and_reopened(self):
+        # covers: INF-500e-1
         before = {"a.yaml": "todo", "b.yaml": "done", "c.yaml": "done"}
         after = {
             "a.yaml": "done",     # closed during the period
@@ -120,6 +152,7 @@ class TestAcDeltas(unittest.TestCase):
         self.assertEqual(result["net_done"], 1)
 
     def test_deleted_criterion_is_not_counted_as_reopened(self):
+        # covers: INF-500e-1
         # A record that disappears was not retracted, it was removed. Counting it
         # as a reopen would inflate the trust metric on every store cleanup.
         result = wh.ac_deltas({"gone.yaml": "done"}, {})
@@ -170,10 +203,12 @@ class TestIsoWeekStarts(unittest.TestCase):
         self.assertTrue(all(w.weekday() == 0 for w in weeks))
 
     def test_last_entry_is_the_monday_of_the_reference_week(self):
+        # covers: INF-500e-5
         weeks = wh.iso_week_starts(date(2026, 8, 26), 3)  # a Wednesday
         self.assertEqual(weeks[-1], date(2026, 8, 24))
 
     def test_ordered_oldest_first(self):
+        # covers: INF-500e-5
         weeks = wh.iso_week_starts(date(2026, 8, 26), 3)
         self.assertEqual(weeks, sorted(weeks))
 
@@ -207,12 +242,14 @@ class TestCollectCycleTimes(unittest.TestCase):
         self.assertEqual(ages, [])
 
     def test_criterion_with_no_known_birth_is_skipped_not_zero(self):
+        # covers: INF-500e-3-i
         ages = wh.collect_cycle_times(
             after={"a.yaml": "done"}, before={}, births={}, period_end=date(2026, 8, 26)
         )
         self.assertEqual(ages, [])
 
     def test_birth_after_period_end_clamps_to_zero(self):
+        # covers: INF-500e-3-i
         ages = wh.collect_cycle_times(
             after={"a.yaml": "done"},
             before={"a.yaml": "todo"},
@@ -240,6 +277,7 @@ class TestCollectLaneHealth(unittest.TestCase):
         self.assertIn("absent", result["reason"])
 
     def test_sink_with_no_lane_events_is_unavailable_not_zero_percent(self):
+        # covers: INF-500e-2
         # This is the live state of the repo's sink: events exist, but none are
         # lane-run events. Reporting 0% completion here would assert that runs
         # were attempted and all failed, which is a different and false claim.
@@ -319,6 +357,7 @@ class TestPrCoverageFloor(unittest.TestCase):
         self.assertEqual(reason, "")
 
     def test_capped_page_stopping_short_reports_a_floor(self):
+        # covers: INF-500e-2-i
         floor, reason = wh.pr_coverage_floor(
             returned=120, limit=120,
             merged_dates=[date(2026, 8, 17), date(2026, 8, 25)],
@@ -336,6 +375,222 @@ class TestPrCoverageFloor(unittest.TestCase):
         self.assertEqual(reason, "")
 
 
+class TestAcBirthDates(unittest.TestCase):
+    """ac_birth_dates establishes first appearance by walking a real git log.
+
+    Every other cycle-time test injects a `births` mapping directly, which
+    proves the consumer and leaves the producer unexercised. This class drives
+    `ac_birth_dates` against an actual repository so the claim "age is measured
+    from first appearance, not from the last time the file was written" is
+    proven end to end rather than assumed.
+    """
+
+    def setUp(self):
+        self.repo = Path(tempfile.mkdtemp(prefix="wh_birth_"))
+        self.store = self.repo / "docs" / "acceptance-criteria" / "comp"
+        self.store.mkdir(parents=True)
+        self._git("init", "-q", "-b", "main")
+        self._git("config", "user.email", "test@example.invalid")
+        self._git("config", "user.name", "Test")
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _git(self, *args):
+        subprocess.run(
+            ["git", "-C", str(self.repo), *args],
+            check=True, capture_output=True, text=True,
+            env=_clean_git_env(),
+        )
+
+    def _commit(self, message, when):
+        stamp = f"{when}T12:00:00"
+        subprocess.run(
+            ["git", "-C", str(self.repo), "commit", "-q", "-m", message],
+            check=True, capture_output=True, text=True,
+            env=_clean_git_env({
+                "HOME": str(self.repo),
+                "GIT_AUTHOR_DATE": stamp,
+                "GIT_COMMITTER_DATE": stamp,
+                "GIT_AUTHOR_NAME": "Test",
+                "GIT_AUTHOR_EMAIL": "test@example.invalid",
+                "GIT_COMMITTER_NAME": "Test",
+                "GIT_COMMITTER_EMAIL": "test@example.invalid",
+            }),
+        )
+
+    def test_birth_is_the_first_add_not_the_latest_write(self):
+        # covers: INF-500e-3
+        (self.store / "AC-1.yaml").write_text("id: AC-1\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("add AC-1", "2026-08-01")
+
+        (self.store / "AC-1.yaml").write_text("id: AC-1\nwork_status: done\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("edit AC-1", "2026-08-15")
+
+        births = wh.ac_birth_dates(self.repo, "HEAD")
+        self.assertEqual(births["AC-1"], date(2026, 8, 1))
+
+    def test_moving_a_criterion_does_not_reset_its_age(self):
+        # covers: INF-500e-3
+        # An atomic `git mv` in a single commit is recorded by git as R100
+        # (a rename), which never appears under --diff-filter=A at all -- so
+        # it cannot exercise the earliest-add-wins logic below (verified: any
+        # aggregation strategy passes an atomic-mv scenario, because the walk
+        # only ever observes one A event for the key). A non-atomic move --
+        # deleted in one commit, re-added at a new path in a later one -- is
+        # NOT folded into a rename by git, so it genuinely produces two A
+        # events for the same identifier. That is what this test drives, so
+        # it can actually fail against an implementation that keeps the most
+        # recent add instead of the earliest one.
+        (self.store / "AC-2.yaml").write_text("id: AC-2\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("add AC-2", "2026-08-02")
+
+        self._git("rm", "-q", "docs/acceptance-criteria/comp/AC-2.yaml")
+        self._commit("remove AC-2 (pending reorg)", "2026-08-10")
+
+        # `git rm` prunes now-empty parent directories, so the store tree
+        # itself is gone at this point and must be recreated.
+        feature = self.store / "feature"
+        feature.mkdir(parents=True)
+        (feature / "AC-2.yaml").write_text("id: AC-2\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("re-add AC-2 into a feature folder", "2026-08-20")
+
+        births = wh.ac_birth_dates(self.repo, "HEAD")
+        self.assertEqual(births["AC-2"], date(2026, 8, 2))
+
+    def test_earliest_of_two_add_records_wins(self):
+        # covers: INF-500e-3
+        # Deliberately isolates the earliest-add-wins aggregation from any
+        # move/rename concern: the same key is genuinely added twice at the
+        # same path (deleted in between so the second write is its own A
+        # event, not a modification of the first). The log walks newest
+        # first, so an implementation that keeps the FIRST record it sees per
+        # key (e.g. `births.setdefault(key, current)`) would report the
+        # later, wrong, date here -- this is the case that line is for.
+        (self.store / "AC-9.yaml").write_text("id: AC-9\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("add AC-9", "2026-08-05")
+
+        self._git("rm", "-q", "docs/acceptance-criteria/comp/AC-9.yaml")
+        self._commit("remove AC-9", "2026-08-10")
+
+        # `git rm` prunes now-empty parent directories, so the store tree
+        # itself is gone at this point and must be recreated.
+        self.store.mkdir(parents=True)
+        (self.store / "AC-9.yaml").write_text("id: AC-9\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("re-add AC-9 at the same path", "2026-08-15")
+
+        births = wh.ac_birth_dates(self.repo, "HEAD")
+        self.assertEqual(births["AC-9"], date(2026, 8, 5))
+
+    def test_registry_index_is_excluded_from_the_index(self):
+        # covers: INF-500e-3
+        (self.store / "index.yaml").write_text("component: comp\n", encoding="utf-8")
+        (self.store / "AC-3.yaml").write_text("id: AC-3\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("add AC-3 and the registry index", "2026-08-03")
+
+        births = wh.ac_birth_dates(self.repo, "HEAD")
+        self.assertIn("AC-3", births)
+        self.assertNotIn("index", births)
+
+    def test_repository_with_no_store_yields_an_empty_index(self):
+        # covers: INF-500e-3
+        (self.repo / "README.md").write_text("no store here\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("no acceptance criteria at all", "2026-08-04")
+
+        self.assertEqual(wh.ac_birth_dates(self.repo, "HEAD"), {})
+
+
+class TestReportEndToEnd(unittest.TestCase):
+    """One command produces the whole report, trust tier first.
+
+    This is the L1-level check: `build_report` is driven against a real
+    temporary repository and its output rendered, so the claim "one command
+    answers both whether delivery is getting healthier and whether it is
+    getting faster" is proven by running it, not by reasoning about the parts.
+    """
+
+    def setUp(self):
+        self.repo = Path(tempfile.mkdtemp(prefix="wh_e2e_"))
+        self.store = self.repo / "docs" / "acceptance-criteria" / "comp"
+        self.store.mkdir(parents=True)
+        self._git("init", "-q", "-b", "main")
+        self._git("config", "user.email", "test@example.invalid")
+        self._git("config", "user.name", "Test")
+
+        (self.store / "AC-1.yaml").write_text("id: AC-1\nwork_status: todo\n", encoding="utf-8")
+        (self.repo / "mod.py").write_text("def f():\n    return 1\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("seed the store and a module", "2026-08-18")
+
+        (self.store / "AC-1.yaml").write_text("id: AC-1\nwork_status: done\n", encoding="utf-8")
+        (self.repo / "notes.md").write_text("# notes\n\nprose\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._commit("close AC-1 and add prose", "2026-08-25")
+
+        self.report = wh.build_report(
+            self.repo, weeks=2, today=date(2026, 8, 26),
+            telemetry_path=self.repo / "nonexistent.jsonl", use_gh=False,
+        )
+        self.rendered = wh._render_markdown(self.report)
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _git(self, *args):
+        subprocess.run(
+            ["git", "-C", str(self.repo), *args],
+            check=True, capture_output=True, text=True,
+            env=_clean_git_env(),
+        )
+
+    def _commit(self, message, when):
+        stamp = f"{when}T12:00:00"
+        subprocess.run(
+            ["git", "-C", str(self.repo), "commit", "-q", "-m", message],
+            check=True, capture_output=True, text=True,
+            env=_clean_git_env({
+                "HOME": str(self.repo),
+                "GIT_AUTHOR_DATE": stamp, "GIT_COMMITTER_DATE": stamp,
+                "GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "test@example.invalid",
+                "GIT_COMMITTER_NAME": "Test", "GIT_COMMITTER_EMAIL": "test@example.invalid",
+            }),
+        )
+
+    def test_one_run_answers_both_health_and_speed(self):
+        # covers: INF-500e
+        for heading in ("Tier 1 — Trust", "Tier 2 — Autonomy",
+                        "Tier 3 — Velocity", "Code volume by language"):
+            self.assertIn(heading, self.rendered)
+
+    def test_trust_tier_is_rendered_before_the_velocity_tier(self):
+        # covers: INF-500e
+        # Ordering is the guarantee, not decoration: velocity read over an
+        # untrusted store is meaningless, so trust has to come first.
+        self.assertLess(
+            self.rendered.index("Tier 1 — Trust"),
+            self.rendered.index("Tier 3 — Velocity"),
+        )
+
+    def test_the_closed_criterion_is_counted_in_the_period_it_closed(self):
+        # covers: INF-500e
+        by_week = {p["week"]: p for p in self.report["periods"]}
+        self.assertEqual(by_week["2026-08-24"]["ac_done"], 1)
+        self.assertEqual(by_week["2026-08-24"]["ac_reopened"], 0)
+
+    def test_absent_telemetry_renders_a_named_reason_not_a_zero_rate(self):
+        # covers: INF-500e
+        self.assertIn("No lane data", self.rendered)
+        self.assertNotIn("Completion rate: 0%", self.rendered)
+
+
 class TestUnknownIsNotZero(unittest.TestCase):
     """A figure that could not be obtained must not render as 0.
 
@@ -345,6 +600,7 @@ class TestUnknownIsNotZero(unittest.TestCase):
     """
 
     def test_int_formatter_distinguishes_unknown_from_zero(self):
+        # covers: INF-500e-2
         self.assertEqual(wh._int(0), "0")
         self.assertEqual(wh._int(None), "—")
 

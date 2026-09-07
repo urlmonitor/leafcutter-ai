@@ -1,0 +1,156 @@
+id: TQ-500d-1
+components:
+  - testing_quality
+  - build_orchestration
+title: "Passing on arrival is the expected result here, and it is not the answer"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work whose tests are correct and passing from the moment they are
+      written, because what they assert is an absence that already holds,
+  When the test-writing side finishes and hands that work on,
+  Then its hand-off record does not report the phase as failed, and does not report
+    the immediate pass as work done in the wrong order,
+    And the record carries a falsifiability answer for that piece of work — the
+      substitute evidence or a reasoned negative,
+    And a record for such a piece of work reporting the phase finished while carrying
+      neither is distinguishable from one carrying either,
+    And the immediate pass alone is never recorded as the answer, so a record whose
+      only statement about falsifiability is that the tests passed on arrival counts
+      as carrying no answer.
+depends_on:
+  - TQ-500d
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE SURFACE CARRYING THE INVERSION. Its verification-outcome table currently
+      reads, for a zero-exit run, "PROBLEM. The tests are green before implementation
+      exists ... Do NOT sign off with all-green" — which for this family of work is
+      exactly backwards, and is why nobody has had reason to ask the next question.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The TDD Order section states that a green test-writer phase is an ordering
+      violation, not a pass. That rule is right for ordinary work and inverted for
+      this family; the guidance must name the exception rather than contradict
+      itself.
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-010: "the one mechanism that would have asked 'can this fail?' is not
+      merely absent, it is documented to mean the opposite."
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE INVERSION MUST BE REMOVED FROM THE SURFACE THAT CARRIES IT, NOT ONLY
+    CONTRADICTED ELSEWHERE. The verification-outcome table in
+    templates/agents/test-writer.md reads, for a zero-exit run, "PROBLEM. The
+    tests are green before implementation exists ... Do NOT sign off with
+    all-green". Amend that row in place to name the exception. Adding a correct
+    instruction somewhere else while leaving this row asserting the inverse
+    produces two instructions and the reader follows whichever they met first —
+    which, for everyone involved in the recorded incident, was this one.
+  - >-
+    SCOPE SPLIT WITH TQ-500d-2, DELIBERATE. This AC owns the agent-template and
+    signoff-SKILL surfaces (templates/agents/test-writer.md,
+    templates/skills/signoff/SKILL.md). The CLAUDE.md "TDD Order — test-writer
+    Must Precede python-coder" section is a project-policy document and is
+    TQ-500d-2's to reconcile, under its last Then clause. Do not edit CLAUDE.md
+    here; do not leave it unreconciled either — the two ACs must land together or
+    the reader gets two instructions.
+  - >-
+    THE EXCEPTION MUST NOT BECOME A CLASSIFIER. State that the writer declares
+    the case; do not give the template a list of signals that identify it. A
+    checklist of "signs your tests are green on arrival" is automatic detection
+    wearing prose, and TQ-500a-1-i fails against it.
+  - >-
+    THE FOURTH CLAUSE CLOSES THE CHEAP EXIT AND MUST BE EXPLICIT. Once the
+    guidance stops calling an immediate pass a problem, the path of least
+    resistance is to record the immediate pass as the evidence — "green on
+    arrival, as expected". State plainly that the immediate pass is the PREMISE
+    of the question, not an answer to it, and that a record whose only
+    falsifiability statement is that the tests passed on arrival carries no
+    answer.
+  - >-
+    Must not weaken the existing red-baseline requirement for work that has one.
+    The exception is a substitution for structurally unavailable evidence, never
+    a relaxation available on request; TQ-500d-3 is the observable form of the
+    other side of that boundary.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500d-1-i
+    contract: >-
+      A hand-off record for green-on-arrival work that reports the phase finished and
+      carries either the substitute answer or a reasoned negative — and, in the
+      non-conforming case, one that carries neither while still reporting finished.
+      TQ-500d-1-i asserts the second is reported as owed and absent.
+expects_from:
+  ac_id: TQ-500a-1
+  contract: >-
+    The two conforming answer shapes and the rule that the writer declares which
+    applies. This AC removes the guidance that currently prevents the green-on-arrival
+    case from reaching a conforming hand-off at all.
+test_required: false
+test_rationale: |
+  Genuinely test-free at this AC's boundary. change_target is prompt plus docs
+  and the deliverable is an amendment to the verification-outcome table in
+  templates/agents/test-writer.md and to templates/skills/signoff/SKILL.md. A
+  test asserting the amended wording is present in a template is the
+  source-presence proof the anti-grep constraint forbids: it would be green from
+  the moment the sentence is typed, could never fail for any reason connected to
+  a run, and would then be citable as evidence that green-on-arrival work is
+  being asked for an answer.
+
+  The falsifiable half is TQ-500d-1-i, which asserts over emitted records that a
+  green-on-arrival record with no answer reads as incomplete and — the clause
+  that can actually fail — is never described in words that read as approval.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept llm-expert and change_target [prompt, docs]. Required the inversion be
+      amended IN PLACE in test-writer.md's verification-outcome table rather than
+      contradicted elsewhere, and split the CLAUDE.md TDD-Order reconciliation to
+      TQ-500d-2 (documentation-expert), which already carries that surface in its
+      doc_links and its last Then clause — the two must land together. Added the
+      no-classifier-in-prose constraint. test_required false; falsifiable half is
+      TQ-500d-1-i. criteria untouched.
+superseded_by: null
+covered_by:
+  - TQ-500d-1-i
+implemented_by: []
+change_target:
+  - prompt
+  - docs
+risk_surface: contract_boundary
+notes: |
+  UNTIL THIS LANDS, EVERY OTHER PART OF THIS TREE IS ADVICE COMPETING WITH A RULE. The
+  sharpest part of the recorded defect is not that a check is absent — it is that its
+  absence is documented as correct. Everyone involved in the recorded case followed
+  the written rule and behaved properly, and none of them had reason to ask the next
+  question.
+
+  THE FOURTH CLAUSE CLOSES THE OBVIOUS CHEAP EXIT. Once the guidance stops calling an
+  immediate pass a problem, the path of least resistance is to record the immediate
+  pass as though it were the evidence — "green on arrival, as expected" — which is the
+  same clean bill of health under a new name. Passing on arrival is the premise of the
+  question, not an answer to it.
+
+  BOUNDARY. This AC governs what the record must and must not say for the
+  green-on-arrival case. Which shape of answer a writer chooses is TQ-500a-1; how to
+  choose and take a substitute is TQ-500d-2; whether ordinary work acquires any new
+  obligation is TQ-500d-3.

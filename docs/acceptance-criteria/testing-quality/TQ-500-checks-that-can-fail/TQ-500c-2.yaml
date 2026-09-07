@@ -1,0 +1,193 @@
+id: TQ-500c-2
+components:
+  - testing_quality
+title: "A test that never objected is named, and partial objection is not read as success"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a hand-off record for a piece of work covered by four tests, in which three
+      tests objected to the alteration and the fourth, exposed to it, did not,
+  When that record is read,
+  Then the fourth test is reported by name as having objected under no alteration it
+    was exposed to,
+    And the piece of work is not reported as satisfied on the grounds that some of
+      its tests objected,
+    And the same reading, over a record in which all four objected, reports no test
+      as never having objected,
+    And the same reading, over a record in which none of the four objected, reports
+      all four by name,
+    And the count of tests that never objected is reported alongside the count that
+      did, so the two are never presented as one figure.
+depends_on:
+  - TQ-500c
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The worked case this reading reproduces: of four sibling tests, three objected
+      to the injected fault and one did not — the one carrying the headline clause. A
+      single aggregate verdict would have reported success and left it inert.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The reader this reading extends. Its per-item discipline — one finding per work
+      item, never one verdict for the group — is the same shape one level down, at
+      per-test rather than per-work-item granularity.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE ROW-WISE REDUCER IS "OBJECTED UNDER AT LEAST ONE ALTERATION IT WAS
+    EXPOSED TO". Not "under all", and not "under the majority". A stricter
+    reducer reports sound tests and produces false findings; a looser one (any
+    cell present, regardless of value) reports nobody. Both are green on the
+    failing fixture alone, which is why the all-objected and none-objected
+    controls are in the criteria.
+  - >-
+    A not_exposed CELL IS NOT EVIDENCE EITHER WAY. It neither counts toward
+    objecting nor toward never objecting. Collapsing it into did_not_object marks
+    sound tests inert — three of four cells in the recorded incident's last
+    column are dashes.
+  - >-
+    THE FIFTH CLAUSE IS THE ANTI-COLLAPSE CLAUSE. Report the two counts
+    separately. A ratio, a percentage, or a "3 of 4 caught it" summary recreates
+    the aggregate this AC removes in a form that reads as progress, and two
+    separate counts cannot be summarised into one without discarding a reported
+    figure.
+  - >-
+    Consume TQ-500c-1's per-pair outcomes and never fall back to a group-level
+    verdict. TQ-500c-1 emits none for this reading to fall back to; if one
+    appears, this AC has been implemented against the wrong record.
+  - >-
+    Same host as TQ-500b-1 —
+    templates/scripts/commit_guardian/_signoff_parity_checks.py, mirrored into
+    scripts/commit_guardian/ in the same change. This is a reading of the same
+    completion_manifest, one level down.
+  - >-
+    The reading is a record-shape observation. It must not open a test file, run
+    a test, or consult a coverage record; it reports what the record says each
+    test did.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500b-2
+    contract: >-
+      Per piece of work, the set of tests that objected under no alteration they were
+      exposed to, each named, plus the two counts. A non-empty set means the piece of
+      work is not satisfied, and TQ-500b-2 carries that into the completion decision.
+expects_from:
+  ac_id: TQ-500c-1
+  contract: >-
+    One outcome per test per alteration — objected, did not object, or not exposed —
+    with each test identified. This reading must not fall back to any group-level
+    verdict, and TQ-500c-1 emits none for it to fall back to.
+test_spec:
+  - name: test_tq500c_2_the_test_that_objected_under_nothing_is_reported_by_name
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Four tests, three of which objected to the alteration and a fourth which
+      was exposed and did not: the fourth is reported by its own test-function
+      name, and the work item is not reported as satisfied on the grounds that
+      some of its tests objected.
+  - name: test_tq500c_2_an_all_objected_record_reports_no_test_as_never_objecting
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      The false-positive control. Over a record in which all four objected under
+      at least one alteration they were exposed to, no test is reported. NAMED
+      MUTATION (this descriptor asserts an absence): change the row-wise reducer
+      from "objected under at least one alteration it was exposed to" to
+      "objected under every alteration it was exposed to". Under that injection
+      the tests that objected under one alteration but not another are reported
+      and THIS TEST MUST GO RED; revert to the any-reducer and it returns to
+      green.
+  - name: test_tq500c_2_a_none_objected_record_reports_all_four_by_name
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The false-negative control. Over a record in which none of the four
+      objected, all four are reported by name — not just the first found. NAMED
+      MUTATION: make the reading short-circuit on the first inert test; this test
+      must go RED under it.
+  - name: test_tq500c_2_not_exposed_cells_count_toward_neither_objecting_nor_never_objecting
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      A test exposed to one alteration and objecting, and not exposed to a
+      second, is not reported. NAMED MUTATION (this descriptor asserts an
+      absence): collapse not_exposed into did_not_object in the reducer. That
+      alone does not change an any-reducer, so pair it with the all-reducer
+      injection above: under both together a sound test is reported and THIS TEST
+      MUST GO RED. Revert both and it returns to green.
+  - name: test_tq500c_2_the_two_counts_are_reported_separately_and_never_as_one_figure
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The count of tests that never objected and the count that did both appear
+      in the output as distinct figures. A ratio, a percentage, or a single
+      "3 of 4" string fails this test.
+test_rationale: |
+  The failing case alone is satisfied by a reading that always reports something,
+  so the all-objected and none-objected controls are not optional — without the
+  first, a reading may report every test as inert and still pass; without the
+  second, a reading may report only the first inert test it finds and still pass.
+
+  Three of the five descriptors assert an absence and each names its injection.
+  The load-bearing one is the reducer swap from any to all, because it is the
+  single change that turns the false-positive control red while leaving the
+  headline criterion green — the asymmetry that proves the control is doing work.
+  This AC's falsifiability answer must be of the substitute kind naming that
+  reducer swap and recording each of the five descriptors' outcome under it.
+origin_agent: BrainCandy
+created: 2026-08-31
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-31
+    note: >-
+      Kept python-coder and change_target code. Pinned the row-wise reducer
+      explicitly (at-least-one, not all) because both the stricter and looser
+      forms are green on the failing fixture alone. Three of the five descriptors
+      assert an absence; each names its injection — the any-to-all reducer swap
+      (the load-bearing one), short-circuiting on the first inert test, and
+      collapsing not_exposed into did_not_object. criteria untouched.
+superseded_by: null
+covered_by:
+  - TQ-500c-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE THIRD AND FOURTH CLAUSES ARE THE FALSE-POSITIVE AND FALSE-NEGATIVE CONTROLS,
+  and neither is optional. Without the all-objected case the reading may report every
+  test as inert and still pass. Without the none-objected case it may report only the
+  first inert test it finds and still pass. The failing case alone is satisfied by a
+  reading that always reports something.
+
+  THE FIFTH CLAUSE IS THE ANTI-COLLAPSE CLAUSE. A ratio, a percentage, or a "3 of 4
+  caught it" summary re-creates the aggregate the AC removes, in a form that reads as
+  progress. Two separate counts cannot be summarised into one without discarding a
+  reported figure.
+
+  BOUNDARY WITH TQ-500c-3. This AC asks whether a test ever objected at all.
+  TQ-500c-3 asks which specific alteration a test slept through. A test that objected
+  under one alteration and not another passes this AC and is caught by that one;
+  neither absorbs the other.

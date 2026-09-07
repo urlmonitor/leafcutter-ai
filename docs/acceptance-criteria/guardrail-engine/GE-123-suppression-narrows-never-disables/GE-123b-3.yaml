@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -109,10 +109,24 @@ test_rationale: "Every other criterion under GE-123b pushes towards refusing mor
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
-  - reason: "it-po-v3 technical enrichment (2026-08-18): authored it_requirements framing this record as the over-reach guard (silence and inertness on every non-collapse), restating the counted quantity as a prohibition on findings-based deciding, requiring the lost-coverage warning to carry a stable greppable marker so its absence can be asserted without asserting global error-stream silence (which would forbid GE-120a and collide with GE-113c-3-v), and pinning that the unreadable-file arm is about what drives the decision rather than about unreadable files. Added a mandatory real-artifact false-positive descriptor against the repository's own allowlist, read-only. Flagged explicitly that both arms are green on arrival by design so a red-baseline gate does not reject the record. Baselines re-verified through the real entry point: 0 / 0 / 0, all silent. Criteria unchanged."
+- reason: 'it-po-v3 technical enrichment (2026-08-18): authored it_requirements framing
+    this record as the over-reach guard (silence and inertness on every non-collapse),
+    restating the counted quantity as a prohibition on findings-based deciding, requiring
+    the lost-coverage warning to carry a stable greppable marker so its absence can
+    be asserted without asserting global error-stream silence (which would forbid
+    GE-120a and collide with GE-113c-3-v), and pinning that the unreadable-file arm
+    is about what drives the decision rather than about unreadable files. Added a
+    mandatory real-artifact false-positive descriptor against the repository''s own
+    allowlist, read-only. Flagged explicitly that both arms are green on arrival by
+    design so a red-baseline gate does not reject the record. Baselines re-verified
+    through the real entry point: 0 / 0 / 0, all silent. Criteria unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-31'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-SuppressionNarrowsNeverDisables/09_TICKET-20260831-GE-123b-3.md
 change_target: code
 risk_surface: safety
 notes: |
@@ -156,3 +170,4 @@ notes: |
   BA's figures. The unreadable-file arm was also exercised: a path that does not
   resolve produces no finding and no output on either stream, because scan_file
   swallows the read error and returns an empty finding list.
+target_epic: EPIC-SuppressionNarrowsNeverDisables

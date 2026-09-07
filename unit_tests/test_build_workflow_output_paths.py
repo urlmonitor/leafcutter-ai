@@ -239,7 +239,7 @@ def test_compute_output_mappings_workflow_js_uses_correct_output_key(
 
     # The workflow-js section of _compute_output_mappings() is gated on the
     # PRE-shim output_root/workflows/<name> path already existing on disk
-    # (BP-100k-6 interaction fix: a fixture that never deployed a family must
+    # (BP-100n-1 interaction fix: a fixture that never deployed a family must
     # not get a phantom manifest entry for it). A real build always runs
     # build_workflow_scripts() before write_build_manifest(), so that file is
     # already there; simulate that here rather than invoking the real deploy

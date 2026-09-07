@@ -76,4 +76,4 @@ covered_by:
   - BO-2400a-4-i
 implemented_by:
   - "scripts/build_orchestration/fast_lane.py"
-  - "templates/workflows-js/fast-lane-build.js"
+  - "templates/workflows-js/fast-lane-ship.js"
