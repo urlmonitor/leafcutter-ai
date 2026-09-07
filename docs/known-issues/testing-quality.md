@@ -588,10 +588,25 @@ cannot see, where the absence of the check is documented as correct.
 
 ### KI-TQ-012 — A fixture that sandboxes with `git worktree add` sets its identity in the *real* repository's config, and every worktree and every session inherits it
 
+> **DUPLICATE ID.** A second, independently-filed `KI-TQ-012` exists further down this
+> file ("A test fixture reassigns the real repository's commit identity…"). Same defect,
+> same two files, filed twice on different days without either author seeing the other.
+> Both are closed by the same fix. Neither is renumbered: both are cited by id elsewhere,
+> and this register already carries an unrepaired `KI-CG-012` collision for the same reason.
+> That two people could file the same high-severity defect a week apart is itself the
+> finding — the register is long enough that filing is cheaper than searching.
+
 - **Severity:** high
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Status:** **RESOLVED 2026-09-07.** The identity now comes from `GIT_AUTHOR_*` /
+  `GIT_COMMITTER_*` in `_GIT_ENV_OVERRIDES`, and every `git config user.*` call is gone
+  from both fixtures. Environment variables live and die with the subprocess, so no
+  configuration file is written and nothing can outlive the run.
+  **Proven, not asserted:** the repository identity was set to a known value, both suites
+  were run (10 passed), and the identity was re-read afterwards — unchanged. Before the fix
+  the same run guaranteed a poisoned config.
+- **Occurrences:** **10** misattributed commits in a single session on 2026-09-07, several
+  on open pull requests, across worktrees these tests have never heard of
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07 · **Closed:** 2026-09-07
 - **Where:** `unit_tests/portability/test_ge_120e_1_i.py` — the merge fixture's `build()`
   (`git worktree add` at ~L264, `git config user.*` at L270-271) and its `tearDownClass`
   (`git worktree remove --force`, ~L338)
@@ -839,10 +854,32 @@ does not load — where the failure mode is silence, and silence is the result t
 
 ### KI-TQ-012 — A test fixture reassigns the real repository's commit identity, and every commit made afterwards is authored by the fixture
 
+> **DUPLICATE ID** — see the note on the other `KI-TQ-012` earlier in this file. Same
+> defect, filed twice a week apart; both closed by the same fix; neither renumbered,
+> because both are cited by id.
+
 - **Severity:** high
-- **Status:** open — recurs on every run of the suite; a config repair does not hold
-- **Occurrences:** 3 observed the same day, from three different worktrees — and the offending code is **two** files with **six** call sites, not four in one: a third commit landed authored `GE-120e-1-i fixture`, which is a *different* fixture, so `unit_tests/portability/test_ge_120e_1_i.py` carries the identical defect at 2 further sites
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Status:** **RESOLVED 2026-09-07** — identity now supplied via `GIT_AUTHOR_*` /
+  `GIT_COMMITTER_*` in `_GIT_ENV_OVERRIDES`; every `git config user.*` call removed from
+  both fixtures. Verified by setting the repository identity to a known value, running both
+  suites (10 passed), and re-reading it: **unchanged**.
+- **Occurrences:** **10** misattributed commits in one session (2026-09-07), several on open
+  pull requests. **The count in this line was wrong twice before it was measured** — filed as
+  "four sites in one file", corrected to "two files, six sites", and the real figure is
+  **two files, TEN sites** (8 in `test_ge_120e_1.py`, 2 in `test_ge_120e_1_i.py`). Both
+  earlier counts came from reading the commits that happened to be misattributed rather than
+  from grepping the fixtures.
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07 · **Closed:** 2026-09-07
+- **Scope check, so nobody re-audits it:** a repo-wide sweep found ~40 test files setting
+  `git config user.*`. Only these two leak. The rest set identity inside a throwaway
+  `git init` repository, which has its own config and cannot escape. The discriminator is
+  `git worktree add` against the *real* repository root, not the presence of a `git config`
+  call. One file, `test_check_doc_frontmatter_worktree_pathbase.py`, looks leaky to a naive
+  grep and is not — it worktrees a temp repo it created itself.
+- **Why not `git config --worktree`:** it scopes correctly but requires
+  `extensions.worktreeConfig`, which lives in untracked `.git/config`. This repository has it
+  enabled locally; a fresh CI clone does not, so that fix would pass here and fail in CI. The
+  environment works everywhere and writes nothing.
 - **Where:** `unit_tests/portability/test_ge_120e_1.py` — lines 234, 300, 344, 543 — **and
   `unit_tests/portability/test_ge_120e_1_i.py`**, 2 more sites (found by grepping
   `fixture@example.com` across the branch after a third misattributed commit; the entry
