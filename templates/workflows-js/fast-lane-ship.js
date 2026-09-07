@@ -66,6 +66,15 @@ const WORKTREE_SCHEMA = {
   },
 };
 
+const WORKTREE_VERIFY_SCHEMA = {
+  type: "object",
+  required: ["worktree_path", "raw"],
+  properties: {
+    worktree_path: { type: "string" },
+    raw: { type: "string" },
+  },
+};
+
 const RESOLVER_SCHEMA = {
   type: "object",
   required: ["ac_ids"],
@@ -617,8 +626,77 @@ if (!worktreeResult || !worktreeResult.worktree_path) {
   };
 }
 
-const worktreePath = worktreeResult.worktree_path;
+const claimedWorktreePath = worktreeResult.worktree_path;
 const branch = worktreeResult.branch || `fast-lane/${slug}`;
+
+// Remove the LLM from the trust path for worktree_path, exactly as the comment
+// below already does for ac_store_path. The worktree phase agent has been
+// observed to echo a fabricated path instead of create-fastlane-worktree's real
+// JSON: 2026-08-11 on BO-2400f (<worktree>/tickets/00_inbox), and again
+// 2026-09-07 on UXP-700d, where it returned <repo_root>/worktrees/<slug> while
+// git had actually placed the worktree at <workspace>/worktrees/<slug>.
+//
+// The location is NOT a fixed convention that could simply be recomputed here.
+// setup_ticket_worktree.py's _resolve_installed_layout() deliberately differs by
+// layout: in the dev layout worktrees_base is the workspace PARENT of the repo,
+// while in a consumer/installed layout it is the consumer project root. Deriving
+// a path here would therefore be correct in one layout and wrong in the other.
+// git is the only authority that knows where the worktree really is in both, so
+// ask git and require the answer to be quoted from its raw output.
+const worktreeVerify = await agent(
+  `Report where git says the fast-lane worktree actually is. Do NOT compute, ` +
+  `infer, guess or normalise a path — only quote what git prints.
+
+` +
+  `Run exactly this one command:
+` +
+  `   git worktree list --porcelain
+
+` +
+  `Find the record whose branch line is refs/heads/${branch}. Return:
+` +
+  `{ "worktree_path": "<that record's worktree line path, verbatim>", ` +
+  `"raw": "<that record's full porcelain text, verbatim>" }
+
+` +
+  `If no record matches that branch, return ` +
+  `{ "worktree_path": "", "raw": "<the command's full output, verbatim>" }.`,
+  {
+    agentType: "worktree-agent",
+    schema: WORKTREE_VERIFY_SCHEMA,
+    label: "fastlane-worktree-verify",
+    phase: "Worktree",
+  }
+);
+
+// A path that does not appear in the raw git output it was supposedly read from
+// was invented, not quoted — the one failure mode this step exists to catch.
+const verifiedWorktreePath =
+  worktreeVerify &&
+  worktreeVerify.worktree_path &&
+  worktreeVerify.raw &&
+  worktreeVerify.raw.includes(worktreeVerify.worktree_path)
+    ? worktreeVerify.worktree_path
+    : "";
+
+if (!verifiedWorktreePath) {
+  return {
+    status: "error",
+    message:
+      `Could not confirm the fast-lane worktree location from git for branch ` +
+      `${branch}. The worktree phase claimed "${claimedWorktreePath}". ` +
+      `git worktree list --porcelain reported: ` +
+      `${JSON.stringify(worktreeVerify && worktreeVerify.raw)}. ` +
+      `Proceeding on an unconfirmed path is what sent the resolver to a ` +
+      `non-existent directory on BO-2400f and UXP-700d.`,
+    failing_phase: "worktree",
+    claimed_worktree_path: claimedWorktreePath,
+    branch,
+    classification: "halt",
+  };
+}
+
+const worktreePath = verifiedWorktreePath;
 // Derive the AC store root deterministically from the worktree path — do NOT
 // trust worktreeResult.ac_store_path. The store lives at a fixed convention
 // (<worktree>/docs/acceptance-criteria) inside every worktree cut from
