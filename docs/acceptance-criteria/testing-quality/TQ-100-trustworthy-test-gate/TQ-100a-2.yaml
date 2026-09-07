@@ -1,0 +1,227 @@
+id: TQ-100a-2
+components:
+  - testing_quality
+title: "A test that sandboxes itself with a linked worktree leaves the host repository's commit identity untouched"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a host repository whose recorded commit identity is
+      "Real Human <real-human@example.com>",
+    And a test in the suite that sandboxes itself by adding a linked worktree of
+      that same host repository and making commits inside it under its own
+      fixture identity "Fixture <fixture@example.invalid>",
+    And the standing fact that a linked worktree holds no configuration of its
+      own — it reads and writes the single configuration shared by the host
+      repository and every other worktree of it — so an unqualified identity
+      write issued from inside the sandbox lands on the host,
+  When the suite is run,
+  Then each commit the sandbox makes carries "Fixture <fixture@example.invalid>"
+      as BOTH its author and its committer,
+    And the identity the host repository — and every other worktree of it —
+      commits under afterwards is still "Real Human <real-human@example.com>",
+      unchanged in both name and address,
+    And the sandbox obtained its identity from the environment its git
+      subprocesses inherit rather than by writing an identity into
+      configuration, so the host's shared configuration is not written to at any
+      point in the run,
+    And a commit made in the host repository after the suite finishes is
+      attributed to "Real Human <real-human@example.com>",
+    And the host repository having worktree-scoped configuration switched on
+      changes none of the above: that switch only makes an explicitly
+      worktree-qualified write legal, and an unqualified write issued from
+      inside the sandbox still lands on the host regardless of it.
+depends_on:
+  - TQ-100a
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-012 — the register carries this id TWICE, at ~L589 and ~L840, for two
+      framings of the same defect. Read both before implementing: the first gives
+      the blast-radius account (a shared .git/config read by 80+ worktrees, 42
+      commits at time of writing) and the correct sibling pattern; the second
+      gives the four call sites and a remediation that TQ-100a-2-ii refuses.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      The failure family this AC sits in — a sandbox whose visible half (a
+      temporary directory, removed on teardown) is convincing while its invisible
+      half (the configuration that directory points at) leaks permanently.
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      CROSS-LINK, NOT DUPLICATION. The substitute-evidence shape — break the
+      guarded behaviour on purpose, show the check objects, put it back — is
+      owned by the TQ-500 family. This AC and its children require that proof for
+      the guard in TQ-100a-2-i but must not re-specify the machinery.
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE MECHANISM IS FOUR ENVIRONMENT VARIABLES, SET WHERE THE SUBPROCESS
+    ENVIRONMENT IS ALREADY CENTRALISED. Both offending files already merge a
+    single overrides dict into every git subprocess call
+    (unit_tests/portability/test_ge_120e_1.py:167-169 and
+    unit_tests/portability/test_ge_120e_1_i.py:199-201). Add GIT_AUTHOR_NAME,
+    GIT_AUTHOR_EMAIL, GIT_COMMITTER_NAME and GIT_COMMITTER_EMAIL there, and
+    delete the five `git config user.*` pairs — test_ge_120e_1.py:234, :300,
+    :344, :543 and test_ge_120e_1_i.py:270. Each of those five is preceded by a
+    `git worktree add --detach ... cwd=_REPO_ROOT`, which is what makes the write
+    land on the host. Verified in a scratch repo: with all four variables set and
+    no configured identity anywhere, `git commit` succeeds, produces the intended
+    author AND committer, and writes nothing to any configuration file.
+  - >-
+    ALL FOUR VARIABLES ARE REQUIRED — TWO IS THE FAILURE THAT PASSES LOCALLY.
+    Setting only GIT_AUTHOR_NAME/GIT_AUTHOR_EMAIL leaves the committer to fall
+    back to configuration. On a developer machine a global identity exists, so
+    the commit succeeds and the test is green; on a fresh CI checkout there is no
+    identity at all and git aborts. That is a difference that only shows up in
+    the required job, which is the most expensive place to find it.
+  - >-
+    THE WORKTREE-CONFIG EXTENSION IS NOT A MITIGATION AND MUST NOT BE TREATED AS
+    ONE. `extensions.worktreeConfig` is ALREADY true in this clone. Measured with
+    it enabled: a plain `git config user.email` issued inside a linked worktree
+    still overwrote the host's shared configuration. The extension only makes the
+    explicitly `--worktree`-qualified form legal; it does not redirect unqualified
+    writes. Any reasoning of the form "the extension is on, so we are covered" is
+    false. See TQ-100a-2-ii for why the qualified form is refused outright.
+  - >-
+    REJECTED — PER-INVOCATION `git -c user.name=... -c user.email=... commit`.
+    Safe by construction and cannot outlive the process, but it must be repeated
+    at 9+ call sites, and an omission fails SILENTLY: the invocation falls back to
+    the ambient identity and still succeeds, so nothing in the run objects. The
+    environment-variable form is set once per file and covers every call that
+    inherits it.
+  - >-
+    REJECTED — TEARDOWN-RESTORE. Unsetting or restoring the keys in teardown is
+    defeated by a crashed run, an interrupted run, and `pytest -x`; a teardown
+    that must run correctly is precisely the thing that already failed here. It is
+    additionally wrong for this workspace, where 80+ worktrees and parallel agents
+    share the one configuration file: even a teardown that does run leaves a
+    window in which every concurrent commit is misattributed.
+  - >-
+    THE CONSEQUENCE IS LOCAL, NOT CI. CI checks out a throwaway clone, so the
+    pollution dies with the runner. The damage is to the developer's own machine
+    and propagates across the whole worktree family through the shared
+    configuration — 81 commits are already misattributed. Do not write the change
+    up as a CI risk; it is not one.
+  - >-
+    BOTH TARGET FILES ARE SINGLE-COPY. Verified: neither has a counterpart under
+    templates/, and build.py deploys no conftest.py. The templates-versus-build-
+    output trap — fixing the deployed copy while the source copy keeps
+    regenerating it — does not apply here, so the edit is final where it is made.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-100a-2-i
+    contract: >-
+      Fixtures that supply their identity through the inherited process
+      environment and write nothing to the host's shared configuration — the
+      state under which the session-scoped guard reports nothing. Until this
+      lands, that guard is red on this repository's own suite, which is the point.
+  - agent: python-coder
+    ac_id: TQ-100a-2-ii
+    contract: >-
+      The identity-supply mechanism whose acceptable shapes TQ-100a-2-ii bounds:
+      environment-supplied is accepted, worktree-scoped configuration writing is
+      refused.
+expects_from: null
+test_spec:
+  - name: test_tq100a_2_host_identity_is_unchanged_after_a_linked_worktree_fixture_runs
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: >-
+      git init a throwaway host repo, set its identity, then drive the fixture's
+      own sandbox-build-and-commit path against it as a subprocess
+    description: >-
+      Build a real host repository with a recorded identity, let the fixture add
+      a linked worktree of it and commit inside, then read the host's shared
+      configuration back. Both identity keys must hold their original values.
+      Must use a real linked worktree of a real repository — a bare temporary
+      directory does not share configuration and so cannot exhibit the defect,
+      which is exactly how a synthetic fixture would pass on the broken code.
+  - name: test_tq100a_2_sandbox_commits_carry_the_fixture_identity_as_author_and_committer
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Read back both the author and the committer of a commit the sandbox made.
+      Asserting the author alone is the two-variable failure described in the
+      implementation notes — it stays green while the committer silently falls
+      back to configuration.
+  - name: test_tq100a_2_commits_succeed_with_no_configured_identity_anywhere
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The fresh-checkout shape. Run with the host repository carrying no identity
+      keys and with the environment pointed at an empty home directory so no
+      global configuration is reachable. The sandbox's commits must still succeed
+      and carry the intended author and committer.
+  - name: test_tq100a_2_worktree_scoped_configuration_being_enabled_changes_nothing
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      Enable worktree-scoped configuration on the host and repeat the first
+      assertion; the host identity is still unchanged. NAMED MUTATION (this
+      descriptor asserts an absence of change) - restore one `git config
+      user.email` call inside the sandbox; under that injection the host identity
+      changes and THIS TEST MUST GO RED even with the extension enabled, which is
+      the measured fact that rules the extension out as a mitigation. Revert and
+      it returns to green.
+test_rationale: |
+  Four descriptors because the defect has four independent ways to look fixed and
+  not be. The first is the only one that can observe the harm at all, and only
+  because it uses a real linked worktree of a real repository — the harm is
+  invisible to any sandbox that does not share configuration, which is why eleven
+  days of green runs said nothing. The second separates author from committer,
+  the split that passes on a developer machine and aborts in CI. The third
+  removes every ambient identity, reproducing the fresh-checkout condition the
+  second descriptor's failure mode hides behind. The fourth is the measured
+  refutation of the plausible wrong conclusion — that the already-enabled
+  worktree-config extension makes this safe — and carries a named injection
+  because it asserts that nothing changed.
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-100a-2-i
+  - TQ-100a-2-ii
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHY THE MECHANISM IS IN THE CRITERIA AND NOT A FOOTNOTE. "Do not pollute the
+  host" is unimplementable advice on its own, because the polluting call looks
+  correctly scoped: it is issued with the sandbox as its working directory, and
+  every intuition says a command run inside a directory affects that directory.
+  The third Given states the fact that defeats that intuition, and the last Then
+  closes the one escape hatch a reader would otherwise reach for.
+
+  WHY THIS SITS UNDER TQ-100a. TQ-100a is the containment L1 — one test's
+  malfunction must not reach past itself — and this is the same property one
+  scope wider: past the run, into the repository the run borrowed. The fit is
+  imperfect and the imperfection is on the record: TQ-100a's own criteria speak
+  about the suite finishing despite an unloadable file, not about state outside
+  the process. No existing L1 in this component covers test-environment
+  isolation. An L1 along the lines of "a test never mutates state outside its own
+  sandbox" would be the right home; authoring one is the product owner's call,
+  not this agent's.
