@@ -108,6 +108,31 @@ def _find_main_venv_python() -> str | None:
     return None
 
 
+def _hook_env() -> dict[str, str]:
+    """Build the environment for the delegated hook process.
+
+    Sets ``PYTHONDONTWRITEBYTECODE=1`` so a hook never leaves ``__pycache__``
+    behind in the deployed tree it is reading.
+
+    Why this is load-bearing rather than tidiness: pre-commit decides a hook
+    FAILED when the working tree differs before and after it runs. A hook that
+    imports a deployed module causes CPython to write or refresh a ``.pyc``
+    beside it. In a project whose ``.gitignore`` does not exclude
+    ``__pycache__`` — which every fresh consumer install is, since ``build.py``
+    deploys no ``.gitignore`` — those ``.pyc`` files are tracked, so every hook
+    run rewrites tracked files and pre-commit reports "files were modified by
+    this hook" no matter what the hook itself decided. The hook's own verdict
+    becomes irrelevant, and an ordinary commit is refused.
+
+    Returns:
+        dict[str, str]: A copy of the current environment with bytecode
+        writing disabled for the child process.
+    """
+    env = os.environ.copy()
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    return env
+
+
 def main() -> int:
     """Resolve the correct Python and delegate to the actual hook script.
 
@@ -131,7 +156,11 @@ def main() -> int:
     if _is_worktree():
         main_python = _find_main_venv_python()
         if main_python:
-            result = subprocess.run([main_python] + args)
+            try:
+                result = subprocess.run([main_python] + args, env=_hook_env())
+            except OSError as exc:
+                print(f"run_hook: failed to launch '{main_python}': {exc}", file=sys.stderr)
+                return 1
             return result.returncode
         # Main venv not found — fall through to poetry
         print(
@@ -142,9 +171,17 @@ def main() -> int:
 
     # Main worktree (or fallback): use Poetry if available, else sys.executable
     if _has_poetry_project():
-        result = subprocess.run(["poetry", "run", "python"] + args)
+        try:
+            result = subprocess.run(["poetry", "run", "python"] + args, env=_hook_env())
+        except OSError as exc:
+            print(f"run_hook: failed to launch 'poetry run python': {exc}", file=sys.stderr)
+            return 1
     else:
-        result = subprocess.run([sys.executable] + args)
+        try:
+            result = subprocess.run([sys.executable] + args, env=_hook_env())
+        except OSError as exc:
+            print(f"run_hook: failed to launch '{sys.executable}': {exc}", file=sys.stderr)
+            return 1
     return result.returncode
 
 
@@ -166,5 +203,20 @@ DECISION HISTORY
   detection (poetry binary on PATH + pyproject.toml exists + [tool.poetry] section).
   Repos without Poetry (fresh installs, non-Poetry projects) fall back to
   sys.executable so hooks work without pyproject.toml.
+- 2026-09-07 [python-coder/GE-127a-1]: Added _hook_env() and passed it as `env`
+  to all three delegation sites, setting PYTHONDONTWRITEBYTECODE=1 so a hook
+  never writes __pycache__ into the deployed tree it inspects. Pre-commit judges
+  a hook FAILED when the working tree differs before and after it runs, so where
+  .gitignore does not exclude __pycache__ — every fresh consumer install, since
+  build.py deploys no .gitignore — those .pyc files are tracked and each run
+  rewrites them, failing the hook whatever it actually decided. Found when
+  registering check-file-size (GE-127a-1) turned this latent condition into a
+  live regression: an ordinary commit to a well-under-limit file was refused
+  while the gate itself printed a clean PASSED. This suppresses the trigger in
+  the commit-guardian hooks; it does NOT remove the underlying gap, which is
+  that build.py deploys no .gitignore.
+  Wrapped the three subprocess.run calls in try/except OSError at the same time:
+  the policy applies to those lines once touched, and an unlaunchable interpreter
+  should report a reason rather than raise a traceback out of a pre-commit hook.
 ====================================================================
 """
