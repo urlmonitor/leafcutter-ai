@@ -28,10 +28,14 @@ ARCHITECTURE: Four tests, matching the ticket's Test Requirements table exactly.
     functions this ticket introduces in build_referential_integrity.py, using a
     SYNTHETIC withheld-declaration set so the assertion is independent of
     whatever the real (post-fix) deploy_map ends up looking like.
-    (2) A must_block/reachability test: withholds the sibling from the deploy_map
-    ON DISK, runs `python scripts/build.py --target-dir <tmp>` as a real
+    (2) A must_block/reachability test: withholds the sibling from the
+    deploy_map inside a ``shutil.copytree`` SCRATCH COPY of the whole package
+    (never this worktree's own tracked scripts/build_phases.py -- see the
+    2026-09-01 DECISION HISTORY entry below), runs
+    `python <scratch>/scripts/build.py --target-dir <tmp>` as a real
     subprocess and asserts it fails naming the script/dependency/phase, then
-    restores the source and re-runs the SAME command for the positive control.
+    restores the scratch copy's build_phases.py and re-runs the SAME command
+    for the positive control.
     (3) A deployed-tree test: runs the real build into a temp target, then
     resolves the closure of EVERY deployed .py script against that DEPLOYED
     tree (not the source tree), asserting every resolved dependency is present.
@@ -58,6 +62,7 @@ ARCHITECTURE: Four tests, matching the ticket's Test Requirements table exactly.
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 import os
 import re
@@ -77,6 +82,55 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 import build as _build  # noqa: E402 -- after sys.path setup
 import build_referential_integrity as _bri  # noqa: E402 -- after sys.path setup
+
+# Reused, proven scratch-package builder for test 2 below -- mirrors the exact
+# `_load_build_synthetic_full_package()` pattern established in
+# unit_tests/test_bp_900g_9.py (itself the AC BP-900g-9 sibling of this file's
+# BP-900g-8), rather than a second, hand-authored copy of the same helper.
+_SYNTHETIC_PACKAGE_HELPER_PATH = (
+    _REPO_ROOT / "unit_tests" / "build_guards" / "test_bp_100k_2.py"
+)
+_SCRATCH_BUILD_SUBPROCESS_TIMEOUT_SECONDS = 300
+
+
+def _load_build_synthetic_full_package():
+    """Load ``_build_synthetic_full_package`` from test_bp_100k_2.py.
+
+    Never imported as a bare ``test_bp_100k_2`` module name, so this does not
+    collide with pytest's own collection of that file.
+
+    Returns:
+        The ``_build_synthetic_full_package(workspace: Path) -> Path``
+        function object from that module.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "_bp900g8_synthetic_package_helper", _SYNTHETIC_PACKAGE_HELPER_PATH
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    return module._build_synthetic_full_package
+
+
+def _run_build_in_scratch_pkg(pkg_root: Path, target: Path) -> subprocess.CompletedProcess[str]:
+    """Run ``<pkg_root>/scripts/build.py`` as a subprocess against *target*.
+
+    Used by test 2 below, which mutates (removes a declared line from) the
+    package's own ``build_phases.py``. Runs against a ``shutil.copytree``
+    scratch copy (built by ``_build_synthetic_full_package``) rather than this
+    worktree's own real, tracked ``scripts/build_phases.py`` -- rewriting the
+    real tracked file, even temporarily restored in a ``finally``, is not an
+    acceptable way to drive a subprocess test: a ``finally`` does not survive
+    the process being killed (CI cancellation, OOM, sandbox termination, or a
+    concurrent session sharing this checkout), which would leave a tracked
+    source file mutated on disk.
+    """
+    return subprocess.run(
+        [sys.executable, str(pkg_root / "scripts" / "build.py"), "--target-dir", str(target)],
+        capture_output=True,
+        text=True,
+        timeout=_SCRATCH_BUILD_SUBPROCESS_TIMEOUT_SECONDS,
+        cwd=str(pkg_root),
+    )
 
 
 def _find_output_root(target_dir: Path) -> Path:
@@ -180,86 +234,92 @@ def test_bp_900g_8_build_subprocess_blocks_when_a_resolved_dependency_is_withhel
     """AC-2 (build exits non-zero naming script/dependency/phase) + AC-5
     (real subprocess demonstration with a negative control).
 
-    Temporarily removes any build_ac_store deploy_map line that ships
-    _component_migration_map.py (a no-op today, since HEAD 339b0981c never
-    declared it -- the pre-fix state already IS the withheld state), runs the
-    REAL `python scripts/build.py --target-dir <tmp>` as a subprocess, and
-    asserts non-zero exit naming the deployed script, the missing dependency,
-    and the build_ac_store phase. The source file is always restored in a
-    ``finally`` block. The SAME command is then run again, unmodified, and must
-    exit zero -- a positive-path build alone cannot distinguish a working guard
-    from an absent one.
+    Builds a ``shutil.copytree`` scratch copy of the whole package (via the
+    proven ``_build_synthetic_full_package()`` helper from test_bp_100k_2.py,
+    already reused by this AC's BP-900g-9 sibling for the same class of
+    build_ac_store deploy-declaration mutation), removes the ONE
+    AC_STORE_DEPLOY_MAP line that ships _component_migration_map.py from the
+    SCRATCH COPY's own build_phases.py, and runs the REAL
+    `python <scratch>/scripts/build.py --target-dir <tmp>` as a subprocess
+    against that scratch copy. Asserts non-zero exit naming the deployed
+    script, the missing dependency, and the build_ac_store phase. The SAME
+    scratch copy's build_phases.py is then restored to its original text and
+    the SAME command is run again, unmodified, and must exit zero -- a
+    positive-path build alone cannot distinguish a working guard from an
+    absent one.
+
+    Deliberately never touches this worktree's own tracked
+    scripts/build_phases.py: a ``finally``-block restore (the prior approach)
+    does not survive the process being killed (CI cancellation, OOM, sandbox
+    termination, or a concurrent session sharing this checkout), which would
+    leave a tracked source file mutated on disk. Mutating the scratch copy
+    removes that hazard entirely -- there is nothing to restore if the test
+    process dies, because nothing tracked was ever written to.
     """
     # covers: BP-900g-8
-    build_phases_path = _REPO_ROOT / "scripts" / "build_phases.py"
-    build_py_path = _REPO_ROOT / "scripts" / "build.py"
-    original_text = build_phases_path.read_text(encoding="utf-8")
+    build_synthetic_full_package = _load_build_synthetic_full_package()
+    pkg_root = build_synthetic_full_package(tmp_path / "workspace")
+    scratch_build_phases = pkg_root / "scripts" / "build_phases.py"
+    original_text = scratch_build_phases.read_text(encoding="utf-8")
 
-    # Matches a single-line deploy_map tuple entry referencing the sibling, e.g.
-    #   (ac_store_src / "_component_migration_map.py", "_component_migration_map.py"),
-    # -- the style every other deploy_map entry in build_ac_store() already uses.
-    # Pre-fix, this matches nothing (the entry does not exist yet), which
-    # correctly represents the withheld state the AC's Gherkin narrates.
+    # Matches a single-line AC_STORE_DEPLOY_MAP tuple entry referencing the
+    # sibling, e.g.
+    #   ("scripts/ac_store/_component_migration_map.py", "_component_migration_map.py"),
+    # -- the style every other deploy_map entry in build_ac_store() already
+    # uses (see unit_tests/test_bp_900g_9.py test 4 for the same anchor form
+    # used to INJECT rather than remove entries).
     withhold_re = re.compile(
         r"^[ \t]*\([^\n]*_component_migration_map\.py[^\n]*\),?[ \t]*$",
         re.MULTILINE,
     )
     withheld_text = withhold_re.sub("", original_text)
+    assert withheld_text != original_text, (
+        "withhold_re matched no line in the scratch copy's build_phases.py -- "
+        "the AC_STORE_DEPLOY_MAP entry's literal form changed and this "
+        "fixture can no longer withhold it (AC BP-900g-8)."
+    )
+    scratch_build_phases.write_text(withheld_text, encoding="utf-8")
 
-    try:
-        build_phases_path.write_text(withheld_text, encoding="utf-8")
+    withheld_target = tmp_path / "withheld_target"
+    withheld_target.mkdir()
+    result = _run_build_in_scratch_pkg(pkg_root, withheld_target)
+    combined = result.stdout + result.stderr
 
-        withheld_target = tmp_path / "withheld_target"
-        withheld_target.mkdir()
-        result = subprocess.run(
-            [sys.executable, str(build_py_path), "--target-dir", str(withheld_target)],
-            capture_output=True,
-            text=True,
-            timeout=180,
-            cwd=str(_REPO_ROOT),
-        )
-        combined = result.stdout + result.stderr
+    assert result.returncode != 0, (
+        "build.py --target-dir exited 0 while a resolved intra-package "
+        "dependency (_component_migration_map.py, resolved by "
+        "generate_ticket_from_ac.py) was withheld from the build_ac_store "
+        f"deploy declaration.\nstdout:\n{result.stdout}\nstderr:\n"
+        f"{result.stderr}\n(AC BP-900g-8)."
+    )
+    assert "generate_ticket_from_ac.py" in combined, (
+        "build.py's failure output did not name the deployed script "
+        f"'generate_ticket_from_ac.py'. Output:\n{combined} (AC BP-900g-8)."
+    )
+    assert "_component_migration_map.py" in combined, (
+        "build.py's failure output did not name the missing dependency "
+        f"'_component_migration_map.py'. Output:\n{combined} (AC BP-900g-8)."
+    )
+    assert "build_ac_store" in combined, (
+        "build.py's failure output did not name the deploy phase "
+        "'build_ac_store' that would have to carry the missing dependency. "
+        f"Output:\n{combined} (AC BP-900g-8)."
+    )
 
-        assert result.returncode != 0, (
-            "build.py --target-dir exited 0 while a resolved intra-package "
-            "dependency (_component_migration_map.py, resolved by "
-            "generate_ticket_from_ac.py) was withheld from the build_ac_store "
-            f"deploy declaration.\nstdout:\n{result.stdout}\nstderr:\n"
-            f"{result.stderr}\n(AC BP-900g-8)."
-        )
-        assert "generate_ticket_from_ac.py" in combined, (
-            "build.py's failure output did not name the deployed script "
-            f"'generate_ticket_from_ac.py'. Output:\n{combined} (AC BP-900g-8)."
-        )
-        assert "_component_migration_map.py" in combined, (
-            "build.py's failure output did not name the missing dependency "
-            f"'_component_migration_map.py'. Output:\n{combined} (AC BP-900g-8)."
-        )
-        assert "build_ac_store" in combined, (
-            "build.py's failure output did not name the deploy phase "
-            "'build_ac_store' that would have to carry the missing dependency. "
-            f"Output:\n{combined} (AC BP-900g-8)."
-        )
-    finally:
-        build_phases_path.write_text(original_text, encoding="utf-8")
-
-    # Positive control: the SAME command against the UNMODIFIED tree must exit 0.
+    # Positive control: restore the SAME scratch copy's build_phases.py to its
+    # original text and run the SAME command again -- must exit 0.
+    scratch_build_phases.write_text(original_text, encoding="utf-8")
     clean_target = tmp_path / "clean_target"
     clean_target.mkdir()
-    result2 = subprocess.run(
-        [sys.executable, str(build_py_path), "--target-dir", str(clean_target)],
-        capture_output=True,
-        text=True,
-        timeout=180,
-        cwd=str(_REPO_ROOT),
-    )
+    result2 = _run_build_in_scratch_pkg(pkg_root, clean_target)
     assert result2.returncode == 0, (
         "build.py --target-dir exited "
-        f"{result2.returncode!r} against the UNMODIFIED source tree; expected 0. "
-        f"stdout:\n{result2.stdout}\nstderr:\n{result2.stderr}\n(AC BP-900g-8). "
-        "A positive-path build alone cannot prove the guard works, but a "
-        "negative-path failure alone cannot prove the guard is not simply always "
-        "failing -- both halves through the same command are required."
+        f"{result2.returncode!r} against the UNMODIFIED scratch package; "
+        f"expected 0. stdout:\n{result2.stdout}\nstderr:\n{result2.stderr}\n"
+        "(AC BP-900g-8). A positive-path build alone cannot prove the guard "
+        "works, but a negative-path failure alone cannot prove the guard is "
+        "not simply always failing -- both halves through the same command "
+        "are required."
     )
 
 
@@ -529,6 +589,31 @@ def test_bp_900g_8_validate_ac_schema_closure_still_resolves_ac_components():
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-01 [python-coder/independent-findings remediation]: Test 2
+#   (test_bp_900g_8_build_subprocess_blocks_when_a_resolved_dependency_is_
+#   withheld_from_the_deploy) used to edit THIS WORKTREE'S OWN TRACKED
+#   scripts/build_phases.py in place -- deleting the AC_STORE_DEPLOY_MAP line
+#   for _component_migration_map.py, running the real build.py subprocess,
+#   and restoring the original text in a `finally` block. A `finally` does not
+#   survive the test process being killed (an interrupt, a crash, an OOM kill,
+#   or a concurrent session sharing this checkout, all of which are routine
+#   in this repo's agent-fleet workflow), which would leave a TRACKED SOURCE
+#   FILE mutated on disk -- a live corruption vector, not a theoretical one.
+#   Fixed by mutating a `shutil.copytree` SCRATCH COPY of the whole package
+#   instead (built via the proven `_build_synthetic_full_package()` helper
+#   from unit_tests/build_guards/test_bp_100k_2.py, already reused for the
+#   identical class of build_ac_store deploy-declaration mutation by this
+#   AC's BP-900g-9 sibling in unit_tests/test_bp_900g_9.py test 4), then
+#   running `<scratch>/scripts/build.py --target-dir <tmp>` as the real
+#   subprocess against that copy. Nothing tracked is ever written to, so
+#   there is nothing to restore if the process dies mid-test. Verified this
+#   is not a coverage-shrinking change: with the fix in place the test passes
+#   (7 passed); mutating build.py:1925 to
+#   `if False and _check_intra_package_closure_guard(package_root)` (disconnecting
+#   the closure guard from the build, restored immediately after) makes this
+#   same test -- and per the independent evidence audit, ONLY this test --
+#   fail, confirming the scratch-copy rewrite still exercises the real,
+#   load-bearing wiring end to end. (#BP-900g-8)
 # - 2026-08-26 [python-coder/BP-900g-8 review-fix]: compute_intra_package_closure()
 #   resolved only two of the three reference shapes the AC's Gherkin covers
 #   ("resolving, importing, or executing another module ... whether by import

@@ -1,0 +1,375 @@
+id: GE-127a-1-i
+title: "A file whose length cannot be established is refused and named, never reported as within its permitted length"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a staged file of a kind the size standard covers whose length cannot be
+    established — its contents are not readable as text in the encoding the
+    standard reads, or the file cannot be opened at all,
+  When the author performs an ordinary commit,
+  Then the outcome states that the file's length could not be established, names
+    which of those two situations occurred, and the commit does not complete,
+  And that file is not listed among those found to be within their permitted
+    length, and no length is stated for it,
+  And the outcome is distinguishable from the outcome produced by a file whose
+    length WAS established and found to exceed its limit — an author can tell
+    which of the two results they were given without inspecting anything else,
+  And given the same file is then made readable and its length is below its
+    permitted length,
+  When the author performs an ordinary commit,
+  Then the commit completes and that file is reported as within its permitted
+    length — establishing that the refusal above was a statement about the
+    measurement and not about the file.
+depends_on:
+  - GE-127a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a-1.yaml
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE DEFECT, READ FROM SOURCE 2026-09-01 AND RE-VERIFIED IN THIS WORKTREE.
+      count_lines wraps its read in `except Exception: return 0`, and separately
+      returns 0 for a path that does not exist. Zero is then compared against the
+      limit and passes, so an unreadable or non-UTF-8 file is not merely tolerated
+      — it is reported in the PASSED block as "0 lines - OK". That is not the
+      component's sanctioned fail-open (an internal error yielding a warning and a
+      clean exit so a script bug never blocks an unrelated commit); it is a
+      successful-looking verdict for a check that never happened.
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-ii.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE VOCABULARY TO REUSE, NOT REINVENT. That criterion pins the same shape on
+      the reachability guard: an unresolvable input reports an INDETERMINATE line
+      naming the reason and exits 2, alongside exit 0 clean and exit 1 for a
+      reported finding, and a successfully-empty result carries the same epistemic
+      weight as a failed lookup. Its standing constraint that the indeterminate
+      path "must be exercised by making the lookup genuinely unavailable at run
+      time, not by asserting that an error branch exists in the source" applies
+      here unchanged. Do not mint a third verdict set.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-CG-034 is the precedent this record exists to stop repeating — a scanner
+      that examined 169 files, compared none, and exited 0. KI-CG-012 and
+      KI-CG-018 are the same shape on other gates. Read them before choosing what
+      the outcome prints: in every one, the missing artifact was a stated result
+      for the thing that was not measured.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Error Handling Policy Rule 3 — an except block must log at WARNING or higher
+      or re-raise; returning a value that reads as a successful measurement is
+      neither. Note the precise reading: Rule 2 (never a bare except) is NOT
+      violated, because an exception type is named. The violation is Rule 3, with
+      Ruff BLE001's blind-catch companion.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED, WHICH IS WHY THE SPEC HERE IS A PLAIN LIST.
+    _package_surface_registry.WATCHED_REGISTRIES watches commit_guardian.json on
+    hooks_manifest.hooks (by id) and on the document's own top level (by mapping key, with
+    only "$schema" and "_comment" excluded). This record adds neither: it changes how one
+    unmeasurable input is reported inside check_file_size.py. The manifest entry that makes
+    the gate reachable is declared once, on GE-127a-1, and inherited here. Do NOT mint a
+    config_schema_fragment key to satisfy the structured-spec validator — BP-100n-4-ii
+    records that BP-100k-4 and BP-100k-4-i both declared keys
+    (hook_trigger_reachability, hook_trigger_reachability_indeterminate) that were never
+    created, and commit_guardian.json's 36 top-level keys still contain neither. A second
+    imaginary key makes the machine-checked spec less trustworthy than no spec at all.
+  - >-
+    REUSE BP-100n-4-ii's VERDICT VOCABULARY AND EXIT-STATUS CONTRACT UNCHANGED — THIS IS THE
+    PIN THE BA ASKED FOR AND IT IS DECIDED. The criteria deliberately name no exit status
+    and the BA's notes ask the IT PO to choose. Chosen: an "INDETERMINATE: reason=<text>"
+    line naming which of the two situations occurred, with exit 2, alongside exit 0 for a
+    clean run and exit 1 for a length that WAS measured and found over. That is the existing
+    contract on check_hook_trigger_reachability and the one BP-100n-4-ii pins; using it here
+    means the two guards speak one language and an author can tell a measurement failure
+    from a size finding by the status alone. The alternative the BA names — treating an
+    unmeasurable file as an ordinary finding — is rejected because it collapses exactly the
+    distinction the third clause requires. Do not mint a third verdict set and do not widen
+    the exit-status set.
+  - >-
+    THE DEFECT IS RULE 3, NOT RULE 2, AND THE FIX IS AN UNAVAILABILITY SIGNAL RATHER THAN A
+    NUMBER. count_lines currently wraps its read in `except Exception: return 0` and
+    separately returns 0 for a path that does not exist; zero then compares under the limit
+    and the file is printed in the PASSED block as "0 lines - OK". Replace the swallowed
+    return with a value the caller cannot mistake for a measurement — the measurement
+    function must be incapable of returning a length for a file it could not read. A branch
+    that returns a sentinel integer reintroduces the same defect with a different constant.
+  - >-
+    TWO SITUATIONS, NAMED SEPARATELY, NEVER COLLAPSED. "The contents are not readable as
+    text in the encoding the standard reads" and "the file cannot be opened at all" are
+    different facts about the world and the outcome must say which occurred. Collapsing them
+    costs the author the only information that distinguishes a genuinely binary file from a
+    permissions or path problem. This is BP-100n-4-ii's two-disk-situations rule applied
+    here.
+  - >-
+    A STAGED DELETION IS OUT OF SCOPE AND MUST NOT BE RESOLVED SILENTLY WHILE FIXING THE READ
+    PATH. A deletion presents a path that does not exist and today takes the same
+    return-zero route, so the fix will pass through it. Whether a deleted file should be
+    measured at all is a scope question the BA explicitly left out of the approved set.
+    Exclude deletions from the measured population explicitly and by their git status
+    (`git diff --cached --name-status` already yields D), never by letting them fall into
+    the unreadable branch — a deleted file reported as INDETERMINATE would refuse every
+    commit that removes a covered file.
+  - >-
+    EXERCISE THE UNMEASURABLE STATES FOR REAL. Make a file genuinely unreadable at run time
+    — bytes that are not valid in the encoding the standard reads, or permissions that
+    forbid opening it — never by asserting that an error branch is present in the source.
+    BP-100k-4-i's standing constraint applies unchanged: a source assertion stays green on
+    precisely the fail-open implementation this record exists to forbid.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE.
+    templates/scripts/commit_guardian/ is canonical; scripts/commit_guardian/ and the
+    repo-root .pre-commit-config.yaml are untracked build outputs that build.py overwrites,
+    and templates/commit-guardian/commit_guardian.json is a decoy that needs no edit. Edit
+    the canonical template and re-run `python scripts/build.py --target-dir .` — config.py:19
+    resolves commit_guardian.json beside the DEPLOYED script, so an unbuilt change leaves the
+    running gate unchanged and the work unverified.
+  - >-
+    DEPLOY-MANIFEST BOUNDARY. build_commit_guardian copies every file in
+    templates/scripts/commit_guardian/ verbatim, so a sibling module inside that directory
+    needs no deploy entry; anything imported from outside it MUST be added to the deploy map
+    in scripts/build_phases.py in the same change or the deployed hook raises
+    ModuleNotFoundError at commit time while source-tree tests stay green.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the file
+    read and any decode; log at WARNING or higher or re-raise; no bare or blind excepts. Here
+    the re-raise-equivalent is the INDETERMINATE verdict — it must never degrade into a
+    swallowed error and a measured length.
+test_spec:
+  - name: test_ge_127a_1_i_an_undecodable_file_is_refused_and_named_as_the_unreadable_situation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Stage a covered file whose bytes are genuinely not valid in the encoding the standard
+      reads and run an ordinary commit. The outcome must state that the file's length could
+      not be established, must name this specific situation as the not-readable-as-text one,
+      and the commit must not complete. Exercised by writing real undecodable bytes, never by
+      asserting an error branch exists in the source.
+  - name: test_ge_127a_1_i_an_unopenable_file_is_the_other_separately_named_situation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A covered file that cannot be opened at all — permissions forbidding the read — is
+      reported as a DIFFERENT, separately named situation from the undecodable one, and also
+      refuses the commit. Establishes that the two facts are distinguishable in the outcome
+      rather than collapsed into one message.
+  - name: test_ge_127a_1_i_an_unmeasurable_file_is_never_listed_as_within_its_permitted_length
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      The unmeasurable file appears in no within-permitted-length class and no length is
+      stated for it. NAMED MUTATION (mandatory, run it, do not merely describe it — the BA's
+      injection): restore the swallow-and-return-zero behaviour, so a file whose contents
+      cannot be read yields a measured length of zero instead of an unavailability signal.
+      That is the exact shape presently in the source and the shape every cited precedent
+      shipped. Under the injection the file is reported as within its permitted length at a
+      length of zero and the commit completes; this descriptor must go RED, failing BY THE
+      COMMIT OUTCOME as well as by the text, and return to green on revert.
+  - name: test_ge_127a_1_i_the_unmeasurable_outcome_is_distinguishable_from_a_measured_over_limit_outcome
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Two runs — one staging an unmeasurable covered file, one staging a covered file
+      measured and found over its limit — produce outcomes an author can tell apart without
+      inspecting anything else. Assert on both the emitted text and the exit status, which
+      under the pinned contract are 2 (INDETERMINATE) and 1 (finding) respectively. A single
+      shared refusal message for both states fails this descriptor.
+  - name: test_ge_127a_1_i_the_same_file_made_readable_and_under_its_limit_commits_and_is_reported_within
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE PAIRED RUN, WHICH IS WHAT MAKES THE FIRST ARM A STATEMENT ABOUT MEASURABILITY. Take
+      the same file from the unreadable descriptor, make it readable and below its permitted
+      length, and commit. The commit must complete and the file must be reported as within
+      its permitted length. Without this pairing, a guard that refuses everything passes
+      every other descriptor here.
+  - name: test_ge_127a_1_i_a_staged_deletion_of_a_covered_file_does_not_produce_an_indeterminate_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A commit that deletes a covered file completes and produces no could-not-be-measured
+      verdict for the deleted path. Guards the out-of-scope state the BA flagged: a deletion
+      presents a non-existent path and today takes the same return-zero route the fix
+      replaces, so without this descriptor the fix converts every deletion into a refusal.
+  - name: test_ge_127a_1_i_the_indeterminate_verdict_reaches_the_registered_hook_output_and_exit_status
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the gate through the registered hook path with an
+      unmeasurable file staged and assert that the INDETERMINATE line and its named reason
+      appear in the hook's own output stream and that the exit status is the commit outcome
+      rather than an advisory note. A verdict printed by a function nothing at commit time
+      calls is inert.
+  - name: test_ge_127a_1_i_the_deployed_copy_fails_closed_on_an_unmeasurable_file_in_a_cold_process
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy and every module it imports load and run in a cold
+      process — a helper placed outside templates/scripts/commit_guardian/ without a
+      scripts/build_phases.py deploy-map entry surfaces here as ModuleNotFoundError rather
+      than passing. With an unmeasurable covered file staged, the deployed run emits the
+      indeterminate verdict with its named reason and exits non-zero. Source-tree greenness
+      cannot substitute: the hook runs from the deployed layout.
+test_rationale: |
+  The clause that carries the actual guarantee — "that file is not listed among those found
+  to be within their permitted length" — asserts an absence, and on today's implementation,
+  which refuses nothing at any commit because it runs at no commit, it is green on arrival.
+  The BA's injection is carried into a descriptor verbatim rather than restated: restoring
+  the swallow-and-return-zero shape must turn it red BY THE COMMIT OUTCOME, not merely by
+  the text, because a gate that prints a worried message and exits 0 is indistinguishable
+  from a passing one to pre-commit, which reads only the status.
+
+  Both unmeasurable states are exercised by making the read genuinely fail at run time.
+  BP-100k-4-i's standing constraint is the reason: a test that asserts an error branch is
+  present in the source stays green on precisely the fail-open implementation this record
+  forbids, and every one of the four cited precedents (KI-CG-034, KI-CG-012, KI-CG-018, the
+  AC-store validator's bare-directory no-op) passed its own tests that way.
+
+  The paired readable run and the deletion descriptor are the two boundary checks that stop
+  the fix overshooting. Without the first, a guard that refuses everything passes; without
+  the second, the fix turns every deletion of a covered file into a refusal, because a
+  deletion presents exactly the non-existent path the read-error branch now rejects.
+delivers_to: null
+expects_from:
+  ac_id: GE-127a-1
+  contract: >-
+    The commit-time length verdict and the outcome it is reported through. This
+    record adds the one input state for which that verdict must not be produced —
+    a file whose length could not be established — and requires it to be a named,
+    separate result rather than a measurement of zero.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-01
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: this record adds no
+    hooks_manifest.hooks id and no new top-level mapping key to commit_guardian.json — the
+    only two containers WATCHED_REGISTRIES binds on that file — so it registers nothing and
+    is released from the structured five-field spec. The manifest entry is declared once, on
+    GE-127a-1. The fictional-fragment precedent (BP-100k-4 / BP-100k-4-i declared
+    hook_trigger_reachability and hook_trigger_reachability_indeterminate; neither is among
+    the 36 top-level keys, still) is recorded in it_requirements so it is not repeated here.
+    VERDICT VOCABULARY PINNED, WHICH THE BA EXPLICITLY DEFERRED TO THE IT PO: reuse
+    BP-100n-4-ii''s contract unchanged — "INDETERMINATE: reason=<text>" with exit 2 alongside
+    exit 0 clean and exit 1 for a measured finding. The alternative the BA named (treat an
+    unmeasurable file as an ordinary finding) is rejected on the record because it collapses
+    the third clause''s distinction. SCOPE HAZARD CARRIED FORWARD RATHER THAN RESOLVED
+    SILENTLY: the staged-deletion state the BA flagged as out of scope is given an explicit
+    exclusion requirement and its own boundary descriptor, because the fix passes straight
+    through the same return-zero path a deletion takes and would otherwise refuse every
+    commit removing a covered file. declares_side_effect false: every Then clause reports to
+    a stream and sets an exit status. test_spec: eight executing descriptors, one carrying
+    the BA''s named mutation, one the paired readable run, one the deletion boundary, one
+    the registered hook entry point and one the deployed copy in a cold process.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PARENTED UNDER GE-127a-1 RATHER THAN DIRECTLY UNDER GE-127a, AND THE REASON IS
+  MECHANICAL AS WELL AS SEMANTIC. Semantically this is the negative edge of the
+  commit-time length verdict GE-127a-1 specifies, not a behaviour of its own.
+  Mechanically, the store's id regex admits no roman-suffixed child of an L1: a
+  `GE-127a-i` would fail the id-format check outright, so an L3 must hang from an
+  L2. Both reasons point the same way.
+
+  THIS IS THE LINE GE-120 DREW, APPLIED TO THIS GUARD. The component's deliberate
+  fail-open convention is not repealed here and must not be decomposed away:
+  failing open on one bad input while the check still ran is acceptable.
+  Reporting SUCCESS for a check that never ran is not. A file the standard could
+  not measure has not been checked, so calling it "within its permitted length"
+  is the forbidden half, and the L0 says so in as many words.
+
+  WHY THE PAIRED READABLE RUN IS PART OF THE CRITERION AND NOT A NICETY. A
+  refusal on an unreadable file is also produced by a guard that refuses
+  everything. The paired run — same file, made readable, under its limit, commit
+  completes — is what makes the first arm a statement about measurability rather
+  than a check that has stopped working. This mirrors GE-126a-2-i's construction
+  in this same component.
+
+  NAMED MUTATION — MANDATORY, EXECUTE IT. "That file is not listed among those
+  found to be within their permitted length, and no length is stated for it"
+  asserts an absence, and on today's implementation — which refuses nothing at
+  commit time because it runs at no commit — it is green on arrival. MUTATION:
+  restore the swallow-and-return-zero behaviour, so that a file whose contents
+  cannot be read yields a measured length of zero instead of an unavailability
+  signal. That is the exact shape presently in the source and the shape every
+  cited precedent shipped. Under the injection the file is reported as within its
+  permitted length at a length of zero and the commit completes; this clause must
+  go RED, failing BY THE COMMIT OUTCOME as well as by the text, and must return
+  to green on revert.
+
+  EXERCISE THE UNMEASURABLE STATES FOR REAL. An unreadable file must be made
+  genuinely unreadable at run time — bytes that are not valid in the encoding the
+  standard reads, or permissions that forbid opening it — never by asserting that
+  an error branch is present in the source. A source assertion stays green on
+  precisely the fail-open implementation this record exists to forbid.
+
+  TWO SITUATIONS, NAMED SEPARATELY, AND NOT COLLAPSED. "The contents are not
+  readable as text" and "the file cannot be opened at all" are different facts
+  about the world. Collapsing them into one message costs the author the only
+  information that distinguishes a genuinely binary file from a permissions or
+  path problem. This is BP-100n-4-ii's rule for the two disk situations, applied
+  here.
+
+  ONE STATE DELIBERATELY LEFT OUT OF SCOPE, AND FLAGGED RATHER THAN SMUGGLED IN.
+  A staged DELETION presents a path that does not exist, which today takes the
+  same return-zero route. Whether a deleted file should be measured at all is a
+  scope question, not a measurability question, and it is not in the set approved
+  for this run. It is recorded here so the implementer does not resolve it
+  silently while fixing the read path.
+
+  VERDICT VOCABULARY IS THE IT PO'S TO PIN, AND THE RECOMMENDATION IS EXPLICIT.
+  The criteria above name no exit status, deliberately. The recommendation is to
+  reuse the existing contract unchanged — an INDETERMINATE line naming the reason
+  with exit 2, alongside exit 0 clean and exit 1 for a length that was measured
+  and found over — so that this guard and the reachability guard speak one
+  language. The alternative (treating an unmeasurable file as an ordinary
+  finding) satisfies the criteria too but costs the distinction in the third
+  clause; if it is chosen, it must be chosen explicitly and recorded.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect.

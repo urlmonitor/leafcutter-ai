@@ -1,0 +1,161 @@
+id: GE-120f-5
+title: "The rule is written where the next check author is already looking, in the vocabulary the machine reads, and the written procedure and the enforced procedure say the same thing"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the procedure for adding a protective check is written down where an author of a
+    new check is already directed to look,
+  When that procedure is read,
+  Then it states that a check carries a declaration of one known-bad input it must reject
+    and the observable rejection that input must produce, names the place that declaration
+    is read from, and states plainly that a declaration is not a demonstration,
+  And it uses the names the machine reads for the known-bad input, for the exemption and
+    its ground, and for the value that records an attempt never made, rather than a second
+    set of words for the same things,
+  And it states what an author must do to have a refusal counted — that the declared input
+    is put through the entry point the protected surface invokes and the refusal observed —
+    and states that a check which has never been asked to refuse is reported as unproven
+    rather than counted as protection,
+  And an author who follows the written procedure exactly and omits the declaration is
+    refused by the registration surface, so the written procedure and the enforced procedure
+    agree at the point where they could disagree,
+  And the document describes the requirement as in force rather than as forthcoming,
+    optional, or as something a later pass will supply.
+depends_on:
+  - GE-120f
+  - GE-120f-1
+  - GE-120f-4
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml"
+    relationship: parent
+    status: exists
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE VOCABULARY TO DOCUMENT, AND THE REASON THIS RECORD EXISTS AT ALL. The rule is
+      already written here, in the repository's own words — a check without a known-bad input
+      can pass on dead code — along with the not-applicable-with-a-ground hatch and the four
+      state values including the honest placeholder for an attempt never made. It has no code
+      reader and it is not where a check author looks. What is currently written down is a
+      vocabulary nobody consumes; the document this record requires must use those same names
+      so the two do not drift into a synonym pair.
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      One of the surfaces an author of a new check is directed to. Whether the rule belongs
+      here, on the check family's own front page, or on a dedicated reference page is the
+      documentation author's decision; the criterion is that it sits where the author is
+      already looking, not that it exists somewhere.
+  - path: "templates/scripts/commit_guardian/README.md"
+    relationship: related
+    status: exists
+    relevance: >-
+      The other surface authors read, and a standing caution about it: it already describes
+      at least one check as live with enforcement when that is not the case. A page that
+      describes the state of the family is a page that can be wrong about the family, which
+      is the same declaration-versus-reality failure BP-100n-5 owns one surface over.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: context
+    status: exists
+    relevance: >-
+      READ-ONLY, OWNED ELSEWHERE, AND EXPLICITLY OUT OF SCOPE FOR THIS RECORD. A guard that
+      answers correctly on every input it is ever given because its refusal is unreachable is
+      missing from that catalogue and a new entry is recommended — but that catalogue is a
+      different surface with a different author, and this record must not be discharged by
+      adding an entry there. The deliverable here is the procedure the next check author
+      reads.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-4.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The enforced procedure the written one must agree with. The agreement clause is asserted
+      here as agreement; the gate itself is that record's and is not restated.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      What the document must tell an author a demonstration IS — the declared input put
+      through the entry point the protected surface invokes, and the refusal observed.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  - ac_id: GE-120f-4
+    contract: >-
+      The registration-time requirement as actually enforced, including what a refused
+      registration says. The document states that procedure; the agreement clause fails if
+      the two diverge.
+  - ac_id: GE-120f-1
+    contract: >-
+      What counts as a demonstration — the entry point, the observation, and the rule that a
+      declaration standing alone records an attempt never made.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  WHY THIS RECORD EXISTS AND WHY IT IS THE PARENT'S OWN STATED TRIGGER. GE-120f carries a
+  reference-doc trigger for two reasons it states directly: a rule the whole family must obey
+  has to be written where the next check author will find it, and what is currently written
+  down is a vocabulary with no reader. Both are documentation failures, not code failures,
+  and neither is fixed by any of the four behavioural records in this family. No
+  component-diagram record is produced: the parent rules that out explicitly, because the
+  execution surface belongs to GE-120c and is to be extended rather than duplicated.
+
+  THE AGREEMENT CLAUSE IS WHAT STOPS THIS BEING PROSE. Every other clause here is satisfiable
+  by writing sentences, and sentences about a guarantee are exactly what this repository
+  already has too many of. The agreement clause is not: it fails when the procedure a reader
+  is told to follow and the procedure the registration surface enforces diverge, which is a
+  property of two artifacts and can be exercised. It is also the failure with the most
+  history here — a check documented as taking a remediation action that its own code never
+  takes, believed by authors for months, is the anti-precedent this component already
+  records. A documented-but-dead procedure is worse than none, because authors believe they
+  are covered.
+
+  ARRIVAL COLOURS. Every clause is RED on arrival: no such procedure is written today. The
+  final clause — the requirement is described as in force rather than forthcoming — will pass
+  trivially the moment the text is written, so it is the one to distrust; it exists to stop
+  the document landing before the gate does and describing an intention.
+
+  NAMED MUTATION FOR THE AGREEMENT CLAUSE. INJECTION: change the written procedure so that
+  the declaration is described as recommended rather than required, leaving the registration
+  surface unchanged. Under that injection an author following the document exactly is
+  refused by a gate the document did not warn them about; this clause must go RED, and must
+  return to green on revert. The mirror injection is equally valid and worth running: leave
+  the document as written and relax the gate to accept a registration without a declaration.
+  Either divergence must be caught, because the defect is the gap and not its direction.
+
+  SECOND NAMED MUTATION, FOR THE VOCABULARY CLAUSE. INJECTION: write the document with its
+  own synonyms for the known-bad input, the ground for an exemption, and the never-attempted
+  value. Under that injection every other clause stays green — the rule is stated, the place
+  is named, the procedures agree — and only this clause goes RED. A second vocabulary beside
+  the first is how a rule with one reader becomes a rule with none, and it is the exact
+  history of the vocabulary this family is built on.
+
+  SCOPE BOUNDARY, STATED SO IT IS NOT DISCHARGED ON THE WRONG SURFACE. The false-green
+  catalogue is a different document with a different author and a recommended new entry of
+  its own. This record is not satisfied by writing there, and writing there does not satisfy
+  it.
+
+  NO COUNT OF INSTANCES MAY APPEAR IN THE DOCUMENT THIS RECORD PRODUCES. Records authored the
+  same day disagree about how many instances of this shape exist and the parent records the
+  figure as disputed. The document states the rule and the procedure; how widespread the
+  defect is belongs to whatever measures it, with the date and the state it was measured at.

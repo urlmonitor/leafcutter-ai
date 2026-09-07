@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -106,6 +106,9 @@ covered_by:
   - GE-120e-2-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/30_TICKET-20260825-GE-120e-2.md
+- templates/scripts/commit_guardian/change_set_source.py
+- templates/scripts/commit_guardian/commit_guardian.json
+- unit_tests/portability/test_ge_120e_2.py
 change_target:
   - code
   - config

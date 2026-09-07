@@ -1,0 +1,162 @@
+id: GE-126c-5
+title: "A proof that a guard can fail states which copy of the guard the running process loaded, and an alteration the loaded copy never saw is refused instead of read as evidence"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a guard exists in two copies — the one an author edits, and the one a
+    verifying run loads — and the loaded one is reached through a link rather than
+    through a second edited file, so that reading either copy shows the same bytes,
+  And a proof that the guard can fail is performed by altering the guard so that it
+    can no longer refuse its known-bad input, running the proof, and restoring the
+    guard afterwards,
+  When the proof runs,
+  Then the run states the location of every copy of that guard the process actually
+    loaded, taken from the loaded module itself rather than from the location the
+    author intended to alter,
+  And the proof counts as evidence only when the alteration was made to a copy named
+    in that statement,
+  And an alteration made to a copy the statement does not name is reported as an
+    alteration that never reached the code under test, naming both the copy altered
+    and the copies loaded, and the run fails,
+  And given the same alteration is instead applied to a copy the statement does name,
+    when the proof runs again, then the guard's verdict on the known-bad input differs
+    from the verdict it gave before the alteration.
+depends_on:
+  - GE-126c
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126c.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-TQ-20260831-mutation-probe-lands-in-the-wrong-copy is the source finding and
+      the only reason this AC exists. It records the two opposite verdicts the SAME
+      injection produced — 4 passed against the canonical copy, 3 failed 1 passed
+      against the loaded copy — and its Remediation item 2 names the observable this
+      AC turns into a requirement: the mutated module's own reported location at
+      import time. Read it with KI-TQ-010, which it calls its operational half.
+  - path: "templates/scripts/commit_guardian/check_package_surface_declaration.py"
+    relationship: related
+    status: exists
+    relevance: >-
+      Any guard in this directory is a candidate subject. Named here only as a
+      representative of the family; the requirement is about the family, not this file.
+  - path: templates/agents/test-writer.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The writing surface where the mutation-proof obligation is stated. The finding's
+      cheap half — tell the author which copy to mutate — belongs there. This AC is the
+      expensive half: the run establishes it rather than the author remembering it.
+  - path: "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500a-3.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE BOUNDARY WITH TQ-500 — READ BEFORE BUILDING EITHER. TQ-500a-3 governs what the
+      WRITER must state in the hand-off record: which alteration, and that it was reverted
+      and the tests re-run. It cannot establish that the alteration reached the code,
+      and its own record explicitly declines to judge whether the alteration was the right
+      one. This AC governs what the RUNNING PROCESS must establish about itself. Neither
+      closes the other; TQ-500a-3's record becomes trustworthy only once this holds, so
+      the dependency runs this way and not the other.
+  - path: "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500c-2-i.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The known issue names TQ-500a-3 and TQ-500c-2-i as the two criteria that will require
+      mutation proofs and therefore inherit this trap. Both are consumers of this AC's
+      guarantee, not duplicates of it.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      M2 is the nearest catalogued mechanism and is NOT this one: M2 is a dependency
+      missing from the deploy manifest, whose symptom is a crash. This is a verification
+      step performed against a copy the verifier does not load, whose symptom is silence
+      — and silence is the result that means safe. Recommend a new entry; see this AC's
+      notes.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-126c-5-i
+    contract: >-
+      The statement of loaded copies and the before/after verdict pair, from which
+      GE-126c-5-i separates an alteration that reached the code and changed nothing
+      from an alteration that never reached it.
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126c-5-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: >-
+  RE-DERIVED IN THIS WORKTREE, 2026-09-01, NOT TAKEN ON TRUST. The two-copy structure
+  the finding describes is present here: scripts/commit_guardian is a symlink to
+  ../.leafcutter/scripts/commit_guardian, while templates/scripts/commit_guardian holds
+  the canonical source. `ls -ld` on both was the check. This matters because it is the
+  reason inspection cannot reveal which copy an alteration landed in: after any build the
+  two are byte-identical, and the link makes the deployed one look like an ordinary
+  directory.
+
+
+  WHY THIS IS THE MOST CORROSIVE INSTANCE IN THE SET. Every other guard-liveness defect
+  fails by staying quiet. This one fails by producing a confident, wrong, ACTIONABLE
+  answer: an injection that does not land looks exactly like a test that cannot fail, so
+  the proof manufactures a false positive for the very defect it exists to detect. The
+  finding records the natural next step from that false positive — rewriting tests that
+  were already correct. An escape hatch that lets the author assert which copy was
+  altered reproduces the defect, because the author's belief about the copy is precisely
+  what was wrong.
+
+
+  ANTI-GREP. No clause here is satisfiable by asserting that a path constant is correct,
+  that a helper exists, or that the proof procedure is documented. Instance 8 of this
+  bleed (readme_read_guard) is a correct-looking, greppable constant that never matched
+  anything; a criterion satisfied by reading a constant reproduces it. The observable is
+  the loaded module's own reported location, obtained from the process that loaded it,
+  and the discriminator is that the verdict MOVES when the alteration lands and does not
+  when it does not.
+
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "The proof counts as evidence only
+  when the alteration was made to a copy named in that statement" implies that a landed
+  alteration is NOT reported as a landing failure — green on arrival today, because
+  nothing is reported at all. INJECTION: build the statement of loaded copies from the
+  path the author passed in rather than from the loaded module's own reported location.
+  Under that injection the wrong-copy case reports as a successful proof and the landed
+  case is indistinguishable from it; the clause must go RED, and must return to green on
+  revert. Run it, do not describe it — and run it against the copy the test loads, which
+  is this AC's own subject.
+
+
+  A WEAKER TELL, RECORDED SO IT IS NOT MISTAKEN FOR THE CRITERION. The finding notes the
+  run times: 0.24s for the injection that did not land, 33.5s for the one that did. That
+  is a useful smell for a human and must not become the assertion — a timing threshold is
+  a proxy measurement reported as a verdict, which is mechanism M8.
+
+
+  FALSE-GREEN CATALOGUE. This shape is not in docs/reference/false-green-mechanisms.md.
+  M2 covers the crash-shaped version of two-copy divergence, not the silent-shaped one.
+  Recommend a new entry; do not fold it into M2, whose defeat ("run the deployed hook")
+  is already satisfied by the run that produced the false positive.

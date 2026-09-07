@@ -1,0 +1,417 @@
+id: BP-1500d-1-i
+components:
+  - build_pipeline
+title: "The record describes the producing end truthfully -- where the package stood, and which of its files the deployment came from -- or says plainly that it cannot"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  Given the same real build run in one session against two receiving projects on
+    disk -- one laid out so the producing package and the project's own root are
+    genuinely the same directory, and one laid out so the producing package sits
+    beside the project and nowhere inside it or above it,
+  When each project's record is read back afterwards from the bytes that project's
+    own build wrote into it,
+  Then each record describes the producing end of its own deployment: where the
+    producing package stood in relation to that record, and which of that package's
+    own files the deployment was taken from,
+  And in the first project both halves of that description are stated, and both are
+    true of the project the record sits in,
+  And in the second project neither half is silently reduced to nothing: the record
+    either describes the producing end in terms that hold for that project as it now
+    sits, or says plainly that the producing end cannot be described from there --
+    it never records the answer it would have given had the package been in the same
+    place, and never records an empty account of the package's files as though the
+    package had shipped none,
+  And the two halves agree with one another, so a reader that takes the stated
+    position of the producing package together with the stated names of that
+    package's files arrives at files that exist; a truthful position paired with
+    names that cannot be read from it is no more usable than either alone,
+  And the unavailable answer is distinguishable, to a reader and to an automated
+    caller, from the answers a legitimately same-directory install produces, so "the
+    package is right here and these are its files" and "I could not work out where
+    the package was, and so recorded none of its files" cannot be received as the
+    same answer,
+  And the first project is the control that makes the second verdict attributable: a
+    record that says same-place and names the package's files from there, and a
+    record that says same-place and names none because the build could not express
+    the answer, are otherwise the same shape -- so only running both layouts in one
+    session separates a build that reports the producing end from one that reports a
+    default,
+  And the description is demonstrated to FAIL, before it may be accepted as passing,
+    on a record whose stated producing end does not hold for the project it sits in
+    -- which must be reported as a description that does not hold, rather than
+    followed, and rather than read as an absence of anything to describe -- and both
+    good records are read again after that breakage and still give their own correct
+    and different answers, so the red is attributable to the breakage and not to a
+    fixture that was already broken,
+  And this behaviour concerns only what the record SAYS about the producing end and
+    whether that statement is true where the record sits; the verdict a check gives
+    when it can find no readable record at all, and the vocabulary in which a check
+    reports what it did and did not compare, are separate judgements that this
+    behaviour neither makes nor replaces,
+  And every verdict is taken from records that are written into real projects on
+    disk by real builds and read where they sit, never from reading the build's own
+    source for the presence of an unavailable answer.
+depends_on:
+  - BP-1500d-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-1.yaml"
+    relationship: parent
+    status: exists
+    relevance: "The L2 this refines. Read its it_requirements first -- requirement 6 ('Every path derivation on the record-writing path must be anchored to a root that exists for an arbitrary consumer install ... keeping that anchor and adding a fallback for the case that currently raises is not a fix') is the instruction this AC turns into an asserted behaviour, for BOTH halves of the producing end. The parent's own criteria and its six test_spec entries are about the record's ENTRIES naming artifacts present in the RECEIVING project, and requirement 5 pins that gloss to the entry set being non-empty. The producing package's own files are by definition not present in the receiving project, so the parent's clause excludes them by its own terms. The parent is fully satisfiable while the producing end is undescribed."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-5.yaml"
+    relationship: related
+    status: exists
+    relevance: "THE CLOSEST DONE NEIGHBOUR, AND A BOUNDARY RATHER THAN COVERAGE. Its subject is the DEPLOYED population -- 'the set of files the build recorded as having written', 'every deployed file it did not compare'. That is the far end of the deployment, which is already accounted for. It says nothing about the package's own files the deployment came from, and it governs the GATE's reporting discipline given a record rather than the record's completeness. It is work_status done and readiness approved, which is exactly the trap BP-1500d's proof shape warns about: it was demonstrated in the layout where the producing package and the receiving project are the same directory, which is the one layout in which the producing end is accidentally described correctly. Cited so a coder does not read a done neighbour as coverage."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3.yaml"
+    relationship: related
+    status: exists
+    relevance: "The other done neighbour and the second boundary. It owns the vocabulary in which an unrecorded artifact is reported -- declared exemption versus reported gap, never a pass. That vocabulary is what a check says about what it could not compare; this AC is about what the record told it in the first place. Do not satisfy this AC by adding an exemption for the producing end -- an exemption records a deliberate decision not to police something, and the producing end being indescribable is not a decision."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-4.yaml"
+    relationship: related
+    status: exists
+    relevance: "THE BOUNDARY, cited so it is visible at implementation time. BP-1500d-4 owns the verdict when a record cannot be READ. In the case this AC governs the record reads perfectly -- it is well-formed, parses, and answers -- it just answers falsely about one end and silently about the other. BP-1500d-4's own scope bound and its test entry 5 both push this case out of its territory. A coder who satisfies this AC by making the drift readers report could-not-read has crossed into -4 and must stop. See delivers_to for the edge that runs the other way."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500c.yaml"
+    relationship: related
+    status: exists
+    relevance: "Weighed as a candidate owner and rejected, because the fingerprint set of the package's own files is the SOURCE side of the staleness comparison and that made it a real contender. Two things settle it. BP-1500c is an undecomposed L1 with no L2 children, so nothing in it can be satisfied or violated at this level. And BP-1500d's notes make BP-1500d the PREREQUISITE of BP-1500c in exactly this respect: there is nothing to compare an installed copy against until the record in the project being checked describes what it was built from. This AC produces the input BP-1500c consumes; it does not make BP-1500c's judgement and must not be satisfied by adding one."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-2.yaml"
+    relationship: related
+    status: exists
+    relevance: "The other near-miss, and it is a near-miss for a precise reason: BP-1500d-2's subject is a record that stops meaning what it said once the project MOVES. This defect bites before anything moves -- the description is already false, and already empty, at the location the build wrote it. -2's clauses are also about deployed entries resolving, not about the producing end. Cited so a reader does not fold the two together."
+  - path: templates/scripts/commit_guardian/check_build_drift.py
+    relationship: describes
+    status: exists
+    relevance: "The reader that consumes BOTH halves, and the file that proves they are one behaviour rather than two. It resolves its comparison base for the producing package from the record's own account of where that package stands relative to the record, treating an unstated account as 'the same directory'; and its count of what it verified is drawn from the record's account of the package's files resolved directly against disk, NOT from whatever a directory walk happened to enumerate -- the walk drives only gap detection. So the count of things verified is governed by the second half, and the place it looks is governed by the first. Both are in this AC's mandatory call-site audit set, and the audit must state what the reader does when either half says unavailable."
+  - path: templates/scripts/commit_guardian/check_output_drift.py
+    relationship: describes
+    status: exists
+    relevance: "The second reader, with the same record-resolution shape. Both must be considered together; a producing end made honest for one reader and not the other leaves the family half-enforced. Also in the call-site audit set."
+  - path: scripts/build_helpers.py
+    relationship: describes
+    status: exists
+    relevance: "The writer, and the single root cause seen twice. The statement of the package's position is computed by expressing the package's location relative to the record's own directory; when the two are unrelated -- the genuine out-of-package layout -- that expression is impossible and the code records the value its own comment defines as 'the package root and the manifest directory are the same directory'. The account of the package's files is built by expressing each of them the same way, in two per-file loops that skip-and-continue on the identical condition, so the account comes out empty. Same inexpressible-path condition, two different silent answers. Read the comment block above the position computation for the value's intended meaning -- that is what makes the fallback a definite false claim rather than a blank."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-011 is the parent entry for this family and carries the reproduced evidence for the package-anchored derivations. Both symptoms this AC owns -- a false position statement, and an empty account of the package's files where a warning was issued per file -- should be added to it; check before assuming either is already listed."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "The mechanism named honestly. This is NOT the absent-check variant: see this AC's notes, where the downstream consequence was re-measured and found to have changed. The applicable mechanisms are a derived value that cannot be computed being recorded as a specific definite value indistinguishable from a legitimate one, and a per-item skip whose warnings are emitted at build time and are long gone by the time anything reads the result."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why the self-host layout is the one layout in which both halves of the false description are accidentally true, why every done neighbour in the BP-100k family was demonstrated there, and therefore why the paired two-layout run is the whole proof."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary for the it-po to charge. The real_artifact read (both halves parsed back from the bytes a real build serialized) and the seam between the writer's description and the readers that follow it are both live candidates; failure carries the paired good/good/broken/good sequence."
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: true
+it_requirements:
+  - "THE TWO HALVES MUST LAND IN ONE CHANGE, AND A HALF-LANDING IS A REGRESSION RATHER THAN A PARTIAL IMPROVEMENT. The stated position of the producing package and the account of that package's own files are consumed by the SAME reader as one derivation: the reader forms its comparison base from the record's stated position combined with the record's own directory, and then forms the family prefix it matches manifest keys against from that base expressed back against the same directory. A stated position that the recorded key space does not follow leaves the reader deriving a prefix that matches nothing it holds. Do not open a second AC, a second ticket or a second commit for one half."
+  - "CORRECTION OF THE STATED FAILURE MECHANISM, MEASURED 2026-09-07 IN THIS WORKTREE -- IT IS NOT A CRASH FOR THE FORM MOST LIKELY TO BE CHOSEN, WHICH MAKES IT WORSE. The claim carried into this enrichment was that a truthful sibling-style position walks the reader's prefix derivation into an unhandled error. That is true for ONE form only. pathlib does not normalise a parent-directory step, so a base formed from a dot-dot relative position stays lexically underneath the record's own directory and the prefix derivation SUCCEEDS, yielding a dot-dot-prefixed prefix and no exception at all. The derivation raises only when the recorded position is absolute. So the honest-position-alone intermediate state has TWO distinct shapes and the implementation must exclude BOTH: a hard error for an absolute position, and -- for the relative form -- a prefix in a key space the recorded account does not share, which produces a verified count of nothing and a gap report naming every template, with no error and no clue that the record is what misdirected the check. The silent shape is the one an implementer will ship by accident."
+  - "THE UNAVAILABLE ANSWER MUST BE A VALUE A MACHINE CALLER CAN TELL APART FROM THE LEGITIMATE SAME-DIRECTORY ANSWER, IN THE DATA IT READS AND NOT IN PRINTED TEXT. The empty string is already spoken for: the writer's own comment defines it as 'the package root and the manifest directory are the same directory', and the reader treats a missing or empty value as exactly that. So the empty string cannot also carry 'could not be worked out' without making the two answers the same answer. Whatever representation is chosen must be readable as unavailable by a caller that never sees the build's console output, since every warning this path emits is written at build time and is long gone by the time anything reads the record."
+  - "AN EMPTY ACCOUNT OF THE PACKAGE'S FILES MUST NOT BE RECORDED AS AN ACCOUNT. The reader's count of what it verified is drawn from the record's own account of the producing package's files resolved directly against disk; the directory walk drives only gap detection. An empty account is therefore not a neutral omission -- it is an assertion that the package shipped nothing, and it forces the reader's compared-nothing verdict on its own. If the account cannot be expressed, that fact must be recorded as data on the same footing as the unavailable position, never as an empty collection."
+  - "NAME EVERY ENFORCEMENT POINT, AND CORRECT THE RECORD ABOUT THE SECOND READER. Measured 2026-09-07: check_build_drift.py consumes BOTH halves -- the stated position at its comparison-base derivation, the key space at its family-prefix derivation, and its verified count from manifest keys via its template scan. check_output_drift.py consumes NEITHER: it reads only the deployed-output section and never reads the recorded position or the package-file account. This AC's own doc_link calls it 'the second reader, with the same record-resolution shape', which is true of how it LOCATES the record and false of what it reads FROM it. Both stay in the mandatory call-site audit, but their obligations differ: for the drift reader, state what it does when either half says unavailable -- a behaviour it does not have today; for the output reader, state that it consumes neither half and demonstrate it is unregressed rather than searching it for a producing-end branch that does not exist."
+  - "DO NOT INTRODUCE A SECOND, DISAGREEING SPELLING OF 'THE PACKAGE IS ELSEWHERE'. The in-flight work on this family has already introduced one for the informational per-output template key -- a package-prefixed sentinel used when the target-relative form is unavailable. That key is diagnostic and is never used as a lookup path, so it is not itself this AC's subject; but a fix that spells the same fact a third way, in the position field and in the package-file account, leaves three vocabularies for one condition and no reader able to follow all of them. Choose one representation, use it for both halves, and reconcile the existing sentinel with it or state on the record why it is deliberately left alone."
+  - "THE PAIRED TWO-LAYOUT RUN IS THE CONTRACT, NOT A CONVENIENCE, AND IT MUST STAY INSIDE ONE SESSION. A genuinely same-directory install legitimately produces the same-place answer and legitimately names the package's files from there. An implementation that always produces those answers is green on any single-layout run. The two layouts must be stood up and asserted in the same run so that 'records nothing' and 'records nothing because it gave up' remain distinguishable; splitting them across two scenarios destroys exactly the discrimination the criteria demand."
+  - "BP-100k-5 IS NOT REUSABLE AS PROOF FOR ANY PART OF THIS, AND ITS DONE-AND-APPROVED STATUS IS THE TRAP. It is scoped wholly to the deployed population -- the far end of the deployment -- and it was demonstrated in the self-host layout, which is the one layout in which the producing end is correct by accident. No sign-off on this AC may cite it, or any other BP-100k record, as evidence that a producing-end behaviour holds. The same applies to BP-100k-3: an exemption records a deliberate decision not to police something, and an indescribable producing end is not a decision."
+  - "STAY INSIDE THE SCOPE BOUND THE CRITERIA DRAW. Satisfying this by making the drift readers report could-not-read is BP-1500d-4's territory and must stop; making the staleness judgement against the recorded fingerprints is BP-1500c's and must not be authored here; changing what the build's exit status becomes is BP-1500d-3's. This AC changes only what the record SAYS about the producing end and whether that statement holds where the record sits."
+  - "THE HARNESS BUILDS ITS PACKAGE COPY FROM COMMITTED CONTENT ONLY, AND EVERY ENTRY IN THIS CONTRACT IS RED UNTIL THE FIX IS COMMITTED. The existing out-of-package harness at unit_tests/portability/_bp1500d1_harness.py materialises its package copy with a git archive of HEAD, so an uncommitted working-tree change is invisible to the build the tests actually run. This is a property of the fixture, not a defect in the implementation: a correct fix will read red from the working tree and only turn green once committed. Either extend the harness so its package copy reflects the tree under test, or keep the archive and record the commit-first requirement where the next reader will meet it -- but do not diagnose a correct fix as broken, and do not weaken the tests to make an uncommitted tree pass."
+  - "IDEMPOTENCY COVERS BOTH HALVES. Two consecutive builds into the same unchanged receiving project must produce byte-identical records, including the stated position and the package-file account and including the case where either is unavailable. Verify by running the build twice and diffing the bytes, not by reasoning about the writer."
+  - "THE BUILD MUST STILL LEAVE THE PRODUCING PACKAGE'S OWN TREE ALONE. Making the producing end describable must not become a reason to read, write or touch anything in the producing package beyond hashing the template files the account names. This is BP-1500a's guarantee and a hard constraint on the implementation rather than a behaviour this AC asserts; the record is gitignored, so a regression here shows in no git status and must be asserted directly."
+  - "ORDERING CAVEAT FOR WHOEVER SCHEDULES THIS. Both delivers_to edges on this record describe states that do not exist until it lands, but neither BP-1500d-2 nor BP-1500d-4 carries a depends_on on this AC or on its parent -- both depend only on the L1 -- and both are readiness approved. So the store permits either to be dispatched first, against a baseline this AC has not yet created. Treat the edges as prerequisites when sequencing by hand; do not treat the store's dependency graph as having recorded them."
+delivers_to:
+  - agent: python-coder
+    ac_id: BP-1500d-4
+    contract: "A receiving project in which the drift readers actually resolve the producing package and compare something. This is BP-1500d-4's all-clear baseline and it is currently unreachable in a genuine out-of-package install, for a reason this AC now owns directly: the reader's count of what it verified is drawn from the record's account of the producing package's files, and that account is empty, so the reader takes its compared-nothing branch no matter what else is true. BP-1500d-4 needs a state in which the checks demonstrably GIVE the all-clear, or its could-not-read verdict has never been shown to discriminate. That state does not exist until this AC lands -- and it does not exist if only the position half lands."
+  - agent: python-coder
+    ac_id: BP-1500d-2
+    contract: "A record whose account of the producing end is expressed against a root the receiving project can name for itself. -2 relocates the receiving project and asserts its entries still resolve; an account of the producing end that only resolves from the original location would survive -2's entry assertions untouched while breaking on the move. Landing this first keeps -2's relocation proof honest about both ends rather than only the deployed one."
+expects_from:
+  - ac_id: BP-1500d-1
+    contract: "The out-of-package consumer-simulation harness and the record written into the receiving project's own root with a non-empty entry set for the deployed side. This AC adds one layout to that harness -- a paired build whose package and receiving project genuinely ARE the same directory -- and asserts on the producing-end description in both records. It neither produces the record nor builds a second harness. If -1 has not landed there is nothing to read."
+test_spec:
+  - name: test_bp_1500d_1_i_one_session_builds_both_layouts_and_the_same_directory_record_states_both_halves_truthfully
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "THE CONTROL, AND THE HALF OF THE PAIRING THAT MUST BE LEGITIMATELY EMPTY-OFFSET. In ONE test session stand up both layouts and run a real out-of-process build into each: layout A where the producing package and the receiving project are genuinely the same directory, layout B where the package sits beside the project and nowhere inside or above it. Read layout A's record back from the bytes on disk and assert BOTH halves are stated and both hold for the project the record sits in -- the stated position resolves to the package from that record's own directory, and the account of the package's files is non-empty with every name in it resolving to a file that exists when combined with the stated position. Layout A must reach these assertions through the SAME code path as layout B, not through a fixture shortcut, or it is not a control. This entry is expected GREEN today: the same-directory answer is the answer the build gives unconditionally, which is precisely why it cannot be the only layout under test."
+  - name: test_bp_1500d_1_i_the_sibling_layout_record_reduces_neither_half_to_nothing
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The second half of the same paired session. Read layout B's record from its own bytes and assert that neither half was silently reduced: the stated position either holds for the receiving project as it now sits, or is an explicit unavailable; and the account of the package's files is either populated with names that resolve, or is an explicit unavailable. Assert the exact pair the build produces today is absent -- an empty-string position (which the writer's own comment defines as same-directory) together with an empty file account -- since that pair is a definite false claim about position and a false claim of a package that shipped nothing. Do NOT assert merely that the fields are non-empty: any string satisfies the first and any collection the second. Expected RED at authoring time; measured 2026-09-07, a real out-of-package build now records 471 deployed entries with no error and still an empty position and zero package-file entries."
+  - name: test_bp_1500d_1_i_the_stated_position_and_the_named_package_files_agree_so_the_reader_derivation_completes_and_resolves
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "THE AGREEMENT ENTRY, AND THE LOAD-BEARING ONE -- every other entry here is satisfiable in halves and this one is not. Against layout B's record, perform the SAME two-step derivation the drift reader performs -- form the comparison base from the stated position combined with the record's own directory, then express that base back against the same directory to form the key space it matches recorded names in -- and assert three things together. FIRST, the derivation completes: it must not raise, which excludes an absolute recorded position. SECOND, and this is the failure the crash-shaped reading of this defect misses: the derived key space must actually match the recorded names, because a dot-dot relative position does NOT raise -- pathlib keeps the parent step unnormalised so the derivation succeeds lexically and yields a dot-dot-prefixed key space (verified 2026-09-07) -- and a position honest in that form paired with names recorded in any other form produces a match count of zero, silently, with every template reported as a gap. THIRD, run the real reader against layout B and assert its verified count is greater than zero and accounts for the recorded names, since that count is drawn from the record's own account and not from the directory walk. If either half is the explicit unavailable, assert BOTH are and that the reader reports unavailable rather than clean or drifted. A record that passes the two preceding entries and fails this one is the intermediate state this AC exists to forbid."
+  - name: test_bp_1500d_1_i_an_automated_caller_cannot_receive_the_unavailable_producing_end_as_the_same_answer_as_a_legitimate_same_directory_install
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "DISTINGUISHABILITY, ASSERTED ON WHAT A CALLER RECEIVES RATHER THAN ON PRINTED FORM. In a cold process, parse the bytes both builds serialized -- never a hand-authored fixture -- and assert that the value meaning 'the package is right here and these are its files' and the value meaning 'the producing end could not be worked out, so none of its files are named' are distinct at the data level, reachable by a caller that never saw the build's console. The build-time warnings this path emits are gone by the time anything reads the record, so console text cannot carry the distinction. Assert the two records' producing-end descriptions are not equal to one another, so an implementation that emits the same-directory answer in both layouts is red here even when both records look individually well-formed."
+  - name: test_bp_1500d_1_i_the_producing_end_description_is_written_by_the_real_build_command_line_from_outside_the_package_tree
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>/receiving_project"
+    description: "PRODUCTION ENTRY POINT, and the entry a cheaper test cannot replace. The manifest writer already receives both the package root and the target root as parameters, so a direct-import test can hand it any pair it likes and demonstrate a writer that CAN describe the producing end without demonstrating a build that DOES. Invoke the build as a child process through the command line a consumer runs, with a working directory that is the receiving project and an interpreter search path containing no path under the package checkout -- assert that property of the child rather than assuming it -- and only then assert the producing-end description appears in the record the child wrote. Both layouts of the paired session must be produced this way; a layout produced by an in-process call is not evidence about the entry point."
+  - name: test_bp_1500d_1_i_a_stated_producing_end_that_does_not_hold_is_reported_as_such_and_both_good_records_still_answer_correctly_afterwards
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE NEGATIVE CONTROL THE CRITERIA DEMAND, as a five-run sequence over the SAME paired session so each red is attributable. (1) Both good records read clean and give their own different answers. (2) Break layout B's record so its stated producing end does not hold for the project it sits in -- assert the consumer reports a description that does not hold: not followed, and not read as an absence of anything to describe, which are the two wrong verdicts. (3) Restore; both good again, still different. (4) Break the other half: leave the position stated and replace the package-file account with an empty one -- assert this is reported as an account that could not be given, never as a package that shipped no templates and never as a clean comparison. (5) Restore; both good and still different. Runs 3 and 5 are what separate a working inspection from a fixture that was already broken. Without breakage 4 this AC can be closed by writing an empty account beside an honest position, which is the intermediate state the agreement entry forbids and this control catches from the other side."
+test_rationale: |
+  Six entries, all bound to real out-of-process builds and all asserting against the
+  bytes on disk. Nothing here is provable by an in-process call, and that is not a
+  style preference: the manifest writer already accepts both roots as parameters, so
+  a direct-import test proves the writer is CAPABLE of describing the producing end
+  while saying nothing about whether the build does it.
+
+  The pairing is one session on purpose and must not be split. A genuinely
+  same-directory install legitimately produces the same-place position and
+  legitimately names the package's files from there, so an implementation that emits
+  those answers unconditionally is green on every single-layout run -- which is the
+  state the build is in today. Entry 1 is the control and is expected green now;
+  entry 2 is the same assertion against the layout where the answer is a default.
+  Only holding both in one run keeps "records nothing" and "records nothing because
+  it gave up" apart, which is the distinction the criteria are written around.
+
+  ENTRY 3 IS THE ONE THAT CANNOT BE DROPPED, AND ITS MECHANISM WAS RE-MEASURED
+  BECAUSE THE STATED ONE WAS ONLY HALF RIGHT. The reading handed to this enrichment
+  was that an honest sibling position walks the drift reader's prefix derivation into
+  an unhandled error. Verified on 2026-09-07: that happens only for an ABSOLUTE
+  recorded position. pathlib does not normalise a parent-directory step, so a
+  dot-dot relative position keeps the derived base lexically under the record's own
+  directory and the prefix derivation SUCCEEDS, returning a dot-dot-prefixed key
+  space with no exception raised. The consequence is worse than the crash, not
+  milder: an honest position whose key space the recorded names do not share matches
+  nothing, produces a verified count of zero, reports every template as a gap, and
+  offers the reader no signal that the record is what misdirected the check. Entry 3
+  therefore asserts completion AND key-space agreement AND a non-zero verified count
+  against the real reader, because any one of the three alone passes on a state the
+  other two reject.
+
+  Entry 4 asserts on what an automated caller receives rather than on printed form,
+  for the same reason the sibling records in this family do: every warning on this
+  path is emitted at build time and is long gone by the time a pre-commit hook reads
+  the record, so console text cannot carry the unavailable/same-directory
+  distinction. The empty string cannot carry it either -- the writer's own comment
+  defines it as same-directory and the reader treats it that way.
+
+  Entry 6 is a five-run sequence rather than two red assertions, matching the
+  discipline the parent uses. A break-and-fail pair cannot separate a working
+  inspection from a fixture that was already broken; the interleaved restores
+  attribute each red to its own breakage, and the criteria name two breakages
+  because a record can be false at either end.
+
+  EVERY ENTRY IS RED UNTIL THE FIX IS COMMITTED, AND THAT IS THE FIXTURE, NOT THE
+  SPEC. The out-of-package harness materialises its package copy from a git archive
+  of HEAD, so the build these tests run is built from committed content only and
+  cannot see an uncommitted working tree. A correct implementation will read red from
+  the working tree and turn green on commit. Do not diagnose that as a broken fix,
+  and do not weaken any entry to make an uncommitted tree pass; the honest options
+  are to commit first or to extend the harness so its package copy reflects the tree
+  under test.
+
+  ANGLES. criterion and reachability are the mandatory floor. seam is charged and is
+  the whole point of entry 3: the producer writes a record that a different module
+  reads back, and the defect lives precisely in the two sides disagreeing about the
+  key space -- the textbook seam gap, both halves individually plausible and never
+  wired together. real_artifact is charged because the claim is about the bytes the
+  real writer serializes, parsed in a cold process. That is four core angles, at the
+  cap. deployed is NOT charged: the drift readers do ship through the build, but the
+  parent already charges deployed against this same harness for the layout itself,
+  and re-charging it here would re-derive the parent's entry rather than add
+  coverage. boundary is not charged -- the criteria name no range, count or limit;
+  the emptiness this AC cares about is a truthfulness question, not a cardinality
+  one. failure is charged and, being conditional, consumes no slot.
+origin_agent: business-analyst
+created: 2026-09-07
+created_by_ticket: null
+amended_by:
+  - reason: scope-absorption
+    by: business-analyst
+    at: 2026-09-07
+    note: >-
+      AUTHORED EARLIER THE SAME DAY covering only the package-position half, with the
+      empty account of the package's own files flagged in notes as adjacent and
+      deliberately not owned. That separation was wrong and is withdrawn. The two are
+      one behaviour, and the reader is what proves it: the place a check looks for the
+      producing package is governed by the position half, while the count of what it
+      actually verified is drawn from the account of the package's files resolved
+      directly against disk -- the directory walk drives only gap detection. So
+      fixing the position alone raises the verified count by nothing, and an honest
+      position expressed as a step outside the receiving project makes the reader's
+      own prefix derivation inexpressible in turn. Neither half is usable without the
+      other, and a record where one is honest and the other is not is still a record
+      no reader can follow. The criteria now assert both ends and, critically, that
+      the two AGREE. Title widened accordingly. The pairing rule, the negative
+      control, the scope bounds and the no-reading-the-source clause are unchanged in
+      shape; the BP-100k-5, BP-100k-3 and BP-1500c boundary citations and a second
+      delivers_to edge onto BP-1500d-2 are new. No it-po field existed to disturb.
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-07
+    note: >-
+      Added estimated_complexity (L), it_requirements in LIST form, a six-entry
+      test_spec and its test_rationale. criteria, title, depends_on, component,
+      components, readiness, work_status, req_status, delivers_to, expects_from,
+      doc_links and assigned_agent are untouched; assigned_agent was already
+      python-coder and is agreed. it_requirements is a list rather than the
+      five-field object: per ACS-100i-6 the structured form is triggered only by
+      package_surface true, and this AC registers nothing in any registry the build
+      reads. ONE CORRECTION OF FACT, RE-MEASURED 2026-09-07 IN THIS WORKTREE AND
+      CARRIED INTO BOTH it_requirements AND test_rationale. The mechanism handed to
+      this enrichment held that a truthful sibling-style position walks the drift
+      reader's family-prefix derivation into an unhandled error. That is true only
+      for an ABSOLUTE recorded position. pathlib does not normalise a
+      parent-directory step, so a dot-dot relative position leaves the derived base
+      lexically under the record's own directory, the derivation SUCCEEDS, and the
+      reader gets a dot-dot-prefixed key space with no exception -- which is the
+      worse outcome, because a key space the recorded names do not share matches
+      nothing, verifies nothing and reports every template as a gap, silently. The
+      agreement test entry now asserts derivation-completes AND key-space-agrees AND
+      a non-zero verified count from the real reader, because each alone passes on a
+      state the other two reject. A SECOND CORRECTION, smaller: this record's own
+      doc_link calls check_output_drift.py 'the second reader, with the same
+      record-resolution shape'. It shares how it LOCATES the record and reads NEITHER
+      half of the producing end -- only the deployed-output section. It stays in the
+      call-site audit with a different obligation, stated in it_requirements. Also
+      recorded: the harness materialises its package copy from a git archive of HEAD,
+      so every entry in this contract is red until the fix is committed -- a property
+      of the fixture, not a defect in the implementation. And an ordering caveat: both
+      delivers_to edges describe states this AC creates, but neither BP-1500d-2 nor
+      BP-1500d-4 carries a depends_on on this AC or its parent, so the store permits
+      either to be scheduled first.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS ONE RECORD AND NOT TWO. This AC was first written for the package's
+  stated position alone, with the empty account of the package's own files flagged
+  as adjacent. Re-reading the reader settled it the other way, and the argument is
+  mechanical rather than aesthetic.
+
+  The check's count of what it verified comes from the record's account of the
+  producing package's files, each one resolved directly against disk. The directory
+  walk that a reader might assume drives that count does not -- it drives only the
+  detection of on-disk files the record failed to mention. So an empty account of
+  the package's files forces a verified count of nothing on its own, and correcting
+  the stated position raises that count by nothing at all. Landing the position half
+  alone leaves the gate exactly as blocked as it is today.
+
+  The reverse coupling is sharper still, and it is the reason a second record would
+  have been actively harmful. The reader forms the names it looks for by combining
+  the stated position with the receiving project's own root, and it then expresses
+  that combination back as a name relative to that root. A position that honestly
+  points outside the receiving project cannot be expressed that way. So an honest
+  position delivered WITHOUT a correspondingly rebased account of the package's
+  files does not merely fail to help -- it walks the reader into a derivation that
+  has no answer. Two records, each green on its own half, would have permitted
+  exactly that intermediate state. One clause that requires the two halves to AGREE
+  does not.
+
+  That agreement clause is the load-bearing sentence of this AC. Everything else
+  here is satisfiable in halves; that one is not.
+
+  THE BEHAVIOUR IS NOT "THE FIELDS ARE NON-EMPTY". Any string satisfies the first
+  and any list satisfies the second. The behaviour is that the record's description
+  of the producing end is TRUE where the record sits, or is an explicit unavailable
+  that no reader can mistake for an answer. The paired run is load-bearing for
+  exactly this reason and must not be dropped: a same-directory build legitimately
+  produces the same-place answer and legitimately names the package's files from
+  there, so an implementation that always produces those answers is green on a
+  single-layout test. Only running both layouts in one session distinguishes
+  "records the producing end" from "records the producing end because it gave up".
+
+  WHY THE DONE NEIGHBOURS ARE NOT COVERAGE. BP-100k-5 and BP-100k-3 are both
+  work_status done and readiness approved, and both are genuinely about this
+  machinery, which makes them the most plausible false reassurance in the store.
+  They are not coverage for two independent reasons. Their subject is the DEPLOYED
+  population and the vocabulary a check uses to report what it could not compare --
+  the far end of the deployment and the check's own honesty, neither of which is the
+  record's account of what the deployment came FROM. And both were demonstrated in
+  the layout where the producing package and the receiving project are the same
+  directory, which is the one layout in which the producing end is described
+  correctly by accident. That is precisely the trap BP-1500d's mandatory proof shape
+  names: a child verified only in the package's own workspace is verified in the one
+  layout where the defect does not appear.
+
+  BP-1500c was the strongest candidate here and was rejected on the record rather
+  than by reflex, since the earlier rejection of it concerned a different field. The
+  fingerprint set of the package's own files IS the source side of a staleness
+  comparison, so the pull is real. But BP-1500c is an undecomposed L1 with no L2
+  children, and BP-1500d's own notes make BP-1500d its prerequisite in exactly this
+  respect: there is nothing to compare an installed copy against until the record in
+  the project being checked says what it was built from. This AC produces the input
+  that judgement consumes. It must not be satisfied by making the judgement.
+
+  TWO CORRECTIONS OF FACT, both re-measured on 2026-09-07 in this worktree, both of
+  which change how a future reader should size the harm.
+
+  FIRST -- THE DOWNSTREAM CONSEQUENCE QUOTED IN THE WRITER'S OWN COMMENT IS NO
+  LONGER LIVE. That comment describes a reader that scanned a path which does not
+  exist, found nothing, and reported a clean run -- "an empty comparison set,
+  indistinguishable from a clean run". Both drift readers have since gained a floor
+  that refuses to report clean when they resolved nothing to compare; it is present
+  and reachable in both today. So an undescribed producing end no longer produces a
+  silent all-clear. It produces a hard block, on every commit in a genuine
+  out-of-package install, carrying a diagnosis the reader cannot act on -- because
+  the thing misdirecting the check is the record itself. A real defect, and a worse
+  day-to-day experience than a false green in some respects, but a different failure
+  shape, and this record says so rather than repeating the stale claim. Anyone
+  re-deriving urgency from that comment should re-measure the readers first.
+
+  SECOND -- THE SHAPE OF THE GAP, with method and denominator, since figures belong
+  here and not in criteria. Measured by reading the writer's two per-file loops over
+  the package's agent templates and its guardrail-script templates, both of which
+  skip-and-continue with a per-file warning on the same inexpressible-path condition
+  that produces the false position statement. The denominator is every template file
+  the package ships; the recorded count in a sibling layout is zero of them. The
+  deployed side of the same run was measured at 471 recorded entries after the
+  uncommitted sibling fix. So the record is lopsided in a way that is worth stating
+  plainly: it accounts fully for what was deployed and not at all for what it was
+  deployed from, and it is the second of those, not the first, that decides whether
+  any check can verify anything.
+
+  ORDER OF LANDING, since it was the question that prompted this assessment. All
+  three -- the deployed entries, the stated position, and the account of the
+  package's files -- must be present and mutually consistent before a genuine
+  out-of-package install works at all. The deployed entries are the parent's, and
+  the uncommitted work already addresses them. Both remaining halves are this
+  record's, which is the point of merging them: there is now no way to ship half of
+  what is left and have an AC report success.
+
+  FOR THE IT-PO. test_spec, it_requirements and estimated_complexity are
+  deliberately absent -- they are yours. Four things to carry into them. The paired
+  two-layout run is the contract, not a nicety, and a single-layout entry is green
+  on the defect. There must be an entry that asserts the two halves AGREE, distinct
+  from the entries that assert each is honest, or the intermediate state described
+  above passes. The assertion must be on what an automated caller receives, not on
+  printed form, for the same reason -3 and -4 both record. And the call-site audit
+  covers both drift readers and must state, for each, what it does when either half
+  says unavailable -- that is a behaviour neither reader has today.
+
+  package_surface is not set: this AC registers nothing in any registry the build
+  reads. child_limit_override is not set and is not needed -- the parent has this
+  one child.

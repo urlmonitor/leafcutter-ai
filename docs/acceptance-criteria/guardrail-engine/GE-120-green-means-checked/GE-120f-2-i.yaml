@@ -1,0 +1,129 @@
+id: GE-120f-2-i
+title: "The finding is the run's own outcome, never a note printed beside a success — and a run that could not reach a verdict is unresolved rather than either"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a liveness run that completed and named at least one check whose declared rejection
+    was not observed, or at least one whose attempt has never been made,
+  When the run finishes,
+  Then the outcome it hands back to whatever invoked it is a refusal, and the named checks
+    appear in the same output a reader of that refusal sees,
+  And a run that completed, examined at least one check, and found every examined check's
+    rejection observed or exempted on an accepted ground hands back an acceptance,
+  And no run hands back an acceptance carrying a note that some check's refusal was not
+    observed or has never been demonstrated,
+  And given a run that could not reach a verdict for a check — the attempt was made and
+    produced no answer — that check is reported as unresolved under its own wording, the run
+    hands back a refusal, and the check is counted neither among those whose rejection was
+    observed nor among those whose rejection was not observed,
+  And given the run itself cannot proceed at all, it says so and hands back a refusal rather
+    than an acceptance — announcing an internal difficulty and continuing to a clean answer
+    is the condition this whole tree exists to make impossible, and is a different thing from
+    the component's convention of not hard-blocking on a single unreadable input while the
+    check still ran.
+depends_on:
+  - GE-120f-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-2.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      THE STANDING CONTRADICTION, RESTATED AND NOT RE-LITIGATED — READ THE L0'S OWN
+      PARAGRAPH BEFORE IMPLEMENTING THE LAST CLAUSE. The deliberate fail-open convention (an
+      internal error announces and does not hard-block, approved as GE-116a-1-iii) is NOT
+      repealed. Its subject is a check that RAN and met one input it could not handle. The
+      subject here is a run whose verdict is already known and would be discarded, or a run
+      that never got a verdict at all. The L0 states that whether a cannot-run condition
+      should also block is a per-record decision and not a blanket default; this record makes
+      that decision, explicitly, for the liveness run and for nothing else.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING. The four values and their distinguishability in a report are its
+      clauses and are not restated here — including the value for an attempt that could not
+      be run to a verdict. This record adds only what that value does to the run's outcome.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      READ-ONLY REFERENCE, OWNED ELSEWHERE AND NOT EDITED BY THIS RECORD. The catalogue is
+      where a run that reports its findings and hands back success belongs; the nearest
+      existing entries cover a validator that validates nothing and a proxy reported as a
+      verdict, and neither covers a correct finding discarded at the boundary. A new entry is
+      recommended and is the reference author's to make.
+  - path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The nearest architectural precedent for the last clause: a measuring instrument that
+      cannot measure must say so rather than return a clean result.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-120f-2
+  contract: >-
+    The named failing classes and the run's report. This record adds no new finding; it
+    constrains what the run does with the findings it already has.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE RECORD AND NOT A CLAUSE OF ITS PARENT. The parent requires the
+  checks to be named and the run to fail. An implementation can satisfy the naming half
+  perfectly and lose the failing half at the boundary — printing every finding and handing
+  back success — and the parent's clauses about naming stay green throughout. That is not a
+  hypothetical shape in this repository: it is the documented-as-live, always-returns-success
+  remediation path this component already shipped once, where the guard is described in the
+  project's own instructions as taking an action it does not take. A documented remediation
+  path that does nothing is worse than none, because authors believe they are covered.
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. "No run hands back an acceptance carrying
+  a note that some check's refusal was not observed." ARRIVAL COLOUR: GREEN, vacuously — no
+  run exists, so none currently hands back a mislabelled acceptance. INJECTION: make the run
+  always hand back an acceptance and print its findings. Under that injection the parent's
+  clauses all stay green — every check is still named, with its declared input and declared
+  rejection — and only this record goes RED. That asymmetry is the entire reason this file
+  exists, and it is the fail-open reflex this component reaches for by habit, so run the
+  mutation rather than describing it.
+
+  SECOND NAMED MUTATION, FOR THE UNRESOLVED CLAUSE. INJECTION: treat a check whose attempt
+  produced no answer as one whose rejection was not observed. Under that injection the run
+  still fails and the check is still named, so the parent stays green and the earlier clauses
+  here stay green; only the unresolved clause goes RED. The two conditions have opposite
+  remedies — repair the check, against repair the run — and a reader who cannot tell them
+  apart will repair the wrong one and conclude the tooling is unreliable.
+
+  THIRD NAMED MUTATION, FOR THE ACCEPTANCE CLAUSE. "A run that examined at least one check
+  and found every examined check's rejection observed or accepted-exempt hands back an
+  acceptance." ARRIVAL COLOUR: RED — no run exists. This clause is not decoration: without
+  it the requirement is satisfiable by a run that always refuses, which is the same inert
+  shape one level up and is the subject of GE-120f-1-ii. INJECTION: hand back a refusal
+  unconditionally; the clause must go RED.
+
+  THE EXAMINED-AT-LEAST-ONE QUALIFIER IN THE ACCEPTANCE CLAUSE IS DELIBERATE and belongs to
+  GE-120f-3, which owns the stated figure and the requirement that a run examining none fails
+  as unresolved. It is written into the acceptance clause here so that this record cannot be
+  satisfied by a run that examines nothing and accepts; the figure itself, and its movement
+  under a varying population, are not restated here.

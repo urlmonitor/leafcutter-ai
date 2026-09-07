@@ -617,7 +617,38 @@ def main() -> int:
     # layout from a directory name or a git probe — both fail open when wrong,
     # which is the failure mode this whole ticket exists to remove. Missing key
     # degrades to "" for manifests written before this field existed.
-    package_offset = manifest.get("package_root", "") or ""
+    #
+    # BP-1500d-1-i: an EXPLICIT ``null`` here means the build itself could not
+    # work out where it stood relative to this manifest, and — because the
+    # writer's account of the package's own templates is derived from the
+    # SAME computation — that the manifest's Direction A entries below (if
+    # any) are unavailable for the identical reason, not a truthful account
+    # of a package that shipped nothing. Collapsing this straight to ``""``
+    # via ``manifest.get(..., "") or ""`` (the pre-fix form of this line)
+    # would have silently answered "the package is right here" for a build
+    # that explicitly said it could not tell — the exact same-answer
+    # collision this AC exists to prevent. So ``None`` is checked for and
+    # reported on its own before the ``or ""`` fallback ever runs; the
+    # fallback still degrades a genuinely absent key (pre-fix manifests) to
+    # the historical "" meaning.
+    package_root_raw = manifest.get("package_root", "")
+    if package_root_raw is None:
+        print(
+            f"{_GATE_NAME}: BLOCKED - the build recorded that it could not "
+            "determine where the producing package stood relative to this "
+            "manifest (package_root: null), so the account of that "
+            "package's own templates is unavailable for the identical "
+            "reason — both are derived from the same computation. This is "
+            "a stated producing end that does not hold, not an absence of "
+            "anything to describe: this gate cannot verify template "
+            "content against a build that could not describe its own "
+            "producing end, so this run is not clean. Re-run build.py from "
+            "a layout where the package's position relative to this "
+            "project can be expressed.",
+            file=sys.stderr,
+        )
+        return 2
+    package_offset = package_root_raw or ""
     templates_base = (repo_root / package_offset) if package_offset else repo_root
     templates_dir = templates_base / "templates" / "agents"
     cg_templates_dir = templates_base / "templates" / "scripts" / "commit_guardian"
@@ -794,4 +825,29 @@ if __name__ == "__main__":
 #   edits in the deployed scripts/commit_guardian/ tree went undetected
 #   because check_build_drift only hashed templates/agents/. Adding
 #   commit-guardian closes this drift blind spot.
+# - 2026-09-07 [python-coder/BP-1500d-1-i]: (#BP-1500d-1-i) The writer side
+#   (build_helpers.py) was fixed the same day to record a truthful
+#   ``package_root`` position ("" / "leafcutter-ai" / "../leafcutter-ai")
+#   instead of collapsing every inexpressible case to "", and to key
+#   template_hashes entries the same way the position is expressed, so the
+#   two halves agree. This hook's own family_prefix derivation
+#   (``templates_dir.relative_to(repo_root)``, unchanged) already produces
+#   the identical ``../leafcutter-ai/templates/agents``-style prefix for a
+#   truthful sibling position with no change needed here — verified
+#   behaviorally: a real out-of-package build now reports
+#   ``RESULT verified=174 ... drifted=0`` and exits 0 through this exact
+#   code path (was ``BLOCKED - compared 0 templates`` against an
+#   always-empty account).
+#   One reader change WAS required, not a convenience: this file's own
+#   ``manifest.get("package_root", "") or ""`` collapsed an explicit
+#   ``None`` (the writer's new sentinel for "genuinely inexpressible,"
+#   e.g. no shared drive on Windows) into the same "" a legitimate
+#   same-directory install produces — silently reporting "the package is
+#   right here" for a build that explicitly recorded it could not tell.
+#   ``main()`` now checks for ``None`` before that fallback and returns 2
+#   with a message naming the cause, distinct from both the clean case and
+#   the pre-existing generic ``verified == 0`` message.
+#   check_output_drift.py was read end to end and confirmed to consume
+#   neither half of the producing end (only ``output_mappings``), so it
+#   needed no change and is unregressed by this fix.
 # ====================================================================

@@ -1229,6 +1229,8 @@ flowchart TD
 - BP-100n-4: The population of commit gates the reachability check walks is taken from the gate scripts present on disk, so a script the registry never mentions is reported as invoked by nothing — a guard whose input is the registry cannot see what the registry omits
 - BP-100n-4-i: A script that is deliberately not a gate is recorded as one with a stated ground and the check honours it; a record that states no ground is itself refused and the script it names stays reported
 - BP-100n-4-ii: The check states how many gate scripts it compared, and a run that compared none is an unresolved run that fails — a comparison that never happened must not be able to look like a comparison that found nothing wrong
+- BP-100n-5: A finished record's declaration that names parts of a real configuration file is read back against that file, and a named part that is not there is reported by name and fails the run — a declaration checked only for shape is a check that never opened anything
+- BP-100n-5-i: A declaration whose shape the check cannot interpret, and a named file it cannot open, are each reported as their own unresolved condition — never folded into the conforming class and never into each other
 - BP-1100a-3: The surface a generated ticket names contains the file the requirement says will change
 - BP-1100a-4: A file the requirement mentions but never says will change is not named as the work's surface
 - BP-1100a-4-i: A file the requirement forbids touching is never named as the work's surface
@@ -1586,6 +1588,14 @@ flowchart TD
 - GE-120e-2: Which checks work out their own change set is read from the manifest, not from the two that were caught
 - GE-120e-4: Undoing or replaying someone else's recorded change is treated the same way as merging it in
 - GE-120e-4-i: Reworking a merge after the operation record is gone still attributes only the author's part
+- GE-120f-1: A check's refusal is established by putting its declared known-bad input through the entry point the protected surface uses, and the record says what was observed rather than what was declared
+- GE-120f-1-i: A refusal produced by reaching inside a check is not a demonstration — the run states the entry point it used, and only the entry point the protected surface invokes counts
+- GE-120f-1-ii: A check that also refuses the work it is meant to accept has demonstrated nothing — refusing everything is as inert as refusing nothing, and is reported under its own wording
+- GE-120f-2: A check whose declared rejection was not observed is named and fails the run, and a check that has never been asked to refuse is never counted among the things keeping the work safe
+- GE-120f-2-i: The finding is the run's own outcome, never a note printed beside a success — and a run that could not reach a verdict is unresolved rather than either
+- GE-120f-3: The liveness run states how many checks it actually put an input through, that figure moves when the population moves, and a run that put an input through none fails as unresolved
+- GE-120f-4: A check joins the protected family only by declaring what it must refuse, read from where it is registered — so the next check inherits the requirement by existing rather than by someone remembering
+- GE-120f-4-i: A check that was already registered when the requirement arrived is subject to it identically, and a ground that is a fact about when a check was registered is no ground at all
 - GE-122a-1: A whole-collection pass reports every number claimed by two artifacts
 - GE-122a-1-i: A collision is found even when only one claimant is in the current change set
 - GE-122a-1-ii: Excusing a merged-in decision record must not excuse the author's own record claiming the same number
@@ -1701,10 +1711,14 @@ flowchart TD
 - GE-126b-1-i: The statement arrives without being asked for and nothing can switch it off
 - GE-126b-2: A store that was never found and a store with nothing to look at are two different answers
 - GE-126b-3: The check finds the same store from wherever you happen to be standing
+- GE-126b-5: A check reports whether it has ever been shown to refuse anything, and never-shown is a different answer from shown-and-refused
+- GE-126b-5-i: A check with nothing it could be asked to refuse says why, and a claimed exemption whose ground is that the demonstration has not been done is refused like one with no ground at all
 - GE-126c-1: The build-source copy refuses the same record the deployed copy blocks
 - GE-126c-1-i: The copy the build produces does not inherit the refusal
 - GE-126c-2: The refusal names the copy you ran and the copy that works
 - GE-126c-3: The refusal follows from what the copy is and not from whether a dependency happened to load
+- GE-126c-5: A proof that a guard can fail states which copy of the guard the running process loaded, and an alteration the loaded copy never saw is refused instead of read as evidence
+- GE-126c-5-i: A verdict that did not move under an applied alteration is reported as an alteration that changed nothing, and is distinguishable from one that never reached the code
 - GE-126d-1: A check registered on every documented leg but missing from the autofix roster is named
 - GE-126d-1-i: A roster entry naming a check that no longer exists is named too
 - GE-126d-2: Recording a deliberate exclusion silences the report for that check and no other
@@ -1713,6 +1727,13 @@ flowchart TD
 - GE-126e-2: The census says how many checks it examined beside how many it found
 - GE-126e-2-i: A list too long to act on in one pass is a successful run and never a blocked commit
 - GE-126e-3: A new check joins the census by being registered rather than by being remembered
+- GE-127a-1: The change that takes a file past its permitted length is refused at the moment it is committed
+- GE-127a-1-i: A file whose length cannot be established is refused and named, never reported as within its permitted length
+- GE-127b-1: A change that leaves an already-oversized file longer than it was is refused; one that leaves it the same or shorter is allowed
+- GE-127b-1-i: A run that could not establish any previous length says which situation it is in and refuses, and a clean run states how many files it compared
+- GE-127c-1: The outcome states which kinds of file it measured, so a kind that was never measured is not read as having passed
+- GE-127d-1: The published rule and the enforced rule are checked against each other, and no fact the standard accepts about a change is left without effect on its verdict
+- GE-127d-2: The length a file is quoted at is one the author can arrive at themselves by following a published measurement rule
 - INF-1000a-1: Detect stale fixtures when a required field is added to a schema
 - INF-1000a-1-i: Schema file with no required-field changes passes without scanning fixtures
 - INF-1000a-1-ii: Fixture files that already contain the new field are not flagged
@@ -1947,6 +1968,7 @@ flowchart TD
 - TKT-500g-4-i: An empty demand is not a way to say "no proof needed" — it is refused by name
 - TKT-500g-5: The readiness report never calls a demanded proof unnecessary
 - TKT-600a-1: Generated files_touched excludes prose-illustration paths; depends_on is guard-valid
+- TKT-600a-2: A path the record itself declares as non-edit-surface is not harvested from its own prose
 - TKT-600b-1: The generated phase record names exactly the phases the drive will dispatch for that ticket's location
 - TKT-600b-1-i: Generation refuses rather than guesses when the ticket's final location is not yet settled
 - TKT-600b-1-ii: A phase the drive will not run is recorded as excluded, never left out of the record

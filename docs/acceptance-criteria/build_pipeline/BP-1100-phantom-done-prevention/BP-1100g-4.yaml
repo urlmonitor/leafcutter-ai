@@ -190,6 +190,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-1100g-4-i
+  - BP-1100g-4-ii
 implemented_by:
 - tickets/00_inbox/TICKET-20260826-BP-1100g-4.md
 - templates/scripts/commit_guardian/check_proof_promise_claim.py

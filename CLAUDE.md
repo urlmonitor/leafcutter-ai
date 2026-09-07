@@ -629,15 +629,50 @@ forced extra fix commits at finalize.
 After merging `origin/main` into a long-diverged feature/epic branch (especially when both
 sides heavily edited the same file), git's 3-way auto-merge can produce a **textually clean
 but semantically broken** result — silently dropping hunks one side added. Tests can stay
-green because the dropped logic had no failing test. Before approving the merge:
+green because the dropped logic had no failing test.
+
+**Fetch before you diff — this is part of the recipe, not an aside.** The audit below
+compares against your local `origin/main` remote-tracking ref, not against the actual
+current tip on GitHub. An unfetched ref answers a different question with a clean-looking
+answer: if your last fetch predates the hunks in question, they are absent from
+`origin/main` on your machine too, so the diff against your (broken) tree agrees with
+itself and shows nothing wrong.
 
 ```bash
+git fetch origin main
 git diff origin/main -- <heavily-diverged-file>   # should be ADDITIVE only (your feature's changes)
 ```
 
-Every deletion line in that diff must be one you can explain. Any of main's logic that is
+This two-dot form is correct **regardless of whether the merge is committed yet** — run it
+on the uncommitted working tree, or on `HEAD` after the merge commit, and it gives the same
+right answer either way, provided the ref above is fresh. `git diff origin/main --numstat`
+printing a deletion count greater than zero on the diverged file means something of main's
+was removed; investigate before proceeding. `--numstat` columns are **added, then deleted**,
+then path — so `71  0  <file>` (zero in the second column) is a valid proof of additive-only,
+and `0  42  <file>` is the shape of the defect this audit exists to catch.
+
+**Do not reach for the three-dot form (`git diff origin/main...HEAD`) for this check.** It
+is the intuitive "show me what my branch did" reflex, and it is wrong here for two different
+reasons depending on timing:
+
+- **Before the merge is committed**, three-dot compares `HEAD` against the merge-base at the
+  OLD divergence point — before `origin/main` was merged in — so it shows only your branch's
+  own prior commits relative to that point. A hunk of main's that your merge dropped was
+  never one of your branch's own changes, so it never appears. Clean report, logic missing.
+- **After the merge is committed**, `origin/main` becomes an ancestor of `HEAD`, so the
+  merge-base *is* `origin/main` and the two forms become mathematically identical — three-dot
+  neither fails nor helps at that point; it just does nothing two-dot wasn't already doing.
+
+Every deletion line in the diff must be one you can explain. Any of main's logic that is
 altered or removed (not just reformatted) is a HIGH-severity regression — restore it (take
 main's version of that region and re-apply your change on top), then re-run the suite.
+
+**A related hazard that causes the same loss by a different path:** `git restore --staged
+--worktree <path>` run during an IN-PROGRESS merge takes content from `HEAD`, and mid-merge
+`HEAD` is the PRE-merge commit — so it silently reverts `origin/main`'s side of that path,
+discarding whatever the merge had just brought in. It reads like "unstage a file I didn't
+mean to touch"; it is not. To drop a path mid-merge, use `git checkout --theirs <path>` or
+`git checkout --ours <path>` — never `git restore` — while a merge is in progress.
 
 **Why this matters:** merging `origin/main` into EPIC-InFlightVisibility auto-merged
 `finalize-feature.js` with no conflict but silently dropped main's hardened deploy-parity
@@ -646,6 +681,30 @@ contradiction filter) — which could let a malformed test run merge to main. Al
 stayed green; caught only by a fresh `git diff origin/main` review that showed non-additive
 deletions.
 (Source: EPIC-InFlightVisibility retrospective, 2026-07-23.)
+
+On 2026-09-07, merging `origin/main` into a docs branch, `git restore --staged --worktree
+docs/agents/cards/` was run mid-merge to unstage some unrelated paths. It reverted main's
+side of those paths entirely — the affected file went from 43 lines to 1 — deleting 42 lines
+of card content main had added. The audit that should have caught this, run after the merge
+was committed, reported clean — not because two-dot is wrong post-merge (it isn't: it gives
+the correct answer at any point in the merge, committed or not), but because the local
+`origin/main` remote-tracking ref used for that audit was **stale** — it dated from before
+the fetch that would have included the 42 lines in question, so the diff compared the broken
+tree against a ref that also lacked those lines, and the two agreed. The loss was caught
+only because the `pull-request` agent independently re-read the diff and refused to push.
+`git checkout --theirs`/`--ours` remains the correct mid-merge tool for the `git restore`
+hazard above; `git fetch origin main` immediately before the audit is the fix for this one.
+(Source: merge-audit incident, 2026-09-07; fixed in 2d9d43cf3.)
+
+This is the third time a documented defence in this file has turned out to be a no-op
+rather than a typo: `feedback_categories.yaml`'s wrong path (silently reported "missing" on
+every worktree — see the feedback-sink section above) and the AC-store validator's
+bare-directory glob (exited 0 for eight days having checked zero files — see "AC-store
+hygiene" below) are the other two. This one is the sharpest version of the pattern: the
+command was never wrong — the ref it compared against was. A check that examined nothing
+must not look like a check that found nothing. Treat a clean result from any audit command
+in this file as provisional until you've confirmed the ref or file it compares against is
+actually current.
 
 ### Real-artifact behavioral spot-check before declaring done
 

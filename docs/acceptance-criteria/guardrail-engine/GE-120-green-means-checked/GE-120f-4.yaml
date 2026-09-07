@@ -1,0 +1,188 @@
+id: GE-120f-4
+title: "A check joins the protected family only by declaring what it must refuse, read from where it is registered — so the next check inherits the requirement by existing rather than by someone remembering"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the place where a protective check is registered is also the place its declaration
+    is held — one known-bad input it must reject, and the observable rejection that input
+    must produce,
+  When a check is registered, or an existing registration is changed,
+  Then a registration carrying no such declaration is refused at the point of registration,
+    naming the check and stating what the declaration must contain,
+  And the requirement is applied to whatever the registration surface holds when it is read,
+    so a check registered afterwards is subject to it without anything being added to the
+    thing that applies it, and a check that merely resembles an already-declared one inherits
+    nothing,
+  And a declaration written only in prose beside the check — in its own description, in a
+    guide, or in a note — does not satisfy the requirement, which is satisfied only by what
+    is read from the registration surface,
+  And a registration that carries a declaration is accepted here without the rejection having
+    been demonstrated, and that check is thereby counted among those whose refusal has never
+    been demonstrated rather than among the protected — passing this point is not a
+    demonstration and must never be reported as one.
+depends_on:
+  - GE-120f
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml"
+    relationship: parent
+    status: exists
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE VOCABULARY THE REGISTRATION SURFACE MUST HOLD, ALREADY WRITTEN AND WITH NO READER.
+      The known-bad input and its expected observable rejection, the not-applicable-with-a
+      -ground alternative, and the four state values are all defined here. The requirement
+      this record adds is that something reads them. Never mint a second vocabulary beside
+      this one; that the vocabulary exists and nothing consumes it is itself an instance of
+      the defect this tree exists to catch.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING AND THE OWNER OF THE DATUM. It establishes that each check CARRIES the
+      declaration alongside its own configuration and that the record is reported with four
+      distinguishable values. It does not make carrying one a condition of joining. This
+      record adds only that condition, at the moment of registration, so the datum cannot be
+      optional in practice while being required on paper.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE OTHER HALF, AND THE REASON THE LAST CLAUSE OF THIS RECORD EXISTS. This record is
+      necessarily about a declaration EXISTING, which is the shape that reproduces the defect
+      one level up if it stands alone. It never stands alone: GE-120f-1 reads the declaration
+      back by putting its input through the check and observing, and the last clause here
+      forbids the registration gate from being read as evidence of anything more than
+      enrolment.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-6.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      BOUNDARY, AND THE PRECEDENT FOR THE INHERITANCE CLAUSE. GE-120c-6 owns whether a
+      deployed guard is registered at all, and already establishes the rule this record reuses
+      one axis over: an exemption must be a property read from the candidate or from a
+      declared record, never a match against an identifier written into the thing that
+      applies the rule, "so a guard added tomorrow inherits the rule instead of inheriting an
+      exemption by resemblance". Reuse that mechanism rather than growing a second one; scope
+      each declaration to the rule it applies to, as that record requires.
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      IN-FLIGHT SIBLING, AND THE ADJACENT FAILURE. BP-100n-5 owns a declaration that
+      contradicts the file it describes — well-formed, machine-read, and wrong about reality.
+      This record owns a declaration being required at all. A registration gate that checks
+      only that a declaration is present is the incumbent behaviour that record describes,
+      one surface over, which is why the last clause here is not optional.
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The registration procedure as it is currently written. The requirement this record adds
+      changes what completing that procedure means, which is why the documentation record in
+      this family exists — a procedure whose written form and enforced form disagree teaches
+      the next author the wrong thing.
+  - path: templates/hooks/readme_read_guard.py
+    relationship: related
+    status: exists
+    relevance: >-
+      The worked example, and the limit of this record on its own. That guard would have
+      passed this gate on the day it was written: a declaration of what it must refuse could
+      have been supplied truthfully and it would still have been unable to refuse anything.
+      Registration is the enrolment; GE-120f-1 is the proof.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-120f-4-i
+    contract: >-
+      The registration-time requirement and the population it is read over, into which
+      GE-120f-4-i inserts the checks that were already registered when the requirement
+      arrived and the refusal of a ground that is a fact about when rather than about what.
+expects_from:
+  - ac_id: GE-126b-5
+    contract: >-
+      The shape of the declaration — one known-bad input, its observable rejection — and the
+      four-value vocabulary. This record makes carrying that datum a condition of joining and
+      does not redefine it.
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120f-4-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHAT THIS RECORD OWNS, AND WHY IT IS NOT COVERED BY THE DATUM RECORD. A requirement that
+  every check carries a declaration is satisfied today by every check that happens to carry
+  one, and is silent about the next check, which will be written by someone who has not read
+  this tree. Making the declaration a condition of joining is what turns a rule people must
+  remember into a rule they cannot avoid — the difference between a family that is compliant
+  and a family that stays compliant.
+
+  ANTI-GREP, AND THE ONE PLACE IN THIS TREE WHERE EXISTENCE IS LEGITIMATELY THE SUBJECT. Every
+  other record here forbids a criterion satisfiable by asserting that a declaration exists,
+  because that reproduces the defect one level up. This record's subject IS existence, at one
+  specific moment, and it is safe only because of its final clause: passing this gate places
+  a check among those whose refusal has never been demonstrated, not among the protected. If
+  that clause is dropped, this record becomes the defect — a family where every check has a
+  declaration and none has ever refused anything, reported as fully protected. Implement the
+  final clause first.
+
+  THE INHERITANCE CLAUSE IS THE ANTI-LITERAL DISCRIMINATOR. A gate that applies the
+  requirement to a set of check identifiers written into it satisfies every other clause and
+  fails this one, because the next check is not in the set. The population must be whatever
+  the registration surface holds when it is read. This is the same rule GE-120c-6 already
+  states for its exemptions, and reusing its mechanism is required rather than optional — two
+  independently-maintained vocabularies for the same idea will disagree, and each declaration
+  must record which rule it applies to so an exemption from one does not silently become an
+  exemption from the other.
+
+  NAMED MUTATION FOR THE FIRST ABSENCE-ASSERTING CLAUSE. "A declaration written only in prose
+  beside the check does not satisfy the requirement." ARRIVAL COLOUR: GREEN, vacuously —
+  nothing is required today, so nothing is currently satisfied by prose. INJECTION: satisfy
+  the requirement from any statement found in the check's own text describing what it
+  rejects. Under that injection a check whose description mentions what it refuses is
+  admitted with nothing machine-readable to put through it, and this clause must go RED
+  naming it; revert must restore it. This is not a straw man — prose beside the check is
+  where this repository has repeatedly recorded what a guard does, including one guard whose
+  written description claims a remediation it does not perform.
+
+  NAMED MUTATION FOR THE INHERITANCE CLAUSE. ARRIVAL COLOUR: RED — no registration is refused
+  today, so a newly registered check without a declaration is admitted. INJECTION, for the
+  built state: apply the requirement only to a set of check identifiers written into the gate.
+  Under that injection a newly registered check carrying no declaration is admitted while
+  every existing one is still policed; the clause must go RED naming the admitted check, and
+  return to green on revert. Add the check to a fixture registration surface rather than
+  naming a real one, so the assertion does not expire the day that check is declared.
+
+  NAMED MUTATION FOR THE FINAL CLAUSE. ARRIVAL COLOUR: GREEN, vacuously. INJECTION: on
+  acceptance at registration, write the check's record as the rejection having been observed.
+  Under that injection every newly registered check is reported as demonstrated on the
+  strength of its own declaration; this clause must go RED, and it is the same injection
+  GE-120f-1's absence-asserting clause carries, deliberately, because it is the single
+  substitution that would defeat both records at once.
+
+  DAY ONE. The registration gate arrives on a family most of whose checks carry no
+  declaration. Those checks must be brought into line — declared, exempted on a ground the
+  exemption rule accepts, or removed — as part of this work rather than after it. Landing the
+  gate green by exempting the existing population is the failure this record's child exists to
+  prevent, and a postponement is not a ground.
+
+  NO COUNT OF INSTANCES IS STATED OR IMPLIED IN THIS RECORD, per the parent's disputed-count
+  rule. How many checks currently carry no declaration is a measurement, not a premise.

@@ -438,6 +438,67 @@ function selectDispatchPhases(orderedPhases, isEpicMember) {
   return phases.filter((p) => p.agent !== "pull-request");
 }
 
+/**
+ * Compare what a ticket's own phase record requires against what the drive
+ * will actually dispatch for it — a PURE READ, never a write (TKT-600b-4).
+ *
+ * The drive must never edit a ticket's phase record to make it agree with
+ * its own behaviour: on any disagreement it must change no phase status,
+ * must surface both sides of the disagreement by name, and must not record
+ * the ticket complete. This function is that comparison. It never mutates
+ * anything and its `permits_status_rewrite` field is always false — even
+ * the excluded remedy (rewriting a non-dispatched phase's status to the
+ * exclusion value, which "looks like a correction") is not something this
+ * comparison ever sanctions; the caller must hold the ticket open and
+ * report `record_requires` / `drive_will_run` / `disagreement` verbatim
+ * rather than reconcile them.
+ *
+ * @param {Array<string>} recordRequires - phase-agent names the ticket's own record marks needed.
+ * @param {Array<string>} driveWillRun - phase-agent names the drive will dispatch for this ticket's location.
+ * @returns {{record_requires: Array<string>, drive_will_run: Array<string>, disagreement: Array<string>, completed: boolean, permits_status_rewrite: boolean}}
+ */
+function compareRecordToDispatch(recordRequires, driveWillRun) {
+  const required = recordRequires || [];
+  const willRun = driveWillRun || [];
+  const willRunSet = new Set(willRun);
+  const disagreement = required.filter((phase) => !willRunSet.has(phase));
+  return {
+    record_requires: required,
+    drive_will_run: willRun,
+    disagreement,
+    completed: disagreement.length === 0,
+    permits_status_rewrite: false,
+  };
+}
+
+/**
+ * Compute the phase-record entries one drive run is permitted to write.
+ *
+ * TKT-600b-4-i: the permitted write set equals the dispatched set EXACTLY.
+ * Not a superset — writing an entry for a phase that was never dispatched
+ * (even the exclusion value "not_needed") is the TKT-600b-4 violation one
+ * function over. Not a subset either — a dispatched phase whose outcome
+ * goes unrecorded is the BUG-23 signature this file's own dispatch-loop
+ * comments already document. A phase the drive declined to dispatch is
+ * therefore absent from the result entirely: the drive performed no work on
+ * it and has no testimony to write, whether passing or excluding.
+ *
+ * @param {Array<string>} dispatchedPhases - phase-agent names actually dispatched this run.
+ * @param {Array<{agent: string, result: string}>} phaseOutcomes - each dispatched phase's own report of itself.
+ * @returns {Object<string, string>} agent name -> "signed_off" | "failed", one entry per dispatched phase with a reported outcome.
+ */
+function writtenPhaseEntries(dispatchedPhases, phaseOutcomes) {
+  const dispatched = new Set(dispatchedPhases || []);
+  const written = {};
+  for (const outcome of phaseOutcomes || []) {
+    if (!outcome || !dispatched.has(outcome.agent)) {
+      continue;
+    }
+    written[outcome.agent] = outcome.result === "ok" ? "signed_off" : "failed";
+  }
+  return written;
+}
+
 // ---------------------------------------------------------------------------
 // Record adjudication — pure functions over a ticket record read back off disk
 //

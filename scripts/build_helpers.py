@@ -350,8 +350,51 @@ def _compute_output_mappings(
                 (template-compiled/config-injected) or raw bytes for a
                 verbatim binary/non-text copy (e.g. a non-.md skill asset),
                 matching whichever type the real deploy phase would write.
+
+        BP-1500d-1: ``template_path`` always lives under ``package_root``,
+        which equals ``repo_root``/``target_root`` in the self-host layout
+        and is nested one level under it in a consumer-install-with-copy
+        layout, but is a genuine SIBLING of it for a real out-of-package
+        consumer install (the producing package cloned next to, not inside,
+        the receiving project). ``relative_to(repo_root)`` then raises
+        ValueError, which previously propagated out of this per-file helper,
+        aborted the entire ``_compute_output_mappings`` loop, and left
+        ``output_mappings`` empty for every entry -- not just this one --
+        while the build still exited 0 (the exact symptom this AC's
+        it_requirements measured: 154 mappings for an in-parent target vs.
+        ``{}`` for a temp-root target). The ``template`` key is informational
+        only (surfaced in drift-gate diagnostics via ``entry.get("template")``
+        -- never used as a lookup path), so falling back to a package-relative
+        key when the target-relative one is unavailable loses no behaviour
+        that any reader depends on, while letting every entry the receiving
+        project's install actually needs keep being recorded.
+
+        BP-1500d-1-i CROSS-REFERENCE, DELIBERATELY LEFT ALONE: the
+        ``"<package>/"`` fallback below is a second spelling of "the
+        package is elsewhere," distinct from the ``package_offset`` /
+        ``None`` vocabulary ``write_build_manifest`` now uses for the
+        position half and the template-account half (Direction A). It is
+        not reconciled with that vocabulary here because it governs a
+        different, diagnostic-only field: this ``template`` key is never
+        used as a lookup path by either drift gate (confirmed by reading
+        both gates — the only read site is
+        ``check_output_drift.py``'s ``entry.get("template", "<unknown>")``
+        for a printed diagnostic line), whereas the Direction A position and
+        account ARE load-bearing lookup keys a reader resolves files
+        against. Changing this fallback would touch Direction B
+        (output_mappings, the deployed side, already verified correct
+        against a real build at 471 entries) for a field with no behavioural
+        effect on any verdict, which is outside BP-1500d-1-i's scope (the
+        position and the account of the package's own files) for no
+        functional gain.
         """
-        tpl_key = template_path.relative_to(repo_root).as_posix()
+        try:
+            tpl_key = template_path.relative_to(repo_root).as_posix()
+        except ValueError:
+            try:
+                tpl_key = "<package>/" + template_path.relative_to(package_root).as_posix()
+            except ValueError:
+                tpl_key = template_path.as_posix()
         out_key = output_path.relative_to(repo_root).as_posix()
         payload = content.encode("utf-8") if isinstance(content, str) else content
         mappings[out_key] = {
@@ -930,6 +973,88 @@ def _compute_output_mappings(
     return mappings
 
 
+def _relative_package_offset(package_root: Path, repo_root: Path) -> str | None:
+    """Return where ``package_root`` stands relative to ``repo_root``, in the
+    one vocabulary both the manifest's ``package_root`` field and its
+    template-account keys share (BP-1500d-1-i).
+
+    Uses ``os.path.relpath`` rather than ``Path.relative_to`` because
+    ``relative_to`` only succeeds when one path is a literal subpath of the
+    other -- true for the self-host layout (``package_root == repo_root``)
+    and for a consumer install that clones the package one level under the
+    target (``package_root`` nested under ``repo_root``), but false for a
+    genuine out-of-package install where the package sits BESIDE the
+    receiving project (neither contains the other). ``os.path.relpath``
+    computes a ``..``-prefixed lexical offset for that third case instead of
+    raising, and ``pathlib`` never normalises a ``..`` component, so a base
+    built by appending this offset back onto ``repo_root``
+    (``repo_root / offset``) stays lexically anchored under ``repo_root`` --
+    which is exactly what lets ``check_build_drift.py``'s own
+    ``relative_to(repo_root)`` call succeed against it with no reader change
+    (measured 2026-09-07: the reader already forms its ``family_prefix``
+    this way; it only needed to stop collapsing this function's ``None``
+    into the same string as ``""``).
+
+    Args:
+        package_root: Root of the leafcutter package providing the
+            templates.
+        repo_root: The manifest's own directory (``manifest_path.parent``) --
+            the base every manifest key is computed relative to.
+
+    Returns:
+        ``""`` when ``package_root`` and ``repo_root`` are the same
+        directory (preserves the pre-existing meaning of the empty string --
+        readers must keep treating it that way for manifests written before
+        this fix). The ``..``/subdirectory-style relative offset string
+        otherwise. ``None`` -- a value no legitimate offset can ever equal,
+        distinguishable from both of the above at the JSON data level, never
+        only in build-time console text that is long gone by the time a
+        reader runs -- when the offset is genuinely inexpressible (the only
+        case ``os.path.relpath`` cannot resolve lexically: the two roots do
+        not share a drive on Windows). This is the SAME sentinel that
+        governs the template-account half: when this returns ``None``, no
+        per-file key for a template under ``package_root`` can be expressed
+        either, and the caller must not record an empty collection as
+        though the package shipped nothing -- see ``write_build_manifest``'s
+        Direction A loops, which both gate on this same return value.
+    """
+    try:
+        offset = os.path.relpath(str(package_root), str(repo_root))
+    except ValueError:
+        return None
+    return "" if offset == "." else offset
+
+
+def _package_relative_key(tpl_path: Path, package_root: Path, package_offset: str) -> str:
+    """Compose a template's manifest key from the SAME offset recorded as
+    ``package_root`` (BP-1500d-1-i's agreement requirement).
+
+    ``tpl_path`` is always a real descendant of ``package_root`` here (every
+    caller enumerates it via ``package_root``-rooted ``rglob()``), so
+    ``relative_to(package_root)`` cannot raise. Prefixing that with
+    ``package_offset`` (already expressed relative to the manifest's own
+    directory by ``_relative_package_offset``) produces exactly the key
+    space ``check_build_drift.py``'s ``family_prefix`` derivation expects:
+    ``package_offset`` itself, whatever shape it takes, IS what
+    ``templates_dir.relative_to(repo_root)`` yields on the reading side, so
+    a key built the same way agrees with it lexically with no reader-side
+    translation required.
+
+    Args:
+        tpl_path: Absolute path to a template file under ``package_root``.
+        package_root: Root of the leafcutter package.
+        package_offset: The non-``None`` value ``_relative_package_offset``
+            returned for this build (``""`` or a relative offset string).
+            Callers must not invoke this when the offset is ``None`` --
+            there is no key space to place the entry in.
+
+    Returns:
+        The manifest key string.
+    """
+    rel = tpl_path.relative_to(package_root).as_posix()
+    return f"{package_offset}/{rel}" if package_offset else rel
+
+
 def write_build_manifest(
     package_root: Path,
     dry_run: bool = False,
@@ -1014,41 +1139,68 @@ def write_build_manifest(
         _warn(f"templates/agents/ not found at {templates_dir}; skipping.")
         return ""
 
-    # --- Direction A: template hashes (flat dict, backward-compatible) ---
-    # relative_to(repo_root) is wrapped per-file: repo_root is target_root,
-    # which is correct for both real supported layouts (self-host:
-    # package_root == target_root; consumer-install: package_root nested one
-    # level under target_root as "leafcutter-ai/") but has no guaranteed
-    # relationship to package_root for an arbitrary caller-supplied
-    # target_root (e.g. a build-into-a-scratch-dir smoke test) — skip such a
-    # template with a warning rather than let one bad key crash the entire
-    # manifest write (matches Direction B's existing warn-and-degrade
-    # pattern below).
-    template_hashes: dict[str, str] = {}
-    for tpl_path in sorted(templates_dir.rglob("*.md")):
-        try:
-            key = tpl_path.relative_to(repo_root).as_posix()
-        except ValueError:
-            _warn(f"{tpl_path} is not under {repo_root}; omitting from manifest.")
-            continue
-        template_hashes[key] = hashlib.sha256(tpl_path.read_bytes()).hexdigest()
+    # Computed ONCE, up front: the "package_root" manifest field AND both
+    # Direction A loops below (the account of the package's own templates)
+    # are all governed by this single value (BP-1500d-1-i). The two halves
+    # of "where the producing package stood" and "which of its files the
+    # deployment came from" must agree with one another, which they can only
+    # do if they are derived from one call rather than recomputed twice with
+    # potentially different fallback behaviour. See
+    # ``_relative_package_offset``'s docstring for the full vocabulary.
+    package_offset = _relative_package_offset(package_root, manifest_path.parent)
 
-    # Commit-guardian hook templates: check_build_drift.py scans this second
-    # template tree independently (its own _collect_py_template_files()), so
-    # its fingerprints must live in the same manifest or every hook script
-    # edit is permanently reported "not in manifest" (BP-100k-1). Mirrors
-    # that collector exactly: all .py files, __pycache__ excluded.
-    cg_templates_dir = package_root / "templates" / "scripts" / "commit_guardian"
-    if cg_templates_dir.is_dir():
-        for tpl_path in sorted(cg_templates_dir.rglob("*.py")):
-            if "__pycache__" in tpl_path.parts:
-                continue
-            try:
-                key = tpl_path.relative_to(repo_root).as_posix()
-            except ValueError:
-                _warn(f"{tpl_path} is not under {repo_root}; omitting from manifest.")
-                continue
+    # --- Direction A: template hashes (flat dict, backward-compatible) ---
+    # BP-1500d-1-i: previously wrapped `tpl_path.relative_to(repo_root)`
+    # per-file in a try/except that recorded the value its own comment two
+    # lines below defines as "the package root and the manifest directory
+    # are the same directory" — a definite false claim for a genuine
+    # out-of-package install (package beside, not inside or above, the
+    # receiving project), not a neutral absence. Both loops now key off
+    # ``package_offset`` instead, which is:
+    #   - "" for the self-host layout (package_root == repo_root) — same
+    #     empty-string meaning as before, preserved for old manifests;
+    #   - a "leafcutter-ai"-style offset for a consumer install that clones
+    #     the package one level under target_root — also unchanged, since
+    #     that case never raised ValueError in the first place;
+    #   - a "../leafcutter-ai"-style offset for a genuine sibling
+    #     out-of-package install — the case that previously either raised
+    #     (crashing this whole computation) or silently dropped every
+    #     template one at a time. os.path.relpath resolves this lexically
+    #     instead of raising, and pathlib's refusal to normalise ".."
+    #     means the resulting key agrees with check_build_drift.py's own
+    #     family_prefix derivation with no reader-side translation needed.
+    # When ``package_offset`` is None (the position is genuinely
+    # inexpressible), NEITHER loop runs: an empty ``template_hashes`` in
+    # that state is not a neutral omission (BP-1500d-1-i's it_requirements
+    # forbid recording it as a plain empty collection), so the *reason* is
+    # recorded on the same footing via the "package_root": null value below
+    # rather than left for a reader to infer from silence.
+    template_hashes: dict[str, str] = {}
+    if package_offset is None:
+        _warn(
+            f"cannot express {package_root}'s position relative to "
+            f"{manifest_path.parent}; the account of the package's own "
+            "templates is unavailable for the same reason — see this "
+            "manifest's 'package_root' field."
+        )
+    else:
+        for tpl_path in sorted(templates_dir.rglob("*.md")):
+            key = _package_relative_key(tpl_path, package_root, package_offset)
             template_hashes[key] = hashlib.sha256(tpl_path.read_bytes()).hexdigest()
+
+        # Commit-guardian hook templates: check_build_drift.py scans this
+        # second template tree independently (its own
+        # _collect_py_template_files()), so its fingerprints must live in
+        # the same manifest or every hook script edit is permanently
+        # reported "not in manifest" (BP-100k-1). Mirrors that collector
+        # exactly: all .py files, __pycache__ excluded.
+        cg_templates_dir = package_root / "templates" / "scripts" / "commit_guardian"
+        if cg_templates_dir.is_dir():
+            for tpl_path in sorted(cg_templates_dir.rglob("*.py")):
+                if "__pycache__" in tpl_path.parts:
+                    continue
+                key = _package_relative_key(tpl_path, package_root, package_offset)
+                template_hashes[key] = hashlib.sha256(tpl_path.read_bytes()).hexdigest()
 
     # --- Direction B: expected output hashes (new output_mappings section) ---
     output_mappings: dict[str, dict[str, str]] = {}
@@ -1134,14 +1286,18 @@ def write_build_manifest(
     # zero templates — an empty comparison set, indistinguishable from a clean
     # run. Self-host hid this because package_root and target_root coincide.
     #
-    # Recording the offset avoids re-deriving it from a directory name or a git
-    # probe, either of which fails open when the guess is wrong. Empty string
-    # means the package root and the manifest directory are the same directory.
-    try:
-        package_offset = package_root.relative_to(manifest_path.parent).as_posix()
-    except ValueError:
-        package_offset = ""
-    manifest["package_root"] = "" if package_offset == "." else package_offset
+    # BP-1500d-1-i: ``package_offset`` was already computed once, above, and
+    # governs both this field and the account of the package's own templates
+    # (Direction A, above) — recorded here verbatim rather than recomputed, so
+    # the two halves cannot silently diverge. "" means the package root and
+    # the manifest directory are the same directory (unchanged meaning, kept
+    # for backward compatibility with manifests written before this fix).
+    # A real relative offset string ("leafcutter-ai", "../leafcutter-ai") means
+    # a real, resolvable position was found. ``None`` (JSON ``null``) means the
+    # position — and therefore the template account above — is genuinely
+    # inexpressible: a value distinguishable from both of the above at the
+    # data level, never only in build-time console text a reader never sees.
+    manifest["package_root"] = package_offset
 
     if dry_run:
         _dry_run(
@@ -1722,4 +1878,90 @@ def install_hooks(target_root, dry_run=False):
 #   target_root IS a real git repo the probe succeeds and execution falls
 #   through to step 4 unchanged, preserving the loud-failure path for genuine
 #   install errors. Docstring Returns: section updated to list the new status.
+# - 2026-09-07 [python-coder/BP-1500d-1]: Fixed _add()'s per-file
+#   template_path.relative_to(repo_root) call inside _compute_output_mappings()
+#   to no longer let a genuine out-of-package install (producing package
+#   cloned as a SIBLING of target_root, not nested inside it) raise
+#   uncaught ValueError. That exception previously propagated out of the
+#   per-file helper, aborted the whole _compute_output_mappings() loop, and
+#   left output_mappings empty for every entry while the build still exited
+#   0 — the exact fail-open measured by BP-1500d-1's it_requirements (154
+#   mappings for an in-parent target vs. {} for a temp-root target). Added a
+#   fallback: when template_path is not under repo_root, key it relative to
+#   package_root instead (prefixed "<package>/" so it cannot collide with a
+#   real repo_root-relative key), falling back to the absolute path only if
+#   neither base applies. The "template" key is informational only (surfaced
+#   in drift-gate diagnostics, never used as a lookup path), so this changes
+#   no reader's behaviour. Verified behaviorally: a real build.py subprocess
+#   run against a scratch out-of-package target (package and target as
+#   independent sibling directories under a system temp root) now produces
+#   471 non-empty output_mappings entries, all resolving to real files under
+#   the target, with every deployed agent .md file named in the record.
+# - 2026-09-07 [python-coder/BP-1500d-1-i]: (#BP-1500d-1-i) Fixed the two
+#   remaining false/silent claims the same defect family left in Direction A
+#   (template_hashes) and the "package_root" position field, which the
+#   previous entry's Direction B fix did not touch. Before this fix,
+#   `package_root.relative_to(manifest_path.parent)` raised for a genuine
+#   sibling out-of-package install and was caught into `""` — the value this
+#   module's own comment defines as "the package root and the manifest
+#   directory are the same directory," a definite false claim rather than an
+#   absence. The paired per-file loops hashing templates/agents/*.md and
+#   templates/scripts/commit_guardian/*.py caught the identical ValueError
+#   per file and silently dropped each entry, leaving template_hashes {} for
+#   every sibling install — so fixing the position alone would have raised
+#   check_build_drift.py's verified count by nothing at all (both halves are
+#   consumed by that same reader: the stated position is where it looks, the
+#   template account is what it counts as verified).
+#   Fix: both computations now go through one new helper,
+#   _relative_package_offset(package_root, manifest_path.parent), which uses
+#   os.path.relpath instead of Path.relative_to. relpath resolves a sibling
+#   layout lexically to a "../<package-dir-name>"-style string instead of
+#   raising (measured 2026-09-07: pathlib never normalises a ".." component,
+#   so the offset stays anchored under manifest_path.parent and
+#   check_build_drift.py's existing `templates_dir.relative_to(repo_root)`
+#   call already derives the identical string on the reading side with no
+#   reader change needed for this part). template_hashes keys are now built
+#   via the new _package_relative_key() helper, which composes
+#   `<package_offset>/<path-relative-to-package_root>` — the same base the
+#   position field records — so the two halves are provably the same claim
+#   rather than two independently-computed values that could disagree.
+#   "package_root" is still "" for a same-directory install (unchanged
+#   meaning, preserved for old manifests) and is now `None` (JSON `null`) —
+#   never a plausible-looking string — for the one case relpath itself
+#   cannot resolve lexically (different drives on Windows); when that
+#   happens neither Direction A loop runs, so an empty template_hashes in
+#   that state is accompanied by an explicit `null`, not left to be misread
+#   as "the package shipped nothing." check_build_drift.py's main() was
+#   updated to stop collapsing that `None` into `""` via its old
+#   `manifest.get(...) or ""` pattern (which would have silently reported
+#   the unavailable case as the legitimate same-directory answer) and now
+#   reports a distinct BLOCKED verdict for it before ever deriving a
+#   family_prefix. check_output_drift.py reads neither half of the producing
+#   end (confirmed by reading it end to end: it only reads output_mappings)
+#   and needed no change.
+#   Deliberately left alone: the "<package>/"-prefixed fallback the previous
+#   entry added to `_add()`'s informational "template" key (Direction B) is
+#   a second, disagreeing spelling of "the package is elsewhere," but it is
+#   diagnostic-only — the only read site is check_output_drift.py's
+#   `entry.get("template", "<unknown>")` for a printed line, never a lookup
+#   path — so reconciling it here would touch already-verified-correct
+#   Direction B code for zero behavioural effect; see _add()'s own
+#   docstring for the full reasoning.
+#   Verified behaviorally against a real build.py subprocess: a package
+#   copy built from `git archive $(git stash create)` (captures this same
+#   uncommitted fix; a plain `git archive HEAD` cannot see it) run against a
+#   genuine sibling out-of-package target now records package_root:
+#   "../leafcutter-ai" and 174 template_hashes entries (was "" and 0), and
+#   check_build_drift.py run against that same install reports
+#   `RESULT verified=174 ... drifted=0` and exits 0 (was `BLOCKED - compared
+#   0 templates`). The self-host control layout (package_root == target
+#   root) is unchanged: package_root "" with 174 unprefixed keys, gate exit
+#   0. Idempotency verified: two consecutive builds into the same
+#   unchanged sibling target produced byte-identical .build_manifest.json.
+#   Also verified: a manifest with package_root forced to null is reported
+#   BLOCKED with a distinct message rather than crashing or reading clean; a
+#   manifest with a stated-but-wrong position, and a manifest with the
+#   position left truthful but the template account emptied, both fall
+#   through to the pre-existing `verified == 0` floor (BP-100k-3/B-1(a)) and
+#   are correctly reported as not clean rather than as an absence.
 # ====================================================================

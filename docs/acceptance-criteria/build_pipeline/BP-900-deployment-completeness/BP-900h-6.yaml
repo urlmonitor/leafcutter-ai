@@ -243,6 +243,7 @@ superseded_by: null
 covered_by:
   - BP-900h-6-i
   - BP-900h-6-ii
+  - BP-900h-6-iii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/10_TICKET-20260825-BP-900h-6.md
 change_target: pipeline

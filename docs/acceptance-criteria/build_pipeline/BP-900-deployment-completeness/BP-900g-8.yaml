@@ -200,11 +200,31 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: proof-chain-repair
+  by: business-analyst
+  at: 2026-09-01
+  note: 'Recorded the two test files that carry the 18 ''# covers: BP-900g-8'' tags
+    (7 in unit_tests/test_bp_900g_8.py, 11 in unit_tests/test_bp_closure_guard_correctness.py)
+    into covered_by. They were the AC''s only real proof and none was recorded, while
+    covered_by named only three children that are all work_status: todo with empty
+    coverage — recorded proof absent, real proof unrecorded. All 18 pass under
+    AC_ENFORCE_STRICT=1 (0 skipped, 0 xfail). The three child ids are PRESERVED:
+    covered_by is dual-purpose per config/ac_store_schema.json (''Test file paths
+    ... child AC IDs''). Classification is unchanged — done_proof consults
+    _has_resolvable_child only when linked_tests is empty (done_proof.py:1345), and
+    this AC has 18 tags, so it is already leaf-classified and covered_by does not
+    feed the decision; scan_ac_store additionally filters covered_by entries
+    containing ''/'' or ''::'' out of its children set (scan_ac_store.py:638-641).
+    criteria, work_status and readiness untouched. work_status NOT changed in either
+    direction — the missing decisive test (the newly-added-module case named in
+    BP-900g-8-i) is reported as a recommendation for human judgement, not acted on.'
 superseded_by: null
 covered_by:
   - BP-900g-8-i
   - BP-900g-8-ii
   - BP-900g-8-iii
+  - unit_tests/test_bp_900g_8.py
+  - unit_tests/test_bp_closure_guard_correctness.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260825-BP-900g-8.md
 - scripts/build.py

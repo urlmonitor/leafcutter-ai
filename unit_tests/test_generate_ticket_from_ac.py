@@ -699,6 +699,10 @@ class TestEndToEndGeneratorComputedMap:
                 "--ac", "BO-E2E-001",
                 "--ac-root", str(ac_root.parent.parent),
                 "--tickets-root", str(tickets_root),
+                # TKT-600b-1-i: the generator refuses rather than guess which
+                # phases the drive will dispatch. This fixture is a standalone
+                # ticket; an epic-member fixture must say so instead.
+                "--location-kind", "standalone",
             ])
 
             assert exit_code == 0, (
