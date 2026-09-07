@@ -285,7 +285,7 @@ DECISION HISTORY
   new config key — per GE-127b-1's it-po enrichment), and the
   PreviousLengthSourceError floor distinguishing "could not be read" /
   "could not be interpreted" / "holds no covered file whatsoever" per
-  GE-127b-1-i, reusing BP-100n-4-ii's INDETERMINATE vocabulary.
+  GE-127b-1-i, reusing BP-1600a-2-ii's INDETERMINATE vocabulary.
 - 2026-09-07 [python-coder/GE-127b-1-i correction]: Narrowed the refusing
   set from three situations to two per the 2026-09-01 criteria correction.
   resolve_head_covered_paths() no longer raises for an unborn HEAD or a

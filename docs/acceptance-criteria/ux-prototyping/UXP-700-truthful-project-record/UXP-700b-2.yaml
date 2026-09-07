@@ -81,7 +81,7 @@ test_spec:
     angle: boundary
     framework: unittest
 notes: |
-  House style copied from BP-100n-4 per the BA memory note: state the measured populations in
+  House style copied from BP-1600a-2 per the BA memory note: state the measured populations in
   the Given and close with a varying-population clause. This is the record that makes UXP-700b-1
   falsifiable - without per-check figures, "it examined something" is an assertion the checker
   makes about itself with nothing behind it.

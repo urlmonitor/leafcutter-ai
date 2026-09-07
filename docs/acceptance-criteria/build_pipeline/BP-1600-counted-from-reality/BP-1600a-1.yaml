@@ -61,12 +61,12 @@ doc_links:
       population under examination is arrived at — is a different rule, now named by BP-1600a.
       Read BP-100n-1, -2 and -5 as the absence-reporting siblings this record no longer sits
       beside.
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml"
     relationship: related
     status: exists
     relevance: >-
       THE SIBLING CENSUS ON THE OTHER SURFACE, AND THE BOUNDARY IS ITS OWN FIRST GIVEN.
-      BP-100n-4 (approved, high) enumerates the commit-gate scripts against the gate
+      BP-1600a-2 (approved, high) enumerates the commit-gate scripts against the gate
       registry the commit-time configuration is generated from. Its first Given scopes it
       to "the repository keeps its commit-gate scripts together in one place" — the
       commit-guardian script directory — so it structurally cannot reach the surface this
@@ -77,7 +77,7 @@ doc_links:
       cannot pass on a literal list. What must NOT be reused is its registry-reading rule —
       that surface names scripts on entry lines of a manifest, this one names them inside
       shell commands and in a different layout (see BP-1600a-1-ii).
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-ii.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2-ii.yaml"
     relationship: related
     status: exists
     relevance: >-
@@ -93,7 +93,7 @@ doc_links:
       registered, correctly wired, running on every edit, and unable to refuse: three of
       its four gated prefixes resolve out from under themselves through the installed-tree
       symlinks and never match, and the fourth names a directory this project does not
-      have. The Scheduled work paragraph of M9 names BP-100n-4 as the mechanical
+      have. The Scheduled work paragraph of M9 names BP-1600a-2 as the mechanical
       enumeration of the class "across the commit-guardian surface" — the qualifier is the
       gap this record closes.
   - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml"
@@ -106,7 +106,7 @@ doc_links:
       question on this surface: which scripts are in the invoked set at all. A script this
       census reports as run by nothing has no refusal to demonstrate, and a script this
       census reports as wired may still be unable to refuse — neither verdict implies the
-      other. GE-120f previously carried a note claiming BP-100n-4 already enumerated its
+      other. GE-120f previously carried a note claiming BP-1600a-2 already enumerated its
       exemplar; that claim was false, and this record is what makes it true for this
       surface.
   - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-6.yaml"
@@ -116,7 +116,7 @@ doc_links:
       BOUNDARY — THE THIRD ENUMERATION, ALSO ON THE COMMIT-GATE SURFACE. GE-120c-6 sweeps
       the guard directory ("every check script living where the commit-guardian's check
       scripts live") against the deployed commit registry. Same inversion, same directory,
-      different reference set from BP-100n-4 — and neither of the two reaches this surface.
+      different reference set from BP-1600a-2 — and neither of the two reaches this surface.
       Its rule that "a registration the commit path never reads is not a registration" is
       the precedent BP-1600a-1-ii applies here to a wiring that exists only in a copy the
       project does not ship.
@@ -205,7 +205,7 @@ declares_side_effect: false
 it_requirements:
   - >-
     NO DISCRIMINATOR FOR WHAT COUNTS AS A HOOK SCRIPT — DECIDED DELIBERATELY, AND THIS IS
-    A DEVIATION FROM THE SIBLING CENSUS THAT MUST NOT BE SILENTLY UNDONE. BP-100n-4's
+    A DEVIATION FROM THE SIBLING CENSUS THAT MUST NOT BE SILENTLY UNDONE. BP-1600a-2's
     surface needed a predicate to separate gates from helper modules, and the winning one
     there was an executable entry point. Measured on this surface at 468e0490f: the hook
     directory holds thirteen files, all thirteen are Python, and all thirteen carry an
@@ -438,12 +438,12 @@ amended_by:
       chose SPLIT over child_limit_override, as this record's own PARENT AND CAPACITY note
       asked. Nothing about the requirement changed: criteria, readiness (draft), priority
       (high) and work_status (todo) are untouched. The new parent BP-1600a names the rule this
-      record shares with BP-100n-3 and BP-100n-4 — the population a check walks is taken from
+      record shares with BP-100n-3 and BP-1600a-2 — the population a check walks is taken from
       reality, never from a list that can omit things — and the new L0 BP-1600 exists because
       BP-100 sits at exactly its child_limit_override of 13 and its own note reserved that
       ceiling to force this decision rather than absorb it. Only this record moved of the
       three cluster members: BP-100n-3 is done with covers-tags in shipped source, and
-      BP-100n-4 is cited from roughly sixty places plus five more on the unmerged PR #726.
+      BP-1600a-2 is cited from roughly sixty places plus five more on the unmerged PR #726.
       See BP-1600a's notes for the migration path.
 superseded_by: null
 covered_by:
@@ -470,7 +470,7 @@ notes: >-
 
 
   WHY THIS SURFACE AND NOT ONLY THE OTHER ONE. Two registration surfaces exist in this
-  project and until now only one has been counted. BP-100n-4 owns the commit-gate scripts
+  project and until now only one has been counted. BP-1600a-2 owns the commit-gate scripts
   against the gate registry; GE-120c-6 sweeps the same directory against the deployed commit
   registry; both are scoped, by their own first clauses, to where the commit-guardian check
   scripts live. Nothing has ever compared the harness hook directory against the settings
@@ -525,7 +525,7 @@ notes: >-
   honest parent: its own sentence is "a guard that finds nothing where something should be
   says so, instead of passing", and its criteria say that an empty result "looks, from inside
   the guard, exactly like there is nothing here to check" — which is this census's fail-closed
-  requirement verbatim, and BP-100n-4 is the sibling census already living there. BP-100n was
+  requirement verbatim, and BP-1600a-2 is the sibling census already living there. BP-100n was
   at its five-L2 cap when this record was written, so this record makes it six and the
   child-limit guard will report it. NO child_limit_override WAS ADDED. That was deliberate:
   raising an override to silence a guard, in a record whose entire subject is guards that were
@@ -556,16 +556,16 @@ notes: >-
   latter was chosen: BP-1600, following the precedent BP-1300 set and documented in its own
   notes when it was placed outside BP-100 for this identical reason.
 
-  WHY THE OTHER TWO CLUSTER MEMBERS DID NOT COME. BP-100n-3 and BP-100n-4 share this record's
+  WHY THE OTHER TWO CLUSTER MEMBERS DID NOT COME. BP-100n-3 and BP-1600a-2 share this record's
   rule and belong under BP-1600a on the merits. BP-100n-3 is work_status done with covers-tags
   in scripts/build_phases.py and a test file named after it; renaming it would break an
-  evidence chain inside a structural move. BP-100n-4 is cited from roughly sixty places, and
+  evidence chain inside a structural move. BP-1600a-2 is cited from roughly sixty places, and
   the open, unmerged PR #726 adds five more from a branch that cannot be edited from here.
   BP-1600a's notes carry the migration path and its precondition. Both remain under BP-100n
   for now, which is why the absence-reporting parent still hosts two population records.
 
 
-  ADJACENT RECORDS THAT MUST NOT BE CLOSED AS DUPLICATES OF THIS ONE, OR IT OF THEM. BP-100n-4
+  ADJACENT RECORDS THAT MUST NOT BE CLOSED AS DUPLICATES OF THIS ONE, OR IT OF THEM. BP-1600a-2
   owns enumeration on the commit-gate surface. GE-120c-6 owns the deployed-registry sweep of
   the same directory. GE-120f owns whether a guard in any set can refuse. GE-126d-3 owns the
   single declaration of registration legs that a settings leg should be added to. TQ-500a owns
