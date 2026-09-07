@@ -797,26 +797,28 @@ your output from reaching the caller.
 **On "yes":** Execute the following steps in order. Wrap the entire block in
 best-effort handling (log a warning and proceed if any step fails):
 
-1. Load `.claude/skills/route-learning/SKILL.md` (or `templates/skills/route-learning/SKILL.md`).
-   Apply its decision tree to classify the learning. If the skill is unavailable,
-   log: "S9: route-learning skill not found — capture skipped." and stop.
-
-2. Load `.claude/skills/capture-learning/SKILL.md` (or `templates/skills/capture-learning/SKILL.md`).
-   Execute the write using the route classification from step 1.
-   If the skill is unavailable, log: "S9: capture-learning skill not found — capture skipped." and stop.
-
-3. Emit a `knowledge_captured` telemetry event. This shape is normatively
-   defined in `templates/skills/signoff/SKILL.md` §7 step 4 (deployed:
-   `.claude/skills/signoff/SKILL.md` §7 step 4) — the required field set below
+1. Emit a `knowledge_captured` telemetry event. This shape is normatively
+   defined in `templates/skills/signoff/SKILL.md` §7 step 2 (deployed:
+   `.claude/skills/signoff/SKILL.md` §7 step 2) — the required field set below
    must match that definition exactly; this agent has no `ticket_path` in
-   hand, so the optional `ticket` field defined there is omitted here. Append
-   to `debugging/logs/agent_telemetry.jsonl` (create the file if absent; skip
+   hand, so the optional `ticket` field defined there is omitted here. Per
+   ADR-034 (Knowledge Write Ownership), this append is this agent's entire
+   obligation — it does not classify the learning or write to any knowledge
+   surface itself. Do NOT load `route-learning` or `capture-learning`;
+   ADR-034 §2 item 3 retired both names and neither has ever existed under
+   `templates/skills/` or `.claude/skills/`. Append to
+   `debugging/logs/agent_telemetry.jsonl` (create the file if absent; skip
    gracefully if the directory is not writable):
    ```json
-   {"event": "knowledge_captured", "timestamp": "<ISO-8601>", "agent": "it-po", "component": "<component-id>", "destination": "<routed_file_path>", "entry_kind": "<entry_kind from route-learning>"}
+   {"event": "knowledge_captured", "timestamp": "<ISO-8601>", "agent": "it-po", "component": "<component-id>", "destination": "(unrouted)", "entry_kind": "unclassified", "text": "<the learning body, exactly as you wrote it>"}
    ```
+   `entry_kind` and `destination` carry the literal sentinels shown above —
+   with `route-learning` retired, this step defines no classification
+   procedure to run; `INF-400c-5` owns the real `entry_kind` vocabulary and
+   `INF-400c-4` owns the destination/sink path. `text` is REQUIRED and MUST be
+   the non-empty learning body from the reflection prompt below.
 
-4. **Capture scope constraint (specification-relevant only):** The reflection
+2. **Capture scope constraint (specification-relevant only):** The reflection
    prompt asks about specification-relevant discoveries only:
    - Component conventions and agent assignment patterns
    - Cross-agent boundary patterns and contract shapes that recur
@@ -827,9 +829,10 @@ best-effort handling (log a warning and proceed if any step fails):
    Do NOT capture code-level learnings (implementation patterns, error handling
    conventions, test strategies). Those belong to the implementing agents.
 
-5. **Duplicate detection:** Before writing, route-learning Step 0 checks for
-   existing entries with equivalent content. If a duplicate is detected, skip
-   the write and log: "S9: duplicate learning detected — not persisted again."
+3. **Duplicate detection (self-check only):** `route-learning`'s Step 0
+   duplicate check was retired along with the skill and is not replaced here.
+   Do a lightweight self-check instead: if you already emitted an equivalent
+   learning earlier in this same run, do not emit it a second time.
 
 **Constraint — this step is not conditional on `ticket_path`:** The knowledge
 emission step runs whether or not this agent was spawned with a `ticket_path`.

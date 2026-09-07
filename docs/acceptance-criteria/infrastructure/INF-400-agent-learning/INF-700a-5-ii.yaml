@@ -1,0 +1,175 @@
+id: INF-700a-5-ii
+components:
+  - infrastructure
+  - knowledge_system
+  - build_orchestration
+  - worktree_manager
+title: "A record emitted too late for this run to route is counted and named as waiting, and the next completed unit of work picks it up"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-5.yaml"
+criteria: |
+  Given the declared knowledge-emission sink is an absolute path fixed when the
+    package was built into this project rather than a name each process
+    resolves against wherever it started, so one sink serves the whole install
+    and a record emitted inside an isolated working directory is still in it
+    after that directory has been removed,
+  And an agent can emit a record after this unit of work's routing step has
+    already read the sink, because the phases that publish the work emit too,
+  When the unit of work completes and its working directory is removed,
+  Then the reported result states how many records were in the sink at the end
+    of the unit of work and how many the routing step read, and names the
+    difference rather than leaving it implied,
+  And a record the routing step never read is not reported as routed, as
+    written, or as nothing-to-do,
+  And that record is described as waiting for the next completed unit of work,
+    and the description is true of the world: the record is still in the sink
+    when read from outside the removed working directory, a later completed
+    unit of work in the same install routes it, and the learning reaches its
+    destination exactly once,
+  And the wait is stated as a wait with something a reader can act on attached
+    to it — the next completed unit of work in this install — rather than as
+    a finished outcome, and no surface calls such a record lost, discarded or
+    reclaimed, because none of those describe a record that is still sitting
+    where it was written,
+  And a record left waiting is genuinely outstanding: it carries learning text
+    and a later run writes it, so it counts towards the knowledge waiting to be
+    written, and a count that rises while records wait and returns to zero once
+    they are written is the rule against a permanently non-empty backlog
+    working rather than being broken — that rule forbids retaining records
+    nothing can ever write, and these are records the next completed unit of
+    work does write,
+  And where nothing further completes in that install, the records still
+    waiting remain findable by asking, so an indefinitely deferred tail is
+    visible to a person standing in that project rather than silent,
+  And on a completion path where nothing emits after the routing step has read
+    the sink, the difference is zero, so the figure reads as a real signal and
+    not as permanent background noise.
+depends_on:
+  - INF-700a-5
+  - INF-400c-4
+doc_links:
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE EMITTED-VERSUS-READ DIFFERENCE REQUIRES A SECOND LOOK AT THE SINK AFTER THE ROUTING STEP, AND THAT LOOK MUST NOT ROUTE. The figure is the count present at the END of the unit of work minus the count the routing step read. Obtaining it therefore means re-reading the sink late in the completion sequence, and the obvious shortcut — running the routing step a second time to see what is left — both routes the tail (defeating the deferral this AC describes) and adds a second set of writes after the publication has been made (defeating INF-700a-5). The late read must count, not drain."
+  - "THE FINDABLE-BY-ASKING CLAUSE NEEDS A SURFACE THAT IS READ-ONLY BY CONSTRUCTION, NOT BY CONVENTION. The harvester's existing --dry-run flag is the nearest candidate and is nearly right — it skips capture_fn and skips the state write — but it also counts every dry-run record as outstanding, so it answers 'what would be routed' rather than 'what is waiting'. Whatever surface is chosen must not create the sink, must not write the state file, and must not watermark anything, and its no-side-effect property must be asserted by a test that checks the filesystem afterwards rather than by reading the code. This is the surface a person standing in a parked project uses, so it has to be safe to run when nothing else is running."
+  - "THE WAITING COUNT IS INF-700c's COUNT, NOT A NEW ONE. The criterion requires a waiting record to contribute to the knowledge-waiting-to-be-written figure and requires that figure to return to zero once the record is written. Do not introduce a second counter for the tail: two counters that must agree will disagree, and the failure will present as the permanently non-empty backlog INF-700c forbids while both counters are individually correct."
+  - "THE ZERO-ON-A-QUIET-PATH CLAUSE CONSTRAINS THE ORDERING, NOT JUST THE ARITHMETIC. The difference reads as a real signal only if it is genuinely zero when nothing emits after the routing step. Any implementation that itself emits during the completion sequence — a knowledge record about the routing run, a telemetry-shaped record written to the knowledge sink by mistake — makes the difference permanently non-zero and turns the figure into the background noise the criterion names. The routing step and everything after it must not write to the knowledge sink."
+  - "Must handle errors gracefully per the project error handling policy. A failure to compute the difference must degrade to reporting that it is unknown, never to reporting zero — a fabricated zero is indistinguishable from a healthy path and is the exact silence this record closes."
+delivers_to:
+  agent: documentation-expert
+  contract: "The emitted-versus-read figure and what it means now the sink outlives an isolated working directory — a record the routing step did not reach is waiting for the next completed unit of work, not gone — which INF-700a-4's reference must state, alongside the fact that an install has one sink shared by every working directory of it"
+expects_from:
+  - ac_id: INF-400c-4
+    contract: "The build-time absolute declaration that makes one sink serve the whole install, which is what turns a late emission into a delay rather than a loss"
+  - ac_id: INF-700a-5
+    contract: "The durability outcome, of which this is the emitting half — the tail this AC counts is the residual that outcome leaves once the routing step is ordered ahead of the publishing phases"
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+  - reason: "BA rewrite, 2026-09-07, on BrainCandy's approved decision that the sink resolves against the repository. THE PREMISE THIS AC WAS BUILT ON HAS BEEN REMOVED, so the record is rewritten rather than patched. It previously required a late-emitted record to be reported as GONE, and forbade any surface calling it deferred, pending, outstanding or waiting, on the ground that the sink was created inside the working directory and reclaimed with it. That ground no longer holds: one sink now serves every working directory of a repository and outlives all of them, so the record is exactly what the old criteria forbade calling it. The old wording is now the wrong answer, and worse than merely stale — an implementation built to it would report a present record as lost and would stop looking for it. WHAT THE AC KEEPS: the emitted-versus-read difference, the requirement to name it rather than imply it, the three not-this assertions, and the zero-on-a-quiet-path clause. All four were about counting honestly and none depended on the record dying. WHAT CHANGED: the severity claim inverts from a loss to a delay; the report must now describe the record as waiting for the next completed unit of work AND be held to that by a later run actually producing the learning; a clause is added stating that such a record legitimately contributes to the waiting count, and that a count which rises and returns to zero is INF-700c's rule working rather than the manufactured permanent backlog it forbids; and a clause is added requiring an indefinitely deferred tail — a repository where nothing further completes — to stay findable rather than silent. WHY IT IS STILL WORTH HAVING AT ALL, now the outcome is benign: the difference is the only figure that distinguishes a routing step that read everything from one that read what happened to be there first, and the tail is unbounded at the end of a project. A delay nobody counts becomes a loss the first time nothing else completes."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA wording correction, 2026-09-07, same day. The entry above describes the sink as resolving 'against the repository' and serving 'every working directory of a repository'. That anchor was replaced later the same day by a build-time absolute path written into the deployed configuration, for reasons recorded on INF-400c-4 — chiefly that 'the repository' is ambiguous in a nested consumer install. The unit of sharing is therefore the INSTALL, not the repository, and the criteria, delivers_to, expects_from, one test descriptor and the notes now say so. NOTHING SUBSTANTIVE CHANGES FOR THIS RECORD: the property it depends on is that one sink outlives every isolated working directory of the project, which both anchors deliver and the new one delivers more directly. The inversion from loss to delay, and every reason given for it, stand exactly as written."
+    by: business-analyst
+    at: 2026-09-07
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_a_record_emitted_after_the_routing_step_is_named_in_the_difference
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive a completion path in which one record is in the sink before the routing step runs and a second is appended after it. Assert the reported result states two present and one read, and names the unread record. A result that reports only the read count is the silence this AC closes."
+  - name: test_an_unread_record_is_not_reported_as_routed_written_or_nothing_to_do
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "With one record left unread, assert the reported result's routing outcome is not the wrote-everything value and not the nothing-to-do value, and that the unread record does not appear in the written count. Three separate not-this assertions, because each is a plausible implementation and each hides the record in a different place."
+  - name: test_a_waiting_record_survives_the_teardown_and_is_written_by_the_next_completed_unit_of_work
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The clause that holds the words to the world, inverted from the version this AC carried before the sink decision. Drive a path that leaves one record unread, complete it, remove the working directory, then read the sink from outside that directory and assert the record is still there. Assert the report describes it as waiting for the next completed unit of work and contains none of the words that would call it lost. Then drive a second unit of work in the same install and assert the learning reaches its destination exactly once. Report and world must agree, and here agreement means the learning DOES arrive — the opposite assertion to the one this descriptor made before."
+  - name: test_the_waiting_count_rises_while_a_record_waits_and_returns_to_zero_once_it_is_written
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Assert the count of knowledge waiting to be written is zero before the run, non-zero while the late-emitted record waits, and zero again after the next completed unit of work routes it. Both ends matter: a count that never rises cannot signal a tail, and a count that never returns to zero is the permanently non-empty backlog INF-700c forbids. This test is what distinguishes the two."
+  - name: test_the_difference_is_zero_on_a_path_where_nothing_emits_after_the_routing_step
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Drive a completion path with no emission after the routing step; assert the emitted-versus-read difference is exactly zero. A figure that is permanently non-zero on a healthy path is background noise nobody will read, which is how the waiting count stopped carrying a signal."
+test_rationale: |
+  The third descriptor is still the one that distinguishes this AC from a
+  counter, but it now asserts the opposite outcome from the version written
+  before the sink decision, and that inversion is the point: reporting a
+  difference is easy, and the tempting wording is wrong in exactly the case
+  that matters — it was wrong as "gone" once the record started surviving, and
+  it would be wrong as "waiting" if nothing ever collected it. Driving a second
+  unit of work in the same test that asserts the report's wording is what holds
+  the words to the world, in whichever direction the world happens to be
+  pointing. The fourth descriptor asserts both ends of the waiting count for
+  the same reason: a rising count and a permanently non-zero count look
+  identical at any single moment, and only one of them is allowed.
+notes: |
+  WHAT THIS AC IS FOR NOW. Once the routing step is ordered ahead of the phases
+  that publish the work (INF-700a-1, as refined on 2026-09-07), a residual
+  remains: those publishing phases emit too, and their records arrive after the
+  sink has been read. With an install-scoped sink that residual is a
+  one-run delay rather than a loss. This AC counts and names it. It is the
+  smallest of the family's failure records and deliberately so — its severity
+  fell when the sink stopped dying with the working directory, and the record
+  says so rather than keeping a loud claim it can no longer support.
+
+  THE ONE PLACE THE DELAY BECOMES A LOSS, which is why the AC survives at all:
+  nothing guarantees another unit of work ever completes. The last change
+  before a project is parked, before a holiday, before a repository is handed
+  over — its publishing phases' learnings sit in the sink with no successor.
+  Nothing is broken and nothing reports a problem, which is the family's
+  original failure mode in miniature. The clause requiring the waiting records
+  to stay findable by asking is what keeps that case visible; narrowing the
+  window by ordering, or draining the tail deliberately at the end of a
+  session, are options an IT PO can weigh and neither is required here.
+
+  THE RESIDUAL THIS AC USED TO STATE IS CLOSED. It previously recorded that
+  INF-700a-5 had rejected durable-emission-with-deferred-routing because the
+  sink did not outlive the working directory, and that the option could be
+  reopened if that changed. It changed on 2026-09-07 and the option was
+  reopened and re-decided on the merits: adopted for this residual, rejected as
+  the whole mechanism, for reasons recorded on INF-700a-5. Nothing here is
+  waiting on that question any more.
+
+  BOUNDARY. INF-400c-4-iv owns a sink that has never been written to, which is
+  a no-work outcome and is correct. INF-700a-5-i owns a routing write that
+  happened and was never published. This AC owns a record the routing step
+  never reached — which, since the sink decision, is still sitting where it was
+  written. The three used to present identically to a naive reader as nothing
+  there; the emitted-versus-read figure is what separates the third from the
+  other two.
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary

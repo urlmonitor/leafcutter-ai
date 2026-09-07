@@ -178,6 +178,101 @@ _EXCLUDED_SCAN_DIRS: frozenset[str] = frozenset(
     }
 )
 
+# KI-TQ-20260901-1310: pytest COLLECTION ALONE in this repository measures
+# ~30-33s before any test body executes (measured 2026-09-01). A flat
+# per-run ceiling charges that fixed cost against every AC's budget and
+# then hands whatever is left over to actual test execution — so the
+# effective execution budget shrinks the larger the repository's own test
+# tree grows, which has nothing to do with the AC under verification.
+# BP-900g-8-ii (PR #694) needed ~142s of genuine execution time across the
+# 5 subprocess-heavy tests in ONE linked file; the old flat 60s budget could
+# not clear collection AND that work, so the cheapest way to pass the gate
+# was to delete the very subprocess-level proof the AC's criteria required.
+#
+# The fix gives collection its own floor (charged once, not per file) and a
+# per-file execution allowance on top, so the budget scales with how many
+# test files an AC actually links rather than with a single number picked to
+# fit the smallest AC that ever existed.
+# The per-file allowance carries deliberate CI headroom. The ~142s figure above
+# was measured on a developer workstation; a GitHub-hosted runner is materially
+# slower for subprocess-heavy work (each `build.py --target-dir` run pays real
+# filesystem and process-spawn cost), so a per-file allowance chosen to just
+# clear the local measurement would reproduce this very defect on CI while
+# looking fixed locally. 300s leaves roughly a 2x margin over the measured
+# worst case rather than the ~1.3x that 150s would have given.
+_PYTEST_COLLECTION_FLOOR_SECONDS = 30.0
+_PYTEST_PER_FILE_BUDGET_SECONDS = 300.0
+
+# Optional operator override, honoured verbatim when it parses as a positive
+# float; falls back to the computed default (never crashes, never zeroes)
+# otherwise. See _resolve_pytest_timeout_seconds.
+_ENV_TIMEOUT_OVERRIDE_VAR = "LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS"
+
+# Sentinel key stored in the dict _run_pytest_and_parse returns on a genuine
+# subprocess timeout. Deliberately shaped so it can never collide with a real
+# pytest nodeid: every real nodeid contains "::" and ends in a "test_..."
+# segment (see _nodeid_function_name), so both this module's own
+# _classify_outcomes/_find_nodeid_for_test and fast_lane.py's
+# _resolve_tag_outcome look it up by nodeid, miss it, and fall through to
+# their existing "no result found" handling — identical to what they already
+# do for a genuinely empty dict. Only the two call sites that build the
+# operator-facing eligibility reason (verify_done_eligible's leaf path and
+# _verify_composite_eligible) read this key directly, to make a timeout
+# distinguishable from "no test found" (KI-TQ-20260901-1310 bullet 2).
+_PYTEST_TIMEOUT_SENTINEL = "__done_proof_pytest_timeout__"
+
+
+def _resolve_pytest_timeout_seconds(test_files: list[Path]) -> float:
+    """Compute the ``timeout=`` budget for one ``_run_pytest_and_parse`` call.
+
+    Honours ``LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS`` when it is set to
+    a value ``float()`` can parse and that is strictly positive — used
+    verbatim in that case.  Otherwise (absent, empty, non-numeric, zero, or
+    negative) falls back to a computed default: a fixed collection floor
+    (``_PYTEST_COLLECTION_FLOOR_SECONDS``, paid once) plus a per-file
+    execution allowance (``_PYTEST_PER_FILE_BUDGET_SECONDS`` times the number
+    of files in *test_files*), so an AC that links more test files receives a
+    strictly larger budget rather than the same fixed ceiling every AC
+    competes for (KI-TQ-20260901-1310).
+
+    A non-numeric override never crashes and never silently produces a zero
+    budget — both the parse failure and a non-positive value are logged to
+    stderr and treated as "no override given".
+
+    Args:
+        test_files: The test files about to be handed to the pytest
+            subprocess.  Only its length is used (per-file allowance).
+
+    Returns:
+        The timeout in seconds, always a positive float.
+    """
+    override = os.environ.get(_ENV_TIMEOUT_OVERRIDE_VAR)
+    if override:
+        try:
+            parsed = float(override)
+        except ValueError as exc:
+            print(
+                f"WARNING: done_proof: {_ENV_TIMEOUT_OVERRIDE_VAR}={override!r} "
+                f"is not a valid number, falling back to the computed default "
+                f"budget: {exc}",
+                file=sys.stderr,
+            )
+            parsed = None
+        if parsed is not None and parsed > 0:
+            return parsed
+        if parsed is not None:
+            print(
+                f"WARNING: done_proof: {_ENV_TIMEOUT_OVERRIDE_VAR}={override!r} "
+                "must be a positive number of seconds; falling back to the "
+                "computed default budget.",
+                file=sys.stderr,
+            )
+    file_count = max(len(test_files), 1)
+    return (
+        _PYTEST_COLLECTION_FLOOR_SECONDS
+        + _PYTEST_PER_FILE_BUDGET_SECONDS * file_count
+    )
+
 
 # ---------------------------------------------------------------------------
 # JS runner seam
@@ -879,33 +974,49 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     outcome that is non-passing on its own merits still reports XFAIL or SKIPPED
     and is still rejected by :func:`_classify_outcomes` (BO-2500a-2-i).
 
+    The ``timeout=`` budget is computed by :func:`_resolve_pytest_timeout_seconds`
+    rather than hardcoded (KI-TQ-20260901-1310): it grows with the number of
+    files in *test_files* so an AC linking more test files gets a strictly
+    larger allowance, and can be overridden verbatim via the
+    ``LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS`` environment variable.
+
+    A genuine timeout still fails closed exactly as before — no test can be
+    reported as passing — but the returned dict now carries
+    :data:`_PYTEST_TIMEOUT_SENTINEL` instead of being silently empty, so a
+    caller building the operator-facing reason can name the budget and the
+    command instead of the ambiguous bare "not run" phrasing (bullet 2 of the
+    KI; see :func:`verify_done_eligible` and :func:`_verify_composite_eligible`).
+
     Args:
         test_files: Absolute paths to Python test files to execute.
 
     Returns:
         Dict mapping pytest nodeid strings to outcome strings.  Returns an
         empty dict when *test_files* is empty or the subprocess cannot be
-        started.
+        started.  Returns ``{_PYTEST_TIMEOUT_SENTINEL: <message>}`` — never a
+        real nodeid — when the subprocess exceeds its computed budget.
     """
     if not test_files:
         return {}
     cmd = [sys.executable, "-m", "pytest", "-v", "--tb=no", "--no-header"]
     cmd.extend(str(f) for f in test_files)
     child_env = {**os.environ, "AC_ENFORCE_STRICT": "1"}
+    timeout_seconds = _resolve_pytest_timeout_seconds(test_files)
     try:
         proc = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=timeout_seconds,
             env=child_env,
         )
     except subprocess.TimeoutExpired as exc:
-        print(
-            f"WARNING: done_proof: pytest timed out after 60 s: {exc}",
-            file=sys.stderr,
+        message = (
+            f"pytest could not verify {len(test_files)} linked file(s) within "
+            f"its {timeout_seconds:.1f}s timeout budget (command: pytest): {exc}"
         )
-        return {}
+        print(f"WARNING: done_proof: {message}", file=sys.stderr)
+        return {_PYTEST_TIMEOUT_SENTINEL: message}
     except OSError as exc:
         print(
             f"WARNING: done_proof: cannot run pytest: {exc}",
@@ -1123,6 +1234,35 @@ def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
     return f"linked test {label}: {nodeid}"
 
 
+def _pytest_timeout_reason(ac_id: str, pytest_results: dict[str, str]) -> str | None:
+    """Return a distinguishable timeout reason, or ``None`` when no timeout occurred.
+
+    KI-TQ-20260901-1310 bullet 2: a genuine pytest timeout must not read like
+    "the tests do not exist" — ``_describe_non_passing``'s bare ``"not run"``
+    fallback is exactly that ambiguous phrase, and a timeout empties
+    *pytest_results* of every real nodeid, so every linked test would
+    otherwise report it. Checking for :data:`_PYTEST_TIMEOUT_SENTINEL` here
+    lets both call sites (:func:`verify_done_eligible`'s leaf path and
+    :func:`_verify_composite_eligible`) short-circuit to a reason that names
+    the AC, the budget, and the command *before* any per-test classification
+    runs.
+
+    Args:
+        ac_id: The AC identifier being evaluated (leaf) or the composite's own
+            identifier — folded into the reason for operator context.
+        pytest_results: ``{nodeid: outcome}`` from :func:`_run_pytest_and_parse`,
+            or the sentinel-only dict it returns on timeout.
+
+    Returns:
+        The operator-facing reason string when *pytest_results* is the
+        timeout sentinel dict; ``None`` otherwise.
+    """
+    message = pytest_results.get(_PYTEST_TIMEOUT_SENTINEL)
+    if message is None:
+        return None
+    return f"could not verify {ac_id}: {message}"
+
+
 def _classify_outcomes(
     linked_tests: list[dict],
     pytest_results: dict[str, str],
@@ -1229,6 +1369,15 @@ def _verify_composite_eligible(
     all_child_tests = [test for tests in per_child_tests.values() for test in tests]
     test_files = list({t["file"] for t in all_child_tests})
     pytest_results = _run_pytest_and_parse(test_files)
+    timeout_reason = _pytest_timeout_reason(ac_id, pytest_results)
+    if timeout_reason is not None:
+        return {
+            "eligible": False,
+            "reason": timeout_reason,
+            "passing_tests": [],
+            "failing_tests": [],
+            "dangling_tags": dangling_tags,
+        }
 
     passing_tests: list[str] = []
     failing_tests: list[str] = []
@@ -1374,6 +1523,15 @@ def verify_done_eligible(
     if py_linked:
         py_files = list({t["file"] for t in py_linked})
         pytest_results = _run_pytest_and_parse(py_files)
+        timeout_reason = _pytest_timeout_reason(ac_id, pytest_results)
+        if timeout_reason is not None:
+            return {
+                "eligible": False,
+                "reason": timeout_reason,
+                "passing_tests": [],
+                "failing_tests": [],
+                "dangling_tags": dangling_tags,
+            }
         py_passing, py_failing = _classify_outcomes(py_linked, pytest_results)
 
     # --- TypeScript/JavaScript path (BO-2500e-2 / BO-2500e-4-i) ---

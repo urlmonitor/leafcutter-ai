@@ -1,6 +1,8 @@
 id: INF-400c-4-i
 components:
   - infrastructure
+  - knowledge_system
+  - llm_authoring
 title: "No shipped template directs a knowledge_captured event at the telemetry sink"
 component: infrastructure
 level: L3
@@ -8,21 +10,40 @@ status: active
 req_status: active
 work_status: todo
 priority: high
-readiness: draft
+readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
 criteria: |
   Given four shipped surfaces instruct an agent to emit a knowledge_captured
     event — the signoff skill's knowledge-capture section, and the knowledge
-    emission sections of the product-owner, business-analyst, and it-po v3
-    agent templates,
-  And each of the four currently names debugging/logs/agent_telemetry.jsonl
-    as the append target,
-  When the shipped template text is read,
-  Then each of the four names the declared knowledge-emission sink from
-    INF-400c-4 as the append target,
-  And no shipped template pairs the string "knowledge_captured" with the
-    telemetry sink path,
-  And the instruction to emit remains best-effort: a template states that a
+    emission sections of the product-owner, business-analyst, and it-po agent
+    templates,
+  And all four name debugging/logs/agent_telemetry.jsonl as the append target,
+  When an agent follows any one of the four surfaces literally and emits a
+    record,
+  Then the record lands at the declared knowledge-emission sink from
+    INF-400c-4, and at no other path,
+  And that holds for all four surfaces in the same install, so no install ever
+    runs with some agents emitting to one file and some to another,
+  And it holds wherever in that install the agent is working: an agent
+    following one of these surfaces from inside an isolated working directory
+    and an agent following the same surface from the project root append to the
+    same file, and the record the first one wrote is still there after its
+    working directory has been removed,
+  And no shipped surface carries a destination of its own. The sink is an
+    absolute path fixed when the package was built into this project, so no
+    name a surface could have written into it is correct in two installs — a
+    surface that carries one is right only on the machine it was written on and
+    wrong everywhere the package is shipped to. Where a surface tells an agent
+    where to append, following it reaches the sink this install declares and
+    not a file underneath the directory the agent happens to be standing in,
+  And no shipped surface instructs an agent to append a knowledge_captured
+    event to the operational telemetry stream,
+  And the one place that surface text still discusses the telemetry stream —
+    the paragraph in the signoff knowledge-capture section that records the
+    producer/reader disagreement as unsettled and defers it to INF-400c-4 —
+    describes it in the past tense as settled, naming what was settled, rather
+    than continuing to tell a reader the question is open,
+  And the instruction to emit remains best-effort: a surface states that a
     failed append is logged and the agent still returns its primary output.
 depends_on: [INF-400c-4]
 doc_links:
@@ -45,17 +66,76 @@ assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
   - "All four emit sites must change together — a partial repoint splits the corpus across two files"
+  - "THIS IS NO LONGER A REPOINT, AND CALLING IT ONE IS THE MISTAKE TO AVOID — IT PO reading of the hardened criterion. The 2026-09-07 revision moved this AC from 'name a different file' to 'carry no destination at all'. A surface that swaps debugging/logs/agent_telemetry.jsonl for any other written-down path satisfies the old wording, fails the new one, and is right only on the machine the edit was authored on. What each surface must instead tell the agent is WHERE TO OBTAIN the sink from the install's own build-generated declaration — a read or an invocation, resolved at emit time. The corresponding change on INF-400c-4's side is already recorded there: the parity check's emitting side can no longer be a path literal, because after this AC there is no literal to extract."
+  - "THE FOUR SURFACES ARE PROSE AN LLM FOLLOWS, SO THE INSTRUCTION MUST BE FOLLOWABLE WITHOUT JUDGEMENT. An agent reading 'obtain the sink from the deployed configuration' will improvise a path if the surface does not name the exact artefact and the exact key to read. Improvisation across four surfaces is how a corpus splits without any of them being obviously wrong. Whatever indirection is chosen must be stated identically in all four and must be executable by an agent that has read nothing else."
   - "Changing the signoff knowledge-capture section touches BO-2000a-5 in build-orchestration; that AC must be checked for contradiction before the edit lands"
   - "Must not reintroduce the retired route-learning or capture-learning skill names (ADR-034 decision 3)"
+  - "THE SIGNOFF SECTION NAMES THE TELEMETRY SINK TWICE, and only one of the two is an instruction. Line 910 is the append instruction and must be repointed. Lines 959-965 are a scope note that records the producer/reader disagreement as unsettled and hands it to INF-400c-4 — that paragraph must be rewritten to state the settlement, not deleted and not left as-is. A blanket rule of the form 'the string knowledge_captured must never appear near the telemetry sink path' would forbid the honest historical note as well as the stale instruction; the criteria distinguish the two deliberately."
+  - "COORDINATE, DO NOT SERIALISE BLINDLY. INF-700b-1 adds the `text` field and INF-400c-5 replaces the hand-written JSON with a validating emission helper — all three ACs edit the same four surfaces. Whichever lands last must re-read the other two's result rather than reapplying a remembered diff."
+  - "THE LANDING ORDER, AND WHY THESE TWO DO NOT LAND TOGETHER — IT PO decision, answering the collision with INF-700b-1 which is in implementation now. Order: (1) INF-700b-1 lands first, unblocked, because it is already in flight and it is the change that makes a record useful at all; nothing here should stall it. (2) INF-400c-4 lands in parallel with it — disjoint file set, scripts/ and config/ only. (3) THIS AC lands after both, and must not begin until INF-700b-1's edit is on the branch. (4) INF-400c-5 lands last, because its helper call DELETES the very lines the two prior ACs edit; landing it earlier throws their work away. Do NOT land this AC together with INF-700b-1 as one change: they collide on the same JSON example block in the same four files, a combined revert would take the text field down with the sink repoint, and this AC has its own independent verification (INF-400c-4's parity check over the four surfaces) that a bundled change would not exercise separately."
+  - "THE COLLISION IS LINE-LEVEL AND RESOLVABLE, but only if re-read rather than remembered. INF-700b-1 adds a field to the emitted object; this AC changes the append target beside it. Both live in the same fenced example in each of the four surfaces. Re-read each surface at edit time and apply to the text as it then stands. A remembered diff reapplied over an already-edited surface silently drops the other AC's field, and nothing in the four surfaces is under test that would notice."
 delivers_to: null
 expects_from:
   ac_id: INF-400c-4
-  contract: "The single declared knowledge-emission sink path that the templates name verbatim"
+  contract: "The single declared knowledge-emission sink path — a knowledge-only stream, not the operational telemetry stream — that the four emit surfaces resolve their append target through"
 origin_agent: BrainCandy
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - reason: "BA refresh, 2026-09-07. Two corrections. (1) The clause 'no shipped template pairs the string knowledge_captured with the telemetry sink path' was over-broad: the signoff knowledge-capture section legitimately names both, in the scope note at lines 959-965 that records the disagreement and defers it to INF-400c-4. As written the criterion would have been satisfied by deleting an honest description of the mismatch. Replaced with a clause requiring that paragraph to state the settlement instead. (2) The Then clauses asserted properties of the shipped TEXT ('when the shipped template text is read'), which is the grep-shaped coverage this repository's CLAUDE.md forbids for gate and wiring ACs. Restated as a property of where a record LANDS when an agent follows the surface literally."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA amendment, 2026-09-07, following INF-400c-4's rewrite around the approved decision that the sink resolves against the repository rather than the process's current directory. Two clauses added, nothing removed. WHY: this AC's Then clauses were all about WHICH file a record lands in, and were satisfiable by four surfaces that agree on a bare relative name — at which point an agent working inside an isolated working directory appends to a file that is reclaimed with that directory, in an install where every other clause here is green. The added clauses state the outcome as reaching the same file from anywhere in the install and as the record surviving the removal, and forbid a surface handing the agent a name the agent finishes resolving for itself. CONSEQUENCE FOR THE MECHANISM, RAISED FOR THE IT PO RATHER THAN SETTLED HERE: INF-400c-4's it_requirements describe the emitting side of the parity check as 'the path LITERAL extracted from each shipped surface'. A surface that must not hand over a directory-resolved name may no longer carry a comparable literal at all, so the check's emitting side may have to compare what the surface tells the agent to invoke rather than a string it names. The criteria are written as where the record lands precisely so they survive whichever form is chosen. UNCHANGED: the four surfaces, the settled-scope-note distinction, the best-effort clause, and the landing order in the it_requirements."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA revision, 2026-09-07, same day, following the anchor being re-settled as a build-time absolute path written into the deployed configuration. The clause added in the entry above forbade a surface handing over a name the AGENT finishes resolving; that was the right instinct against the previous anchor but too weak against this one. Under a build-fixed absolute path, no name a surface could carry is correct in two installs at all — a surface carrying one is right only on the machine the change was authored on, which is the most convincing possible way to be wrong, because it works for whoever writes it. The clause is therefore hardened from 'no name the agent resolves' to 'no destination of its own', and a two-install test descriptor was added: build into two temp projects at different absolute locations and require each surface to reach its own project's sink. That pair cannot be satisfied by any written-down destination. WHAT THIS SETTLES THAT THE PREVIOUS ENTRY RAISED: it flagged, as a question for the IT PO, whether the parity check's emitting side could still compare a path LITERAL extracted from each surface. It cannot — there is no longer a literal to extract, by criterion. The emitting side of the comparison has to be what the surface tells the agent to invoke or read. That is now a consequence of the criteria rather than an open question, and the landing order in the it_requirements is unaffected by it."
+    by: business-analyst
+    at: 2026-09-07
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_all_four_deployed_emit_surfaces_resolve_to_the_declared_sink
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Run build.py into a temp target, then run the sink-parity check over the DEPLOYED copies of the signoff skill and the product-owner, business-analyst and it-po templates; assert it passes and that it reports having inspected exactly four surfaces, so a check that silently found none cannot report agreement."
+  - name: test_one_unrepointed_surface_out_of_four_blocks_the_check
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Partial-repoint negative control. In the deployed temp target, revert exactly one of the four surfaces to name debugging/logs/agent_telemetry.jsonl; assert the check exits non-zero and names that surface. Repeat for each of the four so no surface is left uncovered by the guard."
+  - name: test_a_surface_followed_from_an_isolated_working_directory_reaches_the_same_sink_as_from_the_project_root
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Build into a temp project with an isolated working directory added. Perform the append each surface describes twice — once from a process whose current directory is inside the isolated working directory, once from the project root — then remove the isolated working directory and assert both records are present in one file at the project root, and that no sink file was left where the removed directory used to be. A surface that hands the agent a bare relative name passes every other test here and fails this one."
+  - name: test_no_deployed_surface_carries_a_sink_path_of_its_own
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Build the same package into TWO temp projects at different absolute locations. Assert that following each surface in each project appends to that project's own declared sink, and that neither project's records land in the other. A destination written into a surface can only be correct in one of the two, so this pair fails on any surface that carries one — including a surface that carries the right answer for the machine the change was authored on."
+  - name: test_the_settlement_scope_note_is_not_read_as_an_append_instruction
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The signoff knowledge-capture section legitimately names the telemetry stream once, in the paragraph recording what was settled. Assert the check classifies that paragraph as prose and the append line as an instruction, by confirming the check still passes with the historical paragraph present and still blocks when the append line is reverted."
+test_rationale: |
+  This is a prompt AC and would normally carry test_required: false, but the BA
+  deliberately restated its criteria as a property of WHERE A RECORD LANDS
+  rather than of what the shipped text says, precisely to escape grep-shaped
+  coverage. No test can run an LLM, so the honest mechanical form is the
+  deployed-layout parity check: build.py into a temp target and exercise the
+  check against the deployed copies, which is a behavioural run of a real gate
+  and not a string search. The per-surface negative control is what makes
+  partial repoint — four surfaces, one missed, corpus split across two files —
+  a red test rather than an undetected outcome. The third test exists because
+  the naive guard (forbid the telemetry path anywhere near the string
+  knowledge_captured) would delete an honest historical note; it pins the
+  distinction the criteria draw deliberately.
 change_target: prompt
 risk_surface: contract_boundary

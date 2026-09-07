@@ -9,7 +9,7 @@ req_status: active
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h.yaml"
 criteria: |
   Given the consumer-simulation install of BP-900h-1, which builds into a scratch
