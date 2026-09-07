@@ -52,6 +52,27 @@ depends_on:
   - GE-120c-1
   - GE-120c-3
 doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      CENSUS OWNERSHIP — BP-100n-4 OWNS IT; THIS AC IS SUBORDINATE TO IT (user decision,
+      2026-09-07). Both records specify the same census: every check script living where the
+      commit-guardian's check scripts live, matched against the deployed/effective registry,
+      with an exemption model, reported by name, failing the run. Neither referenced the other
+      until this amendment. BP-100n-4 is the owner because it is already `approved` where this
+      record is only `reviewed`; it carries seven executing test descriptors, two with named
+      mandatory mutations; and it has self-corrected twice — an amendment stripped four
+      hard-coded population sizes from its criteria as internally unreachable (66/18
+      non-recursive versus 71/19 recursive could not both be true), and its it_requirements
+      caught that build_precommit._check_hook_script_integrity's last-whitespace-token
+      extraction reports check_done_proof.py — a registered, invoked, required gate — as
+      invoked by nothing. WHAT SUBORDINATION MEANS HERE, PRECISELY: the enumeration comparison
+      is BP-100n-4's to define and to implement; this AC must consume that verdict and must not
+      stand up a second, independently-maintained census. See the notes block on this record for
+      the two things this record specifies that BP-100n-4 does not and that subordination must
+      not drop — the BUILT-WORKING-COPY runner, and the differently-stated exclusion rule for
+      package-development scripts that BP-900e-3 requires to hold alongside its own.
   - path: docs/architecture/components/commit-guardian.md
     relationship: related
     status: exists
@@ -169,6 +190,32 @@ expects_from:
 origin_agent: BrainCandy
 created: 2026-08-25
 amended_by:
+  - reason: census-ownership-subordinated-to-BP-100n-4
+    by: business-analyst
+    at: '2026-09-07'
+    note: >-
+      USER DECISION, 2026-09-07: BP-100n-4 owns the check-script census; this record is
+      subordinated to it. Recorded as a doc_link plus an explicit notes block rather than
+      `superseded_by: BP-100n-4`, and the reason is mechanical, not stylistic. Per
+      docs/reference/ac-schema.md the `superseded_by` field is only permitted when `status`
+      is also `superseded_by`, and that lifecycle state is "excluded from active enforcement"
+      — identical in effect to `deprecated`. Retiring this record would therefore delete, not
+      subordinate, the two things it specifies that BP-100n-4 does not: (1) the BUILT-WORKING-COPY
+      runner (this sweep runs from unit_tests/portability/ against the second working copy
+      GE-120c-1 stands up and measures against the DEPLOYED registry; BP-100n-4 extends the
+      commit-time guard from unit_tests/commit_guardian/ and reads the registry in effect at
+      commit time — the deployment seam between those two is a real axis, and it is the axis
+      GE-120c-6's own it_requirements say the commit_guardian test layout cannot reproduce);
+      and (2) the exclusion rule for package-development scripts, which BP-900e-3:44 states is
+      "deliberately stated differently and must both hold" — BP-900e-3 excludes a script because
+      neither registry nor deployable template promises it, this record excludes it because it
+      does not live in the guard directory. Also preserved and not present in BP-100n-4: the
+      per-sweep-scoped exemption vocabulary shared with GE-120c-3, the no-false-positive property
+      pin, and the standing flag that scripts/epic_lock.py does not exist in the tree so a
+      regression assertion naming it is vacuous. Nothing else on this record changed. criteria
+      untouched; readiness left at reviewed (approval is the user's gate); work_status untouched.
+      The reciprocal reference has been added on BP-100n-4's side in the same pass, so the link is
+      discoverable from both ends.
   - reason: it-po-technical-enrichment
     agent: it-po
     date: '2026-08-25'
@@ -179,6 +226,76 @@ implemented_by: []
 change_target: code
 risk_surface: internal
 notes: |
+  SUBORDINATED TO BP-100n-4 — USER DECISION, 2026-09-07. READ THIS BEFORE BUILDING ANYTHING
+  HERE. This record and BP-100n-4 were authored independently and specify the SAME census:
+  every check script living where the commit-guardian's check scripts live, matched against the
+  registry, with an exemption model, reported by name, failing the run. Neither referenced the
+  other — verified 2026-09-07, zero occurrences of "BP-100n" in this file and zero occurrences
+  of "GE-120c-6" in BP-100n-4, before this amendment added both. The fork is now recorded from
+  both ends.
+
+  BP-100n-4 OWNS THE CENSUS. Grounds, in the order they were weighed: it is `approved` where
+  this record is `reviewed`; it carries seven executing test descriptors, two of them with
+  NAMED MANDATORY MUTATIONS rather than described ones; and it has twice caught itself being
+  wrong — an amendment removed four hard-coded population sizes from its criteria after finding
+  them internally unreachable as a pair (66 on disk implies 18 unreferenced under a
+  non-recursive listing; reaching 19 requires a recursive one, which makes the disk figure 71),
+  and its it_requirements found that build_precommit._check_hook_script_integrity's
+  last-whitespace-token extraction reports check_done_proof.py — a registered, invoked,
+  required gate — as invoked by nothing, because its entry line ends in a flag. A record with
+  that self-correction history is the one to own a census.
+
+  THE PRACTICAL RULE: the enumeration comparison — the population on disk, the invoking
+  population from the registry, and the set difference between them — is BP-100n-4's to define
+  and implement. This record CONSUMES that verdict. Do not stand up a second census beside it.
+  BP-100n-4's own it_requirements already say so, in a constraint written without knowing this
+  fork existed: "EXTEND THE ENUMERATION, DO NOT FORK THE GUARD ... do not build a second
+  reachability guard beside it, or the two will disagree about how many gates exist." That
+  instruction was aimed at BP-100k-4's predicate. It applies with more force here, because here
+  the second guard was already written.
+
+  TWO THINGS THIS RECORD SPECIFIES THAT BP-100n-4 DOES NOT. Subordination must not drop either;
+  if an implementer finds it cannot keep them, that is a finding to raise, not a detail to
+  discard.
+
+    (1) THE BUILT-WORKING-COPY RUNNER. This sweep runs from unit_tests/portability/, against
+    the real built second working copy GE-120c-1 stands up, and measures against the registry
+    the INSTALL DEPLOYED — resolved the way the commit path resolves it. BP-100n-4 extends the
+    commit-time guard, is homed in unit_tests/commit_guardian/, and reads the registry in
+    effect at commit time. Those are not the same measurement. This record's own it_requirement
+    is explicit that unit_tests/commit_guardian/ is "the layout in which this defect class
+    cannot reproduce", because its tests import from the source tree. BP-100n-4 does carry ONE
+    deployed-layout descriptor (test_bp_100n_4_deployed_copy_runs_the_census...), which is the
+    nearest thing it has to this axis and is the natural place to absorb it — but a deployed
+    descriptor inside the commit_guardian suite is not the same as a sweep over a separate
+    built working copy, and the third criteria block here (a registration present only in the
+    non-operative 3-entry templates/commit-guardian/commit_guardian.json reads as unregistered)
+    has no counterpart in BP-100n-4 at all.
+
+    (2) THE EXCLUSION RULE FOR PACKAGE-DEVELOPMENT SCRIPTS, STATED DIFFERENTLY ON PURPOSE.
+    BP-900e-3:44 records that its rule and this one "are deliberately stated differently and
+    must both hold": BP-900e-3 excludes a script because neither the registry nor a deployable
+    template promises it; this record excludes it because it does not live in the guard
+    directory. scripts/build.py is out of scope under BOTH statements and neither sweep may
+    flag it — BP-900e-3 calls that carve-out load-bearing, since flagging build.py would fail
+    the merge gate on a false positive. BP-100n-4 states neither rule; its population is
+    "every gate script held anywhere beneath that place", which excludes build.py by the same
+    directory logic this record uses but never says so, and says nothing about BP-900e-3's
+    promise-based formulation. Collapsing the two rules into one is the regression to avoid.
+
+  ALSO NOT PRESENT IN BP-100n-4, AND WORTH CARRYING: the per-sweep-scoped exemption vocabulary
+  shared with GE-120c-3 (one vocabulary, one storage location, explicit scope per entry, an
+  unscoped declaration rejected rather than defaulted to both sweeps); the requirement that the
+  no-false-positive case be pinned as a PROPERTY and not only by name; and the standing flag
+  that scripts/epic_lock.py does not exist in the tree, so a regression assertion naming it
+  passes on a completely broken sweep.
+
+  WHY NOT `superseded_by: BP-100n-4`. The schema permits that field only with
+  `status: superseded_by`, and that lifecycle state is excluded from active enforcement — the
+  same effect as `deprecated`. Setting it would retire this record and everything above with
+  it. The two are not strictly duplicates; they are the same census taken on two surfaces. A
+  doc_link plus this statement records the subordination without deleting the residue.
+
   FOUR TIMES IS A PATTERN, NOT AN ACCIDENT. This component has now shipped four guards that are
   written, tested, deployed and registered nowhere. GE-122d's coverage matrix documented the
   third one — check_adr_collision.py — and named the trap explicitly, and the very next guard
