@@ -3789,9 +3789,33 @@ role reassignment. The claim prompt opens `You are the claim-phase agent for a f
 different model, or after a template edit, and if it refuses at the claim step the run loses its
 only exclusion guarantee.
 
-**Nothing enforces the field.** No hook, gate or test compares a workflow's `agentType`
-dispatches against `permits_shell`. The field is declared, documented, and consulted by exactly
-one hand-written comment. That is why a wrong reading of it survived review and shipped.
+**CORRECTION, 2026-09-01 — the paragraph that stood here was wrong, and the correction narrows
+this entry.** It claimed "nothing enforces the field … consulted by exactly one hand-written
+comment". Both halves are false, and the entry is weaker for it being so:
+
+- **`permits_shell` is read by real code.** `templates/workflows-js/plan-feature.js:1850`,
+  `classifyWorkspaceSetupPermission()`, gates the workspace-setup dispatch on it, with live
+  tests behind it (`unit_tests/workflows/test_bo_1500f_1_real_registry_read.py`,
+  `test_bo_1500f_1.py`). The `fast-lane-ship.js` occurrence is a comment; it is not the only
+  reader.
+- **`status-checker` holding `Bash` while declaring `permits_shell: false` is DELIBERATE, not a
+  contradiction.** The schema says so by name: *"Distinct from tool possession (an agent can
+  have `Bash` in its tools list purely for read-only diagnostics, e.g. status-checker, without
+  `permits_shell` being true)."* So the three dispatches above are a charter *inconsistency* —
+  the claim step writes to the store, which is not read-only diagnostics — but nothing is being
+  mechanically bypassed, because `permits_shell` does not gate fast-lane's dispatches at all.
+
+**What IS true, restated.** No check compares a *workflow's* `agentType` dispatches against
+`permits_shell`. `plan-feature.js` consults it for its own single dispatch and nothing
+generalises that. So the field is enforced in exactly one place and advisory everywhere else,
+which is how a wrong reading of it survived review in a different workflow.
+
+**And backfilling alone would change nothing.** The gate is `if (match.permits_shell === true)`.
+For the 58 of 60 agents where the field is absent, absent and `false` already take the identical
+branch — so populating them buys documentation, not behaviour. The behaviour only changes when a
+reader learns to distinguish *undecided* from *decided-none*, which is precisely what
+`classifyWorkspaceSetupPermission()` already does for its own four failure modes and what no
+other reader does.
 
 **Suggested fix, and the ordering matters.**
 
