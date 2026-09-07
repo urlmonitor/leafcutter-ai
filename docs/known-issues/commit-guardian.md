@@ -3773,6 +3773,27 @@ the current state is bad mainly because the documentation promises the stronger 
 - Either way, **correct `CLAUDE.md`.** A documented guarantee nobody can rely on is worse
   than a documented convention everybody follows, because the first stops people looking.
 
+**The same hook fails in the opposite direction too, and it demonstrated this on the commit
+that filed this entry.** `_is_git_commit_call` (line 40) returns True when the command field
+*contains the literal string* `git commit` — anywhere, in any context. So the hook is
+simultaneously:
+
+| | |
+|---|---|
+| **False negative** | any caller that types `COMMIT_AGENT_MODE=1` is authorised |
+| **False positive** | any command whose text merely *mentions* `git commit` is blocked |
+
+The second is not hypothetical. Opening the pull request for this entry —
+`gh pr create … --body "…"` , where the body quotes `CLAUDE.md`'s sentence about
+`git commit` — was blocked by this hook. Nothing was being committed; the phrase appeared
+inside prose being passed to GitHub. **The hook blocked the attempt to document the hook.**
+
+The workaround is `--body-file`, which keeps the phrase out of the command string — but note
+what that means: the guard is evaded by moving text into a file, and enforced against
+commands that were never commits. Both halves are the same root cause, which is that a
+command string is being used as a proxy for two things it cannot express — *who is calling*
+and *what is being done*.
+
 **Trap.** The hook is not broken and will not appear in any failing test — it does precisely
 what its code says. Reading the code answers "does the env-var check work" (yes) rather than
 "does this enforce delegation" (no). The mismatch is only visible by reading the hook against
