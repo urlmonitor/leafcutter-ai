@@ -304,6 +304,17 @@ function parseRecord(path) {
   // heading, so a `\Z`-terminated lookahead fails to match ANYTHING and the
   // handoff target silently resolves to nothing. Written the first time with
   // exactly that bug; the reachability test is what caught it.
+  //
+  // HEADING SHAPE (BO-3000a finding F4). Real tickets do not write a bare
+  // `### <agent>` heading — they write `### <agent> — <short description>`
+  // (see e.g. tickets/99_done/TICKET-20260603-FeedbackAnalysisPipeline.md:
+  // `### python-coder — create trend_report.py`). The production driver reads
+  // this heading through an LLM instructed to report "the agent names
+  // verbatim", which trivially tolerates a trailing description. This regex
+  // is mechanical, so it must accept the same trailing separator/description
+  // explicitly or it silently disagrees with production on every real ticket
+  // shape, making the real_artifact-angle test below exercise a fixture
+  // production would never actually see.
   const implementationTaskAgents = [];
   const tasksHeading = text.match(/^##[ \t]+Implementation Tasks[ \t]*$/m);
   if (tasksHeading) {
@@ -311,7 +322,7 @@ function parseRecord(path) {
     const nextSection = rest.match(/^##[ \t]+/m);
     const section = nextSection ? rest.slice(0, nextSection.index) : rest;
     for (const line of section.split("\n")) {
-      const m = line.match(/^###[ \t]+([A-Za-z0-9_-]+)[ \t]*$/);
+      const m = line.match(/^###[ \t]+([A-Za-z0-9_-]+)(?:[ \t]+[—–-].*)?[ \t]*$/);
       if (m && !implementationTaskAgents.includes(m[1])) {
         implementationTaskAgents.push(m[1]);
       }
@@ -370,13 +381,32 @@ function promoteAgentToNeeded(path, agentName) {
  * templates/agents/python-coder.md §"Test Delegation" tells a coder to use when
  * handing work to another phase (BO-3000a). Reuses the section when it already
  * exists so two calls do not produce two `## Implementation Tasks` headings.
+ *
+ * INSERTS INTO THE SECTION (BO-3000a finding F5), not at end-of-file. A real
+ * ticket's `## Implementation Tasks` section is very often NOT the last
+ * section in the file — `## Agent Contracts` routinely follows it (see e.g.
+ * tickets/99_done/TICKET-20260603-FeedbackAnalysisPipeline.md, where
+ * `## Implementation Tasks` precedes `## Risk & Safety`). Appending at EOF put
+ * the new `### <agent>` heading AFTER any such later section, so parseRecord's
+ * section-slice (which stops at the next `## ` heading) never saw it — a
+ * fixture built with that realistic ordering silently exercised a target that
+ * was never actually resolvable, passing (or failing) for the wrong reason.
  */
 function appendImplementationTask(path, agentName) {
   if (!existsSync(path)) return false;
   const text = readFileSync(path, "utf8");
   const entry = `### ${agentName}\n\n- [ ] harness-simulated handoff task\n`;
-  if (/^##[ \t]+Implementation Tasks[ \t]*$/m.test(text)) {
-    writeFileSync(path, `${text}\n${entry}`, "utf8");
+  const headingMatch = text.match(/^##[ \t]+Implementation Tasks[ \t]*$/m);
+  if (headingMatch) {
+    const afterHeadingIdx = headingMatch.index + headingMatch[0].length;
+    const rest = text.slice(afterHeadingIdx);
+    const nextSectionMatch = rest.match(/^##[ \t]+/m);
+    const insertOffset = nextSectionMatch
+      ? afterHeadingIdx + nextSectionMatch.index
+      : text.length;
+    const before = text.slice(0, insertOffset).replace(/\n*$/, "\n\n");
+    const after = text.slice(insertOffset);
+    writeFileSync(path, `${before}${entry}\n${after}`, "utf8");
   } else {
     writeFileSync(path, `${text}\n## Implementation Tasks\n\n${entry}`, "utf8");
   }

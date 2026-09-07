@@ -187,14 +187,6 @@ const RECORD_READBACK_SCHEMA = {
     // predates this field simply never populates it, and every existing
     // caller of readTicketRecordBack already tolerates an absent key.
     depends_on: { type: "array", items: { type: "string" } },
-    // implementation_task_agents (BO-3000a): the `### <agent>` subsection
-    // headings under the record's `## Implementation Tasks` section — the
-    // channel templates/agents/python-coder.md §"Test Delegation" tells a coder
-    // to name a handoff target through. Optional, exactly like depends_on: a
-    // reader that predates this field never populates it and every existing
-    // caller tolerates its absence, so the handoff path simply falls back to
-    // refusing as it did before.
-    implementation_task_agents: { type: "array", items: { type: "string" } },
     error: { type: "string" },
   },
   required: ["readable"],
@@ -286,6 +278,26 @@ const PHASE_RESULT_SCHEMA = {
     },
     result_status: { type: "string" },
     message: { type: "string" },
+    // handoff_target (BO-3000a). The driver's ONLY source for the identity of
+    // the agent a handoff is addressed to is this field on the handing-off
+    // agent's OWN result — the driver never infers it from the ticket body.
+    // Declared here so an agent returning `status: "handoff"` has a
+    // structural cue to name the field the driver actually routes on, rather
+    // than following a template that tells it WHAT it owes the ticket
+    // (the `### <agent>` task-breakdown convention) without ever telling it
+    // WHO the driver should re-dispatch. See the `if`/`then` below, which
+    // makes this field REQUIRED exactly when `status` is `"handoff"` without
+    // touching the top-level `required: ["status"]` — every reply that is
+    // valid today stays valid.
+    handoff_target: {
+      type: "string",
+      description:
+        "REQUIRED when status is 'handoff': the name of the phase agent that " +
+        "must act before this phase can proceed, exactly as it appears in " +
+        "phaseOrder (e.g. 'test-writer', 'python-coder'). Absent, empty, or " +
+        "not a recognised phase agent causes the driver to refuse the " +
+        "handoff and halt rather than guess a re-dispatch target.",
+    },
     // Test-evidence fields (BO-2000e-2 second satisfaction route). Populated by
     // the test-writer phase; ignored for every other phase. Both are optional so
     // that a phase agent which omits them leaves the coder guard CLOSED — absent
@@ -305,6 +317,17 @@ const PHASE_RESULT_SCHEMA = {
     },
   },
   required: ["status"],
+  // Conditionally require handoff_target only when status is "handoff", so no
+  // currently-valid reply (any non-handoff status omitting the field) becomes
+  // invalid. NOTE: whether the E2 engine's schema enforcement honours
+  // JSON-Schema `if`/`then` conditionals is unverified from this repo — see
+  // this ticket's completion report.
+  if: {
+    properties: { status: { const: "handoff" } },
+  },
+  then: {
+    required: ["handoff_target"],
+  },
 };
 
 /**
@@ -509,53 +532,6 @@ function absorbPromotedPhases(record, pending, known, attempted, deferred) {
     pending.push(...resorted);
   }
   return added;
-}
-
-/**
- * Resolve a handoff target from the ticket's own record.
- *
- * BO-3000a. `templates/agents/python-coder.md` §"Test Delegation" tells a coder
- * to signal a handoff by writing a `### <agent>` block under the ticket's
- * `## Implementation Tasks` section and returning `(status: handoff)`. It never
- * mentions a `handoff_target` field in the JSON result. The driver read only
- * that field, so an agent that followed its template exactly was refused for
- * omitting something it was never told to send — and the one ticket in the
- * observed run that produced working production code was dropped for it.
- *
- * Scoping to `## Implementation Tasks` is load-bearing, not tidiness. Real
- * tickets also carry `## Agent Contracts` with its own `### <agent>`
- * subsections (`### documentation-expert` is routine), and those declare
- * documentation obligations rather than work handed to another phase. A scan
- * over every `### <agent>` heading resolves the WRONG agent on an ordinary
- * ticket. The record reader is what applies that scoping; this function
- * consumes the already-scoped list.
- *
- * Returns exactly one name or null. Two candidates is ambiguous and yields
- * null, because BO-3000's requirement that an unresolvable handoff fail closed
- * is correct and is not relaxed here — guessing a re-dispatch target is worse
- * than refusing. This narrows what "unresolvable" means; it does not widen what
- * the driver is willing to guess.
- *
- * @param {object} record — the read-back reply
- * @returns {{target: string|null, candidates: Array<string>}}
- */
-function handoffTargetFromRecord(record) {
-  if (!record || record.readable !== true) return { target: null, candidates: [] };
-  const named = Array.isArray(record.implementation_task_agents)
-    ? record.implementation_task_agents
-    : [];
-  const candidates = [];
-  for (const raw of named) {
-    if (typeof raw !== "string") continue;
-    const agentName = raw.trim();
-    if (agentName === "") continue;
-    if (!phaseOrder.includes(agentName)) continue;
-    if (!candidates.includes(agentName)) candidates.push(agentName);
-  }
-  return {
-    target: candidates.length === 1 ? candidates[0] : null,
-    candidates,
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -993,10 +969,8 @@ async function readTicketRecordBack(recordPath) {
     `"depends_on" (the frontmatter depends_on: list, as an array of ticket paths verbatim, or [] if the key is absent — do not resolve or interpret the paths), ` +
     `and "signoffs": one entry per sign-off heading in the ## Comments section, in the order they appear, as {"agent": "<name>", "status": "<status>"} ` +
     `(heading form: "### YYYY-MM-DD HH:MM — <agent> (status: <status>)"). List EVERY matching heading, including repeats — do not de-duplicate them. ` +
-    `Also report "implementation_task_agents": the "### <agent>" subsection headings that appear under the "## Implementation Tasks" section, as an array of the agent names verbatim, in the order they appear, or [] if that section is absent or has no such subsections. ` +
-    `Scope this STRICTLY to the "## Implementation Tasks" section: stop at the next "## " heading. Do NOT include "### <agent>" headings from "## Agent Contracts" or any other section — those declare documentation obligations, not work handed to another phase, and reporting one here makes the driver re-dispatch the wrong agent. ` +
     `If the record cannot be opened for any reason, return {"readable": false, "error": "<what went wrong>"} — an unreadable record is a real answer and will be treated as a failure, so never guess its contents. ` +
-    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "depends_on": [...], "implementation_task_agents": [...], "signoffs": [...], "signed_off_agents": [...]}. ` +
+    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "depends_on": [...], "signoffs": [...], "signed_off_agents": [...]}. ` +
     `Return ONLY the JSON object, no prose.`,
     {
       agentType: "status-checker",
@@ -1608,7 +1582,18 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
     // ## Test Requirements section, or written by test-writer earlier in this
     // drive. Fail-closed: if neither route produced evidence, block.
     if (CODER_PHASES.has(phaseName) && !hasTestRequirements) {
-      const testWriterRan = neededPhases.some((p) => p.agent === "test-writer");
+      // BO-3700: read from plannedPhaseNames (the live set, grown by
+      // absorbPromotedPhases as phases are promoted mid-drive), not from
+      // neededPhases (the frozen opening snapshot). test-writer's canonical
+      // priority (5) precedes every CODER_PHASES member (6+) and
+      // pendingPhases stays sorted by priority, so by the time a coder's
+      // turn is reached, a test-writer named anywhere in plannedPhaseNames —
+      // whether present at the start or absorbed as a mid-drive promotion —
+      // has already been dispatched. This affects only the wording below
+      // ("ran but reported no evidence" vs "was never scheduled"); the guard
+      // returns `status: "blocked"` either way, so no dispatch outcome
+      // changes — only the diagnosis text does.
+      const testWriterRan = plannedPhaseNames.has("test-writer");
       return {
         status: "blocked",
         message:
@@ -1776,7 +1761,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
       }
 
       // ------------------------------------------------------------------
-      // Handoff routing (BO-3000)
+      // Handoff routing (BO-3000, BO-3000a)
       // ------------------------------------------------------------------
       // `handoff` is a valid PHASE_RESULT_SCHEMA status meaning "another
       // agent must act before I can proceed" — it is NOT a success and must
@@ -1784,72 +1769,71 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
       // branch a handoff result was indistinguishable from `status: "ok"`:
       // the loop advanced to the next phase in phaseOrder and the named
       // agent was never re-dispatched (see BO-3000 for the live incident).
+      //
+      // BO-3000a: the ONLY place the driver looks for the identity of the
+      // agent a handoff is addressed to is the `handoff_target` field the
+      // handing-off agent's own result carries. An earlier version of this
+      // branch fell back to inferring a target from the `### <agent>`
+      // headings under the ticket's `## Implementation Tasks` section when
+      // that field was missing. That inference is REMOVED, not merely
+      // unused: it read a section that is ambiguous by construction (13
+      // agents carry `requires_ticket_section: true` and routinely appear
+      // together on one ticket), and it converted a DELIBERATE targetless
+      // halt — python-coder's contract-shrinkage guard and test-writer's
+      // test-drift rule both emit `(status: handoff)` naming no agent on
+      // purpose, meaning "blocked, needs user authorization" — into a
+      // spurious re-dispatch of whichever agent happened to have a task
+      // section on the ticket. See BO-3000a's notes for the full record.
       if (resultStatus === "handoff") {
         const handoffTarget = phaseResult.handoff_target;
-        let normalizedTarget =
+        const normalizedTarget =
           typeof handoffTarget === "string" ? handoffTarget.trim() : "";
-        let isKnownAgent =
-          normalizedTarget !== "" && phaseOrder.includes(normalizedTarget);
 
-        // BO-3000a — fall back to the channel the AGENT TEMPLATE prescribes.
-        //
-        // templates/agents/python-coder.md §"Test Delegation" tells a coder to
-        // name its handoff target by writing a `### <agent>` block under the
-        // ticket's `## Implementation Tasks` section, and says nothing about a
-        // `handoff_target` field. Reading only the field meant an agent that
-        // followed its own template was refused for omitting something it was
-        // never asked to send. The record is consulted only when the explicit
-        // field did not resolve, so this changes no path that already worked.
-        let resolvedFromRecord = false;
-        let recordCandidates = [];
-        if (!isKnownAgent) {
-          const fromRecord = handoffTargetFromRecord(phaseRecord);
-          recordCandidates = fromRecord.candidates;
-          if (fromRecord.target) {
-            normalizedTarget = fromRecord.target;
-            isKnownAgent = true;
-            resolvedFromRecord = true;
-            log(
-              `Phase '${phaseName}' returned 'status: handoff' with no usable ` +
-              `handoff_target field; resolved '${normalizedTarget}' from the ` +
-              `ticket's own '## Implementation Tasks' section, which is the ` +
-              `channel the agent template prescribes (BO-3000a).`
-            );
-          }
-        }
-
-        if (!isKnownAgent) {
-          // Still fail closed. BO-3000's requirement is unchanged: an
-          // unresolvable handoff halts rather than guessing. What changed is
-          // only what counts as resolvable.
-          const ambiguity =
-            recordCandidates.length > 1
-              ? ` The ticket's '## Implementation Tasks' section names more ` +
-                `than one known agent (${JSON.stringify(recordCandidates)}), ` +
-                `which is ambiguous — refusing to choose between them.`
-              : ` The ticket's '## Implementation Tasks' section named no ` +
-                `known phase agent either.`;
+        // Case (a): the result was read and named NO target at all — the key
+        // absent, empty, blank, or not a string. This is also what a
+        // DELIBERATE targetless halt looks like, and it must refuse
+        // identically whether or not the ticket's body names agents
+        // elsewhere: the driver never reads the ticket body to resolve this.
+        if (normalizedTarget === "") {
           return {
             status: "blocked",
             message:
-              `Phase '${phaseName}' returned 'status: handoff' but named no ` +
-              `recognizable handoff_target ('${handoffTarget}').${ambiguity} ` +
-              `Refusing to guess a re-dispatch target and refusing to advance ` +
-              `to the next phase in phaseOrder. Inspect '${phaseName}'’s ` +
-              `message and the ticket's ## Comments for the intended target ` +
-              `agent, then re-run /build-feature.`,
+              `Phase '${phaseName}' returned 'status: handoff' but its result ` +
+              `was read and named no handoff target (handoff_target was ` +
+              `${JSON.stringify(handoffTarget)}). Refusing to guess a ` +
+              `re-dispatch target and refusing to advance to the next phase ` +
+              `in phaseOrder. This may be a deliberate targetless halt (a ` +
+              `contract-shrinkage guard or test-drift stop asking for user ` +
+              `authorization) rather than an omission — inspect '${phaseName}'` +
+              `'s message and the ticket's ## Comments for what it needs ` +
+              `before re-running /build-feature.`,
             ticket_path: worktreeTicketPath,
             failing_phase: phaseName,
             blocker_detail: phaseResult,
-            handoff_candidates: recordCandidates,
             classification: "halt",
           };
         }
 
-        // A target resolved from the record is a phase this drive will now run;
-        // the completion decision must expect it like any other (BO-3700).
-        if (resolvedFromRecord) {
-          plannedPhaseNames.add(normalizedTarget);
+        // Case (b): a target was named, but it is not an agent this driver
+        // recognises. Reproduce the value it was given verbatim — never
+        // resolve it to some other agent, so a misspelt agent is
+        // distinguishable from one that does not exist.
+        if (!phaseOrder.includes(normalizedTarget)) {
+          return {
+            status: "blocked",
+            message:
+              `Phase '${phaseName}' returned 'status: handoff' naming ` +
+              `'${normalizedTarget}' as its handoff_target, which is not an ` +
+              `agent this driver recognises as a phase agent. Refusing to ` +
+              `guess a re-dispatch target and refusing to advance to the ` +
+              `next phase in phaseOrder. Check '${normalizedTarget}' for a ` +
+              `misspelling or a name that does not exist, fix the emitter, ` +
+              `then re-run /build-feature.`,
+            ticket_path: worktreeTicketPath,
+            failing_phase: phaseName,
+            blocker_detail: phaseResult,
+            classification: "halt",
+          };
         }
 
         log(

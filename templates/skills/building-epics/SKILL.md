@@ -656,6 +656,19 @@ supervisor logic is needed beyond this priority ordering.
 | `blocker` | Run **failure adjudication** (§3). May respawn a sibling, may escalate to `brainstorm-lead`, may halt. | Loop control depends on adjudication branch. |
 | `question` | HALT the ticket. Build the user-escalation payload (§6) and return `{status: "blocked", payload: ...}` to the parent epic-supervisor. | Terminal for this `ticket-supervisor` until user replies. |
 
+**Note on the two handoff readers.** The row above describes how the `ticket-supervisor`
+*agent* resolves a handoff — by reading prose, because it is itself an LLM reasoning over
+the ticket. The `build-feature.js` / `build-ticket.js` workflow *drivers* are not LLMs and do
+not parse this prose: they route strictly on a `handoff_target` field in the phase agent's
+JSON result and only that field. When the field is absent or names an agent the driver does
+not recognise, the driver dispatches nobody and refuses — reproducing the unrecognised value
+verbatim so the two cases are distinguishable (BO-3000a). It never falls back to the
+`### <agent>` heading under `## Implementation Tasks`: that heading is the per-agent task
+breakdown, ambiguous by construction whenever more than one agent has a section on the same
+ticket, and inferring a target from it would re-dispatch an agent on a handoff that named
+nobody deliberately. Every phase agent template must set `handoff_target` on the
+machine-parsed dispatch path for this reason — see `signoff` §3.
+
 ### §2.3 Completion Manifest Validation (post-comment-parse step)
 
 After parsing the latest comment status tag (step 3 of the §2.1 pseudocode) and **before** routing on it (step 4), the ticket-supervisor MUST read the `completion_manifest:` YAML block in that comment body. The manifest format is defined in [`signoff` §2b](../signoff/SKILL.md) — this section describes only the **supervisory actions** taken based on its contents.

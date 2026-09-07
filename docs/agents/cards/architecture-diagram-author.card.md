@@ -150,6 +150,7 @@ flowchart TD
 - ACD-2000a-5: State diagram shows a requirement's attempt lifecycle from first try to escalation
 - ACD-2000b-3-i: State diagram shows a requirement's claim lifecycle including the reclaim path
 - ACD-2100e-1: A sequence diagram shows every point where the route stops to ask and what follows from each answer
+- ACS-1300b-4: A sequence diagram shows where the link gets recorded and which delivery paths miss that point
 - ACS-900e-2: Component diagram shows the boundary between the new hook and the audit script
 - BO-1000a-4: Sequence diagram of the start-of-step narration emission path
 - BO-1000c-3: Sequence diagram of live progress delivery from background workflow to the conversation

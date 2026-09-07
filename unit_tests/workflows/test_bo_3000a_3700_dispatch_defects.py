@@ -1,9 +1,9 @@
 """Behavioral tests for two build-feature.js dispatch defects found by driving a real epic.
 
 Covers:
-  BO-3000a — "A handoff that names its target the way the agent template
-              prescribes is honoured, not refused for omitting a field the
-              template never mentions."
+  BO-3000a — "A handoff is routed by the target the handing-off agent named in
+              its own result, and is refused diagnosably — never inferred from
+              the ticket body — when that target is absent or unknown."
   BO-3700  — "Work that becomes necessary while a ticket is being driven is
               still done, instead of being decided against before it was known
               about."
@@ -24,25 +24,39 @@ THE TWO DEFECTS, AND WHY THEY LOOK LIKE ONE.
   adr-author at priority 2 and architect-review — its decider — at 4, so even a
   live pending set walked forward-only is already past the slot.
 
-  BO-3000a — templates/agents/python-coder.md §"Test Delegation" defines a
-  handoff as: write a `### <agent>` block under `## Implementation Tasks`, and
-  return `(status: handoff)`. It never mentions a `handoff_target` JSON field.
-  The driver reads only that field and refuses on `undefined`. The agent
-  complied with its template and was rejected for it.
+  BO-3000a — the field evidence (see BO-3000a.yaml notes) showed a coder that
+  wrote the `### test-writer` block templates/agents/python-coder.md
+  §"Test Delegation" prescribes, returned `(status: handoff)`, and was refused
+  because its result named no `handoff_target`. The FIRST fix tried taught the
+  driver to infer a target from that same `### <agent>` heading when the field
+  was missing. That inference was REJECTED on review and has been REMOVED from
+  the driver, not merely left unused: the `## Implementation Tasks` section is
+  a general per-agent task breakdown carried by 13 agents and is ambiguous by
+  construction (real tickets routinely name more than one), and inference would
+  silently re-dispatch an agent on a DELIBERATE targetless halt — the exact
+  shape python-coder's contract-shrinkage guard and test-writer's test-drift
+  rule use to mean "blocked, needs user authorization, naming nobody on
+  purpose." The shipped fix instead makes `handoff_target` a REQUIRED field on
+  the handing-off agent's own result (enforced by PHASE_RESULT_SCHEMA's
+  conditional `required` when `status: "handoff"`), and makes the two ways a
+  handoff can fail to resolve — no target at all, and an unrecognised target —
+  diagnosably distinct in the refusal.
 
 WHAT MUST NOT REGRESS. BO-3000 requires an UNRESOLVABLE handoff to fail closed,
 and that is correct — guessing a re-dispatch target is worse than refusing.
-test_two_candidate_agents_in_implementation_tasks_still_refuses and
 unit_tests/workflows/test_bo_3000_handoff_routing.py (5 tests, green before this
-change) are the guards on that. BO-3000a narrows what "unresolvable" means; it
-does not relax the refusal.
+change and unaffected by it) is the guard on that; this file's
+test_unknown_target_is_reproduced_in_the_refusal_and_never_substituted extends
+it to the "named but unrecognised" case BO-3000a adds.
 
-REAL-ARTIFACT NOTE. `## Agent Contracts` also carries `### <agent>` subsections
+NO-INFERENCE NOTE. `## Agent Contracts` also carries `### <agent>` subsections
 — `### documentation-expert` is routine — so a heading scan not scoped to
-`## Implementation Tasks` resolves the WRONG agent on an ordinary ticket. That
-is not hypothetical: it is the on-disk shape of GE-122d-1, the very ticket this
-defect was found on. test_agent_contracts_subsection_is_not_read_as_a_handoff_target
-pins the scoping.
+`## Implementation Tasks` would resolve the WRONG agent on an ordinary ticket.
+That is not hypothetical: it is the on-disk shape of GE-122d-1, the very ticket
+BO-3000a's field evidence was found on. The driver reads NEITHER section for a
+handoff target; test_ticket_body_agent_sections_do_not_supply_a_handoff_target
+and test_deliberate_targetless_halt_does_not_respawn_a_body_named_agent pin
+that absence behaviorally, on tickets that carry both sections populated.
 
 Every test EXECUTES build-feature.js's own top-level body through the driver
 harness and asserts on the observed dispatch sequence — never on source text.
@@ -251,123 +265,190 @@ class TestMidDrivePromotionIsDispatched(_DriveCase):
         )
 
 
+#: Sentinel meaning "omit this key from the phase result entirely" — distinct
+#: from passing None (which serializes to JSON null, a real present-but-not-a-
+#: string value the schema and driver must also refuse).
+_OMIT = object()
+
+
+def _latest_signoff_status(records, ticket_path, agent):
+    """The status of the LAST sign-off entry a ticket record carries for
+    ``agent``, or None if it carries none at all. Used to prove a handing-off
+    phase was not recorded as completed: a completed phase's latest entry
+    reads 'ok' or 'signed_off' (POSITIVE_SIGNOFF_STATUSES); a phase that
+    handed off leaves its own '(status: handoff)' entry instead.
+    """
+    entries = [
+        s
+        for s in (records.get(ticket_path) or {}).get("signoffs", [])
+        if s.get("agent") == agent
+    ]
+    return entries[-1]["status"] if entries else None
+
+
+def _signoff_count(records, ticket_path, agent):
+    return sum(
+        1
+        for s in (records.get(ticket_path) or {}).get("signoffs", [])
+        if s.get("agent") == agent
+    )
+
+
+def _implementation_task_agents_after_run(observation, ticket_path):
+    """The `implementation_task_agents` the LAST read-back for this ticket
+    carried — i.e. what the driver was told after every phase had run,
+    including any `### <agent>` block a phase wrote during its own dispatch.
+    """
+    entries = [
+        rb
+        for rb in observation.get("readbacks") or []
+        if rb.get("ticket_path") == ticket_path
+    ]
+    return entries[-1].get("implementation_task_agents") or [] if entries else []
+
+
 class TestHandoffTargetResolvedFromRecord(_DriveCase):
-    """BO-3000a — a handoff named through the template's channel is honoured."""
+    """BO-3000a — a handoff is routed by handoff_target alone, never by the
+    ticket body, and is refused diagnosably when handoff_target cannot be
+    used.
+    """
 
-    def test_handoff_without_target_field_resolves_target_from_implementation_tasks(self):
+    def test_handoff_naming_a_known_agent_redispatches_exactly_that_agent(self):
         # covers: BO-3000a
         # angle: criterion
-        observation, _ = self._drive(
-            ["test-writer", "python-coder"],
-            {
-                "test-writer": {"status": "ok"},
-                # Exactly the real shape: writes the ### test-writer block, then
-                # returns status: handoff with NO handoff_target field.
-                "python-coder": {
-                    "status": "handoff",
-                    "adds_implementation_task": "test-writer",
-                    "message": "4 of 6 red-baseline tests need a fixture-path fix",
-                },
-            },
-        )
-        dispatched = H.phase_dispatch_labels(observation)
-        self.assertEqual(
-            2,
-            dispatched.count("test-writer"),
-            "python-coder handed off to test-writer through the channel its own "
-            "template prescribes, and test-writer was not re-dispatched. "
-            f"Dispatched: {dispatched}",
-        )
-
-    def test_agent_contracts_subsection_is_not_read_as_a_handoff_target(self):
-        # covers: BO-3000a
-        # angle: real_artifact
-        #
-        # The record carries ### documentation-expert under ## Agent Contracts
-        # and NOTHING under ## Implementation Tasks — the ordinary shape of a
-        # real ticket. There is no handoff target, so the drive must refuse
-        # rather than re-dispatch documentation-expert.
-        observation, _ = self._drive(
-            ["test-writer", "python-coder"],
-            {
-                "test-writer": {"status": "ok"},
-                "python-coder": {"status": "handoff"},
-            },
-            body_extra=(
-                "\n## Agent Contracts\n\n### documentation-expert\n\n"
-                "Existing docs to update / cross-link:\n\n"
-                "- docs/architecture/components/commit-guardian.md\n"
-            ),
-        )
-        dispatched = H.phase_dispatch_labels(observation)
-        self.assertNotIn(
-            "documentation-expert",
-            dispatched,
-            "a ### documentation-expert heading under ## Agent Contracts was "
-            f"mistaken for a handoff target: {dispatched}",
-        )
-        self.assertEqual(
-            "blocked",
-            (observation.get("result") or {}).get("status"),
-            "a handoff naming no resolvable target must still fail closed",
-        )
-
-    def test_two_candidate_agents_in_implementation_tasks_still_refuses(self):
-        # covers: BO-3000a
-        # angle: boundary
-        #
-        # BO-3000's fail-closed promise: the fallback resolves, it does not guess.
-        observation, _ = self._drive(
-            ["test-writer", "python-coder"],
-            {
-                "test-writer": {"status": "ok"},
-                "python-coder": {"status": "handoff"},
-            },
-            body_extra=(
-                "\n## Implementation Tasks\n\n"
-                "### test-writer\n\n- [ ] one thing\n\n"
-                "### documentation-expert\n\n- [ ] another thing\n"
-            ),
-        )
-        self.assertEqual(
-            "blocked",
-            (observation.get("result") or {}).get("status"),
-            "two candidate agents under ## Implementation Tasks is ambiguous and "
-            "must refuse, not pick one",
-        )
-
-    def test_explicit_handoff_target_field_takes_precedence_over_the_record(self):
-        # covers: BO-3000a
-        # angle: criterion
-        observation, _ = self._drive(
-            ["test-writer", "python-coder"],
+        observation, ticket_path = self._drive(
+            ["test-writer", "python-coder", "sql-coder"],
             {
                 "test-writer": {"status": "ok"},
                 "python-coder": {
                     "status": "handoff",
                     "handoff_target": "test-writer",
-                    # A DIFFERENT agent named in the record. The explicit field
-                    # must win, so this drive must not dispatch architect-review.
+                    "message": "4 of 6 red-baseline tests need a fixture-path fix",
+                    # A DIFFERENT agent named in the ticket body. The explicit
+                    # field is the driver's ONLY source for the target, so this
+                    # must be ignored, not raced against handoff_target.
                     "adds_implementation_task": "architect-review",
+                },
+                "sql-coder": {"status": "ok"},
+            },
+        )
+        dispatched = H.phase_dispatch_labels(observation)
+        self.assertEqual(
+            ["test-writer", "python-coder", "test-writer"],
+            dispatched,
+            "python-coder handed off to test-writer via handoff_target, and "
+            f"test-writer was not re-dispatched next: {dispatched}",
+        )
+        self.assertNotIn(
+            "architect-review",
+            dispatched,
+            f"a body-named agent was dispatched instead of handoff_target: {dispatched}",
+        )
+        self.assertNotIn(
+            "sql-coder",
+            dispatched,
+            f"a later phase ran after an unresolved handoff: {dispatched}",
+        )
+        records = observation.get("records") or {}
+        self.assertEqual(
+            "handoff",
+            _latest_signoff_status(records, ticket_path, "python-coder"),
+            "the handing-off phase's own record entry must not read as a "
+            "completed ('ok' / 'signed_off') outcome",
+        )
+        result = observation.get("result") or {}
+        self.assertEqual("blocked", result.get("status"))
+        self.assertEqual("cross_agent", result.get("classification"))
+        self.assertEqual("test-writer", result.get("handoff_target"))
+
+    def test_handoff_with_no_target_refuses_and_dispatches_no_agent(self):
+        # covers: BO-3000a
+        # angle: failure
+        #
+        # "the key absent, empty, blank, or not a name" (BO-3000a criteria) —
+        # each sub-case must refuse identically.
+        cases = [
+            ("absent", _OMIT),
+            ("empty_string", ""),
+            ("blank_whitespace", "   "),
+            ("json_null", None),
+            ("non_string_type", 123),
+        ]
+        for label, value in cases:
+            with self.subTest(case=label):
+                python_coder_result = {"status": "handoff"}
+                if value is not _OMIT:
+                    python_coder_result["handoff_target"] = value
+                observation, _ = self._drive(
+                    ["test-writer", "python-coder"],
+                    {
+                        "test-writer": {"status": "ok"},
+                        "python-coder": python_coder_result,
+                    },
+                )
+                dispatched = H.phase_dispatch_labels(observation)
+                self.assertEqual(
+                    ["test-writer", "python-coder"],
+                    dispatched,
+                    f"case {label!r}: a targetless handoff dispatched an agent: "
+                    f"{dispatched}",
+                )
+                result = observation.get("result") or {}
+                self.assertEqual(
+                    "blocked", result.get("status"), f"case {label!r}"
+                )
+                self.assertIn(
+                    "named no handoff target",
+                    result.get("message") or "",
+                    f"case {label!r}: refusal did not state the result was read "
+                    f"and named nothing: {result.get('message')!r}",
+                )
+
+    def test_unknown_target_is_reproduced_in_the_refusal_and_never_substituted(self):
+        # covers: BO-3000a
+        # angle: boundary
+        observation, _ = self._drive(
+            ["test-writer", "python-coder"],
+            {
+                "test-writer": {"status": "ok"},
+                "python-coder": {
+                    "status": "handoff",
+                    "handoff_target": "not-a-real-phase-agent-xyz",
                 },
             },
         )
         dispatched = H.phase_dispatch_labels(observation)
         self.assertEqual(
-            2,
-            dispatched.count("test-writer"),
-            f"the explicit handoff_target was not honoured: {dispatched}",
-        )
-        self.assertNotIn(
-            "architect-review",
+            ["test-writer", "python-coder"],
             dispatched,
-            f"the record overrode an explicit handoff_target: {dispatched}",
+            f"an unrecognised handoff_target caused a dispatch: {dispatched}",
+        )
+        result = observation.get("result") or {}
+        self.assertEqual("blocked", result.get("status"))
+        message = result.get("message") or ""
+        self.assertIn(
+            "not-a-real-phase-agent-xyz",
+            message,
+            f"the refusal did not reproduce the unrecognised value verbatim: {message!r}",
+        )
+        self.assertIn(
+            "not an agent this driver recognises",
+            message,
+            f"the refusal did not state the value was unrecognised: {message!r}",
         )
 
-    def test_handoff_fallback_is_reachable_from_the_workflow_top_level_body(self):
+    def test_ticket_body_agent_sections_do_not_supply_a_handoff_target(self):
         # covers: BO-3000a
-        # angle: reachability
-        observation, _ = self._drive(
+        # angle: real_artifact
+        #
+        # IDENTICAL-REFUSAL test. Ticket A's body names SEVERAL agents, across
+        # BOTH sections BO-3000a's criteria calls out — the per-agent task
+        # breakdown (## Implementation Tasks, one pre-existing, one added by
+        # python-coder's own handoff dispatch) and ## Agent Contracts. Ticket B
+        # names nobody anywhere. Both get a targetless handoff. Asserting both
+        # merely "blocked" would be weaker than this: two DIFFERENT blocked
+        # results would still permit the prose to be influencing something.
+        observation_a, ticket_a = self._drive(
             ["test-writer", "python-coder"],
             {
                 "test-writer": {"status": "ok"},
@@ -375,22 +456,190 @@ class TestHandoffTargetResolvedFromRecord(_DriveCase):
                     "status": "handoff",
                     "adds_implementation_task": "test-writer",
                 },
+            },
+            body_extra=(
+                "\n## Implementation Tasks\n\n"
+                "### documentation-expert\n\n- [ ] pre-existing task\n\n"
+                "\n## Agent Contracts\n\n### documentation-expert\n\n"
+                "Existing docs to update / cross-link:\n\n"
+                "- docs/architecture/components/commit-guardian.md\n"
+            ),
+        )
+        observation_b, ticket_b = self._drive(
+            ["test-writer", "python-coder"],
+            {
+                "test-writer": {"status": "ok"},
+                "python-coder": {"status": "handoff"},
+            },
+        )
+
+        # Prove ticket A really did carry resolvable candidates — several of
+        # them — before asserting the driver ignored them. Without this half
+        # the drive could be "correctly ignoring" a target that never existed.
+        task_agents_a = _implementation_task_agents_after_run(observation_a, ticket_a)
+        self.assertEqual(
+            {"documentation-expert", "test-writer"},
+            set(task_agents_a),
+            "ticket A's body did not end up naming several candidate agents — "
+            f"the fixture does not exercise what this test claims: {task_agents_a}",
+        )
+        task_agents_b = _implementation_task_agents_after_run(observation_b, ticket_b)
+        self.assertEqual(
+            [],
+            task_agents_b,
+            f"ticket B's body was supposed to name nobody: {task_agents_b}",
+        )
+
+        dispatched_a = H.phase_dispatch_labels(observation_a)
+        dispatched_b = H.phase_dispatch_labels(observation_b)
+        self.assertEqual(["test-writer", "python-coder"], dispatched_a)
+        self.assertEqual(["test-writer", "python-coder"], dispatched_b)
+
+        result_a = observation_a.get("result") or {}
+        result_b = observation_b.get("result") or {}
+        self.assertEqual("blocked", result_a.get("status"))
+        self.assertEqual("blocked", result_b.get("status"))
+        self.assertEqual(
+            result_a.get("message"),
+            result_b.get("message"),
+            "the ticket's prose changed which refusal the driver reported:\n"
+            f"A (names several agents): {result_a.get('message')!r}\n"
+            f"B (names nobody):         {result_b.get('message')!r}",
+        )
+        self.assertEqual(
+            result_a.get("blocker_detail"),
+            result_b.get("blocker_detail"),
+            "the two runs' own phase results should be identical — the body "
+            "content is the only thing that differs between A and B",
+        )
+
+    def test_deliberate_targetless_halt_does_not_respawn_a_body_named_agent(self):
+        # covers: BO-3000a
+        # angle: failure
+        #
+        # The field-evidence shape (BO-3000a.yaml notes): a ticket already
+        # carries a `### test-writer` task section from an EARLIER delegation
+        # — not one added by THIS phase's own dispatch — and python-coder's
+        # contract-shrinkage guard now emits a targetless handoff on purpose,
+        # meaning "stop, do not proceed without authorization." The drive must
+        # halt, not re-run test-writer because its heading is sitting right there.
+        observation, ticket_path = self._drive(
+            ["test-writer", "python-coder"],
+            {
+                "test-writer": {"status": "ok"},
+                "python-coder": {"status": "handoff"},
+            },
+            body_extra="\n## Implementation Tasks\n\n### test-writer\n\n- [ ] one thing\n",
+        )
+        task_agents = _implementation_task_agents_after_run(observation, ticket_path)
+        self.assertEqual(
+            ["test-writer"],
+            task_agents,
+            "the ticket did not end up naming a resolvable body agent — the "
+            f"fixture does not exercise the deliberate-halt shape: {task_agents}",
+        )
+        dispatched = H.phase_dispatch_labels(observation)
+        self.assertEqual(
+            1,
+            dispatched.count("test-writer"),
+            "test-writer was re-dispatched from its ### heading despite the "
+            f"handoff naming no target: {dispatched}",
+        )
+        self.assertEqual(["test-writer", "python-coder"], dispatched)
+        result = observation.get("result") or {}
+        self.assertEqual("blocked", result.get("status"))
+        self.assertIn("named no handoff target", result.get("message") or "")
+
+    def test_unobtainable_result_and_targetless_result_refuse_distinguishably(self):
+        # covers: BO-3000a
+        # angle: boundary
+        #
+        # Phase A returns a result the driver cannot use AT ALL (an
+        # unrecognised status — PHASE_STATUS_VALUES guard, upstream of the
+        # handoff branch). Phase B returns a result the driver reads intact,
+        # which itself names no handoff target. Both stop the ticket; the two
+        # refusals must be told apart in what the run reports.
+        observation_unobtainable, _ = self._drive(
+            ["test-writer", "python-coder"],
+            {
+                "test-writer": {"status": "ok"},
+                "python-coder": {"status": "not-a-real-phase-status"},
+            },
+        )
+        observation_targetless, _ = self._drive(
+            ["test-writer", "python-coder"],
+            {
+                "test-writer": {"status": "ok"},
+                "python-coder": {"status": "handoff"},
+            },
+        )
+
+        result_unobtainable = observation_unobtainable.get("result") or {}
+        result_targetless = observation_targetless.get("result") or {}
+
+        self.assertEqual("blocked", result_unobtainable.get("status"))
+        self.assertEqual("blocked", result_targetless.get("status"))
+
+        message_unobtainable = result_unobtainable.get("message") or ""
+        message_targetless = result_targetless.get("message") or ""
+
+        self.assertIn("no usable result", message_unobtainable)
+        self.assertNotIn("no usable result", message_targetless)
+
+        self.assertIn("named no handoff target", message_targetless)
+        self.assertNotIn("named no handoff target", message_unobtainable)
+
+        self.assertNotEqual(
+            message_unobtainable,
+            message_targetless,
+            "an agent that never reported usably and an agent that reported "
+            "and named nothing produced the SAME refusal text — a reader "
+            "cannot tell a dead agent from a non-conformant one",
+        )
+
+        for observation in (observation_unobtainable, observation_targetless):
+            dispatched = H.phase_dispatch_labels(observation)
+            self.assertEqual(["test-writer", "python-coder"], dispatched)
+
+    def test_handoff_routing_is_reachable_from_the_workflow_top_level_body(self):
+        # covers: BO-3000a
+        # angle: reachability
+        #
+        # Proof that the routing above is executed by build-feature.js's own
+        # top-level body via the real harness — not by calling an extracted
+        # helper function directly. The re-dispatch of test-writer performs a
+        # REAL second write to the REAL ticket file (a second '(status: ok)'
+        # sign-off entry); that side-effect can only exist if the actual
+        # driver script ran the actual agent() dispatch a second time.
+        observation, ticket_path = self._drive(
+            ["test-writer", "python-coder", "sql-coder"],
+            {
+                "test-writer": {"status": "ok"},
+                "python-coder": {
+                    "status": "handoff",
+                    "handoff_target": "test-writer",
+                },
+                "sql-coder": {"status": "ok"},
             },
         )
         self.assertIsNone(
             observation.get("error"),
             f"the driver threw instead of running: {observation.get('error')}",
         )
-        handed = [
-            entry
-            for entry in observation.get("readbacks", [])
-            if "test-writer" in (entry.get("implementation_task_agents") or [])
-        ]
-        self.assertTrue(
-            handed,
-            "no read-back carried the ### test-writer subsection — the driver was "
-            "never handed a resolvable target, so a pass here would prove nothing",
+        dispatched = H.phase_dispatch_labels(observation)
+        self.assertEqual(["test-writer", "python-coder", "test-writer"], dispatched)
+        records = observation.get("records") or {}
+        self.assertEqual(
+            2,
+            _signoff_count(records, ticket_path, "test-writer"),
+            "the re-dispatch did not produce a second real sign-off entry in "
+            "the real ticket file, so this did not prove genuine execution "
+            f"through the top-level body: {records.get(ticket_path)}",
         )
+        result = observation.get("result") or {}
+        self.assertEqual("blocked", result.get("status"))
+        self.assertEqual("cross_agent", result.get("classification"))
+        self.assertEqual("test-writer", result.get("handoff_target"))
 
 
 if __name__ == "__main__":

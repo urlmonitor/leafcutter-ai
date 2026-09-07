@@ -217,10 +217,12 @@ The `- [ ]` / `- [x]` checkbox syntax is load-bearing: the pre-commit parity gua
 When a `python-coder` completes coding but defers test writing to `test-writer`, it:
 
 1. Checks off its own tasks under `### python-coder`.
-2. Populates tasks under `### test-writer` (these may remain unchecked — they are the next agent's tasks).
-3. Signs off with `(status: handoff)` naming `test-writer` as the recipient.
+2. Populates tasks under `### test-writer` (these may remain unchecked — they are the next agent's tasks). This section is how `test-writer` learns WHAT to do.
+3. Signs off with `(status: handoff)` naming `test-writer` as the recipient, AND returns `handoff_target: "test-writer"` in its JSON result. This field is how the driver learns WHO to re-dispatch.
 
-The supervisor receives the `handoff` status tag and spawns `test-writer` next, skipping natural order if needed.
+Steps 2 and 3 answer different questions for different readers — the task section is read by the receiving agent, `handoff_target` is read by the driver — so both must be present; naming the recipient in one without the other leaves that reader with nothing to act on.
+
+The `ticket-supervisor` agent reads the `## Comments` prose to identify the named recipient and spawns it next, skipping natural order if needed (see `building-epics` §2.2). The `build-feature.js` / `build-ticket.js` workflow drivers route strictly on the `handoff_target` field and only that field: when it is absent or names an agent the driver does not recognise, the driver dispatches nobody and refuses — with a distinct message for each of the two cases — rather than parsing `## Comments` prose (see BO-3000a). The `### <agent>` heading under `## Implementation Tasks` is never read as a fallback target source: it is the per-agent task breakdown (carried by the 13 agents with `requires_ticket_section: true`, see the table above), it is ambiguous by construction once more than one agent has a section on the same ticket, and treating it as a target would re-dispatch an agent on a handoff that named nobody on purpose (BO-3000a).
 
 ### Blocker path
 

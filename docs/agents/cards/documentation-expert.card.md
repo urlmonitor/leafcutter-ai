@@ -182,6 +182,8 @@ flowchart TD
 - ACD-2100e-2: A how-to guide takes an operator from a waiting run back to a running one
 - ACS-1200a-3: The written back-link rule matches the enforced one
 - ACS-1200d-4: The how-to tells you how to park an idea and how to take it back out
+- ACS-1300a-4: Someone who did not build the repair can preview it, run it, and read what it did
+- ACS-1300c-4: The refusal is written down beside the field it protects, where the next tool author will find it
 - ACS-500g-2-ii: A how-to guide walks a reader from a noticed repetition to a referenced pattern
 - ACS-900a-3: How-to guide and sequence diagram for the retirement-detection trigger
 - ACS-900b-3: How-to guide and sequence diagram for the retirement-blocks-commit behavior
