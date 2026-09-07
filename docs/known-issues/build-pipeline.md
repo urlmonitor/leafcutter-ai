@@ -3544,3 +3544,160 @@ defect in the code under test, not in the fixture.
 **Related.** User-memory `feedback_test_isolation_pitfalls` and `KI-TQ-012` (a fixture that
 sandboxes the filesystem while leaking into shared state) are the same family: tests here
 treat the runner's environment as private scratch space with weaker guarantees than assumed.
+
+---
+
+### KI-BP-20260907-0722 — The pre-consolidation migration deletes a consumer's root `.pre-commit-config.yaml` without migrating its project-local hooks, and reports the deletion as success
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build.py:1586-1592` (`_PRE_CONSOLIDATION_PATHS`), `:1661-1690` (`_cleanup_stale_paths`), called unconditionally at `:2101` · `scripts/build_precommit.py:346` (`output_path`), `:348` (`_strip_package_managed_blocks`), `:363-365` (the early return)
+- **Reported by:** observed during a v7.0.194 build into the self-hosting workspace `C:\Users\Hendrik\Code\leafcutter`; consequence confirmed by inspection against the adopter repo `bybit-trader` (pin `v0.0.3-653-g7b016df1`)
+
+**Symptom.** A build removes the consumer's repo-root `.pre-commit-config.yaml` and reports it
+with a green checkmark:
+
+```text
+Stale file cleanup:
+  ✓ removed stale: .pre-commit-config.yaml
+...
+Shim install:
+  shim: .pre-commit-config.yaml -> pre-commit-config.yaml (copy (symlink failed))
+```
+
+The shim step then recreates the root path as a copy of (or symlink to)
+`<output_root>/pre-commit-config.yaml`. For a consumer whose root file carried project-local
+hooks the package does not ship, those hooks are gone, and nothing in the output names the
+loss.
+
+**Mechanism.** Three facts compose:
+
+1. `.pre-commit-config.yaml` is listed in `_PRE_CONSOLIDATION_PATHS` (`build.py:1592`), the
+   legacy-location migration list. `_cleanup_stale_paths` (`:1661`) unlinks any entry that is a
+   real file rather than a symlink into `output_root` (`:1685`), then prints
+   `_success(f"removed stale: {rel_path}")` (`:1688`).
+2. The merge logic that exists precisely to preserve project-local hooks —
+   `_strip_package_managed_blocks` (`build_precommit.py:348`) — reads
+   `output_path = target_root / "pre-commit-config.yaml"` (`:346`). `build_precommit_config` is
+   registered as an *artifact* phase, so it is invoked with `output_root`, i.e. `.leafcutter/`.
+   **It never reads the repo-root file.** The migration deletes the file; the stripper that
+   would have rescued its contents is pointed somewhere else.
+3. If `<output_root>/pre-commit-config.yaml` already exists and `force` is false,
+   `build_precommit_config` returns 0 without writing (`:363-365`). A consumer that last built
+   months ago therefore keeps a stale package config, and this run leaves it stale.
+
+So the migration is a delete, not a migration. The word "pre-consolidation" describes where the
+file used to live; nothing carries its content forward.
+
+**Detection.** After any build, compare registered hook ids across the deletion:
+
+```bash
+git show HEAD:.pre-commit-config.yaml | grep -c "^ *- id:"
+grep -c "^ *- id:" .pre-commit-config.yaml
+```
+
+A drop is the signature. Because the root file is normally git-tracked the content is
+recoverable, but the *effective gate coverage* between the build and the recovery is not, and
+no output line announces it. A consumer who does not think to diff a file the build just called
+stale has no reason to look.
+
+**Worked case (not executed).** `bybit-trader` carries a real, git-tracked 36,415-byte root
+`.pre-commit-config.yaml` holding 36 project-local hooks alongside 23 `@package-managed`
+blocks, plus an untracked `.leafcutter/pre-commit-config.yaml` of 11,126 bytes last written
+2026-06-28. A build against that repo deletes the 36 KB file, declines to rewrite the June
+output (no `--force`), and shims the root to it — substituting a three-month-old package-only
+set for 36 local gates.
+
+**Confidence.** The deletion and the shim replacement are **empirically confirmed** — a
+v7.0.194 build into the self-hosting workspace printed both lines above. The `bybit-trader`
+consequence is code reading plus file inspection, deliberately **not** confirmed by running the
+build, since running it is the destructive act.
+
+**Fix direction.** `_cleanup_stale_paths` should migrate rather than delete: before unlinking a
+real root `.pre-commit-config.yaml`, run `_strip_package_managed_blocks` over *that* file and
+fold the surviving project-local blocks into `<output_root>/pre-commit-config.yaml`. The
+stripper already does exactly this job and is merely aimed at the wrong path. Short of that,
+the deletion must refuse to proceed when the root file contains non-`@package-managed` blocks,
+and say which blocks it is protecting. A regression test needs a consumer-shaped fixture — a
+root config carrying both local and `@package-managed` hooks plus a pre-existing stale
+`output_root` copy — since neither half reproduces the loss alone.
+
+**A note on the failure's shape.** Both halves are green. The destructive step reports success
+with a checkmark; the step that would have preserved the content is skipped silently by an
+early return. There is no red anywhere in a run that removes a consumer's gate coverage.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a destructive step reported as
+success. **Related:** KI-BP-009 found the identical shape one path over, at `.claude/skills` —
+a path present in both `_PRE_CONSOLIDATION_PATHS` and the shim map, where the build `rmtree`s
+an adopter's real directory and reports it with a green checkmark. That entry is the
+directory-shaped case and this one the file-shaped case; a fix addressing only one leaves the
+other live. The shared root cause is that `_PRE_CONSOLIDATION_PATHS` assumes every listed path
+is package-owned, which is false for any path a consumer is also invited to write to.
+
+---
+
+### KI-BP-20260907-0812 — `generate_product_truth.py` builds index paths with the platform separator, so on Windows the validator can never pass and every commit touching an AC YAML is blocked
+
+- **Severity:** high
+- **Status:** FIXED by `26f35212` — retained for context per the register's "fixed, recorded for context" exception, because the `.as_posix()` call at the construction site is otherwise unexplained and invites a well-meaning revert to `str(...)`.
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `docs/product-truth/scripts/generate_product_truth.py:423` — `paths[flow["id"]] = str(path.relative_to(STORE))` · consumed by `_check_derived_indexes` in `docs/product-truth/scripts/validate_product_truth.py` · surfaced through the `check-product-truth-validate` and `check-product-truth-generate` hooks (`templates/scripts/commit_guardian/commit_guardian.json:1093,1107`)
+- **Filed under `build_pipeline` provisionally** — the package has no `product-truth` known-issues component file, and this machinery is deployed by `build_product_truth()` (`scripts/build_phases.py:3548`). Move it if a product-truth file is created.
+
+**Symptom.** On Windows the product-truth validator fails against an unmodified, correct store:
+
+```text
+FAIL: [index] by_flow does not match a fresh rebuild — run generate_product_truth.py
+1 error(s), 24 warning(s)
+```
+
+**Mechanism.** `load_flows()` stores each flow's location as `str(path.relative_to(STORE))`, which
+renders with `os.sep`. The committed `index.json` was generated on a POSIX host and holds
+`flows/fern-and-fig/checkout-and-pay.flow.json`; a Windows rebuild produces
+`flows\fern-and-fig\checkout-and-pay.flow.json`. `_check_derived_indexes` compares stored against
+rebuilt and reports drift.
+
+**This is not store drift, and must not be recorded as such.** Verified across the whole store:
+
+```text
+by_flow entries:                14
+separator-only differences:     14
+genuine content differences:     0
+```
+
+Every mismatch is the separator alone. The store is correct on its native platform.
+
+**Why the severity is high rather than cosmetic.** Both hooks fire on
+`files: (^docs/product-truth/|^docs/acceptance-criteria/.*\.yaml$)`. Since the validator cannot
+pass on Windows, a Windows contributor cannot commit **any** acceptance-criteria YAML — not only
+product-truth files. AC authoring is blocked wholesale on the platform. The escape is
+`--no-verify`, which disables every other gate in the same breath.
+
+The write direction is worse than the read direction. Nothing stops a Windows contributor running
+the generator in write mode; `index.json` is then rewritten with backslash paths, which fails for
+every POSIX contributor and for CI. The file then flips separator on each platform's turn — a
+churn loop where each side's "fix" breaks the other, and neither side is wrong.
+
+**Detection.**
+
+```bash
+python - <<'PY'
+import json, pathlib, os
+STORE = pathlib.Path('docs/product-truth')
+idx = json.load(open(STORE/'index.json', encoding='utf-8'))
+norm = lambda x: x.replace(os.sep, '/')
+for fid, e in idx.get('by_flow', {}).items():
+    p = e.get('path','')
+    if p != norm(p):
+        print('platform-separator path in committed index:', fid, p)
+PY
+```
+
+A committed index that already contains `os.sep`-flavoured paths means a Windows write has landed.
+
+**Fix direction.** Emit POSIX separators at the single construction site — `path.relative_to(STORE).as_posix()` rather than `str(...)`. Store-relative paths inside a JSON manifest are identifiers, not filesystem paths, and should be platform-independent by construction. Audit the sibling loaders (`load_mocks`, and any other `relative_to` in the two scripts) for the same expression before closing. A regression test should assert that every emitted `path` value contains no backslash, which fails today on Windows and passes trivially on POSIX — so it must be written as a string-content assertion, not as a round-trip through `pathlib`, or it will pass vacuously on the platform that cannot reproduce the bug.
+
+**Pattern:** a check that cannot pass is as useless as one that cannot fail, and pushes contributors toward `--no-verify` — which is the mechanism by which one platform-specific defect disables an entire gate set. **Related:** `KI-CG-20260907-0745` is the other defect found the same day whose practical effect is a blanket tool block on Windows; both are cases of POSIX-shaped assumptions reaching a Windows contributor through generated artifacts.
