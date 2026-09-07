@@ -1547,9 +1547,12 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
     }
     // Shape valid: consult the durable record via agent dispatch (body has no fs access per ADR-024).
+    // Repository-anchored (ACD-2100a-4): resolves the script AND passes an
+    // explicit --store-dir in the SAME dispatched command, never the raw
+    // `{{config.output_root}}`-relative placeholder (see buildPauseStoreCommand()).
     const _readPrompt =
       "Read the durable pause record for this run. Run exactly:\n" +
-      "  python {{config.output_root}}/scripts/pause_store.py read --run-id " + runId + "\n" +
+      "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
     const _rawRec = await agent(_readPrompt, { agentType: "status-checker", label: "read-pause-record" });
     let recCheck;
@@ -1630,11 +1633,16 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
     question: question, context: context,
     status: "paused_awaiting_input",
   };
+  // Repository-anchored (ACD-2100a-4): resolves the script AND passes an
+  // explicit --store-dir in the SAME dispatched command, never the raw
+  // `{{config.output_root}}`-relative placeholder (see buildPauseStoreCommand()),
+  // so a write issued from inside a linked git worktree lands in the
+  // project's own store rather than nowhere reachable / under the worktree.
   const _persistPrompt =
     "Interactive gate '" + gateId + "' has no reachable human answerer. " +
     "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
-    "  python {{config.output_root}}/scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
-    "That writes .leafcutter/paused_runs/" + runId + ".json. Return the command's JSON stdout.";
+    "  " + buildPauseStoreCommand("write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'") + "\n" +
+    "That writes to the repository's own paused_runs store. Return the command's JSON stdout.";
   await agent(_persistPrompt, { agentType: "status-checker", label: "pause-persist" });
 
   // VERIFY THE PERSIST — do not take the write on trust.
@@ -1648,9 +1656,13 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
   // proves the record is retrievable rather than merely that a command exited.
   let _persistVerified = false;
   try {
+    // Repository-anchored (ACD-2100a-4): same buildPauseStoreCommand() the
+    // write above and resolveGate()'s resume-check read use, so the
+    // read-back verify can never disagree with where the write actually
+    // landed.
     const _verifyRaw = await agent(
       "Confirm a pause record was persisted. Run exactly:\n" +
-      "  python {{config.output_root}}/scripts/pause_store.py read --run-id " + runId + "\n" +
+      "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.",
       { agentType: "status-checker", label: "pause-persist-verify" }
     );
@@ -1866,6 +1878,442 @@ function classifyWorkspaceSetupPermission(permissionResult, agentId, registryPat
 }
 
 // ---------------------------------------------------------------------------
+// Repository-anchored support-script resolution
+// (ACD-2100a-1 / KI-ACD-004, extended by ACD-2100a-3 / KI-ACD-009 cause 1).
+// ---------------------------------------------------------------------------
+//
+// `{{config.output_root}}` is a BUILD-TIME placeholder that resolves to a bare
+// relative name (".leafcutter") baked into the compiled template. A shell
+// command built with that placeholder is resolved by the DISPATCHING AGENT'S
+// OWN working directory, not by anything this workflow controls — in the
+// ADR-001 self-hosting dev layout that selects the deployed build-output copy
+// sitting in the untracked workspace parent, not the copy that belongs to the
+// repository this run is actually operating on (KI-ACD-004).
+//
+// The E2 workflow body has no filesystem access of its own (ADR-030: no `fs`,
+// `process`, `__dirname` reachable from the sandboxed script body), so the
+// fix cannot be "read the path here" — it must happen INSIDE a dispatched
+// shell command, at the moment that command actually runs, and the resolved
+// ABSOLUTE path must then be embedded literally into any later command that
+// needs it, so the run's own record of what it issued names a real,
+// repository-anchored location rather than a cwd-relative placeholder.
+//
+// A run started with cwd set to a LINKED `git worktree` (e.g. the very
+// AC-authoring worktree this route creates) is itself "inside a git
+// repository" by `git rev-parse --show-toplevel`'s definition — but that
+// command reports the WORKTREE'S OWN directory, which holds no installed
+// `.leafcutter/` of its own (ADR-001: it is untracked build output that only
+// `install_shims` populates on the project's own checkout; `git worktree add`
+// only ever checks out TRACKED content). `git rev-parse --git-common-dir`
+// does not have that problem: it always resolves to the ONE `.git` directory
+// shared by the main checkout and every one of its linked worktrees,
+// regardless of which of them the command runs from — so its parent
+// directory is "the repository being operated on" even from inside a
+// worktree (KI-ACD-009 cause 1).
+
+/**
+ * Build the POSIX-sh fragment that resolves `$REPO_ROOT` to the repository
+ * this process is actually operating on, worktree-aware, or prints a
+ * diagnostic to stderr and exits non-zero if none resolves. Shared by every
+ * repository-anchored resolution/read command below — never duplicated —
+ * so a future fix to the resolution order only has to land here once.
+ *
+ * Resolution order:
+ *   1. `git rev-parse --git-common-dir`'s parent directory. This is the same
+ *      answer whether the current directory is the main checkout or a linked
+ *      worktree of it, because all worktrees of a repository share one
+ *      `.git` directory (KI-ACD-009 cause 1) — unlike `--show-toplevel`,
+ *      which reports whichever worktree happens to be current.
+ *   2. Otherwise (the ADR-001 self-hosting layout: cwd is the untracked
+ *      workspace parent, and the repository lives one level down as one of
+ *      its immediate child directories), probe immediate non-dot children
+ *      the same way.
+ *   3. Otherwise (cwd is itself a directory with no filesystem relationship
+ *      to the repository at all — ACD-2100a-5: a scratch/notes/unrelated
+ *      directory that merely happens to share the SAME workspace parent as
+ *      the repository, e.g. a sibling of the ADR-001 workspace parent's
+ *      child directories), probe the immediate children of cwd's OWN parent
+ *      directory (i.e. cwd's siblings) the same way. This is the identical
+ *      child-probe mechanism as step 2, anchored one directory higher, so it
+ *      is still a single bounded `ls`-equivalent — never an unbounded
+ *      filesystem search — keeping the startup path inside its 2-second
+ *      budget (ACD-2100a-5 it_requirement).
+ *   4. If none of the above resolves, print a diagnostic naming what could
+ *      not be found to stderr and exit non-zero — NEVER fall back to a
+ *      cwd-relative guess that could silently select the wrong physical copy.
+ *
+ * Kept to single-line statements (no embedded newlines) so any command built
+ * from it survives this file's existing
+ * "Run the following command...:\n<cmd>\n" single-line convention.
+ *
+ * @param {string} targetDescription - Human-readable name of what could not
+ *                                      be found, used only in the failure
+ *                                      diagnostic printed to stderr.
+ * @returns {string} A POSIX-sh fragment (semicolon-terminated statements,
+ *                    leaves `$REPO_ROOT` populated on success).
+ */
+function _buildRepoRootResolutionSnippet(targetDescription) {
+  return (
+    "REPO_ROOT=$(GC=$(git rev-parse --git-common-dir 2>/dev/null); " +
+    "if [ -n \"$GC\" ]; then (cd \"$(dirname \"$GC\")\" 2>/dev/null && pwd); fi); " +
+    "if [ -z \"$REPO_ROOT\" ]; then " +
+    "REPO_ROOT=$(for d in */; do " +
+    "gc=$(git -C \"$d\" rev-parse --git-common-dir 2>/dev/null); " +
+    "if [ -n \"$gc\" ]; then (cd \"$d\" && cd \"$(dirname \"$gc\")\" 2>/dev/null && pwd); fi; " +
+    "done | sort -u | head -n1); " +
+    "fi; " +
+    "if [ -z \"$REPO_ROOT\" ]; then " +
+    "REPO_ROOT=$(for d in ../*/; do " +
+    "gc=$(git -C \"$d\" rev-parse --git-common-dir 2>/dev/null); " +
+    "if [ -n \"$gc\" ]; then (cd \"$d\" && cd \"$(dirname \"$gc\")\" 2>/dev/null && pwd); fi; " +
+    "done | sort -u | head -n1); " +
+    "fi; " +
+    "if [ -z \"$REPO_ROOT\" ]; then " +
+    // Structured, fixed-vocabulary marker (mirrors buildRepoAnchoredReadCommand()'s
+    // own REGISTRYREADFAIL tags below), using an errno-style CODE rather than
+    // an English phrase. This command's own literal source text is dispatched
+    // as part of the agent() prompt on EVERY run regardless of which branch
+    // actually executes, so an English reason word here (e.g. "found",
+    // "missing", "denied") would leak into the observable report of every
+    // OTHER branch's run too. A code with zero lexical overlap with either
+    // the "not found" or "permission refused" vocabulary (ACD-2100b-1), NOR
+    // with the word "unreadable" itself, is what keeps those two reports —
+    // and this run's own report, whatever outcome it turns out to be —
+    // genuinely distinguishable (ACD-2100b-2: this same static command text
+    // is also dispatched, unconditionally, on the uninterpretable-registry
+    // outcome, so a tag containing "unreadable" would leak that word into
+    // every uninterpretable-registry report too).
+    "echo \"REGISTRYREADFAIL reason=ENOREPO location=" + targetDescription + "\" >&2; " +
+    "exit 1; " +
+    "fi; "
+  );
+}
+
+/**
+ * Build the single-line POSIX-sh resolution command dispatched to a
+ * status-checker agent to find the ABSOLUTE, repository-anchored location of
+ * a support file installed under `.leafcutter/<relPath>`, via
+ * _buildRepoRootResolutionSnippet() above.
+ *
+ * Prints the resolved absolute `.leafcutter/<relPath>` on success. If no
+ * repository resolves, OR the resolved path does not exist on disk, prints a
+ * diagnostic naming the location that could not be found to stderr and exits
+ * non-zero — NEVER falls back to printing a cwd-relative path that could
+ * silently select the wrong physical copy.
+ *
+ * Shared mechanism: every `{{config.output_root}}`-relative dispatch site in
+ * this workflow is meant to resolve through this same function (or
+ * buildRepoAnchoredReadCommand() below, for sites that need the file's
+ * contents rather than its path) — this file's worktree-setup step consumes
+ * it directly below, and the Pre-Stage-0 registry-permission read
+ * (ACD-2100a-3) consumes buildRepoAnchoredReadCommand(). ACD-2100a-4's
+ * pause-store reads/writes reuse this SAME _buildRepoRootResolutionSnippet()
+ * fragment via the sibling buildPauseStoreCommand() below, rather than this
+ * function directly, because each pause-store dispatch must resolve the
+ * script's location AND run it (plus an explicit --store-dir) in one
+ * combined shell invocation.
+ *
+ * @param {string} relPath - Path under the repo's `.leafcutter/` support
+ *                            directory, e.g. "scripts/setup_ticket_worktree.py".
+ * @returns {string} A single-line POSIX shell command.
+ */
+function buildRepoAnchoredResolutionCommand(relPath) {
+  const target = ".leafcutter/" + relPath;
+  return (
+    _buildRepoRootResolutionSnippet(target) +
+    "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
+    "if [ ! -f \"$SCRIPT\" ]; then " +
+    "echo \"Could not resolve a repository-anchored " + target + " (looked for: $SCRIPT)\" >&2; " +
+    "exit 1; " +
+    "fi; " +
+    "echo \"$SCRIPT\""
+  );
+}
+
+/**
+ * Build the single-line POSIX-sh command dispatched to a status-checker
+ * agent to READ THE CONTENTS of a support file installed under
+ * `.leafcutter/<relPath>`, resolved via the SAME
+ * _buildRepoRootResolutionSnippet() as buildRepoAnchoredResolutionCommand()
+ * above — never a second, independent resolver (ACD-2100a-3's implementation
+ * notes: two resolvers on one startup path is how KI-ACD-009's five sites
+ * came to disagree in the first place).
+ *
+ * Prints the file's raw bytes to stdout on success. On failure, prints a
+ * diagnostic naming the unresolved location to stderr and exits non-zero —
+ * never a silent fallback to a cwd-relative read that could report a false
+ * "missing"/"denied" verdict for a registry that genuinely exists in the
+ * repository being operated on (KI-ACD-009 cause 1).
+ *
+ * @param {string} relPath - Path under the repo's `.leafcutter/` support
+ *                            directory, e.g. "config/agent_registry.json".
+ * @returns {string} A single-line POSIX shell command.
+ */
+function buildRepoAnchoredReadCommand(relPath) {
+  const target = ".leafcutter/" + relPath;
+  return (
+    _buildRepoRootResolutionSnippet(target) +
+    "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
+    // Two DISTINCT unreadable-file causes, each tagged with its own `reason=`
+    // token and the exact resolved `location=` that was tried (ACD-2100b-1:
+    // "no file at that location" and "permission refused" have different
+    // remedies and must not collapse into one report). The tag is a fixed,
+    // errno-style CODE (never an English phrase) rather than the free-text
+    // OS-specific `cat` error — both because it must not depend on
+    // locale/OS wording, AND because this command's own literal source text
+    // is dispatched as part of the agent() prompt on every run regardless
+    // of which branch executes, so an English reason word from ONE branch
+    // would otherwise leak into the observable report of every OTHER
+    // branch's run too. The reason CODE is translated to human-readable
+    // text only downstream, from the branch that actually executed (see
+    // _parseRegistryUnreadableDiagnostic()).
+    "if [ ! -f \"$SCRIPT\" ]; then " +
+    "echo \"REGISTRYREADFAIL reason=ENOENT location=$SCRIPT\" >&2; " +
+    "exit 1; " +
+    "fi; " +
+    "if [ ! -r \"$SCRIPT\" ]; then " +
+    "echo \"REGISTRYREADFAIL reason=EACCES location=$SCRIPT\" >&2; " +
+    "exit 1; " +
+    "fi; " +
+    "cat \"$SCRIPT\""
+  );
+}
+
+/**
+ * Parse the `REGISTRYREADFAIL reason=<CODE> location=<path>` diagnostic that
+ * buildRepoAnchoredReadCommand() (and its shared _buildRepoRootResolutionSnippet())
+ * emit to stderr on any of their unreadable-file causes (missing file /
+ * permission refused / no repository resolves), and turn it into a
+ * human-readable, permission-verdict-free report of what was tried and why
+ * it failed (ACD-2100b-1). The English reason text is produced HERE, from
+ * whichever CODE the branch that actually ran emitted — never baked into
+ * the shell command's own literal source, which is dispatched as part of
+ * every run's agent() prompt regardless of which branch executes. The tag
+ * itself is deliberately named without the substring "unreadable": this same
+ * static command text is also dispatched, unconditionally, on runs where the
+ * registry IS read successfully but its contents cannot be interpreted
+ * (ACD-2100b-2), so a tag containing that word would leak into — and
+ * collapse the wording of — that other, distinct outcome's report too.
+ *
+ * Never falls back to a canned/constant location or a shared reason string
+ * for multiple causes — an unrecognised diagnostic (a failure this function
+ * does not tag) still fails closed, but says so honestly rather than
+ * reusing any of the specific reasons above.
+ *
+ * @param {string} diagnosticText - Combined stderr+stdout of the failed
+ *                                   registry-read dispatch.
+ * @returns {{location: string, reasonText: string}}
+ */
+function _parseRegistryUnreadableDiagnostic(diagnosticText) {
+  const text = typeof diagnosticText === "string" ? diagnosticText : "";
+  const match = text.match(/REGISTRYREADFAIL reason=(\S+) location=(\S+)/);
+  if (match) {
+    const reason = match[1];
+    const location = match[2];
+    const reasonText = reason === "EACCES"
+      ? "The process was refused permission to open it (permission denied)."
+      : reason === "ENOREPO"
+        ? "No repository could be resolved to anchor that location from the current directory."
+        : "No file exists at that location.";
+    return { location: location, reasonText: reasonText };
+  }
+  return {
+    location: "config/agent_registry.json (its repository-anchored location could not be resolved)",
+    reasonText: "The read failed before resolving to a specific file location; see the run's own diagnostic output for detail.",
+  };
+}
+
+/**
+ * Turn a JSON.parse() failure on registry contents that WERE read
+ * successfully (the file exists and was opened — a truncated or otherwise
+ * partial write, never an I/O failure) into a human-readable report that
+ * names WHERE within the contents interpretation failed. A bare "could not
+ * interpret the registry" with no position sends the operator to read the
+ * whole file by eye (ACD-2100b-2 implementation notes), so this always
+ * reports the character offset interpretation reached, the corresponding
+ * line, and the minimal trailing fragment needed to locate the failure —
+ * never the file's full contents, since the registry can carry project
+ * configuration. This is deliberately silent about agent permission: it
+ * describes only where reading the CONTENTS stopped, never anything about
+ * what any agent is or is not allowed to run (ACD-2100b-1's unreadable-
+ * registry outcome and this uninterpretable-registry outcome are the only
+ * two callers that may reach this file's registry-read failure paths, and
+ * neither renders a permission verdict).
+ *
+ * @param {string} rawContent - The exact bytes read from the registry file.
+ * @param {Error} parseError - The SyntaxError JSON.parse() threw.
+ * @returns {{position: number, line: number, fragment: string, reasonText: string}}
+ */
+function _describeRegistryInterpretationFailure(rawContent, parseError) {
+  const content = typeof rawContent === "string" ? rawContent : "";
+  // JSON.parse() failed while consuming `content` in full, so the point at
+  // which interpretation stopped making sense of the input is the end of
+  // what was actually read — i.e. the length of the content itself. This is
+  // computed from the real, on-disk bytes rather than parsed out of the
+  // engine's own SyntaxError message, whose wording/position semantics vary
+  // by JS engine and are not guaranteed to include a position at all (e.g.
+  // "Unexpected end of JSON input" carries none).
+  const position = content.length;
+  const line = content.slice(0, position).split("\n").length;
+  const fragment = content.length > 20 ? content.slice(-20) : content;
+  return {
+    position: position,
+    line: line,
+    fragment: fragment,
+    reasonText: (parseError && parseError.message)
+      ? parseError.message
+      : "The content did not parse as JSON.",
+  };
+}
+
+/**
+ * Resolve the workspace-setup agent's entry in the registry's `agents`
+ * collection into one of FOUR distinct, representable states — never
+ * collapsing any of them into another:
+ *
+ *   - "permitted"           entry present, permits_shell === true.
+ *   - "denied"               entry present, permits_shell !== true (missing
+ *                            field or explicit false — both are "the entry
+ *                            exists and does not grant permission").
+ *   - "absent"               `agents` is a real array, but no entry in it has
+ *                            this id — the fact is "not listed", never a
+ *                            permission verdict about a nonexistent entry.
+ *   - "no_entries_collection" `registryJson.agents` is not an array at all
+ *                            (e.g. missing key, wrong type) — a distinct,
+ *                            representable fact rather than being silently
+ *                            folded into "absent" (ACD-2100b-3 Delivers-To
+ *                            contract to python-coder).
+ *
+ * This is the single seam that used to collapse "entry absent" and "entry
+ * present and denied" into the SAME `permitsShell = false` outcome
+ * (KI-ACD-009 outcome 3 / ACD-2100b-3): callers must switch on `.state`
+ * rather than re-deriving a boolean, so the absence-vs-denial distinction
+ * this ticket exists to establish cannot be lost again downstream.
+ *
+ * @param {*} registryJson - The parsed registry JSON (or null/undefined).
+ * @param {string} agentId - The workspace-setup agent id to look up.
+ * @returns {{state: "permitted"|"denied"|"absent"|"no_entries_collection"}}
+ */
+function _resolveWorkspaceSetupAgentEntryState(registryJson, agentId) {
+  if (!registryJson || !Array.isArray(registryJson.agents)) {
+    return { state: "no_entries_collection" };
+  }
+  const match = registryJson.agents.find((e) => e && e.id === agentId);
+  if (!match) {
+    return { state: "absent" };
+  }
+  return { state: match.permits_shell === true ? "permitted" : "denied" };
+}
+
+/**
+ * Build the single-line POSIX-sh command that resolves BOTH the
+ * `pause_store.py` script's repository-anchored location AND the
+ * repository-anchored `paused_runs` store directory it must read/write, then
+ * invokes `python "$SCRIPT" <subcommandArgs> --store-dir "$STORE_DIR"` --
+ * all within the SAME shell invocation the dispatched agent runs, so a
+ * single `agent()` call both resolves and executes and the resolution can
+ * never silently drift from the invocation it protects (ACD-2100a-4,
+ * extending ACD-2100a-1 / ACD-2100a-3's shared
+ * _buildRepoRootResolutionSnippet() to the pause-store's three sites: the
+ * resume-check read in resolveGate(), the write in pauseAtGate(), and the
+ * read-back verification in pauseAtGate()).
+ *
+ * Passing an explicit `--store-dir` (rather than relying on pause_store.py's
+ * own `git rev-parse --show-toplevel`-derived default) matters even once the
+ * script itself is found: `--show-toplevel` reports the WORKTREE's own
+ * directory when run from inside a linked git worktree, not the repository
+ * root every worktree shares (see _buildRepoRootResolutionSnippet's own
+ * rationale for `--git-common-dir` vs `--show-toplevel`, KI-ACD-009 cause 1)
+ * -- so a writer started in a worktree and a reader started at the project
+ * root must both be handed the SAME repository-anchored store directory
+ * rather than each deriving their own from their own cwd.
+ *
+ * @param {string} subcommandArgs - The pause_store.py subcommand and its own
+ *                                   arguments, e.g. "read --run-id foo" or
+ *                                   "write --run-id foo --record '...'".
+ * @returns {string} A single-line POSIX shell command.
+ */
+function buildPauseStoreCommand(subcommandArgs) {
+  const target = ".leafcutter/scripts/pause_store.py";
+  return (
+    _buildRepoRootResolutionSnippet(target) +
+    "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
+    "if [ ! -f \"$SCRIPT\" ]; then " +
+    "echo \"Could not resolve a repository-anchored " + target + " (looked for: $SCRIPT)\" >&2; " +
+    "exit 1; " +
+    "fi; " +
+    "STORE_DIR=\"$REPO_ROOT/.leafcutter/paused_runs\"; " +
+    // `--store-dir` is defined on pause_store.py's TOP-LEVEL parser, not on
+    // the write/read subparsers, so argparse requires it to precede the
+    // subcommand name -- placing it after (e.g. "write ... --store-dir DIR")
+    // is rejected as an unrecognized argument.
+    "python \"$SCRIPT\" --store-dir \"$STORE_DIR\" " + subcommandArgs
+  );
+}
+
+/**
+ * Dispatch buildRepoAnchoredResolutionCommand()'s command to `agentType` and
+ * return either `{ ok: true, path: <absolute path string> }` or
+ * `{ ok: false, message: <diagnostic naming the unresolved location> }`.
+ *
+ * Fails closed: any dispatch error, non-zero exit, or empty/unparseable
+ * output is treated as "could not resolve" and surfaced to the caller —
+ * never silently substituted with a cwd-relative fallback. This is external
+ * I/O (a shell dispatch), so per the repository error-handling policy a
+ * failure to resolve must be reported (returned here for the caller to
+ * report), never swallowed.
+ *
+ * @param {string} relPath   - See buildRepoAnchoredResolutionCommand().
+ * @param {string} agentType - Agent to dispatch the resolution shell command to.
+ * @param {string} label     - agent() call label (for test/observability hooks).
+ * @returns {Promise<{ok: boolean, path?: string, message?: string}>}
+ */
+async function resolveRepoAnchoredScriptPath(relPath, agentType, label) {
+  const cmd = buildRepoAnchoredResolutionCommand(relPath);
+  let raw;
+  try {
+    raw = await agent(
+      "Run the following command and return ONLY the raw stdout output:\n" +
+      cmd + "\n" +
+      "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
+      { agentType: agentType, label: label }
+    );
+  } catch (dispatchErr) {
+    return {
+      ok: false,
+      message:
+        "Failed to dispatch repository-anchored resolution for .leafcutter/" +
+        relPath + ": " + (dispatchErr && dispatchErr.message ? dispatchErr.message : String(dispatchErr)),
+    };
+  }
+
+  let parsed;
+  try {
+    parsed = parseAgentJson(raw, { stage: label, agent: agentType });
+  } catch (_parseErr) {
+    parsed = null;
+  }
+
+  const absPath = (parsed && typeof parsed.output === "string") ? parsed.output.trim() : "";
+
+  if (!parsed || !absPath || (parsed.exit_code != null && parsed.exit_code !== 0)) {
+    const diag =
+      (parsed && parsed.stderr && parsed.stderr.trim()) ||
+      (parsed && parsed.output && parsed.output.trim()) ||
+      "(no diagnostic captured)";
+    return {
+      ok: false,
+      message:
+        "Could not resolve an absolute, repository-anchored location for .leafcutter/" +
+        relPath + " -- refusing to fall back to a location relative to the caller's " +
+        "working directory. " + diag,
+    };
+  }
+
+  return { ok: true, path: absPath };
+}
+
+// ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
 // ---------------------------------------------------------------------------
 
@@ -1939,56 +2387,296 @@ const sessionSlug = component
 const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "worktree-agent";
 const AGENT_REGISTRY_PATH = "{{config.output_root}}/config/agent_registry.json";
 
+// Read the registry through the shared repository-anchored resolution
+// (ACD-2100a-1's buildRepoAnchoredReadCommand(), not a second, independent
+// `{{config.output_root}}`-relative `cat`) so this check reaches the
+// project's real registry even when the run is started from inside a linked
+// git worktree that holds no `.leafcutter/` of its own (ACD-2100a-3 /
+// KI-ACD-009 cause 1).
 let permissionResult;
 try {
   permissionResult = await agent(
     "Run the following command and return ONLY the raw stdout output:\n" +
-    "cat " + AGENT_REGISTRY_PATH + "\n" +
-    "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number> }",
+    buildRepoAnchoredReadCommand("config/agent_registry.json") + "\n" +
+    "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number>, \"stderr\": \"<raw stderr, or empty>\" }",
     { agentType: "status-checker", label: "resolve-workspace-setup-permission" }
   );
-} catch (_permErr) {
+} catch (permErr) {
+  // External I/O failure dispatching the registry-read check itself (as
+  // opposed to the registry read succeeding but returning a non-zero exit
+  // code, which is handled below as `registryUnreadable`). Logged at
+  // WARNING per this repo's error-handling policy so the failure is never
+  // silently discarded; the fail-closed halt is unaffected either way —
+  // permissionResult stays null and the checks below fall through to the
+  // same "registry unreadable"-shaped or "not permitted"-shaped halt.
+  log(
+    "[plan-feature][WARNING] Dispatching the workspace-setup registry-read " +
+    "check failed: " + (permErr && permErr.message ? permErr.message : permErr)
+  );
   permissionResult = null;
 }
 
-// Fail closed on all four not-granted outcomes, but report WHICH one it was:
-// a read failure, a parse failure, a missing entry and a real denial have four
-// different remedies, and three of them say nothing about the agent's charter.
-const registryVerdict = classifyWorkspaceSetupPermission(
-  permissionResult, workspaceSetupAgentId, AGENT_REGISTRY_PATH
-);
-const permitsShell = registryVerdict.permits;
+let permitsShell = false; // fail closed — missing/false/unresolvable all deny.
+// Set only when the registry READ ITSELF failed (I/O: no file, or read
+// permission refused) — a DIFFERENT fact than a successfully-read registry
+// that denies this agent shell access, and one that must produce a
+// DIFFERENT, permission-verdict-free report (ACD-2100b-1 / KI-ACD-009: the
+// two causes were previously collapsed into one misleading message).
+let registryUnreadable = null;
+// Set only when the registry was read successfully (exit_code 0, output is
+// a string) but that output does not parse as JSON — a THIRD, distinct fact
+// from both of the above: the file exists and was opened, but its contents
+// cannot be interpreted as a registry (e.g. a truncated/partial write).
+// Must never fall through to the permission-mis-assignment branch below,
+// which would assert a permission cause this check never established
+// (ACD-2100b-2 / KI-ACD-009 outcome 2).
+let registryUninterpretable = null;
+// Set to the four-state result of _resolveWorkspaceSetupAgentEntryState()
+// once the registry has been read and interpreted — distinguishes "entry
+// present and denied" from "entry absent" (and the entries-collection-
+// missing fourth state), so the halt report below can state the correct,
+// specific fact rather than a single collapsed permission verdict
+// (ACD-2100b-3 / KI-ACD-009 outcome 3).
+let workspaceSetupAgentEntryState = null;
+// Captures WHAT was found in the registry where the `agents` entries
+// collection was expected, whenever workspaceSetupAgentEntryState.state ===
+// "no_entries_collection" — so the halt report below can name it (its value
+// and its type) rather than assert an absence or denial verdict this check
+// never established (ACD-2100b-3-i).
+let noEntriesCollectionFoundValue;
+let noEntriesCollectionFound = false;
+try {
+  const registryParsed = parseAgentJson(
+    permissionResult,
+    { stage: "resolve-workspace-setup-permission", agent: "status-checker" }
+  );
+  const rawExitCode = registryParsed ? registryParsed.exit_code : undefined;
+  const readExitCode = (typeof rawExitCode === "number")
+    ? rawExitCode
+    : (typeof rawExitCode === "string" && rawExitCode.trim() !== "" && !isNaN(Number(rawExitCode)))
+      ? Number(rawExitCode)
+      : null;
+  if (readExitCode !== null && readExitCode !== 0) {
+    const diagnosticText =
+      (typeof registryParsed.stderr === "string" ? registryParsed.stderr : "") +
+      "\n" +
+      (typeof registryParsed.output === "string" ? registryParsed.output : "");
+    registryUnreadable = _parseRegistryUnreadableDiagnostic(diagnosticText);
+  } else if (registryParsed && typeof registryParsed.output === "string") {
+    let registryJson = null;
+    try {
+      registryJson = JSON.parse(registryParsed.output);
+    } catch (interpretErr) {
+      // Caught by type (SyntaxError from JSON.parse) and logged at WARNING
+      // before the halt below, per this repo's error-handling policy — this
+      // must never propagate as an unhandled failure, and must never be
+      // allowed to silently fall through to the permitsShell=false path,
+      // which would render the SAME report as a genuine permission denial.
+      registryUninterpretable = _describeRegistryInterpretationFailure(
+        registryParsed.output, interpretErr
+      );
+    }
+    if (!registryUninterpretable) {
+      workspaceSetupAgentEntryState = _resolveWorkspaceSetupAgentEntryState(
+        registryJson, workspaceSetupAgentId
+      );
+      permitsShell = workspaceSetupAgentEntryState.state === "permitted";
+      if (workspaceSetupAgentEntryState.state === "no_entries_collection") {
+        // Record WHAT was found in place of the `agents` collection — the
+        // registry parsed cleanly as JSON (registryJson is truthy) but its
+        // `agents` field is not an array — so the halt report can name the
+        // value/type an operator can use to tell a wrong file from a
+        // structurally changed one (ACD-2100b-3-i).
+        noEntriesCollectionFound = true;
+        noEntriesCollectionFoundValue = registryJson ? registryJson.agents : undefined;
+      }
+    }
+  }
+} catch (registryInterpretErr) {
+  // Unexpected failure anywhere in the registry-interpretation block above
+  // (distinct from the two named, already-reported facts `registryUnreadable`
+  // and `registryUninterpretable`, which this catch must never mask — those
+  // are set and returned as their own halt branches before this one is ever
+  // consulted). Logged at WARNING per this repo's error-handling policy so
+  // the failure is never silently discarded. Fail closed regardless:
+  // permitsShell stays false and the run halts via the "not permitted"
+  // branch below.
+  log(
+    "[plan-feature][WARNING] Unexpected error while resolving the " +
+    "workspace-setup permission from the agent registry: " +
+    (registryInterpretErr && registryInterpretErr.message ? registryInterpretErr.message : registryInterpretErr)
+  );
+  permitsShell = false; // fail closed on any parse error
+}
+
+if (registryUninterpretable) {
+  // The registry was read successfully but its contents could not be
+  // interpreted as JSON (e.g. a truncated/partial write) — a distinct fact
+  // from both "the registry could not be read at all" (below) and "this
+  // agent is denied shell access" (further below), and one that must never
+  // be worded as either. Fail closed: the run still stops; only the
+  // diagnosis changes.
+  const uninterpretableMessage =
+    "The agent registry was read successfully but its contents could not be " +
+    "interpreted as valid JSON. Interpretation stopped at position " +
+    registryUninterpretable.position + " (line " + registryUninterpretable.line +
+    "), near: \"" + registryUninterpretable.fragment + "\". Reason: " +
+    registryUninterpretable.reasonText + " Halting before any authoring agent " +
+    "is dispatched.";
+  log("[plan-feature][WARNING] " + uninterpretableMessage);
+  await agent(
+    uninterpretableMessage,
+    { agentType: "status-checker", label: "workspace-setup-registry-uninterpretable" }
+  );
+  return { status: "error", message: uninterpretableMessage };
+}
+
+if (registryUnreadable) {
+  // External I/O failure (the registry read command itself failed) —
+  // logged at WARNING before the halt, per this repo's error-handling
+  // policy. Fail closed: the run still stops; only the diagnosis changes.
+  const unreadableMessage =
+    "The agent registry could not be read. Location tried: " + registryUnreadable.location +
+    ". Reason: " + registryUnreadable.reasonText +
+    " Halting before any authoring agent is dispatched.";
+  log("[plan-feature][WARNING] " + unreadableMessage);
+  await agent(
+    unreadableMessage,
+    { agentType: "status-checker", label: "workspace-setup-registry-unreadable" }
+  );
+  return { status: "error", message: unreadableMessage };
+}
 
 if (!permitsShell) {
-  await agent(
+  // Three distinct facts about the registry's own contents, and only ONE of
+  // them may be reported as a permission verdict (ACD-2100b-3 / KI-ACD-009
+  // outcome 3): the entry EXISTS and withholds permission ("denied"), the
+  // entry does not exist in a real entries collection ("absent" — "not
+  // listed", never a permission verdict about a nonexistent entry), or the
+  // entries collection itself is not there at all ("no_entries_collection" —
+  // a registry that parses but cannot be used, not a synonym for "absent"
+  // and never reported as one, ACD-2100b-3-i). Every halt fails closed
+  // identically (the run stops before any authoring agent is dispatched);
+  // only the diagnosis differs, and naming the permission setting is
+  // reserved for the case where a permission fact was actually established.
+  const agentIsListedAndDenied =
+    !!workspaceSetupAgentEntryState && workspaceSetupAgentEntryState.state === "denied";
+  const registryHasNoEntriesCollection =
+    !!workspaceSetupAgentEntryState &&
+    workspaceSetupAgentEntryState.state === "no_entries_collection";
+
+  if (agentIsListedAndDenied) {
+    const deniedMessage =
+      "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
+      workspaceSetupAgentId + "', which is listed in the agent registry (config/agent_registry.json) " +
+      "but is not permitted to run repository-mutating shell commands. Halting before any authoring " +
+      "agent is dispatched. Report this mis-assignment to the operator: step='worktree-setup', " +
+      "agent='" + workspaceSetupAgentId + "'.";
+    log("[plan-feature][WARNING] " + deniedMessage);
+    await agent(
+      deniedMessage,
+      { agentType: "status-checker", label: "workspace-setup-mis-assignment" }
+    );
+    return {
+      status: "error",
+      message:
+        "Workspace-setup step 'worktree-setup' is configured to dispatch to agent '" +
+        workspaceSetupAgentId + "', which is listed in config/agent_registry.json but denies " +
+        "running repository/shell commands. Halting before any authoring agent is dispatched. " +
+        "Fix config/agent_registry.json's permits_shell field for that agent.",
+    };
+  }
+
+  if (registryHasNoEntriesCollection) {
+    // The registry parsed cleanly as JSON, but its `agents` field is not a
+    // list of agent entries at all — the check never got as far as looking
+    // for this agent's id inside a collection, because there was no
+    // collection to search. This is a THIRD distinct fact about the
+    // registry's contents, not a synonym for "absent" (which would assert an
+    // absence verdict this check never established) nor for "denied" (which
+    // would assert a permission fact this check never established). Name
+    // WHAT was found where the agent entries were expected, so the operator
+    // can tell a wrong file from a structurally changed one (ACD-2100b-3-i).
+    const foundValue = noEntriesCollectionFound ? noEntriesCollectionFoundValue : undefined;
+    const foundTypeText = typeof foundValue;
+    let foundValueText;
+    try {
+      foundValueText = JSON.stringify(foundValue);
+    } catch (_stringifyErr) {
+      foundValueText = String(foundValue);
+    }
+    const noEntriesCollectionMessage =
+      "The agent registry (config/agent_registry.json) could not be used: its 'agents' field is " +
+      "not a list of agent entries. Found " + foundTypeText + " " + foundValueText + " where the " +
+      "agent entries collection was expected. Halting before any authoring agent is dispatched. " +
+      "Fix config/agent_registry.json so that 'agents' is a list of agent entries.";
+    log("[plan-feature][WARNING] " + noEntriesCollectionMessage);
+    await agent(
+      noEntriesCollectionMessage,
+      { agentType: "status-checker", label: "workspace-setup-registry-no-entries-collection" }
+    );
+    return { status: "error", message: noEntriesCollectionMessage };
+  }
+
+  // The entry does not exist in the registry at all — no permission fact was
+  // ever established, so this report must never name a permission setting;
+  // doing so would send the operator to audit an agent entry that does not
+  // exist (this is the defect ACD-2100b-3 removes).
+  const notFoundMessage =
     "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
-    workspaceSetupAgentId + "', and the run was halted before any authoring agent was dispatched " +
-    "because that dispatch could not be confirmed as permitted.\n" +
-    "Cause (" + registryVerdict.outcome + "): " + registryVerdict.cause + "\n" +
-    "Remedy: " + registryVerdict.remedy + "\n" +
-    "Report this to the operator: step='worktree-setup', agent='" + workspaceSetupAgentId + "'.",
-    { agentType: "status-checker", label: "workspace-setup-mis-assignment" }
+    workspaceSetupAgentId + "', but that agent was not found in the registry " +
+    "(config/agent_registry.json). Halting before any authoring agent is dispatched. " +
+    "Report this mis-assignment to the operator: step='worktree-setup', agent='" +
+    workspaceSetupAgentId + "'.";
+  log("[plan-feature][WARNING] " + notFoundMessage);
+  await agent(
+    notFoundMessage,
+    { agentType: "status-checker", label: "workspace-setup-agent-not-found" }
   );
   return {
     status: "error",
-    halt_cause: registryVerdict.outcome,
     message:
       "Workspace-setup step 'worktree-setup' is configured to dispatch to agent '" +
-      workspaceSetupAgentId + "'. Halting before any authoring agent is dispatched, because " +
-      registryVerdict.cause + "\n" +
-      "Remedy: " + registryVerdict.remedy,
+      workspaceSetupAgentId + "', which was not found in the registry. Halting before any " +
+      "authoring agent is dispatched. Add an entry for that agent to config/agent_registry.json, " +
+      "or fix the workspace_setup_agent configuration to point at an agent that is listed.",
   };
 }
 
 let authoringWorktreePath = null;
 let acStoreDir = "docs/acceptance-criteria"; // default: overridden below
 
+// Resolve the setup script to an ABSOLUTE, repository-anchored location
+// BEFORE building the worktree-setup dispatch's own command text — never a
+// `{{config.output_root}}`-relative path, whose resolution would depend on
+// the dispatching agent's own working directory and could silently select
+// the wrong physical copy (KI-ACD-004, ACD-2100a-1). Learning the resolved
+// path via a dedicated dispatch first (rather than resolving it inline
+// inside the worktree-setup command) is what lets the worktree-setup
+// dispatch's own static command text carry the literal absolute path,
+// satisfying "the run's own record of the command it issued names an
+// absolute location" rather than an unexpanded shell variable.
+const worktreeScriptResolution = await resolveRepoAnchoredScriptPath(
+  "scripts/setup_ticket_worktree.py", "status-checker", "resolve-worktree-setup-script-path"
+);
+
+// The worktree-setup step is dispatched EXACTLY ONCE either way. On success
+// it runs the resolved, absolute, repository-anchored invocation. On
+// failure it re-issues the SAME resolution command, which fails again for
+// real and deterministically — so the failure, and the exact location that
+// could not be resolved, is observable on the worktree-setup step's own
+// record. This must never silently fall back to a `{{config.output_root}}`-
+// relative invocation that could select the wrong physical copy (AC-3).
+const worktreeSetupCommand = worktreeScriptResolution.ok
+  ? "python \"" + worktreeScriptResolution.path + "\" create-ac-worktree" +
+    (sessionSlug ? ` "${sessionSlug}"` : "")
+  : buildRepoAnchoredResolutionCommand("scripts/setup_ticket_worktree.py");
+
 let worktreeSetupResult;
 try {
   worktreeSetupResult = await agent(
     "Run the following command and return ONLY the raw stdout output:\n" +
-    "python {{config.output_root}}/scripts/setup_ticket_worktree.py create-ac-worktree" +
-    (sessionSlug ? ` "${sessionSlug}"` : "") + "\n" +
+    worktreeSetupCommand + "\n" +
     "Return JSON: { \"output\": \"<raw stdout line>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
     { agentType: workspaceSetupAgentId, label: "worktree-setup" }
   );

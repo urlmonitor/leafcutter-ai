@@ -35,9 +35,9 @@ criteria: |
 depends_on: [ACD-2100e, ACD-2100c-1, ACD-2100c-2, ACD-2100c-4, ACD-2100c-5]
 doc_links:
   - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
-    relationship: describes
+    relationship: creates
     status: planned
-    relevance: "THE TARGET FILE. ACD-2100c-1, c-2, c-4 and c-5 already link this exact path as planned; publishing under any other name leaves all four dangling and check-doc-links cannot catch a target that never appears."
+    relevance: "THE TARGET FILE, AND THIS RECORD'S SOLE DELIVERABLE. Relationship is 'creates' rather than 'describes' because this record authors the diagram -- the four siblings that merely reference it (ACD-2100c-1, c-2, c-4, c-5) keep 'describes'. It read 'describes' until 2026-08-31, which made every one of those four inherit this path as their own documentation target while leaving this record indistinguishable from a consumer; see BO-2200c-5-i. Publishing under any other name leaves all four dangling and check-doc-links cannot catch a target that never appears."
   - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists

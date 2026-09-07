@@ -3,7 +3,7 @@ title: Build-Drift Pre-Commit Hooks (Direction A + Direction B)
 type: how-to
 status: active
 created: 2026-05-13
-last_updated: 2026-08-18
+last_updated: 2026-08-31
 components:
 - commit_guardian
 - infrastructure
@@ -186,15 +186,41 @@ the module-level `shim_map` in `scripts/build_helpers.py` (the same table
 entry extends `output_mappings` coverage without a second, independently
 maintained list.
 
-### Edge cases — safe exits (no false-blocks)
+### Edge cases
 
 | Situation | Behaviour |
 |---|---|
 | `.build_manifest.json` absent (fresh clone) | Warn on stderr, exit 0 |
 | `output_mappings` section absent (old manifest format) | Warn on stderr, exit 0 |
-| Output file on disk but NOT in `output_mappings` | INFO warning on stderr, skip file, exit 0 |
-| Output file in `output_mappings` but missing on disk | INFO warning on stderr, skip entry, exit 0 |
+| Output file on disk but NOT in `output_mappings`, with a grounded exemption declared | `UNCOMPARABLE: EXEMPT <key> ground=<ground>` on stderr, counted in the `exempt` field of the `RESULT` line, never blocks (exit 0) |
+| Output file on disk but NOT in `output_mappings`, with no grounded exemption declared | `UNCOMPARABLE: GAP <key> action=run build.py to register it` on stderr, counted in the `gaps` field, drives a non-clean, non-zero exit |
+| Output file in `output_mappings` but missing on disk | `UNCOMPARABLE: MISSING <key> reason=recorded but not found on disk` on stderr, counted in the `missing` field, always drives a non-zero exit — deletion is the most complete form of drift |
+| Output file in `output_mappings`, present on disk, but unreadable (permission error, or not a regular file) | `UNCOMPARABLE: UNREADABLE <key> reason=<detail>` on stderr, counted in the `unreadable` field, always drives a non-zero exit |
 | Template AND output both changed in same commit, output matches re-render | Exit 0 (hashes agree) |
+
+**This table describes the current, verified behaviour as of `BP-100k-3` / `BP-100k-6`
+(2026-08-18) plus the adversarial-review `UNREADABLE` case added afterward.** Before those
+fixes, both "not in `output_mappings`" rows above collapsed into a single silent
+`INFO warning on stderr, skip file, exit 0` path — which meant an unmapped file was reported
+identically to a file that was checked and found clean, and a hardcoded (rather than
+installer-derived) scan/key namespace meant *every* deployed output took that path, so the
+hook never actually compared anything. That regression is recorded in full in
+[`docs/known-issues/commit-guardian.md`](known-issues/commit-guardian.md) `KI-CG-034`, along
+with the companion trigger defect below. Do not reintroduce a silent skip on the unmapped
+path — every uncomparable case above must print a line and be counted in the `RESULT`
+summary, whether or not it blocks the commit.
+
+The `RESULT` line format is `RESULT verified=<N> uncomparable=<M> exempt=<E> gaps=<G>
+drifted=<D> missing=<X> unreadable=<Y>`. Only `drifted`, `gaps`, `missing`, and `unreadable`
+drive a non-zero exit; `exempt` entries are reported for visibility but never block, per the
+grounded-exemption contract above.
+
+**The hook's pre-commit trigger does not filter by staged path.** `check-output-drift`'s
+entry in `scripts/commit_guardian/commit_guardian.json` carries `"always_run": true` rather
+than a `files:` path-prefix filter (`BP-100k-4`). This is deliberate, not an oversight: the
+hook scans the whole output tree by content hash and never consults the staged file list
+(`pass_filenames: false`), so a `files:` filter would silently exclude any output deployed
+under a differently-configured output root — precisely the second half of `KI-CG-034`.
 
 ### Fixing a Direction B block
 
@@ -486,3 +512,13 @@ disables the hook without removing it from `.pre-commit-config.yaml`.
 
 - `leafcutter/docs/build-pipeline.md` — architecture of the
   template compilation pipeline.
+
+- `docs/known-issues/commit-guardian.md` `KI-CG-034` — the scanner/installer namespace
+  mismatch and stale `files:` trigger that made Direction B report a false clean on every
+  deployed output; records when and how the fix (`BP-100k-3`, `BP-100k-4`, `BP-100k-6`)
+  landed, and what `ACD-2100d-2` added on top of it.
+
+- `unit_tests/build_guards/test_acd_2100d_2.py` — behavioural tests that hand-edit a real
+  deployed output file, confirm it is reported by name and blocks the commit, confirm the
+  verdict is consumed where "delivered" is decided, and confirm re-running `build.py`
+  removes the reported repair.

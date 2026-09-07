@@ -259,9 +259,13 @@ def test_gate_pauses_instead_of_cancelling():
         f"A bare-object dispatch is phantom persistence — the agent never writes the file."
     )
 
-    # The string must contain the pause_store.py write instruction.
-    assert "scripts/pause_store.py write" in prompt, (
-        f"pause-persist prompt must contain 'scripts/pause_store.py write'. "
+    # The string must invoke pause_store.py's write subcommand. buildPauseStoreCommand()
+    # (ACD-2100a-4) moved the top-level --store-dir option ahead of the subcommand
+    # token, so the two are no longer contiguous — require both fragments instead of
+    # one literal substring (anti-phantom: still requires the real parameterized
+    # invocation, not merely a mention of the script name).
+    assert "pause_store.py" in prompt and "write --run-id" in prompt, (
+        f"pause-persist prompt must invoke 'pause_store.py' with 'write --run-id'. "
         f"Got: {prompt[:300]}"
     )
 
@@ -656,8 +660,16 @@ def test_valid_answer_applied_by_type_and_resumes_from_pause():
         f"Got labels: {[c.label for c in result2.agent_calls]}"
     )
     read_prompt = reads2[0].prompt
-    assert isinstance(read_prompt, str) and "pause_store.py read" in read_prompt, (
-        f"read-pause-record prompt must contain 'pause_store.py read' instruction. "
+    # buildPauseStoreCommand() (ACD-2100a-4) puts --store-dir ahead of the subcommand
+    # token, so 'pause_store.py' and 'read' are no longer contiguous — require both
+    # fragments (still anchored on the parameterized 'read --run-id' invocation, not
+    # a bare mention of the script name).
+    assert (
+        isinstance(read_prompt, str)
+        and "pause_store.py" in read_prompt
+        and "read --run-id" in read_prompt
+    ), (
+        f"read-pause-record prompt must invoke 'pause_store.py' with 'read --run-id'. "
         f"Got: {str(read_prompt)[:200]}"
     )
 
@@ -1231,9 +1243,13 @@ def test_pause_persist_is_verified_by_readback():
     assert isinstance(prompt, str), (
         f"pause-persist-verify prompt must be an INSTRUCTION STRING, got {type(prompt)}"
     )
-    assert "pause_store.py read" in prompt, (
+    # buildPauseStoreCommand() (ACD-2100a-4) puts --store-dir ahead of the subcommand
+    # token, so 'pause_store.py' and 'read' are no longer contiguous — require both
+    # fragments (still anchored on the parameterized 'read --run-id' invocation, not
+    # a bare mention of the script name).
+    assert "pause_store.py" in prompt and "read --run-id" in prompt, (
         "The verify dispatch must actually run the read command; a prompt without "
-        f"'pause_store.py read' verifies nothing. Prompt: {prompt[:300]}"
+        f"'pause_store.py' + 'read --run-id' verifies nothing. Prompt: {prompt[:300]}"
     )
 
 
