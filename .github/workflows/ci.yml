@@ -459,3 +459,21 @@ jobs:
         # github.workspace itself, which holds only the leafcutter-ai/
         # checkout at this point.
         run: python leafcutter-ai/scripts/ci/check_consumer_install.py --package-dir leafcutter-ai --target-dir . --use-install
+
+      - name: Check declaring files resolve from the deployed output root
+        # AC BP-900h-4. .leafcutter is the deployed output root the step
+        # above just built as a sibling of the leafcutter-ai/ checkout.
+        # Non-zero here is a real, load-bearing failure — this step
+        # deliberately carries no continue-on-error.
+        run: python leafcutter-ai/scripts/ci/check_declaring_files.py --deployed-root .leafcutter
+
+      - name: Check declaring files resolve across every install layout
+        # AC BP-900h-4-i. Layout (a) — the prescribed leafcutter-ai/ package
+        # directory name, main checkout — is this job's own already-built
+        # install; the layout-set config names it as one entry so this same
+        # multi-layout entry point (never a second, single-layout-only path)
+        # covers the self-hosted-shape control this job already stands up.
+        # Non-zero here is likewise load-bearing; no continue-on-error.
+        run: |
+          python -c "import json; json.dump([{'layout': 'prescribed-name', 'deployed_root': '.leafcutter', 'package_dir_name': 'leafcutter-ai', 'is_worktree': False}], open('layout_set.json', 'w'))"
+          python leafcutter-ai/scripts/ci/check_declaring_files.py --layout-set layout_set.json
