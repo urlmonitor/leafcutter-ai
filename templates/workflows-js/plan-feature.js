@@ -2204,7 +2204,18 @@ try {
     "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number>, \"stderr\": \"<raw stderr, or empty>\" }",
     { agentType: "status-checker", label: "resolve-workspace-setup-permission" }
   );
-} catch (_permErr) {
+} catch (permErr) {
+  // External I/O failure dispatching the registry-read check itself (as
+  // opposed to the registry read succeeding but returning a non-zero exit
+  // code, which is handled below as `registryUnreadable`). Logged at
+  // WARNING per this repo's error-handling policy so the failure is never
+  // silently discarded; the fail-closed halt is unaffected either way —
+  // permissionResult stays null and the checks below fall through to the
+  // same "registry unreadable"-shaped or "not permitted"-shaped halt.
+  log(
+    "[plan-feature][WARNING] Dispatching the workspace-setup registry-read " +
+    "check failed: " + (permErr && permErr.message ? permErr.message : permErr)
+  );
   permissionResult = null;
 }
 
@@ -2284,7 +2295,20 @@ try {
       }
     }
   }
-} catch (_parseErr) {
+} catch (registryInterpretErr) {
+  // Unexpected failure anywhere in the registry-interpretation block above
+  // (distinct from the two named, already-reported facts `registryUnreadable`
+  // and `registryUninterpretable`, which this catch must never mask — those
+  // are set and returned as their own halt branches before this one is ever
+  // consulted). Logged at WARNING per this repo's error-handling policy so
+  // the failure is never silently discarded. Fail closed regardless:
+  // permitsShell stays false and the run halts via the "not permitted"
+  // branch below.
+  log(
+    "[plan-feature][WARNING] Unexpected error while resolving the " +
+    "workspace-setup permission from the agent registry: " +
+    (registryInterpretErr && registryInterpretErr.message ? registryInterpretErr.message : registryInterpretErr)
+  );
   permitsShell = false; // fail closed on any parse error
 }
 
