@@ -59,6 +59,32 @@ covered_by: []
 implemented_by:
   - docs/product-truth/schemas/mockup.schema.json
   - docs/product-truth/mockups/fern-and-fig/plant-listing.mockup.json
+test_required: true
+test_spec:
+  - name: test_every_registered_mockup_validates_against_the_mockup_schema
+    target_dir: unit_tests/product_truth/
+    description: "Each *.mockup.json in the store validates against mockup.schema.json, so the mockup is a schema-governed artifact type rather than a convention."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_every_step_screen_id_resolves_to_a_registered_mockup
+    target_dir: unit_tests/product_truth/
+    description: "A flow step carrying a screen id resolves to a mockup registered in the index; an unresolvable screen id is reported so the validator can gate on it."
+    type: integration
+    angle: seam
+    framework: unittest
+  - name: test_one_mockup_is_fully_drawn_and_the_remainder_are_registered_stubs
+    target_dir: unit_tests/product_truth/
+    description: "Exactly one mockup carries the fully drawn worked reference while the others are registered stubs whose steps still resolve, so the artifact type has a reference without every screen being finished."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_the_worked_reference_is_registered_under_the_example_product_root
+    target_dir: unit_tests/product_truth/
+    description: "The fully drawn reference resolves under the example product's own root and is not registered as a screen of the project's own product, so example content demonstrates the type without standing in for the real record."
+    type: integration
+    angle: boundary
+    framework: unittest
 change_target: code
 risk_surface: internal
 notes: |

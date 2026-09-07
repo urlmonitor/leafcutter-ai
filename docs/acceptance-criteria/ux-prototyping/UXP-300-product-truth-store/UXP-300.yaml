@@ -42,5 +42,31 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_required: true
+test_spec:
+  - name: test_every_registered_artifact_resolves_under_a_declared_store_directory
+    target_dir: unit_tests/product_truth/
+    description: "Every artifact the index registers resolves to a path under flows/, mock-data/ or mockups/; a registration pointing outside those three is reported, not ignored."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_one_canonical_dataset_per_entity_per_component
+    target_dir: unit_tests/product_truth/
+    description: "No entity is carried by two mock-data artifacts within the same component; a second dataset for an entity already covered is rejected rather than merged, so the store grows by extension and never by duplication."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_flow_to_ac_is_authored_and_the_reverse_edge_is_derived
+    target_dir: unit_tests/product_truth/
+    description: "step.implements is the only authored link direction: an AC's product_truth back-reference is recomputed from the flow steps that name it, and a hand-written back-reference no flow supports is reported."
+    type: integration
+    angle: seam
+    framework: unittest
+  - name: test_the_store_passes_its_own_validator
+    target_dir: unit_tests/product_truth/
+    description: "validate_product_truth.py exits zero against the committed store, and the run states how many artifacts it examined so a pass over an empty store is distinguishable from a real one."
+    type: integration
+    angle: deployed
+    framework: unittest
 change_target: config
 risk_surface: internal
