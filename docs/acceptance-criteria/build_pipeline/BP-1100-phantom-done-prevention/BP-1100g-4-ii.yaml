@@ -1,0 +1,123 @@
+id: BP-1100g-4-ii
+components:
+  - build_pipeline
+title: "A plan is not yet a hand-off: work still declared as only planned is not refused for a proof it has not reached the point of owing, and anything that cannot be read as still-planned is"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work whose plan promises a kind of proof,
+  And that work declares itself as still only planned — not started, not
+    offered for hand-off,
+  And no test yet claims the promised kind,
+  When the promise-versus-claim check runs over it,
+  Then it is not refused, and the outcome states that the work was passed over
+    because it is still a plan, so being passed over is distinguishable in the
+    output from having been examined and found complete,
+  And given the same work, with the same promise and the same absent claim, now
+    declaring itself as started or as offered for hand-off,
+  When the check runs again,
+  Then it is refused exactly as before, naming the piece of work, the stated
+    behaviour and the unclaimed kind — the point at which a claim falls due
+    moves, and nothing about what counts as a claim moves with it,
+  And given work whose declaration of its own state is absent, unreadable, or
+    otherwise cannot be established,
+  When the check runs,
+  Then it is examined rather than passed over, because a state that cannot be
+    read is not evidence of being early — the same posture this check already
+    takes when it cannot read the work at all,
+  And given work offered for hand-off whose every promised kind is claimed,
+  When the check runs,
+  Then it is not refused,
+  And in no case does the outcome describe a piece of work that was passed over
+    as one whose proofs were reached.
+depends_on:
+  - BP-1100g-4
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-4.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/scripts/commit_guardian/check_proof_promise_claim.py"
+    relationship: modifies
+    status: exists
+    relevance: "main() reads every staged ticket identically and has no notion of the work's declared state, so it demands the claim at the moment the promise is written"
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    proof_promise_claim_planned_skip:
+      type: object
+      description: "The passed-over outcome of the promise-versus-claim check: work whose own declared state is still 'planned' is recorded by name as passed over for that reason, separately from work that was examined and had every promised kind claimed. Keeps 'not yet due' readable in the output rather than silently indistinguishable from 'clean'."
+  reference_file_path: "templates/scripts/commit_guardian/check_proof_promise_claim.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "THE PARENT ALREADY SAYS THIS. BP-1100g-4's criteria read 'When the work is offered for hand-off, then it is refused'. The shipped check never implemented that trigger — it refuses on any staged ticket, including one created moments earlier that no coder has touched. This edge case pins down what 'offered for hand-off' means operationally; it does not add a rule the parent lacked."
+    - "Exempt ONLY the still-planned state. Everything else — started, offered, blocked, deferred — remains subject to the check. Reducing the trigger to the finished state alone would open a real hole: this repository mandates that the test writer runs before the coder, so by the time work is started the claims genuinely should exist."
+    - "FAIL CLOSED on anything unclear. Absent, unparseable, or unrecognised state must be examined, never passed over. This module already models the posture: it reports work it cannot read as its own non-zero condition rather than folding it into 'no claim'."
+    - "Do not touch the promise extraction, the claim index, the comparison, or the refusal wording. The comparison is correct; only the decision about WHICH work is subject to it is wrong. Widening or narrowing what counts as a claim would change the parent's meaning, which is out of scope."
+    - "The passed-over outcome must be stated. Work skipped as still-planned that produced no output at all would be indistinguishable from work that was examined and found complete — the exact conflation this whole L1 exists to prevent."
+    - "Must follow the repo error-handling policy: specific-exception try/except around file and parse I/O, log at WARNING or higher or re-raise; no bare or blind excepts. A parse failure while reading the declared state must reach the fail-closed path, never a swallowed exception and a pass."
+test_spec:
+  - name: test_planned_work_with_an_unclaimed_promise_is_passed_over_and_says_so
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The check, executed as a process over work that declares itself still planned and carries an unclaimed promised kind, terminates with exit status zero and states in its output that the work was passed over for being still a plan."
+  - name: test_the_same_work_once_started_is_still_refused_by_name
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Byte-identical work apart from its declared state, moved from planned to started, is refused by the executed check with a non-zero exit and names the piece of work and the unclaimed kind — the mutation proof that the change narrows when the check applies rather than disabling it."
+  - name: test_the_same_work_once_offered_for_handoff_is_still_refused_by_name
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The same work declaring itself offered for hand-off is likewise refused with a non-zero exit, establishing that only the still-planned state is passed over and not every state other than the finished one."
+  - name: test_work_with_no_readable_state_is_examined_not_passed_over
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Work carrying no declaration of its own state, and work whose declaration cannot be parsed, are each examined by the executed check and each refused on the unclaimed promise — an unreadable state is never treated as evidence of being early."
+  - name: test_handed_off_work_whose_promise_is_claimed_is_not_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Work offered for hand-off whose promised kind is claimed by a tagged test exits zero, and its output describes it as examined and complete rather than as passed over — the two outcomes stay distinguishable."
+test_rationale: "The defect is a trigger condition, and a trigger condition is invisible to any test that reads the module: an implementation that checks everything and one that checks only what is due are source-shaped alike, differing solely in a decision made at run time against a value in the input. Per CLAUDE.md ('Gate / Workflow ACs — Verify Behaviorally, Not by Grep') a source-reading test is forbidden here. Every descriptor therefore executes the check as a process and asserts on its exit status and emitted output. Two of them are load-bearing against the obvious wrong fix: exempting on the finished state alone would leave started work unchecked, and passing over anything whose state cannot be read would turn a parse failure into a free pass — the fail-open inversion this register exists to catch. The pair of started and offered descriptors exists so that a fix which exempts 'anything not finished' is caught rather than accepted."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100g-4
+  contract: "The promise-versus-claim refusal and its 'offered for hand-off' trigger, whose operational meaning this edge case pins down — work still declared as planned has not reached the point at which a claim falls due."
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by:
+  - by: BrainCandy
+    at: 2026-09-07
+    note: >-
+      work_status set to done on measured evidence, not on the fix landing. The
+      five behavioural tests were confirmed RED against the unmodified deployed
+      hook (5 failed), GREEN after the fix (5 passed), RED again with the fix
+      stashed AND the tree rebuilt (5 failed), and GREEN once restored and
+      rebuilt. The rebuild step is load-bearing: these tests execute the
+      DEPLOYED hook as a subprocess, so stashing the template alone leaves the
+      fixed copy running and the revert would have reported a false green —
+      which the workflow's mutation proof would then have read as "the test is
+      not coupled to the fix" and halted on. Sibling suite: 66 passed under
+      AC_ENFORCE_STRICT=1; ruff clean on the changed file.
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_bp_1100g_4_ii.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_proof_promise_claim.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: "Found on 2026-09-07 by the gate refusing a ticket that had just been generated from an approved AC: TICKET-20260907-BP-100k-4-ii.md, status todo, no implementation, refused for a 'reachability' proof whose test is by mandate the next phase's output. The gate landed on main the same day in #702, so the collision with the /build-ac path appears not to have been exercised before merge. Every AC-generated ticket carrying a reachability promise is blocked identically, which makes the documented ADR-012 path — /plan-feature then /build-ac — unusable end to end. Note that BP-1100g-4 is work_status done: what it specifies is right, and its own criteria already say the refusal belongs at hand-off; the shipped implementation simply never honoured that clause. It is left at done rather than flipped, with the unfinished work carried by this child."
