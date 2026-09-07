@@ -54,6 +54,7 @@ import json
 import subprocess
 import sys
 import uuid
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -147,14 +148,18 @@ def _build_layout(
     )
 
 
-def _build_self_hosted_layout(tmp_path_factory: pytest.TempPathFactory) -> _Layout:
+def _build_self_hosted_layout(deployed_parent: Path) -> _Layout:
     """The self-hosted control layout: package_dir_name matches THIS
     checkout's own directory name, deployed root built directly from THIS
     checkout — the exact shape this repository's own development
     environment uses, and the real thing rather than a clone of it (no
     clone needed: this checkout already exists on disk, and it is NEVER
-    torn down — see _all_layouts' teardown, which skips this identity)."""
-    deployed_parent = tmp_path_factory.mktemp("self-hosted")
+    torn down — see _all_layouts' teardown, which skips this identity).
+
+    *deployed_parent* must already exist and must be created by the caller
+    on the main thread (see _all_layouts) — pytest.TempPathFactory.mktemp is
+    not thread-safe, so this worker-invoked function must never call it
+    itself."""
     result = build_consumer_install(_WORKTREE_ROOT, deployed_parent, extra_args=["--no-shims"])
     assert result.returncode == 0, (
         f"build.py failed for the self-hosted control layout.\n"
@@ -169,7 +174,7 @@ def _build_self_hosted_layout(tmp_path_factory: pytest.TempPathFactory) -> _Layo
 
 
 @pytest.fixture(scope="module")
-def _all_layouts(tmp_path_factory: pytest.TempPathFactory) -> dict:
+def _all_layouts(tmp_path_factory: pytest.TempPathFactory) -> Generator[dict, None, None]:
     """Build ALL FOUR real layouts CONCURRENTLY (ThreadPoolExecutor — each
     worker's cost is a subprocess.run call, which releases the GIL, so this
     gets real wall-clock parallelism) and share them across every test in
@@ -181,22 +186,41 @@ def _all_layouts(tmp_path_factory: pytest.TempPathFactory) -> dict:
     pytest budget on its own, but combined with test_bp_900h_4.py's own
     fixture and normal timing variance it left too little margin. Building
     concurrently cuts this module's layout-construction wall time to
-    roughly the single SLOWEST layout rather than the sum of all four."""
+    roughly the single SLOWEST layout rather than the sum of all four.
+
+    THREAD-SAFETY OF THE PYTEST FIXTURE ITSELF: pytest.TempPathFactory is
+    NOT thread-safe. mktemp()'s lazy basetemp initialisation
+    (_ensure_relative_to_basetemp) races when called concurrently from
+    multiple worker threads, raising "... is not a normalized and relative
+    path" — reproduced deterministically under CI's fresh-clone conditions.
+    Every mktemp() call below therefore happens HERE, on the main thread,
+    before the ThreadPoolExecutor is created; the worker functions
+    (_build_layout via _build_clone, and _build_self_hosted_layout) only
+    ever receive already-created Path objects and never touch
+    tmp_path_factory (or any other pytest fixture object) themselves. This
+    is the only pytest fixture object touched anywhere in this module from
+    a worker thread — caplog, monkeypatch, and request are not used."""
     clone_specs = [
         ("prescribed-name", "leafcutter-ai", False),
         ("different-name", "vendor-package-dir", False),
         ("worktree", "leafcutter-ai", True),
     ]
 
+    # Allocate every temp directory the workers will need UP FRONT, on the
+    # main thread. Distinct clone identities are disambiguated by
+    # _build_layout's own uuid-suffixed subdirectory, so all three clones
+    # safely share one pre-allocated parent.
+    clone_root = tmp_path_factory.mktemp("layouts")
+    self_hosted_root = tmp_path_factory.mktemp("self-hosted")
+
     def _build_clone(spec: tuple[str, str, bool]) -> _Layout:
         identity, package_dir_name, as_worktree = spec
-        root = tmp_path_factory.mktemp("layouts")
-        return _build_layout(root, identity, package_dir_name, as_worktree=as_worktree)
+        return _build_layout(clone_root, identity, package_dir_name, as_worktree=as_worktree)
 
     layouts: dict[str, _Layout] = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         futures = [executor.submit(_build_clone, spec) for spec in clone_specs]
-        futures.append(executor.submit(_build_self_hosted_layout, tmp_path_factory))
+        futures.append(executor.submit(_build_self_hosted_layout, self_hosted_root))
         for future in concurrent.futures.as_completed(futures):
             layout = future.result()
             layouts[layout.identity] = layout
