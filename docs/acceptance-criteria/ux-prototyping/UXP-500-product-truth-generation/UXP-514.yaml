@@ -54,6 +54,38 @@ covered_by:
   - UXP-514-6
 implemented_by:
   - docs/product-truth/scripts/validate_product_truth.py
+test_required: true
+test_spec:
+  - name: test_validator_errors_when_stored_impl_status_diverges_from_recomputed
+    target_dir: unit_tests/product_truth/
+    description: "A step whose stored impl_status disagrees with the value recomputed from its ACs' work_status is reported by name and the run exits non-zero (D1)."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_validator_errors_on_product_truth_that_the_inversion_does_not_support
+    target_dir: unit_tests/product_truth/
+    description: "An AC whose product_truth block disagrees with the by_ac inversion, and an AC carrying a block no flow references, are each reported as their own named error (D2)."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_validator_errors_when_a_derived_index_diverges_from_a_fresh_rebuild
+    target_dir: unit_tests/product_truth/
+    description: "Each of by_component, by_entity, by_flow and by_ac is compared against a fresh rebuild and a divergence in any one names that key (D3)."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_unresolvable_screen_warns_on_a_draft_flow_and_errors_on_an_approved_one
+    target_dir: unit_tests/product_truth/
+    description: "The same unregistered screen id is a warning while its flow is unapproved and an error once it is approved, so the severity follows the flow's readiness rather than being fixed (D4)."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_each_check_reports_which_one_fired_rather_than_a_bare_exit_code
+    target_dir: unit_tests/product_truth/
+    description: "A run failing one check names that check, so a caller reading only the exit code is not the only way to tell D1 from D4."
+    type: integration
+    angle: real_artifact
+    framework: unittest
 change_target: code
 risk_surface: internal
 notes: |
