@@ -124,6 +124,21 @@ H-1 REVIEW-FINDING COVERAGE (tests 8, 9, 10, added 2026-09-07): a
     (never a hardcoded list of today's 8 ids, which is exactly the kind of
     assumption that went stale here) and asserts each one is EXEMPT when
     its real pattern matches nothing.
+
+SPLIT NOTE (BP-100n-4, check-file-size, 2026-09-07): test 10's registry-
+    driven guard covers TWO entry shapes in the same
+    hook_trigger_reachability_exemption_registry key — id-keyed (registered-
+    gate, EXEMPT) and, since BP-100n-4-i widened that key, script-keyed
+    (declared-non-gate, consumed by the disk census). The SCRIPT-keyed half
+    — its own test method, its own shape-partitioning setUp (including the
+    loud failure on a THIRD, unrecognised entry shape), the two line
+    regexes, and the env var name it alone needs — was split into the
+    sibling module test_bp_100k_4_ii_registry_shapes.py purely to keep this
+    file's line count from growing past check-file-size's limit a second
+    time. This module's own id-keyed test filters to id-keyed entries only
+    and does not re-assert the third-shape guard; that property lives
+    solely in the sibling module now, which is sufficient to keep it from
+    going stale a second time.
 """
 
 from __future__ import annotations
@@ -158,6 +173,11 @@ _NOTHING_TO_MATCH_LINE_RE = re.compile(r"NOTHING-TO-MATCH:\s*(\S+)")
 # by the H-1 regression tests (8, 9, 10) to check BOTH that a gate was
 # classified EXEMPT and that its real ground text was actually reported.
 _EXEMPT_LINE_RE = re.compile(r"EXEMPT:\s*(\S+)\s+ground=(.*)")
+# SPLIT NOTE (BP-100n-4, check-file-size): the DECLARED-NON-GATE /
+# UNREFERENCED line regexes and the HOOK_TEST_GATE_DIR env var name, needed
+# only by the SCRIPT-keyed half of test 10's H-1 guard, now live in the
+# sibling module test_bp_100k_4_ii_registry_shapes.py. See this module's
+# docstring "SPLIT NOTE" paragraph.
 
 # Test-only environment override this file's mutation-proof test (test 6)
 # requires the fix to honor: forces the pre-fix (kind-based == unreachable)
@@ -1073,23 +1093,28 @@ class TestFailClosedPropertyHoldsUnderTheNewOrdering(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# test_spec 10 (H-1 review finding, regression guard): every id in the REAL
-# hook_trigger_reachability_exemption_registry is classified EXEMPT when its
-# real pattern matches nothing — driven from the registry itself at run
-# time, never from a hardcoded list of today's 8 ids.
+# test_spec 10 (H-1 regression guard, ID-KEYED HALF ONLY — see this
+# module's "SPLIT NOTE" docstring paragraph and the class docstring below).
 # ---------------------------------------------------------------------------
 
 
 class TestEveryRealExemptionRegistryEntryStaysExemptOnZeroMatch(unittest.TestCase):
-    """Regression guard for H-1. Loads the real exemption registry AND the
-    real ``hooks_manifest.hooks`` pattern for every id it names, at run
-    time, and asserts every one of them is classified EXEMPT (never
-    NOTHING-TO-MATCH, never UNREACHABLE) in a repo tracking none of their
-    targets. A hardcoded list of ids would go stale exactly the way
-    ``has_location_anchor``'s '^' assumption did — this test cannot narrow
-    back to that shape, because it enumerates the registry's own ids at
-    run time and fails loudly (floor assertion) if the registry is ever
-    empty."""
+    """Regression guard for H-1 (ID-keyed half). Loads the real exemption
+    registry AND the real ``hooks_manifest.hooks`` pattern for every
+    id-keyed id it names, at run time, and asserts every one of them is
+    classified EXEMPT (never NOTHING-TO-MATCH, never UNREACHABLE) in a repo
+    tracking none of their targets. A hardcoded list of ids would go stale
+    exactly the way ``has_location_anchor``'s '^' assumption did.
+
+    Filters to id-keyed entries (``"id" in entry``) because BP-100n-4-i
+    widened this SAME registry key to also carry SCRIPT-keyed
+    declared-non-gate records (``{"script": ..., "ground": ...}``), which
+    this id-keyed-only test does not concern itself with. The SCRIPT-keyed
+    half of this H-1 guard — plus the loud failure on a THIRD, unrecognised
+    entry shape, which is what stops the shape split itself from going
+    stale a second time — lives in the sibling module
+    test_bp_100k_4_ii_registry_shapes.py.
+    """
 
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory()
@@ -1102,17 +1127,14 @@ class TestEveryRealExemptionRegistryEntryStaysExemptOnZeroMatch(unittest.TestCas
         registry = _load_real_registry()
         real_hooks = _real_hooks_manifest_hooks(registry)
         exemption_entries = _real_exemption_entries(registry)
-        self.exemption_ids = [entry["id"] for entry in exemption_entries]
+        self.id_keyed_ids = [
+            entry["id"] for entry in exemption_entries if isinstance(entry, dict) and "id" in entry
+        ]
         self.assertGreater(
-            len(self.exemption_ids),
-            0,
-            msg=(
-                "setup bug / vacuous-test guard: the real "
-                "hook_trigger_reachability_exemption_registry is empty — "
-                "this test would trivially pass over zero entries"
-            ),
+            len(self.id_keyed_ids), 0, msg="setup bug / vacuous-test guard: zero id-keyed ids found"
         )
-        entries_under_test = [_find_hook_entry(real_hooks, gid) for gid in self.exemption_ids]
+
+        entries_under_test = [_find_hook_entry(real_hooks, gid) for gid in self.id_keyed_ids]
 
         fd, path = tempfile.mkstemp(suffix=".json")
         os.close(fd)
@@ -1139,7 +1161,7 @@ class TestEveryRealExemptionRegistryEntryStaysExemptOnZeroMatch(unittest.TestCas
         nothing_to_match_ids = set(_NOTHING_TO_MATCH_LINE_RE.findall(combined))
         unreachable_ids = set(_UNREACHABLE_LINE_RE.findall(combined))
 
-        for gate_id in self.exemption_ids:
+        for gate_id in self.id_keyed_ids:
             self.assertIn(
                 gate_id,
                 exempt_ids,
