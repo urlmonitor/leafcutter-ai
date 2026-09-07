@@ -162,3 +162,12 @@ ENTROPY_HIGH:changelogs/2026-09-01-1240-a-claim-is-taken-at-face-value-and-now-t
 # allowlist trip the scanner it suppresses. Glob, not per-line: the catalogue grows.
 # Duplicated to the workspace root per the dual-update rule.
 ENTROPY_HIGH:docs/reference/false-green-mechanisms.md:*
+
+# The proof-claims reference page and the BP-1100g-tail changelog entry each cite a
+# date-and-slug known-issue id in prose. Long hyphenated tokens that read as high-entropy
+# to the scanner; not credentials. The ids are deliberately NOT reproduced here: quoting
+# one makes this allowlist trip the very check it suppresses. Glob, not per-line: both are
+# prose files that grow.
+# Duplicated to the workspace root per the dual-update rule.
+ENTROPY_HIGH:docs/reference/proof-claims-and-completeness.md:*
+ENTROPY_HIGH:changelogs/2026-09-01-0915-a-claimed-kind-of-proof-is-a-declaration-not-evidence-now-legible-on-three-surfaces.md:*

@@ -1,0 +1,517 @@
+id: GE-127d-1
+title: "The published rule and the enforced rule are checked against each other, and no fact the standard accepts about a change is left without effect on its verdict"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the size standard's published description states which kinds of file it
+    covers, when it applies, and how long a file of each kind may be,
+  When that published description is compared against the outcomes the standard
+    actually produces,
+  Then they agree on all three points, and a change that leaves either the
+    description or the enforced behaviour saying something the other does not is
+    reported and the commit does not complete,
+  And every published place that states the rule is compared, so a rule that is
+    corrected in one place and left stale in another is reported rather than
+    passing on the strength of the corrected one,
+  And the agreement is established by evaluating both the described rule and the
+    produced outcome, not by anyone reading the description and judging it
+    correct,
+  And given the standard accepts, as an input to whether a particular file
+    passes, some fact about the change being made to that file,
+  When the same file at the same length is presented once with that fact holding
+    and once with it not holding,
+  Then either the two presentations produce different verdicts, or the standard
+    does not accept that fact as an input to the verdict at all — a fact that is
+    accepted for the verdict and then makes no difference to it is not permitted
+    to remain.
+depends_on:
+  - GE-127d
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE — INHERITED AND NOT RESTATED. Reconciling the
+      published rule with the applied one only means something once the rule is
+      applied at all; that registration is BP-100n-4's day-one triage. Do not
+      restate the census.
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      ONE OF THE TWO STALE PUBLISHED STATEMENTS, RE-VERIFIED IN THIS WORKTREE ON
+      2026-09-01. Its entry for this gate states that it blocks NEW files
+      exceeding the limit and that modifications to existing large files are
+      exempt as an incremental refactor path. That was true until 2026-05-01 and
+      has not been true since.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE SECOND STALE PUBLISHED STATEMENT, AND THE REASON THE FOURTH CLAUSE
+      EXISTS. The comment on this gate's own configuration section makes the same
+      new-files-only claim independently of the reference documentation, so
+      correcting one leaves the other standing. Both are surfaces people and
+      agents reason from when deciding what a change will cost them.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE CODE IS RIGHT AND THIS IS NOT A DEFECT RECORD ABOUT IT — READ THIS
+      BEFORE TREATING ANY CLAUSE ABOVE AS A BUG REPORT. Its recorded change
+      history entry of 2026-05-01 states that the check was updated to enforce
+      limits on ALL changed files rather than only new ones, deliberately, to
+      drive progressive refactoring. That entry is the evidence that the two
+      published claims are stale rather than aspirational, and it establishes the
+      direction of travel that GE-127b's ratchet continues. Separately, and this
+      is the subject of the last clause: the per-file verdict accepts a fact about
+      whether the file is newly added and that fact does not enter the verdict.
+      Be precise about what is and is not true here — the same fact IS read
+      elsewhere, to label a passing file as new or modified in the report, so a
+      criterion or a ticket asserting that "the flag is unused" would be factually
+      false and must not be written.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      The register for this component, and the home of the
+      declaration-versus-reality class this record sits in — a documented claim
+      that nothing checks is indistinguishable from a true one until somebody
+      reads the code.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" applies with an
+      unusual twist here: the artifact under test IS partly text, so the temptation
+      is a test that greps the published wording for a corrected sentence. Such a
+      test is satisfied by an edit and stays green the next time the behaviour
+      moves and the sentence does not — which is precisely how this defect
+      occurred. Both sides must be evaluated.
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: true
+declares_side_effect: false
+it_requirements:
+  config_schema_fragment:
+    hooks_manifest:
+      type: object
+      description: >-
+        hooks_manifest.hooks gains ONE entry for the published-versus-enforced reconciliation
+        gate, carrying the fields its siblings carry (id, tier "judgment", name, entry routed
+        through run_hook.py, language "system", stages ["pre-commit"], and a `files` trigger
+        matching every surface that states or enforces the rule — at minimum
+        templates/scripts/commit_guardian/README.md,
+        templates/scripts/commit_guardian/commit_guardian.json,
+        templates/scripts/commit_guardian/check_file_size.py and docs/pre-commit-hooks.md).
+        This is a SECOND, separate gate from check-file-size and needs its own id: its trigger
+        fires on edits to the published surfaces and the enforcing code, not on the staged file
+        set the size gate measures, so folding it into check-file-size's per-file loop would
+        make it fire on the wrong population. Adding this id is a watched list_ids registration
+        and is the reason this record declares package_surface. NO NEW TOP-LEVEL KEY is added:
+        the list of published surfaces belongs NESTED under the existing `file_size` section at
+        commit_guardian.json line 13, which the mapping_keys container at dotted path "" does
+        not see. If a new top-level key later proves genuinely necessary, it is covered by this
+        same declaration — but prefer the nested home.
+  reference_file_path: "templates/scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - >-
+      THIS IS NOT A DEFECT RECORD ABOUT check_file_size.py AND THE BEHAVIOUR MUST NOT BE
+      "RESTORED". The guard's DECISION HISTORY entry of 2026-05-01 records that limits were
+      deliberately extended to ALL changed files, not only new ones, to drive progressive
+      refactoring. The two published statements are what is stale. Anyone reading them as a
+      specification and reinstating the new-files-only exemption reverses a deliberate decision
+      and destroys GE-127b-1's ratchet in the same move.
+    - >-
+      THE DIRECTION OF THE RECONCILIATION IS DECIDED HERE, EXPLICITLY, AS THE BA REQUIRES:
+      CORRECT THE DOCUMENTATION TO MATCH THE BEHAVIOUR. Two published statements claim
+      new-files-only with an exemption for modifications to existing large files —
+      templates/scripts/commit_guardian/README.md line 41 and the `_comment` on the `file_size`
+      section at commit_guardian.json line 14. Both are corrected to state what is enforced:
+      limits apply to every changed file of a covered kind, and the incremental path is
+      GE-127b-1's ratchet rather than an exemption. The alternative — restoring the exemption —
+      is rejected on the record because GE-127b-1 delivers the incremental-refactor path the
+      stale wording was promising, without reintroducing a hole a file can grow through.
+    - >-
+      EXACTLY ONE STATEMENT OF EACH FACT MUST SURVIVE, OR THE DEFECT RECURS. The parent L1 is
+      explicit that the fix must "leave exactly one statement of the rule standing rather than
+      two agreeing ones that can drift apart again". README.md line 41 and the commit_guardian.json
+      `_comment` currently make the same claim independently, which is why correcting one leaves
+      the other standing — and is why the third named mutation exists. Prefer a single
+      authoritative statement with the other surfaces pointing at it over two hand-maintained
+      copies that happen to agree today.
+    - >-
+      THE COMPARISON MUST EVALUATE THE ENFORCED SIDE, NOT PARSE THE CODE. Obtain the enforced
+      scope and limits by reading the configuration the gate actually reads and, where the rule
+      is behavioural rather than configured, by EXERCISING the gate and observing its outcome.
+      A check that greps check_file_size.py for a constant is satisfied by a source edit and
+      stays green the next time the behaviour moves — which is precisely how this defect
+      occurred and precisely what CLAUDE.md's "Verify Behaviorally, Not by Grep" forbids on an
+      artifact that is partly text.
+    - >-
+      THE PUBLISHED SURFACES MUST BE ENUMERATED FROM CONFIGURATION, NEVER HARD-CODED IN THE
+      CHECK. Put the list of surfaces that state the rule in a NESTED key under the existing
+      `file_size` section (for example `published_rule_surfaces`), read it at run time, and make
+      the `files` trigger on the manifest entry consistent with it. A surface list written into
+      the check is the same defect one level up: a new published surface added later is
+      unwatched and the gate reports agreement it never checked. Note the ordering consequence
+      GE-127d-2 records — once that record publishes the measurement rule, its statement becomes
+      one more surface this list must contain.
+    - >-
+      A SURFACE THAT CANNOT BE READ IS NOT AGREEMENT. If any listed published surface is missing,
+      unreadable or unparseable, report an INDETERMINATE line naming the surface and the reason
+      and exit 2 — the same vocabulary BP-100n-4-ii pins and GE-127a-1-i and GE-127b-1-i reuse.
+      Silently skipping an unreadable surface and reporting agreement on the rest is the
+      four-times-shipped shape on this component (KI-CG-034, KI-CG-012, KI-CG-018, the AC-store
+      validator's bare-directory no-op) and would let the gate certify a state it never examined.
+      State the number of surfaces compared in the outcome so a run that compared none cannot
+      look like a run that compared all.
+    - >-
+      THE LAST CLAUSE IS ABOUT AN ACCEPTED-BUT-INERT INPUT, AND THE ACCURATE STATEMENT MATTERS.
+      check_file(filepath, is_new_file) accepts the newly-added fact and its body never reads it
+      — the verdict is `lines <= limit`. The same fact IS read elsewhere, to label a passing file
+      "new" or "modified" in the report. A ticket, test or commit message asserting "the flag is
+      unused" would be factually false. The permitted resolutions are exactly two: make the fact
+      affect the verdict, or stop accepting it as an input to the verdict. Given the direction
+      decided above, the expected resolution is to remove it from the verdict signature while
+      leaving the reporting use intact — but either resolution satisfies the clause and the choice
+      must be recorded.
+    - >-
+      HOST — THIS GATE IS A NEW SIBLING SCRIPT, NOT A MODE OF check_file_size.py. Its trigger
+      population is the published surfaces, not the staged file set, and its verdict is a single
+      agreement judgement rather than a per-file one. Place it as a new check_*.py INSIDE
+      templates/scripts/commit_guardian/, which build_commit_guardian copies whole, so no
+      scripts/build_phases.py deploy entry is needed. A module imported from OUTSIDE that
+      directory MUST be added to the deploy map in the same change or the deployed hook raises
+      ModuleNotFoundError at commit time while source-tree tests stay green. It must consume the
+      SAME configuration read and the SAME measurement function as check_file_size.py rather than
+      re-deriving either — a reconciliation gate with its own copy of the rule is two rules.
+    - >-
+      CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE.
+      templates/scripts/commit_guardian/ is canonical; scripts/commit_guardian/ and the repo-root
+      .pre-commit-config.yaml are UNTRACKED build outputs regenerated from hooks_manifest, so a
+      hook block hand-added to the pre-commit config is silently discarded on the next build;
+      templates/commit-guardian/commit_guardian.json is a decoy (3 hook ids, no file_size
+      section, parity is one-directional legacy ⊆ canonical). config.py:19 resolves
+      commit_guardian.json beside the DEPLOYED script, so `python scripts/build.py --target-dir .`
+      is mandatory and is part of this change.
+    - >-
+      SEQUENCING — THIS GATE JUDGES A RULE, SO THE RULE MUST BE SETTLED FIRST. GE-127c-1 pins the
+      scope and GE-127b-1 changes when the standard applies; both must land before or with this
+      record, or its first run reports disagreement with documentation nobody has had the chance
+      to correct. Correcting the wording is necessary and not sufficient — the parent L1 is
+      explicit that a criterion satisfied by editing a sentence is satisfied again the next time
+      the behaviour moves and the sentence does not.
+    - >-
+      Must follow the repo error-handling policy: specific-exception try/except around file, JSON
+      and subprocess I/O; log at WARNING or higher or re-raise; no bare or blind excepts. A
+      swallowed read of a published surface must never become agreement.
+test_spec:
+  - name: test_ge_127d_1_a_published_statement_disagreeing_with_the_enforced_scope_refuses_the_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      NAMED MUTATION 1, DOCUMENTATION SIDE (mandatory, run it — the BA's injection 1). Over a
+      fixture tree with the gate installed, change ONE published statement alone so it names a
+      different set of covered kinds than the set in force, changing nothing else, and run an
+      ordinary commit. The commit must be refused and the outcome must name the disagreement and
+      the surface it is on.
+  - name: test_ge_127d_1_a_change_to_the_enforced_scope_alone_also_refuses_the_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      NAMED MUTATION 2, BEHAVIOUR SIDE (mandatory, run it — the BA's injection 2). Revert
+      mutation 1, then change the enforced scope alone so it no longer matches the published
+      statements, changing no wording. The commit must be refused again. A check that catches
+      only the documentation direction lets the behaviour drift away from correct documentation,
+      which the BA identifies as the more dangerous of the two — and which the record's genuine
+      red baseline alone does not establish.
+  - name: test_ge_127d_1_correcting_one_published_surface_and_leaving_the_other_stale_still_refuses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      NAMED MUTATION 3, SECOND SURFACE (mandatory, run it — the BA's injection 3). Bring one
+      published statement into agreement with the behaviour and leave the other stale. The commit
+      must still be refused, naming the stale one. Without this injection the clause passes on a
+      check that reads whichever surface the implementer happened to think of — and the two
+      surfaces that carry this claim today, README.md line 41 and the commit_guardian.json
+      _comment, are independent, which is exactly why correcting one leaves the other standing.
+  - name: test_ge_127d_1_a_newly_added_published_surface_is_compared_without_changing_the_check
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      THE ANTI-HARD-CODED-SURFACE-LIST DESCRIPTOR. Add ONE new published surface to the configured
+      surface list, containing a statement that disagrees with the behaviour, and change nothing
+      in the check itself. The commit must be refused naming that new surface, and the stated
+      count of surfaces compared must be exactly one greater than before. Both numbers are read
+      from the gate's own output. No implementation carrying a surface list written into itself
+      can pass this.
+  - name: test_ge_127d_1_an_unreadable_published_surface_is_named_and_never_reported_as_agreement
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      With one listed published surface made GENUINELY unreadable or unparseable at run time, the
+      gate emits the INDETERMINATE line naming that surface and the reason, exits 2, and does not
+      report agreement on the remaining surfaces. Exercised by breaking the read for real, never
+      by asserting an error branch exists in the source. Guards against the four-times-shipped
+      shape on this component in which a skipped input became a clean verdict.
+  - name: test_ge_127d_1_a_fact_accepted_into_the_verdict_that_changes_nothing_is_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Present the same file at the same length twice, once with the newly-added fact holding and
+      once without, and require either that the two presentations produce different verdicts or
+      that the fact is not accepted as an input to the verdict at all. This clause has a genuine
+      red baseline: check_file(filepath, is_new_file) accepts the fact today and its body never
+      reads it. Assert over the verdict, not over the report — the same fact IS legitimately used
+      to label a passing file new or modified, and a test asserting the flag is unused anywhere
+      would be factually false.
+  - name: test_ge_127d_1_the_reconciliation_verdict_is_emitted_through_its_registered_hook_entry_point
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size_rule_parity.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the reconciliation gate as a subprocess through its own
+      registered hook path and assert that the disagreement report and the count of surfaces
+      compared appear in the hook's own output stream, and that the exit status is the commit
+      outcome rather than an advisory note. A comparison computed by a function nothing at commit
+      time calls is inert — and this record's entire subject is a claim nothing checks.
+  - name: test_ge_127d_1_the_deployed_copy_reconciles_the_real_published_surfaces_and_comes_back_clean
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy and every module it imports load and run in a cold process
+      — a helper outside templates/scripts/commit_guardian/ with no scripts/build_phases.py
+      deploy-map entry surfaces here as ModuleNotFoundError rather than passing. Over the
+      repository's REAL published surfaces and the real configuration, following the wording
+      correction, the deployed run reports zero disagreements, states a surfaces-compared count
+      greater than zero, and exits zero. That assertion is RED today — README.md line 41 and the
+      commit_guardian.json _comment both claim new-files-only against a behaviour that has
+      enforced all changed files since 2026-05-01 — and is this record's own red baseline for the
+      correction.
+test_rationale: |
+  Unlike its siblings, the first three clauses here have a genuine red baseline: two published
+  statements contradict the behaviour today and nothing compares them. The three named injections
+  the BA wrote are therefore not there to manufacture a red — they are there to prove properties
+  the red baseline alone does not establish, and each is carried into a descriptor verbatim. The
+  documentation-side and behaviour-side injections together prove bidirectionality, without which
+  the gate catches only stale prose and lets correct prose drift away from the code. The
+  second-surface injection proves the check reaches EVERY published place, without which it passes
+  on whichever surface the implementer thought of — and the two surfaces carrying this claim today
+  are independent, so that is not a hypothetical.
+
+  A fourth descriptor exists that the criteria do not name and that the enrichment decision makes
+  necessary: adding a new published surface to the configured list must be caught with no change to
+  the check, and the stated surfaces-compared count must move by one. That is the same add-one-item-
+  and-require-the-count-to-move construction BP-100n-4 uses as its decisive anti-grep descriptor,
+  and it is the only thing that stops the surface list being a literal inside the gate — which
+  would reproduce this exact defect one level up.
+
+  Per CLAUDE.md "Verify Behaviorally, Not by Grep", with the twist this record's own doc_link names:
+  the artifact under test is partly text, so the tempting test greps the published wording for a
+  corrected sentence. Such a test is satisfied by an edit and stays green the next time the
+  behaviour moves and the sentence does not, which is exactly how this defect occurred. Both sides
+  are evaluated in every descriptor — the published side by reading the surfaces, the enforced side
+  by reading the live configuration and exercising the gate.
+delivers_to:
+  - agent: documentation-expert
+    ac_id: null
+    contract: >-
+      The corrected published statements of the rule — which kinds are covered, when the standard
+      applies, and how long a file of each kind may be — for the reference-doc GE-127d's
+      documentation_triggers require. Whatever wording lands becomes an input this gate compares on
+      every subsequent commit, so it must be machine-comparable against the configuration rather
+      than free prose.
+expects_from:
+  - ac_id: GE-127c-1
+    contract: >-
+      The set of kinds in force, read once at run time from file_size.checked_extensions. This
+      record compares that same value against every published description of the scope and must
+      consume it rather than re-deriving the configuration independently — two readers of one
+      configuration is the drift this record exists to catch.
+  - ac_id: GE-127a-1
+    contract: >-
+      The enforced when-it-applies behaviour and the per-kind limits as the gate actually applies
+      them, obtained by exercising the gate and reading the configuration it reads, never by
+      parsing its source.
+origin_agent: business-analyst
+created: 2026-09-01
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-01
+  note: 'criteria untouched. PACKAGE SURFACE TRUE: this record adds a SECOND hooks_manifest.hooks
+    id for the reconciliation gate — a watched list_ids registration — so
+    check-package-surface-declaration refuses the commit unless a cited AC declares it. HOST
+    DECIDED: a new sibling check_*.py inside templates/scripts/commit_guardian/, not a mode of
+    check_file_size.py, because its trigger population is the published surfaces and the enforcing
+    code rather than the staged file set, and folding it in would fire it on the wrong population.
+    build_commit_guardian copies that directory whole so no scripts/build_phases.py entry is needed;
+    anything imported from outside it does need one. NO NEW TOP-LEVEL KEY: the configured list of
+    published surfaces goes NESTED under the existing file_size section at commit_guardian.json line
+    13, invisible to the mapping_keys container bound at dotted path "". config_schema_fragment names
+    hooks_manifest, which is real and present — the BP-100k-4 / BP-100k-4-i fictional-key precedent
+    is not repeated. DIRECTION OF THE FIX DECIDED EXPLICITLY, AS THE BA REQUIRED: correct the two
+    stale published statements (README.md line 41 and the file_size _comment at line 14) to match the
+    behaviour; do NOT restore the new-files-only exemption, because GE-127b-1''s ratchet delivers the
+    incremental path that wording promised without reopening a hole. Exactly one statement of each
+    fact must survive, per the parent L1. THE INERT-INPUT CLAUSE: check_file(filepath, is_new_file)
+    accepts the newly-added fact and its body never reads it, while the same fact IS legitimately read
+    elsewhere to label a passing file new or modified — so no artifact may assert "the flag is
+    unused"; the expected resolution is removing it from the verdict signature while leaving the
+    reporting use intact, and either permitted resolution must be recorded. SEQUENCING: GE-127c-1 and
+    GE-127b-1 must land before or with this, or its first run reports disagreement with documentation
+    nobody has had the chance to correct. declares_side_effect false: every Then clause reports to a
+    stream and sets an exit status; the documentation correction is a source edit made by the change,
+    not a runtime side-effect the criteria assert. test_spec: eight executing descriptors carrying all
+    three of the BA''s named mutations, plus an add-a-surface-and-require-the-count-to-move descriptor
+    borrowed in shape from BP-100n-4 so the surface list cannot be a literal, plus the registered hook
+    entry point and the deployed copy in a cold process.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+notes: |
+  THIS IS NOT A DEFECT AC AND MUST NOT BE READ AS ONE. Every fact below was read
+  from source in this worktree on 2026-09-01 and is stated at the confidence it
+  was read at:
+    - The behaviour is correct and deliberate. The guard's recorded change history
+      entry of 2026-05-01 states that limits were extended to all changed files,
+      not just new ones, to drive progressive refactoring. Nobody should "restore"
+      the new-files-only exemption on the strength of the stale documentation.
+    - The two published statements are stale by four months: the gate's entry in
+      the guard family's reference documentation, and the comment on its own
+      configuration section. Both independently claim new-files-only with an
+      exemption for modifications to existing large files.
+    - The per-file verdict accepts a fact about whether the file is newly added
+      and does not use it. The same fact IS used elsewhere, to label a passing
+      file as new or modified. A record, ticket or test asserting that the flag is
+      unused would be false; the accurate statement, and the one the last clause
+      makes, is that it is accepted as an input to the VERDICT and makes no
+      difference to the verdict.
+
+  THIS RECORD WAS PROPOSED AS AN L3 AND IS AUTHORED AS AN L2, FOR TWO REASONS.
+  Mechanically, the store's id regex admits no roman-suffixed child of an L1, so a
+  `GE-127d-i` would fail the id-format check and an L3 would need an L2 parent
+  that does not exist. Semantically it is the first-order statement of GE-127d's
+  own promise rather than an edge case of some other behaviour. Recorded rather
+  than silently changed.
+
+  TWO OBLIGATIONS IN ONE RECORD, AND WHY THEY ARE NOT SPLIT. Clauses one to three
+  govern the published surfaces; the last clause governs an accepted input. They
+  are the same obligation at two depths — the rule as declared is the rule as
+  operated — and a fact the standard says it takes and then ignores is the same
+  lie as a sentence describing a rule it does not apply, one level down. The
+  single-behaviour-per-record convention argues for splitting them; the pairing
+  was approved deliberately and is recorded here so the IT PO can split it at
+  enrichment if the test descriptors turn out to have nothing in common.
+
+  THE ACCEPTANCE SHAPE THAT HAS TEETH, AND THE ONE THAT DOES NOT. A criterion
+  satisfied by editing a sentence is satisfied again the next time the behaviour
+  changes and the sentence does not — this defect has already happened here,
+  exactly that way, and correcting today's wording is necessary and not
+  sufficient. What discharges this record is a check evaluated against BOTH the
+  published statement and the enforced behaviour, so that a future change to
+  either without the other is caught at the commit that makes it.
+
+  NAMED MUTATIONS — MANDATORY, EXECUTE THEM IN BOTH DIRECTIONS. The first three
+  clauses have a genuine red baseline today (the two published statements
+  contradict the behaviour, and no check compares them), so the injections below
+  are not there to manufacture a red — they are there to prove the check is
+  bidirectional and reaches every published surface, which the red baseline alone
+  does not establish:
+
+  (1) DOCUMENTATION SIDE: change one published statement alone so that it names a
+      different set of covered kinds than the set in force, changing nothing else.
+      The commit must be refused, naming the disagreement.
+
+  (2) BEHAVIOUR SIDE: revert (1), then change the enforced scope alone so it no
+      longer matches the published statements, changing no wording. The commit
+      must be refused again. A check that catches only the first direction lets the
+      behaviour drift away from correct documentation, which is the more dangerous
+      of the two.
+
+  (3) SECOND-SURFACE MUTATION, for the clause requiring every published place to
+      be compared: bring one published statement into agreement with the behaviour
+      and leave the other stale. The commit must still be refused, naming the stale
+      one. Without this injection the clause passes on a check that reads whichever
+      surface the implementer happened to think of.
+
+  THE DIRECTION OF THE FIX IS NOT DECIDED HERE AND MUST NOT BE ASSUMED. For the
+  new-files-only contradiction, two reconciliations exist — correct the
+  documentation to match the behaviour, or restore the behaviour to match the
+  documentation — and they are materially different products. The second is
+  largely superseded by GE-127b: a ratchet delivers the incremental-refactor path
+  the stale documentation was promising, without reintroducing the exemption.
+  Whichever is chosen must be chosen explicitly and recorded, and the decision
+  must leave the rule stated in a way that cannot drift apart again. The last
+  clause admits the same two-way freedom by construction: the accepted fact must
+  either start mattering or stop being accepted, and this record forbids only the
+  present state in which it does neither.
+
+  DELIBERATELY OUT OF SCOPE HERE, AND NOT YET AUTHORED ANYWHERE — FLAGGED, NOT
+  SMUGGLED IN. GE-127d carries a second subject this record does not cover: that
+  the number the author is quoted for a file is one they can arrive at themselves
+  from the published counting rule. Today the counting rule discards documentation
+  blocks before counting and is published nowhere, which is why the same
+  repository measures 200 files over their limit under the guard's rule and 314
+  over the same raw number of lines. That behaviour needs its own record under
+  GE-127d and was not in the set approved for this run. It is named here so its
+  absence is visible rather than assumed covered.
+
+  BOUNDARY WITH GE-127c-1. That record requires a run to state which kinds it
+  measured. This one requires the published description of the scope and the scope
+  enforced to agree. A run that announces its measured kinds perfectly while the
+  documentation describes a different set fails this record; a perfectly
+  documented scope whose runs say nothing about what they looked at fails that
+  one.
+
+  BOUNDARY WITH GE-127e. This record is about the rule being TRUE. GE-127e is
+  about the refusal being USEFUL. A gate can quote an accurate limit and an
+  accurate count and still leave the author with nothing to do.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. The IT PO will need to decide whether
+  the comparison check lives beside the size guard or as its own gate, and whether
+  the correction of the stale wording is a separate documentation record — the
+  three named mutations above are written to survive either choice.

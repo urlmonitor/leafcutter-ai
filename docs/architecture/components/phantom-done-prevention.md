@@ -5,13 +5,14 @@ type: architecture
 status: active
 flight_level: L2-Container
 created: 2026-07-21
-last_updated: 2026-08-18
+last_updated: 2026-09-01
 source_ticket: tickets/00_inbox/TICKET-20260721-BP-1100f-6.md
 components:
   - build_pipeline
   - build_orchestration
 children:
   - docs/architecture/diagrams/c3-003-phantom-done-real-effect-intent-verification.md
+  - docs/architecture/diagrams/c3-007-promise-versus-claim-sequence.md
 related_docs:
   - docs/architecture/components/build-orchestration.md
   - docs/architecture/agent_delivery_workflows.md
@@ -42,9 +43,10 @@ Every gate here is packaged and portable per [ADR-001](adrs/ADR-001-self-hosting
 any project that installs leafcutter and runs `build.py` gets the same behaviour — the
 gates do not depend on the leafcutter repo's own root `CLAUDE.md`.
 
-This container is documented by one L3 child diagram at the component level:
+This container is documented by two L3 child diagrams at the component level:
 
 - [Phantom-Done Prevention — Proving a Durable Change by Real Effect and Intent](../diagrams/c3-003-phantom-done-real-effect-intent-verification.md) — the end-to-end sequence showing where each of the five gates sits relative to dispatch and to the done state.
+- [Promise versus Claim — Where the Boundary to the Execution Observer Lies](../diagrams/c3-007-promise-versus-claim-sequence.md) — the `BP-1100g` sequence: a plan promises a kind of proof, a test claims it, and the hand-off check refuses by name when a promised kind has no claim. Draws the boundary explicitly — the check reads only authored declarations, never a test's body, so whether a test does what it claims is left to the execution observer (`BO-2900a`) on the far side.
 
 ## The five gates
 
@@ -67,5 +69,6 @@ This container is documented by one L3 child diagram at the component level:
 - [Build Orchestration — Epic & Ticket Dispatch Sequencing](build-orchestration.md) — owns the drive/verification-phase routing the gates plug into.
 - [Agent Code Delivery Workflows](../agent_delivery_workflows.md) — the supervisor dispatch topology and blocker adjudication these gates review.
 - [Feature to Merged PR — End-to-End Sequence Diagram](../diagrams/c2-006-feature-to-merged-pr.md) — the end-to-end pipeline the gates annotate.
+- [Reference: Proof Claims and What They Do Not Mean](../../reference/proof-claims-and-completeness.md) — the `BP-1100g` claim-side reference: what claiming each of the seven kinds of proof means and does not mean, the accepted-paste design decision, and the seam rule's hand-off record.
 - [ADR-001 — Self-Hosting Boundary](adrs/ADR-001-self-hosting-boundary.md) — why each gate is packaged and portable.
 - [ADR-020 — Live Surface Tester](adrs/ADR-020-live-surface-tester.md) — the observable-side-effect smoke surface Gate 5 routes to.

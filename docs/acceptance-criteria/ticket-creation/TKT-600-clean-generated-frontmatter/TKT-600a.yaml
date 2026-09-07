@@ -49,7 +49,7 @@ amended_by:
       child covering the remaining case with a mechanism that is not phrase-matching,
       or an explicit decision to narrow this L1 too.
 superseded_by: null
-covered_by: [TKT-600a-1]
+covered_by: [TKT-600a-1, TKT-600a-2]
 implemented_by: []
 change_target: code
 risk_surface: internal

@@ -52,7 +52,7 @@ assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
   - "The location list for the new exemption is copied in spirit from the existing high-entropy prose-prefix list, and one entry on that list — the skill-prompt area — holds executable Python including the secrets scanner's own source. The kind gate is what stops the new exemption inheriting that shape. It must not be dropped as redundant, and it must be observable: removing it has to turn a test red."
-  - "The pre-existing defect this AC guards against is recorded as KI-CG-004 in docs/known-issues/commit-guardian.md, with measured evidence — a token of Shannon entropy 5.17 is exempt from the high-entropy rule at the scanner's own source path, at the ticket tree, at the acceptance-criteria store and at the retrospectives area, while reported under the build scripts directory. That defect is explicitly OUT OF SCOPE here. Do not repair it, do not widen it, and do not let this AC be closed as a duplicate of it: KI-CG-004 concerns an existing rule's file-level exemption, this AC concerns the kind gate on a new one."
+  - "The pre-existing defect this AC guards against is recorded as KI-CG-004 in the commit-guardian known-issues register (a live document, linked from this record's doc_links at relationship related — it is context, never an edit surface for this work), with measured evidence — a token of Shannon entropy 5.17 is exempt from the high-entropy rule at the scanner's own source path, at the ticket tree, at the acceptance-criteria store and at the retrospectives area, while reported under the build scripts directory. That defect is explicitly OUT OF SCOPE here. Do not repair it, do not widen it, and do not let this AC be closed as a duplicate of it: KI-CG-004 concerns an existing rule's file-level exemption, this AC concerns the kind gate on a new one."
   - "If the location data is shared between the existing high-entropy exemption and the new generic-credential exemption, the kind gate must be applied on both sides or the sharing must not happen. Reusing the list without reusing the gate is exactly the careless line of reuse this AC exists to forbid, and it would silently widen KI-CG-004 rather than contain it."
   - "The kind gate must reject on the file's own extension, so that two files in the same directory differing only in extension receive different verdicts in a single run. A gate that is short-circuited by a directory-level decision cannot satisfy the second scenario."
   - "The scanner's own source path must be covered explicitly, not merely by implication from the extension rule. It is the sharpest instance of the class and the one a future reader will check first."
@@ -118,6 +118,26 @@ amended_by:
     requirements describe — sharing the location list without sharing the kind gate —
     would be a one-line change in that module, so the guard against it has to live there
     too.'
+- reason: fenced-register-named-not-pathed
+  date: '2026-09-01'
+  by: business-analyst
+  entry: 'CRITERIA UNTOUCHED. title, req_status, depends_on, doc_links, test_spec and
+    notes are all unchanged. One it_requirements bullet was reworded: the second bullet
+    now refers to "the commit-guardian known-issues register" by name and keeps the
+    KI-CG-004 id, where it previously spelled out that register''s repository path.
+
+    WHY: the path was being harvested into the generated ticket''s files_touched as an
+    edit surface, so this record — whose requirements fence KI-CG-004 as explicitly out
+    of scope — presented that live document to a coder as a file to modify, which is the
+    exact inversion the fence exists to prevent. Measured against the shipped
+    _build_files_touched on 2026-09-01: before, ["docs/known-issues/commit-guardian.md",
+    "templates/scripts/commit_guardian/check_secrets.py"]; after, only the check_secrets.py
+    surface. The doc_link stays at relationship related — correct, and the thing that keeps
+    the fence discoverable. The harvest came from the prose mention, not from the link.
+
+    This is a working-around of a generator defect, not a fix for it. The durable fix is
+    specified in TKT-600a-2: a path a record declares at a non-edit-surface relationship
+    must not be harvested out of that same record''s prose.'
 superseded_by: null
 covered_by: []
 implemented_by:

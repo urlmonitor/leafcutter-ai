@@ -12,17 +12,23 @@ priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the repository keeps its commit-gate scripts together in one place, and
-    at the time of writing that place holds 66 of them,
+    that place holds both scripts sitting directly in it and scripts held in
+    subdirectories of it,
   And the gate registry from which the commit-time gate configuration is
-    generated holds 59 entries, of which 5 are marked not to be emitted,
-  And 19 of the scripts present on disk are named by no registry entry at all —
-    including one that the gate family's own reference documentation describes as
-    a live gate running with enforcement,
+    generated names some of those scripts on an entry that is emitted, names
+    others on an entry marked not to be emitted, and does not name others at all,
   When the reachability check runs,
-  Then the population it examines is obtained by listing the gate scripts
-    actually present in that place, and the invoking population is obtained by
-    reading the registry actually in effect at commit time, so neither side of the
-    comparison is a set written into the check itself,
+  Then the population it examines is every gate script held anywhere beneath that
+    place, subdirectories included, obtained by listing that place at run time,
+  And each script in that population is identified by its position within that
+    place rather than by its bare filename, so two scripts sharing a filename at
+    different positions are two members of the population and a registry entry
+    naming one of them is never read as covering the other,
+  And the invoking population is obtained by reading the registry actually in
+    effect at commit time and taking from each entry the gate script that entry
+    executes, including when the entry carries further arguments after that
+    script, so neither side of the comparison is a set written into the check
+    itself,
   And every script present on disk that no registry entry names is reported by
     name, together with the statement that nothing invokes it, and the run fails,
   And a script that a registry entry names but that the generated commit-time
@@ -40,7 +46,11 @@ criteria: |
   Then the newly added script is among those reported as invoked by nothing, and
     the number of scripts the check states it compared is one greater than the
     number it stated before — establishing that the population was enumerated
-    from the tree rather than recited from a list.
+    from the tree rather than recited from a list,
+  And the same holds when that one new gate script is added inside a
+    subdirectory of that place rather than directly in it — a gate the check
+    cannot see is a gate the check cannot report, and a population that stops at
+    the top level silently excuses every gate held below it.
 depends_on:
   - BP-100n
 doc_links:
@@ -87,8 +97,9 @@ doc_links:
     relationship: modifies
     status: exists
     relevance: >-
-      The authoritative registration surface — hooks_manifest.hooks (59 entries, 5 with
-      enabled false) plus the nine-entry hook_trigger_reachability_exemption_registry.
+      The authoritative registration surface — hooks_manifest.hooks (61 entries at
+      b846121c9, 5 with enabled false; re-measure, this figure has moved twice) plus the
+      hook_trigger_reachability_exemption_registry.
       It is a package surface, so a NEW top-level key trips check-package-surface-declaration
       and requires the structured spec. Note the decoy: templates/commit-guardian/commit_guardian.json
       is a different, much smaller file and is NOT the registration surface.
@@ -106,12 +117,41 @@ doc_links:
     relationship: describes
     status: exists
     relevance: >-
-      Documents check-ticket-signoff-parity as a live hook id "with --enforce". That
-      claim is false today and is the reason a documented-but-unreachable gate is worse
-      than an absent one — the documentation is what people and agents reason from.
+      Line 46 documents check-ticket-signoff-parity as a live hook id whose "current config
+      uses --enforce". HALF OF THAT IS NOW TRUE: as of BP-1100g-5-i (406375c88) the id IS
+      registered and the script IS reached, but its entry carries no --enforce, so the
+      documented enforcement level is still not what runs. The original, wholly-false version
+      of this claim is why a documented-but-unreachable gate is worse than an absent one —
+      the documentation is what people and agents reason from — and the surviving half is out
+      of scope here (see the it_requirements constraint on this id).
   - path: "docs/pre-commit-hooks.md"
     relationship: describes
     status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      SEQUENCING CONSTRAINT FOR EXACTLY ONE SCRIPT — READ BEFORE TRIAGING check_file_size.py,
+      AND NOTE THAT THIS IS DELIBERATELY NOT A depends_on EDGE. GE-127b specifies the ratchet:
+      a file already past the size limit may still be changed, but a change that leaves it
+      larger is refused. Until that lands, check_file_size.py is the one member of the
+      unreferenced set whose registration blocks the very commit that registers it — this AC's
+      own implementation edits scripts/build_phases.py, measured at 2603 lines under the hook's
+      own docstring-stripping rule (3873 raw) against a 400-line cap. Day-one triage of that
+      one script therefore has two bad answers and one good one: register it flat and wall off
+      a large fraction of the Python codebase including this AC's own target file; record it as
+      a declared non-gate, which this AC already calls implausible for the ten config-carrying
+      scripts and which is suppression under another name; or land GE-127b first, after which
+      registering it is a no-op for every file that is already over. Prefer the third.
+      WHY NO depends_on: scan_ac_store._classify_ac blocks an AC on any non-ancestor depends_on
+      entry until that entry reaches work_status: done, and GE-127b is an L1 composite, which
+      the scanner's own contract says is never built as a leaf and never reaches done. A
+      depends_on edge here would therefore not sequence this AC behind GE-127b — it would
+      remove this AC from the ready set permanently. The dependency also runs both ways in
+      substance: GE-127a and GE-127b each carry a doc_link declaring THIS AC their precondition,
+      because the size gate cannot fire at all until this AC's triage registers it. Neither
+      direction is a whole-AC dependency; both are one-script sequencing, which is what a
+      doc_link plus this stated constraint records without falsifying the dependency graph.
   - path: "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500b-1.yaml"
     relationship: related
     status: exists
@@ -130,7 +170,7 @@ doc_links:
       WATCHED_REGISTRIES is why this AC declares package_surface. It watches
       commit_guardian.json on TWO containers — hooks_manifest.hooks by id, and the
       document's own top level by mapping key (metadata exclusions are only "$schema"
-      and "_comment"). Registering any of the 19 adds a watched id, so
+      and "_comment"). Registering ANY member of the unreferenced set adds a watched id, so
       check-package-surface-declaration refuses the commit unless a cited AC declares
       package_surface: true. That is a measured consequence of the day-one triage, not a
       formality.
@@ -153,9 +193,12 @@ it_requirements:
       type: object
       description: >-
         hooks_manifest.hooks gains one entry per script that day-one triage classifies as
-        a real gate, beginning with check-ticket-signoff-parity under the id
-        templates/scripts/commit_guardian/README.md already documents — so no new id is
-        minted. Each added entry carries the same fields its siblings carry (id, name,
+        a real gate. (This field previously said "beginning with check-ticket-signoff-parity";
+        that entry now exists — BP-1100g-5-i added it at 406375c88 — so it is asserted rather
+        than added, and the remaining additions come from the check's own first run.) Prefer
+        an id already documented for the script over minting a new one; minting is the
+        expensive path per the known issue. Each added entry carries the same fields its
+        siblings carry (id, name,
         entry, language, pass_filenames, and either always_run or a files trigger). This
         is the surface the build reads to decide which gates a consumer project receives,
         so every addition here is a package-surface registration.
@@ -204,43 +247,113 @@ it_requirements:
       implementation that compares one literal list against another reproduces this exact
       defect one level up, which is how the incumbent guard fails.
     - >-
+      THE DISK LISTING IS RECURSIVE AND IDENTITY IS THE PATH, NOT THE FILENAME. DECIDED
+      EXPLICITLY BECAUSE THE PRIOR criteria DECIDED IT BY ACCIDENT. Measured at b846121c9:
+      templates/scripts/commit_guardian/ holds 67 check_*.py directly and 5 more in its
+      hooks/ subdirectory — check_ac_done_on_merge.py, check_ac_limits.py,
+      check_agent_spawn_consistency.py, check_agent_verification_consistency.py and
+      check_files_touched_reconciliation.py. Three of those five are registered and genuinely
+      run (spawn-consistency, verification-consistency, and files-touched-reconciliation under
+      the id check-predone-scope). A non-recursive listing therefore drops five gate scripts
+      from the population, three of them live, and hides check_ac_done_on_merge.py, which no
+      entry names — the exact class this AC exists to find. List recursively.
+      IDENTITY MUST BE THE PATH BENEATH THE GATE DIRECTORY, for a reason recursion creates:
+      check_ac_limits.py exists BOTH at the top level and in hooks/, and only the top-level
+      one is on an entry line (under the id check-ac-tree-limits). Under bare-filename
+      identity, hooks/check_ac_limits.py is silently covered by its namesake's registration
+      and reported as invoked when nothing invokes it — a false negative in the one direction
+      this check exists to close. Note also that the existing entry lines already carry the
+      hooks/ path segment, so the invoking side can be read path-relative without inventing
+      anything.
+      WHAT THE COUNTING RULE COSTS, SO IT IS NOT RE-LITIGATED BY SURPRISE: recursion plus path
+      identity is the widest of the plausible rules and produces the largest day-one triage
+      set. That is the point. A narrower rule buys a smaller first commit by leaving gates
+      unexamined, which is the trade this AC was written to refuse.
+    - >-
       THE INVOKING SIDE IS THE ENTRY LINE, NEVER THE ID. check_ac_limits.py is registered
       and runs under the id check-ac-tree-limits, so a kebab-cased-filename-to-id
-      comparison falsely reports it as unregistered. Take the script filename from the
-      last .py token of each entry field — exactly the extraction
-      build_precommit._check_hook_script_integrity already performs for the opposite
-      direction. That function is the existing half of this check; this AC is its missing
-      converse, and the two should read the registry the same way.
+      comparison falsely reports it as unregistered. Take from each entry field the LAST
+      TOKEN THAT ENDS IN .py.
+      CORRECTION, MEASURED AT b846121c9 — THIS INSTRUCTION PREVIOUSLY SAID "exactly the
+      extraction build_precommit._check_hook_script_integrity already performs", AND THAT IS
+      A DIFFERENT AND BROKEN RULE. That function takes the last WHITESPACE-delimited token,
+      which is not the last .py token whenever an entry carries arguments after its script.
+      Three entries do: check-done-proof ends "check_done_proof.py --test-root .",
+      check-product-truth-validate ends "validate_product_truth.py --quiet", and
+      check-product-truth-generate ends "generate_product_truth.py --check --quiet". Under
+      the whitespace rule all three resolve to a flag rather than a script, so
+      check_done_proof.py — a registered, invoked, required gate — is reported as invoked by
+      nothing. Copying that extraction reproduces the false positive and inflates the
+      unreferenced population by one. The two directions should still read the registry the
+      same way, so FIX _check_hook_script_integrity to the last-.py-token rule in the same
+      change rather than matching this check to its defect; that function is silently
+      skipping the same three entries today, which is why the flag case was never noticed.
     - >-
       THREE STATES, NEVER TWO. Registered-and-enabled is silent; registered with
       enabled:false is reported as deliberately switched off and does not fail;
-      absent from the registry is reported and fails. Re-measured in this worktree at
-      authoring time: 66 check_*.py on disk, 59 hooks_manifest entries, 5 of them
-      enabled:false (check-mermaid-drift, check-diagram-naming, check-duplicate-code,
-      check-diff-coverage, check-surface-components-e2), 60 distinct .py filenames named
-      across all entry lines, 19 scripts named by no entry line.
+      absent from the registry is reported and fails. The five enabled:false ids are
+      check-mermaid-drift, check-diagram-naming, check-duplicate-code, check-diff-coverage
+      and check-surface-components-e2 — stable across every measurement so far, and named
+      here because the switched-off arm's mutation descriptor names them individually.
+      DO NOT TAKE ANY POPULATION SIZE FROM THIS FIELD OR FROM criteria. The sizes are stated
+      once, in notes, with the date, the commit and the counting rule that produced them, and
+      they have already gone stale twice. Re-measure before triage.
     - >-
-      DAY-ONE TRIAGE OF ALL 19 IS IN SCOPE, NOT A FOLLOW-UP. The check fails on the very
-      commit that lands it. Each of the 19 must be registered, deleted, or given a
-      grounded record in the declared-non-gate register (BP-100n-4-i) in that same change.
-      Landing the check green by pre-suppressing its findings proves nothing. A register
-      ground that says only that triage or registration is deferred is a suppression under
-      another name, not a ground.
+      DAY-ONE TRIAGE OF THE WHOLE UNREFERENCED SET IS IN SCOPE, NOT A FOLLOW-UP. The check
+      fails on the very commit that lands it. EVERY script it reports as invoked by nothing —
+      whatever that set turns out to be on the day, which is not the set any number in this
+      record describes — must be registered, deleted, or given a grounded record in the
+      declared-non-gate register (BP-100n-4-i) in that same change. Take the set from the
+      check's own first run, never from a count written here. Landing the check green by
+      pre-suppressing its findings proves nothing. A register ground that says only that
+      triage or registration is deferred is a suppression under another name, not a ground.
     - >-
-      TEN OF THE 19 ALREADY CARRY A CONFIGURATION SECTION, WHICH IS EVIDENCE OF INTENT.
-      Verified in this worktree: commit_guardian.json holds a dedicated top-level config
-      section for check_complexity, check_debug_scripts, check_doc_coverage,
+      TEN OF THE UNREFERENCED SCRIPTS ALREADY CARRY A CONFIGURATION SECTION, WHICH IS
+      EVIDENCE OF INTENT. Re-verified at b846121c9: commit_guardian.json holds a dedicated
+      top-level config section for check_complexity, check_debug_scripts, check_doc_coverage,
       check_doc_links, check_docstrings, check_documentation, check_file_size,
-      check_folder_density, check_root_files and check_sql_complexity. A script the
-      registry configures but never invokes is a gate someone wired half-way; "declared
-      non-gate" is an implausible disposition for these ten and, if chosen, needs a ground
-      that explains the configuration section rather than ignoring it.
+      check_folder_density, check_root_files and check_sql_complexity, and all ten are still
+      named by no entry line. A script the registry configures but never invokes is a gate
+      someone wired half-way; "declared non-gate" is an implausible disposition for these ten
+      and, if chosen, needs a ground that explains the configuration section rather than
+      ignoring it. These ten are named individually rather than counted, so this constraint
+      stays checkable as the surrounding population moves.
     - >-
-      REGISTER check-ticket-signoff-parity UNDER ITS DOCUMENTED ID. README.md documents
-      hook id check-ticket-signoff-parity as live "with --enforce"; that claim is false
-      today. Restore that id rather than minting a new one — minting is the expensive path
-      per the known issue, and this one registration unblocks BP-1100g-5-i and four TQ-500
-      criteria that pin their reader onto this host.
+      check-ticket-signoff-parity IS ALREADY REGISTERED — ASSERT IT, DO NOT ADD IT. THIS
+      CONSTRAINT SAID THE OPPOSITE UNTIL 2026-09-01 AND WAS THE AC'S NAMED EXEMPLAR OF A
+      DOCUMENTED-BUT-UNREACHED GATE. Verified at b846121c9: BP-1100g-5-i (commit 406375c88,
+      PR #660) added the hooks_manifest entry under exactly the documented id, enabled, and
+      check_ticket_signoff_parity.py is now on an emitted entry line. The delivers_to
+      contract to TQ-500b-1 already anticipated this — "whichever AC is scheduled first owns
+      the addition" — and BP-1100g-5-i was first, so the correct action here is to find the
+      entry present and assert it, never to re-add it. A RESIDUAL AND NARROWER DEFECT
+      SURVIVES, and it is not this AC's to fix: the entry carries no --enforce flag, while
+      README.md line 46 still states "current config uses --enforce". The script is reached;
+      the documented enforcement level is not what runs. Do not silently correct that here —
+      it is a documentation-versus-config discrepancy about one gate, not a member of this
+      AC's reached-versus-unreached census, and folding it in would put a second question
+      inside the criterion.
+    - >-
+      check_file_size.py IS THE ONE SCRIPT WHOSE REGISTRATION BLOCKS THE COMMIT THAT
+      REGISTERS IT — SEQUENCE IT BEHIND GE-127b. Measured at b846121c9 under the hook's own
+      docstring-stripping counting rule: scripts/build_phases.py stands at 2603 counted lines
+      (3873 raw) against a 400-line cap, and this AC's own implementation edits that file for
+      the deploy map. Registering check_file_size.py flat therefore refuses the very commit
+      that registers it, and walls off a large fraction of the first-party Python tree
+      besides. The two dispositions available inside this AC are both bad: register flat and
+      block, or record it as a declared non-gate — which the configuration-section constraint
+      above already calls implausible for exactly this script, and which is suppression under
+      another name. THE THIRD ANSWER IS EXTERNAL: GE-127b ("A file already over the line
+      cannot get further over it") specifies the ratchet — an oversized file may be changed
+      and may shrink, but a change that leaves it larger is refused, judged against the file's
+      own previous size rather than the threshold. Land GE-127b first and registering
+      check_file_size.py is a no-op for every file already over, including build_phases.py.
+      OPERATIONALLY: if GE-127b is not yet landed when this AC is scheduled, do NOT resolve
+      the deadlock by weakening the census, by raising the cap, or by exempting the offenders
+      — raise the sequencing and let this AC wait for that one script. Every other member of
+      the unreferenced set can be triaged independently; this constraint quarantines exactly
+      one. This is recorded as a doc_link and this constraint rather than a depends_on edge;
+      the doc_link states why, and the reason is mechanical, not stylistic.
     - >-
       A NEWLY REGISTERED GATE GOES LIVE ON THE SAME COMMIT AND BP-100k-4 IMMEDIATELY
       JUDGES IT. Every entry added to hooks_manifest.hooks starts running at commit time
@@ -440,6 +553,104 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- reason: stale-facts-corrected-criteria-changed-reapproval-required
+  by: business-analyst
+  at: 2026-09-01
+  note: >-
+    readiness was demoted approved to draft by this pass per the ACS-1300a-1-i precedent,
+    because criteria changed. BrainCandy reviewed that on 2026-09-01 and restored approved,
+    judging both changes corrections to already-approved intent — this AC is scheduled
+    high-priority phase_1 work and a re-approval cycle would stall it for no gain in
+    correctness. Recorded here rather than left as a bare field change, so the restoration
+    is attributable and the demotion is not mistaken for one that never happened.
+    Two changes to criteria and no change to what the check must DO.
+
+
+    (1) THE FOUR HARD-CODED POPULATION SIZES ARE REMOVED FROM criteria. They were stale AND
+    internally unreachable as a pair. "66 on disk" is a NON-RECURSIVE listing, which yields 18
+    unreferenced, not 19; reaching 19 required also counting hooks/check_ac_done_on_merge.py,
+    which needs a RECURSIVE listing, which makes the disk figure 71. Consistently non-recursive
+    the pair is 66/18; consistently recursive it is 71/19. An implementer following the old
+    criteria literally writes a non-recursive listing, gets a number that does not match, and
+    either fudges it or never notices that hooks/ holds five gate scripts. RE-MEASURED
+    INDEPENDENTLY AT b846121c9 by this amendment, not inherited from the sibling agent's count:
+    registry 61 entries / 5 enabled:false; disk 67 non-recursive giving 18 unreferenced, 71
+    distinct names recursive giving 19, and 72 giving 20 under the adopted rule. A fourth rule —
+    the last-whitespace-token extraction the it_requirements previously told implementers to
+    copy — also gives 19, but a DIFFERENT 19, by falsely reporting check_done_proof.py. Three
+    incompatible rules producing "19" over three different sets is why the numbers left
+    criteria: they are observations, they belong in notes with a date and a commit, and
+    BP-100n-4-ii already requires the check to STATE its populations in every run, which is a
+    number that cannot go stale. The requirement that both populations be enumerated from live
+    sources is strengthened, not weakened — criteria now describe the enumeration instead of
+    reciting its output.
+
+
+    (2) RECURSION IS NOW DECIDED EXPLICITLY IN criteria, AS BEHAVIOUR. The listing is recursive
+    and identity is the script's PATH beneath the gate directory, not its bare filename.
+    Grounds, measured: hooks/ holds five gate scripts and THREE OF THEM ARE LIVE — spawn
+    consistency, verification consistency, and files-touched-reconciliation under the id
+    check-predone-scope — so a non-recursive population drops five gates including three that
+    run, and hides check_ac_done_on_merge.py, which nothing invokes. Path identity is forced by
+    recursion rather than chosen: check_ac_limits.py exists at BOTH the top level and in hooks/,
+    and only the top-level one is on an entry line, so under bare-filename identity the hooks/
+    copy is silently covered by its namesake and reported invoked when nothing invokes it. The
+    entry lines already carry the hooks/ segment, so the invoking side reads path-relative
+    without inventing anything. One clause was added to the added-script arm requiring the same
+    behaviour when the new script is added inside a subdirectory — without it the recursion
+    decision has no red baseline and any non-recursive implementation passes.
+
+
+    NO FIFTH POPULATION WAS ADDED. BP-100n-4-ii fixes the run summary at exactly four numbers
+    and that is untouched; this amendment REMOVES numbers from criteria and adds none.
+
+
+    GE-127b WIRED AS A doc_link PLUS AN it_requirements CONSTRAINT, NOT A depends_on EDGE, AND
+    THE REASON IS MECHANICAL. check_file_size.py is the one member of the unreferenced set whose
+    registration blocks the commit that registers it — this AC's own implementation edits
+    scripts/build_phases.py, measured at 2603 lines under the hook's own docstring-stripping rule
+    (3873 raw) against a 400-line cap. GE-127b's ratchet makes that registration a no-op for
+    files already over. WHY NOT depends_on: scan_ac_store._classify_ac blocks an AC on any
+    non-ancestor depends_on entry until that entry reaches work_status: done, and GE-127b is an
+    L1 composite, which the scanner's own contract states is never built as a leaf and never
+    reaches done — the edge would not sequence this AC behind GE-127b, it would remove this AC
+    from the ready set permanently. Second reason: the dependency runs both ways in substance.
+    GE-127a and GE-127b each carry a doc_link declaring THIS AC their precondition, because the
+    size gate cannot fire until this AC's triage registers it. Neither direction is a whole-AC
+    dependency — both are one-script sequencing — and writing either as a depends_on would
+    falsify the graph. The constraint quarantines exactly one script and says explicitly that
+    the deadlock is not to be resolved by weakening the census, raising the cap, or exempting
+    the offenders.
+
+
+    THIRD DEFECT FOUND WHILE MEASURING, CORRECTED IN it_requirements. The constraint "THE
+    INVOKING SIDE IS THE ENTRY LINE" told implementers to take "the last .py token — exactly the
+    extraction build_precommit._check_hook_script_integrity already performs". Those are two
+    different rules. That function takes the last WHITESPACE-delimited token, which is a flag
+    rather than a script for the three entries that carry arguments after theirs: check-done-proof
+    ("check_done_proof.py --test-root ."), check-product-truth-validate and
+    check-product-truth-generate (both "--quiet"). So the AC instructed an extraction that
+    reports check_done_proof.py — a registered, invoked, required gate — as invoked by nothing.
+    The constraint now specifies the last-.py-token rule and requires _check_hook_script_integrity
+    to be fixed to match in the same change, since it is silently skipping those same three
+    entries in the opposite direction today.
+
+
+    THE AC'S NAMED EXEMPLAR IS ALSO STALE AND IS RECORDED AS SUCH. check-ticket-signoff-parity is
+    no longer unreferenced: BP-1100g-5-i registered it under its documented id at 406375c88
+    (PR #660), which is where 59 entries became 61. The delivers_to contract to TQ-500b-1 already
+    anticipated this and the it_requirements constraint is inverted from "register it" to "assert
+    it, do not re-add it". A narrower defect survives and is deliberately left out of scope: the
+    entry carries no --enforce while README.md line 46 still says the config uses one, so the gate
+    is reached but not at the documented enforcement level — a documentation-versus-config
+    question about one gate, not a member of this AC's census.
+
+
+    NOT DONE, DELIBERATELY: BP-100n-4-i and BP-100n-4-ii untouched; no test_spec descriptor
+    changed, since every one of them already asserts over the check's own reported set and
+    stated counts rather than over any literal, which is precisely why they survive this
+    amendment unchanged and is the strongest evidence that the numbers never belonged in
+    criteria.
 superseded_by: null
 covered_by:
   - BP-100n-4-i
@@ -448,14 +659,47 @@ implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
 notes: >-
-  VERIFIED DEFECT, 2026-08-31, sourced from KI-CG-20260831-hook-scripts-never-invoked and
-  re-measured against this worktree before authoring: 66 check_*.py scripts on disk, 59
-  hooks_manifest entries, 5 of them enabled:false (check-mermaid-drift, check-diagram-naming,
-  check-duplicate-code, check-diff-coverage, check-surface-components-e2), 60 distinct .py
-  filenames named across all entry lines, and 19 scripts on disk named by no entry at all.
-  The 19 reconcile exactly with the finding's 24-unreferenced count once the 5 disabled are
-  set aside, which is the arithmetic that makes constraint "registered-but-disabled is a
-  third state" load-bearing rather than decorative.
+  VERIFIED DEFECT, 2026-08-31, sourced from KI-CG-20260831-hook-scripts-never-invoked. The
+  defect is unchanged and the criteria's behavioural clauses stand. The POPULATION SIZES that
+  used to appear in criteria have been removed and live here instead — see the census block
+  below for why, and treat every number in this record as an observation with a date and a
+  commit attached, never as a requirement.
+
+
+  CENSUS AS MEASURED AT b846121c9, 2026-09-01, BY THIS AMENDMENT — INDEPENDENTLY, NOT
+  INHERITED. Registry side: 61 hooks_manifest entries, 5 of them enabled:false
+  (check-mermaid-drift, check-diagram-naming, check-duplicate-code, check-diff-coverage,
+  check-surface-components-e2 — unchanged since authoring). Disk side, and the number depends
+  entirely on the counting rule, which is the whole point of this block:
+
+    - non-recursive listing, bare-filename identity ......... 67 on disk, 18 unreferenced
+    - recursive listing, bare-filename identity ............. 71 distinct names, 19
+    - non-recursive, using _check_hook_script_integrity's
+      last-whitespace-token extraction ...................... 67 on disk, 19 unreferenced
+    - recursive listing, path identity (THE RULE ADOPTED) ... 72 on disk, 20 unreferenced
+
+  Three of those four rules can produce a "19", and they produce three DIFFERENT sets of 19.
+  The third is worse than merely different: it reaches 19 by falsely reporting
+  check_done_proof.py, a registered and required gate, because its entry line ends in a flag
+  rather than in the script name. A number that three incompatible rules agree on and three
+  incompatible sets underlie is not evidence of anything.
+
+
+  WHY THE COUNTS LEFT criteria, STATED SO IT IS NOT UNDONE. They have now gone stale twice in
+  a single day of elapsed store time — 66/59/60/19 at authoring on 2026-08-31, 67/61/-/18 at
+  the sibling re-measurement, 72/61/-/20 under the adopted rule here — and while they were
+  stale they were also internally unreachable as a pair: 66 is a non-recursive listing, which
+  yields 18, and reaching 19 required silently counting hooks/check_ac_done_on_merge.py, which
+  needs a recursive listing, which makes the disk figure 71. An implementer following the old
+  criteria literally would write a non-recursive listing, get a number that did not match, and
+  either fudge it or fail to notice that hooks/ holds five gate scripts of which three are
+  live. Recursion was a real design decision the criteria were making by accident; it is now
+  made explicitly, in criteria, as behaviour rather than as arithmetic. THE REQUIREMENT THAT
+  BOTH POPULATIONS BE ENUMERATED FROM LIVE SOURCES IS NOT WEAKENED BY THIS — it is
+  strengthened, because criteria now describe how the enumeration works instead of asserting
+  what it happened to return on one afternoon, and BP-100n-4-ii still requires the sizes to be
+  STATED in every run. A number the check prints from what it examined cannot go stale; a
+  number written into a requirement can only go stale.
 
 
   THE GAP IS IN THE ENUMERATION, NOT THE PREDICATE. BP-100k-4's predicate is sound and is
@@ -465,13 +709,46 @@ notes: >-
   registry it is meant to be checking cannot detect incompleteness in that registry.
 
 
-  DAY-ONE BLAST RADIUS IS 19 REPORTS, AND THAT IS THE CORRECT OUTCOME. The check fails on the
-  commit that lands it until each of the 19 is registered, deleted, or given a grounded record
-  in the non-gate register (BP-100n-4-i). Triaging them is part of the work, not a follow-up:
-  a check that lands green because its findings were pre-suppressed has proved nothing. The
-  named instance is the ticket sign-off parity script — deployed, documented as live with
-  enforcement, invoked by nothing, and load-bearing for BP-1100g-5-i and four TQ-500 criteria
-  that pin their reader onto it.
+  DAY-ONE BLAST RADIUS IS THE WHOLE UNREFERENCED SET, AND THAT IS THE CORRECT OUTCOME. The
+  check fails on the commit that lands it until every script it reports is registered,
+  deleted, or given a grounded record in the non-gate register (BP-100n-4-i). Triaging them is
+  part of the work, not a follow-up: a check that lands green because its findings were
+  pre-suppressed has proved nothing. Take the set from the check's first run; do not take it
+  from the census block above, which is dated evidence that the set moves.
+
+  THE EXEMPLAR HAS CHANGED, AND ITS DEPARTURE IS ITSELF THE ARGUMENT. This AC's named instance
+  was the ticket sign-off parity script — deployed, documented as live with enforcement,
+  invoked by nothing. It is no longer unreferenced: BP-1100g-5-i registered it under its
+  documented id in commit 406375c88 (PR #660) and it is now on an emitted entry line. The
+  contract to TQ-500b-1 anticipated exactly this and says whichever AC is scheduled first owns
+  the addition; BP-1100g-5-i was first. What survives is narrower and deliberately out of
+  scope: the entry carries no --enforce flag while README.md still states the config uses one,
+  so the gate is reached but not at the documented enforcement level. That is a
+  documentation-versus-config question about one gate, not a reached-versus-unreached one, and
+  folding it in would put a second question inside the criterion. THE POINT FOR THIS AC: the
+  single most load-bearing fact in its original text — its named example — was falsified by
+  ordinary scheduled work within a day. Facts about the world stated as requirements decay at
+  the speed the world moves. Criteria state behaviour; notes state observations, dated.
+
+  check_file_size.py IS A SPECIAL CASE AND HAS AN EXTERNAL ANSWER. It is the one member of the
+  unreferenced set whose registration blocks the very commit that registers it: this AC's own
+  implementation edits scripts/build_phases.py, measured at b846121c9 at 2603 lines under the
+  hook's own docstring-stripping rule (3873 raw) against a 400-line cap. Registering it flat
+  refuses that commit and walls off a large fraction of the first-party Python tree; recording
+  it as a declared non-gate is the disposition this AC already calls implausible for the ten
+  config-carrying scripts, of which it is one, and is suppression under another name. The
+  third answer was authored on 2026-09-01: GE-127b, "A file already over the line cannot get
+  further over it", specifies the ratchet — an oversized file may still be worked on and may
+  shrink, but a change that leaves it larger is refused, judged against the file's own
+  previous size. Land that and registering check_file_size.py is a no-op for every file
+  already over. The sequencing is recorded as a doc_link and an it_requirements constraint
+  rather than a depends_on edge, and the doc_link states the mechanical reason: a
+  non-ancestor depends_on entry blocks readiness until the dependency reaches
+  work_status: done, and GE-127b is an L1 composite that never will, so the edge would not
+  sequence this AC — it would delete it from the ready set. GE-127a and GE-127b each already
+  carry a doc_link naming THIS AC as their own precondition, since the size gate cannot fire
+  until this AC's triage registers it; neither direction is a whole-AC dependency and writing
+  either as one would falsify the graph in both.
 
 
   MUTATIONS FOR THE ABSENCE-ASSERTING CLAUSES. Two clauses here assert that something is NOT

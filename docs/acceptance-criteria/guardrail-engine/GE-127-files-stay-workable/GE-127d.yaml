@@ -1,0 +1,123 @@
+id: GE-127d
+title: "The limit you are shown is the limit that is applied"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  What the standard says it does is what it does.
+
+  The rule you read — which files it covers, when it applies, and how big is too
+  big — is the rule you get, and the size you are quoted for a file is one you
+  can arrive at yourself. Nobody plans a change around a published rule and then
+  discovers a different one was enforced, and nobody is told a file is a size
+  that does not match what they can see in it.
+depends_on:
+  - GE-127
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE. Reconciling the published rule with the applied one
+      only means something once the rule is applied at all; that registration is
+      BP-100n-4's day-one triage. Do not restate the census.
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      One of the two published descriptions that currently contradict the guard's
+      behaviour — it states the gate blocks NEW files only and that modifications
+      to existing large files are exempt.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The configuration section for this gate carries a comment making the same
+      new-files-only claim, so the contradiction is present on the configuration
+      surface as well as in the documentation. Both are read as authoritative.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The guard's own recorded change history states the new-files-only exemption
+      was removed. That entry is the evidence that the two published claims above
+      are stale rather than aspirational.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-01
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-127d-1
+  - GE-127d-2
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+notes: |
+  THIS IS A DOCUMENTED CONTRADICTION, NOT AN INFERENCE — READ FROM SOURCE,
+  2026-09-01. Two published surfaces state that this gate applies to NEW files
+  only and that modifications to existing large files are exempt as an incremental
+  refactor path: the gate's entry in the guard family's reference documentation,
+  and the comment on its own configuration section. The guard's recorded change
+  history states that exemption was removed and that limits are enforced on all
+  changed files. Both published claims are therefore stale, and both are surfaces
+  people and agents reason from when deciding what a change will cost them.
+
+  A SECOND, QUIETER MISMATCH — THE NUMBER ITSELF. The size a file is reported to
+  be is not the number of lines in it: certain classes of line are discarded before
+  counting. That may well be the right rule, and this criterion takes no position
+  on which rule is correct. It takes a position on two things only: the rule must
+  be published, and the number quoted back to you must be one you can arrive at
+  from the published rule. A rule you cannot reproduce reads as an arbitrary
+  verdict, and the predictable response to an arbitrary verdict is to look for the
+  cheapest way past it.
+
+  WHY THIS BELONGS IN THIS GOAL AND IS NOT COSMETIC. The gate's own message tells
+  authors not to delete blank lines, comments or documentation to get under the
+  limit. That instruction only holds if the counting rule and the limit are
+  legible; if they are not, stripping content is exactly what a rational author
+  tries first, and the guard ends up making files worse. Honesty here is what makes
+  the other four criteria enforceable rather than merely present.
+
+  THE DIRECTION OF THE FIX IS NOT DECIDED HERE, AND MUST NOT BE ASSUMED. Two
+  reconciliations are available for the new-files-only contradiction — correct the
+  documentation to match the behaviour, or restore the behaviour to match the
+  documentation — and they are materially different products. Note that the second
+  is largely superseded by GE-127b: a ratchet gives the incremental-refactor path
+  the stale documentation was promising, without the exemption. Whichever is chosen
+  must be chosen explicitly and recorded, and the decision must leave exactly one
+  statement of the rule standing rather than two agreeing ones that can drift apart
+  again.
+
+  THE ACCEPTANCE SHAPE THAT HAS TEETH, AND THE ONE THAT DOES NOT. A criterion
+  satisfied by editing a sentence is satisfied again the next time the behaviour
+  changes and the sentence does not — this defect has already happened once here,
+  exactly that way. What discharges this L1 is a check that the published statement
+  and the enforced behaviour agree, evaluated against both, so that a future change
+  to either without the other is caught. Reconciling today's wording is necessary
+  and is not sufficient.
+
+  BOUNDARY WITH GE-127e, WHICH IS EASY TO BLUR. This L1 is about the rule being
+  TRUE. GE-127e is about the message being USEFUL when the rule stops you. A gate
+  can quote an accurate limit and an accurate count and still leave you with
+  nothing to do; it can also give excellent advice about a limit that is not the
+  one enforced. Keep the two obligations apart.
+
+  BOUNDARY WITH GE-127c. What is in scope is GE-127c's decision. That the scope
+  actually applied matches the scope published is this criterion's, and it applies
+  to whatever list enrichment pins.
