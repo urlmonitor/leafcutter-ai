@@ -149,7 +149,7 @@ flowchart TD
 | TDD Red-Baseline Gate | test-writer signed off before python-coder; red_baseline present in sign-off comment | Must turn all red_baseline tests green; cannot skip or xfail any listed test | `test-writer` |
 | Stop-and-Ask | Implementation task requires editing a .sql file | Halts immediately and instructs caller to use sql-coder for the SQL portion | `sql-coder` |
 | Contract-Shrinkage Guard | About to narrow a return shape, function signature, or dictionary structure | Must enumerate consumers via research-agent first; blocked if any consumer depends on removed field | `research-agent` |
-| Test Delegation | Implementation requires new or updated unit tests | Adds tasks to ### test-writer section and uses (status: handoff) instead of (status: ok) | `test-writer` |
+| Test Delegation | Implementation requires new or updated unit tests | Adds tasks to ### test-writer section, uses (status: handoff) instead of (status: ok), and returns handoff_target: "test-writer" in the JSON result | `test-writer` |
 | File-Size Limit | New .py file would exceed {{config.file_size_limit_py}} lines | Plans module splits upfront using build_phases.py / build_helpers.py precedent | `None` |
 | Research Delegation | Any cross-file or symbol-level question arises during implementation | Delegates to research-agent via Agent tool; never guesses or searches directly | `research-agent` |
 ---
@@ -1216,6 +1216,7 @@ flowchart TD
 - BP-100k-3-i: A freshly built, unmodified tree yields zero uncomparable artifacts and a clean drift run — the stricter reporting raises no false alarms
 - BP-100k-4: A registered commit gate whose activation condition can never match anything the repository is able to stage is reported as unreachable and blocks — a gate that cannot fire is not protection
 - BP-100k-4-i: The reachability check raises no false alarm on gates that can fire, and fails rather than passing when it cannot determine reachability at all
+- BP-100k-4-ii: A trigger that matches nothing because the project holds no file of that kind is a gate with nothing to do, not a gate that cannot fire — the two are told apart by what a checkout could ever produce, never by what it holds today
 - BP-100k-5: The drift gate examines the deployed surface the build actually wrote, and reports the size of the population it did not examine — a verified count with no denominator is not a pass
 - BP-100k-5-i: The unexamined deployed population reaches zero by registering the deploy surface, never by exempting it, and the newly covered files are provably drift-checked
 - BP-100m-1: Two source templates deploying to the same command path fail the build, naming both sources and the target
@@ -1257,6 +1258,7 @@ flowchart TD
 - BP-1100g-3-ii: The set of taught proof kinds resolves to the same set wherever the scanner runs from
 - BP-1100g-4: A kind of proof that was promised and never claimed is refused by name
 - BP-1100g-4-i: A claim is taken at face value: the promise-versus-claim check never judges whether a test does what it says
+- BP-1100g-4-ii: A plan is not yet a hand-off: work still declared as only planned is not refused for a proof it has not reached the point of owing, and anything that cannot be read as still-planned is
 - BP-1100g-5-i: A missing, reasonless, or contradictory seam answer is reported, while a reasoned no is not
 - BP-1200a-1: Full test suite passes on a fresh clone using the documented CI test command
 - BP-1200a-1-ii: No test fails at collection time because a build-generated dependency is missing from the fresh clone
@@ -1427,6 +1429,7 @@ flowchart TD
 - BP-900h-6: The simulation uses the install, not just builds it — a first commit is attempted
 - BP-900h-6-i: The use-the-install step mutates only a target it is entitled to destroy, and refuses anything else untouched
 - BP-900h-6-ii: The executed-guard record accounts for the guard population the adopter would face, and a narrowed run cannot report an unqualified pass
+- BP-900h-6-iii: The simulated adopter tracks no file of at least one kind the deployed guards watch for, so a guard that only misfires in a project unlike this one is exercised rather than assumed absent
 - BP-901: goal_to_epic.py main() only resolves the worktree root when a default path is actually needed
 - CR-100a-1: Structural bucket names exactly its six Modern smells
 - CR-100a-2: Design bucket names exactly its six Modern smells
@@ -1727,6 +1730,13 @@ flowchart TD
 - GE-126e-2: The census says how many checks it examined beside how many it found
 - GE-126e-2-i: A list too long to act on in one pass is a successful run and never a blocked commit
 - GE-126e-3: A new check joins the census by being registered rather than by being remembered
+- GE-127a-1: The change that takes a file past its permitted length is refused at the moment it is committed
+- GE-127a-1-i: A file whose length cannot be established is refused and named, never reported as within its permitted length
+- GE-127b-1: A change that leaves an already-oversized file longer than it was is refused; one that leaves it the same or shorter is allowed
+- GE-127b-1-i: A run that could not establish any previous length says which situation it is in and refuses, and a clean run states how many files it compared
+- GE-127c-1: The outcome states which kinds of file it measured, so a kind that was never measured is not read as having passed
+- GE-127d-1: The published rule and the enforced rule are checked against each other, and no fact the standard accepts about a change is left without effect on its verdict
+- GE-127d-2: The length a file is quoted at is one the author can arrive at themselves by following a published measurement rule
 - INF-1000a-1: Detect stale fixtures when a required field is added to a schema
 - INF-1000a-1-i: Schema file with no required-field changes passes without scanning fixtures
 - INF-1000a-1-ii: Fixture files that already contain the new field are not flagged
@@ -1961,6 +1971,7 @@ flowchart TD
 - TKT-500g-4-i: An empty demand is not a way to say "no proof needed" — it is refused by name
 - TKT-500g-5: The readiness report never calls a demanded proof unnecessary
 - TKT-600a-1: Generated files_touched excludes prose-illustration paths; depends_on is guard-valid
+- TKT-600a-2: A path the record itself declares as non-edit-surface is not harvested from its own prose
 - TKT-600b-1: The generated phase record names exactly the phases the drive will dispatch for that ticket's location
 - TKT-600b-1-i: Generation refuses rather than guesses when the ticket's final location is not yet settled
 - TKT-600b-1-ii: A phase the drive will not run is recorded as excluded, never left out of the record

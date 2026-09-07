@@ -9,7 +9,7 @@ req_status: draft
 readiness: approved
 priority: high
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 criteria: |
   Given a project directory that is neither the producing package nor anywhere inside
     the producing package's own parent folder,
@@ -238,7 +238,8 @@ amended_by:
       true; both negative controls, the travels-with-the-project clause and the
       no-reading-the-source clause are untouched, as are every it-po field.
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-1500d-1-i
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

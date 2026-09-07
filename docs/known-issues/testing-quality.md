@@ -952,10 +952,42 @@ is convincing and the invisible half leaks permanently.
 
 ### KI-TQ-20260901-1310 — The red-baseline gate's 60-second pytest budget silently negotiates the AC's required test shape down to whatever fits
 
-- **Severity:** high
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Severity:** was high.
+- **Status:** **RESOLVED 2026-09-07, on CI evidence rather than on the fix landing.**
+
+  > Fixed by **PR #706** (`fde1e75b`). This entry was deliberately held open after that
+  > merge: its claim was that a subprocess-level AC could now clear the gate, and a merged
+  > fix is not that claim's evidence — a green CI run is. Both arrived:
+  >
+  > | PR | `Proof-of-done coverage check (BO-2500b)` |
+  > |---|---|
+  > | #708 | **pass, 2m03s** |
+  > | #694 | **pass, 2m51s** |
+  >
+  > Neither could have completed under the old 60-second ceiling; #694 is the very PR whose
+  > `pytest timed out after 60 s` produced this entry.
+  >
+  > **The budget is composed, not raised** — a 30 s collection floor charged ONCE, plus
+  > 300 s per linked test file. A single larger constant would still ignore the AC's own
+  > size and reproduce this defect one notch up, which is what the fix direction above
+  > warned against; a test pins that ten files get strictly more than one. A timeout is
+  > now also distinguishable from an absent test: a non-nodeid-shaped sentinel is threaded
+  > through `verify_done_eligible` and `_verify_composite_eligible` so the reason names the
+  > budget and the command instead of reading as "these tests do not exist".
+  >
+  > The per-file figure is deliberately ~2x the measured worst case. The ~142 s that
+  > exposed this was measured on a workstation, and a hosted runner is materially slower
+  > for subprocess-heavy work — a value chosen to just clear the local number would have
+  > reproduced this defect in CI while looking fixed locally.
+  >
+  > **A second occurrence, recorded before the fix landed and worth keeping.** Building
+  > BP-900h-4 the same budget forced its author to optimise the declaring-file inspector
+  > from ~7.1 s to ~1.7 s per invocation to fit. That is a genuine improvement, but the
+  > prompt was a gate budget rather than a profiler — the first time this pressure produced
+  > an optimisation instead of deleted coverage. Two ACs in one day had their test design
+  > bent by this number.
+- **Occurrences:** 2
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-07
 - **Where:** `scripts/ac_store/done_proof.py:896-908` (`_run_pytest_and_parse`, `timeout=60`),
   consumed by `scripts/build_orchestration/fast_lane.py:1482` (`verify_red_baseline`)
 

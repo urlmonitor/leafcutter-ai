@@ -732,7 +732,7 @@ Every phase agent appends one `## Comments` entry per invocation. The heading is
 | Tag | When to use | Effect on supervisor |
 |---|---|---|
 | `ok` | Phase completed, no concerns. | Spawns the next `needed` agent in natural order. |
-| `handoff` | Phase completed and explicitly hands to a named sibling (the prose body MUST name the receiving agent). | Spawns the named agent next, regardless of natural ordering. |
+| `handoff` | Phase completed and explicitly hands to a named sibling (the prose body MUST name the receiving agent). When dispatched for a machine-parsed result (see the Machine-Parsed Dispatch Output Contract in your agent template), also set `handoff_target: "<agent-name>"` in the returned JSON — the `ticket-supervisor` agent reads the prose body, but the `build-feature.js` / `build-ticket.js` workflow drivers route on this field, not on prose (see BO-3000a). | Spawns the named agent next, regardless of natural ordering. |
 | `blocker` | Phase could not complete; another agent must fix something first. | Triggers failure adjudication: respawn sibling, ask user, or escalate to brainstorm-lead. |
 | `question` | Phase needs user clarification. | Halts the ticket; surfaces the question to the user. |
 
@@ -758,7 +758,10 @@ completion_manifest:
 ```
 
 - For `ok`: a one-liner summarising what changed and any test status.
-- For `handoff`: the named recipient and a one-sentence reason.
+- For `handoff`: the named recipient and a one-sentence reason. On the machine-parsed
+  path, the recipient named here in prose is for the human/ticket-supervisor reader;
+  the JSON result MUST separately carry `handoff_target: "<agent-name>"` for the
+  workflow drivers, which do not parse this prose.
 - For `blocker`: what was attempted, why it failed, and a specific suggested remediation (which agent to respawn, or what user input is needed).
 - For `question`: the precise ambiguity and the options the user should choose between.
 
@@ -891,6 +894,12 @@ agents:
 Approach approved at the architecture level (extract a writer interface; thin adapter for live vs historic). Handing to python-coder for implementation; no further architectural review needed unless the writer interface needs more than 2 implementations.
 ```
 
+If this sign-off is on the machine-parsed dispatch path (see your agent template's
+Machine-Parsed Dispatch Output Contract), the JSON result for the same phase MUST
+also carry `handoff_target: "python-coder"`. The comment prose above is what a human
+or the `ticket-supervisor` agent reads; `handoff_target` is the only field the
+`build-feature.js` / `build-ticket.js` workflow drivers route on.
+
 ---
 
 ## §7 Knowledge Capture Step
@@ -905,12 +914,20 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
 
 **Yes path**:
 1. Ask: "Describe the learning in one to three sentences."
-2. Load `.claude/skills/route-learning/SKILL.md` and apply the decision tree to classify the learning.
-3. Load `.claude/skills/capture-learning/SKILL.md` and execute the write.
-4. Emit a `knowledge_captured` telemetry event to `agent_telemetry.jsonl`. **This
-   step is the single normative definition of the `knowledge_captured` emission
-   shape for the whole package.** The S9 knowledge-emission block in each v3
-   agent template (`templates/agents/product-owner.md`,
+2. Emit one `knowledge_captured` telemetry event to `agent_telemetry.jsonl`.
+   Per ADR-034 (Knowledge Write Ownership), this single append is the agent's
+   entire obligation: the agent does not classify the learning, does not pick
+   a destination knowledge surface, and does not write to one — the harvester
+   (`scripts/knowledge/harvest_learnings.py`, invoked via the
+   `knowledge-harvester` agent) is the sole writer and performs whatever
+   routing is needed when it later drains the sink. Do NOT load
+   `route-learning` or `capture-learning` to reach this step — ADR-034 §2
+   item 3 retired both names, neither has ever existed under
+   `templates/skills/` or `.claude/skills/`, and re-introducing either name
+   (under any spelling) is the defect this step exists to close. **This
+   step is the single normative definition of the `knowledge_captured`
+   emission shape for the whole package.** The Knowledge Loop — Emission
+   block in each v3 agent template (`templates/agents/product-owner.md`,
    `templates/agents/business-analyst.md`, `templates/agents/it-po.md`)
    references this step by path instead of restating the field list — if a
    template's emission block ever appears to disagree with what is written
@@ -925,12 +942,45 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
      "component": "<component-id>",
      "destination": "<routed_file_path>",
      "entry_kind": "<entry_kind>",
-     "ticket": "<ticket_path>"
+     "ticket": "<ticket_path>",
+     "text": "<the learning body, exactly as the agent wrote it>"
    }
    ```
 
-   **Required of every producer:** `event`, `timestamp`, `agent`, `component`,
-   `destination`, `entry_kind`.
+   **Required of every producer:** `event`, `timestamp`, `agent`, `component`, `destination`, `entry_kind`, `text`.
+
+   **`text` — REQUIRED OF THE PRODUCER, OPTIONAL TO THE CONSUMER.** An
+   emitting agent MUST populate `text` with the non-empty learning body from
+   step 1 above, as one JSON string (newlines escaped, no multi-line
+   pretty-printing, no raw markup fragments — this is one JSONL line). A
+   reader/consumer MUST accept a record without it: this is the whole
+   backward-compatibility story for the 28 six-field records already on disk
+   (none of them carry `text`) — they stay structurally valid on read, and a
+   missing `text` is a **classification** (ineligible-to-write, per
+   `INF-700c-1`) rather than a parse error or a validation failure. Do not
+   tighten a reader to require `text` — that would invalidate every
+   pre-existing record.
+
+   **`entry_kind` and `destination` — no classification procedure is defined
+   here.** Both fields used to be `route-learning`'s output; with that skill
+   retired and nothing replacing it inline, this step does not ask the agent
+   to classify or route. Populate both with the literal sentinel values
+   `"unclassified"` and `"(unrouted)"`. This is a deliberate non-value, not a
+   vocabulary or sink-path decision: `INF-400c-5` owns the real `entry_kind`
+   vocabulary and `INF-400c-4` owns the destination/sink path, and this step
+   must not pre-empt either. `route-knowledge`
+   (`templates/skills/route-knowledge/SKILL.md`) was evaluated as a drop-in
+   classifier for this spot and rejected: its 16-value `target_surface`
+   taxonomy overlaps the harvester's 11-value `_KNOWN_ENTRY_KINDS` on only 4
+   values (ADR-034 §2, "Consequences that follow mechanically"), and its
+   output shape (`{target_surface, path, rationale}`) does not match this
+   record's `{entry_kind, destination}` fields — per that same ADR, a
+   vocabulary reconciliation is a prerequisite of any repoint, not a
+   follow-up to one. The harvester already treats an unrecognised
+   `entry_kind` as unroutable-but-retryable rather than discarding it
+   (`unroutable_by_kind` / `outstanding`, never dropped on this account), so
+   emitting `"unclassified"` costs no record — it only defers real routing to
+   `INF-400c-5`.
 
    **Optional — `ticket`:** include it only when the emitting agent has a
    ticket path in hand. Phase agents invoked with a `ticket_path` — this
@@ -947,14 +997,16 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
    computed over it, are both defined over the **required** field set above
    only.
 
-   **This guard is currently violated, and saying so is the point.**
-   `scripts/knowledge/harvest_learnings.py` `_event_hash` keys its digest on
-   `(ticket, timestamp, destination, entry_kind)` — and `ticket` is empty in
-   every one of the 28 records on disk, so one of four key components is a
-   constant. `INF-400b-2-i` owns removing it. Until that lands, treat this
-   paragraph as the rule the codebase is being brought into line with, not a
-   property it already has. Do not add a second consumer that keys on
-   `ticket` in the meantime.
+   **The one consumer that violated this guard has been brought into line.**
+   `scripts/knowledge/harvest_learnings.py` `_event_hash` used to key its
+   digest on `(ticket, timestamp, destination, entry_kind)`, with `ticket`
+   empty in every one of the 28 records on disk — one of four key components
+   a constant. `INF-400b-2-i` re-keyed it onto `_REQUIRED_DIGEST_FIELDS`
+   (`timestamp, agent, component, destination, entry_kind`) and now excludes
+   `ticket` and `text` from identity explicitly. So this guard describes the
+   codebase as it is, not as it is being brought to be. It stays stated
+   because the next consumer is the one at risk: `ticket` looks like an
+   identifier and is not one.
 
    **Scope of "normative": the record's SHAPE, not its destination.** Which
    file these events are written to is a separate, still-unreconciled
@@ -964,7 +1016,14 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
    record looks like; it does not settle where it goes, and a reader should
    not infer agreement on the sink from agreement on the fields.
 
-This step is **mandatory** — skipping it is a protocol violation. If `route-learning` or `capture-learning` are unavailable, log a warning and proceed (do not block sign-off).
+This step is **mandatory** — skipping it outright is a protocol violation.
+`route-learning` and `capture-learning` are retired and this step no longer
+asks an agent to load either, so their absence is not a condition that can
+occur here anymore. The one recognised escape hatch is a write failure on the
+append itself (e.g. the `debugging/logs/` directory is not writable): log a
+warning and proceed — do not block sign-off. (What the proceed-anyway branch
+must leave behind as a countable artefact is `INF-700b-1-ii`'s obligation,
+not re-specified here.)
 
 ---
 

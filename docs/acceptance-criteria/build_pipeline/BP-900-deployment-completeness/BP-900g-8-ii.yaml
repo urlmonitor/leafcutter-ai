@@ -9,7 +9,7 @@ req_status: active
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
 criteria: |
   Given a script the build deploys into a consumer install,
@@ -225,7 +225,8 @@ amended_by:
       and FileNotFoundError for the doc_types declaring file from the deployed
       check_doc_frontmatter.py. criteria, title, depends_on and req_status untouched.
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/test_bp_900g_8_ii.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260825-BP-900g-8-ii.md
 change_target: pipeline
