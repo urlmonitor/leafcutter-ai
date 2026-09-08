@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 criteria: |
   Given a project into which the route has been installed by running the installer
@@ -126,9 +126,14 @@ origin_agent: business-analyst
 created: 2026-08-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/portability/test_acd_2100d_1.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/19_TICKET-20260826-ACD-2100d-1.md
+- scripts/build_phases.py
+- unit_tests/_installed_route_probe.py
+- unit_tests/_workflow_engine_harness.py
+- unit_tests/portability/test_acd_2100d_1.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
