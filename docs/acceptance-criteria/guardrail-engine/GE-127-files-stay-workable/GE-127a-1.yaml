@@ -351,7 +351,6 @@ covered_by:
 implemented_by:
   - "templates/scripts/commit_guardian/commit_guardian.json"
   - "templates/scripts/commit_guardian/check_file_size.py"
-  - "templates/scripts/commit_guardian/run_hook.py"
 change_target: code
 risk_surface: contract_boundary
 notes: |
