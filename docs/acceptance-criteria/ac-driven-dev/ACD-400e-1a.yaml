@@ -29,7 +29,7 @@ doc_links:
   - path: scripts/ac_store/scan_ac_store.py
     relationship: describes
     status: exists
-    relevance: "The behaviour the account must describe. Every verdict the account has to state was observed by executing this surface on 2026-09-08 and is pinned by ACD-400c-1, ACD-400c-1-i, ACD-400c-1-ii, ACD-400c-2, ACD-400c-3, ACD-400d-1, ACD-400d-2, ACD-400d-2-i, ACD-400d-3 and ACD-400d-4. Tagged `describes`, not `modifies`: this AC changes what is written, never what the queue does."
+    relevance: "The behaviour the account must describe. Every verdict the account has to state was observed by executing this surface on 2026-09-08 and is pinned by ACD-400c-1, ACD-400c-1-ii, ACD-400c-2, ACD-400c-3, ACD-400d-1, ACD-400d-2, ACD-400d-2-i, ACD-400d-3 and ACD-400d-4. Tagged `describes`, not `modifies`: this AC changes what is written, never what the queue does. NOTE 2026-09-08: ACD-400c-1-i was deleted by BrainCandy's ruling and is deliberately absent from the list above. The fact it pinned -- that work failing admission appears in neither list and in neither count -- remains TRUE and is still worth stating in the account; it is simply no longer pinned by an AC of its own, being an ACS-1100 reporting concern rather than a selection one."
   - path: docs/architecture/components/ac-driven-dev.md
     relationship: describes
     status: exists

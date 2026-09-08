@@ -78,13 +78,13 @@ test_spec:
 test_rationale: "A direct unit test on the admission predicate would be insufficient: it would stay green if the predicate stopped being called, which is the exact shape of the defect this AC exists to make impossible. The pinning value comes from asking the entry point the build loop asks."
 delivers_to:
   agent: python-coder
-  contract: "A reusable temp-AC-store fixture builder under unit_tests/ac_store/ — writes real .yaml records with caller-chosen id, level, status, work_status, readiness, priority, estimated_complexity and depends_on into a tmp root, and invokes the scanner's command surface returning the parsed {ready: [...], blocked: [...]} JSON. Consumed by ACD-400c-1-i, ACD-400c-1-ii, ACD-400c-2, ACD-400c-3 and the whole ACD-400d family."
+  contract: "A reusable temp-AC-store fixture builder under unit_tests/ac_store/ — writes real .yaml records with caller-chosen id, level, status, work_status, readiness, priority, estimated_complexity and depends_on into a tmp root, and invokes the scanner's command surface returning the parsed {ready: [...], blocked: [...]} JSON. Consumed by ACD-400c-1-ii, ACD-400c-2, ACD-400c-3 and the whole ACD-400d family."
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-08
 amended_by: []
 superseded_by: null
-covered_by: [ACD-400c-1-i, ACD-400c-1-ii]
+covered_by: [ACD-400c-1-ii]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

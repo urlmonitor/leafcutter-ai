@@ -28,7 +28,7 @@ doc_links:
   - path: scripts/ac_store/scan_ac_store.py
     relationship: describes
     status: exists
-    relevance: "The queue the checker must ask. Tagged `describes`, not `modifies`: the checker asks the selector questions and never changes it. Every verdict it will find is already pinned by ACD-400c-1, ACD-400c-1-i, ACD-400c-1-ii, ACD-400c-2, ACD-400c-3, ACD-400d-1, ACD-400d-2, ACD-400d-2-i, ACD-400d-3 and ACD-400d-4."
+    relevance: "The queue the checker must ask. Tagged `describes`, not `modifies`: the checker asks the selector questions and never changes it. Every verdict it will find is already pinned by ACD-400c-1, ACD-400c-1-ii, ACD-400c-2, ACD-400c-3, ACD-400d-1, ACD-400d-2, ACD-400d-2-i, ACD-400d-3 and ACD-400d-4. ACD-400c-1-i was deleted 2026-09-08 by BrainCandy's ruling; the neither-list-nor-count behaviour it described is unchanged and unpinned, so the checker may observe it but must not treat it as a criterion."
   - path: docs/architecture/components/ac-driven-dev.md
     relationship: describes
     status: exists
