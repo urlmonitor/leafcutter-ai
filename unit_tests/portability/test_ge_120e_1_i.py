@@ -198,6 +198,23 @@ _NOTHING_TO_INSPECT_MISSING_MSG = (
 
 _GIT_ENV_OVERRIDES = {
     "PRE_COMMIT_ALLOW_NO_CONFIG": "1",
+    # KI-TQ-012. This fixture builds its scenarios as worktrees OF THE REAL
+    # REPOSITORY (`git worktree add` with cwd=_REPO_ROOT). Worktrees share
+    # $GIT_COMMON_DIR/config, so a plain `git config user.email ...` inside one
+    # writes to the configuration of the ENTIRE repository family and outlives
+    # the fixture — teardown removes the worktree but never unsets the keys.
+    # That leaked a fixture identity onto ten real commits in one session,
+    # several of them on open pull requests.
+    #
+    # Supplying the identity through the environment instead cannot leak: it
+    # lives and dies with the subprocess, and no configuration file is written.
+    # `git config --worktree` would also scope correctly, but only where
+    # extensions.worktreeConfig is enabled — that lives in untracked
+    # .git/config, so a fresh CI clone does not have it.
+    "GIT_AUTHOR_NAME": "GE-120e-1-i fixture",
+    "GIT_AUTHOR_EMAIL": "ge120e1i-fixture@example.com",
+    "GIT_COMMITTER_NAME": "GE-120e-1-i fixture",
+    "GIT_COMMITTER_EMAIL": "ge120e1i-fixture@example.com",
 }
 
 
@@ -267,8 +284,8 @@ class _EmptyAuthoredChangeSetFixture:
             raise RuntimeError(
                 f"Fixture setup failed: `git worktree add` did not create {self.root}"
             )
-        _run_git(["config", "user.email", "ge120e1i-fixture@example.com"], cwd=self.root)
-        _run_git(["config", "user.name", "GE-120e-1-i fixture"], cwd=self.root)
+        # Identity comes from _GIT_ENV_OVERRIDES, never `git config` — see
+        # KI-TQ-012 there. Writing it here would escape into the real repo.
 
         # Base commit c0 — common ancestor holding the file `theirs` will
         # delete, and the production file `theirs` will edit.

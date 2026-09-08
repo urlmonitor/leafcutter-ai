@@ -128,7 +128,36 @@ GE-120e-5 -> GE-120e-1, GE-120e-2, GE-120e-4
 | test-runner | 01, 02, 03, 04, 05, 06, 07, 09, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 22, 23, 24, 25, 26, 28, 29, 30, 31, 32, 33, 34, 35, 36 |
 | test-writer | 01, 02, 03, 04, 05, 06, 07, 09, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 22, 23, 24, 25, 26, 28, 29, 30, 31, 32, 33, 34, 35, 36 |
 
-## Deferred red baselines — restore these when their tickets are driven
+## Deferred red baselines — status as of 2026-09-07
+
+**Two of the three are back and green.** `test_ge_120e_2_i.py` (ticket 31) and
+`test_ge_120e_4_i.py` (ticket 36) were restored from `98797e669`, their blockers fixed, and
+both now pass — 5/5 and 4/4 respectively. The full `unit_tests/portability/` suite is
+**106 passed** with them included.
+
+**One is still deferred: `test_ge_120b_2_i.py` (ticket 10).** Its five tests need
+`scripts/commit_guardian/ge120b2i_verify_unchanged.py` — a `capture`/`verify` CLI that does
+not exist. That is ticket 10's implementation, which has not been built, so the file is
+removed again rather than merged red. Restore with
+`git checkout 98797e669 -- unit_tests/portability/test_ge_120b_2_i.py` when ticket 10 is
+driven.
+
+**What the two restorations actually cost, since the original note underestimated it.**
+Neither was blocked by its own AC being unimplemented:
+
+- **Ticket 36** was blocked by a *fixture* bug — `_init_repo()` never `mkdir`'d the repo
+  before `git init`, so all four tests died at setup regardless of implementation quality.
+  Fixing that alone took it to 2 passed. The rest was a genuine AC gap: the objection named
+  the violation and the production files but never the weakened test file.
+- **Ticket 31** was blocked by a *speculative API* — the file called
+  `harness.build_second_working_copy()` / `run_check()`, which never shipped — and then by a
+  predicate defect of its own: it counted `exit != 0` as "the check objected", conflating
+  could-not-check with objected. Six checks were accused of objecting when none had run.
+
+The original note's "speculative-API naming" warning was right but understated: in both
+cases the test file needed real repair, not a rename.
+
+## Original restore notes
 
 Three red-baseline test files were **removed from the branch on 2026-09-01** so the first
 tranche of this epic could merge. They are not lost: restore each from the salvage commit

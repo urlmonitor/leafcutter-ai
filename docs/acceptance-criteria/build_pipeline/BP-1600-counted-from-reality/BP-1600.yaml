@@ -1,0 +1,90 @@
+id: BP-1600
+components:
+  - build_pipeline
+title: "What a check covers is measured against what you actually have, not against a list someone maintains"
+component: build-pipeline
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Nothing goes unchecked because it was left off a list.
+
+  When a check decides what to examine, it works out its own subject matter by
+  looking at what is really there, at the moment it runs. It never takes that
+  subject matter from a list a person has to remember to extend, because
+  anything missing from such a list is exempted silently and looks, in every
+  report, exactly like something that passed.
+
+  Anything that exists but that nothing accounts for is named and the run
+  fails. You are protected in the places you actually have, not only in the
+  places somebody remembered to write down.
+depends_on: []
+doc_links:
+  - path: "docs/reference/false-green-mechanisms.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      The register of the false-green mechanisms this goal exists to close. The
+      list-shaped population is the M9 family: a check whose subject matter is
+      recited rather than enumerated reports an all-clear over the members it
+      never had.
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1600a
+implemented_by: []
+notes: |
+  WHY THIS IS A NEW L0 RATHER THAN A FOURTEENTH L1 UNDER BP-100. Two independent
+  reasons, and the first is mechanical.
+
+  MECHANICAL. BP-100 carries child_limit_override: 13 and has exactly 13 active
+  L1 children (14 on disk, of which BP-100b is superseded and so does not consume
+  a slot). Its own amendment note records that the waiver "was NOT raised to make
+  room for BP-100n; it is left at exactly the current count, so the next L1 added
+  to BP-100 trips the gate and forces this conversation rather than sliding under
+  a margin." A new L1 under BP-100 is that next L1. Honouring the trap the note
+  set means not raising the override to slip past it — the same instinct that led
+  the author of BP-1600a-1 to decline an override on BP-100n.
+
+  SEMANTIC, AND IT WOULD STAND ALONE. No existing build-pipeline L0 honestly
+  frames this property. BP-100 governs artifact PRESENCE and PLACEMENT — that
+  what the build promised is there and in the right place. BP-1300 governs
+  VERDICT DETERMINISM — that a guardrail says the same thing on your machine as
+  in CI. BP-1500 governs the build's EFFECTS ON YOUR FILES — no silent edits, no
+  leftovers. BP-900 governs DEPLOYMENT COMPLETENESS. This goal governs a property
+  none of them reaches: how a check works out WHAT ITS SUBJECT MATTER IS. A check
+  can be present, deterministic, correctly deployed, and destructive of nothing,
+  and still exempt half the things it exists to cover, because its population came
+  from a literal.
+
+  PRECEDENT. BP-1300 was created as a new build-pipeline L0 for the same pair of
+  reasons, and said so in its own notes: "Placed as a new build-pipeline L0 rather
+  than under BP-100 (reliable-builds, already over its child cap with
+  child_limit_override: 13) ... BP-100 governs artifact PRESENCE and PLACEMENT;
+  this goal governs a distinct property". This record follows that precedent
+  deliberately.
+
+  SPARSE ON PURPOSE, AND NOT PERMANENTLY. This L0 opens with one L1, and that L1
+  opens with one L2. The child-limit hook's sparse advisory (fewer than three
+  children) will fire on both; it is non-blocking and it is correct. The cluster
+  this L0 names has three known members today — BP-100n-3 (platform set taken from
+  the build's own platform set), BP-100n-4 (commit-gate population taken from the
+  scripts on disk) and BP-1600a-1 (session-hook population taken from the scripts
+  on disk) — and only the third could be moved without breaking evidence links
+  that already exist. See BP-1600a's notes for the migration path and its
+  precondition.
+
+  ID EVIDENCE. A store-wide grep for "BP-1600" on 2026-09-07 returned no record
+  using this ID. It corroborates BP-1500's own ID-EVIDENCE note, which recorded
+  BP-1500 and BP-1600 as both confirmed free, took BP-1500, and stated "BP-1600
+  remains free". That sentence is now spent — this record takes it. BP-1500's note
+  is dated evidence of a check that was correct when it was made and has been left
+  as written rather than edited from here.
+change_target: pipeline
+risk_surface: contract_boundary

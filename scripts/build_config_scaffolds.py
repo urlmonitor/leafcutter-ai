@@ -6,6 +6,9 @@ BUSINESS CONTEXT: skills_config.json references paths like testing_context.readm
     precommit_autofix_config_path, changelog_folder, and changelog_categories_path.
     Without scaffolding, downstream agents (test-planner, precommit-autofix, changelog)
     fail at runtime. This phase creates write-if-absent scaffolds for each.
+    config/reachability_exemptions.yaml (BO-2900d-1) is scaffolded the same way: a
+    fresh consumer install needs a valid, empty registry or the reachability guard's
+    exemption seam silently reads zero exemptions from a file that was never created.
 ARCHITECTURE: Single build phase function build_config_scaffolds() that checks each
     known config-referenced path and writes a minimal-valid scaffold if absent.
     The precommit-autofix scaffold is loaded from the canonical template source at
@@ -90,6 +93,29 @@ Tests are organised by module. Each test file should follow the
 - Prefer integration tests over mocks for database-dependent code
 """
 
+# BO-2900d-1: the reachability-exemption registry the check_done_proof
+# reachability guard (and its exemption inventory, BO-2900d-2) reads via the
+# shared scripts/commit_guardian/_reachability_inventory.py seam. Scaffolded
+# here (write-if-absent, same as the other config files in this phase) so a
+# fresh consumer install has a valid, empty registry rather than the guard
+# silently reading zero exemptions from a file that was never created.
+_REACHABILITY_EXEMPTIONS_SCAFFOLD = """# Reachability exemption registry (BO-2900d-1).
+#
+# One entry per unit or capability that is deliberately allowed to have no
+# runtime way in of its own. Each entry MUST carry a non-empty `reason` --
+# a blank reason records nothing and grants no pass (BO-2900d-1-i). `item`
+# is matched by EXACT string equality only: no globs, no prefixes, no
+# name/extension/folder convention (BO-2900d-1's third Gherkin scenario).
+#
+# Schema (one list entry per exemption):
+#   - item: '<exact repo-relative module path or surface:capability id>'
+#     kind: 'unit' | 'capability'
+#     reason: '<non-empty string explaining why no entry point exists>'
+#     recorded: '<YYYY-MM-DD>'
+#     recorded_by: '<who recorded it>'
+exemptions: []
+"""
+
 
 def build_config_scaffolds(
     target_root: Path,
@@ -121,6 +147,12 @@ def build_config_scaffolds(
         (
             config.get("changelog_categories_path", ".claude/changelog_categories.md"),
             _CHANGELOG_CATEGORIES_SCAFFOLD,
+        ),
+        (
+            config.get(
+                "reachability_exemptions_path", "config/reachability_exemptions.yaml"
+            ),
+            _REACHABILITY_EXEMPTIONS_SCAFFOLD,
         ),
     ]
 

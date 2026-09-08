@@ -166,6 +166,26 @@ _SHARED_MODULE_MISSING_MSG = (
 
 _GIT_ENV_OVERRIDES = {
     "PRE_COMMIT_ALLOW_NO_CONFIG": "1",
+    # KI-TQ-012. This fixture builds its scenarios as worktrees OF THE REAL
+    # REPOSITORY (`git worktree add` with cwd=_REPO_ROOT). Worktrees share
+    # $GIT_COMMON_DIR/config, so a plain `git config user.email ...` inside one
+    # writes to the configuration of the ENTIRE repository family and outlives
+    # the fixture — teardown removes the worktree but never unsets the keys.
+    # That leaked a fixture identity onto ten real commits in one session,
+    # several of them on open pull requests, across worktrees this test has
+    # never heard of.
+    #
+    # Supplying the identity through the environment instead cannot leak: it
+    # lives and dies with the subprocess, and no configuration file is written.
+    #
+    # `git config --worktree` would also scope correctly, but only where
+    # extensions.worktreeConfig is enabled — that lives in untracked
+    # .git/config, so a fresh CI clone does not have it and the call would
+    # fail. The environment works everywhere.
+    "GIT_AUTHOR_NAME": "GE-120e-1 fixture",
+    "GIT_AUTHOR_EMAIL": "ge120e1-fixture@example.com",
+    "GIT_COMMITTER_NAME": "GE-120e-1 fixture",
+    "GIT_COMMITTER_EMAIL": "ge120e1-fixture@example.com",
 }
 
 try:
@@ -231,8 +251,8 @@ class _NoAuthorMergeFixture:
         _run_git(["worktree", "add", "--detach", str(self.root), "HEAD"], cwd=_REPO_ROOT)
         if not (self.root / ".git").exists():
             raise RuntimeError(f"Fixture setup failed: `git worktree add` did not create {self.root}")
-        _run_git(["config", "user.email", "ge120e1-fixture@example.com"], cwd=self.root)
-        _run_git(["config", "user.name", "GE-120e-1 fixture"], cwd=self.root)
+        # Identity comes from _GIT_ENV_OVERRIDES, never `git config` — see
+        # KI-TQ-012 there. Writing it here would escape into the real repo.
 
         (self.root / self.deleted_test_rel).write_text("def test_probe():\n    assert True\n", encoding="utf-8")
         (self.root / self.prod_file_rel).write_text("def probe_fn():\n    return 1\n", encoding="utf-8")
@@ -297,8 +317,8 @@ class _AuthorAndCarriedInMergeFixture:
         _run_git(["worktree", "add", "--detach", str(self.root), "HEAD"], cwd=_REPO_ROOT)
         if not (self.root / ".git").exists():
             raise RuntimeError(f"Fixture setup failed: `git worktree add` did not create {self.root}")
-        _run_git(["config", "user.email", "ge120e1-fixture@example.com"], cwd=self.root)
-        _run_git(["config", "user.name", "GE-120e-1 fixture"], cwd=self.root)
+        # Identity comes from _GIT_ENV_OVERRIDES, never `git config` — see
+        # KI-TQ-012 there. Writing it here would escape into the real repo.
 
         (self.root / self.deleted_test_rel).write_text("def test_probe():\n    assert True\n", encoding="utf-8")
         (self.root / self.prod_file_rel).write_text("def probe_fn():\n    return 1\n", encoding="utf-8")
@@ -341,8 +361,8 @@ class _AuthorAndCarriedInMergeFixture:
         _run_git(["worktree", "add", "--detach", str(target_root), "HEAD"], cwd=_REPO_ROOT)
         if not (target_root / ".git").exists():
             raise RuntimeError(f"Fixture setup failed: could not create {target_root}")
-        _run_git(["config", "user.email", "ge120e1-fixture@example.com"], cwd=target_root)
-        _run_git(["config", "user.name", "GE-120e-1 fixture"], cwd=target_root)
+        # Identity comes from _GIT_ENV_OVERRIDES, never `git config` — see
+        # KI-TQ-012 there. Writing it here would escape into the real repo.
         (target_root / "docs").mkdir(parents=True, exist_ok=True)
         (target_root / self.author_baddoc_rel).write_text(
             "---\nfoo: bar\n---\n# Author's own bad doc\n", encoding="utf-8",
@@ -540,8 +560,8 @@ class TestOrdinaryCommitChangeSetEqualsFullStagedDiff(unittest.TestCase):
         _run_git(["worktree", "add", "--detach", str(cls.root), "HEAD"], cwd=_REPO_ROOT)
         if not (cls.root / ".git").exists():
             raise RuntimeError(f"Fixture setup failed: could not create {cls.root}")
-        _run_git(["config", "user.email", "ge120e1-fixture@example.com"], cwd=cls.root)
-        _run_git(["config", "user.name", "GE-120e-1 fixture"], cwd=cls.root)
+        # Identity comes from _GIT_ENV_OVERRIDES, never `git config` — see
+        # KI-TQ-012 there. Writing it here would escape into the real repo.
         cls.staged_rel = "_ge120e1_probe_ordinary.py"
         (cls.root / cls.staged_rel).write_text("def probe():\n    return 42\n", encoding="utf-8")
         _run_git(["add", cls.staged_rel], cwd=cls.root)
