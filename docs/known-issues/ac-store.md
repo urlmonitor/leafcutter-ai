@@ -1670,3 +1670,126 @@ two are independent and the gate one was blocking.
 **Pattern:** boilerplate that was true of the case it was written for, promoted to
 unconditional, so it now asserts the opposite of what the same document proves two
 paragraphs earlier.
+
+---
+
+### KI-ACS-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1 observed directly; the exposure is every AC-store change ever verified locally
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/ac_store/validate_ac_schema.py` versus
+  `templates/scripts/commit_guardian/check_ac_schema.py:619`
+
+**Symptom.** Two tools validate AC YAML. Everything in this repository — CLAUDE.md's own
+"AC-store hygiene" pre-flight, every agent instruction, every sign-off — reaches for the
+standalone one. The required CI gate runs the other. **They do not apply the same rules.**
+
+```
+$ grep -n validate_test_contract scripts/ac_store/validate_ac_schema.py
+                                        (no match)
+$ grep -n validate_test_contract templates/scripts/commit_guardian/check_ac_schema.py
+619:    errors.extend(validate_test_contract(path, data))
+```
+
+So a run reporting
+
+```
+OK: all 3820 AC YAML files are valid.
+```
+
+is a genuine pass of a **strictly weaker** rule set than the one that decides whether the
+commit lands. The count is real, the files were read, nothing is broken — and the result still
+does not answer the question the operator asked it.
+
+**Observed.** During the 2026-09-07 census work, an agent amended six records, ran
+`validate_ac_schema.py` across four components, reported four clean runs each naming a nonzero
+count, and pushed. CI then failed the required `AC store valid` check on
+`validate_test_contract` — a rule the local tool cannot see. The local verification was
+performed correctly and proved the wrong thing.
+
+**Why this is high.** It is not a missing check; it is a check that *reports success in the
+vocabulary of the check you wanted*. The output is indistinguishable from the stronger run, so
+there is no signal to investigate, and the divergence is invisible until a PR is already open.
+Every agent in this repository currently has a green-looking local gate that under-tests
+relative to CI, and CLAUDE.md prescribes it by name.
+
+**Remediation.** Either make `validate_ac_schema.py` call the same validator set as
+`check_ac_schema.py` — one rule set, two entry points — or make its output state which rule
+set it ran and that it is not the gate. The first is better: two tools that answer "is this AC
+valid?" differently is the divergence, and documenting the divergence preserves it. If they
+must stay separate, a parity test asserting the validator list is identical would at least
+fail when they drift again.
+
+**Related.** `KI-ACS-001` (the same script's bare-directory no-op — the second time this file
+has looked like it checked something it did not).
+`docs/reference/false-green-mechanisms.md` → M9, and `unit_tests/README.md` §8.
+
+**Pattern:** two implementations of the same question, one of which is the gate and the other
+of which is the one everybody runs.
+
+---
+
+### KI-ACS-20260907-approved-code-acs-with-no-test-contract-sit-on-main-until-something-stages-them
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 2 confirmed (`UXP-600a`, `TQ-100c-2-i`); the store has not been swept
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/scripts/commit_guardian/_ac_schema_validators.py` —
+  `validate_test_contract`, and the staged-file scoping it inherits
+
+**Symptom.** `validate_test_contract` refuses an approved code AC that declares no
+`test_spec`. It is a **forward ratchet**: it evaluates only the records present in the current
+commit's index. A record that was approved before the rule shipped, and has not been re-staged
+since, carries the violation indefinitely and is reported by nothing.
+
+`TQ-100c-2-i` on `origin/main`:
+
+```
+level: L3
+readiness: approved
+assigned_agent: python-coder
+change_target: code
+                        <- no test_spec, no test_required
+```
+
+Title: *"An AC marked done with zero covering tests is flagged by the integrity check."* An
+approved code AC, specifying an integrity check, with no test contract — sitting on the default
+branch, unflagged.
+
+**How it surfaced, which is the instructive part.** Nobody went looking. A separate change
+corrected an unrelated false claim in that record's `it_requirements`. Editing the file staged
+it; staging it put it in front of the ratchet for the first time since the rule existed; CI
+failed. **The defect was found by an edit that had nothing to do with it.**
+
+That makes the true population unknown. Two are confirmed only because two records happened to
+be touched. `UXP-600a` (`change_target: schema`, `frontend-coder`) slipped the same way and is
+additionally `readiness: reviewed`, which the ratchet also scopes out.
+
+**Why medium and not high.** The direction is safe — these are unproven records, not falsely
+proven ones, and the ratchet does close over anything actively worked on. It earns a place in
+the register because the *population is unmeasured* and because each instance surfaces at the
+worst moment: as a CI failure on an unrelated PR, where it reads as "this change broke
+something" rather than "this change revealed something."
+
+**Remediation.**
+
+1. **Sweep the store out of band** and count. Until that number exists, every estimate of the
+   AC store's health is an estimate of the staged subset. This is the whole remediation as far
+   as knowing the problem goes.
+2. Decide the disposition per record — write the contract, or reclassify honestly to non-code.
+   Note the reclassification path is the tempting wrong answer when the record genuinely
+   specifies code, which `TQ-100c-2-i` does.
+3. Consider a whole-store run of this specific rule on push to main, in the shape of the
+   existing `AC store valid (whole store, push to main)` job, so the backlog is a number that
+   moves rather than a series of ambushes.
+
+**Related.** `KI-ACS-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks`
+(above) — the reason a local pass does not surface these either.
+The CLAUDE.md note under "AC-store commits — stage the parent alongside the child", which
+documents the same staged-scope blindness for a different pair of fields.
+
+**Pattern:** a forward ratchet is a promise about new work, not a statement about the store —
+and its silence about old work is easy to read as a clean bill of health.
