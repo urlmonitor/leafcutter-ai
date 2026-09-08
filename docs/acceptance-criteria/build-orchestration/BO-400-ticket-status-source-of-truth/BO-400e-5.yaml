@@ -1,0 +1,154 @@
+id: BO-400e-5
+components:
+  - build_orchestration
+  - supervisor_system
+title: "A sequence diagram shows every route to the finished state, and that exactly one of them passes the guard"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who needs to know how a ticket comes to be recorded finished, and who has
+    not read the drivers,
+  When they open the architecture documentation for the close of a ticket,
+  Then a sequence diagram is present that shows the close from the moment a drive decides a
+    ticket is finished to the moment the recorded state changes,
+    And every participant that can write the ticket's recorded state appears in it, so that
+      a route which is not drawn is a route which does not exist,
+    And the checking mechanism is shown reading the ticket's own record and deciding from
+      what it read, not from what the caller passed it,
+    And both drivers are shown -- the one that carries a whole epic and the one that carries
+      a single ticket -- and both are shown reaching that same mechanism, so a reader can
+      see whether the two have diverged,
+    And the refusal is drawn as its own path, ending with the recorded state unchanged and
+      the outstanding step named, rather than the diagram showing only the successful close,
+    And the blanket override is drawn as a path that exists and is marked as absent from the
+      ordinary close,
+    And exactly one path in the diagram ends in the finished state being written, and that
+      path passes through the checking mechanism,
+  So the diagram answers the question this feature exists to answer -- how many doors are
+    there -- rather than only illustrating the happy path through one of them.
+depends_on:
+  - BO-400e
+  - BO-400e-1
+  - BO-400e-2
+  - BO-400e-3
+  - BO-400e-4
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The canonical home for supervisor/driver sequence diagrams in this repository -- it already carries the worktree-lifecycle, approval-to-PR and files-touched-reconciliation sequences, each with a dated changelog trailer. Add the close-path sequence here rather than starting a new document."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The component document the diagram belongs to; link the new sequence from it so a reader arriving at the component finds the close path. Relationship set to modifies by it-po: the record's own relevance note describes an edit to this file, so it is an edit surface and must appear in the generated ticket's files_touched."
+  - path: templates/workflows-js/build-feature.js
+    relationship: describes
+    status: exists
+    relevance: "The epic driver -- one of the two participants that must appear. Read its completion-write step for the routes the diagram has to depict. TWIN of build-ticket.js."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+    relevance: "The single-ticket driver -- the other participant. A diagram showing only one of the two would hide precisely the divergence BO-400a-2-ii's standing constraint exists to prevent."
+  - path: scripts/set_ticket_status.py
+    relationship: describes
+    status: exists
+    relevance: "The checking mechanism at the centre of the diagram: it reads the record's agents map, refuses while any entry is unaccounted for, and carries the blanket override that must be drawn as off the ordinary path."
+  - path: templates/agents/status-checker.md
+    relationship: describes
+    status: exists
+    relevance: "The party that performs the write, and the participant through which the second door was reachable. Its closing protocol is the rule the diagram should make visible."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-20260831-1932 -- the split outcome the diagram must make impossible to misread. The diagram is worth drawing because the defect was a routing question that nobody could see without reading two files."
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+    relevance: "Why the two workflow drivers, and not ticket-supervisor, are the participants the diagram must draw. A close-path sequence that still shows a supervisor would depict a topology that no longer exists."
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: describes
+    status: exists
+    relevance: "House layout and conventions for architecture documents -- follow it rather than inventing a placement or trailer format for the new sequence."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+test_required: false
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: docs/architecture/agent_delivery_workflows.md
+  n_location_rule: "2 -- the new close-path sequence added to docs/architecture/agent_delivery_workflows.md alongside its existing sequences, plus one link to it from docs/architecture/components/build-orchestration.md so a reader arriving at the component finds the close path."
+  required_skills:
+    - architecture-diagram-author
+    - write-c4-diagram
+  post_write_commands: []
+  constraints:
+    - "THE DIAGRAM IS DERIVED FROM THE RECORDS, NOT FROM THE SOURCE. Draw the close path BO-400e-1 through BO-400e-4 establish. If the diagram and those records ever disagree, the records are right and the diagram is stale -- this record must never be read as amending them."
+    - "AUTHOR IT AFTER THE BEHAVIOUR LANDS. depends_on already orders this last for a reason: a diagram of the single door drawn before the single door exists documents a shape the repository does not have, and is indistinguishable from documentation of the shape it does."
+    - "THE DIAGRAM MUST BE FALSIFIABLE AGAINST THE DRIVERS. Its stated purpose is that a route which is not drawn is a route which does not exist. That only holds if EVERY participant able to write the ticket's recorded state is named, and if 'exactly one path ends in the finished state' is stated on the diagram itself rather than left for the reader to count. A diagram a later second door could be added under without contradicting it has failed."
+    - "NO HAPPY-PATH-ONLY DIAGRAM. The refusal path is drawn as its own path with its own terminal state -- recorded state unchanged, outstanding step named -- and the blanket override is drawn as a path that exists and is marked as absent from the ordinary close. Omitting either documents the half that was never in doubt."
+    - "BOTH DRIVERS OR IT HIDES THE THING IT IS FOR. The epic driver and the single-ticket driver must both appear and must both be shown reaching the same mechanism, so a reader can see whether the twins have diverged. A diagram of one of them cannot show a divergence between them."
+    - "FOLLOW THE HOUSE FORMAT. docs/architecture/agent_delivery_workflows.md already carries the worktree-lifecycle, approval-to-PR and files-touched-reconciliation sequences, each with a dated changelog trailer. Add the close-path sequence there, in that form. Do not start a new document."
+    - "DOCUMENTATION ONLY -- test_required is false deliberately. This record produces no executable behaviour, so test-writer skips it with a recorded reason rather than the code being silently left untested. Every behavioural claim the diagram depicts is already owned and tested by BO-400e-1 through BO-400e-4."
+delivers_to: null
+expects_from:
+  ac_id: BO-400e-3
+  contract: "The single close route -- the checking mechanism as the only writer of the finished state, reached identically by both drivers -- which is the shape the diagram depicts"
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- reason: criteria-narrowed
+  by: human user
+  at: 2026-09-07
+  note: 'Removed the second scenario ("given a reader comparing the diagram against
+    the drivers after a later change, when a second route has been introduced, then
+    that route is one the diagram does not contain"). It was a counterfactual about
+    a code change that does not exist: not checkable at authoring time, satisfied
+    vacuously by the completeness clauses above it, and it implied a standing drift
+    gate that nothing in this repository performs and no record owns. Flagged by it-po
+    during enrichment, which correctly declined to edit criteria itself; removed at
+    the approval gate. The completeness clauses are untouched, including "exactly
+    one path in the diagram ends in the finished state being written". If a real drift
+    check is wanted — something that notices when the drivers gain a route the diagram
+    lacks — it needs its own AC outside this family, which is at its five-child cap.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the parent BO-400e's documentation_triggers: [sequence-diagram]. It takes the
+  fifth and last L2 slot under BO-400e, which is now at the cap of five.
+
+  WHY A DIAGRAM IS THE RIGHT ARTEFACT HERE, AND NOT DECORATION. The defect this family
+  fixes was a routing question: two doors existed to the same state and only one of them
+  read the record, and nobody could see that without opening two files and a prompt. The
+  diagram's job is to make the number of doors readable at a glance, which is why the
+  criteria demand every writing participant, both drivers, the refusal path and the
+  override path -- and why "exactly one path ends in the finished state" is stated as an
+  explicit clause rather than left implicit in the drawing.
+
+  BOTH DRIVERS OR IT HIDES THE THING IT IS FOR. Per BO-400a-2-ii's standing constraint the
+  epic driver and the single-ticket driver must not diverge. A diagram of one of them
+  cannot show a divergence between them, and the twin relationship is exactly the kind of
+  fact a reader will not reconstruct from prose.
+
+  THE REFUSAL PATH IS NOT OPTIONAL. A happy-path-only diagram of this feature documents the
+  half that was never in doubt. The refusal is the reason the finished state is worth
+  reading, so it is drawn with its own terminal state -- record unchanged, outstanding step
+  named.
+
+  SCOPE. This record is documentation only. It states nothing about behaviour that
+  BO-400e-1 through BO-400e-4 do not already own, and it must not be read as amending them:
+  if the diagram and those records ever disagree, the records are right and the diagram is
+  stale.
+
+  PRIORITY inherited from the parent's medium, which the parent labels a validator-forced
+  placeholder.

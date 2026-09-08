@@ -1,0 +1,207 @@
+id: TQ-100a-2-ii
+components:
+  - testing_quality
+title: "Scoping the identity write to the worktree is refused as the fix, because it aborts on a checkout that lacks the extension"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the written remediation for this defect names, as its first option,
+      scoping the identity write to the worktree rather than writing it
+      unqualified,
+    And that form is legal only where the repository has the worktree-
+      configuration extension switched on,
+    And that switch lives in the repository's own configuration and is therefore
+      absent from every fresh checkout — which is exactly what the pull-request
+      test job creates,
+  When a test sandbox issues a worktree-scoped identity write on such a checkout,
+  Then the git invocation aborts with a fatal error stating that the worktree
+      scope cannot be used across multiple working trees unless the worktree-
+      configuration extension is enabled,
+    And the test that issued it fails, so the required test job of the pull
+      request is red and the change cannot merge,
+    And therefore an implementation of TQ-100a-2 whose identity is supplied by a
+      worktree-scoped configuration write is not accepted, however correctly the
+      host repository behaves on the author's own machine,
+    And an implementation whose identity is supplied through the inherited
+      process environment IS accepted on that same checkout, because it needs no
+      repository configuration of any kind,
+    And the written remediation no longer presents the worktree-scoped write as
+      an option to take, at either place the defect is written up, so the next
+      reader is not sent down a path that ends in a red required job.
+depends_on:
+  - TQ-100a-2
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE DOCUMENT THIS AC CORRECTS. The id KI-TQ-012 appears twice. The second
+      occurrence (~L840) states at ~L885 that the correctly-scoped form is
+      "available today" and at ~L907 makes "change all four sites to `git config
+      --worktree ...`" its remediation item 1. The first occurrence (~L589) does
+      NOT recommend it — its fix direction at ~L641-646 prefers per-invocation
+      identity and environment variables, and mentions the worktree scope at
+      ~L617 only when describing what the broken call omits. Both write-ups must
+      end up unambiguous about which forms are acceptable.
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The same failure one level up — written guidance that tells the reader the
+      wrong thing with authority. Cross-linked, not duplicated: TQ-500d owns the
+      general property; this AC corrects one specific instance of it.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE ABORT IS MEASURED, NOT PREDICTED. On a repository WITHOUT the extension —
+    which is what a fresh checkout produces — `git config --worktree` exits 128
+    with "fatal: --worktree cannot be used with multiple working trees unless the
+    config extension worktreeConfig is enabled". Reproduce that in the test
+    rather than asserting the message from memory; the wording is git's and may
+    be versioned.
+  - >-
+    THE TRAP IS THAT IT WORKS ON YOUR MACHINE. This clone already has
+    `extensions.worktreeConfig` set to true, so an implementer following the
+    register will see the worktree-scoped form succeed locally and conclude it is
+    correct. The failure appears first in the required job, on someone else's
+    pull request. State this in the register correction, not only here.
+  - >-
+    CORRECT THE REGISTER IN THE SAME CHANGE. This is a prose edit to
+    docs/known-issues/testing-quality.md — remove the worktree-scoped write from
+    remediation item 1 of the ~L840 occurrence, replace it with the environment-
+    variable form, and note why the qualified form is not available on a fresh
+    checkout. Small enough to belong in the implementer's commit; large enough
+    that leaving it is how the next reader repeats the mistake. Do NOT
+    renumber or merge the two duplicate KI-TQ-012 ids as part of this change —
+    that is register hygiene, separately tracked, and conflating the two makes
+    this diff unreviewable.
+  - >-
+    DO NOT WEAKEN THIS INTO "PREFER THE ENVIRONMENT FORM". A preference is
+    advice; this is a refusal with a measured consequence attached. An
+    implementation using the worktree-scoped write fails a required job on a
+    checkout it will certainly encounter.
+  - >-
+    THE FOURTH CLAUSE IS THE CONTROL AND IS NOT OPTIONAL. Showing that the
+    worktree-scoped form aborts proves only that one option is bad. Showing that
+    the environment form succeeds ON THE SAME EXTENSION-LESS CHECKOUT is what
+    establishes that the refusal has somewhere to go, rather than describing an
+    unsolvable situation.
+delivers_to: null
+expects_from:
+  ac_id: TQ-100a-2
+  contract: >-
+    The identity-supply mechanism whose acceptable shapes this AC bounds. It adds
+    no new behaviour to TQ-100a-2; it rules one implementation of it out and
+    corrects the written guidance that recommends that implementation.
+test_spec:
+  - name: test_tq100a_2_ii_worktree_scoped_write_aborts_on_a_checkout_without_the_extension
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: boundary
+    surface_invoked: >-
+      git config --worktree user.email ..., issued as a subprocess inside a
+      linked worktree of a repository that has more than one working tree and no
+      worktree-configuration extension set
+    description: >-
+      Build the extension-less multi-worktree condition a fresh checkout
+      produces, issue the worktree-scoped write, and assert the invocation exits
+      128 and that its error text names the worktree-configuration extension.
+      Reproduce the condition rather than asserting the message from a fixture -
+      the whole point is that the ambient repository has the extension enabled
+      and would hide this.
+  - name: test_tq100a_2_ii_the_environment_supplied_identity_succeeds_on_that_same_checkout
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The control. On the identical extension-less multi-worktree repository, a
+      commit whose identity comes from the inherited process environment succeeds
+      and carries the intended author and committer. Without this the first
+      descriptor establishes only that one option fails.
+  - name: test_tq100a_2_ii_the_portability_suite_passes_on_an_extension_less_checkout
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: >-
+      python -m pytest unit_tests/portability/ -q, run as a subprocess against a
+      clone whose worktree-configuration extension is unset
+    description: >-
+      The end-to-end refusal, asserted behaviourally rather than by reading the
+      source for a forbidden string. Under an implementation that uses the
+      worktree-scoped write this run is red; under the environment-supplied one
+      it is green. A test that greps the fixtures for "--worktree" passes on dead
+      code and cannot tell the two apart.
+  - name: test_tq100a_2_ii_the_register_no_longer_offers_the_aborting_form_as_a_remediation
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: >-
+      Read docs/known-issues/testing-quality.md as it is on disk and assert that
+      neither write-up of this defect presents the worktree-scoped write as a
+      remediation to apply. The deliverable here IS the document text, so reading
+      the document is the direct assertion rather than a proxy for one. Scope the
+      assertion to the remediation passages - the descriptive mention of what the
+      broken call omits is accurate and must survive.
+test_rationale: |
+  The first two descriptors are a matched pair and neither is meaningful alone:
+  one shows the register's recommendation aborts on the checkout CI creates, the
+  other shows the accepted mechanism succeeds on that same checkout. Both must
+  construct the extension-less multi-worktree condition themselves, because the
+  repository they run in has the extension enabled and would silently make the
+  refused form work.
+
+  The third is deliberately behavioural. The obvious test here is a grep for
+  "--worktree" across the fixtures, and it is the wrong test twice over: it
+  passes on code that is never executed, and it fails on a legitimate mention in
+  a comment. Running the suite on an extension-less clone distinguishes the two
+  implementations by what they do.
+
+  The fourth asserts over the document because the document is the deliverable.
+  It is scoped to the remediation passages so that the accurate descriptive
+  mention at the first write-up is not deleted by an over-broad assertion — the
+  false-shortfall whose natural remedy is to weaken the check until it stops
+  complaining.
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  WHY THIS IS AN AC AND NOT A COMMENT ON THE TICKET. The register is the first
+  thing an implementer reads about this defect, it is authoritative in tone, and
+  its remediation item 1 ships a broken required job. Without a criterion that
+  refuses that path explicitly, the most likely outcome of this whole tree is an
+  implementer doing exactly what the document says, watching it work on a clone
+  that has the extension, and discovering the abort in CI on somebody else's
+  pull request.
+
+  THE DUPLICATE ID IS NOTED, NOT FIXED HERE. docs/known-issues/testing-quality.md
+  carries KI-TQ-012 twice, at ~L589 and ~L840, for two framings of the same
+  defect; the file itself records the collision at ~L1026. Renumbering is
+  register hygiene and belongs to its own change. This AC only requires that
+  neither write-up recommends the aborting form.
+
+  ONE AGENT, TWO ARTEFACTS. The change touches test code and one prose passage in
+  the same register the tests read. That is one commit by one implementer, not a
+  hand-off — but if the store's owner prefers strict one-artefact-per-AC, the
+  register correction splits cleanly into a sibling AC assigned to
+  documentation-expert, with this AC keeping the first three descriptors.

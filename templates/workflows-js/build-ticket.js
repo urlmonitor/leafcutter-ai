@@ -313,6 +313,49 @@ function sortByCanonicalPriority(phases) {
 }
 
 /**
+ * From a ticket's phases, return those whose STATUS still owes this drive work.
+ *
+ * Pure function (no module state) so it is unit-testable in isolation, and a
+ * named function rather than an inline filter because the `failed` half of the
+ * predicate is a deliberate decision that has to be readable and testable.
+ *
+ * `needed` is obvious. `failed` is here because the signoff skill's own state
+ * machine says `failed` -> `signed_off` after rework, and until KI-BO-20260907-1555
+ * this driver did not implement that edge: the dispatch set was
+ * `filter(p => p.status === "needed")`, so a phase that exhausted the
+ * failure-adjudication ladder was enumerated by the planner and then silently
+ * discarded. Nothing anywhere transitioned it back, which made `failed` a
+ * write-only terminal state and left re-running the drive a no-op — GE-120
+ * ticket 36 reached four `failed` phases and zero `needed` ones, and its
+ * re-drive dispatched no phase agent at all while still correctly reporting
+ * those phases as outstanding.
+ *
+ * Re-dispatching a `failed` phase is safe in both directions:
+ *   - On success the agent SETS `signed_off` (signoff skill step 1) rather than
+ *     find-replacing the literal `needed`, so the `failed` row is cleared and
+ *     the phase does not come back on the next drive.
+ *   - On failure it stays `failed`, which is where it already was.
+ * The within-drive retry ladder is unchanged and still caps attempts; what a
+ * re-drive costs is one more attempt per failed phase, which is what an
+ * operator re-running a drive is asking for.
+ *
+ * NOT included: `signed_off` (terminal — a downstream agent hands work back by
+ * resetting the row to `needed`, which this predicate already selects) and
+ * `not_needed` (the ticket says the phase does not apply). Widening to either
+ * would re-run passed work every drive.
+ *
+ * TWIN: mirrors build-feature.js. Keep in sync with that file.
+ *
+ * @param {Array<{agent: string, status: string}>} orderedPhases
+ * @returns {Array<{agent: string, status: string}>}
+ */
+function selectDispatchableByStatus(orderedPhases) {
+  return (orderedPhases || []).filter(
+    (p) => p && (p.status === "needed" || p.status === "failed")
+  );
+}
+
+/**
  * Absorb phases the ticket's record says became `needed` AFTER the drive began.
  *
  * BO-3701 (build-ticket.js's half of the BO-3700 twin divergence). This
@@ -1289,8 +1332,12 @@ const CODER_PHASES = new Set(["python-coder", "sql-coder", "frontend-coder"]);
 // Phase 2 — Guard: compute the phases this drive will dispatch
 // -------------------------------------------------------------------------
 
+// selectDispatchableByStatus keeps the phases whose status still owes work —
+// `needed` AND `failed` (KI-BO-20260907-1555: a failed phase used to be dropped
+// here and no later drive could ever re-run it). See that function for why
+// re-dispatching a failed phase terminates.
 const neededPhases = sortByCanonicalPriority(
-  orderedPhases.filter((p) => p.status === "needed")
+  selectDispatchableByStatus(orderedPhases)
 );
 
 // -------------------------------------------------------------------------

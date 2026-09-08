@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-31
+last_updated: 2026-09-07
 components:
   - testing_quality
 related_docs:
@@ -1282,3 +1282,170 @@ repository) is the same *file family* mishandling git state, though a different 
 
 **Pattern:** a fixture that treats a subprocess as finished when it returns, while the tool it
 invoked has deliberately left work running behind it.
+
+---
+
+### KI-TQ-20260907-0940 — A reachability fixture symlinks the package into its scratch workspace where the real consumer layout is a directory
+
+- **Severity:** low — recorded so it is not rediagnosed, **not** worth a fix of its own. See
+  "Do not action this on its own" below.
+- **Status:** open — no AC, and none wanted
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `unit_tests/portability/test_bp_900h6ii.py:581`
+
+**What it is.** `TestBp900h6iiReachability` builds a scratch workspace and places the package
+into it as a **symlink** rather than a copy:
+
+```python
+(workspace_dir / "leafcutter-ai").symlink_to(_WORKTREE_ROOT)
+```
+
+The real layout is a real directory, on both authorities. `CLAUDE.md:66` — *"this repo is
+cloned into a subdirectory (e.g. `my-project/leafcutter-ai/`)"*. And `.github/workflows/ci.yml`
+`:443-445`, the very command this test extracts and runs:
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    path: leafcutter-ai
+```
+
+`actions/checkout` writes a directory. So the fixture's workspace differs from the layout it
+exists to simulate, in a test whose declared angle is `reachability`. All line numbers and
+quotations verified 2026-09-07 at `origin/main` (`e2b1eb7ea`).
+
+The motive is legitimate: a `copytree` of the package is expensive. (Measured in this worktree
+2026-09-07: 67 MB excluding `.git`; a build tree with `__pycache__` and deploy outputs runs
+higher, ~76 MB observed.) The symlink is a reasonable thing to have reached for.
+
+**Do not action this on its own.** It accounts for **1 of the 18** regressed outcomes in
+`KI-BO-20260831-1520`'s second occurrence — the other 17 have nothing to do with it. And
+re-anchoring the harness under `BP-1500d-1`, which is already the plan, **subsumes it**: that
+work builds a real out-of-package scratch project with a real package directory at
+`<scratch>/leafcutter-ai/`, which is this fixture's fix by construction. Doing both means
+writing the same fix twice. The entry exists so the next person to hit this recognises it in
+one minute instead of re-deriving it; that is the whole of its value.
+
+> **The misdirection, which is the actually useful part of this entry.** The instinct on
+> seeing a symlink-vs-directory discrepancy is to make the code resolve symlinks. **It already
+> does, and resolving harder cannot fix this.** Verified 2026-09-07:
+>
+> ```text
+> build.py:1618   package_root = Path(__file__).resolve().parent.parent
+> build.py:1899   target_root  = Path(args.target_dir).resolve() if args.target_dir else Path.cwd()
+> ```
+>
+> Both ends of the comparison are `.resolve()`d — which is *why* the symlink case behaves
+> differently: resolution collapses `<scratch>/leafcutter-ai` back onto the real worktree path,
+> so the package and the target no longer sit in the relationship the layout implies. More
+> resolution moves it further from the real layout, not closer. **The fixture has to hold a
+> real directory; there is no path-normalisation fix.** This cost one investigation cycle on
+> 2026-09-07.
+
+**Fix direction (only as part of the `BP-1500d-1` harness work).** Materialise a real
+directory. If copy cost is the objection, the harness does not need the whole package — a
+`copytree` with an ignore predicate dropping `.git/`, `__pycache__/`, `leafcutter-web/` and
+`changelogs/` is small, and closer to a consumer's install than a full mirror is.
+
+**Related.** `KI-BO-20260831-1520` (second occurrence — the regression this was 1 of 18 of).
+`KI-ACS-014` and `KI-TQ-004` are the same family from other angles: a symlinked build output
+standing in for a source tree, and a test consequently measuring something other than what it
+names.
+
+**Pattern:** a fixture whose shortcut is invisible in its own result — the test passes, and
+nothing in its output says the workspace it built is not the workspace it is named after.
+
+---
+
+### KI-TQ-20260907-agent-eval-gate-has-never-evaluated-an-agent — it fast-passes when nothing is affected and dies on a missing API key when something is
+
+**Severity:** high — a required-looking green badge that has never once run the thing it names.
+**Found:** 2026-09-07, on `fix/product-truth-resync` (PR #738).
+**Component:** testing-quality / CI (`Agent Evals` workflow, `scripts/evals/eval_selector.py`,
+`scripts/evals/run_agent_eval.py`, `check_eval_staleness` pre-commit hook).
+
+The `Agent evals (affected)` check has two branches and **neither one evaluates an agent.**
+
+**Branch 1 — nothing affected, fast pass.** The selector diffs changed files against each
+agent's declared `triggers` closure. When none match it prints, verbatim:
+
+```
+AFFECTED   (will run): <none>
+UNAFFECTED (skipped as unaffected): flow-author mock-data-author pt-classifier
+No affected agents — nothing to eval. Fast pass.
+```
+
+Every one of the twelve most recent `Agent Evals` runs before PR #738 took this branch. The
+check was green on all of them. Zero evals ran on any of them.
+
+**Branch 2 — something affected, infrastructure failure.** PR #738 touched
+`docs/product-truth/index.json` and `docs/product-truth/flows/**`, which sit in the trigger
+closures of `flow-author`, `mock-data-author` and `pt-classifier`. So the evals actually ran,
+for what appears to be the first time. Every single row failed:
+
+```
+WARNING run_agent_eval: Row clf-017: model invocation/parse failed: claude CLI exited 1:
+ERROR   run_agent_eval: claude CLI exited 1
+subprocess.CalledProcessError: Command '['claude', '-p', ... ]' returned non-zero exit status 1
+```
+
+The job's environment dump shows `ANTHROPIC_API_KEY:` — empty. The CLI cannot authenticate, so
+no row gets a model response.
+
+**The score is the dangerous part, and it is worth understanding exactly.** Every failed
+invocation yields `got=none`. The gate then reported:
+
+```
+GATE: FAIL — score 22.22% < threshold 70.00%
+```
+
+22.22% is 4 of 18. Those four are **not** partial successes. They are the rows whose *expected*
+outcome happens to be `none`, matching the failure default by coincidence. A reader who sees
+"22%" will reason about a degraded agent and go looking for a prompt regression. There is no
+agent behaviour in that number at all. **A gate that cannot invoke its subject must score 0 or
+error out — never a plausible-looking percentage**, because a plausible percentage sends the
+next person to debug the wrong layer.
+
+**Why nobody noticed.** The two branches conceal each other. Ordinary work does not touch
+`docs/product-truth/**` or an agent template, so the check is green essentially always, and
+that green is read as "the evals pass". The one branch that does trigger it reads as "this
+branch broke the evals" rather than "the evals have never run". Both readings are locally
+reasonable and both are wrong.
+
+**A second-order effect worth its own attention.**
+`docs/product-truth/scripts/generate_product_truth.py` is itself inside those trigger closures,
+and its entire job is to rewrite the files the closures watch. Meanwhile
+`check-product-truth-validate` fails the store whenever its derived data is stale and tells you
+to run exactly that script. So one gate demands regeneration and the other charges three Opus
+artifact evals (900s per-row timeout) for performing it. Keeping the store valid is expensive
+by construction — which is a plausible reason the store sat drifted for seven weeks before
+PR #738. The closures likely want to distinguish **derived** fields (`impl_status`,
+`impl_asof`, `impl_summary` — written by the generator) from **authored** ones (steps, screens,
+scenarios — written by `flow-author`). Only the latter can change an eval's verdict.
+
+**Trap.** Do not "fix" this by relaxing the trigger closures alone. The closures are defensible:
+`flow-author`'s eval declares `sandbox_copy: ["docs/product-truth"]`, so the whole store
+genuinely is its input environment. The missing credential is the primary defect; the
+over-broad closure is the secondary one. Fixing only the second would make the gate quieter
+while leaving it just as incapable of evaluating anything.
+
+**Fix direction.**
+1. Provision the eval job's credential, and make a missing one a hard, named error at job
+   start — never a per-row warning that degrades into a score.
+2. Make an unrunnable eval distinguishable from a failing one in the gate's own output. "0 of
+   18 rows invoked" and "4 of 18 rows passed" must not print the same shape.
+3. Consider asserting the negative: a periodic run that proves the harness can invoke a model
+   at all, so branch 1's green is backed by something.
+4. Separately, split derived from authored paths in the trigger closures.
+
+**Related.** `KI-TQ-010` (nothing asks whether a passing test is *able* to fail — this is that
+question asked of a whole CI gate). The `CLAUDE.md` "Pre-Drive Checklist" already records three
+instances of the same shape: the `feedback_categories.yaml` path that reported missing on every
+worktree, the AC-store validator's bare-directory glob that exited 0 having checked zero files,
+and the stale `origin/main` ref that made a merge audit agree with itself. This is the fourth
+and the most complete: the other three examined the wrong thing, whereas this one has never
+examined anything.
+
+**Pattern:** a check that examined nothing must not look like a check that found nothing — and
+when it cannot examine anything, it must not emit a number that looks like a measurement.

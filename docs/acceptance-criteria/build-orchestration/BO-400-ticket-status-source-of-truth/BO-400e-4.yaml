@@ -1,0 +1,206 @@
+id: BO-400e-4
+components:
+  - build_orchestration
+  - supervisor_system
+title: "Several tickets in the identical state, carried by one run, all get the same answer -- and it is the strict one"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one run carrying four tickets,
+    And the first three are in the identical state: their records name the same phases as
+      needed, every one of those phases carries a sign-off, except one and the same phase
+      in all three, which carries none,
+    And the fourth ticket's record names those same phases as needed and carries a
+      sign-off for every one of them,
+  When the run reaches the close of each of the four,
+  Then the first three all receive the same answer as each other,
+    And that answer is refusal: none of the three has its recorded state changed, and each
+      refusal names the same outstanding phase,
+    And the fourth is written finished,
+    And the answers do not vary with the order in which the run reached the tickets, nor
+      with which of the four was closed first,
+  And given a second run over the same four tickets in the same state,
+  When it reaches the close of each,
+  Then it produces the same four answers as the first run,
+  So one run cannot give two answers to one question, the answer it gives is the strict
+    one, and "the same answer every time" is not obtained by a run that refuses
+    everything.
+depends_on:
+  - BO-400e
+  - BO-400e-1
+  - BO-400e-2
+  - BO-400e-3
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-20260831-1932 IS this case: one drive, three tickets in exactly the same state -- every phase signed off except pull-request, with no sign-off entry for it -- and the guard refused one and flipped the other two to done. The reproduction here is that observation with a control ticket added."
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver, the surface on which the split outcome was observed -- it is the driver that carries several tickets in one run, so it is the only place the defect is visible. TWIN of build-ticket.js."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket twin. It cannot exhibit the disagreement itself, which is precisely why the change must land here too: otherwise the two drivers become the two doors again."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "Behavioral harness. It must be driven with FOUR tickets in ONE run and must expose the record write performed for each, individually -- a per-ticket assertion aggregated across four separate runs does not reproduce the defect."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400a-2-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "Already uses the three-tickets-in-one-drive shape with a control case, and is the closest precedent for how this must be tested."
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+    relevance: "Why the epic driver's own per-ticket loop -- not a supervisor agent -- is the surface that carries several tickets in one run, and therefore the only place the disagreement can occur."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component document for the drivers -- the boundary this change stays inside."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The batching and dispatch topology that determines the order tickets are reached in a run -- the dimension the order-independence clause is about."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the completion-write step in build-feature.js, which is the only driver that can exhibit the disagreement, and the twin step in build-ticket.js, which cannot but must not be allowed to become the second door. Both change together."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_bo_400e_4.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_ticket_done_recording.py"
+  constraints:
+    - "FOUR TICKETS, ONE RUN -- CARDINALITY IS THE WHOLE POINT. A per-ticket assertion gathered from four independent single-ticket runs does not reproduce this defect and does not satisfy this record. At one ticket the broken driver and the fixed driver are indistinguishable, because either branch is defensible in isolation; the defect IS the disagreement between tickets inside a single run."
+    - "ORDER-INDEPENDENCE IS A PROPERTY OF THE DECISION, NOT OF THE FIXTURE. No state accumulated during a run -- a memo, a cache, a running tally, a set of already-seen phases, a batch index -- may influence a later ticket's answer. The observed split correlated with position in the run (ticket 01 refused, tickets 03 and 20 written); an implementation whose answer depends on how far into the run a ticket sits has not converged, it has moved the disagreement somewhere harder to see."
+    - "DETERMINISM MUST NOT BE OBTAINED BY REFUSING EVERYTHING. 'All four the same answer' is a property a completely broken writer holds trivially. The fourth, fully-signed-off ticket is part of the contract, not a testing nicety: only the contrast makes the three refusals attributable to the missing sign-off."
+    - "THE PER-TICKET DECISION MUST BE INDIVIDUALLY OBSERVABLE. The run must expose the record write it performed for EACH ticket, separately. A run that reports only an aggregate outcome cannot be checked for agreement between its tickets, which is exactly the observability gap that made the original defect look like agent caprice for a day."
+    - "VERIFY BY EXECUTION, NEVER BY GREP. Nothing about this record is visible in the source: the broken driver and the fixed one both contain completion code, a phase list and a parity check. Only reading back the four records a single run produced can tell them apart."
+    - "BOTH TWINS IN ONE CHANGE, per BO-400a-2-ii's standing constraint."
+    - "TEMPLATES ARE BUILD SOURCES, NOT THE RUNNING ARTEFACT. Keep the deployed copy of the drivers in step (check-build-drift is the gate) and confirm the four-ticket behaviour through the deployed layout before sign-off."
+test_spec:
+  - name: test_four_tickets_in_one_run_receive_one_answer_three_refused_one_written
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Drive FOUR tickets through the real workflow in ONE run: three in the identical state (same phases named needed, every one signed off except the same single phase in all three, which has no sign-off) plus a fourth whose every needed phase is signed off. Assert the three receive the same answer as each other, that the answer is refusal -- no recorded state changed, the same outstanding phase named in each -- and that the fourth is written finished. FOUR SEPARATE SINGLE-TICKET RUNS DO NOT REPRODUCE THIS: the defect is the disagreement between tickets inside one run, so per-ticket assertions gathered from independent runs pass on the broken driver."
+  - name: test_answers_do_not_vary_with_the_order_the_run_reaches_the_four_tickets
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Re-drive THE SAME four-tickets-in-one-run fixture with the tickets permuted -- including runs in which the control ticket is reached first and last -- and assert each ticket's answer is unchanged by its position. The observed split correlated with position in the run (ticket 01 refused, 03 and 20 written), so an answer that moves with order has relocated the disagreement rather than removed it. Must reuse the one-run fixture: permuting four independent single-ticket runs proves nothing."
+  - name: test_a_second_run_over_the_same_four_tickets_produces_the_same_four_answers
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Restore the same four tickets to the same state and drive a SECOND full run, asserting the four answers match the first run's four answers exactly. Covers the criteria's second-run clause; combined with the control ticket it also proves the repeatability is not the trivial repeatability of a writer that refuses everything."
+  - name: test_one_answer_per_condition_is_reachable_from_a_real_workflow_run
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "REQUIRED -- invoke the production entry point: load and execute the real workflow script via unit_tests/prompt_assembly/harness_build_ticket_guard.mjs, carrying all four tickets in one run, and assert the per-ticket record writes the run actually performed. Do NOT satisfy this by importing the completion helper and calling it four times: that is the single-ticket shape the record's own rationale rules out, and it passes on the broken driver. AUTHORED DELIBERATELY (it-po): because this record carries an authored test_spec, the ticket generator's own reachability floor would otherwise append a generic sentinel whose text asserts 'the AC authored no test_spec, so the entry point is not declared' -- false here, and misleading on precisely the record whose entry point and run shape are load-bearing."
+test_rationale: |
+  Authored here as a deliberate single exception to it-po's ownership of test_spec, at the
+  coordinator's instruction; it is NOT precedent, and every other record in this family
+  leaves test_spec unauthored for it-po.
+
+  The reason is mechanical rather than editorial. The parent BO-400e is explicit that a
+  single-ticket test cannot see this defect at all, because either branch looks correct in
+  isolation -- the defect IS the disagreement between two tickets. That constraint is
+  carried in this record's criteria, notes and harness doc_link, and none of those three
+  survive into the generated ticket's Test Requirements section: the generator derives that
+  section from test_spec, falling back to one descriptor per Gherkin Then clause. Under the
+  fallback a test-writer could satisfy every Then with a per-ticket assertion, produce four
+  independent single-ticket tests, and look correct while proving nothing. The descriptor
+  above is the only place the four-tickets-one-run shape becomes a mechanical requirement
+  at ticket-generation time.
+
+  The angle is boundary rather than criterion. The taxonomy's boundary question is
+  empty / one / many, and cardinality is exactly what is load-bearing here: at one ticket
+  the behaviour is indistinguishable between the broken and fixed driver, and only at many
+  does the property under test -- one answer per condition -- become observable at all.
+  Tagging it criterion would describe it as an ordinary Then-clause check and lose the one
+  fact that makes the test valid.
+
+  ADDENDUM (it-po, 2026-09-07) -- three descriptors APPENDED, the authored one above
+  untouched. The paragraphs above are the coordinator's and stand verbatim; the first
+  descriptor is unmodified. Three were added after it, and none of them dilutes it,
+  because each is bound to the same four-tickets-in-one-run fixture rather than to a
+  ticket in isolation.
+
+  Two of the three cover Then clauses the authored descriptor does not assert: that the
+  answers do not vary with the order the run reaches the tickets, and that a second run
+  over the same four produces the same four answers. Both are separate clauses in the
+  criteria, and both are properties of a RUN, so neither can be folded into a descriptor
+  about a single pass without changing what that descriptor asserts.
+
+  The third is a reachability descriptor, and it is here for a mechanical reason that has
+  changed since the rationale above was written. Under BO-2900g-1 the reachability floor
+  is no longer attached inside the criteria-derived fallback alone -- _ensure_reachability_
+  floor now runs at the single point every finalised test plan passes through, so an
+  authored test_spec DOES receive a generator-appended entry. But the appended sentinel
+  carries fixed text stating that the AC authored no test_spec and that the entry point is
+  therefore undeclared. On this record both halves are false, and the instruction to go and
+  resolve an entry point is precisely the invitation to write the single-ticket test the
+  rationale above exists to forbid. Authoring the reachability entry explicitly takes the
+  dedupe-by-angle branch, so the sentinel is never appended and the entry point -- the real
+  workflow script driven through harness_build_ticket_guard.mjs with all four tickets in one
+  run -- is named where the test author will read it.
+delivers_to: null
+expects_from:
+  ac_id: BO-400e-3
+  contract: "A single close route through the checking mechanism -- the property that makes one answer per condition possible, since two routes are what produced two answers"
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Behaviour (d) of the four the parent BO-400e names, and the second one the parent warns a
+  decomposition drops.
+
+  A SINGLE-TICKET TEST CANNOT SEE THIS DEFECT AT ALL. Either branch looks correct in
+  isolation: the refusal is defensible on its own, and the done write is defensible on its
+  own to anyone who did not read the record. The defect IS the disagreement between two
+  tickets, so any test covering this record must carry several tickets in the identical
+  state through ONE run and compare their answers to each other. Four separate single-
+  ticket runs, each asserted independently, reproduce nothing -- they are the same blind
+  spot that let the original observation look like agent caprice.
+
+  THE FOURTH TICKET IS THE CONTROL AND IS NOT OPTIONAL. Without it, a run that refuses
+  every close satisfies every clause about agreement and strictness. "All the same answer"
+  is a property that a completely broken writer holds trivially; only the contrast with a
+  ticket that IS written finished makes the three refusals attributable to the missing
+  sign-off.
+
+  ORDER-INDEPENDENCE IS IN THE CRITERIA DELIBERATELY. The observed split was ticket 01
+  refused, tickets 03 and 20 written -- an outcome that correlates with position in the
+  run. An implementation whose answer depends on how far into the run the ticket sits has
+  not converged; it has moved the disagreement somewhere harder to see.
+
+  VERIFY BY EXECUTION, NEVER BY GREP. Nothing about this record is observable in the
+  source: the broken driver and the fixed one both contain completion code, a phase list
+  and a parity check. Only reading back the four records a single run produced can tell
+  them apart.
+
+  BOTH TWINS IN ONE CHANGE, per BO-400a-2-ii's standing constraint.
