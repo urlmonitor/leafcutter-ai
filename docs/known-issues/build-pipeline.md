@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-31
+last_updated: 2026-09-08
 components:
   - build_pipeline
 related_docs:
@@ -1052,11 +1052,27 @@ project-local skills *into* the shared package. Run against that skill, it would
 that detail into a repo owned outside the adopter. Adopter skills need a home that is
 structurally outside the promotion path, not merely one nobody has promoted yet.
 
-**The concept already exists in the code; the layout contradicts it.**
-`build_phases.py:1930` computes `project_skills_dir = target_root / ".claude" / "skills"` and
-`:2020` uses it as `in_project = (project_skills_dir / skill_id).exists()` to decide whether
-a skill is project-local. Under the symlink that predicate can never distinguish anything —
-every package skill is "project-local" and every project skill is inside the package output.
+**~~The concept already exists in the code; the layout contradicts it.~~ CORRECTED
+2026-09-08 — the code this paragraph sends you to was deleted before the paragraph was
+written.** It read: *"`build_phases.py:1930` computes `project_skills_dir = target_root /
+".claude" / "skills"` and `:2020` uses it as `in_project = (project_skills_dir / skill_id)
+.exists()` to decide whether a skill is project-local. Under the symlink that predicate can
+never distinguish anything."*
+
+The reasoning about the symlink is sound. The premise is not: **that resolution leg no longer
+exists.** It was removed on 2026-08-18 under BP-1300a-1 — six days *before* the
+`RE-VERIFIED 2026-08-25` block above was written — and the only trace of `in_project` left in
+`build_phases.py` is a DECISION HISTORY comment recording the removal, which states the leg
+"could report `in_project = True` for a since-removed skill, masking a genuinely missing
+one."
+
+Left struck through rather than deleted, because the misdirection is the useful part: an
+implementer told "the concept already exists, the layout contradicts it" budgets for a repair
+and finds a build. There is **no** project-local predicate to fix. Whatever distinguishes
+adopter content from package content has to be built, not restored — which is a materially
+larger piece of work than this entry has implied for two weeks.
+
+Found while enriching `BP-1500g`, the AC set that now owns this repair.
 
 **Fix direction.** Symlink **per skill** rather than symlinking the parent. `.claude/skills/`
 becomes a real directory holding one symlink per package-provided skill; `clean_stale_artifacts`
@@ -3884,6 +3900,60 @@ defect in the code under test, not in the fixture.
 **Related.** User-memory `feedback_test_isolation_pitfalls` and `KI-TQ-012` (a fixture that
 sandboxes the filesystem while leaking into shared state) are the same family: tests here
 treat the runner's environment as private scratch space with weaker guarantees than assumed.
+
+---
+
+### KI-BP-20260908-1140 — `declares_side_effect` derives FALSE for an AC whose Then clause says a file "is gone", because the deriver only recognises engineering vocabulary
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1 (15 records in a single commit)
+- **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `templates/scripts/commit_guardian/_ac_schema_validators.py` — `_DURABLE_EFFECT_RE`
+  and `derive_declares_side_effect` immediately below it
+
+`BO-2900g-2` requires `declares_side_effect` — the field that non-overridably routes the
+`user-surface-smoker` phase — to be DERIVED from an AC's own Then clause rather than authored
+by opinion. Correct principle. The derivation is a **phrase regex**, and it recognises only
+engineering register: `removed from disk`, `deletes a/the file`, `written to disk`,
+`persisted`, `saved to disk`, `created on disk`.
+
+**So an AC that describes deleting a file in plain language derives FALSE.** `BP-1500b-1`'s
+Then clause reads *"the installed copy … is **gone** from that project's installed tree"* and
+*"the build's report … **names it as something it removed**"*. A durable, observable
+filesystem effect, stated twice. Neither phrasing is in the vocabulary, so the deriver returns
+False and the commit gate then blocks on the disagreement with the authored `true`.
+
+**All 15 records of two AC sets tripped it at once**, which is the useful signal rather than a
+nuisance: those sets were written by a BA under an explicit instruction to use customer
+language and keep filesystem verbs, paths and function names out of `criteria`. The store's
+authoring convention and this deriver's vocabulary are in direct tension, and the convention
+is the one that is written down.
+
+**The gate offers two remedies and both are bad.** Change the authored value — accept a value
+you know is wrong and lose smoker routing on an AC that genuinely removes files. Or change the
+criteria text — reword an approved specification to match a regex, which is writing the spec
+for the tool instead of the reader. The first was taken here, deliberately, and is recorded in
+those records: `criteria` is the durable artifact, routing metadata is not, and the affected
+ACs already carry subprocess-level test contracts, so little coverage is lost. **That
+reasoning does not generalise** to an AC whose only verification would have been the smoker.
+
+**Related, and possibly the same root.** `KI-BP-20260831-0940` records that
+`derive_declares_side_effect` is negation-blind and "forces a FALSE value into the store".
+Both are the deriver answering False when the text says otherwise. Whether they share a cause
+is unestablished — check before fixing either, so the second is not filed a third time.
+
+**Fix direction.** A regex over free prose cannot decide this. Either derive from something
+structured the author already supplies (`change_target` is adjacent), or make the deriver's
+failure legible instead of silent: when a Then clause carries a removal or write verb the
+vocabulary does not cover, answer *"cannot derive"* and require the author to state it, rather
+than returning False as though the question had been answered. A deriver that cannot
+distinguish "no side effect" from "no phrase I recognise" is the same defect this register
+keeps recording in other forms.
+
+**Pattern:** a derivation keyed to one register of language, applied to text that a different
+written convention requires be phrased in another — so the correct answer is unreachable and
+the disagreement is attributed to the author.
 
 ---
 

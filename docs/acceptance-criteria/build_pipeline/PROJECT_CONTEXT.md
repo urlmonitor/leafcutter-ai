@@ -1,10 +1,13 @@
 ---
+title: Build-pipeline AC namespace conventions
 description: Accumulated conventions for the build-pipeline AC namespace — naming,
   ID numbering, and scope boundaries for BP-series authoring agents.
 created: '2026-07-21'
-last_updated: '2026-07-21'
+last_updated: '2026-09-08'
 type: tutorial
 status: active
+components:
+  - build_pipeline
 ---
 # build-pipeline — Project Context for Authoring Agents
 
@@ -133,3 +136,57 @@ leafcutter repo's own root CLAUDE.md (not deployed to consumers per ADR-001).
   IMPORT on a clean checkout because they depend on gitignored build outputs
   (scripts/commit_guardian/, scripts/doc_compliance/, scripts/feedback/) absent
   after a plain clone; developer checkouts only pass on stale local artifacts.
+
+## BP-1500 family — the honesty/ownership boundary (added 2026-09-08, PO run)
+
+BP-1500's L0 criteria opens "Running the build should never cost you anything
+you did not ask to give up", but its notes narrow the goal to "is the build's
+ACCOUNT of its own work complete and true". Those are not the same goal, and the
+gap matters when placing a record:
+
+- **Honesty defects** (the build's report is wrong, vacuous, or unfalsifiable) —
+  BP-1500a, b, c, d, e. Fixed by changing what the build SAYS or what it checks.
+- **Ownership defects** (the build damages or claims something the adopter owns)
+  — BP-1500g. NOT fixed by an honest report. A build that announced the deletion
+  in red and did it anyway would satisfy the honesty reading and leave the
+  adopter equally badly off.
+
+When a BP-1500 record's harm survives a perfectly truthful report, it is an
+ownership record, not a reporting one. Say so in its notes.
+
+### BP-1500g — handoff owed to the BA and IT PO (do not let this evaporate)
+
+BP-1500g ("Your own work in your own project survives every build", L1, draft,
+high) was split out of BP-1500b-4 on 2026-09-08 against KI-BP-009. The split was
+deliberate and BP-1500b-4 is NOT superseded — full reasoning in BP-1500g's notes.
+Two concrete actions were left for the BA/IT PO because L2 content is outside a
+PO run's jurisdiction:
+
+1. BP-1500b-4's test_spec entry
+   `test_bp_1500b_4_a_default_no_flag_build_does_not_delete_a_real_adopter_owned_skills_directory`
+   belongs to BP-1500g now. BP-1500b-4's own test_rationale instructs that it be
+   REDIRECTED, not deleted — it is the only entry testing that AC's fourth Then
+   clause as a property of the rebuild rather than of the sweep function.
+2. BP-1500b-4's COEXISTENCE it_requirement should end up CITING BP-1500g rather
+   than carrying the repair itself.
+
+### Two traps when decomposing BP-1500g
+
+- **Do not prescribe where adopter-owned additions live.** There is no safe
+  placement today in either direction, and choosing one may need an ADR. The L1
+  states the outcome only, deliberately.
+- **Survival alone is not the outcome.** The cheapest way to stop the deletion
+  is to stop installing the link, which silently stops the package's own
+  capabilities arriving. Any L2 set that tests only "the adopter's file
+  survived", without also testing that leafcutter's own helpers are still
+  reachable in the same project after the same build, leaves that door open.
+
+### Cap position (checked on disk 2026-09-08)
+
+BP-1500 now has **6 L1s against the hard cap of 7, no child_limit_override** —
+one slot left. `BP-1500f` was deliberately SKIPPED, not overlooked: it is named
+in both BP-1500b's and BP-1500b-3-i's notes as the reserved id for a possible
+future L1 lifting out the general "an unexamined check must not look like a
+satisfied one" rule. The letter gap is intentional; taking f would have turned
+two written pointers into misdirections. A seventh L1 fills BP-1500; an eighth
+needs a waiver.

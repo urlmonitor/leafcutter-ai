@@ -1,0 +1,247 @@
+id: BP-1500g
+components:
+  - build_pipeline
+title: "Your own work in your own project survives every build"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  The build only ever removes what the build put there.
+
+  Running a build never costs you a file, a folder, or an edit you made
+  yourself. Anything in your project that leafcutter did not create is still
+  there afterwards, unchanged, whichever way you ran the build -- the plain
+  everyday command included, not only the careful one. Today the plain command
+  is the dangerous one, which is the opposite of what anyone would assume.
+
+  And there is somewhere in your project for the things you add yourself. If
+  you write your own helper alongside the ones leafcutter ships, it keeps
+  working and it keeps existing: the next build does not quietly reclaim the
+  space you put it in, and neither does the next upgrade. Being told after the
+  fact would not be enough -- an adopter who has to restore from backup has
+  already lost, however clear the message was.
+
+  Making room for your work must not cost you leafcutter's. An outcome where
+  your helper survives because the package's own capabilities silently stopped
+  arriving is not this outcome; both have to work at once, in the same project,
+  after the same ordinary build.
+depends_on:
+  - BP-1500
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-009 (high, open) is the observed defect and the reason this L1 exists. Read the RE-VERIFIED 2026-08-25 block at the top of the entry, not only the original symptom below it -- the original entry describes a placement problem, and the re-verification is what turns it into data loss on the default path. Re-confirmed a third time by BrainCandy on 2026-09-08 against today's main: a no-flag build against a scratch target deleted an adopter-authored skill directory and printed a success marker."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The build whose behaviour this L1 constrains. Both halves of the observed defect live here -- the stale-path cleanup step that removes the adopter's directory and the shim step that replaces it -- and they run in that order on every build. Do not read either in isolation; the harm is the pair."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500b-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "THE RECORD THIS ONE WAS SPLIT OUT OF, and the one most likely to be mistaken for coverage. Its fourth Then clause reaches this behaviour on its plain reading; it is nonetheless a DIFFERENT unit of work, for the ordering and altitude reasons set out in this L1's notes. Read the ruling there before deciding either record is redundant. CORRECTED 2026-09-08 (it-po): this line previously said BP-1500b-4's COEXISTENCE it_requirement also reaches this behaviour. As of the BA's redirect on the same day that is no longer true -- that it_requirement now CITES BP-1500g for the default-path repair rather than carrying it, and what remains BP-1500b-4's obligation is only that its sweep must not reintroduce the behaviour and must not contradict the ownership convention chosen here. Likewise the test entry test_bp_1500b_4_a_default_no_flag_build_does_not_delete_a_real_adopter_owned_skills_directory was RETARGETED in place to covers: [BP-1500g-1] rather than dropped, and is now the shared regression guard between the two records -- see the HANDOFF section in notes."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The convention that produces a project tree holding package-generated artifacts and adopter-owned files side by side. That shared occupancy is the precondition for this defect: nothing here is reachable in a layout where the two never mix."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+created_by_ticket: null
+amended_by:
+  - action: doc_link_correction
+    agent: it-po
+    date: '2026-09-08'
+    reason: "ONE FIELD TOUCHED: the `relevance` note on the BP-1500b-4 doc_link. Criteria, title, depends_on, covered_by, documentation_triggers and every other field UNCHANGED; readiness remains draft. The line asserted that BP-1500b-4's COEXISTENCE it_requirement reaches this behaviour, which was true when this L1 was authored and stopped being true a few hours later when the BA executed the redirect this L1's own HANDOFF section asked for. It now cites BP-1500g for the repair. The correction was left to this run because it was not the BA's to make; it is recorded here rather than silently overwritten. The same note now also records that the redirected test entry was RETARGETED in place to covers: [BP-1500g-1] rather than deleted, so a reader of this L1 does not have to open BP-1500b-4 to learn where that entry went."
+superseded_by: null
+covered_by:
+  - BP-1500g-1
+  - BP-1500g-2
+  - BP-1500g-3
+  - BP-1500g-4
+  - BP-1500g-5
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - reference-doc
+change_target: pipeline
+risk_surface: safety
+notes: |
+  ==========================================================================
+  WHY THIS IS ITS OWN RECORD AND NOT AN AMENDMENT TO BP-1500b-4's GIVEN.
+  The question was asked explicitly by the reporter and is answered here so
+  no later reader has to re-litigate it.
+  ==========================================================================
+  BP-1500b-4 does reach this behaviour on its plain reading -- that is not in
+  dispute, and its it_requirements already say so at length. Three things make
+  it the wrong single home anyway.
+
+  (1) ORDERING. BP-1500b-4 is an L2 whose Given opens "when the install is
+      rebuilt AND THE ORPHAN SWEEP RUNS", and whose depends_on names
+      BP-1500b-2. The sweep does not exist yet. So the clause that would stop
+      the deletion is gated behind building BP-1500b-1, -2 and -3 first. The
+      deletion is happening on the default path today, in adopter installs, and
+      is independent of whether a sweep is ever written -- it is a cleanup step
+      and a shim step disagreeing about who owns a directory. Requiring the
+      residue feature to land before the data loss can stop is the wrong
+      sequence for a live data-loss defect, and it is the reporter's stated
+      reason for asking that it be worked first.
+
+  (2) ALTITUDE. BP-1500b-4 is a CONSTRAINT ON A NEW FEATURE: do not let the
+      sweep you are building become destructive. This is a DEFECT IN EXISTING
+      BEHAVIOUR: the build is already destructive. Those are different units of
+      work with different done-conditions. A reviewer can accept BP-1500b-4 by
+      confirming the sweep is well-behaved, which is exactly what the L2's own
+      test_rationale warns about ("a correct sweep bolted onto a build that is
+      still deleting the adopter's skills directory").
+
+  (3) THE GIVEN GENUINELY DOES NOT LEAD ANYWHERE NEAR THE HARD CASE. This is
+      the IT PO's observation and it is correct. BP-1500b-4's three categories
+      -- a machine-local settings file, a run-time lock file, and the build's
+      own link entries -- all sit at the root of the managed area, OUTSIDE any
+      directory the package claims wholesale. Every one of them is answerable
+      by a per-file provenance test. The case here is a real directory sitting
+      exactly where the package intends to put a link, holding a file the
+      package has never heard of. Per-file provenance does not resolve it,
+      because the conflict is over the container, not the contents. An
+      implementer working only from that Given will build something correct
+      that does not touch this.
+
+  WHAT WOULD HAVE MADE THE AMENDMENT RIGHT: if the only harm were "the sweep
+  might delete too much", one record would be correct and this one would be
+  duplication. It is not the only harm -- see the second and third criteria
+  paragraphs, neither of which BP-1500b-4 reaches at any reading.
+
+  BP-1500b-4 IS NOT SUPERSEDED AND MUST NOT BE NARROWED IN RESPONSE TO THIS.
+  Its provenance rule, its default-deny asymmetry and its no-exception-list
+  control are all still required of the sweep, and none of them is restated
+  here. The two records answer different questions about the same tree: that
+  one asks what a new sweep may remove, this one asks what the build as it
+  stands today may remove.
+
+  ==========================================================================
+  HANDOFF -- ONE CONCRETE ACTION FOR THE BA OR IT PO, DO NOT LET IT EVAPORATE.
+  ==========================================================================
+  BP-1500b-4's test_rationale ends: "If the owner decides that repair belongs
+  elsewhere, drop this ONE entry deliberately and say where it went -- do not
+  let it evaporate." The owner has now decided. The entry is
+
+    test_bp_1500b_4_a_default_no_flag_build_does_not_delete_a_real_adopter_owned_skills_directory
+
+  and it went HERE, to BP-1500g. The BA decomposing this L1 should carry it
+  down as an L2 test descriptor under BP-1500g and, in the same pass, redirect
+  BP-1500b-4's copy to cite BP-1500g rather than deleting it outright -- it is
+  the only entry in that contract testing the fourth Then clause as a property
+  of the rebuild, so removing it silently would weaken BP-1500b-4 as well.
+  The same applies to BP-1500b-4's COEXISTENCE it_requirement: it should end
+  up citing BP-1500g rather than carrying the repair itself.
+
+  This PO run deliberately did NOT make those edits. L2 content is the BA's and
+  IT PO's jurisdiction, and reaching into a reviewed L2's test_spec from an L1
+  authoring pass is the quiet-widening move this store keeps catching. The
+  instruction is recorded here, in the store, where both downstream agents read
+  it -- and repeated in the component PROJECT_CONTEXT.md.
+
+  ==========================================================================
+  SCOPE BOUNDARY THE REPORTER ASKED FOR EXPLICITLY: NO PLACEMENT IS PRESCRIBED.
+  ==========================================================================
+  Where an adopter's own additions should live is a genuine design question
+  with no good answer today -- the honest current state is that there is no
+  safe placement at all, in either direction. Inside the generated tree, the
+  opt-in clean build reaps it; at the discoverable location, the default build
+  reaps it. This L1 therefore states only the OUTCOME (your addition keeps
+  working and keeps existing) and deliberately names no directory, no
+  configuration key and no ownership convention. Choosing among them is the
+  BA's Gherkin and the IT PO's enrichment, and it may well need an ADR.
+
+  A related trap worth naming so it is not discovered late: the cheapest way to
+  stop the deletion is to stop installing the link, and that silently stops
+  leafcutter's own capabilities arriving in the project. The third criteria
+  paragraph exists to make that outcome a failure rather than a pass. Any L2
+  set that tests only survival, and never that the package's own helpers are
+  still reachable in the same project after the same build, leaves that door
+  open.
+
+  ==========================================================================
+  PLACEMENT AND CAPS, CHECKED ON DISK 2026-09-08 -- NOT TAKEN ON TRUST.
+  ==========================================================================
+  Homes considered and rejected:
+    - BP-900 (deployment completeness): 8 L1s against child_limit_override: 8,
+      itself above the hard cap of 7. FULL -- a ninth needs a second waiver.
+      Wrong theme regardless: BP-900 asks whether everything PROMISED arrived.
+    - BP-100 (reliable builds): child_limit_override: 13 against a default of
+      7. Adding to it deepens an existing waiver.
+    - BP-017: mentions .claude/skills but is about symlink targets being
+      relative rather than absolute, and is work_status: done. Not coverage --
+      verified by reading the record, not by trusting the report.
+    - BP-700d ("existing projects upgrade without breaking"): nearest title
+      match in the store. Scoped to the frontend agent/skill consolidation
+      migration; its four L2s are all about that one transition. Not a general
+      ownership guarantee.
+    - A NEW L0 was seriously considered and rejected. The honest theme here is
+      ownership -- leafcutter sharing a project with its adopter rather than
+      occupying it -- and that is arguably not BP-1500's honesty theme. It
+      would have yielded three or four L1s. It was rejected because the
+      reporter asked for one data-loss defect to be worked first, and a new
+      L0 turns a fix into a programme with three siblings nobody requested,
+      which is how a store accumulates permanent drafts. If ownership later
+      earns its own goal, this L1 is the natural first child of it and BP-1600
+      is free.
+  Store-wide search for existing coverage before authoring: every AC mentioning
+  "adopter", every AC mentioning ".claude/skills", and a regex sweep for
+  deletion/destruction/overwriting of adopter-owned or project-owned files
+  across all of docs/acceptance-criteria/. Nothing covers this. The only two
+  records that come close are BP-1500b-4 (ruled on above) and BP-1500b's
+  notes, which describe the defect accurately in prose while owning a
+  different requirement.
+
+  WHY BP-1500f WAS SKIPPED AND THIS IS g. BP-1500f is named twice in the store
+  -- BP-1500b's notes and BP-1500b-3-i's notes -- as the reserved id for a
+  possible future L1 lifting out the general rule that an unexamined check must
+  not look like a satisfied one. Taking f for something unrelated would have
+  turned two written pointers into misdirections for no gain. The letter gap is
+  deliberate. After this record BP-1500 stands at 6 L1s against the hard cap of
+  7 with no override, so that reservation remains exercisable -- but it is now
+  THE LAST SLOT. A seventh L1 fills the parent, and an eighth needs a waiver.
+  Flagged rather than worked around, per the reporter's instruction.
+
+  THEME TENSION, FLAGGED HONESTLY RATHER THAN RESOLVED SILENTLY. BP-1500's own
+  criteria opens "Running the build should never cost you anything you did not
+  ask to give up", which is this defect verbatim; its notes narrow the goal to
+  "is the build's ACCOUNT of its own work complete and true", which this defect
+  is not really about. The green checkmark on the deletion is aggravating, not
+  the injury -- a build that announced the deletion in red and did it anyway
+  would satisfy the honesty reading and leave the adopter exactly as badly off.
+  This record is placed under BP-1500 on the strength of the L0's criteria
+  text, which is the normative field, and the tension is recorded so a future
+  reader does not mistake the placement for a claim that this is a reporting
+  defect. It is not. It is a destruction defect that happens to also be
+  reported dishonestly.
+
+  ROADMAP. phase_1 exit criterion 4 reads "The self-host build leaves the
+  repository clean and reports truthfully: no unrequested edits to tracked
+  files, no orphaned artifacts, no false all-clear". This defect is adjacent
+  but not inside it: the criterion is scoped to THE SELF-HOST REPOSITORY, and
+  the harm here lands hardest in adopter installs -- it was reported from one.
+  No roadmap change is proposed; the gap is noted so nobody claims criterion 4
+  closes this.
+
+  PRIORITY IS high, NOT THE medium DEFAULT FOR A NEW L1, AND THE DEVIATION IS
+  DELIBERATE. Matches the parent L0 and sits one step below BP-1500b-4's
+  critical. The reporter characterised this as data loss to be worked first and
+  reproduced it on today's main; assigning medium would have understated it to
+  every downstream reader and to the scanner's ordering. Adjust at approval if
+  that judgement is wrong. readiness remains draft.
+
+  REPRODUCTION, AS REPORTED 2026-09-08 (kept in benefit terms; the mechanism is
+  in KI-BP-009 and belongs to the BA and IT PO). A scratch project was given a
+  skill of its own that the package does not ship and never has. An ordinary
+  build with no flags was run against it. The build printed a success marker
+  for a removal and then re-installed its link. The project's file was gone.
+  Nothing in the output told the owner they had lost anything.

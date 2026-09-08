@@ -1,0 +1,115 @@
+id: BP-1500g-4
+title: "An adopter can find out where their own work can live, and what a build will do to it, before they lose any of it"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given an adopter who wants to add a capability of their own to a project that
+    has the package installed, and who has not yet added it,
+  When they consult the project's task-oriented documentation before making the
+    change,
+  Then it tells them where their own additions can live such that both their
+    addition and the package's capabilities work,
+  And it states, for each way of running the build, what that run will do to their
+    addition,
+  And it gives them a way to confirm for themselves, after a build, that their
+    addition is still present and still runs, so the guarantee is checkable by the
+    adopter and not only by the project's own tests,
+  And an adopter who follows it does not have to read the build's source, ask the
+    maintainers, or recover from a backup in order to learn the answer.
+depends_on:
+  - BP-1500g
+  - BP-1500g-1
+  - BP-1500g-2
+doc_links:
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The component's existing detail reference and the first place to check for a home before creating a new page. Check the how-to directory alongside it -- this content is task-oriented and may not belong in the component reference."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-009 is the question this documentation has to answer, and the reason it cannot be written until BP-1500g-1 and BP-1500g-2 have been implemented: today the honest answer is that there is no safe placement in either direction, and documenting that is not what this AC asks for."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500g-5.yaml"
+    relationship: describes
+    status: exists
+    relevance: "The sibling documentation AC and the boundary to keep. That one is the reference statement of the ownership boundary -- what the build claims, by category. This one is the adopter's task: what to do, in what order, and how to check it worked. Link them; do not merge them and do not write the boundary twice."
+assigned_agent: how-to-author
+estimated_complexity: S
+it_requirements:
+  - "THIS AC IS NOT IMPLEMENTABLE UNTIL BP-1500g-1 AND BP-1500g-2 HAVE LANDED, AND THAT IS A HARD GATE RATHER THAN A PREFERENCE. The first Then clause asks the page to state where the adopter's additions CAN live such that both their addition and the package's capabilities work. Today the honest answer is that there is no such placement in either direction. If the author reaches this AC and the answer is still `nowhere safe`, the correct outcome is to stop and say so -- publishing the least-bad option as guidance would tell adopters to put work somewhere a later build reclaims, which is worse than the current silence."
+  - "THE PAGE MUST NOT INVENT THE PLACEMENT. It states whatever BP-1500g-1's implementation decided and records where that decision lives -- if the choice was architectural it should have an ADR, and the page cites it rather than paraphrasing. The AC set constrains the outcome and the discoverability of the answer; it does not contain the answer, and this page must not become the first place someone writes one down."
+  - "THE SECOND Then CLAUSE REQUIRES ONE STATEMENT PER WAY OF RUNNING THE BUILD, AND THE WAYS MUST BE ENUMERATED FROM THE BUILD'S OWN INTERFACE RATHER THAN FROM MEMORY. As of origin/main 1cce5b48a the invocations with distinct consequences for adopter content are: the plain no-flag run, the opt-in removal mode, the no-shims variant, and the dry-run/report path. Read the argument parser and confirm the list at authoring time -- a table missing a mode is a page that reassures an adopter about a command they are not running."
+  - "THE THIRD Then CLAUSE IS WHAT MAKES THIS MORE THAN A PAGE AND MUST BE A CONCRETE, RUNNABLE CHECK -- a command or short sequence the adopter can execute in their own project, using only what an installed project already has. Not `verify your skill still works`, but something that produces an unambiguous answer. It has to confirm both halves the behavioural ACs distinguish: the content is present and byte-identical, AND it is still discovered by name. An adopter who can run this does not have to trust the guarantee, and it is the only check available in a project whose test suite they do not run."
+  - "THE FOURTH Then CLAUSE IS A TESTABLE PROPERTY OF THE PAGE, NOT A SENTIMENT: an adopter following it must not need to read the build's source, ask a maintainer, or recover from a backup. Any step that resolves to `see scripts/build.py` fails it. Where the underlying mechanism is genuinely needed, state the consequence and link the reference rather than sending the reader to code."
+  - "THE BOUNDARY WITH BP-1500g-5 IS CITE, NOT REPEAT. That record is the REFERENCE statement of the ownership boundary -- what the build claims, by category. This one is the adopter's TASK -- what to do, in what order, and how to check it worked. Link them. Do not write the boundary twice, and do not let this page grow a category table; if the reader needs the classification, that is the reference page's job."
+  - "Placement: check `docs/how-to/` for an existing home before creating a page -- `docs/how-to/creating-a-skill.md` and `docs/how-to/output-layout/adopt-consolidated-output-root.md` are the nearest neighbours and one of them may be the right host. A new page must be registered wherever the project's doc index requires, so it is discoverable rather than merely present."
+  - "Must satisfy the project's documentation frontmatter and doc-compliance gates; a page that cannot pass `check-doc-frontmatter` is not deliverable."
+test_required: false
+test_rationale: |
+  test_required IS false BECAUSE THIS AC PRODUCES A PROSE ARTIFACT AND NO
+  EXECUTABLE BEHAVIOUR. It is recorded explicitly, rather than left absent, so
+  that test-writer skips it for the stated reason instead of the omission
+  looking like an oversight the way an empty contract does.
+
+  WHAT VERIFIES IT INSTEAD, AND THE READING TO REFUSE. The page's own third
+  Then clause requires a runnable check for the ADOPTER; that check is content
+  OF this deliverable, not coverage OF it. Do not satisfy this AC by adding a
+  test to the project's suite that runs the documented check -- that would test
+  BP-1500g-1's behaviour a second time under this AC's name, and this AC would
+  still be unverified. What must be reviewed here is that the page exists, that
+  the check it documents actually works when a human runs it in an installed
+  project, and that the four Then clauses are each answerable from the page
+  alone.
+
+  THE ORDERING GATE IS THE REAL RISK TO THIS AC, NOT ITS COVERAGE. It depends
+  on BP-1500g-1 and BP-1500g-2 and cannot be written truthfully before them.
+  An author who reaches it early will produce a page describing an intention,
+  which reads exactly like a page describing a guarantee.
+delivers_to: null
+expects_from:
+  ac_id: BP-1500g-1
+  contract: "The placement decision as implemented -- the location or convention under which adopter-authored additions both survive an ordinary build and remain discoverable -- together with the record of where that decision is documented (an ADR id, if the choice was architectural). Also, from BP-1500g-2, the demonstrated fact that the package's own capabilities still arrive in the same project after the same run; without it the first Then clause cannot be written truthfully, because a placement that survives by suppressing the package's delivery is not a placement this page may recommend. If either is unavailable when this AC is picked up, it is BLOCKED, not implementable with a caveat."
+origin_agent: BrainCandy
+created: 2026-09-08
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-08'
+    reason: "Added assigned_agent (how-to-author), estimated_complexity (S), it_requirements, test_required, test_rationale and expects_from. Criteria, title, depends_on and doc_links UNCHANGED; readiness remains draft. NOTES ON THE CHOICES. (1) assigned_agent is `how-to-author`, the registry's leaf documentation author for `docs/how-to/`, rather than the `documentation-expert` that the it-po template's documentation_triggers table nominates for the how-to trigger. Both are in `config/agent_registry.json` and `how-to-author` is `is_ticket_phase: true` with `spawned_by` including documentation-expert, so the coverage the S7b gate checks for is present; the leaf author is named directly because documentation-expert dispatching a specialist and returning before it finishes is a known hazard in this repo. Flagged rather than done silently. (2) test_required: false, with the reasoning recorded, because this AC produces prose and no executable behaviour. The test_rationale additionally names a reading to REFUSE: the runnable check the page must contain is CONTENT of the deliverable, not coverage of it, and adding a suite test that runs it would re-test BP-1500g-1 under this AC's name while leaving this AC unverified. (3) The it_requirements make the ordering dependency a HARD GATE -- if the honest answer is still `nowhere safe` when this is picked up, stop and say so; publishing the least-bad option as guidance is worse than the current silence, because it tells adopters to put work somewhere a later build reclaims. (4) The enumeration of build invocations is required to be read off the argument parser at authoring time rather than recalled; as of origin/main 1cce5b48a the modes with distinct consequences for adopter content are the plain run, the opt-in removal mode, the no-shims variant and the dry-run/report path."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  SATISFIES THE how-to ENTRY IN BP-1500g's documentation_triggers.
+
+  THIS AC IS ORDERED AFTER THE BEHAVIOURAL ONES ON PURPOSE. It depends on
+  BP-1500g-1 and BP-1500g-2 because the first Then clause cannot be written
+  truthfully until a placement exists that survives both a build and the package's
+  own delivery. Writing it earlier would produce a document that describes an
+  intention. If an implementer reaches this AC and finds the answer is still "there
+  is nowhere safe", the correct response is to stop and say so, not to publish the
+  least-bad option as guidance.
+
+  IT DOES NOT PRESCRIBE THE PLACEMENT EITHER. The criterion is that the
+  documentation STATES where additions can live -- whatever the implementation of
+  BP-1500g-1 decided. The AC set constrains the outcome and the discoverability of
+  the answer; it does not contain the answer, and this file must not become the
+  place someone writes one down.
+
+  THE THIRD Then CLAUSE IS THE ONE THAT MAKES THIS MORE THAN A PAGE. An adopter
+  who can verify their own work survived does not need to trust the guarantee, and
+  it is the only check available to them in a project whose test suite they do not
+  run. It is also the check that would have surfaced this defect years earlier in
+  the reporting repository.

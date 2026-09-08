@@ -1,0 +1,165 @@
+id: BP-1500b-1-i
+title: "The sweep reaps the installed tree being rebuilt, in every layout, and never a second tree on the same machine"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given two installed trees exist on one machine and both carry the retired
+    "fast-lane-build" workflow: one belonging to a project that keeps the
+    package inside itself and installs into its own root, and one belonging to
+    an ordinary adopter project that keeps the package elsewhere,
+  When the first project's install is rebuilt,
+  Then the retired workflow is gone from the first project's installed tree,
+  And nothing is removed from the second project's tree, nor from the package's
+    own source,
+  When the second project's install is then rebuilt,
+  Then the retired workflow is gone from the second project's installed tree
+    too, by the same behaviour and with no layout-specific special case,
+  And where the location the sweep is pointed at is reached through a link
+    rather than being a directory in its own right, the sweep examines the files
+    that location actually contains and reports them in its scope, rather than
+    finding nothing there and continuing silently.
+depends_on:
+  - BP-1500b-1
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-010 is the already-owned instance of the path defect this AC must not re-diagnose. Read it for the mechanism and for the correction in notes below; the fix for it belongs to BP-100b-3, not here."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the self-hosting layout that makes 'which tree am I reaping' a real question rather than a theoretical one."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100b-3.yaml"
+    relationship: describes
+    status: exists
+    relevance: "OWNS THE PATH DEFECT ITSELF (reopened as KI-BP-010). This AC deliberately does not re-diagnose it; it states the outcome that must hold in both layouts once it is fixed, which is a property BP-100b-3 is silent about."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The build_pipeline component's detail_ref. Describes target-root resolution and the shim layer, which is where 'which tree am I reaping' is actually decided."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The reaped tree must be derived from the build's resolved target root for the run in progress, and must be expressible as one derivation serving both layouts. Verified on disk 2026-09-07: `clean_stale_artifacts` computes `claude_dir = target_dir / '.claude'` (build_phases.py:3787) and then joins `_MANAGED_ARTIFACT_DIRS['workflows'] == '.claude/workflows'` (:3752) onto it. That doubled segment belongs to BP-100b-3 / KI-BP-010 and must not be re-diagnosed or re-fixed here."
+  - "KI-BP-010's stated premise -- that the doubled path 'never exists, so the loop continues every time' -- is FALSE in the self-hosting layout and this AC exists because of it. `/home/henzeh/projects/leafcutter/.claude/.claude` is a symlink to `/home/henzeh/projects/leafcutter/leafcutter-ai/.claude` (verified, `ls -la`, created 2026-06-17) and that target holds nine real workflow files. So the reaper is currently aimed at the PACKAGE's own tree. Correcting the join without bounding the blast radius converts a silent no-op into a cross-tree deletion. Bound the radius in the same change, not after it."
+  - "Before any deletion, the candidate path must be asserted to lie under the resolved target root AFTER symlink resolution of both sides. A candidate resolving outside it is a fault to surface, never a file to delete. Resolve-then-compare, not compare-then-resolve: string-prefix comparison on unresolved paths is what lets a link escape the bound."
+  - "No layout-specific conditional. There must be no self-hosting-versus-adopter branch in scope resolution -- both layouts are served by one target-root derivation, or the criteria's 'no layout-specific special case' clause is unmet regardless of the observable outcome."
+  - "Where a scope location is reached through a symbolic link, resolve it and walk the files it actually contains, and count those files in the reported scope. Declining to walk a link and continuing silently is the vacuous all-clear arriving by a different route; it is BP-1500b-3's scope count that goes wrong, so the two must be implemented together."
+  - "The package's own source tree (templates/, and the package checkout generally) is never a deletion target under any layout, including the self-hosting one where it sits inside the workspace being built."
+test_spec:
+  - name: test_bp_1500b_1_i_a_self_hosting_rebuild_leaves_the_adopter_tree_untouched
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Stand up two installed trees under one tmp root -- one self-hosting (package inside the target, installing into its own root) and one ordinary adopter -- both carrying the retired workflow. Rebuild the first; assert the second's tree and the package sources are byte-identical afterwards."
+  - name: test_bp_1500b_1_i_an_adopter_rebuild_leaves_the_self_hosting_tree_and_package_sources_untouched
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The mirror of the first: rebuild the adopter install; its orphan is gone and nothing in the self-hosting tree or in templates/ changed."
+  - name: test_bp_1500b_1_i_both_layouts_reach_the_outcome_through_the_same_invocation
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Parametrised over the two layouts with identical build arguments: each rebuild removes its own orphan. Behavioural, not structural -- it proves one code path serves both rather than grepping for the absence of a branch."
+  - name: test_bp_1500b_1_i_a_symlinked_scope_location_is_walked_and_its_files_counted
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Point a scope location at a symlink whose target holds N artifacts (the .claude/.claude shape observed on disk). The sweep classifies those N files and the reported scope count includes them; a run that finds nothing there and continues fails."
+  - name: test_bp_1500b_1_i_a_candidate_resolving_outside_the_target_root_is_surfaced_as_a_fault_not_deleted
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Plant a link inside the scope whose target resolves outside the resolved target root. The file survives, and the run reports a fault on the build's fault channel rather than removing it or passing silently."
+  - name: test_bp_1500b_1_i_the_package_source_tree_is_never_a_deletion_target_in_the_self_hosting_layout
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Reproduces the observed geometry directly: the doubled path resolves into the package's own .claude holding nine real workflow files. After a self-hosting rebuild those nine are decided by the target's own scope, and no file under the package checkout is removed."
+test_rationale: |
+  THIS AC IS ENTIRELY ABOUT WHAT IS *NOT* TOUCHED, so its coverage has to be
+  a pair of trees on one filesystem and a byte-comparison of the one that was
+  not the subject of the run. A single-tree test cannot express "never a
+  second tree on the same machine" at all -- there is no second tree in it to
+  survive. That is why every entry here is an integration test over a
+  two-tree fixture rather than a unit test of a path helper.
+
+  A UNIT TEST OF THE PATH JOIN WOULD BE THE WRONG COVERAGE FOR A SECOND
+  REASON: it would test BP-100b-3's defect, which this AC deliberately does
+  not own. Asserting `claude_dir / '.claude/workflows'` is malformed proves
+  nothing about blast radius; the dangerous case is the CORRECTED join
+  reaching a real second tree, which only exists once two trees do.
+
+  THE SYMLINK ENTRIES ARE NOT DEFENSIVE PADDING. The self-hosting workspace
+  reaches its second tree through `.claude/.claude`, a real symlink verified
+  on disk, and reaches its own artifact directories through shim symlinks. A
+  fixture built from plain directories would be green while the real layout
+  deletes across trees, which is the exact synthetic-fixture bias recorded in
+  this repo's own retrospectives.
+delivers_to: null
+expects_from:
+  ac_id: BP-1500b-1
+  contract: "The default-path orphan sweep and, specifically, its resolved target root for the run in progress plus its per-artifact removal records {installed_path, artifact_type, reason}. This AC constrains the domain those records may be drawn from: paths under the resolved target root only, after symlink resolution of both the candidate and the root."
+origin_agent: BrainCandy
+created: 2026-09-07
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-07'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (M), it_requirements, test_spec, test_rationale, expects_from, and one architecture doc_link. Criteria, title and depends_on unchanged. Enrichment pins the constraint to the resolve-then-compare containment check and records the disk verification behind the BA's KI-BP-010 correction (.claude/.claude is a real symlink to the package's own .claude, holding nine workflow files), so the implementer treats cross-tree deletion as the live risk of fixing the join rather than a theoretical one. Test contract is two-tree by construction because the AC's whole claim is about the tree that was not the subject of the run."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  SCOPED AROUND BP-100b-3, NOT OVER IT. The specific doubled-path defect -- a
+  managed-directory name joined onto a base that already ends in that name --
+  has a named owner in BP-100b-3, reopened as KI-BP-010. This AC states only the
+  outcome that must hold once that is fixed: the same behaviour in both layouts,
+  and a blast radius limited to the tree being rebuilt.
+
+  A CORRECTION TO KI-BP-010'S STATED PREMISE, verified on disk 2026-09-07 and
+  the reason the second Then clause exists. The entry reasons that the doubled
+  path "never exists, so the loop continues every time". In the self-hosting
+  layout it DOES exist:
+
+    /home/henzeh/projects/leafcutter/.claude/.claude
+      -> /home/henzeh/projects/leafcutter/leafcutter-ai/.claude   (a link)
+
+  and that target holds nine real workflow files, eight of them current. So in
+  that layout the doubled path is not a harmless miss -- it aims the reaper at
+  the package's own installed tree rather than at the target's. An
+  implementation that merely stops the doubled join without bounding the blast
+  radius converts a silent no-op into a cross-tree deletion, which is why "never
+  a second tree on the same machine" is in the title and not just the criteria.
+
+  THE TWO TREES IN THE GIVEN ARE THE TWO THAT ACTUALLY EXIST HERE:
+    /home/henzeh/projects/leafcutter/.leafcutter/workflows/          9 files
+    /home/henzeh/projects/leafcutter/leafcutter-ai/.claude/workflows/ 9 files
+  Both carry fast-lane-build.js; the package source carries eight templates and
+  no fast-lane-build. The second tree's other workflows were rewritten on
+  2026-09-07, so builds ran against it after the 2026-09-01 template deletion
+  and left the orphan each time.
+
+  THE LINK CLAUSE IS ABOUT SCOPE HONESTY, NOT CONVENIENCE. It pairs with
+  BP-1500b-3: a sweep that declines to walk a linked location and says nothing
+  produces a scope count that silently omits it, which is the vacuous all-clear
+  arriving by a different route.

@@ -1,10 +1,9 @@
 ---
-title: Architecture Decision Records
-description: Index of all Architecture Decision Records (ADRs) for the leafcutter-ai
-  package, listing each decision's number, status, title, and date.
-type: reference
+title: "Architecture Decision Records"
+description: "Index of all Architecture Decision Records (ADRs) for the leafcutter-ai package, listing each decision's number, status, title, and date."
+type: "reference"
 created: '2026-08-13'
-last_updated: '2026-08-26'
+last_updated: '2026-09-08'
 status: active
 components:
 - documentation_system
@@ -65,3 +64,7 @@ python scripts/adr_refs.py --index --write
 | [ADR-035](ADR-035-fast-lane-closed-producer-roster.md) | Active | The Fast Lane's Producer Roster Becomes Data, But Stays Closed | 2026-08-25 |
 | [ADR-036](ADR-036-documentation-dispatch-caller-boundary.md) | Active | Documentation Dispatch Is Caller-Dependent — documentation-expert Is a Human Entry Point, Never an AC's assigned_agent | 2026-08-26 |
 | [ADR-037](ADR-037-whole-collection-uniqueness-pass.md) | Active | Whole-Collection Uniqueness Pass — Verdict-Object Contract and Decision-Namespace Guard Registration | 2026-08-18 |
+| [ADR-038](ADR-038-commit-guardian-shared-change-set-derivation.md) | Active | Commit Guardian Shared Change-Set Derivation | 2026-08-31 |
+| [ADR-039](ADR-039-fast-lane-occupied-workspace-refusal.md) | Active | Fast-Lane Occupied-Workspace Refusal | 2026-09-07 |
+| [ADR-040](ADR-040-knowledge-write-publication-rides-completion-commit.md) | Active | Knowledge-Write Publication Rides the Completion Path's Own Commit | 2026-09-07 |
+| [ADR-041](ADR-041-recomputed-attribution-at-item-granularity.md) | Active | Ownership in an Installed Tree Is Decided by Recomputed Attribution at Item Granularity | 2026-09-08 |

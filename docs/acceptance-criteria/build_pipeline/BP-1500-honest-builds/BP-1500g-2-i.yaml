@@ -1,0 +1,151 @@
+id: BP-1500g-2-i
+title: "When the adopter's own capability and one the package ships answer to the same name, neither is taken silently"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given an adopter has added a capability of their own under the same name as one
+    the package ships,
+  When that project is rebuilt with the ordinary everyday command,
+  Then the adopter's version is present and unchanged when the run ends -- not
+    overwritten, not emptied, not moved and not removed,
+  And the run does not end reporting success as though there were no conflict,
+  And the run names the contested name and states which of the two the project
+    will actually run afterwards, so the adopter learns of the collision at the
+    moment it is created rather than inferring it later from behaviour they cannot
+    explain.
+depends_on:
+  - BP-1500g-2
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-009 records that the package computes a project-local-versus-package-provided distinction and that the current layout makes that predicate meaningless -- every package capability looks project-local and every project capability sits inside the package's output. A collision is where that collapsed predicate produces a wrong answer with no symptom, so read that paragraph before deciding this case is theoretical."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500g-2.yaml"
+    relationship: describes
+    status: exists
+    relevance: "The parent behaviour. This AC is the case where its two halves genuinely cannot both be delivered, and it says what must happen then."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE COLLISION MUST BE DETECTED FROM DATA THE BUILD ALREADY HAS, WITH NO EXTRA TRAVERSAL. It is a name present in both the recomputed shipped set and the adopter-owned set -- a set intersection over two collections BP-1500g-1 and BP-1500g-2 already compute. If detecting it requires a new scan of the tree, the detection has been put in the wrong place."
+  - "NEITHER DIRECTION MAY BE RESOLVED SILENTLY, AND THE AC DOES NOT PICK A WINNER. Package-wins overwrites the adopter's work; adopter-wins leaves a shipped item that reports as installed while something else answers to its name. Both are silent failures, and forbidding both is the requirement. Which version the project actually runs is part of the ownership convention BP-1500g-1's implementer chooses -- do not settle it here, and do not let the implementation settle it by default and call that a decision."
+  - "THE RUN MUST STATE WHICH OF THE TWO WILL ACTUALLY RUN AFTERWARDS, AND THE STATEMENT MUST BE TRUE OF THE TREE THE RUN LEAVES BEHIND. A message that names a winner the discovery path does not in fact resolve to is worse than no message: it is the honest-report failure mode with the report itself wrong. Whatever is printed must be verifiable by resolving the name in the finished project."
+  - "PRESERVATION OF THE ADOPTER'S VERSION IS UNCONDITIONAL, EVEN WHERE IT LOSES. The first Then clause admits no exception: not overwritten, not emptied, not moved and not removed. If the chosen convention is that the package's version answers to the contested name, the adopter's content still has to exist unchanged -- which means resolving a collision may not be implemented as a replacement."
+  - "THE PREDICATE THIS AC TESTS IS THE ONE THE CURRENT LAYOUT HAS ALREADY COLLAPSED. KI-BP-009 records that the package used to compute a project-local-versus-package-provided distinction that the shared location rendered meaningless. SEE THE CAVEAT ON THAT ENTRY IN BP-1500g's notes before going to look for it: the `in_project` resolution leg it cites was REMOVED from `scripts/build_phases.py` on 2026-08-18 under BP-1300a-1, six days before that paragraph was written, so the code it points at is not there. The point stands and the pointer does not -- the distinction has to be built, not repaired."
+  - "Must not make the ordinary no-collision path slower or noisier: a set intersection that is empty on virtually every real build must produce no output at all."
+  - "Must follow the project error handling policy; a collision is a condition to report, not an exception to swallow."
+test_spec:
+  - name: test_bp_1500g_2_i_the_adopter_version_of_a_contested_name_is_present_and_unchanged_after_the_run
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter>   (no flags)"
+    description: "The first clause, in its full four-part form: after a real no-flag build over a tree where the adopter has added a capability under a name the package also ships, the adopter's version is present with identical bytes -- not overwritten, not emptied, not moved to a sibling path, and not removed. Assert all four, because a repair that relocates the loser satisfies a naive presence check."
+  - name: test_bp_1500g_2_i_the_run_does_not_report_success_as_though_there_were_no_conflict
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The second clause. The run's outcome over a colliding tree is distinguishable from its outcome over the identical tree without the collision. Asserted as a difference between two runs rather than against a fixed status, since the AC constrains that the collision is not silent, not what specific outcome it produces."
+  - name: test_bp_1500g_2_i_the_run_names_the_contested_name_and_states_which_version_the_project_will_run
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The third clause. The output contains the specific contested name and an unambiguous statement of which of the two the project will run afterwards. Assert on the planted name, never on a generic phrase."
+  - name: test_bp_1500g_2_i_the_stated_winner_is_the_one_the_project_actually_resolves_afterwards
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "THE ENTRY THAT MAKES THE MESSAGE FALSIFIABLE, and the one most likely to be omitted. Parse the winner the run declared, then resolve the contested name through the consuming tool's discovery path in the finished project, and require them to agree. A declaration that does not match the tree is the honest-report failure with the report itself wrong -- and it is invisible to any test that only greps the transcript."
+  - name: test_bp_1500g_2_i_a_non_colliding_build_produces_no_collision_output_at_all
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "THE OVER-REPORT CONTROL. A tree with adopter content that collides with nothing produces no collision report and no change in outcome. Collisions are rare; an implementation that warns on every adopter file trains the adopter to ignore the one message that matters, and would pass every other entry here."
+  - name: test_bp_1500g_2_i_collision_detection_does_not_depend_on_a_hardcoded_set_of_names
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The detection is a set intersection over the recomputed shipped set and the adopter-owned set. Assert it with a contested name minted at run time inside the test body, so an implementation carrying a list of names known to collide fails."
+test_rationale: |
+  THE STATED-WINNER ENTRY IS THE ONE THAT DISTINGUISHES THIS FROM A LOGGING
+  TICKET, AND IT IS THE ONE A TRIMMED CONTRACT WOULD DROP. Three of the six
+  entries here can be satisfied by printing the right words; only resolving the
+  contested name in the finished project and comparing it to what was printed
+  can tell a true statement from a plausible one. The AC's own notes make the
+  declaration load-bearing precisely because it does not pick a winner -- which
+  means the declaration is the only thing carrying the information, and an
+  unverified declaration carries none.
+
+  THE OVER-REPORT CONTROL MATTERS MORE HERE THAN ITS SIZE SUGGESTS. This is the
+  rare case in the set: it needs the adopter to have chosen a name the package
+  already uses, which is why the AC carries a lower priority than its siblings.
+  A detector that fires on every adopter file would pass every survival and
+  reporting entry above while making the collision message worthless through
+  volume, and rare-condition detectors fail this way far more often than they
+  fail closed.
+
+  THE FOUR-PART PRESENCE ASSERTION IS DELIBERATE. `not overwritten, not
+  emptied, not moved and not removed` is four distinct failure modes and the
+  criteria enumerate them individually. Moving the loser aside is the most
+  likely well-intentioned implementation and is the one a bare `exists()` check
+  would pass.
+
+  RUNTIME. Six entries, four real build subprocesses over small scratch trees.
+  Well inside the done-proof pytest budget as fixed by PR #706 (30s collection
+  floor, 300s per linked test file, overridable via
+  LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS).
+delivers_to: null
+expects_from:
+  ac_id: BP-1500g-2
+  contract: "The recomputed shipped set and the adopter-owned set as two name-keyed collections produced by the same run, together with the resolution the consuming tool's discovery path will yield for any given name in the finished project. This AC's condition is the non-empty intersection of those two collections; its fourth test entry additionally requires the resolution lookup, since the declared winner has to be checkable against the tree the run leaves behind."
+origin_agent: BrainCandy
+created: 2026-09-08
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-08'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (S), it_requirements, test_spec, test_rationale and expects_from. Criteria, title, depends_on, priority (medium, as the BA set it) and doc_links UNCHANGED; readiness remains draft. WHAT THE ENRICHMENT ADDS. (1) A STATED-WINNER VERIFICATION entry: the AC deliberately does not pick a winner, which makes the run's declaration the only thing carrying the information -- so the contract now requires resolving the contested name in the finished project and comparing it to what was printed. Three of the six entries are satisfiable by printing the right words; this is the only one that can tell a true statement from a plausible one, and it is invisible to any transcript-grep test. (2) An OVER-REPORT control, because a rare-condition detector that fires on every adopter file passes every survival and reporting entry while making the message worthless through volume. (3) The presence assertion is specified in all FOUR parts the criteria enumerate -- not overwritten, not emptied, not MOVED, not removed -- since relocating the loser is the most likely well-intentioned implementation and passes a bare existence check. (4) A CORRECTION CARRIED INTO THE it_requirements: KI-BP-009's paragraph `the concept already exists in the code` points at the `in_project` / `project_skills_dir` predicate in `scripts/build_phases.py`, but that resolution leg was REMOVED on 2026-08-18 under BP-1300a-1 -- six days BEFORE that paragraph was written on 2026-08-25 and confirmed absent from origin/main 1cce5b48a on 2026-09-08. An implementer told the predicate exists and only needs repairing will go looking for deleted code. The distinction has to be built, not repaired. Raised as a caveat on this run; KI-BP-009 is not this agent's file to edit."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  WHY THIS EDGE CASE IS WORTH A RECORD. Every candidate repair for BP-1500g-1 has
+  to decide what a name means in the shared tree, and a collision is where that
+  decision becomes visible. The two obvious implementations both fail an adopter
+  silently: package-wins overwrites their work, adopter-wins leaves a package
+  capability that appears installed while something else answers to its name. This
+  AC forbids resolving it silently in EITHER direction and requires the run to say
+  what it did -- which is the only outcome that leaves the adopter able to act.
+
+  IT DOES NOT PICK A WINNER, DELIBERATELY. The third Then clause requires the run
+  to STATE which version the project will run; it does not say which that should
+  be. Choosing is part of the ownership convention this L1 leaves open, and
+  pinning it here would prescribe by the back door the thing the L1 refused to
+  prescribe at the front.
+
+  NOTE FOR WHOEVER RESOLVES THE OWNERSHIP CONVENTION: this is the case that will
+  tell you whether the convention is real. A convention under which a collision
+  cannot be described is not a convention.
+
+  PRIORITY IS medium, ONE STEP BELOW ITS PARENT AND THE OTHER LEAVES IN THIS SET.
+  A collision requires the adopter to have chosen a name the package already uses,
+  which is uncommon and is not the reported defect; the deviation is recorded here
+  rather than silently inherited. Raise it at approval if the reviewer disagrees.

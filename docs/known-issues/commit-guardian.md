@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-07
+last_updated: 2026-09-08
 components:
   - commit_guardian
 related_docs:
