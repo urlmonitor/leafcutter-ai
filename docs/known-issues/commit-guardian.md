@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-07
+last_updated: 2026-09-08
 components:
   - commit_guardian
 related_docs:
@@ -4020,3 +4020,54 @@ that found nothing.
 
 **Pattern:** a guard whose logic is sound and whose *input query* silently excludes the exact
 operation the surrounding procedure tells you to perform.
+
+---
+
+### KI-CG-20260908-1520 — `check-file-size` has no merge-commit awareness, so merging `main` into any branch is blocked by `main`'s own accumulated file growth
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `templates/scripts/commit_guardian/check_file_size.py` and
+  `templates/scripts/commit_guardian/_file_size_ratchet.py` (GE-127a-1 crossing refusal,
+  GE-127b-1 ratchet)
+
+**Symptom.** Merging `origin/main` into a branch that had diverged by 29 commits, the gate
+refused the merge commit with **17 files "GREW WHILE ALREADY OVER ITS LIMIT"** and **6 new
+files over the 400-line cap** — among them `scripts/build.py`, `scripts/build_phases.py`,
+`scripts/ac_store/done_proof.py` and `unit_tests/commit_guardian/test_bp_100k_4_ii.py`.
+
+**The merge authored none of it.** Every flagged file was already on `origin/main` at the
+moment of the merge, at the flagged size, and the branch had not touched any of them.
+`test_bp_100k_4_ii.py` is 1165 lines at `origin/main` today. The growth was authored by the
+commits the merge is *bringing in*, each of which passed this same gate when it only touched a
+few files at a time.
+
+**Cause.** `check_file_size.py` contains no merge handling of any kind — no `MERGE_HEAD`
+check, no second-parent logic, nothing that distinguishes "this commit wrote these lines" from
+"these lines arrived from the other parent". On a merge commit every incoming file is
+attributed to the merger.
+
+**Why this is worse than a nuisance.** The gate's only two exits are both wrong. Refactoring
+~20 of `main`'s files inside a conflict resolution is a large unrelated change riding in on a
+merge — precisely the kind of thing the ratchet exists to prevent — and it touches files the
+branch never wrote. The alternative is a bypass, which is what was taken here
+(`SKIP=check-file-size`, recorded in the merge commit's own message). Either way the gate has
+trained the operator to skip it, and a gate routinely skipped on a whole class of commit is
+not enforcing anything on that class.
+
+**Not a CI-required check.** It appears nowhere in `.github/workflows/`, so the bypass cannot
+produce a false green on a PR. That bounds the damage and is the reason the skip was
+acceptable — but it also means the escape is invisible to anyone reading CI.
+
+**Fix direction.** Detect the merge commit (`MERGE_HEAD` present, or a second parent) and
+attribute per file: a file whose staged content equals the other parent's is inherited, not
+authored, and is out of scope for both the crossing refusal and the ratchet. A file the merge
+*resolved* — genuinely different from both parents — is authored and should still be judged.
+That distinction is available from git at no analytical cost, and it is the same
+authored-versus-inherited question `_authored_change.py` already answers elsewhere in this
+component; check whether that helper can be reused before writing a second one.
+
+**Pattern:** a gate that measures a property of the *tree* while claiming to measure a
+property of the *change*, so it bills the person who moved the code to the person who wrote it.
