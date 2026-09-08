@@ -15,6 +15,13 @@ ARCHITECTURE: Four public symbols consumed by tests and the CLI:
     check_staged_done_proofs(staged_yaml_paths, *, test_root) -> list[dict]
         STATIC pre-commit check. Scans test_root for covers tags; returns
         violation dicts for done ACs that have no tag. No subprocess calls.
+        Level-aware (BO-2500b-1-ii): a done L0/L1 composite is proven by its
+        covered_by children being themselves done-and-covered (resolved via
+        _find_ac_root/_resolve_child_ac/_unproven_composite_children), not by
+        a covers tag naming the composite's own id — that tag may never
+        legitimately exist. A composite with any unproven child is still a
+        violation naming that child; composites are never skipped
+        unconditionally. L2/L3 leaves keep the original direct-tag check.
     check_all_done_acs(*, ac_root, test_root) -> list[dict]
         CI-authoritative check. Calls verify_done_eligible (from done_proof)
         for every done AC under ac_root; returns violation dicts for ineligible
@@ -54,6 +61,21 @@ DECISION HISTORY:
     runs. _EXCLUDED_SCAN_DIRS continues to apply so the widened default does
     not traverse node_modules/, dist/, etc. An explicit --test-root still
     overrides the default unchanged.
+  - 2026-09-07 [python-coder/BO-2500b-1-ii]: Made check_staged_done_proofs
+    level-aware. Root cause: the check had no notion of AC level at all and
+    demanded a direct "# covers: <id>" tag for every done AC, including L0/L1
+    composites — whose fulfilment is DERIVED from their children per the
+    ac-fulfillment-gate model, so a tag naming the composite's own id may
+    never legitimately exist. This blocked real commits (GE-127a, GE-127b)
+    until a workaround tag was hand-added. Fix: a done L0/L1 AC is now proven
+    by walking its covered_by children (_find_ac_root resolves the AC-store
+    root from the staged path; _resolve_child_ac loads each child by id;
+    _unproven_composite_children recurses through nested composites) and is
+    reported as a violation, naming the unproven child, only when some child
+    is not itself done-and-covered — composites are never skipped
+    unconditionally (the ACD-400a falsely-done-composite defect this repo has
+    20 recorded instances of). L2/L3 leaves are untouched: the original
+    direct-covers-tag requirement and its exact reason string still apply.
 """
 from __future__ import annotations
 
@@ -233,6 +255,156 @@ def _collect_all_covered_ids(test_root: Path) -> set[str]:
     return covered
 
 
+def _find_ac_root(yaml_path: Path) -> Path | None:
+    """Return the ancestor ``acceptance-criteria`` directory of *yaml_path*.
+
+    Used to resolve an L0/L1 composite's ``covered_by`` children by id
+    (BO-2500b-1-ii) — the store lays composites and their children out as
+    siblings (or descendants) under a shared ``docs/acceptance-criteria/``
+    tree, so walking up from the staged file to that directory name gives a
+    root to search for the child records.
+
+    Args:
+        yaml_path: Absolute or relative path to a staged AC YAML file.
+
+    Returns:
+        The ``acceptance-criteria`` ancestor directory, or ``None`` when no
+        such ancestor exists (e.g. a path outside the AC store) — callers
+        treat ``None`` as "children cannot be resolved" and fail closed
+        (report unproven), never as "skip the composite".
+    """
+    for parent in yaml_path.resolve().parents:
+        if parent.name == "acceptance-criteria":
+            return parent
+    return None
+
+
+def _load_ac_yaml_or_none(path: Path) -> dict | None:
+    """Read and parse an AC YAML file, returning ``None`` on any failure.
+
+    Read/parse failures and non-mapping documents are logged to stderr at
+    WARNING and treated as unresolved rather than fatal, matching the
+    fail-open static-scan behaviour of the rest of this module.
+
+    Args:
+        path: Path to the AC YAML file to read.
+
+    Returns:
+        The parsed mapping, or ``None`` when the file cannot be read/parsed
+        or does not contain a YAML mapping.
+    """
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except (yaml.YAMLError, OSError) as exc:
+        print(
+            f"WARNING: check_done_proof: cannot read {path}: {exc}",
+            file=sys.stderr,
+        )
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _resolve_child_ac(ac_root: Path, child_id: str) -> dict | None:
+    """Locate and load a child AC's YAML record by id under *ac_root*.
+
+    Args:
+        ac_root: Root ``acceptance-criteria`` directory to search recursively.
+        child_id: The child AC's ``id`` field value; the store convention is
+            that the filename stem equals the id (``<id>.yaml``).
+
+    Returns:
+        The child's parsed YAML mapping, or ``None`` when no matching file is
+        found or it cannot be read/parsed.
+    """
+    try:
+        matches = sorted(ac_root.rglob(f"{child_id}.yaml"))
+    except OSError as exc:
+        print(
+            f"WARNING: check_done_proof: cannot scan {ac_root} for {child_id}: {exc}",
+            file=sys.stderr,
+        )
+        return None
+    if not matches:
+        return None
+    return _load_ac_yaml_or_none(matches[0])
+
+
+def _unproven_composite_children(
+    data: dict,
+    ac_root: Path | None,
+    all_covered_ids: set[str],
+    *,
+    _seen: set[str] | None = None,
+) -> list[str]:
+    """Return the ids of ``covered_by`` children that fail to prove a composite done.
+
+    Implements the BO-2500b-1-ii model: an L0/L1 composite's fulfilment is
+    DERIVED from its children rather than proven by a covers tag naming its
+    own id. A child proves itself when it is ``work_status: done`` AND either
+    (a) it is a leaf (L2/L3, or level unset) that itself carries a
+    ``# covers: <child-id>`` tag somewhere under the test root, or (b) it is
+    itself an L0/L1 composite whose own ``covered_by`` children all
+    recursively prove it via this same rule.
+
+    A composite is NEVER treated as proven unconditionally: an empty or
+    missing ``covered_by`` list has nothing to derive fulfilment from and is
+    reported as its own unproven id. This is the guard against the ACD-400a
+    falsely-done-composite defect (20 recorded instances in this repo) —
+    composites must be provably done via their children, not skipped.
+
+    Args:
+        data: Parsed YAML mapping of the composite AC being evaluated.
+        ac_root: Root ``acceptance-criteria`` directory to resolve children
+            under, or ``None`` when it could not be determined (children then
+            fail closed as unproven).
+        all_covered_ids: Set of AC ids found in ``# covers:``/``// covers:``
+            tags anywhere under the test root (from
+            :func:`_collect_all_covered_ids`).
+        _seen: Internal cycle guard against a malformed ``covered_by`` cycle;
+            callers should not pass this.
+
+    Returns:
+        Empty list when every child in ``covered_by`` is proven done and
+        covered; otherwise a list of the unproven child (or composite) ids.
+    """
+    seen = _seen if _seen is not None else set()
+    covered_by = data.get("covered_by") or []
+    if not isinstance(covered_by, list) or not covered_by:
+        return [str(data.get("id", "?"))]
+
+    unproven: list[str] = []
+    for child_id in covered_by:
+        child_id_str = str(child_id)
+        if child_id_str in seen:
+            continue
+        seen.add(child_id_str)
+
+        if ac_root is None:
+            unproven.append(child_id_str)
+            continue
+
+        child_data = _resolve_child_ac(ac_root, child_id_str)
+        if child_data is None:
+            unproven.append(child_id_str)
+            continue
+        if child_data.get("work_status") != "done":
+            unproven.append(child_id_str)
+            continue
+
+        child_level = str(child_data.get("level") or "").upper()
+        if child_level in ("L0", "L1"):
+            unproven.extend(
+                _unproven_composite_children(
+                    child_data, ac_root, all_covered_ids, _seen=seen
+                )
+            )
+        elif child_id_str not in all_covered_ids:
+            unproven.append(child_id_str)
+
+    return unproven
+
+
 def _is_gated_ac_yaml(rel: Path) -> bool:
     """True when a repo-relative path is a real AC YAML the done-proof gate
     should evaluate.
@@ -401,6 +573,18 @@ def check_staged_done_proofs(
     hook.  Only ACs staged as ``done`` are evaluated (bounded blast radius);
     ACs in any other work_status are silently ignored.
 
+    Level-aware for composites (BO-2500b-1-ii): a done AC whose ``level`` is
+    ``"L0"`` or ``"L1"`` is a composite whose fulfilment is DERIVED from its
+    ``covered_by`` children rather than proven by a tag naming its own id —
+    such a tag may never legitimately exist, since the composite's
+    implementation lives under each child's own covers tag by construction.
+    A composite is reported as a violation (naming the unproven child) only
+    when at least one of its children is not itself done-and-covered; it is
+    never skipped unconditionally (see :func:`_unproven_composite_children`
+    for the ACD-400a falsely-done-composite guard). An L2/L3 leaf (or any AC
+    with no ``level``/an unrecognised one) keeps the original, unchanged
+    direct-covers-tag requirement below.
+
     Args:
         staged_yaml_paths: Paths to staged AC YAML files to evaluate.  May
             include non-done ACs — they are skipped automatically.
@@ -431,6 +615,24 @@ def check_staged_done_proofs(
         if not ac_id:
             continue
         ac_id_str = str(ac_id)
+
+        level = str(data.get("level") or "").upper()
+        if level in ("L0", "L1"):
+            ac_root = _find_ac_root(yaml_path)
+            unproven = _unproven_composite_children(data, ac_root, all_covered_ids)
+            if unproven:
+                violations.append(
+                    {
+                        "ac_id": ac_id_str,
+                        "reason": (
+                            f"composite {ac_id_str} is marked done but its "
+                            "covered_by children are not all done-and-covered "
+                            f"— unproven: {', '.join(unproven)}"
+                        ),
+                    }
+                )
+            continue
+
         if ac_id_str not in all_covered_ids:
             violations.append(
                 {
