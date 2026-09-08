@@ -287,6 +287,8 @@ flowchart TD
 - GE-126d-5: What each registration leg buys you is written down beside the list of legs
 - GE-126e-5: The first measured answer is published with the question that produced it
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
+- INF-700a-3: A how-to gets a person from a finished piece of work to the learning on its page
+- INF-700a-4: Reference documentation states when the routing step runs and what its report means
 - INF-700b-5: Reference documentation states what the capture step requires of an agent, and names only steps that exist
 - INF-700c-3: Reference documentation states what may be written as knowledge and what the waiting count means
 - KM-KGS-100b-3: How-to guide for tracing a requirement to its code and tests
@@ -308,3 +310,8 @@ flowchart TD
 - UXP-100a-3: How-to guide for assembling prototypes from the component library
 - UXP-100c-5: How-to guide for reviewing and deciding on a prototype
 - UXP-606: How-to: read decision diamonds in the Atlas Flows view
+- UXP-700a-5: A how-to for starting a project record from nothing
+- UXP-700b-4: A reference for what each outcome of the record's checker licenses a reader to conclude
+- UXP-700c-4: A how-to for reading a drift report and reconciling the record
+- UXP-700d-5: A reference for how example content is kept apart from a project's own record
+- UXP-700e-4: A reference for the record's size bounds and how a shape change is rolled out

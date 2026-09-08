@@ -608,9 +608,27 @@ def harvest(
     Raises
     ------
     SystemExit(1)
-        If *sink_path* does not exist or cannot be read.
+        If *sink_path* exists but cannot be read (permissions, a directory
+        in its place, or another OS-level read failure).
     SystemExit(2)
         If *state_path* exists but is corrupted.
+
+    Notes
+    -----
+    INF-400c-4-iv: a sink that does not exist at all is a no-work run, not
+    an error. A fresh clone or newly provisioned install has never had
+    anything written to the declared sink, and the routing step runs at the
+    end of every completed unit of work -- including on trees where nothing
+    has been emitted yet. An absent sink is therefore treated exactly like
+    an existing-but-empty one (zero lines to read), reported at INFO level
+    (never ERROR) with the exact path that was looked for, and produces the
+    same zero-record ``HarvestResult`` and the same exit status as the
+    empty-sink case. It must never widen into reading some other file (e.g.
+    the operational stream) in its place, and must never create the sink or
+    its parent directory as a side effect of finding them absent -- both
+    are covered by dedicated tests in
+    ``tests/knowledge/test_harvest_learnings.py``. A sink that EXISTS but
+    cannot be read keeps the pre-existing distinct ``SystemExit(1)``.
     """
     result = HarvestResult()
 
@@ -626,14 +644,14 @@ def harvest(
     # tests/knowledge/test_harvest_learnings.py construct it with an
     # explicit sink_path and no notion of a build-time declaration at all).
     if not sink_path.exists():
-        logger.error("Sink file not found: %s", sink_path)
-        sys.exit(1)
-
-    try:
-        raw_lines = sink_path.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        logger.exception("Cannot read sink file %s", sink_path)
-        sys.exit(1)
+        logger.info("Declared sink not found (no-work run): %s", sink_path)
+        raw_lines: list[str] = []
+    else:
+        try:
+            raw_lines = sink_path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            logger.exception("Cannot read sink file %s", sink_path)
+            sys.exit(1)
 
     # 2. Load previously processed hashes
     try:

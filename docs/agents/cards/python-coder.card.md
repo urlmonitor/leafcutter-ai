@@ -949,6 +949,7 @@ flowchart TD
 - BO-2500a-6: A done composite AC derives its proof from its children, not from a direct linked test
 - BO-2500a-6-i: Editing only a non-coverage field of a done composite does not trip the proof-of-done check
 - BO-2500b-1: A pre-commit check gives fast local proof-of-done feedback and is skippable
+- BO-2500b-1-ii: A done composite is proven by its children, not by a covers tag it can never legitimately carry
 - BO-2500b-5: The proof-of-done gate scans the same tree whether it runs locally or in CI
 - BO-2500c-1-i: A hand-typed fixture that could reproduce the bug's own blind spot is flagged
 - BO-2500e-1: The oracle discovers // covers:<id> tags in front-end tests through the shared seam
@@ -1099,6 +1100,10 @@ flowchart TD
 - BO-400c-3: Parity guard rejects commits that move ticket files into epic subfolders
 - BO-400c-3-i: Editing a ticket already residing under done/ (no move) is not blocked
 - BO-400c-3-ii: Branch commit moving a ticket into tickets/99_done/ is blocked (finalize carve-out)
+- BO-400e-1: The steps a close is checked against are the ones the ticket's own record demands, and the caller cannot change that list
+- BO-400e-2: A demanded step nobody accounted for still blocks the finished state, and the block is not lifted by softening what counts
+- BO-400e-3: One door: the finished state is only ever written by the mechanism that checks it, and the blanket override is not the way through
+- BO-400e-4: Several tickets in the identical state, carried by one run, all get the same answer -- and it is the strict one
 - BO-510-1: Agent registry entries carry a produces trait field from a defined enum
 - BO-550-1: Ticket frontmatter supports a structured test_constraints field
 - BO-570-1: Deterministic render-smoke runner helper for the frontend sign-off gate
@@ -1227,9 +1232,6 @@ flowchart TD
 - BP-100n-1: A deployed output the build recorded writing but that is absent from disk is reported and fails the run — deletion is the most complete drift there is, and it is the only kind the gate ignores
 - BP-100n-2: A guard skips a check only because the configuration declares the capability off — never because the capability's output happens to be absent, which is the failure the guard exists to catch
 - BP-100n-3: The build-equality guard covers every platform the build can emit, taken from the build's own platform set — a guard that proves equality only for the platforms it chose to enable proves nothing about the rest
-- BP-100n-4: The population of commit gates the reachability check walks is taken from the gate scripts present on disk, so a script the registry never mentions is reported as invoked by nothing — a guard whose input is the registry cannot see what the registry omits
-- BP-100n-4-i: A script that is deliberately not a gate is recorded as one with a stated ground and the check honours it; a record that states no ground is itself refused and the script it names stays reported
-- BP-100n-4-ii: The check states how many gate scripts it compared, and a run that compared none is an unresolved run that fails — a comparison that never happened must not be able to look like a comparison that found nothing wrong
 - BP-100n-5: A finished record's declaration that names parts of a real configuration file is read back against that file, and a named part that is not there is reported by name and fails the run — a declaration checked only for shape is a check that never opened anything
 - BP-100n-5-i: A declaration whose shape the check cannot interpret, and a named file it cannot open, are each reported as their own unresolved condition — never folded into the conforming class and never into each other
 - BP-1100a-3: The surface a generated ticket names contains the file the requirement says will change
@@ -1295,6 +1297,13 @@ flowchart TD
 - BP-1500d-2: The record still reads after the project is moved, copied or opened somewhere else
 - BP-1500d-3: A build that cannot produce the record stops and says so, instead of warning once and reporting success
 - BP-1500d-4: A check that finds no readable record says so, instead of returning the all-clear it returns when nothing is wrong
+- BP-1600a-1: The population of session hook scripts the wiring census walks is taken from the scripts present on disk, so a script the settings surface never invokes is reported as run by nothing — the surface that carries the harness's own guards has never been counted
+- BP-1600a-1-i: The census states how many hook scripts it examined and how many wirings it read, and a run that could not establish either population is an unresolved run that fails — an unlistable directory and a directory that lists empty are two different facts and must be named as two
+- BP-1600a-1-ii: A script counts as run only when a shipped wiring executes it — the two sides name the same script in two different layouts and are resolved to one identity, a name that merely appears in the settings document is not a wiring, and a wiring that executes nothing is reported too
+- BP-1600a-1-iii: A script deliberately left unwired is recorded with a ground that names where its fate is decided, and the census quotes the ground without saying what should be done; a record stating only that a decision is pending is refused and the script it names stays reported
+- BP-1600a-2: The population of commit gates the reachability check walks is taken from the gate scripts present on disk, so a script the registry never mentions is reported as invoked by nothing — a guard whose input is the registry cannot see what the registry omits
+- BP-1600a-2-i: A script that is deliberately not a gate is recorded as one with a stated ground and the check honours it; a record that states no ground is itself refused and the script it names stays reported
+- BP-1600a-2-ii: The check states how many gate scripts it compared, and a run that compared none is an unresolved run that fails — a comparison that never happened must not be able to look like a comparison that found nothing wrong
 - BP-300a-1: debug.js dispatches three parallel Explore agents in Phase 1
 - BP-300a-1-i: debug.js returns structured error when userInput is empty
 - BP-300a-2: Synthesis proceeds without prompt when all investigators agree with high confidence
@@ -1767,8 +1776,10 @@ flowchart TD
 - INF-400c-2: A harvester agent reads learning emissions and routes each to the correct knowledge surface
 - INF-400c-2-ii: An event the harvester cannot route stays unprocessed and is surfaced, never marked done
 - INF-400c-3: The harvester is idempotent: re-running it does not duplicate persisted learnings
-- INF-400c-4: Emitters and the harvester resolve the same knowledge-emission sink from one declared location
+- INF-400c-4: Emitters and the harvester read one knowledge-emission sink per install, as an absolute path fixed at build time, from one declared location
 - INF-400c-4-iii: Phase telemetry and knowledge emissions are separate streams, and the harvester drains only its own
+- INF-400c-4-iv: A declared sink that has not been written to yet is a no-work run, not a failure and not a reason to look elsewhere
+- INF-400c-4-v: The sink lands in the project the package was built into, in every install shape — and says so when that stops being where it is
 - INF-400c-5: One declared entry_kind vocabulary is shared by the classifier and the harvester and enforced where the event is emitted
 - INF-400c-5-i: Separator and case variants of one entry_kind normalise to a single canonical value
 - INF-400c-5-iii: A rejected entry_kind is reported to the agent and does not fail the agent's run
@@ -1827,6 +1838,14 @@ flowchart TD
 - INF-600l-1-i: When agent cards are absent, the mirror check no-ops instead of false-failing
 - INF-600l-1-ii: When the agent registry is absent, the mirror check no-ops instead of false-failing
 - INF-600l-2: The mirror check is opt-in to the leafcutter agent subsystem and resolves the card path from convention, not a hardcode
+- INF-700a-1: Work that finishes leaves its learnings on their surfaces, with nobody having run anything
+- INF-700a-1-i: No way of finishing work is left quietly without a routing step
+- INF-700a-1-ii: A routing step that cannot finish says so where the work is reported, and changes nothing about the work
+- INF-700a-2: A loop that has never run is distinguishable from a loop with nothing to do
+- INF-700a-5: A learning written while work was in flight is still readable after the place that work ran in is gone
+- INF-700a-5-i: A learning that could not be published is said out loud before the place it was written is removed
+- INF-700a-5-ii: A record emitted too late for this run to route is counted and named as waiting, and the next completed unit of work picks it up
+- INF-700a-5-iii: Two units of work finishing at the same time do not route the same learning twice, and do not lose it between them
 - INF-700b-2: A template that names a step which does not exist is refused by the repository's own gating
 - INF-700b-2-i: The reference gate still refuses from a fresh consumer install, not only from the package's own checkout
 - INF-700b-3: A period with no captured learnings tells a reader which kind of quiet it was
@@ -1984,6 +2003,9 @@ flowchart TD
 - TQ-100a-1-i: A test file importing a nonexistent module does not stop the other files
 - TQ-100a-1-ii: A test file that raises at module scope does not stop the other files
 - TQ-100a-1-iii: Collection isolation still surfaces genuine failures among the loadable tests
+- TQ-100a-2: A test that sandboxes itself with a linked worktree leaves the host repository's commit identity untouched
+- TQ-100a-2-i: The host repository's commit identity is byte-identical across a session, and a fixture that changed it fails the run by name
+- TQ-100a-2-ii: Scoping the identity write to the worktree is refused as the fix, because it aborts on a checkout that lacks the extension
 - TQ-100b-1: A test linked to a not-done AC runs informationally and never fails the run
 - TQ-100b-1-i: When its AC flips to done, the same test transitions from informational to enforced with no test edit
 - TQ-100b-1-ii: A test tagged with an AC id absent from the store is enforced, not silently skipped
@@ -2099,7 +2121,51 @@ flowchart TD
 - UXP-512: Generator writes the product_truth back-ref onto each AC (many-to-many, wholesale)
 - UXP-513: Generator is idempotent and offers --check for CI
 - UXP-514: Validator errors on derived-vs-source drift (impl_status, product_truth, indexes, screen->mockup)
+- UXP-514-1: D1: a step whose stated implementation status disagrees with its criteria is named
+- UXP-514-2: D2: a criterion whose back-reference disagrees with the inverted links is named
+- UXP-514-3: D3: a derived index lookup that differs from a fresh rebuild is named
+- UXP-514-4: D4: a step naming a screen with no registered mockup is named, and gates on approval
+- UXP-514-5: None of the four drift checks reports a clean result on an empty input set
+- UXP-514-6: An index field copied from an artifact is compared against that artifact
 - UXP-516: product_truth is a tool-owned field on the AC schema
 - UXP-530: A request is classified into needs_flow / needs_mock_data / needs_mockup
 - UXP-531: A gold eval set covers the outcome space for the classifier
 - UXP-548: The business-analyst's reported flow_backlinks are reconciled into step.implements and derived data is regenerated
+- UXP-700a-1: Installing the tooling lays down a complete, runnable, empty record
+- UXP-700a-1-i: An absent start-up input is named, not crashed on
+- UXP-700a-1-ii: Re-installing over a populated record never replaces what is already there
+- UXP-700a-2: The record rebuilds itself from zero artifacts with no hand-written index
+- UXP-700a-2-i: Zero-artifact derived lookups are present and empty, never absent
+- UXP-700a-3: A newly installed record carries none of another project's content
+- UXP-700a-4: The build proves a from-scratch record works before it ships one
+- UXP-700a-4-i: Removing one required file turns this check red and no other check
+- UXP-700b-1: A run that examined nothing reports a different outcome from a run that examined something
+- UXP-700b-1-i: Failing open on one bad input stays a run that happened
+- UXP-700b-1-ii: Partial emptiness is reported per artifact type, not rounded to sound
+- UXP-700b-2: Every check states how many records it read, and the figure moves with the record
+- UXP-700b-2-i: A check that did not run is listed as not run, and contributes nothing
+- UXP-700b-3: An every-record rule with no records to test reports that it was not exercised
+- UXP-700b-3-i: One record is enough to exercise the rule, and a violating record still fails it
+- UXP-700c-1: Every pointer the record makes resolves, and one that does not is named
+- UXP-700c-1-i: A pointer the checker cannot classify is reported as unresolvable, never as sound
+- UXP-700c-2: The record states what it was last confirmed against, and says so when that has moved
+- UXP-700c-2-i: A journey never confirmed is reported as never confirmed, not as current
+- UXP-700c-2-ii: A journey known to be behind carries that mark in the record itself
+- UXP-700c-3: The record's checker runs by itself, at the moment the record or the code it describes changes
+- UXP-700c-3-i: The verdict does not depend on which operating system the check ran on
+- UXP-700c-3-ii: A gate that did not run is reported, and never counts as a gate that passed
+- UXP-700d-1: Example artifacts live under their own product root and never appear in a project's own record
+- UXP-700d-1-i: A newly added example artifact is excluded by where it lives, not by a list of names
+- UXP-700d-1-ii: A project's own artifact is never set aside as an example
+- UXP-700d-2: No piece of the example product can be picked up as work
+- UXP-700d-2-i: The three example criteria that are dispatchable today are the proof
+- UXP-700d-2-ii: A real criterion stored beside the example set is still dispatchable
+- UXP-700d-3: Every piece of example content says it is an example, read on its own
+- UXP-700d-4: An artifact type whose whole population is example content is reported
+- UXP-700e-1: The record declares a reviewable size for each thing it holds, and reports what exceeds it
+- UXP-700e-1-i: A new bound arrives as a warning behind a declared shape version, and blocks nothing that predates it
+- UXP-700e-1-ii: Enforcement tightens only when nothing is left on the older shape
+- UXP-700e-2: Each thing is described once; a shorter form is derived, never separately authored
+- UXP-700e-2-i: The derived short form is bounded, reproducible, and not editable in place
+- UXP-700e-3: The record's labels come from declared vocabularies, so one thing has one name
+- UXP-700e-3-i: A field being reshaped is read in both shapes and written in only the new one
