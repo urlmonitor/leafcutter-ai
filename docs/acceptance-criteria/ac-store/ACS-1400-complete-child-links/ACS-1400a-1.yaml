@@ -1,0 +1,87 @@
+id: ACS-1400a-1
+components:
+  - ac_store
+  - commit_guardian
+title: "A child whose dependency list points elsewhere is still checked against its structural parent"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing a child record whose own dependency list names a
+    successor record rather than its structural parent, and whose structural
+    parent's coverage list does not name that child,
+  And a second child record whose dependency list names a sibling in another
+    branch and whose structural parent's coverage list does name it,
+  When a commit staging both children is checked at the moment it lands,
+  Then the first child is reported as a violation naming the child, the structural
+    parent, and the entry that is missing from the parent's coverage list,
+  And the second child is not reported as a violation in that same run, so the
+    check still distinguishes a dependency that deliberately points elsewhere from
+    a structural parent link that is unrecorded,
+  And the reported violation states which of those two cases it found, rather than
+    leaving the reader to infer it from the dependency list.
+depends_on:
+  - ACS-1400a
+  - ACS-1200a
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: related
+    status: exists
+    relevance: "THE HATCH THIS AC CLOSES, AND IT IS ONE LINE. `_check_file` returns an empty violation list when the id-derived structural parent does not appear in the child's own `depends_on`. Its comment justifies this as preventing false positives for cross-branch dependencies — engage that rationale rather than deleting it, because the second Given exists to keep it satisfied. Measured behaviourally 2026-09-08 by invoking the real hook once per orphan via HOOK_TEST_FILES: 26 of the 47 current orphans are silent, and ALL 26 are silent through this hatch. Note the adjacent shape in the same function: an empty dependency list returns early too, which is how the FIN-100h orphan escapes."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Its covered_by table describes this check as blocking and unconditional, which the code does not implement. ACS-1400a-5 is where that text is brought back into agreement; this AC is what it must agree with."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+    relationship: related
+    status: exists
+    relevance: "SEQUENCING, NOT DECORATION — carried as a depends_on edge on this record deliberately. ACS-1200a adds a parked-tree exemption to the same surface this AC makes stricter. Verified behaviourally 2026-09-08: the guard ALREADY reports all six KM-200 children as violations today, so the exemption is a live prerequisite rather than a future one, and strengthening the check without it makes an already-wrong verdict harder to route around. ACS-1400a-4 is the criterion that fails when the exemption is absent."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1400a-1-i
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  THE LOAD-BEARING BEHAVIOUR OF THIS L1, AND THE ONE INDEPENDENTLY RE-MEASURED.
+  The PO's claim that the dependency-list hatch swallows 26 of the 47 was
+  verified by running the real hook once per orphan child through
+  HOOK_TEST_FILES (not by reading the source): 21 orphans block, 26 are silent,
+  and every one of the 26 is silent through this hatch. The claim is exactly
+  right.
+
+  A CORRECTION THE IMPLEMENTER MUST NOT INHERIT WRONG. The L0 notes report two
+  different populations that both happen to number 26 — this hatch's population,
+  and the "parent holds only test paths" population — in a way that reads as one
+  set. They are near-disjoint. Their only overlap is BP-100b's eleven children.
+  The 26 this AC governs are: the BO-100d family (7), BP-100b's children (11),
+  FIN-100h (1, via the empty-dependency-list shape), TKT-100a and TKT-100f (2),
+  and UXP-400a/410a/412a/420a/421a (5). So closing this hatch newly surfaces the
+  DRIFT and RETIRED populations — the ones ACS-1400c can mostly act on — and does
+  not touch the schema-collision population at all. The six deliberate KM-200
+  records are already reported today and are unaffected by this AC.
+
+  WHY THE SECOND Given IS NOT OPTIONAL. Removing the hatch outright is the
+  obvious implementation and it reintroduces the false positives the original
+  comment was written to prevent. BP-100b's eleven children each name their
+  SUCCESSOR in their dependency list — a coherent authoring choice — and a check
+  that reads any non-parent dependency as a violation would be as wrong in the
+  other direction. The discrimination is the behaviour; the strictness alone is
+  not.
+
+  ONE GUARD, NOT TWO. The L1 refuses a second check on this field, and this AC
+  inherits that refusal. Two readers of the same evidence drift apart, which this
+  repo has already paid for once.

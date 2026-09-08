@@ -1,0 +1,83 @@
+id: ACS-1400b-2
+components:
+  - ac_store
+title: "The report separates drift from decision instead of handing over one number"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing a deliberately parked tree carrying the author-set
+    parked signal, a parent whose coverage list resolves to no record at all, a
+    parent that is itself retired, and a parent that simply omits a child it has,
+  When the store-wide check reports on that store,
+  Then every reported record carries a stated classification distinguishing a
+    deliberate exclusion from unrecorded drift,
+  And the parked tree's records are classified as deliberate exclusions naming the
+    reason their author gave, not as findings to act on,
+  And the report states the total number of records it measured against and which
+    records it excluded from that total,
+  And the report does not present a single aggregate count of records to act on
+    without the per-classification breakdown alongside it.
+depends_on:
+  - ACS-1400b
+  - ACS-1200a
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: related
+    status: exists
+    relevance: "STANDING AND INHERITED — reuse its vocabulary, do not invent a second. Any figure a descendant reports must state the total it was measured against and what it excluded. This tree is the sharpest available case for that rule: its own headline number decomposes into populations with opposite correct actions, so a bare count here would be actively misleading rather than merely incomplete."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+    relationship: related
+    status: exists
+    relevance: "SUPPLIES THE DELIBERATENESS SIGNAL THIS AC CLASSIFIES ON — note the dependency rather than re-deriving a second way to detect it. ACS-1200b requires the health surfaces to agree about parked trees and instructs that every reader inferring breakage from a missing link be enumerated; this report inherits that enumeration."
+  - path: scripts/ac_store/scan_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "WHAT IT DOES NOT DO TODAY, WHICH IS THE GAP. Verified 2026-09-08: it reports 47 orphans grouped by parent, with no classification of any kind — a deliberately parked record and a plainly stale one are rendered identically. The detection is correct and must not be rebuilt; the classification layer is what this AC adds."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: internal
+notes: |
+  "47 ORPHANS" IS TRUE AND ACTING ON IT DIRECTLY WOULD HAVE DAMAGED THE STORE.
+  That sentence is the entire argument for this AC. Measured on this branch
+  2026-09-08 by running the real scan and then classifying each parent's coverage
+  list by whether its entries resolve to real records: 12 of the 47 sit under a
+  parent with an empty coverage list (six of those are the deliberate KM-200
+  records), 25 sit under a parent whose coverage list holds only entries that
+  resolve to nothing, and 10 sit under a parent that already names other real
+  children. Those three groups have different correct actions and the current
+  report cannot tell them apart.
+
+  A NOTE ON THE FOUR-POPULATION BREAKDOWN IN THE L0, WHICH THIS AC MUST NOT
+  HARDCODE. The L0's populations are described as overlapping causes, not a
+  partition, and re-measurement confirms they overlap heavily — BP-100b is
+  simultaneously a retired record and a coverage-list collision, and its eleven
+  children are the only overlap between the L0's two separate groups of 26. The
+  classification this AC produces must therefore be derived from signals present
+  on the records — the parked signal, the retired status, whether the parent's
+  coverage entries resolve — and never from a checked-in list of record ids. A
+  hardcoded list is correct on the day it is written and wrong thereafter.
+
+  THE LAST Then IS DELIBERATELY A PROHIBITION. Requiring a breakdown does not stop
+  a headline number appearing above it and being the only thing anyone quotes. The
+  prohibition is on the aggregate standing alone, which is the form that prompted
+  the unsafe repair described in ACS-1400c.
+
+  MEASUREMENTS STAY IN NOTES, NEVER IN A CRITERION — inherited from the L0. Every
+  figure here carries its date and branch; a criterion pinned to a number is
+  falsified by the next commit that changes it.

@@ -1,0 +1,124 @@
+id: ACS-1400c
+components:
+  - ac_store
+title: "Fix the links that are genuinely wrong, and prove the rest were left alone"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Repair what is broken; never sweep up a choice somebody made on purpose.
+
+  The existing gaps are worked through once, deliberately: each one is either
+  repaired or left exactly as it is with a stated reason, and the run says which it
+  did for every record — so nothing is corrected by accident and nothing is skipped
+  in silence.
+depends_on:
+  - ACS-1400
+doc_links:
+  - path: scripts/ac_store/fix_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "THE TOOL THIS L1 MUST MAKE SAFE — READ IT FIRST, IN FULL. It already performs the bulk repair with NO adjudication: it appends every orphan the scan reports to every parent it names. Run today it repairs all 47, which means undoing the six-record KM-200 decision and performing 25 writes that change a done-proof classification. Its case-4 branch rewrites the entire file through yaml.dump, violating byte stability. Its docstring's claim that the hook 'now blocks all commits that touch AC files' is false. This L1 is a safety and adjudication problem on an existing tool, NOT a greenfield build."
+  - path: scripts/ac_store/done_proof.py
+    relationship: related
+    status: exists
+    relevance: "WHY 25 OF THE 47 ARE A DANGEROUS WRITE RATHER THAN A TIDY-UP. `_has_resolvable_child` decides composite-versus-leaf by whether ANY covered_by entry resolves to a real record, and `verify_done_eligible` routes on it. Eleven of the affected parents currently hold ONLY test paths, which resolve to nothing — so appending a child id flips them from leaf to composite and changes what the store believes about whether they can be finished. Bind the outcome to this reader's REAL verdict before and after the run, not to a re-implementation of its rule."
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "THE HAND-OFF, AND THE READY-MADE PATTERN — DO NOT INVENT A SECOND ABSTENTION FORMAT. That approved record abstains on precisely this population and explicitly names this L1's work as out of its scope. Its it_requirements already state the shape: abstain rather than disambiguate, classify by entry RESOLUTION rather than entry shape or the level field, make the abstention an outcome of the detection pass so byte stability follows from never opening the file. Inherit all of it."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+    relationship: related
+    status: exists
+    relevance: "THE EXCLUSION THIS L1 DEPENDS ON, AND A HARD SEQUENCING CONSTRAINT. ACS-1200 defines the deliberately-parked state; without that signal existing, this L1 has no principled way to tell KM-200's six records from real drift and would have to hardcode an exception list. ACS-1200b also states directly that the pre-existing orphans must not be swept up. Run this before ACS-1200a lands and the safest available implementation is still wrong."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "OWNS THE BYTE-STABILITY RULE AND ITS TEST SHAPE — inherit, do not restate. Byte stability means DO NOT WRITE, not write-the-same: a YAML load-and-dump round trip preserves every value while reformatting quoting, key order and line wrapping. Its test shape (raw-byte hash before and after, plus an anti-no-op control in the SAME run) is the one to copy, because every guarantee in this L1 is otherwise satisfied by a tool that does nothing."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Its status lifecycle is SILENT on whether a retired parent should list its retired children, and roughly five of the current gaps sit on exactly that question (BO-100d-1, BO-100d-2, TKT-100a, TKT-100f, and BP-100b as a whole). That convention must be SETTLED and written here, not assumed by an implementer at 2am."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1400c-1
+  - ACS-1400c-2
+  - ACS-1400c-3
+  - ACS-1400c-4
+  - ACS-1400c-5
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+notes: |
+  THE ONE-OFF CLEARANCE OF THE EXISTING POPULATION. Keeping it from refilling is
+  ACS-1400a; surfacing it is ACS-1400b; the durable fix for the largest slice is
+  ACS-1400d. This L1 is the deliberate pass over what is there now.
+
+  THE FRAMING THAT MATTERS MOST, AND IT INVERTS THE OBVIOUS ONE: the risk here is
+  not failing to repair. It is repairing. A bulk repair tool already exists and is
+  one command away; the originating brief, read literally, is an instruction to run
+  it. Doing so would reverse a deliberate decision the store paid a hook bypass to
+  make and would perform 25 writes with done-proof consequences. THE DELIVERABLE
+  OF THIS L1 IS THE ADJUDICATION, NOT THE WRITE. Every criterion should be
+  readable as "and here is how we know we did not damage anything."
+
+  THE FOUR POPULATIONS ARE IN THE L0 NOTES AND MUST BE HANDLED SEPARATELY — do not
+  let a criterion say "reconcile the orphans." Briefly: six deliberate (never
+  repair), twenty-six where the field is carrying test paths instead of child links
+  (repair has teeth; ACS-1300a-3 abstains on these and so should this until
+  ACS-1400d settles the field), about five on retired records (needs a convention
+  decision first), and roughly ten of plain drift (the straightforwardly safe
+  repairs). NOTE WHAT THAT ARITHMETIC IMPLIES: the unambiguously-safe population
+  may be as small as ten of the forty-seven. An L2 that promises to clear 47 is
+  promising the damage.
+
+  EVERY GUARANTEE HERE IS SATISFIED BY A TOOL THAT DOES NOTHING — this is the
+  single most important test-design constraint in the L1, and it is why the pairing
+  discipline is not optional. "Left the parked records alone", "was byte-stable",
+  "changed no done-proof verdict" are all trivially true of a no-op. Each must be
+  asserted in the SAME invocation as a repair that genuinely happened, exactly as
+  ACS-1300a-3's pairing test does it. Split across two runs, the safety half is
+  vacuous.
+
+  ABSTENTION IS REPORTED, NEVER SILENT. A record left alone must appear in the
+  report naming the record and the reason. A silently skipped record is invisible,
+  and invisibility is the same defect one level down — which is the defect this
+  entire tree exists to remove. Use ACS-1300c-3's single abstention channel; do
+  not add a second format.
+
+  THE RETIRED-PARENT CONVENTION IS A DECISION, NOT AN IMPLEMENTATION DETAIL, and
+  it should be taken by a person before any code is written. TKT-100 lists its
+  seven successors and omits the two retired L1s they replaced; that reads as
+  deliberate and arguably correct, and "repairing" it would add retired records
+  back into an active parent's child list. Settle it, write it into ac-schema.md's
+  status lifecycle, then implement it.
+
+  NEVER WRITES work_status — inherited from the L0 as a refusal, and this is the
+  record where it will be most tempting, because the motivating investigation was
+  a sweep of composites marked done with unfinished children. Correcting the child
+  set and re-judging the done claim are two acts. Only the first is here.
+
+  A NOTE ON WHAT "DONE" LOOKS LIKE FOR THIS L1: not "zero orphans". A store where
+  the scan reports six deliberate exclusions, clearly labelled as such, is a
+  HEALTHY store. Any criterion that binds success to a count of zero will force
+  the six wrong repairs to achieve it.
+
+  DOCUMENTATION: `[how-to]`. A person runs this deliberately against the whole
+  store and must be able to read what it decided per record — especially the
+  abstentions, which are the output that matters most here. No sequence-diagram:
+  one pass over one store.
