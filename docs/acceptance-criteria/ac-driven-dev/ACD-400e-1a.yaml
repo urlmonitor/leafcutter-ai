@@ -1,0 +1,105 @@
+id: ACD-400e-1a
+components:
+  - ac_driven_dev
+title: "One written account of how work is chosen, stating all five verdicts in a form a reader and a check can both use"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who wants to know what the build system will pick up next, and a
+    single written account of how the queue chooses,
+  Then that account states all five of the following, each in terms a reader can act
+    on: which tests a piece of work must pass to be admitted at all, and in what
+    order they are applied; which keys the offer is ordered by, and in what order
+    they are consulted; the verdict the queue reaches when a field the selection
+    reads carries no value; the verdict it reaches when such a field carries a value
+    the queue does not recognise; and the fact that work failing admission appears in
+    neither the offer nor the account of held work.
+depends_on: [ACD-400e, ACD-400c, ACD-400d]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+    relevance: "The home for the account, beside the fields it governs. Confirmed 2026-09-08 at lines 46-47: both fields the selection reads are documented as bare optional enums — 'Lifecycle readiness state: draft, reviewed, or approved. Present on ~69 % of records' and the same shape for priority — with no statement of what consumes them, and none of what a consumer does with a missing or unrecognised value. Roughly three records in ten carry neither field, and a reader has no way to learn from this page that those records are invisible to the queue."
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "The behaviour the account must describe. Every verdict the account has to state was observed by executing this surface on 2026-09-08 and is pinned by ACD-400c-1, ACD-400c-1-i, ACD-400c-1-ii, ACD-400c-2, ACD-400c-3, ACD-400d-1, ACD-400d-2, ACD-400d-2-i, ACD-400d-3 and ACD-400d-4. Tagged `describes`, not `modifies`: this AC changes what is written, never what the queue does."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the queue. IT-PO note 2026-09-08: line 17 ('/build-ac selects the next highest-priority ready AC') is a FOURTH surface describing selection, outside ACD-400e-2's list of three. The account written here must not contradict it, and the divergence is flagged to BrainCandy."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "The five verdicts must be carried in a form a program can enumerate and read back — a single, stably-marked, machine-parseable block within the page, each entry naming the field, the input condition and the predicted answer. This is the load-bearing constraint of the whole ACD-400e tree: a check that hardcodes its own copy of the five verdicts leaves the prose free to drift, which is exactly how the three records ACD-400e-2 corrects became wrong. The account, not the check, must be the source the check reads."
+  - "The parseable block must not be a second, separate statement of the verdicts sitting alongside a prose statement of the same verdicts. Two copies on one page reproduce the divergence this tree exists to end, one page down. The prose a reader follows and the entries a check reads must be the same text."
+  - "Every verdict stated must be one already pinned by an approved sibling in the ACD-400c and ACD-400d families. This AC records; it does not discover. A statement about behaviour that no sibling pins is unverified prose and must not be written."
+  - "The account must not state or imply that the queue reports what it excluded. That the exclusion is invisible in both lists and both counts is current behaviour and is stated as such; changing it is the ACS-1100-shaped follow-up flagged in ACD-400c's notes and is out of scope."
+  - "Two of the five verdicts are order-dependent and the order is the part three existing records get wrong: state the admission tests in the sequence they are applied, and the ordering keys in the sequence they are consulted. An unordered list of either satisfies the words and loses the meaning."
+  - "The page must remain valid against the repo's documentation frontmatter and doc-index conventions after the edit, since docs/reference/ac-schema.md is an existing tracked reference page and not a new one."
+test_spec:
+  - name: test_the_account_declares_all_five_verdicts
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "docs/reference/ac-schema.md (parsed selection-verdict block)"
+    description: "Parsing the account's machine-readable block yields entries covering all five required subjects — admission tests in order, ordering keys in order, the absent-value verdict per field, the unrecognised-value verdict per field, and the neither-list fact — and fails when any one is missing."
+  - name: test_every_declared_verdict_is_parseable_into_a_store_description
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "docs/reference/ac-schema.md (parsed selection-verdict block)"
+    description: "Each parsed entry carries enough to build a store from — the field, the input condition and the predicted answer — read from the real committed page rather than from a fixture copy of it."
+test_rationale: "A test that greps the page for expected words passes on prose that is present and wrong, which is the precise failure ACD-400e was raised to close. Asserting instead that the page yields a complete, machine-consumable set of verdict entries is what makes the account usable by ACD-400e-1b's checker, and it is the only assertion at this AC's level that a drifted page cannot satisfy."
+delivers_to:
+  agent: python-coder
+  contract: "A stably-marked, machine-parseable block in docs/reference/ac-schema.md holding one entry per selection verdict. Each entry names: the field the selection reads (approval or urgency, or the ordering chain as a whole), the input condition (a recognised value, an absent field, or an unrecognised value), and the predicted answer (offered / withheld from both lists / ranked at a stated position). Consumed by ACD-400e-1b's checker and by ACD-400e-3's drift detector; both build a store per entry and compare the queue's answer with the entry's prediction."
+expects_from:
+  ac_id: ACD-400c-1
+  contract: "The set of verdicts the account states is exactly the set pinned by the ACD-400c and ACD-400d families; ACD-400c-1 is the head of that set and no verdict may be written that those ACs have not first proved by execution."
+origin_agent: it-po
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  CREATED 2026-09-08 by IT PO v3 as one half of a split of ACD-400e-1 (now
+  status: superseded_by). Sibling: ACD-400e-1b.
+
+  WHY THE SPLIT. ACD-400e-1 as the BA wrote it carries two deliverables in two
+  file types owned by two different agents: a written account in a Markdown
+  reference page, and a verification harness that builds a store from each
+  statement, executes the queue and reports disagreements. documentation-expert
+  cannot author the harness and python-coder should not be authoring the
+  reference prose. Left whole, the AC was also circular against ACD-400e-3: its
+  last clause requires a disagreement REPORT that nothing in the tree builds
+  until ACD-400e-3, which depends on ACD-400e-1 completing first.
+
+  Splitting resolves both. This AC owns the account and, critically, the SHAPE
+  of the account — the machine-readable verdict block that makes the prose the
+  source a checker reads rather than a copy a checker duplicates. ACD-400e-1b
+  owns the checker. ACD-400e-3 then extends the checker with the drift
+  properties rather than inventing it.
+
+  CRITERIA ARE VERBATIM. This AC holds the Given clause and the first Then
+  clause of ACD-400e-1 unaltered; ACD-400e-1b holds the same Given plus the
+  remaining When/Then/And clauses unaltered. Their union is the original text.
+  No behaviour was invented, narrowed or added in the split.
+
+  DISCHARGES ACD-400e'S reference-doc TRIGGER. ACD-400e declares
+  documentation_triggers: [reference-doc]; this AC is that deliverable, and the
+  S7b documentation gate is satisfied by it. No separate documentation AC is
+  authored, for the reason ACD-400e-1's notes gave and this split does not
+  change: a second record describing the same page would recreate the
+  divergence the tree exists to end.

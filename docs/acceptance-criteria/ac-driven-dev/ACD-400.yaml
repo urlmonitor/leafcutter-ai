@@ -31,7 +31,7 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [ACD-400a, ACD-400b]
+covered_by: [ACD-400a, ACD-400b, ACD-400c, ACD-400d, ACD-400e]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

@@ -1,0 +1,101 @@
+id: ACD-400c-1-i
+components:
+  - ac_driven_dev
+title: "Work withheld for want of approval is withheld from the held list too, not moved into it"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the store holds a piece of leaf-level work that is active and still to do,
+    whose recorded approval is draft, and which names as its prerequisite another
+    piece of work that is not finished — so that if it were admitted at all it would
+    be reported as held, with that prerequisite named,
+  When the queue is asked which work is ready to be picked up,
+  Then the piece appears neither among the work offered nor among the work reported
+    as held,
+  And neither the count of work offered nor the count of work reported as held
+    includes it.
+depends_on: [ACD-400c-1]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "Verified by execution 2026-09-08: a temp store with a draft leaf whose depends_on named an unfinished prerequisite returned that id in NEITHER `ready` NOR `blocked`. A second probe over a seven-record store with six unapproved records printed `READY (1)` and `BLOCKED (0)` — the six left no trace in either list or either count. Tagged `describes`, not `modifies`: this AC states current behaviour and requires no edit to the selector."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: related
+    status: exists
+    relevance: "The standing contract this behaviour sits under — an answer that saw a fraction must not look like an answer that saw everything. This AC INHERITS that contract as a statement of what is true today; it does NOT discharge it. Making the queue report what it excluded is a change to the queue's output and is the follow-up the PO flagged to the user in ACD-400c's notes. Deliberately not authored here."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the queue whose admission-versus-classification boundary this AC pins."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Every pytest invocation used to run or verify this test must set AC_ENFORCE_STRICT=1, or a red result is masked as an xfail and reads green."
+  - "The verdict must be obtained by executing the scanner over a temporary store through its real command surface and reading both returned lists; no assertion about the source text of scan_ac_store.py satisfies this AC."
+  - "Both the emitted counts and the emitted lists must be asserted. Asserting only the lists leaves the count clause untested, and the count is the surface a reader of the human-readable output actually sees."
+  - "The prerequisite named in the fixture must be genuinely unfinished, so the record would be classified as held if it were admitted at all. A fixture whose dependency is already satisfied makes the assertion pass for the wrong reason and proves nothing about the ordering of admission before classification."
+  - "This AC authorises no change to the scanner. It states behaviour that ships today and exists to forbid a future change that relocates withheld work into the held list."
+  - "Fixture records must be written as real .yaml files under a temporary AC root, never hand-indented literals or a monkeypatched loader."
+test_spec:
+  - name: test_unapproved_work_with_an_unmet_prerequisite_appears_in_neither_list
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "A draft, active, todo leaf naming an unfinished prerequisite is absent from the offered list and absent from the held list — withheld at admission, not reclassified as held."
+  - name: test_neither_emitted_count_includes_the_withheld_record
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp>"
+    description: "The counts the scanner prints alongside each list exclude the withheld record, so the exclusion is invisible in the totals as well as in the lists."
+test_rationale: "The parent (ACD-400c-1) is satisfied by an implementation that reclassifies unapproved work as held rather than withholding it, and every clause of the parent would still hold. Only a test that reads the held list and the held count can tell those two queues apart."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400c-1
+  contract: "The temp-AC-store fixture builder and the scanner-invocation helper returning parsed {ready: [...], blocked: [...]}; this AC additionally reads the human-readable count line, so the helper must expose the raw stdout as well as the parsed JSON."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Refines ACD-400c-1.
+
+  WHY THIS IS A REFINEMENT OF THE ADMISSION RULE AND NOT A NEW REPORTING REQUIREMENT.
+  Read on its own, ACD-400c-1 is satisfied by a change that reclassifies unapproved work
+  as held rather than withholding it — the work would still be absent from the offer, and
+  every clause of the parent would still hold. That is a materially different queue, and
+  the difference is invisible to the parent's criteria. This L3 closes that hole by naming
+  where the withheld work must NOT turn up. It is a negative control on the admission
+  rule, in the same shape as ACD-400a-5's composite control.
+
+  THE SCOPE FENCE, STATED SO IT IS NOT MISREAD. The PO's ACD-400c notes say the exclusion
+  being invisible in the counts is an ACS-1100-shaped follow-up about what the queue
+  OUTPUTS, must be flagged to the user rather than authored, and must not be silently
+  pulled into an L2 here. This AC does not require the queue to report its exclusions, and
+  a correct implementation of it changes nothing about the queue's behaviour: the sentences
+  above are already true today, verified by execution. What it forbids is a FUTURE change
+  that quietly relocates withheld work into the held list under cover of satisfying the
+  parent. It is recorded here rather than omitted because a specification of an admission
+  rule that cannot distinguish withholding from reclassification is not a specification of
+  that rule. Raised explicitly in the sign-off rather than folded in silently.
+
+  THE COUNT CLAUSE IS NOT A REQUEST FOR A NEW COUNT. The queue already prints a count with
+  each list. The clause asserts only that the existing counts do not include withheld work
+  — which is what they do today. It does not ask for a third count of what was excluded;
+  that is the follow-up above.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L3.

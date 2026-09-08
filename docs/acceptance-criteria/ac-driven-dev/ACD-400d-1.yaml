@@ -1,0 +1,106 @@
+id: ACD-400d-1
+components:
+  - ac_driven_dev
+title: "Recorded urgency is the first thing the queue consults, ahead of size"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given four pieces of work are ready to be picked up, recording urgencies of
+    critical, high, medium and low respectively,
+  And their recorded sizes are chosen so that size alone would order them the other
+    way round — the critical piece is the largest and the low-urgency piece the
+    smallest,
+  When the queue is asked which work is ready,
+  Then they are offered critical first, then high, then medium, then low,
+  And size does not disturb that order anywhere in the list, so the offer is not
+    ordered by size with urgency applied afterwards, nor by size at all.
+depends_on: [ACD-400d]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "Verified by execution 2026-09-08: a temp store holding critical/XL, high/L, medium/S and low/S leaves, scanned through the real command surface, returned them in exactly critical, high, medium, low order — the XL critical piece first and the S low piece last. The sort consults urgency first and size second, which is the opposite of what ACD-400a-1 says. Tagged `describes`, not `modifies`: this AC pins the shipped order; changing it is not in scope."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "THE RECORD THIS AC CONTRADICTS, quote confirmed verbatim 2026-09-08: 'the ready list is sorted by estimated_complexity ascending (S before M before L before XL) then by AC id ascending'. A test written faithfully from that sentence fails against the queue that ships. Correcting the sentence is ACD-400e-2's job — do NOT amend ACD-400a-1 from here."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a.yaml
+    relationship: related
+    status: exists
+    relevance: "Repeats the same superseded claim in its own criteria, quote confirmed verbatim 2026-09-08: 'the ready list is sorted by estimated_complexity then AC id'. Also ACD-400e-2's to reconcile, not this AC's."
+  - path: unit_tests/build_orchestration/test_bo2400a_fast_lane.py
+    relationship: related
+    status: exists
+    relevance: "THE SECOND NEAR-MISS, and it is not coverage for this AC -- but NOT for the reason first recorded here, and the correction matters because the original reasoning was backwards. CORRECTED 2026-09-08 by execution, superseding an IT-PO claim of the same date. The prior text is quoted so the change is auditable: 'its two fixtures BOTH record estimated_complexity S. With sizes equal, urgency-then-size and size-then-urgency produce the identical list, so the test passes on the two-key order ACD-400a-1 asserts. It cannot distinguish the two implementations.' That is FALSE. Equal sizes are exactly what FORCES the urgency key to decide the outcome, so the test discriminates sharply. Both orderings were computed against the two verbatim fixtures (BO-FL-TEST-010 medium/S, BO-FL-TEST-011 high/S) using the real _PRIORITY_ORDER and _COMPLEXITY_ORDER tables: the shipped three-key order returns [011, 010] and the assertion PASSES; the two-key order ACD-400a-1 states returns [010, 011] -- because equal complexity falls through to id ascending -- and the assertion FAILS. So test_ac2_deterministic_sort_order is a live behavioural pin on the three-key order, and the contradiction with ACD-400a-1 is HARDER than 'no test exists': a green test in this repository asserts three keys while two records in the store assert two, and neither side can see the other. It still is not coverage for THIS AC, for the reason that survives the correction: it exercises fast_lane.select_batch, a different entry point from the backlog queue this AC governs. Do not cite it as existing coverage."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the queue. Line 17 says '/build-ac selects the next highest-priority ready AC' — the only surface in the repo that gets the urgency-first order roughly right, and it is not among the three records ACD-400e-2 reconciles."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Every pytest invocation used to run or verify these tests must set AC_ENFORCE_STRICT=1, or a red result is masked as an xfail and reads green."
+  - "The order must be obtained by executing the scanner over a temporary store through its real command surface and reading the offered sequence. No assertion about the source text of scan_ac_store.py, and no direct call to the private sort helper, satisfies this AC — a test bound to the helper stays green when the helper stops being consulted."
+  - "The recorded sizes in the fixture must run counter to the recorded urgencies, as the criteria specify. An equal-size fixture makes urgency-then-size and size-then-urgency produce the same list, which is precisely how the existing fast-lane test at unit_tests/build_orchestration/test_bo2400a_fast_lane.py:335-357 passes while proving nothing about which key leads."
+  - "The full offered sequence must be asserted, not a pairwise before/after relation between two records. A pairwise assertion leaves the interior of the list free and permits an ordering that is correct at the ends and wrong in the middle."
+  - "This AC pins the ranking that ships. No change to the ranking, no additional sort key, and no configurability may be introduced — those are product decisions reserved to BrainCandy by the scope fence in ACD-400d's notes."
+  - "Note for whoever implements this: scripts/build_orchestration/fast_lane.py imports the scanner's sort helper directly, so any edit to the ordering changes both selectors at once. That coupling is a reason to touch neither, not a reason to test through the fast lane."
+test_spec:
+  - name: test_urgency_leads_the_order_and_size_does_not_disturb_it
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Four ready leaves recording critical/XL, high/L, medium/S and low/S: the whole offered sequence is critical, high, medium, low — the largest piece first and the smallest last, so the offer is not ordered by size at any position."
+  - name: test_an_order_produced_by_size_first_would_fail_this_fixture
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "The same fixture asserted against the size-first sequence the store's own ACD-400a-1 describes produces a different list, demonstrating that the fixture discriminates between the two candidate orders rather than being satisfied by both."
+  - name: test_the_ordering_is_read_from_the_scanner_command_surface
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "The sequence under test is the one the scanner's real entry point emits, proving the sort exercised is the one the build loop reaches rather than a helper invoked in isolation."
+test_rationale: "A direct unit test on the sort helper would be both weaker and misleading: weaker because it survives the helper falling out of the call path, and misleading because the repo already holds a green test asserting priority ordering against a different entry point with equal-size fixtures, which is what let this contradiction survive unnoticed."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400c-1
+  contract: "The temp-AC-store fixture builder and the scanner-invocation helper returning parsed {ready: [...], blocked: [...]}; every record this AC builds must be approved so it reaches the ordering stage at all."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Decomposes ACD-400d.
+
+  THE INVERTED-SIZE FIXTURE IS THE POINT, NOT DECORATION. If the four pieces were the
+  same size, an implementation that ordered by size and then by urgency would produce the
+  same list as one that orders by urgency and then by size, and the test would pass on
+  both — including on the two-key order ACD-400a-1 asserts. Making size run counter to
+  urgency is what forces the two implementations apart, and it is what makes this AC fail
+  today against the store's own written record while passing against the code. That
+  divergence is the finding ACD-400d exists to close.
+
+  SPECIFY, DO NOT REDESIGN. Per the scope fence in ACD-400d's notes, this AC states the
+  ranking that ships (critical before high before medium before low). Whether that is the
+  right ranking, whether a fifth tier is wanted, and whether the ranking should be
+  configurable are all product decisions for BrainCandy and none is proposed here.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.
+  Note for that pass: the deliverable is a pinning test, not an edit to the sort.

@@ -1,0 +1,116 @@
+id: ACD-400c-1
+components:
+  - ac_driven_dev
+title: "Only work whose approval has been recorded is offered by the build queue"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the store holds three otherwise identical pieces of leaf-level work — each
+    active, each still to do, none of them waiting on anything else, each carrying
+    the same urgency and the same size — differing only in the approval state
+    recorded against them: one recorded as approved, one as reviewed, one as draft,
+  When the queue is asked, through the same command surface the build loop itself
+    runs, which work is ready to be picked up,
+  Then the approved piece is the only one offered,
+  And the reviewed piece and the draft piece are each absent from the offer,
+  And the missing approval is demonstrably the only reason they are absent: when the
+    approval recorded against either of them is changed to approved and nothing else
+    about the piece or the store changes, that same piece is offered on the next ask.
+depends_on: [ACD-400c]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "The surface whose behaviour this AC states. Verified by execution 2026-09-08, not by reading: a temp store holding one approved, one reviewed and one draft leaf, scanned through the real command surface with --json, returned exactly the approved id in `ready` and an empty `blocked`. Tagged `describes` and NOT `modifies` on purpose — this AC pins an existing rule, and only `modifies` links enter a generated ticket's files_touched (generate_ticket_from_ac.py:104-106). A ticket that authorises editing the selector while specifying it would let the implementer make the criterion true by changing the rule. The edit surface for the pinning test is the IT PO's to name."
+  - path: unit_tests/ac_store/test_readiness_gate.py
+    relationship: related
+    status: exists
+    relevance: "THE NEAR-MISS. Do not cite this file as existing coverage for this AC. Confirmed 2026-09-08 by grepping the whole test tree, not the filename: `_is_approved` appears in no test under unit_tests/ac_store/ at all. This file covers classify_readiness() in goal_to_epic.py (ACD-1200b-1/-2) — a different surface answering a different question."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "States the admission tests as if they were exhaustive and omits approval entirely. Quote confirmed verbatim 2026-09-08: 'only files with level L2 or L3 AND work_status: todo AND status: active are included in the ready output'. This AC adds the fourth test; correcting ACD-400a-1's wording is ACD-400e-2's job and must not be attempted here."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the queue this AC pins. IT-PO note 2026-09-08: this page is a FOURTH surface describing selection and it is not in ACD-400e-2's list of three. Line 17 reads '/build-ac selects the next highest-priority ready AC' — closer to the truth than the three AC records, but still silent on the approval gate. Flagged to BrainCandy; not amended from here."
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+    relevance: "The architectural decision that makes the AC store the build backlog, and therefore what gives the admission rule its blast radius."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Every pytest invocation used to run or verify these tests must set AC_ENFORCE_STRICT=1. Without it pytest_ac_enforcement xfail-masks tests that cover not-done ACs, and a suite that is actually red reports green."
+  - "The test must reach its verdict by executing the scanner over a purpose-built temporary store and asserting the answer it returns. A test that asserts the presence, absence or ordering of any string inside scan_ac_store.py does not satisfy this AC; this repo has shipped grep-shaped tests that passed on dead code."
+  - "The scanner must be driven through the same command surface the build loop uses, in a fresh process, with the temp store supplied as the AC root — not by importing and calling the private admission predicate directly. A test bound to the private helper keeps passing when the helper stops being consulted."
+  - "Fixture records must be written to disk as real .yaml files under a temporary AC root, serialised the way the store's own writers serialise. Hand-indented YAML literals and monkeypatched loaders reproduce the bias that let a column-0 parsing defect ship green in EPIC-PhantomDoneFilesTouched."
+  - "No change to selection behaviour is authorised by this AC. It pins a rule that already ships; if the test cannot be made green without editing the selector, that is a finding to escalate, not a licence to edit. Making the criterion true by changing the rule is the failure ACD-400e-2 forbids one level up."
+  - "Each test must be independent of the live docs/acceptance-criteria/ tree and of the order tests run in — the store it asks about is the one it built."
+test_spec:
+  - name: test_only_the_approved_leaf_is_offered
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Three otherwise-identical ready leaves recorded approved / reviewed / draft: the offer contains exactly the approved id, and the reviewed and draft ids appear in neither returned list."
+  - name: test_flipping_the_record_to_approved_admits_it_on_the_next_ask
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Changing only the recorded approval of the previously-withheld draft leaf to approved, and nothing else in the store, puts that same id into the offer — so the missing approval is the demonstrated cause of its absence, not a coincidence of some other filter."
+  - name: test_scanner_command_surface_is_the_one_exercised
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "The verdict is obtained by invoking the scanner's real entry point over the temp store and parsing its emitted JSON, proving the admission rule under test is the one the build loop actually reaches."
+test_rationale: "A direct unit test on the admission predicate would be insufficient: it would stay green if the predicate stopped being called, which is the exact shape of the defect this AC exists to make impossible. The pinning value comes from asking the entry point the build loop asks."
+delivers_to:
+  agent: python-coder
+  contract: "A reusable temp-AC-store fixture builder under unit_tests/ac_store/ — writes real .yaml records with caller-chosen id, level, status, work_status, readiness, priority, estimated_complexity and depends_on into a tmp root, and invokes the scanner's command surface returning the parsed {ready: [...], blocked: [...]} JSON. Consumed by ACD-400c-1-i, ACD-400c-1-ii, ACD-400c-2, ACD-400c-3 and the whole ACD-400d family."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400c-1-i, ACD-400c-1-ii]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Decomposes ACD-400c.
+
+  EVERY CLAUSE HERE WAS OBSERVED, NOT READ. A probe built a temp AC store, invoked
+  scan_ac_store.main(["--ac-root", <tmp>, "--json"]) and parsed the emitted JSON. The
+  three-record fixture returned ready=['approved-id'], blocked=[]. The PO's report of
+  the gate matches what the code does.
+
+  WHY THE LAST CLAUSE IS IN THE CRITERIA AND NOT LEFT TO A TEST. Without it, a test can
+  satisfy this AC by asserting two ids are missing from the offer — which they would also
+  be if some unrelated filter dropped them, or if the scanner returned an empty list. The
+  flip-and-re-ask clause makes the approval field the demonstrated cause: it fails on an
+  implementation where the gate is absent (the draft piece is offered before the flip) and
+  on one where the whole store is being dropped (the flip changes nothing). This is the
+  repo's anti-vacuity pattern applied to a filter rather than to a gate.
+
+  THE ABSENT-APPROVAL CASE IS DELIBERATELY NOT HERE. A record with no approval field at
+  all is a separately changeable decision with its own consequence, and it is specified by
+  ACD-400c-2. Folding it in would have produced one AC that two different one-line edits
+  could each half-satisfy.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.
+  assigned_agent, it_requirements, estimated_complexity, test_spec, delivers_to and
+  expects_from are the IT PO's to set. Note for that pass: the deliverable is a pinning
+  test, not a change to the selector, so `reference_file_path` naming scan_ac_store.py
+  would be wrong unless the IT PO intends an edit there.
