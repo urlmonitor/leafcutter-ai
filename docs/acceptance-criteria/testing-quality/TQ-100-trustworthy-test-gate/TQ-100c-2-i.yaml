@@ -35,11 +35,11 @@ doc_links:
       tag-recognition rule (_COVERS_REGEX at :41): ACS-1300a-1:76 records it VERIFIED
       DISQUALIFIED 2026-09-01 for collapsing every suffixed id to its L0 root and being blind
       to "// covers:" tags. It is registered in no hooks_manifest entry today, so it does not run.
-  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
     relationship: related
     status: exists
     relevance: >-
-      WHERE THE THREE POSITIONS ON check_ac_coverage.py ARE CROSS-LINKED. BP-100n-4's day-one
+      WHERE THE THREE POSITIONS ON check_ac_coverage.py ARE CROSS-LINKED. BP-1600a-2's day-one
       triage must register, delete, or record as a declared non-gate every commit-guardian
       script that no registry entry names — check_ac_coverage.py among them — and it now carries
       links to all three incompatible positions the store holds on that script: KM-ADM-001
@@ -50,7 +50,7 @@ assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
   - "DESIGN DECISION (settled): a done AC with zero covering tests is a HARD failure of the pre-pytest integrity check (non-zero exit), NOT a non-blocking warning — scoped strictly to ACs whose work_status is done ('a shipped feature must have a protecting test')."
-  - "DESIGN DECISION (settled 2026-06-24, PREMISE CORRECTED 2026-09-07): build the zero-coverage detection as a violation class of the TQ-100c-2 integrity check (one module). The original wording of this requirement read 'there is currently NO check_ac_coverage.py in this repo'. THAT IS FALSE and was corrected on 2026-09-07: the file exists at templates/scripts/commit_guardian/check_ac_coverage.py. The design decision itself is UNCHANGED — the detection is still a violation class of the TQ-100c-2 integrity module, and the done-scoped hard-fail is still an added severity tier rather than a second coverage walker — but the 'if such a script is later introduced' framing no longer applies, because it is already here. WHAT TO DO INSTEAD OF ASSUMING: read the script before deciding whether to reuse its reverse-direction coverage scan, and read the three incompatible positions the store holds on it (see the doc_link to BP-100n-4 on this record, which cross-links all three). Do NOT reuse its tag-recognition rule: ACS-1300a-1:76 records it VERIFIED DISQUALIFIED 2026-09-01 because it collapses every suffixed id to its L0 root and is blind to '// covers:' tags, so a coverage judgement built on it attributes tags to the wrong record. It is also registered in no hooks_manifest entry today, so it does not run."
+  - "DESIGN DECISION (settled 2026-06-24, PREMISE CORRECTED 2026-09-07): build the zero-coverage detection as a violation class of the TQ-100c-2 integrity check (one module). The original wording of this requirement read 'there is currently NO check_ac_coverage.py in this repo'. THAT IS FALSE and was corrected on 2026-09-07: the file exists at templates/scripts/commit_guardian/check_ac_coverage.py. The design decision itself is UNCHANGED — the detection is still a violation class of the TQ-100c-2 integrity module, and the done-scoped hard-fail is still an added severity tier rather than a second coverage walker — but the 'if such a script is later introduced' framing no longer applies, because it is already here. WHAT TO DO INSTEAD OF ASSUMING: read the script before deciding whether to reuse its reverse-direction coverage scan, and read the three incompatible positions the store holds on it (see the doc_link to BP-1600a-2 on this record, which cross-links all three). Do NOT reuse its tag-recognition rule: ACS-1300a-1:76 records it VERIFIED DISQUALIFIED 2026-09-01 because it collapses every suffixed id to its L0 root and is blind to '// covers:' tags, so a coverage judgement built on it attributes tags to the wrong record. It is also registered in no hooks_manifest entry today, so it does not run."
   - "Coverage is determined by scanning test bodies for the `# covers: <AC-ID>` tag (the established convention) — an AC is covered iff at least one collected/known test names it."
   - "The violation message must name the offending AC id; the violation class must be reported distinctly from an assertion failure."
 test_spec:
@@ -177,7 +177,7 @@ amended_by:
       zero-coverage detection is still a violation class of the TQ-100c-2 integrity module and
       the done-scoped hard-fail is still an added severity tier, not a second coverage walker.
       What is retired is only the "if such a script is later introduced" framing. Two doc_links
-      added — the script itself, and BP-100n-4, where the three mutually exclusive positions the
+      added — the script itself, and BP-1600a-2, where the three mutually exclusive positions the
       store holds on that script are cross-linked (KM-ADM-001 requires it rated dead;
       TQ-100b-5 / TQ-100b-5-i treat it as live reader R3; this record believed it absent). Also
       recorded: ACS-1300a-1:76 disqualifies its tag-recognition rule, so reuse of its coverage
@@ -223,7 +223,7 @@ notes: |
   belongs in the TQ-100c-2 integrity module — but the "any future
   check_ac_coverage.py" framing is retired: it is present, and it is contested. The
   store holds three mutually exclusive positions on that one script, cross-linked
-  from BP-100n-4 (see the doc_link added below): KM-ADM-001 REQUIRES it rated dead
+  from BP-1600a-2 (see the doc_link added below): KM-ADM-001 REQUIRES it rated dead
   ("unregistered dead code"), so registering it falsifies that AC; TQ-100b-5 and
   TQ-100b-5-i treat it as live reader R3 in a four-rule parity set; and this record
   believed it absent. Its tag-recognition rule is separately disqualified by

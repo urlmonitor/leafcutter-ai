@@ -749,11 +749,25 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         "skill_registry.json",
         "guardrail_gates.yaml",
         "paths.json",
+        # config/reachability_exemptions.yaml: read by both
+        # scripts/commit_guardian/_reachability_inventory.py (the shared
+        # BO-2900d seam) and scripts/commit_guardian/check_done_proof.py.
+        # Deployed write-if-absent by build_config_scaffolds (a generated
+        # scaffold, not a byte copy of this package's own self-hosted
+        # copy -- same relationship docs/roadmap.json has to build_roadmap
+        # just below), so this manifest never registered it and the widened
+        # closure guard correctly aborted the build once it started
+        # resolving _reachability_inventory.py's import of this file
+        # (BO-2900d-1/-2 fast-lane build, 2026-09-07).
+        "reachability_exemptions.yaml",
         # Deployed by build_ac_store's own block (added with TKT-600b), but
         # never DECLARED here -- so Set B did not contain it and the widened
         # closure correctly aborted the build once ac_coverage_resolver.py and
         # generate_ticket_from_ac.py were seen to read it. Shipping a file and
         # declaring it are two different acts; this guard checks the second.
+        # KEEP THIS ENTRY LAST: unit_tests/test_bp_900g_8_ii.py's
+        # _CORE_CONFIG_TUPLE_ANCHOR text-matches this tuple's closing
+        # '"phase_deferral.yaml",\n    ):' shape in both copies below.
         "phase_deferral.yaml",
     ):
         if (package_root / "config" / core_config_name).is_file():
@@ -958,11 +972,18 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
         "skill_registry.json",
         "guardrail_gates.yaml",
         "paths.json",
+        # config/reachability_exemptions.yaml: mirrors the matching block in
+        # _get_source_deployable_scripts just above -- see that block's
+        # DECISION note.
+        "reachability_exemptions.yaml",
         # Deployed by build_ac_store's own block (added with TKT-600b), but
         # never DECLARED here -- so Set B did not contain it and the widened
         # closure correctly aborted the build once ac_coverage_resolver.py and
         # generate_ticket_from_ac.py were seen to read it. Shipping a file and
         # declaring it are two different acts; this guard checks the second.
+        # KEEP THIS ENTRY LAST: unit_tests/test_bp_900g_8_ii.py's
+        # _CORE_CONFIG_TUPLE_ANCHOR text-matches this tuple's closing
+        # '"phase_deferral.yaml",\n    ):' shape in both copies of it.
         "phase_deferral.yaml",
     ):
         if (package_root / "config" / core_config_name).is_file():
@@ -1260,6 +1281,7 @@ _CONFIG_FILE_PHASE_BY_NAME: dict[str, str] = {
     "phase_deferral.yaml": "build_ac_store",
     "feedback_categories.yaml": "build_feedback",
     "knowledge_sink.json": "build_knowledge_sink_declaration",
+    "reachability_exemptions.yaml": "build_config_scaffolds",
 }
 _DOCS_FILE_PHASE_BY_NAME: dict[str, str] = {
     "components.json": "build_components_registry",

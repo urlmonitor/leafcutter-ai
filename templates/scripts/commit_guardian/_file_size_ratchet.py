@@ -55,6 +55,26 @@ class PreviousLengthSourceError(Exception):
         self.reason = reason
 
 
+class CurrentLengthUnmeasurableError(Exception):
+    """Raised for the two REFUSING situations on a staged file's CURRENT
+    (working-tree) content: it cannot be opened at all, or it can be opened
+    but is not readable as text in the encoding the standard reads.
+
+    A staged DELETION is deliberately NOT one of these situations -- see
+    ``measure_current_length``'s docstring -- so this error must never be
+    raised for a path that simply does not exist.
+
+    Attributes:
+        reason: Human-readable text naming which of the two situations
+            occurred. Printed verbatim by the caller after
+            ``INDETERMINATE: reason=``.
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 # Pinned reason text for the COMPLETING empty-history situation (exit 0),
 # shared verbatim between its two sub-cases — an unborn HEAD (no commit
 # exists yet) and a populated HEAD whose tree holds no covered file — so
@@ -90,6 +110,55 @@ def count_content_lines(content: str) -> int:
     stripped = _TRIPLE_SINGLE_QUOTE_RE.sub("", stripped)
     stripped = _BLOCK_COMMENT_RE.sub("", stripped)
     return len(stripped.splitlines())
+
+
+def measure_current_length(filepath: str) -> int:
+    """Measure the CURRENT (working-tree) line count of *filepath*.
+
+    A staged DELETION is explicitly OUT OF SCOPE for this function's caller
+    to resolve: this function is only ever invoked once the caller has
+    already confirmed the path exists on disk, so a non-existent path (a
+    deletion) never reaches here and never raises
+    ``CurrentLengthUnmeasurableError``.
+
+    The read is split into two steps -- raw bytes, then a separate decode --
+    so the two REFUSING situations are distinguished by construction, never
+    by inspecting the same caught exception two different ways: a read
+    failure (permissions, or any other OS-level error) names the file as
+    "cannot be opened at all", and a decode failure names it as "not
+    readable as text in the encoding the standard reads". Neither situation
+    is coerced into a measured length of zero.
+
+    Args:
+        filepath: Path to the file to measure. The caller must have already
+            confirmed this path exists.
+
+    Returns:
+        The file's current length via the shared ``count_content_lines``
+        measurement rule.
+
+    Raises:
+        CurrentLengthUnmeasurableError: the file could not be opened at all,
+            or its content could not be decoded as UTF-8, the encoding the
+            standard reads.
+    """
+    path = Path(filepath)
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise CurrentLengthUnmeasurableError(
+            f"the length of {filepath!r} could not be established: cannot be opened at all ({exc})"
+        ) from exc
+
+    try:
+        content = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise CurrentLengthUnmeasurableError(
+            f"the length of {filepath!r} could not be established: not readable as text in the "
+            f"encoding the standard reads ({exc})"
+        ) from exc
+
+    return count_content_lines(content)
 
 
 def _run_git(args: list[str]) -> subprocess.CompletedProcess:
@@ -285,7 +354,7 @@ DECISION HISTORY
   new config key — per GE-127b-1's it-po enrichment), and the
   PreviousLengthSourceError floor distinguishing "could not be read" /
   "could not be interpreted" / "holds no covered file whatsoever" per
-  GE-127b-1-i, reusing BP-100n-4-ii's INDETERMINATE vocabulary.
+  GE-127b-1-i, reusing BP-1600a-2-ii's INDETERMINATE vocabulary.
 - 2026-09-07 [python-coder/GE-127b-1-i correction]: Narrowed the refusing
   set from three situations to two per the 2026-09-01 criteria correction.
   resolve_head_covered_paths() no longer raises for an unborn HEAD or a

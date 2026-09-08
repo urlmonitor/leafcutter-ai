@@ -6,7 +6,7 @@ components:
 level: L1
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -20,13 +20,13 @@ criteria: |
 depends_on:
   - GE-127
 doc_links:
-  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
     relationship: depends_on
     status: exists
     relevance: >-
       PRECONDITION, NOT SCOPE. "At the moment it happens" presupposes the guard
       is actually invoked at commit time; it is not today, and registering it is
-      BP-100n-4's day-one triage, not this criterion's work. Take reachability as
+      BP-1600a-2's day-one triage, not this criterion's work. Take reachability as
       given and specify the behaviour that runs once it is. Do not restate the
       census.
   - path: templates/scripts/commit_guardian/check_file_size.py
@@ -45,7 +45,9 @@ amended_by: []
 superseded_by: null
 covered_by:
   - GE-127a-1
-implemented_by: []
+implemented_by:
+  - "templates/scripts/commit_guardian/commit_guardian.json"
+  - "templates/scripts/commit_guardian/check_file_size.py"
 change_target: code
 risk_surface: contract_boundary
 notes: |

@@ -1,4 +1,4 @@
-id: BP-100n-4-i
+id: BP-1600a-2-i
 components:
   - build_pipeline
 title: "A script that is deliberately not a gate is recorded as one with a stated ground and the check honours it; a record that states no ground is itself refused and the script it names stays reported"
@@ -38,9 +38,9 @@ criteria: |
   Then it is reported as invoked and the redundant record is named, so the
     register does not silently retain cover for a script that no longer needs it.
 depends_on:
-  - BP-100n-4
+  - BP-1600a-2
 doc_links:
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml"
     relationship: parent
     status: exists
   - path: "templates/scripts/commit_guardian/commit_guardian.json"
@@ -183,7 +183,7 @@ it_requirements:
       resolved is a suppression under another name; those scripts belong in
       hooks_manifest.hooks instead. Note in particular that ten of the nineteen already
       carry a dedicated configuration section in this same file, which argues against a
-      non-gate disposition for them (see BP-100n-4).
+      non-gate disposition for them (see BP-1600a-2).
     - >-
       CANONICAL VERSUS BUILD OUTPUT. templates/scripts/commit_guardian/ is canonical;
       scripts/commit_guardian/ is a build output build.py overwrites. Add the records to
@@ -298,7 +298,7 @@ test_rationale: |
   against a file the hook never reads.
 delivers_to: null
 expects_from:
-  ac_id: BP-100n-4
+  ac_id: BP-1600a-2
   contract: >-
     The per-script verdict set and the run summary counts, into which this criterion
     inserts the declared-non-gate verdict and its own count, and whose reported class
@@ -317,7 +317,7 @@ amended_by:
     watches commit_guardian.json''s top level by mapping key (metadata exclusions
     are only "$schema" and "_comment"), so a new key would trip check-package-surface-declaration;
     records added inside the existing list are neither a new mapping key nor a new
-    hooks_manifest.hooks id, hence package_surface: false here while BP-100n-4 carries
+    hooks_manifest.hooks id, hence package_surface: false here while BP-1600a-2 carries
     the true declaration for the hooks_manifest additions its triage makes. Validator:
     extend validate_exemptions, never add a second one — the two shapes must agree
     on what counts as a ground. declares_side_effect false: every Then clause reports
@@ -326,6 +326,21 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- reason: renamed-and-moved-BP-100n-4-i-to-BP-1600a-2-i
+  by: product-owner
+  at: '2026-09-07'
+  note: >-
+    THIS RECORD WAS BP-100n-4-i UNTIL 2026-09-07, and its parent BP-100n-4 is now BP-1600a-2.
+    Address change only — criteria, readiness (approved), req_status, work_status, priority,
+    test_spec and it_requirements are untouched. It moved with its parent, which was lifted out
+    of BP-100n into BP-1600a because a commit-gate census belongs with the settings-surface
+    census (BP-1600a-1) under an L1 about populations taken from reality, not under a parent
+    whose title is about absence-reporting. The rename is forced rather than cosmetic: a
+    child's parent is derived from its ID STRING and not from covered_by (GE-106), so a moved
+    child keeping the old prefix would still be counted against BP-100n. The old id was
+    rewritten wherever it appears as an identifier, including in the amendment history above;
+    the full reasoning for that choice, and the two surfaces deliberately left alone, are
+    recorded once on BP-1600a-2 rather than repeated here.
 superseded_by: null
 covered_by: []
 implemented_by: []

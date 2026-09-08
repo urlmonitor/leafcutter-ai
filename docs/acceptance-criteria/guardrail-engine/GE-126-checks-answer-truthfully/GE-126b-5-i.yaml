@@ -46,11 +46,11 @@ doc_links:
       "genuinely non-falsifiable checks (pure census/measurement)" that "must justify it".
       Reuse that shape. Note what the schema does NOT do and this AC must: it requires a
       reason of minLength 1, which a postponement satisfies.
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-i.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2-i.yaml"
     relationship: related
     status: exists
     relevance: >-
-      THE PRECEDENT TO COPY, INCLUDING ITS EXACT WORDING. BP-100n-4-i already establishes
+      THE PRECEDENT TO COPY, INCLUDING ITS EXACT WORDING. BP-1600a-2-i already establishes
       the same three-part shape for a neighbouring register: a stated ground is honoured,
       a record with no ground is itself refused and the script it names stays reported,
       and its parent's constraints state that "a register ground that says only that
