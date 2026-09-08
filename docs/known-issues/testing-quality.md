@@ -1449,3 +1449,49 @@ examined anything.
 
 **Pattern:** a check that examined nothing must not look like a check that found nothing — and
 when it cannot examine anything, it must not emit a number that looks like a measurement.
+
+---
+
+### KI-TQ-20260908-0900 — The agent-eval harness reports "the CLI could not be launched" as a 22% quality score, and the pre-commit gate built on it cannot be satisfied in any fresh worktree
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1 (surfaced on 2026-09-08; the CI half has been failing all of 2026-09-07)
+- **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `scripts/evals/run_agent_eval.py` (scoring path) · `scripts/commit_guardian/check_eval_staleness.py` and its `hooks_manifest` entry `check-eval-staleness` · `scripts/evals/results/.gitignore`
+
+**Symptom.** A full local eval run reports a score and fails a quality threshold:
+
+```text
+rows=18 passed=4 accuracy=22.22%
+axis needs_flow       precision=0.00 recall=0.00 f1=0.00 (tp=0 fp=0 fn=4  tn=14)
+axis needs_mock_data  precision=0.00 recall=0.00 f1=0.00 (tp=0 fp=0 fn=13 tn=5)
+axis needs_mockup     precision=0.00 recall=0.00 f1=0.00 (tp=0 fp=0 fn=10 tn=8)
+GATE: FAIL — score 22.22% < threshold 70.00%
+```
+
+The agent was never invoked. Every one of the 18 rows carries:
+
+```json
+"predicted": {},
+"parse_error": "claude CLI could not be launched"
+```
+
+**Why the aggregate is the defect, not the rows.** The per-row record is honest — it names the launch failure in `parse_error`. The aggregate then discards that distinction: an unlaunched agent contributes `predicted: {}`, every axis reads False, and the run is scored as though the agent had answered "no" to everything. `tp=0` **and** `fp=0` on all three axes is the signature — a model that genuinely answered would produce some false positives. A reader of the summary line concludes the classifier is poor. The truth is that nothing ran.
+
+**The same failure in CI, wearing a different mask.** The `Agent evals (affected)` job fails with `agent CLI exited 1` and empty stderr, on every run. Same root: the harness invokes the `claude` CLI in headless mode (`claude -p … --output-format json`), which has no usable auth in that environment. Locally the CLI is present but still fails to launch from the subprocess. One defect, two surfaces, neither reported as an infrastructure problem.
+
+**The gate built on it cannot be satisfied.** `check-eval-staleness` blocks a commit when an affected agent's eval result is missing or stale — deliberately, per its own `_comment`; its fail-open path covers only git and selector errors. But `scripts/evals/results/*.json` is gitignored, so results exist only on the machine that last ran them and are **missing by definition in every fresh worktree**. Since the trigger closure includes `^docs/product-truth/`, this blocks every fast-lane build that touches the product-truth store. The sanctioned escape (`SKIP=check-eval-staleness`) requires the user's own words in the committing agent's conversation, and a sub-agent's conversation is with its parent — so the escape is structurally unreachable for exactly the mechanism the fast lane runs on.
+
+**Detection.**
+
+```bash
+python scripts/evals/run_agent_eval.py --agent pt-classifier --limit 1
+python -c "import json;d=json.load(open('scripts/evals/results/pt-classifier.json'));print({r['id']:r.get('parse_error') for r in d['rows']})"
+```
+
+Any `parse_error` present alongside a reported accuracy means the score is fabricated from non-answers. `tp=0 and fp=0 across every axis` is the cheap tell.
+
+**Fix direction.** Separate "the agent answered badly" from "the agent never answered". A row whose `parse_error` is set must not be scored as a prediction: either abort the run with an infrastructure error naming the launch failure, or report `rows_scored` and `rows_unlaunched` as distinct counts so a threshold can never be computed over rows that produced no output. A gate that cannot tell those apart will keep converting outages into quality verdicts. Separately, either commit eval results so the freshness gate has a shareable satisfying state, or make the gate fail-open when the results directory is absent entirely (as opposed to stale) — an unsatisfiable gate trains contributors to reach for the bypass, which is the outcome it exists to prevent.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse form. The register's usual case is a check that cannot fail; this is a check that cannot pass, and reports its own outage as the subject's fault. **Related:** `GE-120` (trust that a green check actually checked something) is the same principle read forwards.
