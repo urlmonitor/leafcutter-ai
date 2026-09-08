@@ -383,8 +383,8 @@ names no extension, and an L2 beneath it that enumerates extensions is at the
 wrong altitude. The motivating measurements are in that record's notes rather
 than its criteria.
 
-**BP-100n-4 IS A PRECONDITION, NOT SCOPE — the sharpest hazard for the BA.**
-BP-100n-4 (approved, high, phase_1) owns the uninvoked-gate census and its
+**BP-1600a-2 IS A PRECONDITION, NOT SCOPE — the sharpest hazard for the BA.**
+BP-1600a-2 (approved, high, phase_1) owns the uninvoked-gate census and its
 day-one triage is what registers this script. Every GE-127 record carries it as a
 `depends_on` doc_link for exactly this reason. An L2 here that restates the
 census, repeats its counts, or proposes a second reachability guard is

@@ -24,10 +24,12 @@ LAYOUT CHOICE -- RECORDED, NOT SILENTLY PICKED (per this AC's own
     evidence, which used the real package root directly against an
     unrelated target directory, not a target containing a package copy.
     ``<scratch>/receiving_project/`` holds nothing else before the build
-    runs except a minimal ``skills_config.json`` -- BP-900h-1's "built from
-    an empty directory, NOT a copy of this repository" constrains the
-    TARGET, not the package (which must be present as a copy somewhere for
-    the build to run at all, just not inside the target).
+    runs except a minimal ``.claude/skills_config.json`` -- BP-900h-1's
+    "built from an empty directory, NOT a copy of this repository" constrains
+    the TARGET, not the package (which must be present as a copy somewhere
+    for the build to run at all, just not inside the target). See DECISION
+    HISTORY 2026-09-07 for why the config file itself sits at
+    ``.claude/skills_config.json`` rather than directly at the target root.
 
 WHY A SYSTEM TEMP ROOT AND NOT A SIBLING PATH (it_requirements #2, measured
     2026-08-25): a scratch target at a path that is still reachable via
@@ -99,6 +101,37 @@ DECISION HISTORY
   the project's test-writer/python-coder division of labour). The
   commit-first path is therefore the one this harness keeps: commit the
   production fix, then re-run.
+- 2026-09-07 [python-coder/followups]: FIXED a config-placement defect found
+  during a shared-fixture audit: the config was written at
+  ``target_root / "skills_config.json"`` (directly at the target's top
+  level), but ``scripts/config_loader.py``'s ``load_config`` auto-detect only
+  checks ``<target_root>/<platform_dir>/skills_config.json`` for
+  ``platform_dir`` in ``[".claude", ".gemini", ".cursor", ".github",
+  ".cline"]`` -- there is no top-level fallback. The file was written, never
+  read, and every harness build ran on defaults regardless of the
+  ``output_root_name`` parameter's value. This was invisible because the
+  default ``output_root_name`` (``".leafcutter"``) already equals the
+  build's own default, so the no-op silently wrote back the value already in
+  use. Confirmed live: a harness build with a non-default
+  ``output_root_name`` produced its output under ``.leafcutter`` regardless
+  of the requested name, before this fix.
+  CORRECTING THE EARLIER READING: the 2026-09-01 entry above (and the
+  now-updated code comment near the write call) cited test_spec entry 1's
+  wording ("the target contains nothing but a minimal skills_config.json")
+  as license for the file's exact position within the target. That wording
+  rules out nesting the PACKAGE copy inside the target (see the 2026-09-01
+  entry, which that reading correctly supports) but says nothing about
+  where inside the target the config file itself must sit -- it does not
+  make an unread top-level file a valid "minimal skills_config.json" for
+  this AC's own purpose of exercising ``output_root_name``. The corrected
+  rule is simpler and non-interpretive: the file must sit somewhere
+  ``config_loader.py`` actually looks. Fixed: the config is now written to
+  ``target_root / ".claude" / "skills_config.json"`` (the first-checked, and
+  in this project's own convention the canonical, platform directory) so
+  the parameter it exists to test is actually live. The target still holds
+  nothing else before the build runs -- test_spec entry 1's requirement is
+  unaffected, only the exact path of the one file it names.
+  (#TICKETLESS reason=followups-worktree-shared-fixture-audit)
 ====================================================================
 """
 
@@ -245,14 +278,28 @@ def build_out_of_package_harness(
         archive_path.unlink(missing_ok=True)
 
     # Target itself is empty apart from a minimal skills_config.json, per
-    # this AC's it_requirements #3.
-    skills_config_path = target_root / "skills_config.json"
+    # this AC's it_requirements #3. The file is written at
+    # ``.claude/skills_config.json`` -- NOT directly at the target's top
+    # level -- because ``config_loader.load_config``'s auto-detect only
+    # checks ``<target_root>/<platform_dir>/skills_config.json`` for
+    # ``platform_dir`` in one of a fixed set of platform directories
+    # (``.claude`` first among them); there is no top-level fallback. A
+    # top-level file is written but never read by the real build, which is
+    # exactly the defect this placement was fixed to stop reproducing (see
+    # DECISION HISTORY 2026-09-07).
+    skills_config_dir = target_root / ".claude"
+    skills_config_dir.mkdir(parents=True, exist_ok=True)
+    skills_config_path = skills_config_dir / "skills_config.json"
     skills_config_path.write_text(
         json.dumps({"output_root": output_root_name}) + "\n", encoding="utf-8",
     )
 
+    # Recursive file listing (not a top-level ``iterdir()``) so the snapshot
+    # still names the actual config file by its real relative path rather
+    # than collapsing to the containing directory's name -- see DECISION
+    # HISTORY 2026-09-07.
     pre_build_target_files = sorted(
-        str(p.relative_to(target_root)) for p in target_root.iterdir()
+        str(p.relative_to(target_root)) for p in target_root.rglob("*") if p.is_file()
     )
 
     # Capture the REAL producing package's own record hash BEFORE the build,

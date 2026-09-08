@@ -65,11 +65,11 @@ doc_links:
       commit as this L1. They carry the per-check report leg on the interrogation surface.
       This L1 is the home for the REMAINDER of the regime. See the notes for the split and
       why it is a capacity artifact rather than a design decision.
-  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
     relationship: context
     status: exists
     relevance: >-
-      BOUNDARY — ENUMERATION. BP-100n-4 (approved) owns which guards are in the set at all,
+      BOUNDARY — ENUMERATION. BP-1600a-2 (approved) owns which guards are in the set at all,
       taken from the scripts on disk rather than from the registry. It does not ask whether
       a guard in the set can refuse.
   - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4.yaml
@@ -101,7 +101,34 @@ documentation_triggers:
   - reference-doc
 origin_agent: BrainCandy
 created: 2026-09-01
-amended_by: []
+amended_by:
+  - reason: false-claim-corrected-in-boundary-note
+    by: business-analyst
+    at: '2026-09-07'
+    note: >-
+      criteria UNTOUCHED. readiness (draft), priority (critical) and work_status UNTOUCHED.
+      One false claim corrected in the BOUNDARIES FOR THE BA block, plus the fact it was
+      concealing. The note asserted that readme_read_guard is "registered, ENUMERATED, invoked,
+      reachable and running on every edit". "Enumerated" was false: BP-1600a-2's criteria are
+      scoped by their own first Given to "one place" — the commit-guardian check-script
+      directory — while templates/hooks/readme_read_guard.py is wired in templates/settings.json,
+      a different registration surface BP-1600a-2 never lists and structurally cannot reach. The
+      worked example therefore passes the enumeration boundary because no census looks at it,
+      not because one looked and found it present. The BP-1600a-2 bullet is now scoped to the
+      commit-guardian surface, the word is removed from the sentence, and the correction is
+      stated explicitly so the claim is not silently reintroduced. ADDED WITH IT, because the
+      corrected sentence would otherwise read as coverage by omission: no AC today takes a
+      census of the settings.json / templates/hooks/ surface. Measured 2026-09-07 —
+      templates/hooks/ holds 13 scripts, templates/settings.json wires 11, and the two named by
+      nothing anywhere are check_ticket_no_branch_move.py and check_ticket_state_integrity.py,
+      both already observed as unwired in GE-122a-2:65 and GE-122e-2:68 and demanded by no
+      requirement. Recorded as a finding, NOT as a decomposition target for this L1, whose
+      subject is whether a guard can refuse rather than whether it is in the set. NOT
+      OVERCORRECTED: the four-way distinction is sound and stands; "It passes all four" stands
+      and is if anything strengthened. One further light touch — the GE-120c-6 bullet gained a
+      parenthetical recording that GE-120c-6 was subordinated to BP-1600a-2 by user decision on
+      2026-09-07, with the explicit statement that this does not move the boundary, since
+      neither record reaches the settings.json surface.
 superseded_by: null
 covered_by:
   - GE-120f-1
@@ -162,14 +189,43 @@ notes: |
 
   BOUNDARIES FOR THE BA — four adjacent owners, none of them sufficient, and the
   worked example is the proof of that.
-    - BP-100n-4 (approved) owns ENUMERATION: which guards are in the set at all.
+    - BP-1600a-2 (approved) owns ENUMERATION FOR THE COMMIT-GUARDIAN SURFACE ONLY:
+      which guards are in that set at all. Its criteria are scoped by their own
+      first Given to "one place" — the directory where the commit-guardian's check
+      scripts live — so its census reaches that surface and no other.
     - BP-100k-4 owns REACHABILITY for a REGISTERED gate whose trigger can never match.
     - TQ-500 owns falsifiability of TESTS. This L1 owns falsifiability of GUARDS.
-    - GE-120c-6 owns a deployed guard that nothing invokes.
-    readme_read_guard is registered, enumerated, invoked, reachable and running on
-    every edit — and unable to refuse. It passes all four and is the thing this L1
-    exists to catch. Do not let decomposition close any of the four as a duplicate of
-    this one, and do not let this one be closed as a duplicate of them.
+    - GE-120c-6 owns a deployed guard that nothing invokes. (Subordinated to
+      BP-1600a-2 by user decision 2026-09-07 — the two specify the same census; see
+      both records. That subordination does not change this boundary: neither
+      reaches the surface described next.)
+    readme_read_guard is registered, invoked, reachable and running on every edit —
+    and unable to refuse. It passes all four and is the thing this L1 exists to
+    catch. Do not let decomposition close any of the four as a duplicate of this
+    one, and do not let this one be closed as a duplicate of them.
+
+    CORRECTED 2026-09-07 — THIS NOTE PREVIOUSLY SAID readme_read_guard WAS
+    "ENUMERATED", AND THAT WAS FALSE. It is wired in templates/settings.json, a
+    registration surface BP-1600a-2 never lists and structurally cannot reach: that
+    AC's population is "every gate script held anywhere beneath" the commit-guardian
+    directory, and templates/hooks/readme_read_guard.py is not beneath it. So the
+    worked example passes the enumeration boundary not because a census looked at it
+    and found it present, but because NO CENSUS LOOKS AT IT AT ALL. That single word
+    is why the second surface reads as covered when nothing covers it.
+
+    NO AC TODAY TAKES A CENSUS OF THE settings.json / templates/hooks/ SURFACE, and
+    it is not a small surface. Measured 2026-09-07: templates/hooks/ holds 13
+    scripts and templates/settings.json wires 11 of them. The two named by nothing
+    anywhere are check_ticket_no_branch_move.py and check_ticket_state_integrity.py
+    — both already OBSERVED as unwired in GE-122a-2:65 ("registered in no
+    settings.json entry, no hooks_manifest, no CI job, and no git post-merge
+    installer, so it has never run in anger") and GE-122e-2:68 ("it is currently
+    registered nowhere, so it will not fire today") — and demanded by no
+    requirement. That gap is a finding for the store, not a decomposition target for
+    this L1: this L1 owns whether a guard can refuse, not whether a guard is in the
+    set. It is recorded here so the next reader does not infer coverage from the
+    corrected sentence's silence, as the previous reader could infer it from the
+    false one.
 
   THE REGIME IS SPLIT ACROSS TWO GOALS, AND THE SPLIT IS A CAPACITY ARTIFACT.
     Four records of this regime were authored on 2026-09-01 under GE-126b and GE-126c

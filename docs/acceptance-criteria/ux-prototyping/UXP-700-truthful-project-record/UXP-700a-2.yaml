@@ -1,0 +1,73 @@
+id: UXP-700a-2
+title: "The record rebuilds itself from zero artifacts with no hand-written index"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a record whose artifact places exist and are empty and whose store index is absent,
+  When the record's generator runs,
+  Then a store index is written declaring zero artifacts, holding an empty entry for every
+    derived lookup it maintains,
+  And running the generator a second time with no artifact added writes nothing further,
+  And the record's checker then reaches a verdict against that index without any file having
+    been authored by hand.
+depends_on:
+  - UXP-700a
+  - UXP-700a-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700a.yaml"
+doc_links:
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "A zero-artifact store index that the checker in UXP-700b-1 evaluates."
+expects_from:
+  ac_id: UXP-700a-1
+  contract: "The empty artifact places the generator scans."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by:
+  - UXP-700a-2-i
+implemented_by: []
+change_target: code
+risk_surface: internal
+declares_side_effect: true
+test_required: true
+test_rationale: |
+  The observed workaround was a person rebuilding the derived index by hand before the checker
+  would run. The test therefore has to start from no index at all; a test that starts from the
+  repository's committed index proves nothing about the from-zero path.
+test_spec:
+  - name: test_generator_creates_index_from_zero_artifacts
+    target_dir: unit_tests/product_truth/
+    description: "Running the generator against empty artifact directories with no index present writes an index declaring zero artifacts."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_second_generator_run_on_empty_store_writes_nothing
+    target_dir: unit_tests/product_truth/
+    description: "A second run over the same empty store leaves every file unchanged."
+    type: integration
+    angle: criterion
+    framework: unittest
+notes: |
+  Derived from the same 2026-09-07 reproduction as UXP-700a-1-i: the empty store only reached a
+  verdict after the derived index had been rebuilt by hand. UXP-700a-1 makes the install lay an
+  index down; this AC makes the generator able to produce one from nothing, so a record that
+  loses its index, or was created before the install wrote one, is recoverable without hand
+  authoring.

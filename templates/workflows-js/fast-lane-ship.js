@@ -55,14 +55,33 @@ export const meta = {
 // JSON Schemas
 // ---------------------------------------------------------------------------
 
+// BO-2400f-13: worktree_path is no longer required — a refusal payload
+// (outcome: "refused") legitimately carries no worktree_path at all. The
+// Phase 1 guard below branches on `outcome === "opened"` and treats any
+// other value (a refusal, a missing/null outcome, an unparseable reply, or
+// the legacy blank-worktree_path shape) as a refusal by a plain-falsy,
+// fail-closed read.
 const WORKTREE_SCHEMA = {
   type: "object",
-  required: ["worktree_path"],
+  required: ["outcome"],
   properties: {
+    outcome: { type: "string", enum: ["opened", "refused"] },
     worktree_path: { type: "string" },
     branch: { type: "string" },
     ac_store_path: { type: "string" },
     created: { type: "boolean" },
+    base_commit: { type: "string" },
+    base_matches_origin_main: { type: "boolean" },
+    refusal: { type: "object" },
+  },
+};
+
+const WORKTREE_VERIFY_SCHEMA = {
+  type: "object",
+  required: ["worktree_path", "raw"],
+  properties: {
+    worktree_path: { type: "string" },
+    raw: { type: "string" },
   },
 };
 
@@ -593,12 +612,22 @@ const worktreeResult = await agent(
   `build worktree — do NOT ask for confirmation (creation is non-destructive).\n\n` +
   `Run this single Bash command from the repository root:\n` +
   `   python3 {{config.output_root}}/scripts/setup_ticket_worktree.py create-fastlane-worktree "${slug}"\n\n` +
-  `It fetches origin, creates a worktree on branch fast-lane/${slug} rooted at the ` +
-  `latest origin/main, bootstraps it, and prints a single JSON line with keys ` +
-  `worktree_path, branch, ac_store_path, created.\n\n` +
-  `Return that JSON verbatim as: ` +
-  `{ "worktree_path": "<abs path>", "branch": "fast-lane/${slug}", "ac_store_path": "<abs>", "created": <bool> }.\n` +
-  `If the command exits non-zero, return { "worktree_path": "", "message": "<stderr>" }.`,
+  `It decides FIRST whether the workspace for this AC is already occupied — ` +
+  `something already sits at the location this run would open, or the ` +
+  `fast-lane/${slug} branch is already checked out elsewhere. If so it prints ` +
+  `a REFUSAL and does nothing else: ` +
+  `{ "outcome": "refused", "branch": "fast-lane/${slug}", "refusal": { "reason": ..., ` +
+  `"ac_id": ..., "occupied_path": ..., "occupant": "own_prior_attempt"|"foreign", ` +
+  `"occupant_branch": ..., "uncommitted_changes": ..., "published": {...}, ` +
+  `"options": [...], "message": ... } } — return that JSON verbatim, with NO ` +
+  `worktree_path key at all (absent, not blank).\n\n` +
+  `Otherwise it fetches origin, creates or reconnects the worktree rooted at the ` +
+  `latest origin/main, bootstraps it, and prints ` +
+  `{ "outcome": "opened", "worktree_path": "<abs path>", "branch": "fast-lane/${slug}", ` +
+  `"ac_store_path": "<abs>", "created": <bool>, "base_commit": "<sha>", ` +
+  `"base_matches_origin_main": <bool> } — return that JSON verbatim.\n\n` +
+  `If the command exits non-zero for a reason OTHER than an occupancy refusal ` +
+  `(e.g. it crashed), return { "outcome": null, "message": "<stderr>" }.`,
   {
     agentType: "worktree-agent",
     schema: WORKTREE_SCHEMA,
@@ -607,18 +636,145 @@ const worktreeResult = await agent(
   }
 );
 
-if (!worktreeResult || !worktreeResult.worktree_path) {
+// BO-2400f-13: fail CLOSED, by a plain-falsy read. The run proceeds on an
+// explicit `outcome === "opened"`, OR on the PRE-BO-2400f-13 success shape
+// (the `outcome` key entirely ABSENT — not explicitly null — with a
+// non-blank `worktree_path`), preserved for backward compatibility with
+// callers that predate this discriminant. Every other shape — a
+// discriminated refusal, an EXPLICIT null/unparseable outcome (even with a
+// worktree_path present — the sharpest fail-closed case), an empty reply, or
+// the legacy `{"worktree_path": ""}` blank-but-present shape — takes the
+// refusing branch. This guard sits AHEAD of where the old
+// `!worktreeResult.worktree_path` check used to live, and is now the ONLY
+// thing that can end the run at this phase.
+const isPreDiscriminantOpenedShape =
+  !!worktreeResult &&
+  worktreeResult.outcome === undefined &&
+  typeof worktreeResult.worktree_path === "string" &&
+  worktreeResult.worktree_path.trim() !== "";
+
+if (!worktreeResult || (worktreeResult.outcome !== "opened" && !isPreDiscriminantOpenedShape)) {
+  const refusalBranch =
+    (worktreeResult && worktreeResult.branch) || `fast-lane/${slug}`;
+  const refusal = (worktreeResult && worktreeResult.refusal) || null;
+
+  if (worktreeResult && worktreeResult.outcome === "refused" && refusal) {
+    // A real, discriminated occupancy refusal — relay it verbatim. No claim
+    // was ever taken at this point (the refusal precedes Resolve and the
+    // claim step by two whole phases), so the release step is never reached.
+    return {
+      status: "refused",
+      message:
+        refusal.message ||
+        `The workspace for ${targetAc} is occupied and the run refused before any work began.`,
+      failing_phase: "worktree",
+      target_ac: targetAc,
+      branch: refusalBranch,
+      refusal,
+    };
+  }
+
+  // Fail-closed: an unreadable, missing, or legacy reply. Refuse rather than
+  // guess that the workspace is free.
   return {
-    status: "error",
+    status: "refused",
     message:
-      "Worktree phase failed — could not create the fast-lane worktree. " +
-      `Detail: ${JSON.stringify(worktreeResult)}`,
+      `Occupancy of the fast-lane workspace for ${targetAc} could not be ` +
+      `determined from the worktree phase's reply — refusing rather than ` +
+      `proceeding. Detail: ${JSON.stringify(worktreeResult)}`,
     failing_phase: "worktree",
+    target_ac: targetAc,
+    branch: refusalBranch,
   };
 }
 
-const worktreePath = worktreeResult.worktree_path;
+const claimedWorktreePath = worktreeResult.worktree_path;
 const branch = worktreeResult.branch || `fast-lane/${slug}`;
+// BO-2400f-13-iv: carried through to the operator so a green result is never
+// silently ambiguous about which mainline it was measured against.
+const workspaceCreated =
+  typeof worktreeResult.created === "boolean" ? worktreeResult.created : null;
+const baseCommit = worktreeResult.base_commit || null;
+const baseMatchesOriginMain =
+  typeof worktreeResult.base_matches_origin_main === "boolean"
+    ? worktreeResult.base_matches_origin_main
+    : null;
+
+// Remove the LLM from the trust path for worktree_path, exactly as the comment
+// below already does for ac_store_path. The worktree phase agent has been
+// observed to echo a fabricated path instead of create-fastlane-worktree's real
+// JSON: 2026-08-11 on BO-2400f (<worktree>/tickets/00_inbox), and again
+// 2026-09-07 on UXP-700d, where it returned <repo_root>/worktrees/<slug> while
+// git had actually placed the worktree at <workspace>/worktrees/<slug>.
+//
+// The location is NOT a fixed convention that could simply be recomputed here.
+// setup_ticket_worktree.py's _resolve_installed_layout() deliberately differs by
+// layout: in the dev layout worktrees_base is the workspace PARENT of the repo,
+// while in a consumer/installed layout it is the consumer project root. Deriving
+// a path here would therefore be correct in one layout and wrong in the other.
+// git is the only authority that knows where the worktree really is in both, so
+// ask git and require the answer to be quoted from its raw output.
+const worktreeVerify = await agent(
+  `Report where git says the fast-lane worktree actually is. Do NOT compute, ` +
+  `infer, guess or normalise a path — only quote what git prints.
+
+` +
+  `Run exactly this one command:
+` +
+  `   git worktree list --porcelain
+
+` +
+  `Find the record whose branch line is refs/heads/${branch}. Return:
+` +
+  `{ "worktree_path": "<that record's worktree line path, verbatim>", ` +
+  `"raw": "<that record's full porcelain text, verbatim>" }
+
+` +
+  `If no record matches that branch, return ` +
+  `{ "worktree_path": "", "raw": "<the command's full output, verbatim>" }.`,
+  {
+    agentType: "worktree-agent",
+    schema: WORKTREE_VERIFY_SCHEMA,
+    label: "fastlane-worktree-verify",
+    phase: "Worktree",
+  }
+);
+
+// Trust git over the agent, but only where git actually answered.
+//
+// Three states, deliberately distinguished:
+//   - git quoted a path      -> use it; it outranks the agent's claim.
+//   - git said nothing       -> fall back to the claim. An unanswered probe is
+//                               not evidence of fabrication, and halting the
+//                               lane every time one extra dispatch hiccups is a
+//                               worse failure mode than the bug this guards.
+//   - git answered, and the reported path is absent from its own raw output
+//                            -> HALT. That path was invented, not quoted, and
+//                               it is the exact failure seen on BO-2400f
+//                               (2026-08-11) and UXP-700d (2026-09-07).
+const gitReportedPath =
+  worktreeVerify && worktreeVerify.worktree_path ? worktreeVerify.worktree_path : "";
+const gitRaw = (worktreeVerify && worktreeVerify.raw) || "";
+
+if (gitReportedPath && !gitRaw.includes(gitReportedPath)) {
+  return {
+    status: "error",
+    message:
+      `The worktree location reported for branch ${branch} does not appear in ` +
+      `the git output it was supposedly read from, so it was composed rather ` +
+      `than quoted. Reported: "${gitReportedPath}". git worktree list ` +
+      `--porcelain returned: ${JSON.stringify(gitRaw)}. The worktree phase ` +
+      `separately claimed "${claimedWorktreePath}". Proceeding on an invented ` +
+      `path is what sent the resolver to a non-existent directory on BO-2400f ` +
+      `and UXP-700d.`,
+    failing_phase: "worktree",
+    claimed_worktree_path: claimedWorktreePath,
+    branch,
+    classification: "halt",
+  };
+}
+
+const worktreePath = gitReportedPath || claimedWorktreePath;
 // Derive the AC store root deterministically from the worktree path — do NOT
 // trust worktreeResult.ac_store_path. The store lives at a fixed convention
 // (<worktree>/docs/acceptance-criteria) inside every worktree cut from
@@ -714,6 +870,9 @@ if (acIds.length === 0) {
     ac_ids: [],
     nothing_to_build: true,
     structural_parent_excluded: structuralParentExcluded,
+    created: workspaceCreated,
+    base_commit: baseCommit,
+    base_matches_origin_main: baseMatchesOriginMain,
   };
 }
 
@@ -1534,4 +1693,7 @@ return {
   changelog_required: changelogRequired,
   changelog_entry_path:
     (changelogResult && changelogResult.entry_path) || null,
+  created: workspaceCreated,
+  base_commit: baseCommit,
+  base_matches_origin_main: baseMatchesOriginMain,
 };

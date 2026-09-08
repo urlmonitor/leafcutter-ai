@@ -1,0 +1,89 @@
+id: UXP-700c
+title: "You find out when the record and the product have drifted apart"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L1
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  The record tells you when it has fallen behind the product — you never discover it.
+
+  As the product changes, the written record stops matching it. When that
+  happens you are told, at the time it happens, in terms you can act on —
+  instead of finding out much later from a customer, a review, or a decision you
+  made on the strength of something that stopped being true months ago.
+depends_on:
+  - UXP-700
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-590.yaml
+    relationship: context
+    status: exists
+    relevance: "ADJACENT, NOT THE SAME. UXP-590 keeps the record internally consistent (flow, AC, index and back-reference agree with each other). This L1 is the record's agreement with the code it describes. Both can hold at once with the record uniformly wrong. Do not merge; do not move UXP-590."
+  - path: docs/product-truth/README.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by:
+  - UXP-700c-1
+  - UXP-700c-2
+  - UXP-700c-3
+  - UXP-700c-4
+  - UXP-700c-5
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  The "maintain" L1, restated as its failure mode: the record silently rots.
+
+  ROADMAP PHASE DELIBERATELY UNSET — a question for the user, not a default.
+  phase_1's outcome is "installs into any project ... reliable enough to use
+  across multiple repos", which (a), (b) and (d) serve directly. Continuous
+  freshness reads as later hardening: it only pays off in a project that has
+  been running long enough to drift. Left untagged rather than stamped phase_1.
+
+  SCOPE — four sub-surfaces the BA should expect to cover. Not a decomposition;
+  a checklist of what "drift" concretely means here.
+    1. CITATIONS. Whether what the record points at still exists and still says
+       what the record claims.
+    2. FRESHNESS. Whether the record was regenerated after the product changed,
+       as distinct from whether it is self-consistent (UXP-590's job).
+    3. UN-BACKSTOPPED CHECKS. The store checker is not wired into any automatic
+       gate — searched repo-wide 2026-09-07: referenced by ACs, agent cards,
+       ADRs and how-tos only; no .pre-commit-config.yaml entry, no CI step. A
+       check nobody runs cannot report drift. (Recorded on UXP-700b too; the BA
+       decides which L1 owns it, but exactly one must.)
+    4. HAND-WRITTEN INDEX FIELDS. See the measured evidence below.
+
+  MEASURED EVIDENCE (2026-09-07, this repo). All 14 of 14 flows carry a summary
+  in the index that differs from the summary in the flow file itself. The index
+  copies run 89-218 characters; the source summaries run 365-938. Examples:
+  how-acs-are-built 197 vs 938; author-product-truth 218 vs 731; checkout-and-pay
+  203 vs 748. No check covers those index fields at all. The pattern is
+  unmistakable: someone wrote short summaries by hand because the real ones were
+  too long to display. That is simultaneously evidence for this L1 (a hand-kept
+  field with no guard is a drift surface by construction) and for UXP-700e (the
+  real summaries had outgrown the place they were being read).
+
+  DO NOT CLAIM THE STORE IS DRIFTED ON MAIN. The checker does currently fail on
+  Windows with "by_flow does not match a fresh rebuild", and that is a PLATFORM
+  ARTIFACT, not drift: all 14 by_flow mismatches are path-separator-only
+  (generate_product_truth.py line 423 uses str(path.relative_to(STORE)), which
+  yields backslashes on Windows), with zero genuine content differences. That is
+  a separate portability defect and is NOT evidence for this L1. Anyone citing
+  it as drift is wrong, and the BA should not build an L2 around it here.

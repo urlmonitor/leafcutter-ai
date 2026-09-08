@@ -1,0 +1,66 @@
+id: UXP-700b-4
+title: "A reference for what each outcome of the record's checker licenses a reader to conclude"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - documentation_system
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a person reading the reference for the record's checker,
+  When they look up what an outcome means,
+  Then the reference lists every outcome the checker can report, including the outcome for a
+    run that examined nothing and the outcome for a run that was degraded by a bad input, and
+    states for each what the reader may conclude and what they may not,
+  And it states the rule that a sound verdict is reported only when every check that claims to
+    have passed read at least one record,
+  And it states, with the empty-record run as the worked example, how that rule differs from
+    the project's fail-open convention for a check that hit an internal error,
+  And it names the checks that are exempt from the rule, if any, and why - so a reader can tell
+    an exemption from an omission.
+depends_on:
+  - UXP-700b
+  - UXP-700b-1
+  - UXP-700b-2
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+    relevance: "Vocabulary to align with, not duplicate. GE-120 owns the same rule for the commit guards."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Existing reference-doc house style in this repository."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700b-1
+  contract: "The outcome vocabulary the reference documents."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+test_required: false
+test_rationale: |
+  The deliverable is prose describing an outcome vocabulary that its sibling ACs already pin
+  with executable tests. A test asserting the document mentions each outcome name would be
+  satisfied by a heading-only stub, which is precisely the vacuous check this L1 forbids;
+  documentation-verifier is the correct gate.
+notes: |
+  Produced because UXP-700b declares documentation_triggers: [reference-doc]. The fourth clause
+  was added because an undocumented exemption is how this rule will decay: a check exempted for
+  a good reason and a check nobody got round to look identical in a list.

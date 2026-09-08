@@ -37,13 +37,13 @@ doc_links:
   - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
     relationship: parent
     status: exists
-  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
     relationship: depends_on
     status: exists
     relevance: >-
       PRECONDITION, NOT SCOPE — INHERITED AND NOT RESTATED. Stating what was
       measured is worth nothing while nothing is measured at any commit; that
-      registration is BP-100n-4's day-one triage. Do not restate the census, its
+      registration is BP-1600a-2's day-one triage. Do not restate the census, its
       counts, or any part of it. Note also the pattern this record borrows from
       that criterion and should borrow only in shape: its decisive descriptor adds
       one item to a population and requires a stated number to move. The third
@@ -191,7 +191,7 @@ it_requirements:
     invisible to both. package_surface is therefore FALSE and the plain-list spec is correct;
     the one watched addition in this whole tree is the hooks_manifest id declared on GE-127a-1.
     Do NOT mint a config_schema_fragment key for `file_size` to clear the validator — it is a
-    real key and needs no fragment, and BP-100n-4-ii records what happened the last two times a
+    real key and needs no fragment, and BP-1600a-2-ii records what happened the last two times a
     fragment was authored for a key that did not exist.
   - >-
     ADDING A KIND ACTIVATES GE-127b-1's RATCHET OVER A POPULATION NEVER MEASURED AGAINST ANY

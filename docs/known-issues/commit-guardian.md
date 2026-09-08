@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-26
+last_updated: 2026-09-07
 components:
   - commit_guardian
 related_docs:
@@ -24,9 +24,27 @@ acceptance criterion for something nobody has decided to build yet.
 **Read it before adding new capability to this component.** Fixing what is already
 broken takes precedence over building more.
 
-**Adding an issue.** Append a new `### KI-CG-NNN` section using the next free number.
-Nothing here is generated — edit it by hand. Fill in what you actually know; an issue
-recorded with a thin `Evidence` line is far better than one not recorded.
+**Adding an issue.** Append a new `### KI-CG-YYYYMMDD-short-slug` section — the UTC date you
+filed it plus a few words naming the defect. Nothing here is generated — edit it by hand. Fill
+in what you actually know; an issue recorded with a thin `Evidence` line is far better than one
+not recorded.
+
+**Why a date-and-slug id and not the next free number.** Sequential ids collide whenever two
+sessions file at once, and this register is the reason the convention changed: on 2026-08-26
+two different defects both landed as `KI-CG-012`, and a changelog ended up describing
+`KI-CG-012` using what became `KI-CG-013`'s text. Renumbering is worse than it sounds — inbound
+references do not disambiguate, so a rename can silently repoint a citation at the wrong
+defect. Existing `KI-CG-NNN` entries keep their ids; **do not renumber them.**
+
+A few entries here use `KI-CG-YYYYMMDD-HHMM` instead. Both forms are collision-free and both
+sort and grep identically on the `KI-CG-` prefix; the slug form is written above because it is
+what the large majority of this register's entries already use. Do not renumber the timestamped
+ones to match — see `KI-KM-20260826-id-convention-diverged-across-registers`, which measured the
+inbound references that would break.
+
+This instruction was itself stale until 2026-09-07: it kept prescribing next-free-number for
+twelve days after the convention changed, in the very register whose collision prompted the
+change.
 
 **Hitting an existing issue.** Increment `Occurrences` and update `Last seen`. Do not
 add a duplicate entry. Occurrences is an escalator, not the score — a blocker seen once
@@ -2726,68 +2744,78 @@ nothing and reports success).
 
 ---
 
-### KI-CG-20260831-0713 — `check-hook-trigger-reachability` blocks EVERY commit in a consumer project that tracks no Python
+### KI-CG-20260831-0713 — PARTIALLY fixed by BP-100k-4-ii; the adopter still cannot commit, for a different reason
 
-- **Severity:** blocker
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
-- **Where:** `templates/scripts/commit_guardian/commit_guardian.json:1082-1093` (the gate's
-  own manifest entry), `templates/scripts/commit_guardian/check_hook_trigger_reachability.py`,
-  and `hook_trigger_reachability_exemption_registry` in the same config
+- **Severity:** blocker — unchanged. The reported symptom, "a consumer project cannot make a
+  commit at all", still reproduces.
+- **Status:** open. The kind-based half is fixed; the location-based half is not, and the
+  location-based half is the larger population.
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07
 
-**The defect.** The gate shipped by `BP-100k-4` is `always_run: true`, `pass_filenames: false`,
-and exits non-zero when any registered hook's `files` pattern matches no tracked path. It is
-rendered into every consumer's `.pre-commit-config.yaml` — `_render_hook_yaml` in
-`scripts/build_precommit.py` iterates the whole `hooks_manifest` with no tier filtering and no
-opt-out. Two registered hooks trigger on `files: '\.py$'`: `check-placeholder-defaults` and
-`check-exception-handling`. **A consumer project containing no Python therefore cannot make a
-commit at all.**
+**This entry was briefly marked CLOSED, and that was wrong.** The closure was written when
+`BP-100k-4-ii` landed and it is corrected here rather than quietly amended, because a
+blocker-severity entry reading CLOSED over a still-reproducing symptom is the exact failure
+this register exists to catch — one level up from the code.
 
-**Evidence — reproduced independently, twice, against the real registry.**
-Synthetic consumer repos, gate executed as a process with cwd inside the probe:
+**What BP-100k-4-ii genuinely fixed.** `evaluate_gate` now draws a could-ever/does-now
+distinction: a kind-based condition such as `files: '\.py$'`, matching zero tracked paths, is
+reported under a fourth verdict `NOTHING-TO-MATCH` and does not fail the run, while a
+condition naming a location no checkout could ever produce is still `UNREACHABLE` and still
+blocks. See `BP-100k-4-ii.yaml` and `unit_tests/commit_guardian/test_bp_100k_4_ii.py`,
+verified against a real `build.py`-deployed consumer tracking zero `.py` files. That work is
+sound and is not in question.
 
-| probe | result |
-|---|---|
-| Fresh TypeScript consumer (`src/index.ts`, `README.md`, `.gitignore`) | `exit 1` · `RESULT total=52 unreachable=27 exempt=9` |
-| **Fully-onboarded** consumer — adds `docs/*.md`, `docs/components.json`, `docs/roadmap.json`, `docs/acceptance-criteria/*.yaml`, `tickets/*.md`, `docs/product-truth/*.json` | **still `exit 1`** · `RESULT total=52 unreachable=2 exempt=9` |
-
-The onboarded residue is exactly the two language-shaped triggers:
+**Why the symptom survives it.** Only three registered conditions are kind-shaped. The rest
+are location-shaped, and a fresh consumer tracks almost none of those locations. Two
+independent measurements on 2026-09-07:
 
 ```
-UNREACHABLE: check-placeholder-defaults reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
-UNREACHABLE: check-exception-handling   reason=files pattern '\.py$' matches none of the 9 path(s) this repository tracks
+runtime, real deployed consumer tracking one placeholder file (pr-reviewer):
+  exit 1 · RESULT total=56 unreachable=28 exempt=6 nothing_to_match=7
+
+static, counted from commit_guardian.json hooks_manifest:
+  46 conditions carry a files pattern
+   3 kind-shaped (check-placeholder-defaults, check-mermaid-complexity, check-exception-handling)
+  43 location-shaped
+  35 location-shaped AND absent from hook_trigger_reachability_exemption_registry
 ```
 
-So this is not a not-yet-onboarded edge case. There is no amount of correct onboarding that
-clears it short of adding a `.py` file to the consumer's own tracked tree.
+The two numbers differ because the static 35 is an upper bound — some location patterns do
+match files a real install leaves tracked. 28 ≤ 35 is the expected relationship, and the
+agreement in shape is what makes the runtime figure trustworthy rather than a one-off.
 
-**Why the blast-radius sweep missed it.** `BP-100k-4`'s consumer-layout check was done — nine
-grounded exemptions exist and they are good ones — but every exemption reasons about a
-**path-shaped** pattern ("this path only exists inside the vendored package / the gitignored
-deploy mirror"). No one asked the different question a **language-shaped** pattern raises:
-*what if the consumer simply is not a Python project?* The package is self-hosted in Python, so
-`\.py$` always matches here, and the gate is green in the only repo it was exercised in.
+So `BP-100k-4-ii` moved 7 conditions out of the blocking set and left roughly 28 in it. The
+adopter's first commit still fails.
 
-Two further gates look like the same omission and have no exemption:
-`check-surface-components-e3` (targets `config/agent_registry.json` — the **same file**
-`check-agent-spawn-consistency` was exempted for) and `check-eval-staleness`.
+**The residual this entry previously named, restored.** The pre-closure text flagged
+`check-surface-components-e3` and `check-eval-staleness` as looking like the same omission
+with no exemption. Both were re-confirmed still `UNREACHABLE` on 2026-09-07. They are not
+special — they are two members of the ~28, and naming only them would understate the
+population. They are kept here because they were the two already identified by name and
+losing them was how this residual nearly went untracked.
 
-**Suggested fix (not applied).** Distinguish "this trigger is dead" from "this repository has
-none of that kind of file yet". A pattern that names a language or file family should be
-unreachable only when the repository *could* have such files. Options: extend the exemption
-vocabulary with a language-conditional ground; skip language-shaped triggers when the
-repository tracks zero files of that type; or make the gate advisory in consumer installs and
-blocking only in the package's own checkout. Whichever is chosen, add a consumer-layout probe
-that tracks **no** `.py` to the test suite — the existing consumer fixture has Python in it,
-which is why this passed.
+**Fix direction, and what NOT to do.** Do not extend the exemption registry to ~28 entries to
+make the number go to zero. An exemption is an audited statement that a specific condition
+legitimately cannot match here, and mass-adding them converts an audited list into a
+rubber stamp — the shape `BP-100k-4-i` was written to prevent. The real question is whether a
+location-based condition naming a path that a *consumer install does not create* is
+"unreachable" at all, or whether reachability must be evaluated against the layout the gate
+is running in rather than against the package's own. That is a design decision about the
+gate's frame of reference, and it wants an AC of its own rather than a patch.
 
-**Found by** an adversarial review of the shipped `ab9e91c41`, then independently reproduced
-before filing.
+**Related.** `BP-100k-4-ii` (the kind-based half, done). `BP-1600a-2` (the same gate's
+opposite defect — it walks only registered hooks, so an unregistered script is invisible;
+`todo`). `BP-900h-6-iii` (the consumer simulation must exercise a language-absent adopter, so
+this class is caught by CI rather than by hand).
 
-**Pattern:** the inverse of this register's usual M5 — not a gate that passes without checking,
-but a gate that **fails without a defect**. Same root cause though: the gate cannot tell
-"nothing to check" from "something is wrong".
+**Pattern:** a fix that is correct, well-tested, and closes the mechanism it names, mistaken
+for a fix that closes the *symptom* — because the symptom had two independent causes and only
+one was in scope.
+
+**Scope note — this closes only the too-strict half.** The check still walks only
+*registered* hooks, so a script the registry never mentions remains invisible to it
+(`BP-1600a-2` and its siblings, `todo` on `main` as of this fix). That is a distinct, still-open
+defect and is not resolved by this entry's closure.
 
 ---
 
@@ -3282,7 +3310,7 @@ require the key to be present — the same disk-versus-declaration comparison
 `KI-CG-20260831-hook-scripts-never-invoked` asks for one layer down. Both are the same
 omission: a check that reads the declaration and never the thing declared.
 
-**Not fixed here, deliberately.** Found while enriching `BP-100n-4-ii`, which was steered away
+**Not fixed here, deliberately.** Found while enriching `BP-1600a-2-ii`, which was steered away
 from copying the pattern and carries an `it_requirement` saying why. Repairing two approved,
 done records is a store-integrity change with its own blast radius and belongs in its own
 change rather than riding along with unrelated criteria.
@@ -3291,7 +3319,7 @@ change rather than riding along with unrelated criteria.
 described a real key, instead of copying it because a validator had passed it.
 
 **Related.** `KI-CG-20260831-hook-scripts-never-invoked` (the same declaration-versus-reality
-gap, one layer down). `BP-100n-4-ii` (the record that declined to repeat it). `BO-2000d` (the
+gap, one layer down). `BP-1600a-2-ii` (the record that declined to repeat it). `BO-2000d` (the
 thin-or-fictional-spec rule this violates).
 
 **Pattern:** a validator that checks a declaration is well-formed and never checks that what
@@ -3804,3 +3832,191 @@ concrete case where an unattended, unconfirmed commit did real damage, and the r
 human-gate reading of this rule is the one with evidence behind it.
 `docs/reference/false-green-mechanisms.md` — a guard that reports enforcement it does not
 perform.
+
+---
+
+### KI-CG-20260907-0745 — `enforce_commit_delegation` and `inline_work_guard` locate themselves by testing for the *directory* `.claude/hooks`, so a partial one shadows the real set and blocks every Bash, Edit and Write call
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** the generated `.claude/settings.json` — both `PreToolUse` entries (matchers `Bash` and `Edit|Write`). The defect is in the inline `bash -c` resolver they share, not in either Python hook.
+- **Reported by:** observed in the self-hosting workspace `C:\Users\Hendrik\Code\leafcutter` after a v7.0.194 build
+
+**Symptom.** Every Bash call, and every Edit/Write, made while the working directory sits inside a
+nested repo is rejected before it runs:
+
+```text
+PreToolUse:Bash hook error: ... can't open file
+'C:\Users\Hendrik\Code\leafcutter\leafcutter-ai\.claude\hooks\enforce_commit_delegation.py':
+[Errno 2] No such file or directory
+```
+
+`cd` cannot escape it. The hook fires *before* the command, resolving from the tool's persistent
+working directory, so the very command that would move out of the directory is itself blocked.
+
+**Mechanism.** Both hooks share one resolver, shipped verbatim in `.claude/settings.json`:
+
+```bash
+d="$PWD"; while [ ! -d "$d/.claude/hooks" ] && [ "$d" != "/" ]; do d="$(dirname "$d")"; done
+python "$d/.claude/hooks/enforce_commit_delegation.py"
+```
+
+The loop stops at the first ancestor that **contains a `.claude/hooks` directory**, then invokes a
+**specific script** inside it. A directory-existence test is standing in for a script-existence
+test. Any ancestor holding a *partial* `.claude/hooks` — one written by an older package version,
+or belonging to a different project — captures the walk, and every script that directory lacks
+becomes unreachable.
+
+The self-hosting layout produces exactly that shape. `build.py --target-dir <workspace>` writes
+the current hook set to `<workspace>/.claude/hooks/` (13 scripts here), while
+`<workspace>/leafcutter-ai/.claude/hooks/` retains whatever an earlier build left (6 here). The
+path is gitignored (`.gitignore:19`), so nothing surfaces the divergence. Any tool call made from
+inside `leafcutter-ai/` resolves to the 6-script directory and fails on the 7 it does not have.
+
+**Detection.** Walk the same path the hook walks, from the cwd where the call fails:
+
+```bash
+d="$PWD"; while [ ! -d "$d/.claude/hooks" ] && [ "$d" != "/" ]; do d="$(dirname "$d")"; done
+echo "resolved to: $d"; ls "$d/.claude/hooks" | wc -l
+```
+
+Compare against the repository root's own count. A smaller number at the nearer ancestor is the
+fault. The error text names the resolved path, which identifies the shadowing directory directly —
+that much is well behaved.
+
+**Impact observed, and why the severity is high.** Two subagent audits dispatched in one session
+ran to completion **with no shell at all** — both `ac-scanner` and `knowledge-query` require Bash —
+and returned findings reconstructed from `Read` probing alone. One of them drew two incorrect
+conclusions about which acceptance criteria covered which subject, inferred precisely because it
+could not grep. Neither agent could `cd` out of the trap, and neither surfaced the degradation
+until its final report. A guard that cannot find itself does not merely fail; it silently degrades
+every agent downstream of it, and the degradation looks like a completed audit.
+
+**Workaround.** Move the session working directory above the shadowing repo, or make the near
+directory complete:
+
+```bash
+cp <workspace>/.claude/hooks/*.py <nested-repo>/.claude/hooks/
+```
+
+Both are local repairs and neither survives the next build.
+
+**Fix direction.** Test for the script rather than the directory, so the walk continues past a
+partial one instead of stopping at it:
+
+```bash
+d="$PWD"; while [ ! -f "$d/.claude/hooks/enforce_commit_delegation.py" ] && [ "$d" != "/" ]; do d="$(dirname "$d")"; done
+```
+
+Independently, the hook should **fail open with a warning** when it cannot locate itself. A
+delegation guard that did not run is a missing guard; a delegation guard that blocks every tool
+call is a stopped workstation, and the second failure mode is worse than the first — especially
+for a subagent, which has no way to diagnose or repair it. Both `PreToolUse` entries carry the
+same inline walk, so a fix must touch both. This resolver is generated into every consumer's
+`settings.json`, so any adopter whose tree contains a nested repo with a partial `.claude/hooks`
+inherits it.
+
+**Related.** KI-CG-016 concerns the same hook but a different defect — it matches the phrase
+"commit" anywhere in the command string. This entry is about the resolver that decides *which
+copy* of the hook runs, not about what the hook does once it is running.
+
+---
+
+### KI-CG-20260907-ac-hooks-are-blind-to-renames-and-disagree-on-their-test-seam
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1 (found while performing an AC id migration; the defect is structural, not incidental)
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/scripts/commit_guardian/check_ac_schema.py:349`,
+  `check_ac_parent_covered_by.py:182`, `check_ac_limits.py:354` — the staged-file query each
+  performs, and the environment variable each accepts as its test seam
+
+**Two defects in one place. The first is the expensive one.**
+
+#### 1. Every AC hook is blind to a renamed file
+
+All three hooks discover their input with the same query:
+
+```
+git diff --cached --name-only --diff-filter=AM
+```
+
+`AM` selects **A**dded and **M**odified. Git classifies a rename as **R**, so a renamed file is
+in none of the three. Measured in a scratch repository, staging one rename of a file under
+`docs/acceptance-criteria/`:
+
+```
+$ git diff --cached --name-status
+R086    docs/acceptance-criteria/OLD-1.yaml    docs/acceptance-criteria/NEW-1.yaml
+
+$ git diff --cached --name-only --diff-filter=AM
+                      <- empty. The record is invisible to every AC hook.
+
+$ git diff --cached --name-only
+docs/acceptance-criteria/NEW-1.yaml        <- visible without the filter
+```
+
+**Why this is high and not medium.** Renaming is not an exotic operation in this store — it is
+what an *id migration* is, because a record's parent is derived from its id string, so moving a
+record between parents renames its file. The AC-tree-split procedure the repository documents
+and actively uses therefore produces exactly the change shape that no AC guard examines. A
+split can relocate a record into a parent that is already at its child cap, break a
+`covered_by` back-link, or introduce a dependency cycle, and `check_ac_limits`,
+`check_ac_parent_covered_by` and `check_ac_schema` will each exit 0 having been handed nothing.
+
+This is the family's signature failure re-appearing at the input stage rather than the logic
+stage. The hooks are correct; they are simply never given the file. Their silence is not a pass.
+
+Observed live: a migration of `BP-100n-4` (+ two children) into `BP-1600a-2` staged three
+renames alongside 42 ordinary edits. Git detected all three as renames at 92–94% similarity.
+The three moved records were checked only because the operator drove them through the
+environment seam by hand, having anticipated the gap. A normal commit would not have.
+
+#### 2. Four hooks, two seam names, and one with extra parsing
+
+The environment override used for testing is not consistent, so a control fed to the wrong hook
+is silently discarded:
+
+| hook | seam variable |
+|---|---|
+| `check_ac_schema.py` | `HOOK_TEST_STAGED_FILES` (`:324`) |
+| `check_ac_parent_covered_by.py` | `HOOK_TEST_FILES` |
+| `check_ac_circular_deps.py` | `HOOK_TEST_FILES` |
+| `check_ac_limits.py` | `HOOK_TEST_FILES`, split on **newlines only**, then filtered to paths containing `docs/acceptance-criteria` |
+
+An unrecognised variable is not an error. It falls through to the real `git diff --cached`,
+which for an unstaged edit yields no AC files, and the hook exits **0 having examined nothing**.
+`check_ac_schema.py` additionally reads `HOOK_TEST_FILES_MODIFIED` (`:706`) for its second
+phase, so that one file alone has two seams with different meanings.
+
+The practical consequence is that the obvious way to test a hook produces a confident false
+pass. During the migration above, three separate attempts to verify a hook were no-ops before
+the seam was read from source — including one invocation written specifically to *guard*
+against no-op verification, and a colon-joined control handed to `check_ac_limits`, which
+discards anything not newline-separated.
+
+**Remediation.**
+
+1. Change the staged-file query to include renames. `--diff-filter=AMR` with `--name-only`
+   reports the destination path, which is the one that needs checking. Verify by staging a
+   rename and confirming the hook names the new path — a passing run over an empty set is the
+   defect, not the proof.
+2. Extract the staged-file discovery into one shared helper the four hooks import, rather than
+   four copies of the same query. The rename gap exists four times because the query does.
+3. Converge on ONE seam variable name, and make an **unrecognised** `HOOK_TEST_*` variable a
+   hard error rather than a silent fall-through. A typo in a test seam must not read as a pass.
+4. When the census work under `BP-1600a-2` lands, the population it walks should come from the
+   same helper, so the two cannot drift.
+
+**Related.** `KI-CG-034` (a check that examined nothing exiting 0). The CLAUDE.md note under
+"AC-store commits — stage the parent alongside the child", which already records that these
+hooks see only the index and that several ignore `argv` — this entry adds that the index query
+itself omits a whole change class. `docs/reference/false-green-mechanisms.md` → M9 and the
+`unit_tests/README.md` §8 rule that a check which examined nothing must not look like a check
+that found nothing.
+
+**Pattern:** a guard whose logic is sound and whose *input query* silently excludes the exact
+operation the surrounding procedure tells you to perform.

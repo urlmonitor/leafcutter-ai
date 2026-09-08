@@ -1,0 +1,131 @@
+id: INF-400c-4-iv
+components:
+  - infrastructure
+  - knowledge_system
+title: "A declared sink that has not been written to yet is a no-work run, not a failure and not a reason to look elsewhere"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
+criteria: |
+  Given the declared knowledge-emission sink is created by its first write and
+    lives under a directory that version control excludes, so no clone of this
+    repository and no newly provisioned install has ever contained it,
+  And the routing step will be invoked at the end of every completed unit of
+    work once its trigger exists, including on trees where no agent has yet
+    emitted anything,
+  When the routing step runs and the declared sink is absent,
+  Then it reports zero records read and zero records outstanding,
+  And the outcome it reports, and the status it exits with, are the same
+    outcome and status it reports for a sink that exists and contains no
+    records — the no-work outcome, not an error,
+  And it creates neither the sink nor the directory holding it as a side
+    effect of finding them absent,
+  And it opens no other file in place of the absent one: run in a tree where
+    debugging/logs/agent_telemetry.jsonl holds 28 knowledge records and the
+    declared sink is absent, it still reports zero records read,
+  And it says which path it looked for, so a person reading the run's report
+    can tell an unemitted-to sink from a misconfigured one without guessing.
+depends_on: [INF-400c-4]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THIS IS THE STATE THE REPOINT CREATES, not a hypothetical. Today the reader's default names debugging/logs/knowledge_emissions.jsonl, which has never existed anywhere; after INF-400c-4-i moves the emitters, that file still does not exist until the first agent emits into it. INF-700a's caller will therefore meet an absent sink on its very first run in every tree. If that run returns an error status, whoever wires the caller will turn the wiring off, and the loop stays open for the same reason it has been open since June."
+  - "EXIT-CODE EQUALITY WITH THE EMPTY-SINK CASE is the testable form of 'the same outcome'. Assert equality against the empty-sink run rather than asserting == 0 on its own, so a future change to the empty case moves both together. This mirrors the equality INF-700c-2 asserts for the ineligible corpus."
+  - "MUST NOT CREATE THE SINK OR ITS PARENT. The reader is a reader. A mkdir-on-read turns a misconfigured path into a silently-created empty file, and the next run over the correct path then looks identical to the run over the wrong one."
+  - "NO WIDENING FALLBACK, restated because it is the tempting fix. An absent sink must not cause a search of the operational stream, of a sibling filename, or of a legacy path. INF-400c-4-iii forbids the reader touching the operational stream at all; this AC forbids absence being the trigger that makes it."
+  - "The path looked for must appear in the run's report on the absent-sink path specifically. A no-work outcome that does not name the path it checked is indistinguishable from a no-work outcome over the wrong path, which is exactly how the knowledge_emissions.jsonl / agent_telemetry.jsonl divergence survived three months."
+  - "Must handle errors gracefully per the project error handling policy — an absent file is not an error here, but an unreadable one (permissions, a directory in the file's place) still is, and must keep its existing distinct status."
+  - "EXACTLY WHAT CHANGES IN THE SHIPPED EXIT CODES — IT PO decision, reconciling this AC against the enumeration INF-700c-3 documents (0 clean, 1 sink unreadable, 2 state file corrupt, 3 unroutable records remain, 4 write or state-persist failure, outranking 3). ONE thing changes: the ABSENT case is split out of the exit-1 branch and joins the exit-0 no-work outcome. Today absent and unreadable are the same branch and both return 1; after this AC, absent returns whatever the empty-sink run returns and unreadable keeps 1."
+  - "WHAT MUST NOT CHANGE, stated so it is not collateral. Exit 1 keeps its number and narrows its meaning to a sink that EXISTS and cannot be read — permissions, a directory in its place, a decode failure. Exits 2, 3 and 4 keep their numbers and their meanings unchanged, and 4 keeps outranking 3. NO NEW EXIT CODE IS INTRODUCED. A dedicated code for the absent case (a hypothetical 5) recreates precisely the defect this AC closes: every caller would have to special-case it, and the first caller that forgets treats a fresh clone as a failure and gets the wiring switched off."
+  - "THE COLLAPSE IS AT THE STATUS LEVEL ONLY, NEVER IN THE DATA. Absent and empty must share an exit status and must remain distinguishable in the run's reported output — the report says the sink was absent and names the path it looked for. Collapsing them in the report too would make a misconfigured path indistinguishable from an unemitted-to one, which is the condition that let the knowledge_emissions/agent_telemetry divergence survive three months."
+  - "A DOCUMENTATION LINE FALLS OUT OF THIS AND MUST BE FOLLOWED THROUGH. INF-700c-3's it_requirements enumerate exit 1 as sink unreadable, which becomes imprecise the moment this lands. Notify INF-700c-3 and INF-700a-4 (both documentation-expert, both amending docs/architecture/agent_knowledge_system.md) so the reference reads sink present but unreadable. A code change that leaves the reference describing the old branch is half the fix."
+delivers_to:
+  agent: workflow-architect
+  contract: "A routing step that returns the no-work outcome, not an error, when its declared sink has never been written to — the precondition for INF-700a-1 wiring it into a completion path without that path reporting a failure on every fresh tree"
+expects_from:
+  ac_id: INF-400c-4
+  contract: "The single declared knowledge-emission sink path, which the reader resolves and reports even when nothing has been written to it"
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_absent_sink_exit_status_equals_the_empty_sink_exit_status
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python scripts/knowledge/harvest_learnings.py run through subprocess in two temp trees"
+    description: "Run the harvester CLI twice: once in a tree where the declared sink does not exist, once in a tree where it exists and is empty. Assert the two exit statuses are EQUAL to each other. The assertion must be equality between the two runs, not equality to the literal 0, so a future change to the empty case moves both together."
+  - name: test_absent_sink_reports_zero_read_and_zero_outstanding
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With the declared sink absent, assert the run reports zero records read and zero outstanding, and reports the no-work outcome rather than an error outcome."
+  - name: test_absent_sink_creates_neither_the_sink_nor_its_parent_directory
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Run in a temp tree containing no debugging/ directory at all; assert afterwards that debugging/, debugging/logs/ and the sink file all still do not exist. A reader that mkdirs on read turns a misconfigured path into a silently-created empty file."
+  - name: test_absent_sink_does_not_widen_into_the_operational_stream
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "In a tree where debugging/logs/agent_telemetry.jsonl holds 28 knowledge records and the declared sink is absent, assert the run still reports zero records read and writes to no destination file."
+  - name: test_absent_sink_report_names_the_path_it_looked_for
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Assert the reported output on the absent-sink path contains the resolved sink path, and that a run over a deliberately wrong path names that wrong path rather than the declared one, so the two runs are distinguishable from their reports alone."
+  - name: test_a_sink_that_exists_but_cannot_be_read_keeps_its_distinct_nonzero_status
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The must-not-change half. Create the sink and make it unreadable (mode 000, then separately a directory in its place); assert the run exits with the existing sink-unreadable status and that this status is NOT equal to the absent-sink status. Assert in the same test that a corrupt state file, retained unroutable records and a failed destination write still return their existing distinct statuses, so the absent-case change did not renumber anything."
+test_rationale: |
+  A direct unit test of a resolver function would pass while the CLI still
+  mapped absent to the error branch, so every descriptor runs the production
+  entry point through subprocess. The first and last tests are a pair and must
+  be read together: the first asserts absent and empty are equal, the last
+  asserts absent and unreadable are not, and the last also pins 2, 3 and 4
+  against silent renumbering. Asserting the first as status == 0 rather than as
+  equality with the empty run would let the empty case drift away later without
+  any test going red, which is the drift mode this AC exists to prevent one
+  level down.
+notes: |
+  Authored 2026-09-07 to fill the hole INF-400c-4-ii's withdrawal left at this
+  position. The withdrawn AC asked what happens to the records already in the
+  operational stream when the sink is repointed; the answer, settled by
+  INF-700c-2, is nothing. The question that remains unanswered is what happens
+  on the other side of the repoint: the declared sink is empty and absent, and
+  something is about to start running against it on every completed unit of
+  work.
+
+  Boundary. INF-700c-1-i owns a line in the sink that cannot be parsed.
+  INF-700c-1 owns a record with no learning in it. This AC owns the sink not
+  being there at all, which is a different condition with a different correct
+  answer, and is the condition every fresh clone starts in.
+change_target: code
+risk_surface: contract_boundary

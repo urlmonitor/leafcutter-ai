@@ -1,0 +1,73 @@
+id: UXP-700a-3
+title: "A newly installed record carries none of another project's content"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - build_pipeline
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the tooling is installed into a project that has never used it,
+  When the artifacts in that project's record are enumerated,
+  Then the count is zero for every artifact type,
+  And no artifact belonging to the tooling's own example product, and no artifact belonging to
+    the tooling's own project record, is present in the installed project,
+  And the example product remains obtainable by asking for it by name, so a person who wants to
+    see a worked example can still get one without it having arrived by default.
+depends_on:
+  - UXP-700a
+  - UXP-700a-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700a.yaml"
+doc_links:
+  - path: docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+    relationship: context
+    status: exists
+    relevance: "Constraint. The example content must remain obtainable; this AC forbids it arriving by default, not its existence."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-700a-1
+  contract: "The installed record whose contents this counts."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  A test that asserts specific example artifact names are absent is satisfiable by renaming
+  them. The load-bearing assertion is the total count being zero, which no renaming can
+  satisfy, paired with an assertion that the example product is still reachable on request so
+  the requirement is not discharged by deleting it.
+test_spec:
+  - name: test_fresh_install_record_holds_zero_artifacts_of_every_type
+    target_dir: unit_tests/product_truth/
+    description: "Enumerating the installed project's record returns zero journeys, zero example datasets and zero screens."
+    type: integration
+    angle: real_artifact
+    framework: unittest
+  - name: test_example_product_is_still_obtainable_on_explicit_request
+    target_dir: unit_tests/product_truth/
+    description: "Asking for the example product by name returns its artifacts, so the separation is not achieved by deletion."
+    type: integration
+    angle: criterion
+    framework: unittest
+notes: |
+  BOUNDARY WITH UXP-700d. This AC is about what the INSTALL writes into a consumer project.
+  UXP-700d is about how the example content is kept apart from a project's own record and its
+  own work queue INSIDE a store that holds both. They are different failures closed by
+  different code: this one by the deploy manifest, that one by the store's structure.

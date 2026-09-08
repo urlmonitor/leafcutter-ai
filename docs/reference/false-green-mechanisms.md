@@ -433,7 +433,7 @@ forbids and confirming the test goes red.
 same declaration-versus-reality gap one layer up — a schema validated for shape, never for
 whether the key it names exists.
 
-**Scheduled work.** `BP-100n-4` enumerates this failure class mechanically across the
+**Scheduled work.** `BP-1600a-2` enumerates this failure class mechanically across the
 commit-guardian surface. `GE-126b-5`, `GE-126c-5`, and `BP-100n-5` are the acceptance criteria
 authored against this catalogue entry; a `GE-120f` AC extending the same coverage is
 forthcoming.
@@ -468,6 +468,6 @@ forthcoming.
   `scripts/build_referential_integrity.py` (`compute_intra_package_closure`,
   `find_uncovered_closure_dependencies`) and `scripts/build.py`
   (`_check_intra_package_closure_guard`) are the implementation.
-- `BP-100n-4` — mechanical enumeration of the M9 failure class across commit-guardian;
+- `BP-1600a-2` — mechanical enumeration of the M9 failure class across commit-guardian;
   `GE-126b-5`, `GE-126c-5`, `BP-100n-5` — acceptance criteria authored against this entry
   (a `GE-120f` AC is forthcoming).

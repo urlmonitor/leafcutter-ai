@@ -476,5 +476,90 @@ class TestTestWriterSchemaNullableReason(unittest.TestCase):
         )
 
 
+class TestWorktreePathIsConfirmedFromGit(unittest.TestCase):
+    """The worktree location must be read off git, never off the LLM's claim.
+
+    The worktree phase is an LLM agent. It has twice returned a path it composed
+    rather than the one create-fastlane-worktree printed: 2026-08-11 on BO-2400f
+    (<worktree>/tickets/00_inbox) and 2026-09-07 on UXP-700d, where it reported
+    <repo_root>/worktrees/<slug> while git had placed the worktree at
+    <workspace>/worktrees/<slug>. The resolver then ran against a directory that
+    did not exist and the whole lane halted.
+
+    Recomputing the path in the workflow would not fix it and would break
+    consumers. setup_ticket_worktree.py's _resolve_installed_layout() puts
+    worktrees under the workspace PARENT in the dev layout and under the consumer
+    project root in an installed layout, so any single hardcoded convention is
+    wrong in one of the two. git knows the real location in both.
+    """
+
+    def setUp(self) -> None:
+        content = _read(_WORKFLOW_PATH)
+        self.assertIsNotNone(content, f"{_WORKFLOW_PATH} does not exist.")
+        self.content = content or ""
+
+    def test_workflow_asks_git_where_the_worktree_is(self) -> None:
+        self.assertIn(
+            "git worktree list --porcelain",
+            self.content,
+            "The workflow must ask git for the worktree location rather than "
+            "trusting the phase agent's reported path.",
+        )
+
+    def test_reported_path_is_not_used_without_confirmation(self) -> None:
+        self.assertNotIn(
+            "const worktreePath = worktreeResult.worktree_path;",
+            self.content,
+            "worktreeResult.worktree_path is the LLM's claim and must not be "
+            "assigned straight to worktreePath — it has been fabricated twice.",
+        )
+
+    def test_the_path_must_be_quoted_from_the_raw_git_output(self) -> None:
+        self.assertRegex(
+            self.content,
+            r"gitRaw\s*\.\s*includes\s*\(\s*gitReportedPath\s*\)",
+            "The confirmed path must be checked for presence in the raw git "
+            "output it was supposedly read from. A path absent from that output "
+            "was invented rather than quoted, which is the one failure mode this "
+            "step exists to catch.",
+        )
+
+    def test_an_unconfirmed_path_halts_instead_of_proceeding(self) -> None:
+        self.assertIn(
+            "does not appear in",
+            self.content,
+            "A path git did not actually print must halt with a message naming "
+            "both the reported path and git's raw output. That path was composed "
+            "rather than quoted, which is what sent the resolver to a "
+            "non-existent directory.",
+        )
+
+    def test_silence_from_git_falls_back_rather_than_halting(self) -> None:
+        """An unanswered probe is not evidence of fabrication.
+
+        The first version of this guard halted whenever the verification
+        dispatch returned nothing. That made the whole lane unrunnable any time
+        one extra agent call hiccupped -- a worse failure mode than the bug it
+        prevents, and it broke every fixture that walks this workflow without
+        stubbing the new label. Only a positive contradiction halts now.
+        """
+        self.assertRegex(
+            self.content,
+            r"gitReportedPath\s*\|\|\s*claimedWorktreePath",
+            "With no answer from git the workflow must fall back to the phase "
+            "agent's claim, leaving it no worse off than before this guard "
+            "existed, rather than refusing to run at all.",
+        )
+
+    def test_no_hardcoded_worktrees_convention_is_assumed(self) -> None:
+        self.assertNotRegex(
+            self.content,
+            r"repoRoot\s*\+\s*[\"']/worktrees/",
+            "Deriving <repo_root>/worktrees/<slug> is correct in the dev layout "
+            "and wrong in a consumer installation, where worktrees_base is the "
+            "consumer project root. The location must come from git.",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

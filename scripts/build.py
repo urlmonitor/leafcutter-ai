@@ -57,6 +57,7 @@ from build_phases import (
     clean_stale_artifacts,
     build_workflow_tools,
     build_knowledge_scripts,
+    build_knowledge_sink_declaration,
     build_build_orchestration_scripts,
     build_agent_support_scripts,
     AGENT_SUPPORT_SCRIPT_DIRS,
@@ -748,11 +749,25 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         "skill_registry.json",
         "guardrail_gates.yaml",
         "paths.json",
+        # config/reachability_exemptions.yaml: read by both
+        # scripts/commit_guardian/_reachability_inventory.py (the shared
+        # BO-2900d seam) and scripts/commit_guardian/check_done_proof.py.
+        # Deployed write-if-absent by build_config_scaffolds (a generated
+        # scaffold, not a byte copy of this package's own self-hosted
+        # copy -- same relationship docs/roadmap.json has to build_roadmap
+        # just below), so this manifest never registered it and the widened
+        # closure guard correctly aborted the build once it started
+        # resolving _reachability_inventory.py's import of this file
+        # (BO-2900d-1/-2 fast-lane build, 2026-09-07).
+        "reachability_exemptions.yaml",
         # Deployed by build_ac_store's own block (added with TKT-600b), but
         # never DECLARED here -- so Set B did not contain it and the widened
         # closure correctly aborted the build once ac_coverage_resolver.py and
         # generate_ticket_from_ac.py were seen to read it. Shipping a file and
         # declaring it are two different acts; this guard checks the second.
+        # KEEP THIS ENTRY LAST: unit_tests/test_bp_900g_8_ii.py's
+        # _CORE_CONFIG_TUPLE_ANCHOR text-matches this tuple's closing
+        # '"phase_deferral.yaml",\n    ):' shape in both copies below.
         "phase_deferral.yaml",
     ):
         if (package_root / "config" / core_config_name).is_file():
@@ -957,11 +972,18 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
         "skill_registry.json",
         "guardrail_gates.yaml",
         "paths.json",
+        # config/reachability_exemptions.yaml: mirrors the matching block in
+        # _get_source_deployable_scripts just above -- see that block's
+        # DECISION note.
+        "reachability_exemptions.yaml",
         # Deployed by build_ac_store's own block (added with TKT-600b), but
         # never DECLARED here -- so Set B did not contain it and the widened
         # closure correctly aborted the build once ac_coverage_resolver.py and
         # generate_ticket_from_ac.py were seen to read it. Shipping a file and
         # declaring it are two different acts; this guard checks the second.
+        # KEEP THIS ENTRY LAST: unit_tests/test_bp_900g_8_ii.py's
+        # _CORE_CONFIG_TUPLE_ANCHOR text-matches this tuple's closing
+        # '"phase_deferral.yaml",\n    ):' shape in both copies of it.
         "phase_deferral.yaml",
     ):
         if (package_root / "config" / core_config_name).is_file():
@@ -1258,6 +1280,8 @@ _CONFIG_FILE_PHASE_BY_NAME: dict[str, str] = {
     "paths.json": "build_ac_store",
     "phase_deferral.yaml": "build_ac_store",
     "feedback_categories.yaml": "build_feedback",
+    "knowledge_sink.json": "build_knowledge_sink_declaration",
+    "reachability_exemptions.yaml": "build_config_scaffolds",
 }
 _DOCS_FILE_PHASE_BY_NAME: dict[str, str] = {
     "components.json": "build_components_registry",
@@ -1725,6 +1749,7 @@ def _run_phases(
         ("Sync platforms", build_sync_platforms),
         ("Workflow tools", build_workflow_tools),
         ("Knowledge scripts", build_knowledge_scripts),
+        ("Knowledge sink declaration", build_knowledge_sink_declaration),
         ("Build orchestration scripts", build_build_orchestration_scripts),
         ("Agent support scripts", build_agent_support_scripts),
         ("Template standalone scripts", build_template_standalone_scripts),
@@ -2266,12 +2291,27 @@ def main(argv: list[str] | None = None) -> int:
 
     print()
     _heading("Build manifest")
-    write_build_manifest(
+    manifest_error = write_build_manifest(
         package_root,
         dry_run=args.dry_run,
         target_root=target_root,
         config=config,
     )
+    # BP-1500d-3: the record of what this build put into target_root is the
+    # output_mappings section of .build_manifest.json. When it could not be
+    # produced, write_build_manifest() returns the non-empty error instead of
+    # only warning -- this is the load-bearing enforcement point: the exit
+    # status must be a function of whether the record was producible, not
+    # just the printed message (a build that only warns here leaves every
+    # automated caller believing the install is protected when it is not).
+    if manifest_error:
+        _error(
+            "Build manifest record (output_mappings) could not be produced "
+            f"for target project {target_root}: {manifest_error}. This "
+            "install has no verifiable output_mappings record, so the build "
+            "has failed rather than reporting success with a missing record."
+        )
+        return 1
 
     # Write .leafcutter.lock so the halt-guard knows the build baseline
     if not args.dry_run:
@@ -2518,4 +2558,10 @@ if __name__ == "__main__":
 #   previously-undiscovered instance: validate_ac_schema.py's missing
 #   _ac_components.py -- concrete evidence the mechanism is derived rather than
 #   an enumeration of the one known case. (#BP-900g-8)
+# - 2026-09-07 [python-coder]: Registered the new build_knowledge_sink_declaration
+#   internal phase (declares the build-time knowledge-emission sink absolute
+#   path -- see build_phases.py for the phase itself) right after "Knowledge
+#   scripts" in _run_phases, and added its config file name to
+#   _CONFIG_FILE_PHASE_BY_NAME for the existing diagnostic remediation-hint map.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
 # ====================================================================

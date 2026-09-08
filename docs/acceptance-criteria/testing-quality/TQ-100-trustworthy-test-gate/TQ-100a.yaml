@@ -30,6 +30,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - TQ-100a-1
+  - TQ-100a-2
 implemented_by: []
 change_target:
   - config

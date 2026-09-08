@@ -253,9 +253,50 @@ is also easy to mistake for another author's work. Restore with
 > occurrence of the same shape; see KI-BP-018. Unblock adopters that way if you must, but
 > the entry closes with BP-900g-8.
 
-- **Severity:** blocker.
-- **Status:** **OPEN. Reopened 2026-09-01 — the 2026-08-31 closure was wrong, and the way
-  it was wrong is the more useful half of this entry.**
+- **Severity:** was blocker.
+- **Status:** **RESOLVED 2026-09-07 — and this time the evidence is a run, not a reading.**
+
+  > Fixed by two merged changes, deliberately split because they fail independently:
+  > **PR #694** (`078b862b`) widened the deployed-dependency closure so a non-code file a
+  > deployed script READS is a dependency on the same terms as a module it imports, and
+  > **PR #708** (`0b765b3c`) added the consumer-simulation inspection that proves, in a
+  > real adopter-layout install, that the declaring files actually arrived.
+  >
+  > **The evidence, stated as commands and outputs rather than as a conclusion** — because
+  > the previous closure of this entry argued from source and was wrong:
+  >
+  > - A clean `python scripts/build.py --target-dir /tmp/<scratch>` exits 0 and
+  >   `.leafcutter/config/` now contains `doc_types.json` alongside `diagram_types.json`,
+  >   `skill_registry.json`, `agent_registry.json`, `guardrail_gates.yaml`, `paths.json`,
+  >   `phase_deferral.yaml` and `ac_store_schema.json`. Before this it held three files.
+  > - `env -u PYTHONPATH python <scratch>/.leafcutter/scripts/commit_guardian/check_doc_frontmatter.py <doc>.md`
+  >   runs clean. That is the adopter's exact reproduction, executed from the deployed
+  >   tree, and it no longer raises `FileNotFoundError`.
+  > - CI on both PRs is green, including `Consumer install simulation (BP-900h-1)`.
+  >
+  > **What the fix was NOT.** Deploying `doc_types.json` alone would have closed the
+  > symptom and left the mechanism — that is what this entry warned against for four
+  > occurrences. The closure guard is now derived: it reads what deployed guardrails
+  > actually read. Turning it on surfaced five further undeclared dependencies nobody had
+  > noticed — `config/diagram_types.json`, `config/skill_registry.json` (present in source,
+  > deployed nowhere), `docs/components.json`, `docs/roadmap.json`, and
+  > `config/phase_deferral.yaml` (deployed by TKT-600b but never declared). Each was fixed,
+  > none by hand-listing.
+  >
+  > **A defect it caught on contact.** Merging `origin/main` into the fix branch made the
+  > build abort on `config/phase_deferral.yaml` — shipped but undeclared. The guard found
+  > a real gap in main the first time it met one, which is the behaviour this entry has
+  > wanted since 2026-08-18.
+  >
+  > **Residual, so this closure is not read as wider than it is.** A clean build emits
+  > ~409 `unresolvable data-file read` warnings. Those are the guard's blind spots made
+  > visible, which the AC requires — but each is a dependency static analysis cannot see.
+  > `submit_feedback.py` reaching `config/feedback_categories.yaml` through
+  > `_find_config_root()` is the same shape as the defect fixed here and remains
+  > underivable. Tracked as `KI-BP-20260907-1120` and `KI-BP-20260907-1125` below, not
+  > folded into this closure.
+  > `diagram_type_validators`'s silent fallback to a built-in constant (KI-CG-002) is also
+  > untouched: shipping the file fixes the symptom, not the silence.
 
   > **THE FALSE CLOSURE, recorded rather than deleted.** From 2026-08-31 to 2026-09-01 this
   > entry read `RESOLVED — verified 2026-08-31`. The closure argued that
@@ -3869,3 +3910,369 @@ keeps recording in other forms.
 **Pattern:** a derivation keyed to one register of language, applied to text that a different
 written convention requires be phrased in another — so the correct answer is unreachable and
 the disagreement is attributed to the author.
+
+---
+
+### KI-BP-20260907-0940 — There is no orphan sweep, and the step called "Stale file cleanup" says "no stale files found" while one sits in the tree
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build.py:1844` (`_cleanup_stale_paths`) and its fixed input list
+  `_PRE_CONSOLIDATION_PATHS` at `scripts/build.py:1769`
+
+**A deployed file whose source template no longer exists is never removed, and never
+reported.** `build.py` prints a `Stale file cleanup` heading and, on a tree containing an
+orphan, printed `(no stale files found)`. That reads as "I looked and the tree is clean".
+It is not what happened.
+
+`_cleanup_stale_paths` iterates `_PRE_CONSOLIDATION_PATHS` — a hardcoded list of **eleven**
+paths (`.claude/agents`, `.claude/skills`, `.claude/commands`, `.claude/hooks`,
+`.claude/settings.json`, `.pre-commit-config.yaml`, `.gemini`, `scripts/commit_guardian`,
+`scripts/doc_compliance`, `scripts/feedback`, `scripts/sync_platforms`). It is a **one-time
+migration helper** for a historical layout change, not a sweep. Nothing in the build compares
+the deployed tree against the set of files the build can currently produce, so an output
+whose template was deleted survives every subsequent build indefinitely.
+
+**Observed.** A worktree created by the fast-lane workflow carried
+`.leafcutter/workflows/fast-lane-build.js`, for which no template exists on `main` —
+`templates/workflows-js/` holds eight files and that is not one of them. A worktree I created
+myself minutes earlier from the same ref had eight deployed workflows; the fast-lane-created
+one had nine. `build.py --force` reported `(no stale files found)` against it. The orphan was
+caught only by `check-output-drift` at commit time, which refused the commit with
+`GAP .claude/workflows/fast-lane-build.js action=run build.py to register it` — advice that
+cannot work, because running `build.py` is exactly what does not remove it.
+
+**Why it matters beyond tidiness.** A stale deployed script is executable and reachable. A
+consumer install that once shipped a command keeps shipping it after the package drops it,
+and an agent or workflow that resolves by name can bind to the dead copy — the shape already
+recorded in `project_workflow_name_cache_stale` (a by-name workflow invocation running a
+stale session-cached script). It also means `check-output-drift` is doing the build's job at
+a later, more expensive point: the failure surfaces as a blocked commit rather than a build
+that cleaned up after itself.
+
+**Fix direction.** Derive the removable set rather than extending the list — the same
+correction `BP-900g-8-ii` just applied to the deploy side. The build already computes what it
+produces (`.build_manifest.json` carries 174 template + 481 output_mappings entries); a
+deployed path under the output root that is in neither, and is not a shim symlink, is an
+orphan. Report every one and remove or explicitly retain it. Keep `_PRE_CONSOLIDATION_PATHS`
+as the migration list it is, and stop calling the step "stale file cleanup" while it only
+covers eleven historical paths — the name is what made the message trustworthy.
+
+**Trap.** Do not simply add `workflows/` to the hardcoded list. That fixes the instance and
+leaves the mechanism, which is the failure `KI-BP-018` records for this exact class and which
+this register has now watched play out five times on the deploy side before it was fixed
+properly.
+
+**Pattern:** a maintenance step whose name promises a sweep and whose implementation is a
+fixed migration list — so its clean report is indistinguishable from a clean tree. Same shape
+as the bare-directory AC validator and the stale-ref merge audit recorded in `CLAUDE.md`: a
+check that examined nothing must not look like a check that found nothing.
+
+---
+
+### KI-BP-20260907-1120 — 409 reads the closure guard cannot resolve statically, none of them triaged, each one a potential KI-BP-003
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build_referential_integrity.py` (the data-read detectors added by
+  BP-900g-8-ii), surfaced on every `build.py` run
+
+BP-900g-8-ii widened the deployed-dependency closure to see non-code reads, and correctly
+reports what it **cannot** resolve rather than dropping it — a closure that silently omits
+what it could not derive is indistinguishable from one that found nothing to complain about.
+A clean build emits about **409** such `unresolvable data-file read` lines.
+
+**That disclosure is the AC working. The 409 unexamined entries behind it are the issue.**
+Each is a call site where a deployed script reads a path static analysis could not reduce, so
+each is a place where the guard cannot tell whether the file ships. That is precisely the
+condition that hid KI-BP-003 through five occurrences and an adopter-blocking failure.
+
+**One is already named and is the same shape.** `submit_feedback.py` reaches
+`config/feedback_categories.yaml` through an indirected `_find_config_root()` walk — an
+ancestor walk resolved at runtime, exactly like the `doc_types.json` reader whose declaring
+file turned out never to be deployed. It sits adjacent to the already-open KI-BP-017 (feedback
+scripts not provisioned into a worktree), which suggests the pair has a common cause worth
+establishing before either is fixed.
+
+**Nothing enumerates or triages the set.** There is no list, no owner, and no way to tell a
+resolved-and-fine read from a not-yet-looked-at one. The AC required the underivable set be
+*visible*; visibility without triage is where this stops.
+
+**Fix direction.** Produce the inventory as data rather than as log lines — path, reading
+script, why it could not be resolved — then triage each into: genuinely external (exclude
+with a reason), resolvable with a better detector (extend the derivation), or a real
+undeclared dependency (deploy it). Expect the third bucket to be non-empty; KI-BP-003 was in
+it. Do this before adding detectors, so the detector work is aimed at measured cases rather
+than guessed ones.
+
+**Pattern:** a guard that correctly reports its own blind spots, in a form nobody can act on
+— so the disclosure discharges the obligation without reducing the risk.
+
+---
+
+### KI-BP-20260907-1125 — a warning that fires 409 times on a green build is not a warning, and the 410th is the one that matters
+
+- **Severity:** medium — and the more dangerous half of the pair above
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build_referential_integrity.py:1207` (per-read WARNING), with the
+  author's own measurement at `:1183-1191`
+
+The unresolvable-read disclosure logs **one WARNING per call site, per build, unaggregated**.
+On a clean, fully-green build that is ~409 lines of warning output. A signal at that volume
+is not a signal — it is texture, and the operator learns to scroll past the block. The next
+genuinely new unresolvable read appears as line 410 of an already-ignored wall.
+
+**The volume was known and traded away deliberately**, which is why this is filed as its own
+entry rather than as a grumble. The code comment at `:1183-1191` records that the author
+measured "400+ warnings ... none of which named an actual intra-package dependency" and
+shipped anyway, because the AC required underivable reads to be disclosed rather than
+dropped. That was the right call against the AC as written; it leaves the disclosure
+technically satisfied and practically inert.
+
+**Fix direction.** Aggregate: one RESULT line carrying the count, the full list behind a flag
+or an artifact file, and a **ratchet** so the number can only fall — a build that increases it
+says so loudly. That converts a constant into a trend, which is the only form in which this
+information can be acted on. It also makes the triage in `KI-BP-20260907-1120` measurable
+instead of open-ended.
+
+**Do not fix this by lowering the log level or dropping the reads.** The disclosure exists
+because BP-900g-8-ii forbids silently omitting what the derivation could not resolve, and
+demoting it to DEBUG is that omission wearing a different hat.
+
+**Pattern:** a correct disclosure emitted at a volume that guarantees it is unread — noise
+generated by a guard, which is worse than noise generated by nothing, because it trains the
+operator to ignore the one channel that will eventually carry a real finding.
+
+---
+
+### KI-BP-20260907-0722 — The pre-consolidation migration deletes a consumer's root `.pre-commit-config.yaml` without migrating its project-local hooks, and reports the deletion as success
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build.py:1586-1592` (`_PRE_CONSOLIDATION_PATHS`), `:1661-1690` (`_cleanup_stale_paths`), called unconditionally at `:2101` · `scripts/build_precommit.py:346` (`output_path`), `:348` (`_strip_package_managed_blocks`), `:363-365` (the early return)
+- **Reported by:** observed during a v7.0.194 build into the self-hosting workspace `C:\Users\Hendrik\Code\leafcutter`; consequence confirmed by inspection against the adopter repo `bybit-trader` (pin `v0.0.3-653-g7b016df1`)
+
+**Symptom.** A build removes the consumer's repo-root `.pre-commit-config.yaml` and reports it
+with a green checkmark:
+
+```text
+Stale file cleanup:
+  ✓ removed stale: .pre-commit-config.yaml
+...
+Shim install:
+  shim: .pre-commit-config.yaml -> pre-commit-config.yaml (copy (symlink failed))
+```
+
+The shim step then recreates the root path as a copy of (or symlink to)
+`<output_root>/pre-commit-config.yaml`. For a consumer whose root file carried project-local
+hooks the package does not ship, those hooks are gone, and nothing in the output names the
+loss.
+
+**Mechanism.** Three facts compose:
+
+1. `.pre-commit-config.yaml` is listed in `_PRE_CONSOLIDATION_PATHS` (`build.py:1592`), the
+   legacy-location migration list. `_cleanup_stale_paths` (`:1661`) unlinks any entry that is a
+   real file rather than a symlink into `output_root` (`:1685`), then prints
+   `_success(f"removed stale: {rel_path}")` (`:1688`).
+2. The merge logic that exists precisely to preserve project-local hooks —
+   `_strip_package_managed_blocks` (`build_precommit.py:348`) — reads
+   `output_path = target_root / "pre-commit-config.yaml"` (`:346`). `build_precommit_config` is
+   registered as an *artifact* phase, so it is invoked with `output_root`, i.e. `.leafcutter/`.
+   **It never reads the repo-root file.** The migration deletes the file; the stripper that
+   would have rescued its contents is pointed somewhere else.
+3. If `<output_root>/pre-commit-config.yaml` already exists and `force` is false,
+   `build_precommit_config` returns 0 without writing (`:363-365`). A consumer that last built
+   months ago therefore keeps a stale package config, and this run leaves it stale.
+
+So the migration is a delete, not a migration. The word "pre-consolidation" describes where the
+file used to live; nothing carries its content forward.
+
+**Detection.** After any build, compare registered hook ids across the deletion:
+
+```bash
+git show HEAD:.pre-commit-config.yaml | grep -c "^ *- id:"
+grep -c "^ *- id:" .pre-commit-config.yaml
+```
+
+A drop is the signature. Because the root file is normally git-tracked the content is
+recoverable, but the *effective gate coverage* between the build and the recovery is not, and
+no output line announces it. A consumer who does not think to diff a file the build just called
+stale has no reason to look.
+
+**Worked case (not executed).** `bybit-trader` carries a real, git-tracked 36,415-byte root
+`.pre-commit-config.yaml` holding 36 project-local hooks alongside 23 `@package-managed`
+blocks, plus an untracked `.leafcutter/pre-commit-config.yaml` of 11,126 bytes last written
+2026-06-28. A build against that repo deletes the 36 KB file, declines to rewrite the June
+output (no `--force`), and shims the root to it — substituting a three-month-old package-only
+set for 36 local gates.
+
+**Confidence.** The deletion and the shim replacement are **empirically confirmed** — a
+v7.0.194 build into the self-hosting workspace printed both lines above. The `bybit-trader`
+consequence is code reading plus file inspection, deliberately **not** confirmed by running the
+build, since running it is the destructive act.
+
+**Fix direction.** `_cleanup_stale_paths` should migrate rather than delete: before unlinking a
+real root `.pre-commit-config.yaml`, run `_strip_package_managed_blocks` over *that* file and
+fold the surviving project-local blocks into `<output_root>/pre-commit-config.yaml`. The
+stripper already does exactly this job and is merely aimed at the wrong path. Short of that,
+the deletion must refuse to proceed when the root file contains non-`@package-managed` blocks,
+and say which blocks it is protecting. A regression test needs a consumer-shaped fixture — a
+root config carrying both local and `@package-managed` hooks plus a pre-existing stale
+`output_root` copy — since neither half reproduces the loss alone.
+
+**A note on the failure's shape.** Both halves are green. The destructive step reports success
+with a checkmark; the step that would have preserved the content is skipped silently by an
+early return. There is no red anywhere in a run that removes a consumer's gate coverage.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a destructive step reported as
+success. **Related:** KI-BP-009 found the identical shape one path over, at `.claude/skills` —
+a path present in both `_PRE_CONSOLIDATION_PATHS` and the shim map, where the build `rmtree`s
+an adopter's real directory and reports it with a green checkmark. That entry is the
+directory-shaped case and this one the file-shaped case; a fix addressing only one leaves the
+other live. The shared root cause is that `_PRE_CONSOLIDATION_PATHS` assumes every listed path
+is package-owned, which is false for any path a consumer is also invited to write to.
+
+---
+
+### KI-BP-20260907-0812 — `generate_product_truth.py` builds index paths with the platform separator, so on Windows the validator can never pass and every commit touching an AC YAML is blocked
+
+- **Severity:** high
+- **Status:** FIXED by `26f35212` — retained for context per the register's "fixed, recorded for context" exception, because the `.as_posix()` call at the construction site is otherwise unexplained and invites a well-meaning revert to `str(...)`.
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `docs/product-truth/scripts/generate_product_truth.py:423` — `paths[flow["id"]] = str(path.relative_to(STORE))` · consumed by `_check_derived_indexes` in `docs/product-truth/scripts/validate_product_truth.py` · surfaced through the `check-product-truth-validate` and `check-product-truth-generate` hooks (`templates/scripts/commit_guardian/commit_guardian.json:1093,1107`)
+- **Filed under `build_pipeline` provisionally** — the package has no `product-truth` known-issues component file, and this machinery is deployed by `build_product_truth()` (`scripts/build_phases.py:3548`). Move it if a product-truth file is created.
+
+**Symptom.** On Windows the product-truth validator fails against an unmodified, correct store:
+
+```text
+FAIL: [index] by_flow does not match a fresh rebuild — run generate_product_truth.py
+1 error(s), 24 warning(s)
+```
+
+**Mechanism.** `load_flows()` stores each flow's location as `str(path.relative_to(STORE))`, which
+renders with `os.sep`. The committed `index.json` was generated on a POSIX host and holds
+`flows/fern-and-fig/checkout-and-pay.flow.json`; a Windows rebuild produces
+`flows\fern-and-fig\checkout-and-pay.flow.json`. `_check_derived_indexes` compares stored against
+rebuilt and reports drift.
+
+**This is not store drift, and must not be recorded as such.** Verified across the whole store:
+
+```text
+by_flow entries:                14
+separator-only differences:     14
+genuine content differences:     0
+```
+
+Every mismatch is the separator alone. The store is correct on its native platform.
+
+**Why the severity is high rather than cosmetic.** Both hooks fire on
+`files: (^docs/product-truth/|^docs/acceptance-criteria/.*\.yaml$)`. Since the validator cannot
+pass on Windows, a Windows contributor cannot commit **any** acceptance-criteria YAML — not only
+product-truth files. AC authoring is blocked wholesale on the platform. The escape is
+`--no-verify`, which disables every other gate in the same breath.
+
+The write direction is worse than the read direction. Nothing stops a Windows contributor running
+the generator in write mode; `index.json` is then rewritten with backslash paths, which fails for
+every POSIX contributor and for CI. The file then flips separator on each platform's turn — a
+churn loop where each side's "fix" breaks the other, and neither side is wrong.
+
+**Detection.**
+
+```bash
+python - <<'PY'
+import json, pathlib, os
+STORE = pathlib.Path('docs/product-truth')
+idx = json.load(open(STORE/'index.json', encoding='utf-8'))
+norm = lambda x: x.replace(os.sep, '/')
+for fid, e in idx.get('by_flow', {}).items():
+    p = e.get('path','')
+    if p != norm(p):
+        print('platform-separator path in committed index:', fid, p)
+PY
+```
+
+A committed index that already contains `os.sep`-flavoured paths means a Windows write has landed.
+
+**Fix direction.** Emit POSIX separators at the single construction site — `path.relative_to(STORE).as_posix()` rather than `str(...)`. Store-relative paths inside a JSON manifest are identifiers, not filesystem paths, and should be platform-independent by construction. Audit the sibling loaders (`load_mocks`, and any other `relative_to` in the two scripts) for the same expression before closing. A regression test should assert that every emitted `path` value contains no backslash, which fails today on Windows and passes trivially on POSIX — so it must be written as a string-content assertion, not as a round-trip through `pathlib`, or it will pass vacuously on the platform that cannot reproduce the bug.
+
+**Pattern:** a check that cannot pass is as useless as one that cannot fail, and pushes contributors toward `--no-verify` — which is the mechanism by which one platform-specific defect disables an entire gate set. **Related:** `KI-CG-20260907-0745` is the other defect found the same day whose practical effect is a blanket tool block on Windows; both are cases of POSIX-shaped assumptions reaching a Windows contributor through generated artifacts.
+
+---
+
+### KI-BP-20260907-1620 — The doc-index phase derives the index from the target tree and writes it into the package tree, so every self-hosting build truncates `docs/INDEX.md` by 75%
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 2 (2026-09-07, twice in one session)
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** the `Doc index` phase of `scripts/build.py` · `scripts/generate_doc_index.py` (`generate_index`) · triggered by any `build.py --target-dir <other-root>`, which is precisely what `build-self.sh` runs
+
+**Symptom.** After `python scripts/build.py --target-dir <workspace>` run from inside the package
+repo, `docs/INDEX.md` **in the package repo** is rewritten from 230 lines to 57, losing the
+Components table and most of the index, and its `created:` stamp is reset from the real creation
+date to today:
+
+```text
+HEAD:     230 lines        working:   57 lines
+created:  2026-08-11   →   2026-09-07
+1 file changed, 11 insertions(+), 184 deletions(-)
+```
+
+**Mechanism.** The index is derived from one root and written to another. Run in-process against
+each root, writing nothing:
+
+```text
+generate_index(<package repo>)  -> 230 lines
+generate_index(<workspace>)     ->  57 lines
+```
+
+The 57-line output is the workspace's own small `docs/` tree. The build computes the index for the
+`--target-dir` it was given and then persists it over the package repo's `docs/INDEX.md`. Both
+halves are individually correct; only the pairing is wrong.
+
+**Why this is worse than an ordinary wrong-file write.** `build-self.sh` is documented as the
+package's own development build and does exactly `build.py --target-dir <parent workspace>`. So
+the corruption is not an edge case reached by an unusual flag — it is what the sanctioned
+self-hosting build does every time it runs.
+
+**Detection.**
+
+```bash
+git diff --stat docs/INDEX.md      # after any build.py --target-dir <other-root>
+grep -c '^## Components' docs/INDEX.md   # 1 when intact, 0 when truncated
+grep '^created:' docs/INDEX.md           # a reset to today is the signature
+```
+
+The `created:` reset is the most reliable tell: a regenerated index stamps today, so a `created:`
+that matches the run date rather than the file's real history means the file was replaced rather
+than updated.
+
+**Confidence.** Empirically confirmed, twice in one session, and the root mismatch is reproduced
+by the two `generate_index` calls above without writing anything. An earlier report of this
+symptom was investigated and wrongly dismissed as unreproducible, because the check ran
+`generate_index` against the package root only — which returns the correct 230 lines and looks
+like a clean bill of health. Reproducing it requires passing the *other* root, which is the whole
+defect. Recorded here because that near-miss is the more useful lesson: a one-root check cannot
+falsify a two-root bug.
+
+**Fix direction.** Make the phase's read root and write root the same value, and assert it: the
+index written to `<X>/docs/INDEX.md` must be the index derived from `<X>/docs/`. A regression test
+should build into a scratch target from inside the package repo and assert the package's own
+`docs/INDEX.md` is byte-identical afterwards — that test fails today and cannot pass vacuously,
+since it names a specific file that must not change. Preserving `created:` across regeneration is
+a separate, smaller fix worth taking at the same time: an auto-generated file that resets its own
+creation date destroys the one field that would otherwise reveal it had been replaced.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2, the deployed layout differing from
+the source being read, in its cross-root form. **Related:** `KI-BP-20260907-0722` and `KI-BP-009`
+are the same family — a build step whose target is computed from one root and applied to another,
+reported as success.

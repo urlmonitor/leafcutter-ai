@@ -1,0 +1,81 @@
+id: UXP-700a-4
+title: "The build proves a from-scratch record works before it ships one"
+component: ux-prototyping
+components:
+  - build_pipeline
+  - ux_prototyping
+level: L2
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the set of files a record needs in place before its checker can begin checking,
+  When the tooling's own build runs,
+  Then the build installs a record into a throwaway empty project and runs that record's
+    checker against it,
+  And the build fails, naming the file, when any file the checker reads before checking begins
+    was not installed,
+  And the set of files the build requires is derived from what the checker reads rather than
+    restated by hand, so adding a new start-up input to the checker extends what the build
+    requires with no second edit,
+  And the build states how many required files it checked, and that figure rises by exactly one
+    when the checker gains one start-up input.
+depends_on:
+  - UXP-700a
+  - UXP-700a-1
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700a.yaml"
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900a-1.yaml
+    relationship: context
+    status: exists
+    relevance: "Prior art for deployment-completeness guards in this repo; reuse its shape rather than minting a second mechanism."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-700a-1
+  contract: "The installed record this smoke-test exercises."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by:
+  - UXP-700a-4-i
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  A hand-maintained list of required files is exactly the mechanism that failed here: the
+  deploy list omitted the store's own inputs and nothing noticed. So the contract cannot be
+  proved by asserting the list contains the right names; it has to be proved by a
+  varying-population test - add a start-up input to the checker and the stated required count
+  must rise by one without any list having been edited.
+test_spec:
+  - name: test_build_installs_a_throwaway_record_and_runs_its_checker
+    target_dir: unit_tests/build_guards/
+    description: "The build's record smoke-test deploys into a temp project and executes the checker there."
+    type: integration
+    angle: deployed
+    framework: unittest
+  - name: test_required_file_set_is_derived_not_restated
+    target_dir: unit_tests/build_guards/
+    description: "Adding a start-up input to the checker raises the build's stated required-file count by exactly one with no manifest edit."
+    type: integration
+    angle: seam
+    framework: unittest
+notes: |
+  ANTI-RECURRENCE AC. The reason build_product_truth() shipped without a scaffold is that
+  nothing exercised the thing it produced. A derived required-file set is the only shape that
+  cannot silently fall behind again - a restated list is satisfiable by a stale literal, which
+  is the current state.
+
+  Mutation proof for the derivation clause lives in UXP-700a-4-i.

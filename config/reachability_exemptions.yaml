@@ -1,0 +1,19 @@
+# Reachability exemption registry (BO-2900d-1).
+#
+# One entry per unit or capability that is deliberately allowed to have no
+# runtime way in of its own. Each entry MUST carry a non-empty `reason` --
+# a blank reason records nothing and grants no pass (BO-2900d-1-i). `item`
+# is matched by EXACT string equality only: no globs, no prefixes, no
+# name/extension/folder convention (BO-2900d-1's third Gherkin scenario).
+#
+# See docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/
+# BO-2900d-5.yaml for the full reference documentation of this file's schema
+# and how the reachability guard consumes it.
+#
+# Schema (one list entry per exemption):
+#   - item: '<exact repo-relative module path or surface:capability id>'
+#     kind: 'unit' | 'capability'
+#     reason: '<non-empty string explaining why no entry point exists>'
+#     recorded: '<YYYY-MM-DD>'
+#     recorded_by: '<who recorded it>'
+exemptions: []

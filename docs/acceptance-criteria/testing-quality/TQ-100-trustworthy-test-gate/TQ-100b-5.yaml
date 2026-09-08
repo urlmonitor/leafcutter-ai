@@ -76,6 +76,25 @@ doc_links:
     relationship: implements
     status: exists
     relevance: "RULE R1f, found 2026-08-19. Imports COVERS_TAG_RE from test_enforcement at :91 and, in the except ImportError branch at :92-95, writes the identical pattern out a second time as a local literal. Byte-equal to R1 at HEAD, so it is not a behavioural difference today — it is a second definition site that can drift from R1 silently, and it is the copy that fires in any layout where the AC-store module is not importable. This hook IS registered (hooks_manifest :1056) and is the only registered consumer of any rule in the set."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      R3's FATE IS DECIDED ELSEWHERE, AND THIS AC IS A STAKEHOLDER. ADDED 2026-09-07. BP-1600a-2
+      (approved, high, phase_1) requires day-one triage to register, DELETE, or formally declare
+      a non-gate every commit-guardian script the registry does not name. R3
+      (templates/scripts/commit_guardian/check_ac_coverage.py) is in that set — this AC's own
+      2026-08-19 census entry records that it is not in the hooks_manifest. If that triage
+      DELETES the script, this AC's closed four-rule set becomes a three-rule set and the
+      criteria clause requiring every named member to be compared needs amending; if it
+      REGISTERS the script, R3 becomes a live commit-time reader and the parity requirement
+      hardens rather than relaxes. Either way this record must be revisited with that decision.
+      TWO OTHER RECORDS HOLD INCOMPATIBLE POSITIONS ON THE SAME SCRIPT, and BP-1600a-2 now
+      cross-links all three: KM-ADM-001 REQUIRES it rated dead ("unregistered dead code"), so
+      registration falsifies that AC; and TQ-100c-2-i stated the file did not exist at all until
+      that claim was corrected on 2026-09-07. This AC's position — live but broken — is the only
+      one of the three derived from reading what the script actually does, which is worth saying
+      to whoever runs the triage.
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
@@ -190,6 +209,22 @@ amended_by:
     R1. it_requirements and test_spec were left as the IT PO wrote them apart from
     one additive entry in each flagging the census gap; they are still priced for
     two readers and an IT-PO re-pass is owed.
+- reason: r3-triage-collision-cross-linked
+  by: business-analyst
+  at: '2026-09-07'
+  note: >-
+    criteria UNTOUCHED. readiness (approved), priority and work_status UNTOUCHED. One doc_link
+    added, to BP-1600a-2. No decision taken about R3's fate. WHY: BP-1600a-2's day-one triage must
+    register, delete, or declare a non-gate every commit-guardian script no registry entry names,
+    and R3 (templates/scripts/commit_guardian/check_ac_coverage.py) is in that set — as this AC's
+    own 2026-08-19 census entry already records. Deletion would shrink this AC's closed four-rule
+    set to three and require a criteria amendment; registration would make R3 a live commit-time
+    reader and harden the parity requirement. Neither outcome was visible from this record before
+    now. Also recorded: the store holds three incompatible positions on that one script —
+    KM-ADM-001 requires it rated dead (registration falsifies that AC), this AC treats it as live
+    reader R3 needing reconciliation, and TQ-100c-2-i asserted the file did not exist until that
+    claim was corrected on 2026-09-07. All three are cross-linked from BP-1600a-2. The IT-PO
+    re-pass this record has been owed since 2026-08-19 is still owed and is not discharged here.
 superseded_by: null
 covered_by:
   - TQ-100b-5-i

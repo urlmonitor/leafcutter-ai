@@ -580,7 +580,7 @@
                 ],
                 "pass_filenames": false,
                 "change_set_source": "handed_by_commit_path",
-                "_comment": "BP-100k-4 correction: the files filter is CORRECT, not dead — it matches zero tracked paths only because this package repo has no Docker infrastructure by design, which is a different condition from 'cannot ever match' (a consumer project with a real docker-compose.yml would trigger this normally). Restored the filter (an earlier round of this fix wrongly deleted it, which would have made the gate unconditional in every consumer install) and declared it EXEMPT-with-ground in hook_trigger_reachability_exemption_registry below instead."
+                "_comment": "BP-100k-4 correction: the files filter is CORRECT, not dead — it matches zero tracked paths only because this package repo has no Docker infrastructure by design, which is a different condition from 'cannot ever match' (a consumer project with a real docker-compose.yml would trigger this normally). Restored the filter (an earlier round of this fix wrongly deleted it, which would have made the gate unconditional in every consumer install). BP-100k-4-ii superseded the original EXEMPT-with-ground fix below: this pattern carries no location anchor (it selects by file KIND, matched anywhere in the tree), so check_hook_trigger_reachability.py now classifies a zero-match here as NOTHING-TO-MATCH automatically — the exemption entry was removed as redundant. See __hook_trigger_reachability_nothing_to_match_doc below."
             },
             {
                 "id": "check-agent-diagrams",
@@ -1232,6 +1232,20 @@
                 "pass_filenames": false,
                 "change_set_source": "handed_by_commit_path",
                 "_comment": "KI-1 (BO-2200 retrospective, 2026-08-10): Blocks commits when a staged ticket has status:done but its source_ac is not yet work_status:done in the AC store. Fail-closed only on the specific mismatch; warn-only when the source_ac file is absent (epics/composites have no source_ac and are silently skipped). Scoped to staged tickets only."
+            },
+            {
+                "id": "check-file-size",
+                "tier": "judgment",
+                "name": "Check File Size (GE-127a-1 — crossing refusal + GE-127b-1 ratchet)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_file_size.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "change_set_source": "handed_by_commit_path",
+                "always_run": true,
+                "_comment": "GE-127a-1: registers the long-documented (README.md line 41) but previously unreachable check-file-size gate. always_run: true because the script resolves its own staged-file set via `git diff --cached --name-status` and filters to covered extensions internally, mirroring check-build-drift/check-hook-trigger-reachability rather than a files regex. Refuses a commit that takes a covered file from under to over its permitted length (GE-127a-1), refuses one that grows an already-oversized file further per the GE-127b-1 ratchet, and exits 2 INDETERMINATE (GE-127a-1-i / GE-127b-1-i) when a file's length cannot be established or the previous-length source cannot be resolved."
             }
         ]
     },
@@ -1422,10 +1436,17 @@
         "declares that a gate's 'files' trigger is CORRECTLY authored but its",
         "match is context-dependent, in one of two ways:",
         "",
-        "1. This specific checkout has no current instance of the file family",
-        "   it targets (check-infra-docs, check-mermaid-parent-link): a",
-        "   consumer project may have one even though this package repo",
-        "   currently does not.",
+        "1. The trigger names a specific LOCATION as well as a file family",
+        "   (check-mermaid-parent-link: 'docs/architecture/*.md', a doc",
+        "   family a fresh scaffold has not created yet), and this specific",
+        "   checkout has no current instance of it: a consumer project may",
+        "   have one even though this package repo currently does not. A",
+        "   PURELY kind-based trigger with no location anchor (e.g. the",
+        "   check-infra-docs docker-compose/Dockerfile/init-db.sh/",
+        "   .env.example alternation, matched anywhere in the tree) no",
+        "   longer needs an entry here as of BP-100k-4-ii — see",
+        "   __hook_trigger_reachability_nothing_to_match_doc below, which",
+        "   classifies that case automatically.",
         "2. The target is one of this package's OWN development-source files",
         "   (config/*.json, templates/agents/*.md, templates/workflows-js/*.js,",
         "   scripts/commit_guardian/*). These ARE reachable when committing to",
@@ -1461,11 +1482,48 @@
         "other. Every id below must be unique among hooks_manifest.hooks and",
         "must never be the literal '<unknown>'."
     ],
+    "__hook_trigger_reachability_nothing_to_match_doc": [
+        "Read by check_hook_trigger_reachability.py (BP-100k-4-ii,",
+        "KI-CG-20260831-0713). A THIRD, non-blocking reachability outcome",
+        "alongside reachable and unreachable, reported on its own diagnostic",
+        "line (NOTHING-TO-MATCH: <id> reason=<text>) and counted in its own",
+        "RESULT summary field (nothing_to_match=<n>) rather than folded into",
+        "either the exempt or the unreachable count.",
+        "",
+        "Applies AUTOMATICALLY — no entry required in",
+        "hook_trigger_reachability_exemption_registry above — to a 'files'",
+        "condition that selects paths by KIND (an extension or filename",
+        "family, written with no regex start-of-string anchor '^' on any of",
+        "its alternatives, e.g. '\\.py$', '.*\\.(md|py|sql)$', the",
+        "docker-infra alternation) when it matches zero of the paths this",
+        "checkout currently tracks. A project that has not yet acquired a",
+        "file of that KIND is a gate with nothing to do today, not a gate",
+        "that could never fire — the distinction",
+        "_hook_trigger_reachability_helpers.has_location_anchor() draws is",
+        "COULD-EVER (kind-based: always classified this way on a",
+        "zero-match) versus DOES-NOW (location-anchored: unaffected by this",
+        "key, still governed by hook_trigger_reachability_exemption_registry",
+        "below, exactly as before BP-100k-4-ii).",
+        "",
+        "check-infra-docs was REMOVED from the exemption registry below by",
+        "this AC: its docker-compose/Dockerfile/init-db.sh/.env.example",
+        "alternation carries no location anchor, so a checkout with no",
+        "Docker infrastructure now falls into this automatic classification",
+        "instead of needing a stated ground. check-mermaid-parent-link keeps",
+        "its exemption entry below unchanged — its pattern",
+        "('^docs/architecture/.*\\.md$') IS location-anchored, so it remains",
+        "the DOES-NOW case this AC's own constraints forbid touching ('This",
+        "constraint supplies the missing distinction; it does not overturn",
+        "the parent.').",
+        "",
+        "Test-only escape hatch: HOOK_TRIGGER_DISABLE_KIND_DISTINCTION=1",
+        "reverts to the pre-BP-100k-4-ii behavior (a kind-based zero-match",
+        "treated exactly like a location-anchored one) — see",
+        "_hook_trigger_reachability_helpers.py's kind_distinction_disabled()",
+        "and test_bp_100k_4_ii.py's MUTATION-PROOF CONTRACT. Production code",
+        "never sets this variable."
+    ],
     "hook_trigger_reachability_exemption_registry": [
-        {
-            "id": "check-infra-docs",
-            "ground": "Targets docker-compose*.yml/.yaml, docker/Dockerfile.*, init-db.sh, and .env.example — infrastructure files a CONSUMER project may have. This package repository has no Docker infrastructure by design, so zero tracked matches here is expected, not a broken trigger."
-        },
         {
             "id": "check-paths-integrity",
             "ground": "Targets config/paths.json, one of this package's own internal files. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?config/paths\\.json$) is correct for both the self-hosted and the tracked-vendor layout."
