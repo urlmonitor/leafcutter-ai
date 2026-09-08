@@ -1,0 +1,319 @@
+id: GE-127b-2
+title: "During a merge, a file's previous length is resolved against the merge's other parent as well as HEAD, so a file inherited from the incoming branch is not judged as newly authored"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a merge is in progress, and a covered file already stands above its
+    permitted length on the branch being merged IN but does not exist at all on
+    the branch being merged INTO — so the literal ref HEAD, which during a merge
+    is the receiving branch's PRE-merge tip, holds no blob for that path,
+  When the author completes the merge with an ordinary commit that authors no new
+    content for that file, the file arriving unchanged from the incoming branch,
+  Then the merge commit completes and that file is not refused, because its
+    previous length is resolved against the merge's other parent (MERGE_HEAD) as
+    well as against HEAD and is found there unchanged,
+  And given, in that same merge, a covered file that exists on NEITHER parent is
+    added at a length above its permitted length,
+  When the author completes the merge,
+  Then the merge commit is refused for that file, because a file present on no
+    parent is genuinely new and the absolute limit still applies to it inside a
+    merge exactly as it does outside one,
+  And given, in that same merge, a covered file that is already oversized on a
+    parent is edited by the merge itself into being longer than it stood on the
+    parent it was inherited from,
+  When the author completes the merge,
+  Then the merge commit is refused for that file, because a merge that itself
+    grows an oversized file is not exempt,
+  And given no merge is in progress,
+  When the author performs an ordinary commit,
+  Then the previous length is resolved exactly as it is today, from HEAD alone,
+    and the outcome for every file is byte-for-byte the outcome the gate produces
+    before this change,
+  And the bug symptom ("Merging origin/main into any branch is refused by check-file-size for files the merge did not author. Observed 2026-09-08 merging origin/main into fast-lane/ge-127a-1 — a merge whose only conflict was three marker lines in one AC file — refused with 'FILE TOO LARGE' for unit_tests/portability/test_ge_120e_2_i.py (462 lines) and unit_tests/portability/test_ge_120e_4.py (501 lines). Both files are already committed on origin/main via eaf49388b and are untouched by that branch (verified with git ls-tree origin/main --name-only, and by checking every branch-only commit for them). The merge had to be completed with SKIP=check-file-size on commit d0271d413. Filed as KI-CG-20260908-ratchet-reads-pre-merge-head in docs/known-issues/commit-guardian.md.") must not occur
+depends_on:
+  - GE-127b
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE RECORD THIS ONE REPAIRS, NOT REPLACES. GE-127b-1 pins the previous
+      length to the file's HEAD blob and states plainly that "no HEAD blob for
+      the path" means the file did not exist before. That reading is correct on
+      an ordinary commit and wrong during a merge, where HEAD is the receiving
+      branch's PRE-merge tip. This record narrows "did not exist before" to
+      "exists on no parent"; it does not reopen the persisted-baseline question,
+      which stays decided.
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      get_previous_length(), _read_head_blob_bytes() and
+      resolve_head_covered_paths() all address the literal ref HEAD. This is the
+      single place the merge's other parent has to become visible.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      _classify_file falls through to the absolute-limit branch when no previous
+      length is resolved, which is how an inherited file is judged as brand new.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-CG-20260908-ratchet-reads-pre-merge-head is the filed observation this
+      record closes, including the SKIP=check-file-size escape used on
+      d0271d413.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A source-level
+      assertion that MERGE_HEAD appears in the module stays green on exactly the
+      broken implementation; every descriptor here performs a real merge.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    THE MERGE IS DETECTED FROM GIT STATE, NEVER FROM THE COMMIT MESSAGE OR AN
+    ENVIRONMENT FLAG. A merge is in progress exactly when the ref MERGE_HEAD
+    resolves (`git rev-parse --verify MERGE_HEAD`). Absence of that ref is the
+    ordinary path and must take the existing code path unchanged. Do not sniff
+    for a "Merge branch" message, do not read .git/MERGE_MSG, and do not add a
+    configuration key — a message can be rewritten and a flag can be set by
+    anything.
+  - >-
+    THE ORDINARY PATH MUST BE PROVABLY UNCHANGED, AND THIS IS THE FIRST
+    CONSTRAINT FOR A REASON. check-file-size is a required CI gate; a regression
+    in the non-merge path blocks every merge, which is the very failure this
+    record exists to fix. Structure the change so the merge lookup is an
+    ADDITIONAL fallback consulted only when MERGE_HEAD resolves AND HEAD yielded
+    no blob — never a rewrite of the HEAD lookup itself.
+  - >-
+    RESOLUTION ORDER AND SEMANTICS. HEAD first, exactly as today. If HEAD holds a
+    blob, that is the previous length and MERGE_HEAD is not consulted — a file
+    present on both parents is already judged against the receiving branch's copy
+    and must stay so. Only when HEAD holds no blob is MERGE_HEAD consulted. If
+    MERGE_HEAD holds one, its measured length is the previous length. If neither
+    parent holds one, the previous length is genuinely absent and the file is new
+    — the existing None return, and GE-127b-1's fourth arm, are preserved
+    verbatim.
+  - >-
+    AN OCTOPUS MERGE HAS MORE THAN ONE OTHER PARENT. MERGE_HEAD may contain
+    several lines. Read all of them and treat the file as inherited if ANY of
+    them holds a blob for the path; when more than one does, take the LONGEST of
+    those lengths, since judging against the shortest would manufacture growth
+    the merge did not author. Do not assume a single line.
+  - >-
+    DO NOT EXEMPT MERGE COMMITS WHOLESALE. A `if merge_in_progress: return 0`
+    short-circuit passes the first descriptor here and destroys the shrinking
+    -backlog promise GE-127b sells: a merge that itself edits a file into
+    oversize, or that adds a genuinely new oversized file, must still be refused.
+    The merge changes WHERE the previous length is looked up; it never changes
+    WHETHER the comparison happens.
+  - >-
+    THE SAME MEASUREMENT FUNCTION, A THIRD CALL SITE. The MERGE_HEAD blob is
+    measured with count_content_lines(), the identical function already used on
+    the staged content and the HEAD blob. A second counting path here would
+    manufacture phantom growth across a merge boundary, which is the exact defect
+    class being fixed.
+  - >-
+    ERROR HANDLING INHERITS GE-127b-1-i's FLOOR AND MUST NOT WEAKEN IT. The new
+    `git rev-parse --verify MERGE_HEAD`, `git cat-file -e MERGE_HEAD:<path>` and
+    `git show MERGE_HEAD:<path>` calls follow the repo error-handling policy:
+    specific-exception try/except around each subprocess call and each decode,
+    log at WARNING or higher or re-raise, no bare or blind excepts. A swallowed
+    MERGE_HEAD lookup error must NOT degrade into an absent previous length —
+    that would silently re-manufacture the fail-open shape GE-127b-1-i exists to
+    forbid. Raise PreviousLengthSourceError, the mechanism already present in the
+    module.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE.
+    templates/scripts/commit_guardian/ is canonical and tracked;
+    scripts/commit_guardian/ and .leafcutter/ are UNTRACKED build outputs that
+    build.py overwrites. Edit the template and rebuild; a fix applied only to the
+    deployed copy disappears on the next build while local tests stay green.
+  - >-
+    SPLITTING THE TWO OVERSIZED TEST FILES IS NOT THE FIX AND IS OUT OF SCOPE.
+    unit_tests/portability/test_ge_120e_2_i.py and
+    unit_tests/portability/test_ge_120e_4.py are the observed instance, not the
+    mechanism. Shortening them clears today's symptom and leaves every future
+    merge exposed. Do not touch them as part of this record.
+test_spec:
+  - name: test_ge_127b_2_a_merge_is_not_refused_for_an_oversized_file_inherited_from_the_incoming_branch
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE RED BASELINE AND THE CLAUSE THE WHOLE RECORD EXISTS FOR — WRITE THIS
+      ONE FIRST. In a real temporary git repository with the gate installed,
+      create a branch holding a covered file well above its permitted length,
+      return to a receiving branch that has never held that file, and merge. The
+      merge commit must complete and no line naming that file may appear. This is
+      genuinely RED today, because during the merge HEAD is the receiving
+      branch's pre-merge tip, the file resolves to no previous length, and the
+      absolute-limit branch refuses it. Capture the failing run before any work
+      starts — it reproduces the observed d0271d413 refusal in miniature.
+  - name: test_ge_127b_2_a_genuinely_new_oversized_file_in_the_same_merge_is_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE MANDATORY NEGATIVE ARM. In the same merge shape, additionally stage a
+      covered file above its permitted length that exists on NEITHER parent. The
+      merge must be refused, naming that file and not the inherited one. NAMED
+      MUTATION (mandatory, run it, do not merely describe it): short-circuit the
+      gate to exit 0 whenever MERGE_HEAD resolves. Under that injection this
+      descriptor must go RED, failing BY THE COMMIT OUTCOME and not merely by the
+      text, and return to green on revert. Without this arm the first descriptor
+      is satisfied by exempting merges wholesale, which is the single most likely
+      wrong implementation.
+  - name: test_ge_127b_2_a_merge_that_itself_grows_an_oversized_file_is_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Resolve a merge conflict on an already-oversized covered file such that the
+      recorded resolution is longer than the copy on either parent, then complete
+      the merge. The merge must be refused, and the outcome must state both the
+      previous length (the parent copy it was inherited from) and the length
+      after. A merge authors no new content only when it does not; when it does,
+      the ratchet applies unchanged.
+  - name: test_ge_127b_2_a_file_present_on_both_parents_is_judged_against_the_receiving_branchs_copy
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      An oversized covered file that exists on BOTH parents at different lengths,
+      merged so the result equals the receiving branch's (HEAD) copy, commits
+      cleanly; merged so the result is one line longer than HEAD's copy, is
+      refused. Pins the resolution order: HEAD wins when it holds a blob, and
+      MERGE_HEAD is consulted only when HEAD holds none. An implementation that
+      prefers MERGE_HEAD, or that takes the longer of the two unconditionally,
+      passes the first three descriptors and fails here.
+  - name: test_ge_127b_2_the_non_merge_path_produces_the_same_outcome_it_produced_before_the_change
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE REGRESSION GUARD ON A REQUIRED CI GATE. With no merge in progress,
+      re-run GE-127b-1's four arms end to end in a real repository — oversized
+      and grown is refused naming both lengths; oversized and shrunk commits;
+      oversized and unchanged commits; a new under-limit file commits. Every
+      outcome must be identical to the pre-change behaviour. NAMED MUTATION: make
+      the MERGE_HEAD lookup unconditional rather than gated on MERGE_HEAD
+      resolving. Under that injection the ordinary path changes and this
+      descriptor must go RED, returning to green on revert.
+  - name: test_ge_127b_2_an_unreadable_merge_parent_blob_is_a_named_refusal_not_an_absent_previous_length
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Force the MERGE_HEAD blob lookup to fail (a resolvable ref whose blob
+      cannot be decoded, or a git invocation that errors) during a merge. The run
+      must surface a named refusal citing the unreadable previous-length source —
+      never silently degrade to "no previous length" and let the file through, or
+      judge it against the absolute limit. Guards GE-127b-1-i's fail-open floor
+      across the new code path; a swallowed lookup error here is invisible to
+      every other descriptor.
+  - name: test_ge_127b_2_the_merge_aware_verdict_is_emitted_through_the_registered_hook_entry_point
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the gate as a subprocess through the registered
+      hook path, mid-merge, with an inherited oversized file present, and assert
+      the exit status is a completed-commit outcome rather than an advisory note.
+      A merge-aware lookup that nothing at commit time reaches is inert, and the
+      observed failure happened at exactly this layer.
+  - name: test_ge_127b_2_the_deployed_copy_completes_a_real_origin_main_shaped_merge
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy and every module it imports load and run
+      in a cold process — a helper left outside
+      templates/scripts/commit_guardian/ surfaces here as ModuleNotFoundError
+      rather than passing. Then the survivability proof: construct the observed
+      shape — a receiving branch, an incoming branch carrying two covered files
+      above their limits that the receiving branch has never held, one unrelated
+      three-line conflict — and require the merge to complete WITHOUT
+      SKIP=check-file-size. A run that still needs the skip means nothing was
+      fixed, whatever the synthetic descriptors say.
+test_rationale: |
+  The mutation for the red baseline is naturally available and does not have to be
+  invented: construct a fixture repository where one branch holds an oversized
+  covered file the other lacks, merge, and require the merge to complete. That is
+  red today for the reason the root cause names — during a merge HEAD is the
+  receiving branch's pre-merge tip, so the inherited file resolves to no previous
+  length and _classify_file judges it against the absolute limit as brand new.
+
+  Three of the arms here assert that a commit is ALLOWED and are therefore green
+  on arrival on an implementation that exempts merges wholesale — which is both
+  the cheapest fix and the one that destroys GE-127b's shrinking-backlog promise.
+  Two descriptors carry named injections aimed squarely at it: the genuinely-new
+  oversized file in the same merge, and the merge that itself grows an oversized
+  file. Each must fail BY THE COMMIT OUTCOME, not merely by emitted text — a gate
+  that prints a worried message and exits 0 is indistinguishable from a passing
+  one to pre-commit, which reads only the status.
+
+  The non-merge regression descriptor is not padding. check-file-size is a
+  required CI gate, so a regression in the ordinary path blocks every merge in the
+  repository — the exact failure being fixed, re-created by the fix. Re-running
+  GE-127b-1's four arms unchanged, plus an injection that makes the MERGE_HEAD
+  lookup unconditional, is what makes "provably unchanged" a claim a test can
+  refute rather than a hope.
+
+  Per the repo's standing rule for gate ACs, every descriptor performs a REAL
+  merge in a real temporary repository over real git history. A source-level
+  assertion — that the string MERGE_HEAD appears in the module, or that a
+  merge-aware helper is defined — stays green on exactly the broken
+  implementation, because the defect is not an absent symbol but an unreached
+  lookup. The deployed descriptor ends on the observed shape from 2026-09-08 and
+  requires the merge to complete without SKIP=check-file-size, because that, and
+  not any synthetic fixture, is the claim this record makes.
+delivers_to: null
+expects_from:
+  ac_id: GE-127b-1
+  contract: >-
+    The shared count_content_lines() measurement function, the previous-length
+    resolution seam in _file_size_ratchet.py, and the per-file
+    before-versus-after comparison _classify_file consumes. This record widens
+    WHERE that previous length may be found — the merge's other parent as well as
+    HEAD — and changes nothing about how it is measured, how it is compared, or
+    what happens when it is genuinely absent.
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_ge_127b_2.py
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix. Root cause: The ratchet resolves a file's previous length from the blob at the literal ref HEAD. During a merge, HEAD is the branch's PRE-merge tip, so a file long-standing on origin/main but not yet present on the branch resolves to NO previous length. check_file_size.py's _classify_file then falls through to the absolute-limit branch, and the file is judged as brand new. The GE-127b-1 ratchet — which exists precisely so an already-oversized file is not refused for merely existing — never applies to it. DESIRED: while a merge is in progress, previous length is resolved against the merge's other parent (MERGE_HEAD) as well as HEAD, so a file inherited from the incoming branch is judged against the incoming copy rather than treated as newly authored. A merge commit authors no new content. CONSTRAINTS, all load-bearing: (1) The ordinary non-merge path must be provably UNCHANGED — this is a required CI gate and a regression blocks every merge, which is the very failure being fixed. (2) Do NOT weaken the absolute limit for genuinely new files, in a merge or otherwise: a file that exists on NEITHER parent is new and must still be refused. (3) Do NOT resolve this by exempting merge commits wholesale — a merge that itself edits a file into oversize must still be caught. (4) Splitting main's two oversized test files is NOT the fix and is out of scope; it clears today's instance and leaves the mechanism intact. (5) templates/scripts/commit_guardian/ is canonical; scripts/commit_guardian/ and .leafcutter/ are build outputs that build.py overwrites — edit the template and rebuild. (6) Per the repo's standing rule for gate ACs, verify behaviourally by performing a real merge in a fixture repository, never by reading the source; a source-level assertion stays green on exactly the broken implementation. The mutation for the red baseline is naturally available: construct a fixture where one branch has an oversized file the other lacks, merge, and require the merge to complete — that is red today and must go green, while a genuinely-new oversized file in the same merge must still be refused.

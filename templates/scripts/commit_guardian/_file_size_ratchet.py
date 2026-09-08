@@ -1,24 +1,32 @@
 """
 MODULE: commit_guardian._file_size_ratchet
-GOAL: Resolve each staged covered file's previous (HEAD) length via git,
-    using the SAME measurement function used on the file's current content,
-    and classify the run's previous-length SOURCE into exactly one of three
+GOAL: Resolve each staged covered file's previous length via git, using the
+    SAME measurement function used on the file's current content, and
+    classify the run's previous-length SOURCE into exactly one of three
     outcomes: available (HEAD holds at least one covered file, so a
     per-file lookup proceeds), empty history (HEAD resolves to no commit
     yet, or its tree holds no covered file at all — an ordinary day-one
     state that must COMPLETE, never refuse), or indeterminate (the source
-    could not be reached at all, or a resolvable HEAD blob could not be
+    could not be reached at all, or a resolvable blob could not be
     interpreted — the only two situations that refuse). This stops a
     broken git lookup from silently masquerading as "nothing to compare"
     (the fail-open shape KI-CG-034, KI-CG-012 and KI-CG-018 all shipped on
     this component before) WITHOUT reinstating the opposite defect: an
     empty-but-genuine history deadlocking every fresh consumer-project
     install, since the first commit that would populate it is the one a
-    refusal would be blocking on.
+    refusal would be blocking on. Per-file resolution consults HEAD first,
+    always; only when HEAD holds nothing for a path AND a merge is
+    genuinely in progress (MERGE_HEAD resolves) is the merge's other
+    parent also consulted (GE-127b-2), so a file inherited unchanged from
+    the incoming branch is judged against the copy it arrived with rather
+    than treated as newly authored.
 BUSINESS CONTEXT: Backs the GE-127b-1 / GE-127b-1-i ratchet: an already
     -oversized file may be worked on, but a change that leaves it longer
-    than it stood at HEAD is refused, while a shrink or no-op is allowed
-    even though the file is still over its limit. See
+    than it stood before is refused. GE-127b-2 widens WHERE "before" is
+    looked up during a merge, without changing WHETHER the ratchet applies
+    or HOW a length is measured — see
+    KI-CG-20260908-ratchet-reads-pre-merge-head in
+    docs/known-issues/commit-guardian.md. See
     docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/.
 ARCHITECTURE: Sibling module to check_file_size.py, inside
     templates/scripts/commit_guardian/. build_commit_guardian copies this
@@ -191,16 +199,20 @@ def _run_git(args: list[str]) -> subprocess.CompletedProcess:
         ) from exc
 
 
-def _read_head_blob_bytes(filepath: str) -> bytes:
-    """Read the raw bytes of *filepath* at HEAD, without decoding them.
+def _read_ref_blob_bytes(ref: str, filepath: str) -> bytes:
+    """Read the raw bytes of *filepath* at *ref*, without decoding them.
 
     Raw bytes are read (rather than text) so the caller controls exactly
-    which decode step raises ``UnicodeDecodeError`` — the "uninterpretable"
-    situation this record must name distinctly from "unreadable".
+    which decode step raises ``UnicodeDecodeError``. *ref* is HEAD for the
+    ordinary lookup, or a MERGE_HEAD parent commit SHA for the merge-aware
+    lookup added by GE-127b-2 — both are valid left-hand sides of git's
+    `<rev>:<path>` blob syntax.
 
     Args:
+        ref: A ref or literal commit SHA, already confirmed to hold a blob
+            for *filepath* by the caller.
         filepath: Repository-relative path, already confirmed to exist at
-            HEAD by the caller.
+            *ref* by the caller.
 
     Returns:
         The blob's raw bytes.
@@ -211,7 +223,7 @@ def _read_head_blob_bytes(filepath: str) -> bytes:
     """
     try:
         result = subprocess.run(
-            ["git", "show", f"HEAD:{filepath}"],
+            ["git", "show", f"{ref}:{filepath}"],
             capture_output=True,
             timeout=_SUBPROCESS_TIMEOUT_SECONDS,
             check=False,
@@ -230,37 +242,169 @@ def _read_head_blob_bytes(filepath: str) -> bytes:
     return result.stdout
 
 
+def _merge_in_progress() -> bool:
+    """Return whether a merge is currently in progress.
+
+    Detected EXCLUSIVELY from git state, per GE-127b-2's it_requirements —
+    never from the commit message or an environment flag, either of which
+    can be rewritten or set by something unrelated. True exactly when the
+    pseudo-ref MERGE_HEAD resolves.
+
+    Returns:
+        True when `git rev-parse --verify MERGE_HEAD` succeeds, False
+        otherwise (the ordinary, overwhelmingly common case — not a
+        failure).
+
+    Raises:
+        PreviousLengthSourceError: git itself could not be invoked.
+    """
+    result = _run_git(["rev-parse", "--verify", "MERGE_HEAD"])
+    return result.returncode == 0
+
+
+def _merge_parent_shas() -> list[str]:
+    """Return every commit SHA on the MERGE_HEAD pseudo-ref, one per line.
+
+    An octopus merge records more than one OTHER parent, one SHA per line,
+    in the MERGE_HEAD file itself. `git rev-parse --verify MERGE_HEAD` only
+    ever resolves and prints the FIRST line for a multi-line MERGE_HEAD, so
+    it cannot be reused here without silently dropping every parent past
+    the first — this resolves MERGE_HEAD's own path via git and reads the
+    pseudo-ref file's lines directly instead.
+
+    Returns:
+        The parent SHAs found on MERGE_HEAD, in file order. Never empty
+        when called only after ``_merge_in_progress`` returned True for the
+        same repository state.
+
+    Raises:
+        PreviousLengthSourceError: MERGE_HEAD's path could not be resolved,
+            or the pseudo-ref file could not be opened.
+    """
+    path_result = _run_git(["rev-parse", "--git-path", "MERGE_HEAD"])
+    if path_result.returncode != 0:
+        raise PreviousLengthSourceError(
+            "the merge parents could not be read: MERGE_HEAD's path could "
+            f"not be resolved ({path_result.stderr.strip()})"
+        )
+
+    merge_head_path = Path(path_result.stdout.strip())
+    try:
+        content = merge_head_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise PreviousLengthSourceError(
+            f"the merge parents could not be read: MERGE_HEAD could not be opened ({exc})"
+        ) from exc
+
+    return [line.strip() for line in content.splitlines() if line.strip()]
+
+
+def _resolve_length_at_ref(ref: str, filepath: str) -> int | None:
+    """Return *filepath*'s line count at *ref*, or None if *ref* has no blob for it.
+
+    The SAME resolution shape ``get_previous_length`` has always used for
+    HEAD, generalized to be reused against a MERGE_HEAD parent SHA too:
+    existence is checked first via `cat-file -e`, so a genuinely absent
+    blob returns None rather than raising — a file present on neither
+    parent stays genuinely new, in a merge exactly as outside one.
+
+    Args:
+        ref: A ref (e.g. "HEAD") or a literal commit SHA to look up.
+        filepath: Repository-relative path.
+
+    Returns:
+        The measured length via ``count_content_lines``, or None when *ref*
+        holds no blob for *filepath*.
+
+    Raises:
+        PreviousLengthSourceError: *ref* holds a blob for *filepath* but it
+            cannot be decoded as UTF-8, the encoding the standard reads.
+    """
+    existence = _run_git(["cat-file", "-e", f"{ref}:{filepath}"])
+    if existence.returncode != 0:
+        return None
+
+    raw = _read_ref_blob_bytes(ref, filepath)
+    try:
+        content = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise PreviousLengthSourceError(
+            f"the previous length for {filepath!r} could not be interpreted: "
+            f"{ref} blob is not valid UTF-8 ({exc})"
+        ) from exc
+
+    return count_content_lines(content)
+
+
+def _covered_paths_in_tree(ref: str, extensions: set[str]) -> list[str]:
+    """List every covered-extension path in *ref*'s tree.
+
+    Shared by ``resolve_head_covered_paths`` for both HEAD and, during a
+    merge, each of MERGE_HEAD's other parents.
+
+    Args:
+        ref: A resolvable ref or literal commit SHA.
+        extensions: Lower-cased extensions considered "covered".
+
+    Returns:
+        Paths in *ref*'s tree whose extension is in *extensions*.
+
+    Raises:
+        PreviousLengthSourceError: *ref* resolves but its tree could not be
+            listed, or git itself could not be invoked.
+    """
+    tree_listing = _run_git(["ls-tree", "-r", "--name-only", ref])
+    if tree_listing.returncode != 0:
+        raise PreviousLengthSourceError(
+            f"the previous lengths could not be read: {ref}'s tree could not "
+            f"be listed ({tree_listing.stderr.strip()})"
+        )
+    return [
+        path
+        for path in tree_listing.stdout.splitlines()
+        if path.strip() and Path(path).suffix.lower() in extensions
+    ]
+
+
 def resolve_head_covered_paths(checked_extensions: list[str]) -> list[str]:
-    """Return every covered-extension path tracked in HEAD's tree.
+    """Return every covered-extension path tracked in HEAD's tree, widened
+    during a merge to MERGE_HEAD's other parent(s) when HEAD's tree alone
+    holds none.
 
     This establishes the previous-length SOURCE for the run — repository
     -wide, not per-commit: whether HEAD resolves at all, and whether its
     tree holds any file of a checked kind anywhere. It does not itself
-    resolve any single staged file's previous length; that a commit stages
-    only newly added covered files against a POPULATED HEAD is a different,
-    legitimate state this function does not refuse.
+    resolve any single staged file's previous length.
 
-    An unborn HEAD (no commit exists yet) and a resolvable HEAD whose tree
-    holds no covered file are BOTH ordinary, COMPLETING empty-history states
-    per the 2026-09-01 criteria correction — neither raises here. The caller
-    tells emptiness apart from a genuine failure by the return value itself
-    (empty list vs. a raised error), decided AT THIS POINT OF RESOLUTION,
-    never downstream by re-inspecting collection size elsewhere: only an
-    actual git-level failure (the tree could not be listed even though HEAD
-    resolved, or git itself could not be invoked) raises.
+    GE-127b-2: on an ORDINARY commit (no merge in progress) this function's
+    behaviour is unchanged — HEAD's tree is the only source consulted. Only
+    when HEAD's tree holds NO covered file AND a merge is genuinely in
+    progress (MERGE_HEAD resolves) are MERGE_HEAD's other parent(s) also
+    listed and unioned in — otherwise a receiving branch whose tree holds
+    no covered file at all would misclassify an incoming, already
+    -oversized file as "empty history" and judge it against the absolute
+    limit as brand new, the same defect ``get_previous_length`` fixes
+    per-file, reachable here through the repository-wide precheck instead.
+
+    An unborn HEAD and a resolvable HEAD whose tree holds no covered file
+    anywhere reachable are BOTH ordinary, COMPLETING empty-history states
+    per the 2026-09-01 criteria correction — neither raises here; only an
+    actual git-level failure raises.
 
     Args:
         checked_extensions: Extensions that count as a "covered" file kind
             (e.g. [".py", ".sql"]).
 
     Returns:
-        The list of HEAD-tracked paths whose extension is covered. Empty
-        means empty history (unborn HEAD, or a tree with no covered file) —
-        a legitimate, completing result, not an error.
+        The list of covered paths found at HEAD, or — only when HEAD's
+        tree holds none and a merge is in progress — at MERGE_HEAD's other
+        parent(s). Empty means genuine empty history — a legitimate,
+        completing result, not an error.
 
     Raises:
         PreviousLengthSourceError: HEAD resolves but its tree could not be
-            listed, or git itself could not be invoked.
+            listed, git itself could not be invoked, or (once a merge is
+            detected) MERGE_HEAD's parents or their trees could not be read.
     """
     head_check = _run_git(["rev-parse", "--verify", "HEAD"])
     if head_check.returncode != 0:
@@ -269,49 +413,70 @@ def resolve_head_covered_paths(checked_extensions: list[str]) -> list[str]:
         # the very first commit of every fresh consumer-project install.
         return []
 
-    tree_listing = _run_git(["ls-tree", "-r", "--name-only", "HEAD"])
-    if tree_listing.returncode != 0:
-        raise PreviousLengthSourceError(
-            "the previous lengths could not be read: HEAD's tree could not "
-            f"be listed ({tree_listing.stderr.strip()})"
-        )
-
     extensions = {ext.lower() for ext in checked_extensions}
-    return [
-        path
-        for path in tree_listing.stdout.splitlines()
-        if path.strip() and Path(path).suffix.lower() in extensions
-    ]
+    head_paths = _covered_paths_in_tree("HEAD", extensions)
+    if head_paths:
+        return head_paths
+
+    if not _merge_in_progress():
+        return []
+
+    merge_paths: list[str] = []
+    for sha in _merge_parent_shas():
+        merge_paths.extend(_covered_paths_in_tree(sha, extensions))
+    return merge_paths
 
 
 def get_previous_length(filepath: str) -> int | None:
-    """Return the line count *filepath* had at HEAD, or None if it is new.
+    """Return *filepath*'s previous line count, or None if it is genuinely new.
+
+    HEAD is consulted first, exactly as before GE-127b-2: if HEAD holds a
+    blob for *filepath*, that is the previous length and nothing else is
+    consulted — a file present on both parents of an in-progress merge is
+    judged against the receiving branch's (HEAD's) copy, never the
+    incoming one. This is the entire non-merge behaviour, unchanged.
+
+    Only when HEAD holds NO blob for *filepath*, AND a merge is genuinely in
+    progress (MERGE_HEAD resolves), is the merge's other parent consulted:
+    a file inherited unchanged from the incoming branch is judged against
+    the copy it arrived with instead of being treated as newly authored —
+    fixing KI-CG-20260908-ratchet-reads-pre-merge-head, where HEAD mid
+    -merge is the receiving branch's PRE-merge tip. An octopus merge's
+    several other parents are each checked; when more than one holds the
+    path, the LONGEST of those lengths is used, since judging against the
+    shortest would manufacture growth the merge did not author. A file
+    present on NEITHER parent remains genuinely new — the None return is
+    preserved verbatim; this function never exempts a merge wholesale.
 
     Args:
         filepath: Repository-relative path of a staged, covered file.
 
     Returns:
-        The previous length, or None when the file has no HEAD blob (it did
-        not exist before this commit) — never coerced to zero.
+        The previous length, or None when the file has no blob at HEAD nor,
+        during a merge, at any other parent — never coerced to zero.
 
     Raises:
-        PreviousLengthSourceError: the HEAD blob exists but its content
-            cannot be decoded as UTF-8, the encoding the standard reads.
+        PreviousLengthSourceError: a resolvable blob (HEAD's, or a
+            MERGE_HEAD parent's) exists but its content cannot be decoded
+            as UTF-8, the encoding the standard reads; or MERGE_HEAD's own
+            parents could not be read once a merge was detected.
     """
-    existence = _run_git(["cat-file", "-e", f"HEAD:{filepath}"])
-    if existence.returncode != 0:
+    previous = _resolve_length_at_ref("HEAD", filepath)
+    if previous is not None:
+        return previous
+
+    if not _merge_in_progress():
         return None
 
-    raw = _read_head_blob_bytes(filepath)
-    try:
-        content = raw.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise PreviousLengthSourceError(
-            f"the previous length for {filepath!r} could not be interpreted: "
-            f"HEAD blob is not valid UTF-8 ({exc})"
-        ) from exc
+    merge_lengths = [
+        length
+        for length in (_resolve_length_at_ref(sha, filepath) for sha in _merge_parent_shas())
+        if length is not None
+    ]
+    if not merge_lengths:
+        return None
 
-    return count_content_lines(content)
+    return max(merge_lengths)
 
 
 def resolve_previous_lengths(paths: list[str]) -> dict[str, int]:
@@ -328,13 +493,16 @@ def resolve_previous_lengths(paths: list[str]) -> dict[str, int]:
         paths: Staged, covered file paths to resolve a previous length for.
 
     Returns:
-        Mapping of path to previous line count, for every path that had a
-        HEAD blob. A newly added path (no HEAD blob) is simply absent from
-        the result rather than mapped to zero.
+        Mapping of path to previous line count, for every path
+        ``get_previous_length`` resolved one for (HEAD, or — mid-merge and
+        only when HEAD held nothing — MERGE_HEAD's other parent; see
+        GE-127b-2). A newly added path with no blob on any of those is
+        simply absent from the result rather than mapped to zero.
 
     Raises:
-        PreviousLengthSourceError: a resolvable HEAD blob cannot be
-            interpreted.
+        PreviousLengthSourceError: a resolvable blob cannot be interpreted,
+            or, once a merge is detected, its other parent(s) cannot be
+            read.
     """
     previous_lengths: dict[str, int] = {}
     for path in paths:
@@ -368,5 +536,34 @@ DECISION HISTORY
   and its now-unused checked_extensions parameter — the source-level
   empty-history decision is made once, by the caller, at the point of
   resolution, never re-derived downstream from a collection's size.
+- 2026-09-08 [python-coder/GE-127b-2]: Fixed
+  KI-CG-20260908-ratchet-reads-pre-merge-head: during a merge, HEAD is the
+  receiving branch's PRE-merge tip, so a file long-standing on the branch
+  being merged IN but never held by the branch being merged INTO resolved
+  to no previous length and was refused as brand new. get_previous_length()
+  now consults HEAD first, unchanged; only when HEAD holds no blob for the
+  path AND a merge is genuinely in progress (MERGE_HEAD resolves, detected
+  via `git rev-parse --verify MERGE_HEAD` and never from the commit message
+  or an environment flag) does it also consult MERGE_HEAD's other
+  parent(s), taking the longest length when an octopus merge holds more
+  than one. A file present on NEITHER parent is still genuinely new and is
+  still refused; a merge that itself grows an already-oversized file is
+  still caught, because HEAD (when it holds a blob) always wins and the
+  comparison itself is unchanged — only WHERE the previous length may be
+  found was widened. Renamed the former HEAD-only _read_head_blob_bytes to
+  _read_ref_blob_bytes(ref, filepath) and added _merge_in_progress(),
+  _merge_parent_shas(), and _resolve_length_at_ref(ref, filepath) as the
+  shared per-ref lookup get_previous_length now calls twice (HEAD, then
+  each MERGE_HEAD parent) rather than once. Also widened
+  resolve_head_covered_paths(): a receiving branch whose tree holds NO
+  covered file at all (not just none for one path) previously short
+  -circuited the whole run to EMPTY HISTORY, which -- mid-merge -- let an
+  incoming oversized file fall through to the absolute-limit branch by the
+  same mechanism at the repository-wide precheck instead of the per-file
+  lookup. It now falls back to MERGE_HEAD's other parent(s)' trees (via the
+  new shared _covered_paths_in_tree(ref, extensions)) only when HEAD's own
+  tree is covered-file-empty AND a merge is in progress; the ordinary path
+  (HEAD's tree non-empty, or no merge in progress) is unchanged.
+  (#TICKETLESS reason=ac-only-direct-fix-dispatch-ge127b2)
 ====================================================================
 """
