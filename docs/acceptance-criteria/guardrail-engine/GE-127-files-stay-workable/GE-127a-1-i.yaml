@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
@@ -304,8 +304,13 @@ amended_by:
     the BA''s named mutation, one the paired readable run, one the deletion boundary, one
     the registered hook entry point and one the deployed copy in a cold process.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_ge_127a_1_i_named_situations.py"
+  - "unit_tests/commit_guardian/test_ge_127a_1_i_verdict_floor.py"
+  - "unit_tests/commit_guardian/test_ge_127a_1_i_entry_points.py"
+implemented_by:
+  - "templates/scripts/commit_guardian/check_file_size.py"
+  - "templates/scripts/commit_guardian/_file_size_ratchet.py"
 change_target: code
 risk_surface: contract_boundary
 notes: |
