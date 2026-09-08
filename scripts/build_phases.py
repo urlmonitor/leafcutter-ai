@@ -2438,6 +2438,34 @@ def _deploy_commit_guardian_config_files(
 
     Returns:
         Count of files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-09-08 15:30 [python-coder]: Verified by direct execution
+    #   (not by reading this function) that this deploy declaration already
+    #   writes `agent_registry.json` to `<target_root>/config/agent_registry.json`
+    #   on a fresh `scripts/build.py --target-dir <tmp>` run, and that a
+    #   sibling deploy phase already writes
+    #   `scripts/worktree/check_workspace_setup_permission.py` alongside it —
+    #   both present in the installed target this ticket's own test
+    #   (unit_tests/portability/test_acd_2100d_1.py) installs into. The
+    #   ticket's own implementation notes described this deploy gap as
+    #   "already live"; that description predates BP-900h-4's prior fix
+    #   landing and no longer matches this file's current behaviour, so no
+    #   change was made here.
+    #   CORRECTED same day [python-coder], per pr-reviewer (status: blocker)
+    #   and ac-validator's independent `git stash` A/B reproduction: this
+    #   entry's original closing sentence claimed the actual gap was in
+    #   `unit_tests/_workflow_engine_harness.py`'s pre-flight-invocation
+    #   resolution and pointed to that file's DECISION HISTORY entry for "the
+    #   fix." That harness change has since been reverted (see that file's
+    #   own corrected DECISION HISTORY entry) because direct execution showed
+    #   no such gap ever existed there either: the installed and source
+    #   copies already reached the identical stopping point before this
+    #   ticket touched either file. This deploy declaration remains
+    #   unchanged and correct, and there was no gap anywhere in the deploy
+    #   path or the harness for ACD-2100d-1 to close — the parity this AC's
+    #   Then clause requires already held.
+    #   (#EPIC-StartingNewWorkTheProperWayAlways/19)
     """
     written = 0
     for filename in ("doc_types.json", "diagram_types.json", "agent_registry.json"):

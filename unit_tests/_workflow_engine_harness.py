@@ -1424,3 +1424,40 @@ def run_e1_import_check(script_path: Path, timeout: int = 10) -> E1CheckResult:
 #   run_workflow_under_e2() so every pre-existing caller still gets a real,
 #   registry-backed default for args.workspace_setup_permission without
 #   needing to know the gate moved. (#EPIC-StartingNewWorkTheProperWayAlways/12)
+# - 2026-09-08 15:30 [python-coder]: Added `_resolve_preflight_invocation()`
+#   plus `_DEPLOYED_*` constants, on the claimed diagnosis that
+#   `_default_args_for_script()`'s single SOURCE-shape ancestor walk resolved
+#   `<target>/.leafcutter` as the repo root for a DEPLOYED `plan-feature.js`
+#   and then ran the pre-flight subprocess with `cwd=<target>/.leafcutter`,
+#   which was claimed to fail closed with "No repository could be resolved"
+#   because `resolve_repo_root()` "never walks upward past its cwd." REVERTED
+#   2026-09-08 (later same day) [python-coder], per pr-reviewer (status:
+#   blocker) and ac-validator's independent `git stash` A/B reproduction: the
+#   diagnosis does not hold under direct execution. `resolve_repo_root()`'s
+#   own first resolution step is `git rev-parse --git-common-dir` from the
+#   given cwd, which is git's native upward ancestor search and does walk
+#   past `cwd` — confirmed by invoking `check_workspace_setup_permission.py`
+#   directly with `cwd=<target>/.leafcutter` against a real
+#   `scripts/build.py --target-dir <tmp>` install: it returned
+#   `{"permits": true, "outcome": "granted", ...}` immediately, not a denial.
+#   Separately, `_find_ancestor_containing()`'s SOURCE-shape walk (looking for
+#   `config/agent_registry.json` relative to each ancestor, starting from
+#   `<target>/.leafcutter/workflows`) already matches at ancestor
+#   `<target>/.leafcutter` itself before ever reaching `<target>` — because a
+#   real deployed target always has `.leafcutter/config/agent_registry.json`,
+#   which satisfies the SOURCE-shape's relative path one level early — so the
+#   new DEPLOYED-shape branch in `_resolve_preflight_invocation()` was
+#   structurally unreachable for every real install, not just this one.
+#   Confirmed via direct execution (real `scripts/build.py` install into a
+#   scratch temp target, git-stash A/B on `unit_tests/portability/
+#   test_acd_2100d_1.py`'s three tests, and a full `unit_tests/workflows`
+#   run) that the pre-fix and post-fix harness are behaviourally identical:
+#   the same 22 tests fail and the same 596 pass either way, and the AC's own
+#   three tests pass against the unmodified pre-ticket harness. No defect
+#   ever existed in this harness's pre-flight resolution; the 2026-09-08
+#   15:30 entry above is retained struck through by this entry rather than
+#   deleted, per this repo's own convention that a disproven bugfix narrative
+#   must be corrected, not silently erased. See
+#   scripts/build_phases.py's own DECISION HISTORY entry, corrected in the
+#   same pass, for the parallel correction there.
+#   (#EPIC-StartingNewWorkTheProperWayAlways/19)
