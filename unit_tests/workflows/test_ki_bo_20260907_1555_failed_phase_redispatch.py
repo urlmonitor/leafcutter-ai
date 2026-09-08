@@ -90,6 +90,8 @@ class _SelectDispatchableByStatusContract:
     """Behavioral contract, run against BOTH twins via the subclasses below."""
 
     workflow_path: Path
+    source: str
+    func_src: str
 
     @classmethod
     def setUpClass(cls) -> None:
