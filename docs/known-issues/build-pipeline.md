@@ -1207,7 +1207,51 @@ overwrites the shared parent manifest with one that no gate can use. Any fix sho
 "target is a worktree of this repo" as a first-class case, not an exotic one — `/feature`,
 `worktree-agent` and `building-epics` all create worktrees by design.
 
-**Symptom.** The build's own record of what it wrote is not written to the install it
+**SYMPTOM CORRECTED 2026-09-07 — THE WRITE-TARGET CLAIM BELOW IS NO LONGER TRUE, AND THIS
+ENTRY NEEDS RE-SCOPING BY ITS OWNER.** `BP-1500d-1` and `BP-1500d-3` — the ACs this entry
+is filed against, via their parent `BP-1500d` — both landed on 2026-09-07 (merged in #715
+and #689) and closed most of what this entry documents. Read against current source on the
+same date:
+
+- The record's own directory is resolved from the **target** whenever a target is supplied,
+  falling back to the package only in the no-target call shape. It is therefore the target
+  by default, not "always the package's own directory, never `--target-dir`".
+- A real build invoked through the ordinary command line into a receiving project that is a
+  **sibling** of the producing package, under a system temp root, wrote the record into the
+  **receiving** project — the case the Symptom paragraph says produces no manifest at all.
+- The output-mapping keys are computed against the target as their base, not against
+  `package_root.parent`, so the anchor this entry names as the single common cause of all
+  its symptoms is gone.
+- The fail-open half is closed for the trigger that remains reachable: the record-writing
+  step now returns its failure to the build's exit path, which reports it naming the record
+  and the target project and then exits non-zero.
+
+Every line number cited in the **Where** field and in the paragraphs below predates that
+work and no longer locates what it names — the surviving broad handler sits roughly a
+thousand lines from the line this entry cites for it.
+
+**What is still true, and is the only part of this entry that should be relied on:** the
+SHAPE — a record computation that gives up, an empty record written anyway, and a
+per-artifact success line printed for that record before any failure is reported. A reader
+who stops at the build's first statement about the record is still told it was written.
+`KI-BP-008` is the same fail-open shape and is unaffected by any of the above.
+
+Two further findings from the same 2026-09-07 pass, neither closed: the account of the
+**producing** package (where it stood, and which of its own files the deployment came from)
+is still position-relative and is `BP-1500d-1-i`, still open; and a record entry can now be
+keyed to the receiving project's root and **still point outside it**, when a managed file's
+destination is reached by a parent step — exit 0, a full record, an empty failure field.
+That is a record that is produced and untruthful rather than one that could not be
+produced, and it is `BP-1500d-1-ii`, authored 2026-09-07.
+
+**Status line, for the owner:** this entry still reads `open — AC: BP-1500d`. A large part
+of what it documents has been fixed underneath it, so it wants either closing against the
+two merged ACs with the residue re-filed, or amending down to the surviving shape.
+
+The original text is kept verbatim below, as the 2026-08-25 observation it was.
+
+**Symptom (as observed 2026-08-25 — see the correction above before acting on any of it).**
+The build's own record of what it wrote is not written to the install it
 describes. `scripts/build_helpers.py:185` computes
 `manifest_path = package_root / ".build_manifest.json"` — always the package's own
 directory, never `--target-dir`. Running `python3 scripts/build.py --target-dir
@@ -4168,3 +4212,74 @@ This repo's own `.gitignore` masks the symptom locally — `__pycache__/` and `*
 **Fix direction.** Ship a `.gitignore` template under `templates/` covering at minimum `__pycache__/` and `*.pyc`, and add it to a deploy phase in `build.py`/`build_phases.py` so every consumer install gets it — the same "deploy list" discipline this repo's own `CLAUDE.md` already requires for new hook/gate dependencies. Before closing, count how many commit-guardian hooks (and any other deployed tooling) import a deployed module, so the fix is verified against the actual blast radius rather than the two occurrences that happened to be observed first.
 
 **Pattern:** a workaround at the one call site that happened to get instrumented, standing in for a fix at the one deploy step that would have prevented it everywhere.
+
+---
+
+### KI-BP-20260907-1620 — The doc-index phase derives the index from the target tree and writes it into the package tree, so every self-hosting build truncates `docs/INDEX.md` by 75%
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 2 (2026-09-07, twice in one session)
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** the `Doc index` phase of `scripts/build.py` · `scripts/generate_doc_index.py` (`generate_index`) · triggered by any `build.py --target-dir <other-root>`, which is precisely what `build-self.sh` runs
+
+**Symptom.** After `python scripts/build.py --target-dir <workspace>` run from inside the package
+repo, `docs/INDEX.md` **in the package repo** is rewritten from 230 lines to 57, losing the
+Components table and most of the index, and its `created:` stamp is reset from the real creation
+date to today:
+
+```text
+HEAD:     230 lines        working:   57 lines
+created:  2026-08-11   →   2026-09-07
+1 file changed, 11 insertions(+), 184 deletions(-)
+```
+
+**Mechanism.** The index is derived from one root and written to another. Run in-process against
+each root, writing nothing:
+
+```text
+generate_index(<package repo>)  -> 230 lines
+generate_index(<workspace>)     ->  57 lines
+```
+
+The 57-line output is the workspace's own small `docs/` tree. The build computes the index for the
+`--target-dir` it was given and then persists it over the package repo's `docs/INDEX.md`. Both
+halves are individually correct; only the pairing is wrong.
+
+**Why this is worse than an ordinary wrong-file write.** `build-self.sh` is documented as the
+package's own development build and does exactly `build.py --target-dir <parent workspace>`. So
+the corruption is not an edge case reached by an unusual flag — it is what the sanctioned
+self-hosting build does every time it runs.
+
+**Detection.**
+
+```bash
+git diff --stat docs/INDEX.md      # after any build.py --target-dir <other-root>
+grep -c '^## Components' docs/INDEX.md   # 1 when intact, 0 when truncated
+grep '^created:' docs/INDEX.md           # a reset to today is the signature
+```
+
+The `created:` reset is the most reliable tell: a regenerated index stamps today, so a `created:`
+that matches the run date rather than the file's real history means the file was replaced rather
+than updated.
+
+**Confidence.** Empirically confirmed, twice in one session, and the root mismatch is reproduced
+by the two `generate_index` calls above without writing anything. An earlier report of this
+symptom was investigated and wrongly dismissed as unreproducible, because the check ran
+`generate_index` against the package root only — which returns the correct 230 lines and looks
+like a clean bill of health. Reproducing it requires passing the *other* root, which is the whole
+defect. Recorded here because that near-miss is the more useful lesson: a one-root check cannot
+falsify a two-root bug.
+
+**Fix direction.** Make the phase's read root and write root the same value, and assert it: the
+index written to `<X>/docs/INDEX.md` must be the index derived from `<X>/docs/`. A regression test
+should build into a scratch target from inside the package repo and assert the package's own
+`docs/INDEX.md` is byte-identical afterwards — that test fails today and cannot pass vacuously,
+since it names a specific file that must not change. Preserving `created:` across regeneration is
+a separate, smaller fix worth taking at the same time: an auto-generated file that resets its own
+creation date destroys the one field that would otherwise reveal it had been replaced.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2, the deployed layout differing from
+the source being read, in its cross-root form. **Related:** `KI-BP-20260907-0722` and `KI-BP-009`
+are the same family — a build step whose target is computed from one root and applied to another,
+reported as success.

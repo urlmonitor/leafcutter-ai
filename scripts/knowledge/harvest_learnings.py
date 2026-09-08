@@ -26,16 +26,27 @@ a hash-based state file so re-runs are idempotent, and prints a summary.
 Usage
 -----
     python scripts/knowledge/harvest_learnings.py [--sink PATH] [--dry-run] [--verbose]
+    python scripts/knowledge/harvest_learnings.py --print-sink
 
 Options
 -------
 --sink PATH
     Path to the JSONL sink file.
-    Default: debugging/logs/knowledge_emissions.jsonl (relative to CWD).
+    Default (AC INF-400c-4-v): the build-time declaration recorded at
+    config/knowledge_sink.json beside this deployed script -- the absolute
+    path fixed when the package was built into this project. Falls back to
+    debugging/logs/knowledge_emissions.jsonl (relative to CWD) only when no
+    declaration is present (e.g. an un-built source-tree run).
 
 --state PATH
     Path to the JSON state file tracking processed event hashes.
     Default: debugging/logs/harvest_state.json (relative to CWD).
+
+--print-sink
+    Print the resolved absolute sink path (and nothing else) to stdout and
+    exit 0. Reads the build-time declaration only -- never opens, creates,
+    or stats the sink file itself or its parent directories (AC
+    INF-400c-4-v: obtainable without emitting or harvesting).
 
 --dry-run
     Read events and decide routing but do not write to any knowledge surface.
@@ -53,7 +64,12 @@ Exit codes
     real 28-record sink. Always read the summary's `no learning text` segment
     alongside this code; the count is the only thing that distinguishes
     "nothing to do" from "nothing eligible to do".
-1   Sink file not found or unreadable.
+1   Sink file not found or unreadable. AC INF-400c-4-v extends this same code
+    to a declared sink whose DIRECTORY no longer exists at all -- reported as
+    STALE, naming the declared path, distinctly from the ordinary
+    never-written-to case (directory present, file simply not yet written),
+    which still reports this same code without the word "stale". No new
+    exit status is introduced for the distinction; only the message differs.
 2   State file exists but cannot be parsed (corrupted).
 3   Drained with unroutable events left behind (see summary for the
     per-entry_kind breakdown). Distinct from 0 so a caller cannot mistake a
@@ -329,6 +345,181 @@ def _save_state(state_path: Path, hashes: set[str]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Build-time sink declaration resolution (AC INF-400c-4-v)
+# ---------------------------------------------------------------------------
+#
+# The build deploys this file to <output_root>/scripts/knowledge/
+# harvest_learnings.py (see build_knowledge_scripts in build_phases.py), so
+# the deployed output root is always exactly two directories above this
+# file's own location. Pure path arithmetic -- no I/O -- so this never
+# raises, even when the file is being run from an un-built source tree
+# (where the resulting "output root" simply will not contain a declaration
+# and every caller here falls back to the historical default).
+
+_LEGACY_SINK_RELATIVE_PARTS: tuple[str, ...] = (
+    "leafcutter-ai",
+    "debugging",
+    "logs",
+    "knowledge_emissions.jsonl",
+)
+
+
+def _deployed_output_root() -> Path:
+    """Return the output root this deployed copy of the script lives under.
+
+    Pure function: no I/O, no shared-state mutation.
+    """
+    return Path(__file__).resolve().parents[2]
+
+
+def _read_sink_declaration(output_root: Path) -> str | None:
+    """Read the build-time knowledge-sink declaration, if one exists.
+
+    Returns the declared absolute path string, or ``None`` when no
+    declaration file is present (e.g. an un-built source-tree run) or it
+    cannot be parsed -- callers fall back to the historical default in
+    either case, per AC INF-400c-4-v ("nothing is written into nowhere").
+    """
+    declaration_path = output_root / "config" / "knowledge_sink.json"
+    if not declaration_path.is_file():
+        return None
+    try:
+        data = json.loads(declaration_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "Could not read sink declaration %s: %s", declaration_path, exc
+        )
+        return None
+    value = data.get("knowledge_emission_sink")
+    return value if isinstance(value, str) and value else None
+
+
+def _resolve_default_sink(output_root: Path) -> Path:
+    """Resolve the sink path to use when ``--sink`` is not given on the CLI.
+
+    Prefers the build-time declaration recorded beside this deployed script
+    (AC INF-400c-4-v); falls back to the historical CWD-relative default
+    when no declaration is present.
+    """
+    declared = _read_sink_declaration(output_root)
+    if declared is not None:
+        return Path(declared)
+    return Path("debugging/logs/knowledge_emissions.jsonl")
+
+
+def _recomputed_sink_for_output_root(output_root: Path) -> Path:
+    """Recompute the conventional sink path from where this script currently lives.
+
+    Mirrors ``build_knowledge_sink_declaration``'s own derivation in
+    ``build_phases.py`` (``<project_root>/debugging/logs/
+    knowledge_emissions.jsonl``, where ``project_root == output_root.parent``)
+    so that comparing this against a DECLARED value is what staleness
+    detection (AC INF-400c-4-v) is built on: a declaration written for an
+    install that has since been moved by hand still names its OLD absolute
+    path verbatim, and that stops matching what this exact layout would
+    produce right now -- without either path needing to exist on disk for
+    the comparison itself to hold.
+
+    Pure function: no I/O, no shared-state mutation.
+    """
+    return output_root.parent / "debugging" / "logs" / "knowledge_emissions.jsonl"
+
+
+def _stale_declaration_message(output_root: Path) -> str | None:
+    """Return a staleness message if the build-time declaration no longer matches reality.
+
+    AC INF-400c-4-v: a declared path whose install was moved by hand is
+    reported as STALE, distinctly from a sink that has simply never been
+    written to -- and without inventing a new exit status. Returns ``None``
+    when there is no declaration to go stale, or when the declared value
+    still matches what this layout would produce right now.
+    """
+    declared = _read_sink_declaration(output_root)
+    if declared is None:
+        return None
+    if Path(declared) == _recomputed_sink_for_output_root(output_root):
+        return None
+    return (
+        f"Declared knowledge-emission sink is STALE: {declared} (its "
+        "directory no longer exists -- this install was likely moved by "
+        "hand after the build fixed this absolute path). A rebuild "
+        "(python scripts/build.py --target-dir <project-root>) re-declares "
+        "the sink at this install's current location."
+    )
+
+
+def _handle_print_sink(output_root: Path) -> int:
+    """Print the resolved absolute sink path and return 0 (AC INF-400c-4-v).
+
+    Side-effect free: reads the declaration only, or falls back to the
+    historical default resolved (but never created) via ``.resolve()``.
+    """
+    declared = _read_sink_declaration(output_root)
+    if declared is not None:
+        print(declared)
+    else:
+        print(str(_resolve_default_sink(output_root).resolve()))
+    return 0
+
+
+def _resolve_sink_or_log_stale(args: argparse.Namespace, output_root: Path) -> Path | None:
+    """Resolve the sink path for an ordinary (non-print-sink) run.
+
+    Returns the resolved ``Path`` when the run should proceed. Returns
+    ``None`` when the build-time declaration is stale -- the staleness
+    message has already been logged, and the caller should exit 1 (AC
+    INF-400c-4-v: reused exit code, distinct message).
+
+    An explicit ``--sink`` is the caller's own responsibility and is never
+    checked for staleness -- only the DECLARED/default path is a build-time
+    declaration that can go stale.
+    """
+    if args.sink is not None:
+        return args.sink
+    stale_message = _stale_declaration_message(output_root)
+    if stale_message is not None:
+        logger.error(stale_message)
+        return None
+    return _resolve_default_sink(output_root)
+
+
+def _legacy_sink_candidate(output_root: Path) -> Path:
+    """Return the conventional pre-declaration sink location for *output_root*.
+
+    Mirrors the concrete instance recorded in AC INF-400c-4-v's notes: in a
+    development workspace whose build target is the workspace root, the
+    operational stream's existing lines sit one level down, under the
+    package clone's own ``debugging/logs/``. ``output_root``'s parent is the
+    project root the build was pointed at.
+
+    Pure function: no I/O, no shared-state mutation.
+    """
+    project_root = output_root.parent
+    return project_root.joinpath(*_LEGACY_SINK_RELATIVE_PARTS)
+
+
+def _warn_if_diverging_from_legacy(resolved_sink: Path, output_root: Path) -> None:
+    """Print+log a notice when a pre-existing legacy sink diverges from *resolved_sink*.
+
+    AC INF-400c-4-v: adopting the declaration must not silently orphan
+    records already accumulating elsewhere -- names BOTH locations once,
+    and never touches either file itself. A no-op when the legacy candidate
+    does not exist or is already the same file the declaration names.
+    """
+    legacy = _legacy_sink_candidate(output_root)
+    if legacy == resolved_sink or not legacy.is_file():
+        return
+    message = (
+        f"NOTE: declared knowledge-emission sink is {resolved_sink}, which "
+        f"differs from records already accumulating at {legacy}. Naming "
+        "both here rather than silently diverging -- reconcile "
+        "deliberately before relying on either being the complete history."
+    )
+    print(message)
+    logger.warning(message)
+
+
+# ---------------------------------------------------------------------------
 # Default capture function (production wiring via capture-learning protocol)
 # ---------------------------------------------------------------------------
 
@@ -424,6 +615,16 @@ def harvest(
     result = HarvestResult()
 
     # 1. Read sink file
+    #
+    # Staleness (AC INF-400c-4-v: a build-time declaration whose install was
+    # moved by hand names a directory that is no longer there) is detected
+    # and reported one layer up, in main(), BEFORE this function is even
+    # called -- see _stale_declaration_message(). That detection needs the
+    # deployed output root to recompute the current-layout value for
+    # comparison, which this lower-level, sink/state-only function
+    # deliberately does not take as a parameter (existing direct callers in
+    # tests/knowledge/test_harvest_learnings.py construct it with an
+    # explicit sink_path and no notion of a build-time declaration at all).
     if not sink_path.exists():
         logger.error("Sink file not found: %s", sink_path)
         sys.exit(1)
@@ -686,9 +887,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--sink",
         type=Path,
-        default=Path("debugging/logs/knowledge_emissions.jsonl"),
+        default=None,
         metavar="PATH",
-        help="Path to the JSONL sink (default: debugging/logs/knowledge_emissions.jsonl).",
+        help=(
+            "Path to the JSONL sink. Default (AC INF-400c-4-v): the "
+            "build-time declaration at config/knowledge_sink.json beside "
+            "this deployed script, falling back to "
+            "debugging/logs/knowledge_emissions.jsonl when no declaration "
+            "is present."
+        ),
     )
     parser.add_argument(
         "--state",
@@ -696,6 +903,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=Path("debugging/logs/harvest_state.json"),
         metavar="PATH",
         help="Path to the processed-event state file (default: debugging/logs/harvest_state.json).",
+    )
+    parser.add_argument(
+        "--print-sink",
+        action="store_true",
+        help=(
+            "Print the resolved absolute sink path and exit 0. Side-effect "
+            "free: reads the declaration only (AC INF-400c-4-v)."
+        ),
     )
     parser.add_argument(
         "--dry-run",
@@ -726,11 +941,26 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = _parse_args(argv)
 
+    output_root = _deployed_output_root()
+
+    # AC INF-400c-4-v: obtainable without emitting or harvesting -- reads
+    # the declaration only and returns before anything else (logging setup,
+    # the sink-existence check, the legacy-divergence check) can touch the
+    # filesystem beyond that one read.
+    if args.print_sink:
+        return _handle_print_sink(output_root)
+
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(level=log_level, format="%(levelname)s %(name)s: %(message)s")
 
+    sink_path = _resolve_sink_or_log_stale(args, output_root)
+    if sink_path is None:
+        return 1
+
+    _warn_if_diverging_from_legacy(sink_path, output_root)
+
     result = harvest(
-        sink_path=args.sink,
+        sink_path=sink_path,
         state_path=args.state,
         dry_run=args.dry_run,
         verbose=args.verbose,
@@ -808,3 +1038,17 @@ if __name__ == "__main__":
 #   real records reach `outstanding == 0` because the definition of
 #   outstanding is corrected, not because they were disposed of.
 #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-700c-2)
+# - 2026-09-07 [python-coder]: Added `--print-sink` and re-derived the `--sink`
+#   default from the build-time knowledge-sink declaration
+#   (config/knowledge_sink.json, written by build_knowledge_sink_declaration
+#   in build_phases.py) instead of a hardcoded CWD-relative path, falling back
+#   to the historical default when no declaration is present. Added staleness
+#   detection (_stale_declaration_message): a declared sink whose install was
+#   moved by hand no longer matches what the current layout would recompute,
+#   which is reported as STALE (naming the declared path) and reuses exit
+#   code 1 rather than a new one, distinctly from the ordinary
+#   never-written-to case. Added a one-time legacy-divergence notice
+#   (_warn_if_diverging_from_legacy) naming both locations when a
+#   pre-existing accumulation differs from the newly adopted declaration.
+#   No behaviour change for existing callers that pass --sink explicitly.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)

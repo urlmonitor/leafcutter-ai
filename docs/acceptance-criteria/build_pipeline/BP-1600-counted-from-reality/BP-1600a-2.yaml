@@ -1,4 +1,4 @@
-id: BP-100n-4
+id: BP-1600a-2
 components:
   - build_pipeline
 title: "The population of commit gates the reachability check walks is taken from the gate scripts present on disk, so a script the registry never mentions is reported as invoked by nothing — a guard whose input is the registry cannot see what the registry omits"
@@ -52,12 +52,26 @@ criteria: |
     cannot see is a gate the check cannot report, and a population that stops at
     the top level silently excuses every gate held below it.
 depends_on:
-  - BP-100n
+  - BP-1600a
   - BP-100k-4-ii
 doc_links:
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a.yaml"
     relationship: parent
     status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE FORMER PARENT, AND THE NEIGHBOURING RULE THIS RECORD MUST NOT BE
+      CONFUSED WITH. This record was BP-100n-4 until 2026-09-07. BP-100n owns
+      "an absence is reported as an absence, never as nothing to check" — what a
+      guard does when it finds nothing. This record owns the prior question: how
+      the guard worked out what to look for in the first place. A guard can
+      report every absence it finds faithfully and still be walking a population
+      that omits the thing that matters, which is exactly the defect here. Its
+      remaining sibling BP-100n-5 still cites this record for its shape, and
+      BP-100n-3 is the third member of the same population cluster, left under
+      BP-100n because it is done and carries covers-tags in shipped source.
   - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4-ii.yaml"
     relationship: related
     status: exists
@@ -389,7 +403,7 @@ it_requirements:
       fails on the very commit that lands it. EVERY script it reports as invoked by nothing —
       whatever that set turns out to be on the day, which is not the set any number in this
       record describes — must be registered, deleted, or given a grounded record in the
-      declared-non-gate register (BP-100n-4-i) in that same change. Take the set from the
+      declared-non-gate register (BP-1600a-2-i) in that same change. Take the set from the
       check's own first run, never from a count written here. Landing the check green by
       pre-suppressing its findings proves nothing. A register ground that says only that
       triage or registration is deferred is a suppression under another name, not a ground.
@@ -454,7 +468,7 @@ it_requirements:
       level (by mapping key). Registering any of the 19 adds a watched id, so
       check-package-surface-declaration refuses the commit unless a cited AC declares
       package_surface: true. This AC declares it, which is why the structured five-field
-      spec is present. The paired consequence for the register in BP-100n-4-i: a NEW
+      spec is present. The paired consequence for the register in BP-1600a-2-i: a NEW
       top-level key would trip the same hook on the mapping-key container, which is why
       that register reuses the existing hook_trigger_reachability_exemption_registry key
       instead of introducing one.
@@ -462,7 +476,7 @@ it_requirements:
       Must follow the repo error-handling policy: specific-exception try/except around
       directory listing, file and JSON I/O; log at WARNING or higher or re-raise; no bare
       or blind excepts. A swallowed listing error must never become an empty population —
-      that is the precise fail-open shape BP-100n-4-ii exists to make impossible.
+      that is the precise fail-open shape BP-1600a-2-ii exists to make impossible.
 test_spec:
   - name: test_bp_100n_4_added_gate_script_is_reported_and_the_compared_count_rises_by_one
     target_dir: unit_tests/commit_guardian/
@@ -588,17 +602,17 @@ test_rationale: |
   behind source-tree imports.
 delivers_to:
   - agent: python-coder
-    ac_id: BP-100n-4-i
+    ac_id: BP-1600a-2-i
     contract: >-
-      The per-script verdict set and the run summary, into which BP-100n-4-i inserts the
+      The per-script verdict set and the run summary, into which BP-1600a-2-i inserts the
       declared-non-gate verdict and its count, and whose invoked-by-nothing class a
       groundless register record must fall back into.
   - agent: python-coder
-    ac_id: BP-100n-4-ii
+    ac_id: BP-1600a-2-ii
     contract: >-
       The two enumerated populations — gate scripts listed from disk, and scripts invoked
       by the commit-time configuration read from the registry in effect — whose sizes
-      BP-100n-4-ii requires to be stated and whose unavailability or emptiness it converts
+      BP-1600a-2-ii requires to be stated and whose unavailability or emptiness it converts
       from a silent clean exit into a named, non-zero failure.
   - agent: python-coder
     ac_id: TQ-500b-1
@@ -625,7 +639,7 @@ amended_by:
     (and any other of the 19 triaged as a real gate) adds a watched id and check-package-surface-declaration
     refuses the commit unless a cited AC declares it. The declared-non-gate register
     therefore reuses the existing hook_trigger_reachability_exemption_registry key
-    rather than adding a new top-level one (see BP-100n-4-i). All four populations
+    rather than adding a new top-level one (see BP-1600a-2-i). All four populations
     re-measured independently at enrichment: 66 / 59 / 5 disabled / 60 named filenames
     / 19 unreferenced — reproduced exactly. NEW FINDING recorded in it_requirements:
     ten of the 19 already carry a dedicated top-level configuration section in commit_guardian.json
@@ -666,7 +680,7 @@ amended_by:
     copy — also gives 19, but a DIFFERENT 19, by falsely reporting check_done_proof.py. Three
     incompatible rules producing "19" over three different sets is why the numbers left
     criteria: they are observations, they belong in notes with a date and a commit, and
-    BP-100n-4-ii already requires the check to STATE its populations in every run, which is a
+    BP-1600a-2-ii already requires the check to STATE its populations in every run, which is a
     number that cannot go stale. The requirement that both populations be enumerated from live
     sources is strengthened, not weakened — criteria now describe the enumeration instead of
     reciting its output.
@@ -687,7 +701,7 @@ amended_by:
     decision has no red baseline and any non-recursive implementation passes.
 
 
-    NO FIFTH POPULATION WAS ADDED. BP-100n-4-ii fixes the run summary at exactly four numbers
+    NO FIFTH POPULATION WAS ADDED. BP-1600a-2-ii fixes the run summary at exactly four numbers
     and that is untouched; this amendment REMOVES numbers from criteria and adds none.
 
 
@@ -732,7 +746,7 @@ amended_by:
     question about one gate, not a member of this AC's census.
 
 
-    NOT DONE, DELIBERATELY: BP-100n-4-i and BP-100n-4-ii untouched; no test_spec descriptor
+    NOT DONE, DELIBERATELY: BP-1600a-2-i and BP-1600a-2-ii untouched; no test_spec descriptor
     changed, since every one of them already asserts over the check's own reported set and
     stated counts rather than over any literal, which is precisely why they survive this
     amendment unchanged and is the strongest evidence that the numbers never belonged in
@@ -786,10 +800,67 @@ amended_by:
     same pass. Registering versus deleting versus declaring-non-gate is left to triage, with the
     explicit note that KM-ADM-001 will need amending rather than re-reading if the script is
     registered.
+- reason: renamed-and-moved-BP-100n-4-to-BP-1600a-2
+  by: product-owner
+  at: '2026-09-07'
+  note: >-
+    THIS RECORD WAS BP-100n-4 UNTIL 2026-09-07. Its children BP-100n-4-i and BP-100n-4-ii are
+    now BP-1600a-2-i and BP-1600a-2-ii. Nothing about what the check must DO has changed:
+    criteria, readiness (approved), req_status, work_status, priority, test_spec,
+    it_requirements and every measured census figure are byte-for-byte untouched. This
+    amendment records an ADDRESS CHANGE and nothing else.
+
+
+    WHY IT MOVED. The 2026-09-07 split of BP-100n identified two coherent groups among its six
+    children: an ABSENCE-REPORTING group, which is what BP-100n's own title states, and a
+    POPULATION group — the population a check walks is taken from reality, never from a list
+    that can omit things. This record is in the population group, and so is BP-1600a-1, the
+    census of the settings surface. BP-1600a exists to name exactly that category. Filing a
+    commit-gate census under a parent whose subject is absence-reporting hid the category; the
+    two censuses are now siblings, which is the point.
+
+
+    WHY IT MOVED LATE. The split could not carry this record at the time. A child's parent is
+    derived from its ID STRING and not from covered_by (GE-106), so moving it means renaming
+    it, and PR #726 was then open and unmerged with five references to BP-100n-4 on a branch
+    the split's worktree could not edit — GE-120c-6, GE-120f, KM-ADM-001, TQ-100b-5 and
+    TQ-100c-2-i. Moving it then would have landed five dangling pointers that nobody could fix
+    from where the work was happening. #726 merged; all five were visible and were rewritten.
+
+
+    THE CITATION SWEEP, AND THE ONE TRAP IN IT. Measured immediately before the move: 232
+    occurrences across 50 files — 160 bare BP-100n-4, 17 BP-100n-4-i, 49 BP-100n-4-ii, of which
+    30 were folder-qualified doc_link paths naming the OLD feature folder. Four times the
+    "roughly sixty" the split estimated. The bare id is a clean prefix of both children, which
+    was verified rather than assumed (a uniq scan over every BP-100n-4* form returned exactly
+    those three variants — no BP-100n-40 or similar), so one textual pass maps all three
+    records. But the folder-qualified paths MUST be rewritten first: a bare-id pass run first
+    turns "BP-100-reliable-builds/BP-100n-4.yaml" into "BP-100-reliable-builds/BP-1600a-2.yaml"
+    — correct id, wrong folder, silently unresolvable. Longest match first.
+
+
+    ON REWRITING THE OLD NAME INSIDE HISTORICAL PROSE, WHICH WAS A JUDGEMENT CALL. The old id
+    was rewritten everywhere it appears as an identifier, including inside the amended_by
+    entries and notes above that describe decisions taken when this record was called
+    BP-100n-4. The reasoning: an AC id is an ADDRESS, not a claim about the world. Leaving a
+    stale address preserves no evidence — it destroys the only information the address carried,
+    because the referent still exists and a reader can no longer reach it. This is deliberately
+    NOT the same call as the one made on TQ-100c-2 earlier in this store, where a false CLAIM
+    was left standing inside amendment history: there, the content of the record was the claim,
+    and erasing it would have erased the evidence that it had been believed. Here the content
+    is unchanged and only its name moved. The fact of the rename is preserved once, here, where
+    a reader hits it.
+
+
+    NOT REWRITTEN, DELIBERATELY: five references in dated changelog entries under changelogs/,
+    which are published records of what specific commits and PRs did under the names in force
+    on those dates — rewriting them would make them describe commits that never touched a file
+    of that name. Three more in docs/agents/cards/python-coder.card.md, which is generated by
+    scripts/generate_agent_cards.py and is corrected by regeneration, not by hand.
 superseded_by: null
 covered_by:
-  - BP-100n-4-i
-  - BP-100n-4-ii
+  - BP-1600a-2-i
+  - BP-1600a-2-ii
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
@@ -832,7 +903,7 @@ notes: >-
   made explicitly, in criteria, as behaviour rather than as arithmetic. THE REQUIREMENT THAT
   BOTH POPULATIONS BE ENUMERATED FROM LIVE SOURCES IS NOT WEAKENED BY THIS — it is
   strengthened, because criteria now describe how the enumeration works instead of asserting
-  what it happened to return on one afternoon, and BP-100n-4-ii still requires the sizes to be
+  what it happened to return on one afternoon, and BP-1600a-2-ii still requires the sizes to be
   STATED in every run. A number the check prints from what it examined cannot go stale; a
   number written into a requirement can only go stale.
 
@@ -885,7 +956,7 @@ notes: >-
   check_ac_coverage.py — THREE INCOMPATIBLE POSITIONS EXIST AND DAY-ONE TRIAGE WILL MEET ALL
   THREE. Cross-linked 2026-09-07 so the triage is made in full knowledge. This record does NOT
   decide the script's fate; registering, deleting, or recording it as a declared non-gate
-  (BP-100n-4-i) remains the call of whoever runs the triage. What is settled is that the call
+  (BP-1600a-2-i) remains the call of whoever runs the triage. What is settled is that the call
   cannot be made without seeing these three:
     - KM-ADM-001 (L2, reviewed, high) REQUIRES the artifact data-map to rate the ac-tested edge
       `enforcement: none` because "its named hook check_ac_coverage.py is unregistered dead
@@ -909,7 +980,7 @@ notes: >-
 
   DAY-ONE BLAST RADIUS IS THE WHOLE UNREFERENCED SET, AND THAT IS THE CORRECT OUTCOME. The
   check fails on the commit that lands it until every script it reports is registered,
-  deleted, or given a grounded record in the non-gate register (BP-100n-4-i). Triaging them is
+  deleted, or given a grounded record in the non-gate register (BP-1600a-2-i). Triaging them is
   part of the work, not a follow-up: a check that lands green because its findings were
   pre-suppressed has proved nothing. Take the set from the check's first run; do not take it
   from the census block above, which is dated evidence that the set moves.

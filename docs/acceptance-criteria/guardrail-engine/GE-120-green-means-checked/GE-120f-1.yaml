@@ -181,7 +181,7 @@ notes: |
   not what a criterion asserts.
 
   BOUNDARIES — four adjacent owners, none of them sufficient. Enumeration (which guards are
-  in the set at all) is BP-100n-4's. Reachability of a registered gate whose trigger can
+  in the set at all) is BP-1600a-2's. Reachability of a registered gate whose trigger can
   never match is BP-100k-4's. A deployed guard that nothing invokes is GE-120c-6's.
   Falsifiability of TESTS is TQ-500's; this tree owns falsifiability of GUARDS. The worked
   example passes all four and still cannot refuse, which is why none of them may be closed

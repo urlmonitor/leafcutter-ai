@@ -218,6 +218,31 @@ amended_by:
     criteria, work_status and readiness untouched. work_status NOT changed in either
     direction — the missing decisive test (the newly-added-module case named in
     BP-900g-8-i) is reported as a recommendation for human judgement, not acted on.'
+- reason: caveat-verification
+  by: python-coder
+  at: 2026-09-08
+  note: 'Verified the 2026-08-17 CAVEAT below against current HEAD. It is STALE,
+    not live: it was written during the authoring pass, before the 2026-08-26
+    implementation (commit 8cb6fbd36, PR #578) landed. At current HEAD,
+    AC_STORE_DEPLOY_MAP is a module-level constant in build_phases.py (not the
+    ~851-873 inline list the caveat describes), build.py''s
+    _manifest_ac_store_scripts derives Set C directly from that SAME constant
+    (`return {f"scripts/ac_store/{dest_name}" for _src_rel, dest_name in
+    AC_STORE_DEPLOY_MAP}`), and this is exercised by
+    unit_tests/test_bp_900g_4.py::test_known_undeployed_allowlist_is_empty plus
+    the derived-closure tests in this AC''s own covered_by. BP-900g-5''s fifth
+    it_requirement (C derives from B) IS implemented; BP-900g-5 is correctly
+    work_status: done, and no evidence was found to justify reopening it.
+    Separately, closed the actual gap the prior amendment above left open: added
+    unit_tests/test_bp_900g_8_i.py (4 tests, all passing under
+    AC_ENFORCE_STRICT=1, non-vacuity confirmed by mutation) and marked
+    BP-900g-8-i work_status: done via mark_ac_done.py''s coverage-gated path. The
+    newly-added-module test empirically confirms compute_intra_package_closure()
+    is genuinely derived from the code rather than a currently-complete
+    enumeration. This AC''s own work_status (done) and covered_by are unchanged
+    by this pass — its 18 tests were already real and already passing;
+    BP-900g-8-i was the one piece still open, and is now closed. criteria
+    untouched.'
 superseded_by: null
 covered_by:
   - BP-900g-8-i
