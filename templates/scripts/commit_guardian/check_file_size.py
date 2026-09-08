@@ -10,13 +10,24 @@ BUSINESS CONTEXT: Keeps file complexity under control by forcing refactors of
     file already over the line may shrink or stay the same size and commit
     cleanly, but a change that leaves it LONGER than it stood at HEAD is
     refused.
+
+    MERGE COMMITS (KI-CG-20260908-file-size-ratchet-refuses-merge-commits):
+    judging a merge against HEAD alone refused nearly every ordinary
+    `git merge origin/main` that touched an already-oversized file, because
+    the other parent's already-accepted growth of that file looked like NEW
+    growth the merge author had introduced. The permitted previous length
+    during a merge is now the MOST PERMISSIVE length across every parent —
+    see _file_size_ratchet.py's own MERGE COMMITS section for the full
+    reasoning and the octopus-merge (MERGE_HEAD-reading) detail. An
+    ordinary, non-merge commit is judged exactly as before.
 ARCHITECTURE: Delegates previous-length resolution and the shared line
     -counting rule to the sibling module _file_size_ratchet.py (see that
-    module for the HEAD-blob lookup, the two-situation INDETERMINATE
-    fail-closed floor, and why no persisted baseline / new config key is
-    used). An empty previous-length history (unborn HEAD, or a HEAD tree
-    with no covered file) is a legitimate, COMPLETING result named
-    "EMPTY HISTORY" in the run's output, never folded into INDETERMINATE.
+    module for the HEAD-blob lookup, the merge-aware parent-revision
+    resolution, the two-situation INDETERMINATE fail-closed floor, and why
+    no persisted baseline / new config key is used). An empty previous
+    -length history (unborn HEAD, or a HEAD tree with no covered file) is a
+    legitimate, COMPLETING result named "EMPTY HISTORY" in the run's
+    output, never folded into INDETERMINATE.
 
 Pre-commit hook to block files exceeding line limits.
 
@@ -50,6 +61,7 @@ from _file_size_ratchet import (
     PreviousLengthSourceError,
     measure_current_length,
     resolve_head_covered_paths,
+    resolve_parent_revisions,
     resolve_previous_lengths,
 )
 from config import (
@@ -237,6 +249,14 @@ def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[st
     function raised / what it returned, never downstream by inspecting how
     many previous lengths came back.
 
+    While a merge is in progress, the previous length resolved for each
+    path is the MOST PERMISSIVE (maximum) length found across every parent
+    of the commit -- HEAD plus every parent named in MERGE_HEAD -- not
+    HEAD's alone (KI-CG-20260908-file-size-ratchet-refuses-merge-commits).
+    A merge whose parent set cannot be established is itself an
+    INDETERMINATE source, resolved by the same
+    PreviousLengthSourceError floor as any other unreachable source.
+
     Args:
         covered_paths: Staged file paths of a checked extension.
 
@@ -264,7 +284,8 @@ def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[st
         return {}, None
 
     try:
-        previous_lengths = resolve_previous_lengths(covered_paths)
+        parent_revisions = resolve_parent_revisions()
+        previous_lengths = resolve_previous_lengths(covered_paths, parent_revisions)
     except PreviousLengthSourceError as exc:
         print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
         return None, 2
@@ -387,6 +408,20 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-08 [python-coder/KI-CG-20260908-file-size-ratchet-refuses-merge-commits]:
+  Made the ratchet merge-aware. _resolve_ratchet_or_indeterminate() now
+  resolves every parent revision of the commit in progress (via
+  _file_size_ratchet.resolve_parent_revisions(), HEAD plus every
+  MERGE_HEAD line) and passes them into resolve_previous_lengths(), which
+  now takes the MAXIMUM previous length found across all of them as each
+  file's permitted previous length -- fixing a defect where an ordinary
+  `git merge origin/main` was refused on every already-oversized file the
+  other side had already (and legitimately) grown, because judging solely
+  against HEAD made that already-accepted growth look newly introduced by
+  the merge. _classify_file()'s own logic is unchanged: it already judged
+  a file against whatever "previous" length it was handed, so a merge with
+  a correctly-resolved permissive baseline now passes without any change
+  to the crossing-refusal / ratchet branching itself.
 - 2026-09-07 [python-coder/GE-127a-1 + GE-127a-1-i]: Registered `check-file
   -size` in commit_guardian.json's hooks_manifest.hooks (always_run: true,
   the script resolves its own staged-file set) -- the gate previously had
