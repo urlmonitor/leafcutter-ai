@@ -32,7 +32,15 @@ DECISION HISTORY
     Initial authoring. Verified RED against the pre-fix _file_size_ratchet.py
     (HEAD-only previous-length resolution) via `git stash` of the production
     change and a full run of this file; verified GREEN after unstashing.
+- 2026-09-08 [BrainCandy/GE-127b-2]: added the covers tag below. GE-127b-2 was
+    authored independently of this file, against the same defect and to the same
+    conclusion -- a merge's permitted previous length is the most permissive across
+    every parent. Rather than ship a second implementation, the AC was pointed at
+    the behaviour this file already proves. No test was changed; only the claim of
+    what these descriptors cover was made explicit.
 """
+
+# covers: GE-127b-2
 
 from __future__ import annotations
 
