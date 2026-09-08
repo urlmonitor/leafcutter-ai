@@ -1,0 +1,204 @@
+id: BP-1500g-1
+title: "A capability the adopter added themselves is still there, and still runs, after the ordinary everyday build"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given a project that has the package installed, and the adopter has added one
+    capability of their own -- something the package does not ship and has never
+    shipped -- placed so that the tool which runs capabilities in that project
+    discovers it by name,
+  When that project is rebuilt with the ordinary everyday command and no options
+    of any kind,
+  Then the adopter's capability is present when the run ends, with its contents
+    unchanged byte for byte,
+  And the tool which runs capabilities in that project still discovers it by that
+    same name and runs it, so it survives usable rather than merely undeleted,
+  And this holds for a capability the adopter added after the last build as well
+    as one that was already there before it, because an adopter adds their work
+    between builds, not during one.
+depends_on:
+  - BP-1500g
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-009 (high, open) is this behaviour's negative case, reproduced three times, most recently on 2026-09-08 against that day's main. Read the RE-VERIFIED 2026-08-25 block: the ordinary no-option command is the destructive one, because the same location is claimed by a stale-path cleanup step and by the step that installs the link, and they run in that order every time. The original symptom text below that block describes a placement problem only and understates the defect."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The build whose behaviour this AC constrains. The harm is the PAIR of steps -- the cleanup that removes the adopter's directory and the link install that replaces it -- so neither is informative read alone."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500b-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "READ BEFORE IMPLEMENTING, AS A BOUNDARY, NOT AS COVERAGE. That AC governs what a future orphan sweep may remove, decided per file by provenance. This AC governs a conflict over a CONTAINER -- a real directory sitting where the package intends to put a link -- which a per-file provenance test does not resolve. Whatever ownership convention is chosen here, the sweep specified there must not contradict it. Its provenance rule, its default-deny asymmetry and its no-exception-list control are still required of the sweep and are deliberately not restated here."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The convention that produces one tree holding package-generated artifacts and adopter-owned files together. That shared occupancy is the precondition for this defect."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "THE FOUR ENFORCEMENT POINTS, RE-VERIFIED AGAINST origin/main 1cce5b48a ON 2026-09-08. Cite them BY NAME; the line numbers below are a dated snapshot and are given only so a reader can find them once. (1) `_PRE_CONSOLIDATION_PATHS` in `scripts/build.py` -- the DATA, 11 entries. (2) `_cleanup_stale_paths` in `scripts/build.py`, which iterates that constant and `rmtree`s -- called UNCONDITIONALLY on the default path, no flag required. THIS IS THE LOAD-BEARING POINT: it is the only one of the four that runs on the reported reproduction. (3) `install_shims` in `scripts/build_helpers.py`, driven by the module-level `shim_map` -- what the package CLAIMS; runs by default (suppressed only by `--no-shims`). (4) `clean_stale_artifacts` in `scripts/build_phases.py`, driven by `_MANAGED_ARTIFACT_DIRS` -- gated behind `if args.clean:`, a `store_true` defaulting False, so it does NOT run on the reported reproduction; it is the SECOND direction and is owned by BP-1500g-1-i. A repair applied only to (4) leaves the reported defect untouched; a repair applied only to (2) leaves KI-BP-009's originally-confirmed half live."
+  - "A FIFTH READER OF THE SAME CONSTANT, FOUND DURING ENRICHMENT AND NOT NAMED IN KI-BP-009: `_run_migration_report` in `scripts/build.py` iterates `_PRE_CONSOLIDATION_PATHS` and, for each hit, PRINTS `rm -rf <path>` as an instruction to the adopter. It deletes nothing itself, so it is not load-bearing for the data loss -- but if the four points above are repaired and this one is not, the surviving artefact of the defect is a build that politely instructs the adopter to delete their own directory by hand. Repair it in the same change or state why not."
+  - "MEASURED OVERLAP, SO THE BLAST RADIUS IS NOT UNDERSTATED: EIGHT of the eleven `_PRE_CONSOLIDATION_PATHS` entries are also `shim_map` canonical paths -- `.claude/agents`, `.claude/skills`, `.claude/commands`, `.claude/hooks`, `.gemini`, `scripts/commit_guardian`, `scripts/doc_compliance`, `scripts/feedback`. Three are cleanup-only (`.claude/settings.json`, `.pre-commit-config.yaml`, `scripts/sync_platforms`). One `shim_map` entry, `.claude/workflows`, is absent from the cleanup list and is therefore safe BY OMISSION rather than by design. Nothing in the suite asserts any relationship between the two tables. The defect is not an entry; it is two independently-maintained tables that disagree about who owns the same eight paths, and a repair scoped to one entry fixes one eighth of it."
+  - "DELETING `.claude/skills` FROM THE CONSTANT IS NOT AN ACCEPTABLE REPAIR AND MUST BE REJECTED IN REVIEW. It addresses one of the eight co-claimed paths, leaves the mechanism intact for the other seven, and is disproved by time: the constant is by construction a GROWING register of historical locations, so any repair that consists of editing its contents is re-broken by the next version that adds an entry. See BP-1500g-3, which exists to make exactly that failure visible."
+  - "THE GUARANTEE MUST BE ENFORCED BY SOMETHING THE BUILD EVALUATES AT RUN TIME, NOT BY A PROPERTY OF A LIST. Concretely: before any removal, the build must positively attribute the path to itself from data it RECOMPUTES on that run -- the current template set plus its own provenance record -- and must treat non-attribution as keep. `_cleanup_stale_paths` today has the inverse: its only ownership signal is `is_symlink() and resolves into output_root`, so a real directory is taken as proof of staleness. That inversion -- link means ours, real directory means stale -- is the actual defect, and it is why the adopter's correct workaround (replace the link with a real directory) is the thing that triggers the deletion."
+  - "THE BUILD MUST RECONCILE ITS OWN REMOVAL SET AGAINST ITS OWN CLAIM SET, ON EVERY RUN, AND FAIL RATHER THAN RESOLVE THE DISAGREEMENT SILENTLY. This is the requirement that answers the time direction: a path that is both scheduled for removal and scheduled to be claimed is a contradiction the build can detect from its own data without knowing anything about the adopter, and detecting it costs one set intersection. A developer keeping the two tables in step by hand is not an enforcement point -- it is the absence of one, and it is the state that produced this defect."
+  - "NO PLACEMENT, DIRECTORY, CONFIGURATION KEY OR OWNERSHIP CONVENTION IS PRESCRIBED BY THIS AC, PER THE L1's EXPLICIT SCOPE BOUNDARY. The implementer chooses and RECORDS the convention; if the choice is architectural it warrants an ADR. Two pieces of prior art exist and should be read before inventing a third, neither as a mandate: KI-BP-009's own fix direction (symlink per shipped item rather than symlinking the parent container, which makes link-versus-real-directory a recomputed provenance signal instead of a maintained list), and `config/skill_registry.json`, whose schema already carries a `portable: false` shape for items deployed only under `.claude/skills`."
+  - "SURVIVAL IS BYTE-IDENTICAL AND DISCOVERABLE, NOT MERELY UNDELETED. Contents unchanged byte for byte, AND resolvable by the same name by the tool that consumes capabilities in that project. A repair that relocates the adopter's content somewhere still on disk but no longer discovered satisfies a presence assertion and delivers nothing."
+  - "IDEMPOTENT AND ORDER-INDEPENDENT within a single run: the cleanup step and the shim step run in that fixed order today, and a repair that only works because of that ordering is a repair that a phase reshuffle silently removes. The invariant must hold as a property of each step, not of their sequence."
+  - "OBSERVABILITY: any decision to keep a path the build would previously have removed must be visible in the run output at an appropriate severity, so the change in behaviour is auditable rather than inferred from an absence of damage. Silence is what made this defect survive months of successful builds in the reporting repository."
+  - "Must not regress build wall-clock materially -- the added work is set membership over a tree already being walked, and any implementation whose cost scales with anything larger than the installed tree should be questioned in review."
+  - "Must follow the project error handling policy for all filesystem operations (CLAUDE.md Rules 1-3); a removal path that swallows an OSError is how a partial deletion becomes a silent one."
+test_spec:
+  - name: test_bp_1500g_1_a_default_no_flag_build_leaves_a_real_adopter_authored_capability_byte_identical
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter>   (no flags of any kind)"
+    description: "THE REPRODUCTION, AS THE PRIMARY ENTRY, AND IT MUST BE RED AGAINST TODAY'S BUILD. Build a scratch adopter, replace the `.claude/skills` shim with a REAL directory holding an adopter-authored SKILL.md the package has never shipped, record its bytes, run build.py as a REAL SUBPROCESS with no flags, and assert the file is present with identical bytes. This entry must NOT be written as a direct call to `_cleanup_stale_paths` -- a unit test of that function is GREEN today against a build that destroys adopter data, because the harm is the cleanup and the shim install disagreeing across a whole run."
+  - name: test_bp_1500g_1_the_surviving_capability_is_still_discovered_by_name_after_the_same_run
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter>   (no flags)"
+    description: "The second Then clause, which the byte-identity entry above cannot reach. After the same no-flag run, the adopter's capability resolves by its own name at the location the consuming tool discovers capabilities from -- present AND reachable, not present somewhere the tool no longer looks. Fails a repair that preserves the bytes by moving them out of the discovery path."
+  - name: test_bp_1500g_1_a_capability_added_after_the_previous_build_survives_the_next_one
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The third Then clause, and the sequence in which an adopter actually works. Build once, THEN add the capability into the already-built tree, THEN build again. Distinct from the entry above, where the capability predates every build: this is the case where the shim is already installed and the adopter's addition arrives into a tree the build believes it owns."
+  - name: test_bp_1500g_1_every_co_claimed_path_is_protected_not_only_the_skills_directory
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "THE ONE-ENTRY-FIX CONTROL, and the entry that makes a `.claude/skills`-only repair fail. Parameterised over the measured intersection of `_PRE_CONSOLIDATION_PATHS` and `shim_map` -- eight paths as of 1cce5b48a -- computed IN THE TEST BODY from the two live tables rather than hardcoded, so a ninth co-claimed path added next month is covered without anyone editing this test. Plant real adopter-owned content at each and assert it survives a no-flag build."
+  - name: test_bp_1500g_1_the_build_refuses_to_both_remove_and_claim_the_same_path
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "The run-time reconciliation invariant asserted directly at the seam, independent of any filesystem. Given a removal set and a claim set that intersect, the build surfaces the contradiction and does not proceed to remove; given disjoint sets, it proceeds. This is the entry that stays meaningful when the constant grows, and it is the one that would have caught the defect at the moment `.claude/skills` was added to the second table."
+  - name: test_bp_1500g_1_ownership_is_not_decided_by_a_hardcoded_name_anywhere_in_the_removal_path
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The no-maintained-list control, in the shape BP-1500b-2 and BP-1500b-4 use on their own sides. Plant adopter content whose directory name contains a uuid4 hex minted inside the test body, inside a co-claimed container. It survives. A protected-names constant cannot hold a name that did not exist when it was written, so an allowlist repair -- KI-BP-009's own smaller fallback -- passes every other entry in this contract and fails here."
+  - name: test_bp_1500g_1_the_migration_report_never_instructs_the_adopter_to_delete_their_own_content
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The fifth enforcement point. Run the migration report over a tree holding adopter-owned content at a co-claimed path and assert the printed remediation does not name that path in an `rm`/`rm -rf` instruction. Guards the surviving-advice failure: four repaired code paths and one page of prose still telling the adopter to do it by hand."
+  - name: test_bp_1500g_1_repeated_no_flag_builds_are_byte_stable_over_the_adopter_content
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Idempotency at this AC's own level, distinct from BP-1500g-3's multi-run and upgrade sequence: two consecutive no-flag runs leave the adopter's content identical and produce no second removal report. Cheap here, and it fails a repair that works only because the first run found the tree in a particular state."
+test_rationale: |
+  THE ENTRY POINT IS THE CONTRACT, AND IT IS THE THING MOST LIKELY TO BE GOT
+  WRONG. A direct unit test of `_cleanup_stale_paths` PASSES TODAY against a
+  build that deletes adopter data, because that function in isolation does
+  something defensible -- it removes a real directory at a path the package
+  believes is a stale pre-consolidation artifact. The harm only exists as a
+  property of the whole run, where the cleanup's judgement that the directory
+  is stale and the shim's intention to claim the same path are two halves of
+  the same wrong answer. Every behavioural entry above therefore invokes
+  `build.py` as a real subprocess against a real scratch adopter. An
+  implementer who satisfies this contract with mocked cleanup calls has
+  reproduced the exact bias that let the defect ship, and the reporter's own
+  three-command reproduction is the proof that the real thing is cheap.
+
+  THE PARAMETERISED ENTRY IS WHY THIS CONTRACT DOES NOT ROT. Hardcoding the
+  eight co-claimed paths would make this suite a snapshot of 1cce5b48a and
+  would go quietly stale the first time the constant grows -- which is the
+  defect's own mechanism, reproduced in the tests written to catch it. Computing
+  the intersection from the two live tables inside the test body means a ninth
+  co-claimed path is covered on the day it is added, by nobody.
+
+  THE SEAM ENTRY IS THE ONLY ONE THAT ANSWERS THE TIME QUESTION. Every other
+  entry demonstrates that the build behaves correctly on the tree in front of
+  it today. Only the reconciliation entry asserts a property the build checks
+  ABOUT ITSELF on every run, and it is the entry to defend if the contract is
+  ever trimmed: without it, this AC's guarantee is a statement about the
+  current contents of a list that KI-BP-009 itself says will grow.
+
+  RUNTIME. Eight entries, six of them real build subprocesses over small
+  scratch trees. Comfortably inside the done-proof pytest budget as fixed by
+  PR #706 -- a 30s collection floor plus 300s per linked test file, overridable
+  via LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS. This contract was NOT shaped
+  by the retired 60s ceiling and must not be trimmed toward it.
+delivers_to:
+  agent: python-coder
+  contract: "The ownership convention for the installed tree, as a recomputed run-time predicate rather than a document: owns(installed_path) -> one of {package_produced (the build may replace or remove it), adopter_owned (the build must never remove, empty or overwrite it), unattributable (keep; may be reported, never removed)}. Consumed by BP-1500g-1-i (the opt-in removal mode must obtain the same verdict before deleting through a link), BP-1500g-2 (the package's own items must remain resolvable under whatever layout this verdict implies), BP-1500g-3-i (the same verdict must permit UPDATING package_produced content while leaving adopter_owned alone), and -- across the L1 boundary -- by BP-1500b-4, whose per-file provenance rule for the future orphan sweep must not contradict this verdict. See the caveat in BP-1500g's notes: BP-1500b-4 already records this dependency in prose in its COEXISTENCE it_requirement, but its single `expects_from` slot is occupied by BP-1500b-2, so the contract is one-sided by schema limitation and not by oversight."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-08'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (L), it_requirements, test_spec, test_rationale and delivers_to. Criteria, title, depends_on and all doc_links UNCHANGED; readiness remains draft. THE SUBSTANTIVE FINDINGS THIS ENRICHMENT ADDS, all re-verified against origin/main 1cce5b48a rather than copied from any record. (1) FIVE readers of `_PRE_CONSOLIDATION_PATHS` exist, not the two named in KI-BP-009: `_cleanup_stale_paths` (the load-bearing one -- unconditional on the default path) and `_run_migration_report`, which prints `rm -rf` instructions naming the adopter's own directory. The latter is named in no prior record. (2) The co-claim overlap is EIGHT of eleven paths, not one: `.claude/agents`, `.claude/skills`, `.claude/commands`, `.claude/hooks`, `.gemini`, `scripts/commit_guardian`, `scripts/doc_compliance`, `scripts/feedback`. `.claude/workflows` is in `shim_map` and absent from the cleanup list -- safe by omission, not by design -- and nothing in the suite asserts any relationship between the two tables. (3) The ownership signal in `_cleanup_stale_paths` today is inverted: a symlink into the output root is taken as proof of package ownership and a REAL DIRECTORY as proof of staleness, which is precisely why the adopter's correct workaround triggers the deletion. (4) LINE NUMBERS ARE DELIBERATELY ABSENT FROM THE it_requirements EXCEPT AS A DATED SNAPSHOT: four different line numbers for this one constant now exist across the store and KI-BP-009, and all four were right about some tree. On origin/main 1cce5b48a the constant is at build.py:1791; in the authoring worktree it is at :1769; KI-BP-009 says :1189. The constant name is stable and the numbers are not."
+superseded_by: null
+covered_by:
+  - BP-1500g-1-i
+  - BP-1500g-1-ii
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  THE DEFAULT PATH IS THE SUBJECT, AND THAT IS THE WHOLE POINT. An implementer
+  who fixes only the opt-in destructive mode has fixed the mode nobody runs by
+  accident and left the one everybody runs. The reporter's reproduction used no
+  flags at all. BP-1500g-1-i carries the opt-in mode as the second direction; do
+  not treat it as the primary case.
+
+  NO PLACEMENT IS PRESCRIBED HERE, DELIBERATELY. The Given says only "placed so
+  that the tool which runs capabilities discovers it" -- it names no directory,
+  no configuration key and no ownership convention. That is the L1's explicit
+  scope boundary and it is repeated here because this AC is the one most likely
+  to have a directory written into it during enrichment. Today there is no safe
+  placement in either direction, and choosing one may need an ADR. Choosing it is
+  the implementer's decision to make and record, not a fact to be copied out of
+  this file.
+
+  "STILL RUNS", NOT ONLY "STILL PRESENT". The second Then clause is load-bearing
+  and is the reason the first is not sufficient on its own. A repair that leaves
+  the adopter's files on disk somewhere the tool no longer looks satisfies a
+  presence check and delivers nothing. Byte-identical presence plus discovery by
+  name is the pair that makes the outcome real.
+
+  TEST DESCRIPTOR OWED TO THIS AC -- FOR THE IT PO, DO NOT LET IT EVAPORATE.
+  BP-1500b-4's test_spec entry
+
+    test_bp_1500b_4_a_default_no_flag_build_does_not_delete_a_real_adopter_owned_skills_directory
+
+  was written against BP-1500b-4's fourth Then clause read as a property of the
+  rebuild, and the owner has now decided the repair lives here. On 2026-09-08 that
+  entry was REDIRECTED in place rather than deleted: it now declares covers:
+  [BP-1500g-1] and its description says so. The IT PO authoring this AC's test
+  contract should carry an equivalent descriptor here under its own name. This BA
+  run deliberately authored no test_spec -- the test contract is the IT PO's
+  jurisdiction on this run by explicit instruction -- so the redirect is the only
+  thing holding that entry to this record until then.
+
+  WHY THIS IS NOT COVERED BY BP-1500b-4, IN ONE LINE, SO IT IS NOT RE-LITIGATED:
+  that AC is gated behind an orphan sweep that does not exist yet, and its three
+  Given categories all sit outside any directory the package claims wholesale.
+  The full ruling is in BP-1500g's notes.

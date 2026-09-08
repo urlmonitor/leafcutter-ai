@@ -1,0 +1,209 @@
+id: BP-1500b-2
+title: "Orphans are derived from the package's current sources, never from a maintained list of known-stale names"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given a contributor deletes one template from the package, for a capability
+    that whoever built the sweep has never heard of, and changes nothing else in
+    that commit,
+  And a project's installed tree still carries the artifact that template used
+    to produce,
+  When that project's install is rebuilt,
+  Then the artifact is identified as an orphan and removed, with no edit to any
+    list, catalogue or allowlist of known-stale names anywhere in the package --
+    the deletion of the template is the only change required to make the sweep
+    catch it,
+  And the set the installed tree is compared against is recomputed from the
+    package's current sources during that same rebuild, so it is exactly one
+    smaller than it was on the previous rebuild,
+  And a record left over from an earlier build that still maps a now-deleted
+    source to an installed path is read as evidence that the installed path is
+    an orphan, and never as a reason to keep it,
+  And an installed tree in which every artifact the package declares is present
+    and correct is still reported as carrying residue when it additionally holds
+    one artifact the package declares nothing about -- so a tree that passes
+    every completeness check may still fail this sweep, and passing one gives no
+    information about the other.
+depends_on:
+  - BP-1500b
+  - BP-1500b-1
+doc_links:
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The current cleanup step iterates eleven hardcoded paths from a historical layout migration. That is the exact shape this AC exists to make fail, so read it as the counter-example."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8-ii.yaml"
+    relationship: describes
+    status: exists
+    relevance: "THE INVERSE, AND THE ONE MOST LIKELY TO BE MISTAKEN FOR THIS. Approved, done, merged 2026-09-07. It refuses to ship when a deployed script NEEDS a file the deploy declaration lacks -- declared-but-absent. This AC is present-but-undeclared. The final Then clause states the non-equivalence. Do NOT treat a BP-900g-8-ii fixture, helper or test as evidence here."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-005's narrowing note argues registry-backed artifact classes are safe because deleting an agent template fails the build. Workflows are registry-backed and the orphan survived, so that premise is false and must not be used to narrow this derivation."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The build_pipeline component's detail_ref. Describes the template-to-output compilation whose CURRENT state is the only legitimate definition of the producible set."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "IMPORTANT SCOPE CORRECTION, verified on disk 2026-09-07: the recomputed derivation this AC demands ALREADY EXISTS. `_build_source_manifests` (scripts/build.py:1784) scans templates/agents/*.md, templates/skills/*/, templates/hooks/* and templates/workflows-js/*.js on every call and returns the producible set for that run. This AC is therefore mostly a CONSTRAINT ON WHAT MUST NOT BE ADDED, plus one genuinely new piece of logic: the provenance read in the third Then clause. Do not rewrite the existing derivation; extend it."
+  - "No file committed to the package may enumerate stale, retired or known-orphan names. Not `_PRE_CONSOLIDATION_PATHS`, not a new module constant, not a JSON or YAML allowlist, not a config key, and not a test fixture that doubles as the production list. The deletion of a template must be the only change required to make the sweep catch its output."
+  - "`.build_manifest.json` must never define the producible set. Verified 2026-09-07: the workspace-root manifest (written 2026-09-01) still maps templates/workflows-js/fast-lane-build.js to .claude/workflows/fast-lane-build.js for a source that no longer exists -- `grep -c fast-lane-build.js` against it returns 2. A rule of 'installed path absent from the manifest is an orphan' therefore classifies the ONE REAL ORPHAN as legitimate. That rule is rejected."
+  - "The manifest's only sanctioned role is PROVENANCE: it answers 'was this installed path ever produced by us', which is the signal BP-1500b-4 needs to tell an orphan from an adopter's own file. A manifest entry whose source path no longer exists must resolve to 'this is an orphan', never to 'keep it'. The two manifest states observed on this machine -- one pruned, one stale -- must both reach the removal decision."
+  - "The derivation must be artifact-class-agnostic. It must not narrow to classes lacking a registry: workflows ARE registry-backed via output_mappings and the orphan survived anyway, so KI-BP-005's narrowing note is a false premise. Any new artifact class added to templates/ must be swept by the same code with no per-class addition."
+  - "Any exemption from the sweep must derive from a data property, never from a name. An artifact type whose declared source set is legitimately empty is exempt because the set is empty, not because its name appears somewhere -- so a class added tomorrow inherits the rule automatically."
+  - "Passing a completeness check must yield no information about this sweep, and vice versa. Do not implement this by reusing or inverting BP-900g-8-ii's derived-closure machinery; the two read opposite sides of the comparison and sharing code between them will make one silently define the other."
+  - "The classifier must be callable as a pure function of (current sources, installed tree listing, provenance record) returning a per-path verdict, so it can be exercised and reasoned about without performing a deletion. This is what lets BP-1500b-4's negative controls run without risking a real tree."
+test_spec:
+  - name: test_bp_1500b_2_a_template_named_at_runtime_is_swept_after_deletion_with_no_package_edit
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: "python scripts/build.py --target-dir <root>  (no flags)"
+    description: "THE GENERALISATION CONTROL, and the entry that makes the hardcoded-list shortcut fail. Mint a workflow template basename containing a uuid4 hex generated INSIDE the test body (e.g. __bp1500b2_control_<hex>__.js), deploy it via a real no-flag build subprocess, delete only that template, rebuild. The deployed copy must be gone. No list committed to the package can contain a name that did not exist when the list was written, so an implementation that adds 'fast-lane-build.js' to a constant passes BP-1500b-1 and fails here."
+  - name: test_bp_1500b_2_no_package_file_other_than_the_deleted_template_changes_between_the_two_builds
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The 'no edit to any list' clause asserted behaviourally rather than by grep: hash every file in the package copy before the first build and after the second; the only difference is the deliberately deleted template. Catches an implementation that self-registers the name into a config or cache to make the next run work."
+  - name: test_bp_1500b_2_a_stale_manifest_entry_whose_source_is_gone_marks_the_path_as_an_orphan
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Seed the target with a manifest in the REAL observed stale state -- still mapping templates/workflows-js/fast-lane-build.js to .claude/workflows/fast-lane-build.js for an absent source, copied in the shape the workspace-root .build_manifest.json actually has. The deployed copy is classified as an orphan and removed. This is the case the brief's rejected 'absent from the manifest' rule gets backwards."
+  - name: test_bp_1500b_2_a_pruned_manifest_reaches_the_same_removal_decision_as_a_stale_one
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The mirror state, also observed on disk (the package-root manifest, rewritten 2026-09-07, no longer mentions the workflow). Same input tree, pruned manifest instead of stale: same removal. Proves the verdict comes from current sources, not from whichever manifest state happens to be present."
+  - name: test_bp_1500b_2_the_compared_against_count_falls_by_exactly_one_when_one_template_is_deleted
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    covers:
+      - BP-1500b-2
+      - BP-1500b-3
+    description: "The recomputed-in-the-same-rebuild clause, observed through the reported count: build, record the compared-against count, delete one template, rebuild, count is exactly one lower. Fails against any set computed once and cached, and against a set whose size is a constant."
+  - name: test_bp_1500b_2_a_tree_satisfying_every_deploy_declaration_still_reports_residue
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The non-equivalence clause. Build a target in which every declared artifact is present and correct -- it passes the deploy-completeness direction -- then add one artifact the package declares nothing about. The sweep reports residue. Establishes that passing BP-900g-8-ii gives no information here."
+  - name: test_bp_1500b_2_a_registry_backed_artifact_class_is_swept_like_any_other
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Workflows carry output_mappings and the real orphan survived anyway. Assert the sweep catches an orphan in a registry-backed class and in a class without a registry by the same code path, so KI-BP-005's narrowing premise cannot be reintroduced as a scope reduction."
+test_rationale: |
+  THE SHORTCUT THIS AC EXISTS TO KILL PASSES EVERY OBVIOUS TEST. Adding the
+  single string "fast-lane-build.js" to a list of names to delete satisfies
+  BP-1500b-1 completely, on the real orphan, in a real subprocess, and would
+  keep passing forever while catching nothing else. No fixture whose names are
+  visible to the implementer can distinguish that implementation from a real
+  derivation -- the implementer can always pre-populate the list with the
+  fixture's names, and will not even be doing anything dishonest, because the
+  fixture is right there in the diff.
+
+  THE ONLY CONSTRUCTION THAT DEFEATS IT IS A NAME THAT DID NOT EXIST WHEN THE
+  IMPLEMENTATION WAS WRITTEN. A uuid4 minted inside the test body at run time
+  cannot be in any committed list, cannot be in any allowlist, and cannot be
+  pattern-matched by anything short of the correct general rule. This is the
+  same construction BP-900g-8-ii used for its generalisation control
+  (unit_tests/test_bp_900g_8_ii.py, the marker-file half), where a synthetic
+  marker in a fresh copy proved the derivation generalised rather than having
+  memorised the known case. It worked there and it is reused here deliberately.
+
+  THE SECOND ENTRY IS THE OTHER HALF OF THE SAME GUARD. A hash of the whole
+  package tree across both builds catches the subtler variant: an
+  implementation that passes the uuid test by WRITING the name into a cache or
+  config on the first build and reading it back on the second. That is still a
+  maintained list; it is just maintained by the machine. The clause says "no
+  edit to any list", and only a tree-level byte comparison enforces it.
+
+  THE TWO MANIFEST-STATE ENTRIES ARE NOT REDUNDANT WITH EACH OTHER. Both
+  states exist on the reporting machine right now, in two different manifests,
+  and the rejected derivation handles exactly one of them. Testing only the
+  pruned state reproduces the brief's own blind spot and would ship the rule
+  that classifies the live orphan as legitimate.
+delivers_to:
+  agent: python-coder
+  contract: "Two artefacts consumed by the rest of the batch. (1) The producible set, recomputed inside the rebuild that uses it, as {artifact_type: set[basename]} -- the existing `_build_source_manifests` return shape, unchanged, now reached on the default path. (2) A provenance lookup over .build_manifest.json answering was_ever_produced(installed_path) -> bool, in which an entry whose recorded source path no longer exists yields True-and-orphan (positive removal evidence) and never keep. BP-1500b-3 reports the size of (1); BP-1500b-4 uses (2) as its keep/remove test."
+expects_from:
+  ac_id: BP-1500b-1
+  contract: "The default-path sweep and its per-artifact removal records {installed_path, artifact_type, reason}. This AC constrains how `reason` may be derived: from the recomputed producible set and the provenance record only, never from a stored name."
+origin_agent: BrainCandy
+created: 2026-09-07
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-07'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (M), it_requirements, test_spec, test_rationale, delivers_to, expects_from, and one architecture doc_link. Criteria, title and depends_on unchanged. Two things the enrichment pins down. (1) A scope correction: the recomputed derivation already exists at scripts/build.py:1784 and is reached only behind --clean, so this AC is largely a constraint on what must NOT be added plus one new piece of logic -- the manifest-as-provenance read. (2) The test contract is built around a runtime-minted uuid4 template name, the same generalisation control BP-900g-8-ii used, because that is the only construction a hardcoded-list implementation cannot pre-satisfy; paired with a whole-tree byte comparison across both builds to catch a machine-maintained list."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE AC FROM BP-1500b-1. An implementation could satisfy
+  BP-1500b-1 completely by adding the single string "fast-lane-build.js" to a
+  list of names to delete. It would pass its own tests on the day it was written
+  and catch nothing ever again. This project has patched a hand-maintained
+  deploy list four times for the mirror-image defect; the "no edit to any list"
+  clause is what makes that shortcut fail, and the "a capability whoever built
+  the sweep has never heard of" premise is what makes it impossible to
+  pre-populate.
+
+  ON THE RECORD-OF-PAST-BUILDS CLAUSE, which is the least obvious of the four
+  and was derived from disk rather than from the brief. Two build manifests were
+  inspected on 2026-09-07:
+
+    - The workspace-root manifest (last written 2026-09-01 10:52) STILL maps
+      leafcutter-ai/templates/workflows-js/fast-lane-build.js ->
+      .claude/workflows/fast-lane-build.js, for a source that no longer exists.
+    - The package-root manifest (last written 2026-09-07 16:30) no longer
+      mentions the workflow at all; the entry was pruned when the template went.
+
+  Both states are hazardous, in opposite directions, and a derivation phrased
+  only as "an installed path absent from the manifest is an orphan" handles
+  exactly one of them:
+
+    - Against the PRUNED manifest that rule works, because the entry is gone.
+      This is also the mechanic the parent's notes call out: pruning the record
+      before computing staleness destroys the only evidence the file was ever
+      ours.
+    - Against the STALE manifest that rule FAILS SILENTLY. The path is still
+      listed, so the orphan is classified as legitimate and survives -- and this
+      is the manifest belonging to the very tree the reporter ran
+      `build.py --force` against.
+
+  So the manifest is a record of a past build, not a statement of what the
+  package can currently produce, and it cannot be the definition of the
+  comparison set. The producible set must be recomputed from current sources
+  (second Then clause); the manifest's role is provenance -- it can tell you a
+  path was once ours, which is what distinguishes an orphan from an adopter's
+  own file in BP-1500b-4 -- and a manifest entry whose source has vanished is
+  itself a positive orphan signal (third Then clause).
+
+  This is a correction to the brief that produced this decomposition, which
+  proposed "an installed path in neither the template account nor
+  output_mappings, and not a shim symlink, is an orphan". Applied literally to
+  the stale manifest, that rule does not flag the one real orphan the same brief
+  requires the work to go red on.
