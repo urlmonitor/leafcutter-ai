@@ -56,15 +56,27 @@ documentation_triggers:
   - reference-doc
   - component-diagram
 notes: |
-  DECOMPOSITION DELIBERATELY DEFERRED (BA, 2026-09-08): this L1 has no children on
-  purpose, pending BrainCandy's scope ruling on whether the field split belongs in
-  this tree or in its own L0. It is the most expensive item here — every reader of
-  the coverage field is affected — and ACS-1300a-3 already placed it out of scope
-  twice. Its emptiness is a held decision, not an oversight. ACS-1400a, b and c
-  were decomposed in the same pass; ACS-1400c-2 carries the consequence, requiring
-  the reconciliation pass to abstain out loud on the population this L1 owns and to
-  name this record as what must be settled first, so a permanent deferral leaves a
-  visible, reasoned gap rather than a silent one.
+  RULED 2026-09-08 BY BrainCandy: THE FIELD SPLIT GETS ITS OWN L0. This L1 is
+  therefore a placeholder awaiting supersession, not work to be decomposed in place.
+  A product owner authors the replacement L0 as a follow-up; when it lands, this
+  record's superseded_by must name it and its children stay empty permanently. Do
+  NOT decompose this L1 — children authored here would have to be moved or discarded
+  within the week.
+
+  The ruling matches the reasoning that produced the deferral. This is the most
+  expensive item in the tree (every reader of the coverage field is affected) and
+  ACS-1300a-3 had already placed it out of scope twice. A capability that two trees
+  have now declined to own does not become smaller by being attached to a third; it
+  needs a home of its own, which is exactly what it never had.
+
+  DECOMPOSITION DELIBERATELY DEFERRED (BA, 2026-09-08), the state that preceded the
+  ruling, kept because it explains why this record exists at all: this L1 had no
+  children on purpose, pending the scope decision above. Its emptiness was a held
+  decision, not an oversight. ACS-1400a, b and c were decomposed in the same pass;
+  ACS-1400c-2 carries the consequence, requiring the reconciliation pass to abstain
+  out loud on the population this L1 owns and to name this record as what must be
+  settled first — that consequence SURVIVES the ruling unchanged, and now points at
+  the forthcoming L0 rather than at a pending decision.
 
   THE DURABLE FIX FOR THE LARGEST POPULATION, AND THE ONE ITEM IN THIS TREE THE
   USER SHOULD CONSCIOUSLY DECIDE ABOUT. Flagged at the approval gate rather than
