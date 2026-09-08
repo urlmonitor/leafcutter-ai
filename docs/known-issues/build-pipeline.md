@@ -4135,3 +4135,74 @@ A committed index that already contains `os.sep`-flavoured paths means a Windows
 **Fix direction.** Emit POSIX separators at the single construction site — `path.relative_to(STORE).as_posix()` rather than `str(...)`. Store-relative paths inside a JSON manifest are identifiers, not filesystem paths, and should be platform-independent by construction. Audit the sibling loaders (`load_mocks`, and any other `relative_to` in the two scripts) for the same expression before closing. A regression test should assert that every emitted `path` value contains no backslash, which fails today on Windows and passes trivially on POSIX — so it must be written as a string-content assertion, not as a round-trip through `pathlib`, or it will pass vacuously on the platform that cannot reproduce the bug.
 
 **Pattern:** a check that cannot pass is as useless as one that cannot fail, and pushes contributors toward `--no-verify` — which is the mechanism by which one platform-specific defect disables an entire gate set. **Related:** `KI-CG-20260907-0745` is the other defect found the same day whose practical effect is a blanket tool block on Windows; both are cases of POSIX-shaped assumptions reaching a Windows contributor through generated artifacts.
+
+---
+
+### KI-BP-20260907-1620 — The doc-index phase derives the index from the target tree and writes it into the package tree, so every self-hosting build truncates `docs/INDEX.md` by 75%
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 2 (2026-09-07, twice in one session)
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** the `Doc index` phase of `scripts/build.py` · `scripts/generate_doc_index.py` (`generate_index`) · triggered by any `build.py --target-dir <other-root>`, which is precisely what `build-self.sh` runs
+
+**Symptom.** After `python scripts/build.py --target-dir <workspace>` run from inside the package
+repo, `docs/INDEX.md` **in the package repo** is rewritten from 230 lines to 57, losing the
+Components table and most of the index, and its `created:` stamp is reset from the real creation
+date to today:
+
+```text
+HEAD:     230 lines        working:   57 lines
+created:  2026-08-11   →   2026-09-07
+1 file changed, 11 insertions(+), 184 deletions(-)
+```
+
+**Mechanism.** The index is derived from one root and written to another. Run in-process against
+each root, writing nothing:
+
+```text
+generate_index(<package repo>)  -> 230 lines
+generate_index(<workspace>)     ->  57 lines
+```
+
+The 57-line output is the workspace's own small `docs/` tree. The build computes the index for the
+`--target-dir` it was given and then persists it over the package repo's `docs/INDEX.md`. Both
+halves are individually correct; only the pairing is wrong.
+
+**Why this is worse than an ordinary wrong-file write.** `build-self.sh` is documented as the
+package's own development build and does exactly `build.py --target-dir <parent workspace>`. So
+the corruption is not an edge case reached by an unusual flag — it is what the sanctioned
+self-hosting build does every time it runs.
+
+**Detection.**
+
+```bash
+git diff --stat docs/INDEX.md      # after any build.py --target-dir <other-root>
+grep -c '^## Components' docs/INDEX.md   # 1 when intact, 0 when truncated
+grep '^created:' docs/INDEX.md           # a reset to today is the signature
+```
+
+The `created:` reset is the most reliable tell: a regenerated index stamps today, so a `created:`
+that matches the run date rather than the file's real history means the file was replaced rather
+than updated.
+
+**Confidence.** Empirically confirmed, twice in one session, and the root mismatch is reproduced
+by the two `generate_index` calls above without writing anything. An earlier report of this
+symptom was investigated and wrongly dismissed as unreproducible, because the check ran
+`generate_index` against the package root only — which returns the correct 230 lines and looks
+like a clean bill of health. Reproducing it requires passing the *other* root, which is the whole
+defect. Recorded here because that near-miss is the more useful lesson: a one-root check cannot
+falsify a two-root bug.
+
+**Fix direction.** Make the phase's read root and write root the same value, and assert it: the
+index written to `<X>/docs/INDEX.md` must be the index derived from `<X>/docs/`. A regression test
+should build into a scratch target from inside the package repo and assert the package's own
+`docs/INDEX.md` is byte-identical afterwards — that test fails today and cannot pass vacuously,
+since it names a specific file that must not change. Preserving `created:` across regeneration is
+a separate, smaller fix worth taking at the same time: an auto-generated file that resets its own
+creation date destroys the one field that would otherwise reveal it had been replaced.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2, the deployed layout differing from
+the source being read, in its cross-root form. **Related:** `KI-BP-20260907-0722` and `KI-BP-009`
+are the same family — a build step whose target is computed from one root and applied to another,
+reported as success.
