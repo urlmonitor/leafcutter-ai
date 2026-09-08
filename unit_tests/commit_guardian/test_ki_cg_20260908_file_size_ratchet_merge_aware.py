@@ -32,6 +32,21 @@ DECISION HISTORY
     Initial authoring. Verified RED against the pre-fix _file_size_ratchet.py
     (HEAD-only previous-length resolution) via `git stash` of the production
     change and a full run of this file; verified GREEN after unstashing.
+- 2026-09-08 [BrainCandy/GE-127b-2]: added the covers tag below. GE-127b-2 was
+    authored independently of this file, against the same defect and to the same
+    conclusion -- a merge's permitted previous length is the most permissive across
+    every parent. Rather than ship a second implementation, the AC was pointed at
+    the behaviour this file already proves. No test was changed; only the claim of
+    what these descriptors cover was made explicit.
+- 2026-09-08 [BrainCandy/GE-127b-2]: the covers tag was first written HERE, at
+    module level, immediately below this docstring. It does not count there, and
+    nothing said so: the pre-commit check-done-proof gate searches the staged text
+    for the tag anywhere and passed, while CI's oracle
+    (scripts/ac_store/done_proof.py:875-877) skips any line whose enclosing
+    function is None -- so a Python covers tag is only seen when it sits INSIDE a
+    test function. The two gates disagree about what a covers tag is; filed as
+    KI-CG-20260908-covers-tag-must-be-inside-a-test-function. The tag now sits in
+    the three descriptors that actually prove the rule.
 """
 
 from __future__ import annotations
@@ -158,6 +173,7 @@ class MergeFixtureTestCase(unittest.TestCase):
 class TestMergeAdoptingAlreadyGrownFileFromOtherParentPasses(MergeFixtureTestCase):
     def test_a_merge_that_adopts_an_already_grown_oversized_file_from_the_other_parent_passes(self):
         # covers: KI-CG-20260908-file-size-ratchet-refuses-merge-commits
+        # covers: GE-127b-2
         """THE MANDATORY POSITIVE ARM. big.py is already oversized (450
         lines, limit 400) at the point main and feature diverge. main then
         grows it further (500 lines) in a commit that was, on main's own
@@ -213,6 +229,7 @@ class TestMergeAdoptingAlreadyGrownFileFromOtherParentPasses(MergeFixtureTestCas
 class TestMergeResultLargerThanEveryParentIsRefused(MergeFixtureTestCase):
     def test_a_merge_result_larger_than_every_parent_is_still_refused(self):
         # covers: KI-CG-20260908-file-size-ratchet-refuses-merge-commits
+        # covers: GE-127b-2
         """THE NEGATIVE CONTROL. Both feature and main edit the SAME line of
         an already-oversized big.py (450 lines each), forcing a genuine
         content conflict. The merge author resolves it by writing content
@@ -324,6 +341,7 @@ class TestOrdinaryCommitCrossingTheLimitIsStillRefused(MergeFixtureTestCase):
 class TestOctopusMergeReadsEveryMergeHeadLine(MergeFixtureTestCase):
     def test_an_octopus_merge_reads_every_merge_head_line_not_only_the_first(self):
         # covers: KI-CG-20260908-file-size-ratchet-refuses-merge-commits
+        # covers: GE-127b-2
         """THE OCTOPUS DESCRIPTOR. Three branches merge into feature at once:
         branchB touches an unrelated file only; branchC is the ONLY one that
         grows the already-oversized big.py (450 -> 460, still over the 400

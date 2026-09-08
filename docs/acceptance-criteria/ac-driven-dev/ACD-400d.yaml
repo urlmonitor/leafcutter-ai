@@ -1,0 +1,87 @@
+id: ACD-400d
+components:
+  - ac_driven_dev
+title: "The most urgent work comes back first, by a rule you can read"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  What the build system reaches for next is decided by a stated order of importance.
+
+  When several pieces of work are equally available, the queue hands back the most
+  urgent one first, and the tie-breakers that follow are stated rather than assumed.
+  Work that names no urgency is treated the same way every time, and so is work whose
+  urgency nobody recognises — neither case silently drifts to the front or the back.
+depends_on: [ACD-400]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+    relevance: "The order lives here as an unspecified sort key: `_sort_ready` (lines 353-370) sorts on priority ascending via `_PRIORITY_ORDER` (line 51: critical<high<medium<low), then estimated_complexity, then id. Unnamed priorities and unnamed complexities both fall back to the sentinel 99; an absent priority falls back to 'medium'."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "CONTRADICTS the shipped order. Its Then clause states a two-key sort — 'sorted by estimated_complexity ascending (S before M before L before XL) then by AC id ascending' — with no priority key at all. Reconciling it is ACD-400e's job, not this one's."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a.yaml
+    relationship: related
+    status: exists
+    relevance: "Its own L1 criteria repeats the same superseded two-key claim: 'the ready list is sorted by estimated_complexity then AC id'. Also reconciled by ACD-400e."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400d-1, ACD-400d-2, ACD-400d-3, ACD-400d-4]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+documentation_triggers: []
+documentation_rationale: "The single written statement of the selection rules is owned by ACD-400e; a second reference-doc entry here would recreate the divergence ACD-400e exists to end."
+notes: |
+  AUTHORED 2026-09-08 by PO v3 at BrainCandy's request, as stage 1 of PO -> BA -> IT-PO.
+  Placed under the EXISTING ACD-400 — placement reasoning is in the ACD-400e notes.
+
+  THIS ONE IS WORSE THAN THE APPROVAL GATE, AND THE DIFFERENCE MATTERS FOR THE BA.
+  The approval rule (ACD-400c) is UNSPECIFIED — the store is silent about it. The
+  ordering rule is MIS-specified — the store speaks about it, and what it says is
+  false. Both ACD-400a and ACD-400a-1 describe a two-key sort (complexity, then id).
+  The shipped code has sorted on a three-key sort (priority, then complexity, then id)
+  since the priority tier was added. A test written faithfully from ACD-400a-1 would
+  fail against the code that ships; a test written from the code contradicts an AC in
+  the store. Neither test exists today, which is the only reason the contradiction has
+  survived. Confirmed by grep: `priority` appears in `unit_tests/ac_store/` only as
+  fixture boilerplate; nothing asserts an ordering.
+
+  FOUR DECISIONS BURIED IN `_sort_ready` THAT EACH DESERVE THEIR OWN L2 — the BA should
+  not collapse these into one "sorts correctly" scenario, because each is separately
+  changeable and separately silent:
+  - The RANKING ITSELF: critical before high before medium before low.
+  - THE ABSENT-PRIORITY DEFAULT: a record naming no priority is ranked as `medium`
+    (`ac.get("priority", "medium")`). Note this is the OPPOSITE posture to the absent-
+    readiness default in ACD-400c, which excludes. Absent priority is treated
+    generously; absent readiness is treated harshly. Both are defensible, neither is
+    written down, and the inconsistency between them is exactly the kind of thing a
+    stated rule surfaces and an implicit one hides.
+  - THE UNRECOGNISED-VALUE SENTINEL: a priority string outside the four known values
+    scores 99 and sinks below `low`. Same sentinel is used for unrecognised complexity.
+    A typo therefore demotes work silently rather than failing loudly. Whether that is
+    the wanted behaviour is a product question the L2s must put to the user rather than
+    inherit from the code.
+  - THE TIE-BREAK CHAIN AND ITS FINAL KEY: complexity, then id ascending. The id
+    tie-break is what makes the queue deterministic across runs; ACD-400a's
+    it_requirements already demand idempotent output, so this key is load-bearing for
+    an existing requirement even though nothing connects the two today.
+
+  SCOPE FENCE — SPECIFY, DO NOT REDESIGN. The job is to state and prove the order the
+  system already uses. Changing the ranking, adding a new sort key, or making priority
+  configurable are all product decisions that need BrainCandy, not a coder. If the BA
+  concludes any current behaviour is wrong (the silent demotion on a typo is the most
+  likely candidate), raise it as a question at the gate rather than authoring the
+  changed behaviour into an L2.
+
+  DO NOT TOUCH THE FAST LANE. BO-2400f-12-ii forbids priority from appearing in the
+  fast lane's producibility decision. This L1 governs the ready-batch scan only.

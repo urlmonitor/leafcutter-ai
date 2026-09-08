@@ -403,3 +403,99 @@ files and 59 documents above 400 raw lines (measured in-worktree at authoring,
 per-file count, no exclusions). They differ because the counting rule discards
 documentation blocks before counting — and that difference is itself GE-127d's
 subject. Carry both labels; upgrade neither.
+
+## GE-120g: the THIRD polarity on the GE-120 axis, and GE-120 is now FULL (2026-09-07, PO)
+
+New L1 `GE-120-green-means-checked/GE-120g.yaml`, `origin_agent: BrainCandy`,
+`readiness: draft`, `priority: medium`, `roadmap_phase: phase_1`,
+`components: [commit_guardian]`. Title: *"Being looked at leaves your work
+untouched, and only an objection stops you."* Full evidence, the mutation
+recipe and the boundaries live in that record's `notes` — read it before
+decomposing.
+
+**THE TRIAGE QUESTION THIS ADDS, AND IT IS NOT ASKED ANYWHERE ELSE IN THE STORE.**
+Every one of GE-120a..f, and all of GE-126, presumes a check whose ANSWER is the
+thing under test — absent, wrong, unearned, or misattributed. GE-120g is the case
+where the answer was RIGHT and did not decide the outcome: the gate printed a clean
+pass and the commit was refused anyway, by the act of checking rather than by any
+verdict. Before filing the next guardrail defect, ask *was the check's answer wrong,
+or was it right and overridden?* That question is the whole boundary between
+GE-120a-f and GE-120g, and getting it wrong is what produced the phantom citation
+this record repairs (`run_hook.py` cited in `GE-127a-1.implemented_by` with no
+criterion constraining it and no descriptor exercising it).
+
+Note the polarity precedent is IN-TREE and predates this: GE-120e's own notes say
+"the L0 says green must mean it was checked; this L1 says red must mean you did
+something wrong." GE-120 has always hosted both sides. GE-120g is the third
+position on the red side — *red must mean something said no*. A new L0 was
+considered and rejected: one L1 is below the three-child floor, and it would state,
+beside an approved high-priority unbuilt L0, a promise that L0 already implies.
+
+**SPLIT ON A VOCABULARY THE MANIFEST ALREADY CARRIES, AND CHECK THAT IT IS TOTAL.**
+The reusable move here: `commit_guardian.json` already tags every entry with
+`tier`. Measured in-worktree 2026-09-07 — **62 registered entries, 56 `judgment`,
+6 `transform`, ZERO untiered**, and 62 of 62 dispatch through the one shared runner.
+Totality is what makes the rule opt-out-free: there is no third category to fall
+into, so a check that needs to look *and* fix declares transform rather than earning
+an exception. Prefer an existing total vocabulary over minting an axis.
+**GE-120e's "54 checks are registered in the hook manifest" is STALE** (measured
+2026-08-17, it is 62). Re-measure; do not cite it.
+
+**GE-120 IS NOW AT THE CAP — 7 L1s (a..g) against a hard cap of 7**, and every
+GE-120a..f is at the 5-L2 cap (GE-120c on a live `child_limit_override: 6`). The
+remaining room in this family is **GE-126's two free L1 slots**; after those, split
+the tree (`ac-tree-split`) rather than raising a cap. GE-120f's note that "the two
+free slots at L1 are the only room in this family" is now down to two total, both in
+GE-126.
+
+**Freeze status, re-verified for the third time: EXPIRED.** `test_ge_122e_1.py` was
+read in full on 2026-09-07 (not the notes about it) and all 6 tests were run green
+*after* adding `GE-120g.yaml` and appending to `GE-120.yaml`'s `covered_by`. The
+assertion is a one-directional id-stability set difference plus "every YAML under
+the folder declares a `GE-120*` id". GE-126's L0 notes still describe the old
+byte-identity freeze and are wrong. Standing rule holds: read the guard test.
+
+**A RECORD MAY BE AUTHORED GREEN-ON-ARRIVAL — SAY SO IN `notes` OR IT LANDS
+LOOKING HONESTLY TESTED.** Half of GE-120g's criterion already shipped in PR #728
+before it was specified, and zero tests assert the property
+(`grep -rn "PYTHONDONTWRITEBYTECODE\|_hook_env" unit_tests/ tests/` returns one hit,
+and it is a test harness setting the variable for its own subprocess, not an
+assertion). An ordinary red-baseline run will therefore come up GREEN and prove
+nothing. GE-120g's notes carry the mutation that manufactures a real red baseline
+**and its seeding step**, which is the part that is easy to lose: the fixture must be
+a repo where `__pycache__` under the deployed script directory is TRACKED, seeded by
+running one hook FIRST and then `git add -A`. **This repository cannot be that
+fixture** — its own `.gitignore` excludes `__pycache__/` and `*.pyc` (lines 41-42),
+so the mutation is silently inert here and a "mutation proof" run in-repo is a false
+green about a false red. Generalise: when you author a spec for behaviour that
+already ships, the notes must state that it is green on arrival and must carry a
+falsifying mutation, or the record certifies itself.
+
+**SILENCE≠PASS, again, this time in the AC hooks' own test seam.** Both
+`check_ac_parent_covered_by.py` and `check_ac_limits.py` read `HOOK_TEST_FILES`, and
+its docstring specifies **absolute** paths. Relative paths yield exit 0 with no
+output — indistinguishable from a pass, and that is exactly how this run's first
+verification attempt read. Establish a positive control before believing silence:
+`scripts/ac_store/scan_ac_orphans.py parent-links` names real orphans (47 store-wide
+on 2026-09-07) and feeding one to `check_ac_parent_covered_by` makes it BLOCK with
+exit 1; feeding `GE-120c.yaml` to `check_ac_limits` makes it print its override
+notice. Both controls were run here before the clean results on `GE-120g` were
+believed. Same family as the `scan_ac_orphans.py --component` trap recorded above.
+
+**OUT OF SCOPE AND DELIBERATELY NOT ORPHANED — two fences, both in GE-120g's
+doc_links.** (1) The `try/except OSError` arm of PR #728 (an unlaunchable interpreter
+reports a reason instead of raising out of a hook) is GE-120a's subject verbatim;
+GE-120a is at the 5-L2 cap, so it is recorded as a known, uncovered, already-shipped
+behaviour rather than folded in. Raise it with the user. (2) The residual gap the fix
+itself names — the build deploys no `.gitignore`, so a fresh consumer install tracks
+whatever is written beside the deployed scripts — belongs to **BP-900** (approved,
+critical). An L2 under GE-120g that proposes deploying a `.gitignore` is in the wrong
+tree.
+
+**Identifier.** `GE-128` was verified free on 2026-09-07 by four methods and
+deliberately NOT taken: the next free **suffix** under the chosen parent is correct,
+because `derive_parent_id()` returns `None` for a root-shaped id and both
+`check_ac_parent_covered_by.py` and `scan_ac_orphans.py` derive parentage from id
+shape alone. Third application of the GE-122e-1 rule (after GE-118c). Highest taken
+root in this component remains **GE-127**. `GE-119`, `GE-121` and `GE-124` stay
+retired.

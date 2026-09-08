@@ -9,7 +9,7 @@ req_status: draft
 work_status: todo
 readiness: draft
 priority: medium
-roadmap_phase: phase_1
+roadmap_phase: phase_store_record_health
 criteria: |
   Two different answers stop competing for one place to be written down.
 
@@ -234,8 +234,26 @@ notes: |
   mark_ac_done.py and its own evidence gate.
 
   ==========================================================================
-  ROADMAP FLAG — UNRESOLVED, FOR THE USER AT THE APPROVAL GATE
+  ROADMAP FLAG — RESOLVED 2026-09-08 BY BrainCandy
   ==========================================================================
+  RULING: neither phase_1 nor unphased. A NEW PHASE was added for this subject
+  — phase_store_record_health — and all four store-record-health trees now
+  claim it: ACS-1200, ACS-1300, ACS-1400 and ACS-1500. The PO's objection was
+  upheld in substance (phase_1 was the wrong home) without accepting the
+  alternative on offer (unphased backlog), because a fourth tree arriving in
+  the same unphased limbo is the evidence that the limbo was the problem.
+
+  The contradiction the PO identified is therefore closed rather than merely
+  noted: the component no longer has two trees unphased and two phased on one
+  subject. The phase's exit criteria carry the constraints that were only in
+  these notes before — including that "done" is not zero orphans, and that
+  every safety guarantee must be asserted alongside a repair that genuinely
+  happened.
+
+  THE ORIGINAL FLAG, KEPT VERBATIM because the reasoning is what earned the
+  new phase and a future reader deciding where a fifth tree belongs will need
+  it:
+
   roadmap_phase: phase_1 is claimed here BECAUSE THE BRIEF INSTRUCTED IT and
   because ACS-1400 — the tree this was carved out of — claims it too. The PO
   does not agree with it, and records the disagreement rather than following

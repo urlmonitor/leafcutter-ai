@@ -1,0 +1,94 @@
+id: ACD-400c-1-ii
+components:
+  - ac_driven_dev
+title: "An approval that is not recorded in the exact recognised wording does not count as approval"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the store holds two pieces of leaf-level work that are active, still to do
+    and waiting on nothing, whose recorded approval reads as approval to a human but
+    does not match the recognised wording exactly — one recorded in capitals
+    ("APPROVED") and one recorded with trailing whitespace ("approved "),
+  And a third such piece whose recorded approval matches the recognised wording
+    exactly,
+  When the queue is asked which work is ready to be picked up,
+  Then only the exactly-matching piece is offered,
+  And the two near-miss pieces are withheld, appearing neither among the work
+    offered nor among the work reported as held,
+  And this outcome is the stated verdict for an unrecognised approval, not an
+    accident: an approval whose wording is not recognised is treated as no approval.
+depends_on: [ACD-400c-1]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "Verified by execution 2026-09-08: a temp store holding leaves recorded as 'APPROVED' and 'approved ' alongside one recorded 'approved' returned only the last id in `ready`, with `blocked` empty. The admission test is an exact string comparison, so it is case-sensitive and whitespace-sensitive. Tagged `describes`, not `modifies`."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Documents the approval field as an enum of draft / reviewed / approved but says nothing about what a consumer does with a value outside that set. Confirmed 2026-09-08 at lines 46-47. The verdict this AC states is one of the five things ACD-400e-1 requires the single written account to cover."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the queue whose unrecognised-approval verdict this AC pins."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Every pytest invocation used to run or verify this test must set AC_ENFORCE_STRICT=1, or a red result is masked as an xfail and reads green."
+  - "The verdict must be obtained by executing the scanner over a temporary store through its real command surface; no assertion about the source text of scan_ac_store.py satisfies this AC."
+  - "The trailing-whitespace fixture must survive the round-trip to disk with its trailing space intact. A YAML writer or reader that trims it turns this test into a duplicate of the exact-match case and the near-miss it exists to catch is never exercised — assert the value as loaded back from the fixture file before asserting the scanner's answer."
+  - "Both near-miss records must be asserted absent from BOTH returned lists, not merely absent from the offer. An unrecognised approval withholds; it does not demote. This is the opposite verdict to the one ACD-400d-4 pins on the urgency field, and conflating them is the specific error this AC guards."
+  - "This AC authorises no change to the matching rule. Whether the comparison should tolerate case or whitespace is a product question the BA deliberately did not escalate for this field; a lenient match must not be introduced under cover of making this test pass."
+test_spec:
+  - name: test_capitalised_and_whitespace_padded_approvals_do_not_count_as_approval
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Leaves recorded 'APPROVED' and 'approved ' alongside one recorded 'approved': only the exactly-matching id is offered, and both near-misses are absent from the offered list and from the held list."
+  - name: test_a_near_miss_approval_is_withheld_not_demoted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "The near-miss records are absent from both lists rather than present-and-ranked-last, distinguishing the approval field's withholding verdict from the urgency field's demotion verdict."
+test_rationale: "Asserting only that the near-misses are missing from the offer would also pass on an implementation that demoted them into the held list, which is the urgency field's posture and the wrong one here. Reading both lists is what pins the verdict as withholding."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400c-1
+  contract: "The temp-AC-store fixture builder and the scanner-invocation helper returning parsed {ready: [...], blocked: [...]}; the builder must write the recorded approval value verbatim, preserving case and trailing whitespace."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Refines ACD-400c-1.
+
+  WHY THIS IS WORTH ITS OWN RECORD. The unrecognised-value verdict differs between the
+  two fields the selection reads, and the difference is only visible once both are
+  written down. An unrecognised APPROVAL removes the work from the queue entirely (this
+  AC). An unrecognised URGENCY leaves the work in the queue and merely sinks it below
+  everything recognised (ACD-400d-4). Same class of author error, two opposite
+  consequences, neither stated anywhere before this pass. A reader who learns one and
+  assumes the other is wrong in a way that costs them a build.
+
+  THIS IS NOT A REQUEST TO MAKE THE MATCH LENIENT. The criteria state the behaviour that
+  ships. Whether a case-insensitive or whitespace-trimming match would be better is a
+  product question, and it is a much milder one than the ACD-400d-4 typo question because
+  the failure here is loud in the right direction: the work simply does not appear, which
+  is the same conservative outcome as an absent approval. No question is escalated for
+  this field.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L3.

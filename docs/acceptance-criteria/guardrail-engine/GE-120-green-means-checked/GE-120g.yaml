@@ -1,0 +1,257 @@
+id: GE-120g
+title: "Being looked at leaves your work untouched, and only an objection stops you"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Inspection changes nothing, and nothing but an objection refuses your commit.
+
+  A check whose job is to judge your work leaves that work exactly as it found
+  it; only the checks that are declared to fix things as they go are permitted
+  to change anything. And when you are refused, it is because some check
+  objected to something — never as a side effect of a check having run.
+depends_on:
+  - GE-120
+doc_links:
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: configures
+    status: exists
+    relevance: >-
+      THE VOCABULARY THAT MAKES THIS ENFORCEABLE, AND THE POPULATION IT APPLIES TO.
+      Every registered check already declares a `tier`. Measured in this worktree on
+      2026-09-07: 62 registered entries, 56 `judgment` and 6 `transform`, and ZERO
+      untiered — the split is total, which is why the guarantee can be stated over the
+      whole family without inventing a new axis. The six transform entries are
+      ensure-precommit-config, transform-doc-frontmatter, transform-component-vocab,
+      transform-doc-index, regenerate-roadmap-mirror and transform-description-field.
+      All 62 are dispatched through one shared runner (62 of 62 entry lines name it),
+      so a property of that runner is a property of every check. DO NOT reuse the
+      figure "54 checks" from GE-120e's notes — it was measured 2026-08-17 and is now
+      stale by eight.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-102-transform-tier-autofix/GE-102.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      WHERE THE TIER VOCABULARY CAME FROM, AND WHY IT IS NOT THE PARENT AND NOT A
+      DUPLICATE. GE-102 minted `tier` and stated that judgment-required checks "stay out
+      of the transform tier" — but as an INPUT TO A ROUTER (which failures the auto-fix
+      path may self-heal), never as a behavioural contract on the checks themselves.
+      Nothing in GE-102 says a judgment check must leave the working tree alone, and
+      nothing anywhere says a refusal must come from a check's verdict. Mechanically
+      unavailable as a parent besides: GE-102 is itself an L1 (the flat GE-1xx family)
+      sitting at the five-L2 cap with GE-102a..e. Neither record closes the other.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      NEAREST SIBLING, AND THE ONE MOST LIKELY TO BE MISTAKEN FOR THIS. GE-120e is
+      "a block is always about something you actually did" — a REAL violation attributed
+      to the wrong author, its scope explicitly "a check ASSUMING that the staged diff
+      equals the author's change". Here no check objected to anything: the gate printed a
+      clean pass and the commit was refused anyway. Misattributed objection versus
+      objection-free refusal. GE-120e is at the five-L2 cap and its L2s are cut around
+      the staged-diff assumption, which this defect does not involve. Neither closes the
+      other and this must not be decomposed as more of GE-120e.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      SIBLING GOAL, DELIBERATELY NOT THE PARENT — same reasoning GE-120f recorded on
+      2026-09-01. GE-126 owns the INTERROGATION surface: what you get back when you hand
+      a check your own file or run a copy of it yourself. This defect fires during an
+      ordinary commit with nobody interrogating anything, which is GE-120's surface.
+      GE-126 has the freer capacity (two L1 slots against GE-120's one) and that is
+      explicitly NOT why placement was decided.
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      THE ADJACENT GAP THIS RECORD DELIBERATELY DOES NOT ABSORB. The shipped fix's own
+      decision entry states it "does NOT remove the underlying gap, which is that
+      build.py deploys no .gitignore" — so a fresh consumer install still tracks whatever
+      any tool writes beside the deployed scripts. That is deployment completeness and
+      belongs to BP-900 (approved, critical), not here. This record owns the check
+      family's behaviour whatever the install looks like. Do not close either as a
+      duplicate of the other, and do not let an L2 here propose deploying a .gitignore.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a-1.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      THE RECORD THAT CURRENTLY MIS-CITES THIS BEHAVIOUR, AND THE REASON THIS ONE EXISTS.
+      GE-127a-1's `implemented_by` names the shared runner while no criterion of GE-127a-1
+      constrains it and no descriptor exercises it — the phantom-done shape. GE-127a-1
+      owns one gate's length verdict; the runner change alters behaviour for all 62.
+      Once this record is built and covered, the runner citation belongs under this
+      subtree and should be removed from GE-127a-1. That correction is NOT in scope here
+      and is not performed by this record.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      THE CATALOGUE THIS SHAPE IS MISSING FROM, AND IT IS MISSING FOR A STRUCTURAL REASON:
+      every mechanism in it is a false GREEN. This is a false RED — a refusal no check
+      asked for. A companion entry (or a companion catalogue) is recommended, because the
+      whole family's reasoning to date presumes the only lie a guard can tell is "fine".
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Where a check author learns what declaring a tier commits them to. Today it
+      describes tier as routing information; after this record it must state the
+      behavioural obligation, which is why documentation_triggers is [reference-doc].
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120g-1
+  - GE-120g-2
+  - GE-120g-3
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE BEHAVIOUR ALREADY SHIPS AND THIS RECORD IS GREEN ON ARRIVAL. READ THIS FIRST.
+    Half of this criterion was built before it was specified. PR #728 changed the shared
+    runner so the delegated check process no longer writes bytecode beside the deployed
+    scripts, and wrapped the three dispatch sites in try/except OSError. That landed with
+    NO acceptance criterion of its own; it was claimed as implementation of GE-127a-1 and
+    a BA rejected the claim on evidence. This record is the missing specification, written
+    after the fact and saying so.
+    VERIFIED IN THIS WORKTREE ON 2026-09-07: zero tests anywhere assert the property.
+    `grep -rn "PYTHONDONTWRITEBYTECODE\|_hook_env" unit_tests/ tests/` returns exactly one
+    hit and it is not an assertion — unit_tests/portability/test_ge_120a_1.py:256 sets the
+    variable in a test harness's OWN subprocess environment. That single line is
+    corroborating and nothing more: a test author independently found the property
+    necessary without anyone specifying it. The runner's own behaviour is untested.
+    CONSEQUENCE FOR WHOEVER BUILDS THIS: an ordinary red-baseline run will come up GREEN on
+    the bytecode arm. Green here is not evidence. Treat a passing first run as the signal
+    to go build the mutation below, not as a completed AC.
+
+  THE MUTATION THAT MANUFACTURES A REAL RED BASELINE — AND THE SEEDING STEP WITHOUT WHICH
+  IT IS INERT. Supplied by the BA, reproduced here because losing it makes this record
+  untestable in practice.
+    1. Revert the runner's environment helper so the delegated process is launched bare,
+       with no `env=` argument.
+    2. The fixture must be a repository where `__pycache__` under the deployed script
+       directory is TRACKED. Seed it by running one hook FIRST and then `git add -A` — in
+       that order. Seeding before the run stages nothing, and the mutation then passes.
+    THIS REPOSITORY CANNOT BE THE FIXTURE AS-IS, and that is the trap: its own .gitignore
+    excludes `__pycache__/` and `*.pyc` (verified 2026-09-07, .gitignore lines 41-42), so
+    the mutation is silently inert here. The live condition is every FRESH CONSUMER INSTALL,
+    which has no such .gitignore because the build deploys none. A mutation proof run in
+    this repo and reported as passing would be a false green about a false red.
+
+  WHAT THIS L1 ADDS THAT ITS SIX SIBLINGS DO NOT — THE POLARITY IS THE POINT.
+    GE-120a: a check that could not run says so. GE-120b: same verdict from any working
+    copy. GE-120c: that sameness proven by execution. GE-120d: a new working copy arrives
+    protected. GE-120e: a block is attributable to what you did. GE-120f: a guard that has
+    never refused anything is not counted as protection.
+    Every one of the six is about a check whose ANSWER is wrong, absent, or unearned. This
+    one is about a check whose answer was RIGHT and did not decide the outcome. The gate
+    printed a clean pass and the commit was refused anyway, by the act of checking rather
+    than by any verdict. No sibling can see that: a check that answers correctly on every
+    input satisfies all six and still produces this failure.
+    It belongs under GE-120 rather than beside it because GE-120e already established, in
+    its own notes, that this L0 hosts the red-side axis — "the L0 says green must mean it
+    was checked; this L1 says red must mean you did something wrong". This record is the
+    third position on that axis: red must mean SOMETHING SAID NO. A new L0 was considered
+    and rejected: it would carry a single L1 (below the three-child floor) and would state,
+    beside an approved high-priority unbuilt L0, a promise that L0 already implies — the
+    precise mistake GE-126's notes warn against in the other direction.
+
+  THIS EXHAUSTS GE-120's L1 CAPACITY. Say so plainly rather than letting the next author
+    discover it. With this record GE-120 holds seven L1s (a..g) against the hard cap of
+    seven, and every one of GE-120a..f is at the five-L2 cap (GE-120c already at six on a
+    live child_limit_override). The next record in this family goes to GE-126's two free L1
+    slots, or the tree gets split (see the ac-tree-split skill). Do not discharge this by
+    raising the cap here.
+
+  THE FREEZE ON THIS FOLDER IS EXPIRED — RE-VERIFIED, NOT INHERITED FROM A NOTE.
+    unit_tests/commit_guardian/test_ge_122e_1.py was read in full on 2026-09-07 before this
+    file was written, not the notes describing it. Its assertion is a ONE-DIRECTIONAL
+    id-stability set difference: every id the folder claimed at the baseline must still be
+    claimed, and every YAML under the folder must declare an id beginning `GE-120`. Its own
+    docstring states that adding a record is "ordinary growth ... and must not fail". This
+    file satisfies both, and appending to GE-120.yaml's covered_by is explicitly permitted
+    ("a record may change its CONTENT freely"). GE-126's L0 notes still describe the old
+    byte-identity freeze; that description was already stale when written. Standing rule
+    reaffirmed for the third time in this component: read the guard test, never a note
+    about it.
+
+  THE SPLIT IS BY TIER BECAUSE THE TIER VOCABULARY ALREADY EXISTS AND IS TOTAL.
+    56 judgment / 6 transform / 0 untiered, measured 2026-09-07. That totality is what
+    makes "a judgment check leaves the tree as it found it" a rule with no silent opt-out —
+    there is no third category to fall into. If a future check needs to look AND fix, the
+    answer is that it declares transform, not that the rule acquires an exception. An L2
+    that adds a per-check waiver reintroduces exactly the opt-out this cut was chosen to
+    close. Note the asymmetry the BA must preserve: transform checks fix and stage BY
+    DECLARATION, and GE-102 already owns that positive behaviour — this record constrains
+    the judgment side and the refusal-provenance rule, and must not re-specify what a
+    transform check does.
+
+  TWO BEHAVIOURS, ONE RECORD, DELIBERATELY — AND THE SECOND ARM IS THE FALSIFIABLE ONE.
+    (1) A judgment-tier check leaves the working tree as it found it. (2) A refusal is
+    reported only when a check reported a refusal. They are one L1 because (1) is the only
+    known mechanism by which (2) is violated today, and separating them would let an
+    implementer satisfy the cheap half. But they are NOT the same claim, and (2) must get
+    its own coverage: an implementation that merely stops one source of tree mutation
+    satisfies (1) and leaves (2) unproven. The negative arm is mandatory — a criterion
+    satisfiable by an implementation that refuses nothing, or one that mutates nothing
+    because it inspects nothing, reproduces this defect one level up. Bind the observable
+    to the pair: a check that passes, on a tree that a run would otherwise have modified,
+    and a commit that succeeds.
+
+  THE THIRD BEHAVIOUR IN THE SHIPPED CHANGE IS OUT OF SCOPE HERE AND IS NOT ORPHANED BY
+    SAYING SO. The try/except OSError arm — an unlaunchable interpreter reporting a reason
+    instead of raising out of a hook — has no relationship to inspection side-effects or to
+    refusal provenance. It is "a check that cannot run says so", which is GE-120a's subject
+    verbatim. GE-120a is at the five-L2 cap, so it cannot be filed there today without a
+    split or an override. Recording it as a KNOWN, UNCOVERED, ALREADY-SHIPPED behaviour is
+    the honest disposition; folding it in here to give it a home would make this record
+    about three unrelated things. Raise it with the user rather than absorbing it.
+
+  EVIDENCE, WITH CONFIDENCE LABELS — carry them through and do not upgrade them.
+    - DIRECTLY OBSERVED, THE INCIDENT THAT PRODUCED THIS RECORD: registering the file-size
+      gate activated the latent condition; an ordinary commit to a compliant file was
+      refused while the gate itself printed a clean PASSED. The mechanism is recorded in
+      the runner's own decision history at templates/scripts/commit_guardian/run_hook.py.
+    - READ FROM THE MANIFEST IN THIS WORKTREE, 2026-09-07, NOT DISPUTED: 62 registered
+      entries, all tiered, all dispatched through the one runner. 56 judgment, 6 transform.
+    - READ FROM SOURCE, 2026-09-07, NOT DISPUTED: this repository's .gitignore excludes
+      __pycache__/ and *.pyc, so the defect is latent HERE and live in fresh consumer
+      installs. This is why the mutation needs the seeding step above.
+    - NOT MEASURED: how many of the 56 judgment-tier checks modify the working tree by some
+      OTHER route than bytecode — staging a fix, rewriting a file, touching a timestamp. No
+      criterion below this record may state or imply a count. If a census is wanted it is
+      GE-126e's shape, and it should be proposed rather than assumed.
+    - STALE AND MUST NOT BE CITED: GE-120e's "54 checks are registered in the hook manifest"
+      (2026-08-17). It is 62 today.
+
+  IDENTIFIER. GE-120g is the next free suffix under the chosen parent, taken for its SHAPE
+    rather than because a root number was free — a root-shaped id carries a parent link that
+    derive_parent_id() cannot police, which is this component's standing rule (GE-122e-1,
+    reapplied at GE-118c). GE-128 was verified free by four methods on 2026-09-07 and
+    deliberately NOT taken. Re-verify at merge time regardless: id allocation in this store
+    is known-broken (KI-ACD-008) and three duplicate identifiers were minted here in two
+    days in August. GE-119, GE-121 and GE-124 remain retired and must never be reissued.
+
+  Authored at the PO stage; L1 only. No L2, no L3, no test_spec, no it_requirements, no
+  assigned_agent — the BA and IT PO own those. implemented_by is deliberately EMPTY even
+  though code satisfying part of this criterion is already on the branch: nothing has been
+  verified to implement it, and asserting otherwise is the phantom-done shape this record
+  was created to repair.

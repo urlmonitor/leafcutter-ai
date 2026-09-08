@@ -1,0 +1,122 @@
+id: ACD-400e-1b
+components:
+  - ac_driven_dev
+title: "Every statement in the written account is checked by building the store it describes and asking the queue"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who wants to know what the build system will pick up next, and a
+    single written account of how the queue chooses,
+  When each statement in the account is turned into a store built exactly as that
+    statement describes, and the queue is asked which work is ready,
+  Then the queue's answer is the one the statement predicts, statement by statement,
+  And a statement the queue does not honour is reported as a disagreement naming both
+    the statement and the observed answer — so an account that has drifted from the
+    queue fails this, while an account whose words are merely present passes nothing.
+depends_on: [ACD-400e, ACD-400e-1a, ACD-400c, ACD-400d]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The account this checker interrogates. Tagged `describes`, not `modifies`: ACD-400e-1a writes the page; this AC reads it. A checker that edits the page it checks is the same closed loop the whole tree exists to break."
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "The queue the checker must ask. Tagged `describes`, not `modifies`: the checker asks the selector questions and never changes it. Every verdict it will find is already pinned by ACD-400c-1, ACD-400c-1-ii, ACD-400c-2, ACD-400c-3, ACD-400d-1, ACD-400d-2, ACD-400d-2-i, ACD-400d-3 and ACD-400d-4. ACD-400c-1-i was deleted 2026-09-08 by BrainCandy's ruling; the neither-list-nor-count behaviour it described is unchanged and unpinned, so the checker may observe it but must not treat it as a criterion."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the queue the checker interrogates."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Every pytest invocation used to run or verify this checker must set AC_ENFORCE_STRICT=1, or a red result is masked as an xfail and reads green."
+  - "The verdicts checked must be ENUMERATED FROM THE ACCOUNT at run time, never restated in the checker. A checker carrying its own copy of the five verdicts tests that copy, leaves the page free to drift, and is the same defect one layer down — it is the single most likely way this AC gets implemented wrongly."
+  - "The account must be read from the real committed page on disk, not from a fixture copy of it. A checker fed a fixture proves nothing about what is published."
+  - "Each verdict must be checked by materialising the store it describes and executing the scanner over it through the real command surface, in a fresh process. No verdict may be confirmed by inspecting the scanner's source text, by importing a private predicate, or by reasoning from another verdict."
+  - "A disagreement must be reported naming both the statement that failed and the answer the queue actually gave. A bare pass/fail verdict makes the check unusable for the repair it is meant to trigger, and a report naming only the statement makes the reader re-derive the observation the checker already had."
+  - "All disagreeing statements must be reported in one run, not just the first. A checker that stops at the first mismatch turns one repair pass into as many passes as there are drifted statements."
+  - "The checker must be silent and passing when the account and the queue agree — no advisory output on the happy path. A check that speaks when nothing is wrong gets switched off, and a switched-off check is indistinguishable from the absence this tree is closing."
+  - "The checker authorises no change to the scanner and no change to the account. Its only output is a verdict; if a statement disagrees, the repair is ACD-400e-2's or a follow-up's, never this AC's."
+  - "If the checker is factored as an importable module rather than living wholly inside the test file, and any hook or CI gate later imports it, it must be added to the build deploy manifest in the same change. The deployed layout is not the source tree, and an undeployed dependency raises ModuleNotFoundError at hook runtime while the unit tests stay green — the failure mode that took down done_proof.py."
+test_spec:
+  - name: test_every_verdict_in_the_account_is_honoured_by_the_queue
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "For each verdict parsed from the committed account, the checker builds the store that verdict describes, asks the scanner, and finds the answer the verdict predicts — statement by statement, with no statement skipped."
+  - name: test_a_verdict_the_queue_does_not_honour_is_reported_with_the_observed_answer
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: "checker invoked against a deliberately falsified account fixture"
+    description: "Given an account entry whose prediction is deliberately wrong, the checker reports a disagreement carrying both the offending statement and the answer the queue actually returned — proving the report is populated from an observation rather than from the statement alone."
+  - name: test_all_disagreeing_statements_are_reported_in_one_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: "checker invoked against an account fixture with two falsified entries"
+    description: "Two wrong entries produce two reported disagreements from a single run, so the checker does not stop at the first mismatch."
+  - name: test_the_verdict_set_is_read_from_the_committed_account_not_from_the_checker
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "docs/reference/ac-schema.md (parsed selection-verdict block)"
+    description: "Adding an entry to the account's verdict block increases the number of verdicts the checker exercises, and removing one decreases it — so the checker carries no hardcoded copy of the set."
+  - name: test_the_checker_reaches_the_queue_through_its_real_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "The answers the checker compares against are obtained by invoking the scanner's command surface over the materialised store, not by importing its private helpers."
+test_rationale: "The whole value of this checker is that it cannot pass on a drifted page, so the two assertions that matter most are the falsified-entry cases and the varying-verdict-set case. A checker asserted only on the happy path is satisfied by one that always returns success, and a checker asserted only against its own fixture set is satisfied by one that ignores the published page — both are the dead-check shape this repo has shipped before."
+delivers_to:
+  agent: python-coder
+  contract: "The agreement checker: given the parsed verdict block from docs/reference/ac-schema.md, materialises one temp store per verdict, invokes the scanner's command surface, and returns a result carrying, per verdict, {statement, predicted, observed, agrees}. Empty disagreement list on full agreement. Consumed by ACD-400e-3, which adds the both-directions drift properties on top of it, and reused by ACD-400e-2's record-versus-queue check."
+expects_from:
+  ac_id: ACD-400e-1a
+  contract: "A stably-marked, machine-parseable block in docs/reference/ac-schema.md holding one entry per selection verdict, each naming the field the selection reads, the input condition (recognised value / absent field / unrecognised value), and the predicted answer (offered / withheld from both lists / ranked at a stated position)."
+origin_agent: it-po
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  CREATED 2026-09-08 by IT PO v3 as one half of a split of ACD-400e-1 (now
+  status: superseded_by). Sibling: ACD-400e-1a.
+
+  WHY THE SPLIT — the full reasoning is recorded in ACD-400e-1a's notes and is
+  not repeated. In short: two deliverables, two file types, two owning agents,
+  and a circular dependency against ACD-400e-3 that the split removes.
+
+  CRITERIA ARE VERBATIM. This AC holds the Given clause of ACD-400e-1 (as
+  context) plus its When clause, second Then clause and closing And clause,
+  unaltered. ACD-400e-1a holds the Given plus the first Then. Their union is the
+  original text; nothing was invented, narrowed or added.
+
+  WHY THIS IS THE LARGEST AC IN THE TREE. It is the only one that must read a
+  human-written page, derive an executable store description from each entry,
+  and run the queue once per entry. The temp-store fixture builder from
+  ACD-400c-1 covers the materialisation half, which is the reason the estimate
+  is L and not larger.
+
+  THE ONE THING THAT MAKES THIS AC WORTH BUILDING is that the verdict set is
+  read from the page. Implemented with a hardcoded verdict list it becomes an
+  ordinary duplicate of the ACD-400c and ACD-400d pinning tests, and the page it
+  was built to guard goes unguarded. That constraint is stated first in
+  it_requirements for that reason.

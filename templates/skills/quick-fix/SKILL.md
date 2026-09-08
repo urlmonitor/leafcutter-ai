@@ -925,7 +925,8 @@ every time — do not assume the prior session already switched.
 gh pr list --head "<ACTIVE_BRANCH>"
 ```
 
-If a PR already exists, log its URL and skip to Step 7.5.
+If a PR already exists, record its URL as `PR_URL` and skip to Step 7.5. This
+is **Ending A** below — nothing is outstanding, the run is done.
 
 ### Step 7.4 — Open the PR (confirmation-gated)
 
@@ -947,9 +948,23 @@ Proposed PR:
 OK to open the PR? (yes / edit / cancel)
 ```
 
-On "cancel" or any negative: stop here, do not open a PR, and report the push
-as complete with no PR — print the compare URL instead:
-`https://github.com/<org>/<repo>/compare/main...<ACTIVE_BRANCH>`.
+**If the user declines (or there is no interactive user to ask):** stop here,
+do not open a PR. This is **Ending B** — an outstanding action, not a plain
+completion, and it must not be reported as though nothing were left to do.
+Before reporting, derive the two pieces of information the caller needs to
+open the PR themselves later without re-deriving anything:
+
+- `COMPARE_URL` — run `git -C "<WORKTREE_ROOT>" remote get-url origin` and
+  parse `<org>/<repo>` out of it, then build
+  `https://github.com/<org>/<repo>/compare/main...<ACTIVE_BRANCH>?expand=1`.
+- `PR_COMMAND` — the exact command that would open the PR, i.e.
+  `gh pr create --base main --head "<ACTIVE_BRANCH>" --title "<title>" --body-file <path>`
+  using the same title you drafted above.
+
+Carry both forward to Step 7.5 as structured fields — do not fold them only
+into prose. A caller reading the completion summary must be able to tell an
+action is owed, and get the compare URL and command, from the structured
+fields alone.
 
 On "yes" (or "edit" then a subsequent "yes"): **write the PR body to a file
 first, then reference it with `--body-file`.** Do not pass the body inline on
@@ -964,11 +979,29 @@ create `/tmp/quick-fix-pr-body-<AC-ID>.md` with the drafted body, then:
 gh pr create --title "<title>" --body-file "/tmp/quick-fix-pr-body-<AC-ID>.md"
 ```
 
-Capture the PR URL from the output.
+Capture the PR URL from the output as `PR_URL`.
 
 Leave merging out of scope — that stays the user's call.
 
 ### Step 7.5 — Confirm close
+
+**Two different endings both leave no PR opened by this run, and they must
+not be conflated.** A prior run reported `status: ok` and a plain "PR: none —
+not opened" line on both of them — the fix, AC, test, changelog and commit had
+all landed, but the caller had no way to tell, from the payload alone, that a
+PR still needed to be opened. Compute which ending actually happened before
+printing anything:
+
+```
+PR_NOT_OPENED = (no PR was opened this run) AND (PR_URL is empty)
+```
+
+- **Ending A — a PR already existed** (Step 7.3 found one, `PR_URL` is
+  populated): nothing is outstanding. This is a plain completion.
+- **Ending B — no PR exists at all** (`PR_URL` is empty, whether because the
+  user declined in Step 7.4 or there was no interactive user to ask): this
+  IS an outstanding action owed to the caller. Only this ending sets
+  `PR_NOT_OPENED = true`.
 
 Print the completion summary:
 
@@ -982,8 +1015,32 @@ Print the completion summary:
   Changelog:     <changelog entry path>
   Worktree:      <WORKTREE_ROOT>
   Branch:        <ACTIVE_BRANCH>
-  PR:            <PR URL or "none — see compare link above">
+  PR:            <PR_URL, or "none — not opened" on Ending B>
 ```
+
+**When `PR_NOT_OPENED` is true (Ending B), append this block** — do not omit
+it, and do not let the "PR: none — not opened" line above stand alone as the
+only signal. The point of this block is that a caller can see an action is
+owed without reading prose: name the outstanding action explicitly, alongside
+the same reason, branch, compare URL, and command a structured caller would
+read from `outstanding_action` fields.
+
+```
+
+  *** ACTION REQUIRED ***
+  No pull request was opened. Opening it is now YOUR responsibility.
+
+  Reason:  Opening a pull request is outward-facing and stays behind an
+           explicit confirmation gate. No confirmation was given during
+           this run, so quick-fix intentionally stopped short of opening
+           one — the caller must open it.
+  Branch:  <ACTIVE_BRANCH>
+  Compare: <COMPARE_URL>
+  Command: <PR_COMMAND>
+```
+
+On Ending A, omit this block entirely — printing it there would misreport a
+plain completion as an outstanding action.
 
 ---
 

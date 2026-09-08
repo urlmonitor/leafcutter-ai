@@ -1,0 +1,102 @@
+id: ACD-400e-1
+components:
+  - ac_driven_dev
+title: "One written account of how work is chosen, and every statement in it predicts what the queue actually does"
+component: ac-driven-dev
+level: L2
+status: superseded_by
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who wants to know what the build system will pick up next, and a
+    single written account of how the queue chooses,
+  Then that account states all five of the following, each in terms a reader can act
+    on: which tests a piece of work must pass to be admitted at all, and in what
+    order they are applied; which keys the offer is ordered by, and in what order
+    they are consulted; the verdict the queue reaches when a field the selection
+    reads carries no value; the verdict it reaches when such a field carries a value
+    the queue does not recognise; and the fact that work failing admission appears in
+    neither the offer nor the account of held work,
+  When each statement in the account is turned into a store built exactly as that
+    statement describes, and the queue is asked which work is ready,
+  Then the queue's answer is the one the statement predicts, statement by statement,
+  And a statement the queue does not honour is reported as a disagreement naming both
+    the statement and the observed answer — so an account that has drifted from the
+    queue fails this, while an account whose words are merely present passes nothing.
+depends_on: [ACD-400e, ACD-400c, ACD-400d]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+    relevance: "The natural home for the account, beside the fields it governs. Confirmed 2026-09-08 at lines 46-47: both fields the selection reads are documented as bare optional enums — 'Lifecycle readiness state: draft, reviewed, or approved. Present on ~69 % of records' and the same shape for priority — with no statement of what consumes them, and none of what a consumer does with a missing or unrecognised value. Roughly three records in ten carry neither field, and a reader has no way to learn from this page that those records are invisible to the queue."
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "The behaviour the account must predict. Every verdict the account has to state was observed by executing this surface on 2026-09-08 and is pinned by ACD-400c-1, ACD-400c-1-i, ACD-400c-1-ii, ACD-400c-2, ACD-400c-3, ACD-400d-1, ACD-400d-2, ACD-400d-2-i, ACD-400d-3 and ACD-400d-4. Tagged `describes`, not `modifies`: this AC changes what is written, never what the queue does."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: [ACD-400e-1a, ACD-400e-1b]
+covered_by: []
+implemented_by: []
+change_target: docs
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+risk_surface: contract_boundary
+notes: |
+  SUPERSEDED 2026-09-08 by IT PO v3, stage 3 of PO -> BA -> IT-PO. Split into
+  ACD-400e-1a (documentation-expert — the written account and the shape that
+  makes it machine-readable) and ACD-400e-1b (python-coder — the checker that
+  builds a store from each statement and asks the queue). The criteria below are
+  UNCHANGED and are reproduced verbatim across the two successors: 1a holds the
+  Given plus the first Then, 1b holds the Given plus the When, second Then and
+  closing And. Their union is this text.
+
+  WHY: two deliverables in two file types owned by two agents (a Markdown
+  reference page and a Python verification harness), plus a circular dependency
+  — this AC's closing clause requires a disagreement REPORT that nothing builds
+  until ACD-400e-3, which itself depends on this AC completing. The split
+  removes both. Full reasoning is in ACD-400e-1a's notes.
+
+  --- ORIGINAL BA NOTES, RETAINED ---
+
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Decomposes ACD-400e.
+
+  THIS AC DISCHARGES ACD-400e'S reference-doc DOCUMENTATION TRIGGER. ACD-400e declares
+  documentation_triggers: [reference-doc]; this is that deliverable. No separate
+  documentation AC is authored, because a second record describing the same page would
+  recreate the divergence this tree exists to end — which is the same reasoning ACD-400c
+  and ACD-400d give in their own documentation_rationale. The agent that reads naturally
+  here is documentation-expert; assignment is the IT PO's to set.
+
+  HOW THIS AVOIDS BEING A DOC NOBODY READS — the anti-vacuity constraint in ACD-400e's
+  notes, taken literally. The criteria do not ask whether the account exists, whether it
+  mentions the fields, or whether particular words appear on the page. They ask whether a
+  store built from what the account SAYS produces the answer the account PREDICTS. That
+  construction has three properties worth stating because each kills a different cheap
+  pass: prose that is present but wrong fails; prose that is absent fails for want of a
+  statement to build a store from; and prose that is correct today but drifts tomorrow
+  fails at the point of drift rather than at the point somebody notices.
+
+  WHY FIVE STATEMENTS AND NOT ONE PARAGRAPH. ACD-400e's notes enumerate exactly what the
+  account must cover, so the BA does not scope it to a summary. The five are reproduced in
+  the criteria as separately checkable items rather than as a list in a note, because a
+  single "the account is complete and correct" clause is unfalsifiable and would let an
+  implementer satisfy the AC with a paragraph covering the two easy verdicts.
+
+  ORDER-OF-APPLICATION IS PART OF TWO OF THE FIVE, DELIBERATELY. Which tests are applied
+  is nearly useless to a reader without the order they are applied in: it is the order
+  that explains why work failing admission is reported nowhere (ACD-400c-1-i), and the
+  order of the ordering keys is the exact thing three records in the store get wrong.
+
+  THE NEITHER-LIST ITEM IS A STATEMENT OF CURRENT BEHAVIOUR AND NOT A COMMITMENT TO
+  CHANGE IT. ACD-400e's notes say so explicitly. Making the queue report its exclusions is
+  the ACS-1100-shaped follow-up flagged to the user in ACD-400c's notes, and nothing in
+  this AC asks for it.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.

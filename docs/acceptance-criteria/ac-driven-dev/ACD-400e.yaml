@@ -1,0 +1,109 @@
+id: ACD-400e
+components:
+  - ac_driven_dev
+title: "What the backlog says it picks is what it actually picks"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  One description of how the next piece of work is chosen — and it is true.
+
+  Anyone who wants to know what the build system will pick up next can read a single
+  account of it and rely on what they read. The older accounts that disagree with how
+  the system actually behaves are corrected rather than left standing, so a reader is
+  never quietly misled by a requirement that was true once and is not true now.
+depends_on: [ACD-400, ACD-400c, ACD-400d]
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "PRIMARY RECORD TO RECONCILE. Wrong in both directions at once: its filter enumeration reads as exhaustive and omits the approval gate, and its sort clause states a two-key order the code has not used since the priority tier was added."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a.yaml
+    relationship: related
+    status: exists
+    relevance: "SECOND RECORD TO RECONCILE. Repeats the superseded two-key sort claim in its own L1 criteria. NOTE ITS CHILD CAP: ACD-400a is full at five L2s and forbids a child_limit_override — no reconciliation work may be hung beneath it."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400.yaml
+    relationship: parent
+    status: exists
+    relevance: "THIRD RECORD TO RECONCILE. Its own L0 criteria describes ready work as '(todo, unblocked, active)' — the same omission of the approval gate, one level up. Not amended while authoring this tree: rewriting an existing criteria body is governed by ACS-400 authorship protection and is a decision for the user, not for the PO drafting its children."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Documents `readiness` and `priority` as plain enum fields with no statement of what consumes them or what a consumer does with an absent value. The natural home for the single account, beside the fields it governs."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-2.yaml
+    relationship: related
+    status: exists
+    relevance: "An approved criterion whose wording depends on this account existing: 'unlike the normal ready-batch scan'. The single written statement must make that contrast checkable instead of folkloric."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400e-1, ACD-400e-1a, ACD-400e-1b, ACD-400e-2, ACD-400e-3, ACD-400e-4]
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  AUTHORED 2026-09-08 by PO v3 at BrainCandy's request, as stage 1 of PO -> BA -> IT-PO.
+
+  WHY THIS EXISTS AS A THIRD SIBLING RATHER THAN AS WORK INSIDE ACD-400c AND ACD-400d.
+  BrainCandy expected roughly two L1s, one per hardcoded rule, and asked to be told if
+  the honest decomposition differed. It does, because of something found while
+  verifying the gap: the two rules are not equally silent. The approval gate is
+  unspecified; the ordering rule is MIS-specified. Three existing records — ACD-400,
+  ACD-400a and ACD-400a-1 — describe the queue's selection, and all three describe it
+  wrongly. Correcting them cannot sit under ACD-400c or ACD-400d, because each of those
+  L1s owns only half of what is wrong in the SAME two files. Splitting the repair
+  across both produces two L2s reaching into one record to each fix half of it — and
+  whichever lands second inherits a merge conflict with the first. One owner for the
+  written account, depending on both rule L1s, is the clean shape.
+
+  ORDERING IS DELIBERATE. `depends_on` names ACD-400c and ACD-400d as siblings, not
+  just the parent, so the account is written after the rules it records are settled and
+  proven. This is a genuine build-order dependency, not a hierarchy link, and the
+  scanner's ancestor-exclusion rule (ACD-400a-3) will not strip it.
+
+  WHY THE WHOLE TREE HANGS UNDER ACD-400 AND NOT UNDER A NEW L0 — reasoning for all
+  three siblings, recorded once here:
+  - ACD-400 IS this subject. Its title is "The AC store drives the build backlog via
+    automated scanning and ticket generation", and its own criteria's first Then clause
+    is "a scanner identifies which leaf-level ACs are ready for implementation". A new
+    L0 about queue selection would be a redundant sibling to a tree that already owns it.
+  - Cap arithmetic permits it: ACD-400 carried two L1s against the 7-cap; three more
+    brings it to five. No `child_limit_override` is authored and none may be added.
+  - ACD-400b's partial supersession by the thin-ticket pivot (ACD-1600a / ACD-1800c)
+    does NOT reach ACD-400a. Only the generator half was superseded. The scanner is
+    live, is still the queue, and still belongs here.
+  - CANDIDATES CONSIDERED AND REJECTED. ACS-1000 is not an L0 at all despite its folder
+    name — the file is `level: L2` (single-record folder, quick-fix-authored, leaf
+    traversal semantics). ACS-1100 is a genuine L0 but is `scope: standing` and is
+    explicitly "not a home for" other surfaces; this tree inherits its
+    state-your-denominator contract rather than parenting under it. ACS-100 is at nine
+    L1s, already over the 7-cap. ACD-1800 and ACD-1600 concern what a unit of work IS,
+    not which one is chosen next. BO-2400/BO-2600 are the fast lane, which is
+    deliberately governed by the opposite rules.
+
+  WHAT "ONE ACCOUNT" MUST COVER, so the BA does not scope it to a single paragraph:
+  the four admission tests in the order applied, the ordering keys in the order applied,
+  the verdict for an absent value on each field, the verdict for an unrecognised value
+  on each field, and the fact that a record failing admission is reported in NEITHER the
+  ready nor the blocked list. That last item is a statement of current behaviour, not a
+  commitment to change it — the change is the ACS-1100-shaped follow-up flagged in the
+  ACD-400c notes and is out of scope here.
+
+  ANTI-VACUITY CONSTRAINT, inherited from the ACS-1300 tree's shape and worth restating
+  because it bites hard on a documentation L1: every guarantee here is satisfied by a
+  tool that does nothing and a doc nobody reads. Each L2 must assert, in the same run,
+  that a record which genuinely contradicted the code was actually corrected. A test
+  that only greps for the presence of a paragraph passes on dead prose.
+
+  DO NOT REWRITE `work_status` OR ANY OTHER LIFECYCLE FIELD ANYWHERE IN THIS TREE. The
+  amendments in scope are to `criteria` text and to the reference doc. ACD-400a is
+  currently `work_status: in_progress` after a documented correction from a false
+  `done`; nothing here may touch it.

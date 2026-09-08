@@ -1,0 +1,105 @@
+id: ACD-400d-2
+components:
+  - ac_driven_dev
+title: "Equally urgent work is separated by size and then by identifier, giving one settled order every time"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given five pieces of work are ready to be picked up and all record the same
+    urgency,
+  And three of them record sizes of S, M and L, while the remaining two both record
+    a size of S,
+  When the queue is asked which work is ready,
+  Then within that urgency the S pieces are offered before the M piece and the M
+    piece before the L piece,
+  And the two pieces that match on both urgency and size are offered in ascending
+    order of their identifiers,
+  And that order does not depend on how the records happen to be stored: with the
+    same five records held under names whose alphabetical order is the reverse of
+    their identifiers, the queue offers the identical list,
+  And asking the same unchanged store the same question a second time returns the
+    identical list again.
+depends_on: [ACD-400d, ACD-400d-1]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "Verified by execution 2026-09-08: six equally-urgent, equally-sized leaves were returned in ascending identifier order, and two consecutive scans of the unchanged store returned identical lists. The three keys form a total order over distinct identifiers, which is what makes the result independent of storage order. Tagged `describes`, not `modifies`."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a.yaml
+    relationship: related
+    status: exists
+    relevance: "Carries the requirement this AC's determinism clause serves, confirmed 2026-09-08 in its it_requirements: 'Scanner must be idempotent: repeated runs produce identical output'. Nothing connects that requirement to the identifier tie-break that delivers it. This AC makes the identifier key load-bearing for a requirement that already exists rather than a detail nobody would miss."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the queue whose tie-break chain this AC pins."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Every pytest invocation used to run or verify these tests must set AC_ENFORCE_STRICT=1, or a red result is masked as an xfail and reads green."
+  - "The order must be obtained by executing the scanner over a temporary store through its real command surface; neither a source-text assertion nor a direct call to the private sort helper satisfies this AC."
+  - "The storage-order clause must be tested by holding the identical records under filenames whose alphabetical order is the reverse of the record identifiers, and comparing the two whole answers. A test that merely runs the same store twice passes on an implementation with no tie-break at all, because the enumeration order happens to be stable today — which makes the obvious determinism assertion vacuous."
+  - "The two runs compared for repeatability must be genuinely separate invocations of the command surface, not one invocation whose result is compared with itself. A cached or reused result proves nothing about repeatability."
+  - "This AC pins the tie-break chain that ships. It authorises no change to the keys, their order, or the sentinel behaviour beneath them."
+test_spec:
+  - name: test_equal_urgency_work_is_separated_by_size_then_by_identifier
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Five equally-urgent ready leaves — sizes S, M, L and two further S — are offered with both S pieces first in ascending identifier order, then the M piece, then the L piece."
+  - name: test_the_offer_is_determined_by_the_record_not_by_the_filenames
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "The same five records written under filenames whose alphabetical order is the reverse of their identifiers produce the identical offered list, separating a genuinely total order from an enumeration order that is merely stable."
+  - name: test_two_separate_invocations_over_an_unchanged_store_agree
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Asking the same unchanged store twice, in two separate invocations, returns the identical ordered list — the idempotency ACD-400a's it_requirements already demand, here connected to the key that delivers it."
+test_rationale: "The naive determinism test — run twice, compare — is satisfied by an implementation with no identifier tie-break whatsoever, since the store is enumerated in a stable order today. Only the reversed-filename fixture distinguishes an answer determined by the records from one determined by the filesystem, and only the second is worth the name idempotent."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400c-1
+  contract: "The temp-AC-store fixture builder and the scanner-invocation helper; the builder must allow the on-disk filename to be chosen independently of the record identifier, which the default id-derived naming would otherwise prevent."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400d-2-i]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Decomposes ACD-400d.
+
+  THE STORAGE-ORDER CLAUSE IS WHAT STOPS THIS AC BEING VACUOUS. The queue reads records
+  in a fixed order today, so a repeated identical run returns an identical list whether
+  or not the identifier key exists at all — meaning the obvious determinism assertion
+  passes on an implementation that has no tie-break and is merely lucky. Holding the same
+  records under names whose alphabetical order runs counter to their identifiers is what
+  separates "the answer is stable" from "the answer is determined by the record, not by
+  the filesystem". Only the second is worth the name idempotent, and only the second
+  survives a change to how records are enumerated.
+
+  WHY THE TIE-BREAK CHAIN IS ONE AC AND THE URGENCY KEY IS ANOTHER. The urgency key is
+  what the store currently denies exists (ACD-400d-1). The chain beneath it is what the
+  store currently describes correctly — ACD-400a-1's 'estimated_complexity ascending
+  (S before M before L before XL) then by AC id ascending' is right about these two keys
+  and their order, and wrong only in omitting the key above them. Keeping them apart
+  means ACD-400e-2's reconciliation is an insertion rather than a rewrite, and means a
+  future change to the ranking does not disturb the record that pins determinism.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.
