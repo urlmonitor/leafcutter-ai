@@ -1,0 +1,72 @@
+id: ACS-1400b-1
+components:
+  - ac_store
+title: "The store-wide answer is produced on a schedule and lands in front of a person"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing at least one child record its parent does not name,
+  And nobody has asked for the store to be checked,
+  When the recurring store-wide check reaches its next scheduled run,
+  Then the answer is delivered to a named destination a person reads, and the
+    delivery is recorded,
+  And the recorded delivery names the run it came from, so a run that executed but
+    whose answer was never delivered is distinguishable from one that was,
+  And when the same recurring check runs against a store where every parent names
+    every child, the run is recorded as delivered with nothing to act on rather
+    than producing no record at all.
+depends_on:
+  - ACS-1400b
+doc_links:
+  - path: scripts/ac_store/scan_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "DO NOT BUILD A SCANNER — THIS ONE WORKS AND WAS RE-VERIFIED 2026-09-08. Run unmodified against this branch it finds all 47 orphans across 22 parents, groups them by parent with the parent file path, and exits 1. The entire gap is that nothing invokes it: zero references in .github/, config/, templates/config/ or .pre-commit-config.yaml. This AC is wiring and delivery, not detection."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+    relationship: related
+    status: exists
+    relevance: "ALREADY OWNS PART OF THIS SURFACE AND NAMES THIS SCANNER EXPLICITLY — do not duplicate it, and do not make the scan louder before it has been made correct. ACS-1200b requires the health surfaces to stop reporting deliberately parked trees as breakage. A schedule that reports six deliberate records as drift every week trains the reader to ignore the report, which costs more than the silence it replaced."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1400b-1-i
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+notes: |
+  THE CRITERION BINDS TO THE ANSWER REACHING SOMEONE, NOT TO THE JOB HAVING
+  EXECUTED — this is the L1's explicit instruction and it is the whole difference
+  between this AC and a cron entry. A scheduled job that runs, exits, and writes
+  its output to a log nobody opens reproduces today's silence at higher cost.
+
+  THE THIRD Then IS THE NOISE-VERSUS-MISS TRADE, MADE EXPLICIT. The L1 names noise
+  as the failure mode to design against, which argues for saying nothing when
+  there is nothing to say. But a delivery channel that is silent on a clean run is
+  indistinguishable from a channel that has broken — and a broken channel is
+  exactly how a store rots unobserved for fifteen months. The resolution is a
+  recorded clean run rather than a broadcast one: the record exists, the reader is
+  not interrupted.
+
+  WHY A SEPARATE INSTRUMENT FROM ACS-1400a, RESTATED SO IT IS NOT COLLAPSED. A
+  commit-time check is handed one commit's staged set; the fact in question is a
+  property of the whole store. Even a perfect ACS-1400a is blind to a record
+  nobody is touching. Measured 2026-09-08: of the 47 current orphans, none is
+  under active edit, so a per-commit instrument would have surfaced none of them
+  today.
+
+  THE CADENCE AND THE DESTINATION ARE NOT SETTLED HERE. They are a choice, and the
+  criterion is written to hold for any choice that satisfies it.

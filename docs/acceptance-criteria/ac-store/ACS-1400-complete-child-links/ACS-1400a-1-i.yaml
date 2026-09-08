@@ -1,0 +1,62 @@
+id: ACS-1400a-1-i
+components:
+  - ac_store
+  - commit_guardian
+title: "A merge is not asked to repair links it did not author"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a merge that brings in a branch containing child records whose structural
+    parents do not name them, where the merge result for those records is taken
+    verbatim from one side and so is identical to that side's version,
+  And, in the same merge, one child record whose content the merge itself
+    introduces and whose structural parent does not name it,
+  When the merge commit is checked at the moment it lands,
+  Then the records taken verbatim from one side are not reported as violations,
+  And the record the merge itself introduces is reported as a violation in that
+    same run.
+depends_on:
+  - ACS-1400a-1
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: related
+    status: exists
+    relevance: "THE EXISTING NARROWING THIS AC PROTECTS — it is already in `_get_staged_ac_paths` and must survive the strengthening. A merge stages the entire incoming branch, so a plain staged diff names every requirement record the other side ever touched; the current code intersects that with the diff against the other merge parent so only content the merge itself introduces is gated. The in-code comment states the consequence plainly: without it, the only way through is to bypass the hook, and a habitual bypass is how a real missing back-link later slips past."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+    relationship: related
+    status: exists
+    relevance: "The same argument in a different register: a rule that can only be satisfied by bypassing it teaches the bypass. ACS-1200a exists because the KM-200 merge had to be landed with the check skipped."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  A TECHNICAL CONSTRAINT ON ACS-1400a-1, NOT A SEPARATE FEATURE. Closing the
+  dependency-list hatch widens the set of records the check will fire on. The
+  merge narrowing is the one place where a wider check becomes unsatisfiable for
+  the person running it, because the records it would demand they repair belong
+  to trees they neither authored nor modified.
+
+  THE FAILURE MODE IS SOCIAL AND IT IS ALREADY DOCUMENTED IN THIS REPO. A gate
+  that must be bypassed to complete an ordinary merge produces a bypass habit,
+  and the habit is what let the current population accumulate. This AC exists so
+  that widening the check cannot silently reintroduce that pressure.
+
+  THE SECOND Given IS THE ANTI-VACUITY HALF. "No merge reports a violation" is
+  satisfied by a check that has been disabled for merges entirely. Both clauses
+  must hold in the same run.

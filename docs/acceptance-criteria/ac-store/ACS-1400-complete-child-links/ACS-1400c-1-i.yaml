@@ -1,0 +1,71 @@
+id: ACS-1400c-1-i
+components:
+  - ac_store
+title: "A bulk repair with no adjudication behind it is refused rather than performed"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing a deliberately parked tree, a parent whose coverage
+    list resolves to no record at all, and a parent that simply omits a child it
+    has,
+  When a repair is requested over that store without an adjudication naming a
+    disposition for each affected record,
+  Then no file in the store is modified,
+  And the request is refused with a message naming the records that have no stated
+    disposition,
+  And when the same repair is requested with an adjudication that covers every
+    affected record, the records dispositioned for repair are repaired in that same
+    run.
+depends_on:
+  - ACS-1400c-1
+doc_links:
+  - path: scripts/ac_store/fix_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "THE ENTRY POINT THAT MUST ACQUIRE THIS REFUSAL. Today it takes no adjudication input at all: it calls the scan, iterates every parent the scan names, and patches each one. There is no argument, flag or file by which a caller could express that a record should be left alone. That is why the refusal has to be a behaviour of the tool rather than a convention its callers follow."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "OWNS BYTE STABILITY AND ITS TEST SHAPE — inherit, do not restate. Relevant to the first Then: 'no file is modified' must mean no file was opened for writing, not that files were rewritten with equivalent content. Note that this tool's case-4 fallback currently rewrites a whole file through a load-and-dump round trip, which preserves every value while reformatting quoting, key order and line wrapping."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE ACTUAL URGENCY OF THE WHOLE TREE, EXPRESSED AS ONE CONSTRAINT. The
+  gap is not that reconciliation is impossible. It is that reconciliation is one
+  command away, that command performs no adjudication, and the brief that would
+  prompt someone to run it is now written down in the L0's own notes. Re-verified
+  by reading the tool 2026-09-08: it would repair all 47 records, including the
+  six the store paid a hook bypass to leave alone and 25 whose repair changes what
+  the store believes about whether a record can be finished.
+
+  A DEFAULT-SAFE TOOL IS NOT ENOUGH; THE UNSAFE PATH MUST STOP EXISTING. Adding a
+  new adjudicating entry point alongside the current one leaves the current one
+  reachable, and the current one is the one whose name matches what a hurried
+  person will search for. The refusal belongs on the existing path.
+
+  THE LAST Then IS THE ANTI-VACUITY HALF AND IT IS NOT OPTIONAL HERE. "Refuses to
+  repair" is perfectly satisfied by a tool that refuses everything, which is also
+  what a broken tool does. The adjudicated repair must succeed in the same
+  criterion, or the safety property is indistinguishable from the tool being dead.
+
+  DRY-RUN IS IN SCOPE OF THE MESSAGE, IF NOT OF THE WRITE. The existing preview
+  mode prints the unadjudicated plan for all 47 as though it were the plan. A
+  refusal on the write path that leaves the preview recommending the damage has
+  moved the hazard rather than removed it.

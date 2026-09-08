@@ -1,0 +1,269 @@
+id: ACS-1400
+components:
+  - ac_store
+title: "Trust a finished claim, because nothing it covers was left out of the count"
+component: ac-store
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A requirement counts as finished only against every part it actually has.
+
+  When a requirement is made of smaller parts, whether it is finished depends
+  entirely on which parts get counted. Today a part can exist while the thing it
+  belongs to holds no record of it, so a finished claim can be measured against a
+  smaller set than really exists and still look completely convincing. This goal
+  makes the recorded set of parts match the real one, so a finished claim is
+  judged against everything it covers. Where a record is deliberately incomplete,
+  that is recognised as a decision rather than repaired as a fault.
+depends_on: []
+doc_links:
+  - path: scripts/ac_store/scan_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "THE DETECTION ALREADY EXISTS AND IS CORRECT — do not commission a second one. `find_orphaned_children()` does the single-hop check store-wide, at every level, and reports 47 orphans across 22 parents on this branch. What is missing is not the scan; it is that NOTHING INVOKES IT. Verified 2026-09-08: zero references in .github/, config/, templates/config/ or .pre-commit-config.yaml. That distinction is the whole of ACS-1400b."
+  - path: scripts/ac_store/fix_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "THE REPAIR ALSO ALREADY EXISTS, AND IT IS THE HAZARD RATHER THAN THE SOLUTION. It appends every orphan to every parent with no adjudication of any kind — no abstention channel, no exclusion for deliberately-parked trees, and a case-4 branch that does a full `yaml.dump` round trip (the store-churning reformat TQ-400e-1 forbids). Run today it would undo the KM-200 decision and perform 25 writes that change a done-proof verdict. READ IT BEFORE SPECIFYING ANY REPAIR — ACS-1400c is about making this safe, not about building a replacement from nothing."
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: related
+    status: exists
+    relevance: "THE EXISTING GUARD, AND IT HAS THREE ESCAPE HATCHES, NOT ONE. (1) It reads only the commit's staged set, so an unstaged parent is never examined. (2) `_check_file` returns [] unless the structural parent also appears in the child's `depends_on` — measured 2026-09-08, that alone silently exempts 26 of the current 47. (3) It fails open with a WARNING when the parent is absent from the index. Its silence is three different things and none of them is a pass."
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "THE EXPLICIT HAND-OFF THAT PLACES THIS L0, and the reason it is a sibling rather than a graft. That record — approved, BA-authored — states in its own notes: 'Repairing a stale child list is NOT this tree's job. It is a different operation on a different relation, it already has a tool in scripts/ac_store/fix_ac_orphans.py, and the 118 disagreements above are its population, not ours.' ACS-1300 abstains on exactly this population and reports it. ACS-1400 is where the abstention lands."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200.yaml
+    relationship: related
+    status: exists
+    relevance: "AN UPSTREAM CONSTRAINT, NOT A PARENT — and the source of the six records this goal must NOT repair. ACS-1200 makes 'deliberately parked' a state the guardrails recognise; ACS-1200b already requires the health surfaces to agree and says the pre-existing orphans must not be swept up by the exemption. Sequence accordingly: a reconciliation that runs before ACS-1200a lands has no way to tell a parked tree from a broken one."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "STATES THE ROOT CAUSE OUTRIGHT at the covered_by Scope Convention: the field holds test file paths OR direct-child AC IDs, with no discriminator. Also the home for whatever ACS-1400d settles, and the surface whose 'missing links block the commit' wording is already contradicted by the three escape hatches above."
+  - path: scripts/ac_store/done_proof.py
+    relationship: related
+    status: exists
+    relevance: "WHY THE COUNT IS LOAD-BEARING RATHER THAN COSMETIC. `_has_resolvable_child` decides composite-versus-leaf by whether ANY covered_by entry resolves to a real record, and `verify_done_eligible` routes on that decision — a composite derives its proof from its children, a leaf must carry its own test. This is the single reader that turns a missing child link into a wrong answer about what is finished."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: related
+    status: exists
+    relevance: "STANDING CONTRACT THIS TREE INHERITS, not a parent — ACS-1100 is `scope: standing` and explicitly not a home for other surfaces. Every figure any descendant reports must state the total it was measured against and what it excluded. Given that this tree's headline number (47) turns out to be four different populations, that obligation is unusually live here."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1400a
+  - ACS-1400b
+  - ACS-1400c
+  - ACS-1400d
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  New root L0 in ac-store, authored 2026-09-08 (product-owner, at BrainCandy's
+  request), slug folder ACS-1400-complete-child-links/. Next free hundred —
+  100 through 1300 are occupied; ACS-1400 verified free by grep across docs/ and
+  tickets/ before allocation. Four L1s a–d against the 7-cap.
+
+  ==========================================================================
+  THE ORIGINATING BRIEF, AND WHERE THE EVIDENCE DEPARTS FROM IT
+  ==========================================================================
+  The request was framed as: 47 orphaned children exist because the AC hooks
+  validate only the files in a commit's index, so you edit children, never stage
+  the parent, and the hook that exists to check parents never gets given one.
+  That mechanism is real and is documented in CLAUDE.md. IT IS NOT, HOWEVER, THE
+  DOMINANT CAUSE OF THESE PARTICULAR 47, and building against the brief as stated
+  would produce a repair aimed at the wrong population.
+
+  Measured on this branch, 2026-09-08, whole store, no sampling. Denominator:
+  every record carrying an id under docs/acceptance-criteria/. The scan is
+  scripts/ac_store/scan_ac_orphans.py, unmodified.
+
+  THE SECOND ESCAPE HATCH IS BIGGER THAN THE FIRST. `_check_file` in
+  check_ac_parent_covered_by.py returns [] unless the structural parent also
+  appears in the child's own `depends_on` list. 26 of the 47 fail that test — so
+  for a MAJORITY of the current orphans, staging the parent would have changed
+  nothing. The hook would still have said nothing, for an entirely different
+  reason. Any criterion written to close the staging gap alone leaves 55% of the
+  measured population untouched.
+
+  FOUR POPULATIONS, NOT ONE. These overlap; this is a description of causes, not
+  a partition.
+
+    1. DELIBERATE — 6 records (KM-200a through KM-200f). MUST NOT BE REPAIRED.
+       KM-200's covered_by is empty ON PURPOSE, under the cheap-capture
+       convention: L0 + L1 only, so the tree is visible in the store but
+       structurally outside the buildable backlog (scan_ac_store.py `_is_leaf`
+       matches only L2/L3). The merge commit (PR #433, 2026-08-14) landed only
+       with SKIP=check-ac-parent-covered-by. This is recorded in the component's
+       own PROJECT_CONTEXT.md, and ACS-1200b already states that pre-existing
+       orphans must not be swept up. Repairing these would inject six unready L1s
+       into the buildable backlog and silently reverse a decision the store paid
+       a hook bypass to make.
+
+    2. THE FIELD IS CARRYING TWO MEANINGS AND ONE CROWDED THE OTHER OUT — 26
+       records across 11 parents, the largest group. These parents' covered_by
+       holds ONLY test paths (ACS-300g-1, ACS-300i-1, BP-100b, BP-100b-6,
+       INF-100c-1, INF-100c-3, KM-KGS-100e-1, KM-KGS-100e-5, UXP-544, UXP-545 —
+       10 parents resolving to no record at all, carrying 25 orphans — plus
+       KM-KGS-100e-6, empty, same tree and same cause). Per ac-schema.md a test
+       path in covered_by is a LEAF record's prerogative; every one of these has
+       children. A tool wrote the test link and the child links were never there.
+       These are not stale parents. They are a schema collision surfacing as
+       drift, and the repair has TEETH: appending a child id to a list that
+       currently resolves to nothing flips done_proof `_has_resolvable_child`
+       from leaf to composite, changing what the store believes about whether
+       that record can be finished. ACS-1300a-3 calls this "the only write in the
+       tree with teeth, and the teeth point the wrong way" and abstains on it.
+
+    3. THE RECORD ITSELF IS RETIRED — ~5. BO-100d-1 and BO-100d-2 are
+       `status: superseded_by` (superseded, oddly, by their own -1a/-1b
+       children) and carry 3 orphaned L3s between them; TKT-100a and TKT-100f are
+       themselves `status: superseded_by`, and TKT-100's covered_by lists the
+       seven successors while omitting the two retired records. That omission
+       looks deliberate and arguably correct. BP-100b — the 11-orphan parent — is
+       likewise `status: superseded_by` by BP-100j/k/l, so it is simultaneously
+       in population 2 and 3. Whether a retired parent should list retired
+       children is an open convention question this tree must SETTLE rather than
+       assume; ac-schema.md's status lifecycle is silent on it.
+
+    4. PLAIN STALE DRIFT — the shape the brief described — AT MOST ~10.
+       BO-100d (4: lists -1 and -2 while -1a/-1b/-2a/-2b exist), FIN-100 (1:
+       lists a–g while h exists), and UXP-400a/410a/412a/420a/421a (5: parents
+       with empty covered_by; note these parents are themselves `level: L2` with
+       `level: L2` children, which is a separate structural problem).
+
+  SO: of 47, six must be left alone, twenty-six are a symptom of a schema defect
+  whose repair is the dangerous one, about five sit on retired records where the
+  right answer is a convention decision, and roughly ten are the plain drift the
+  brief described. "Reconcile the 47" is not a safe instruction and must not
+  become one at L2.
+
+  ==========================================================================
+  A REPAIR TOOL ALREADY EXISTS AND IT WOULD DO THE WRONG THING
+  ==========================================================================
+  scripts/ac_store/fix_ac_orphans.py appends every orphan to every parent with no
+  adjudication. Run today against this store it would repair all 47 — including
+  the six that must not be touched, and including 25 writes that change a
+  done-proof classification. Its own docstring asserts that the pre-commit hook
+  "now blocks all commits that touch AC files until these are fixed," which is
+  false: the hook only ever sees the staged set. Its case-4 fallback rewrites the
+  whole file through yaml.dump.
+
+  THIS IS THE ACTUAL URGENCY OF THIS TREE. The gap is not that reconciliation is
+  impossible. It is that reconciliation is one command away and that command is
+  unsafe, while the brief that would prompt someone to run it is already written
+  down. ACS-1400c exists to make the safe path the available one.
+
+  ==========================================================================
+  PLACEMENT — WHY A SIBLING L0 AND NOT A GRAFT
+  ==========================================================================
+  ACS-1300 (trustworthy-coverage-links) was the serious candidate — same field,
+  same store, four free L1 slots, and its notes already carry the parent/child
+  disagreement measurement (118 parents). REJECTED, and by that tree's own
+  written instruction rather than by this PO's judgement. ACS-1300a-3 states:
+  "Repairing a stale child list is NOT this tree's job. It is a different
+  operation on a different relation... This AC abstains and reports; it must not
+  grow a child-list repair." ACS-1300 governs the requirement-to-TEST relation and
+  explicitly disclaims all done-status consequence ("it unblocks nothing"); this
+  goal governs the parent-to-CHILD relation and is entirely about done-status
+  trustworthiness. Grafting here would contradict an approved boundary — the same
+  test ACS-1300 itself applied when it rejected ACD-800.
+
+  Also evaluated: ACS-1100 is `scope: standing`, inherited not parented, and says
+  so itself. ACS-1200 is the upstream constraint that defines the parked state —
+  a dependency, not a home. ACS-400 governs WHO may edit a definition (wrong
+  subject). ACS-200 is structurally broken (no L0 file at all; ACS-200d depends on
+  a nonexistent ACS-200b) and already carries a DO-NOT-HANG-HERE note. ACS-900
+  is the retired-AC code lifecycle. The ac-store component has minted a sibling
+  root L0 for exactly this situation five times (800, 900, 1100, 1200, 1300) and
+  PROJECT_CONTEXT.md records the rule.
+
+  ==========================================================================
+  L1 SPLIT — THE SEAM, AND WHY FOUR
+  ==========================================================================
+  The seam is WHEN THE ANSWER IS PRODUCED and WHO ACTS ON IT.
+
+  - ACS-1400a — at the moment work lands. Close the three escape hatches so the
+    guard's silence means it looked and found nothing.
+  - ACS-1400b — out of band, whole store. The scan already exists and is correct;
+    the gap is that nothing runs it, so its answer reaches nobody.
+  - ACS-1400c — the one-off reconciliation, adjudicated, with the deliberate
+    exclusions provable. This is where the existing unsafe tool gets fixed.
+  - ACS-1400d — the durable fix for population 2: give child links and test links
+    separate homes so neither can crowd out the other.
+
+  WHY (d) IS HERE AT ALL, AND THE SCOPE RISK IN IT. ACS-1300a-3 names the field
+  split twice as "the real fix" and both times places it out of scope ("a schema
+  change well outside this tree's scope"; "do not begin it here"). It is therefore
+  deliberately homeless, and it is the root cause of the largest of the four
+  populations — without it, a and b and c will keep re-detecting and re-repairing
+  the same 26. It is also the most expensive item in this tree by a wide margin,
+  because every reader of covered_by is affected. FLAGGED FOR THE USER AT THE
+  APPROVAL GATE: if this L0 needs to stay small, (d) is the one to defer to its
+  own tree — but it should be deferred deliberately, not omitted quietly, because
+  it has now been declared out of scope by two trees in a row.
+
+  DO NOT re-cut this split at L1. Decompose each of a–d into L2 behaviours.
+
+  CAP ARITHMETIC (hard caps: 7 L1s per L0, 5 L2s per L1; no child_limit_override
+  is authored here and none may be added): 4 L1s against 7 — three slots of
+  headroom, which is the right reserve for a tree whose population turned out to
+  be four different things under one number.
+
+  ==========================================================================
+  TWO PROPERTIES THE CHILDREN INHERIT — DO NOT RE-DERIVE THEM
+  ==========================================================================
+  Both are borrowed deliberately from the adjacent ACS-1300 tree, in the form
+  that tree already states them, so the two repairs behave identically.
+
+  BYTE STABILITY. A record with nothing to repair is never opened for writing.
+  NOT "written identically" — a YAML load-and-dump round trip preserves every
+  value while reformatting quoting, key order and line wrapping, which at this
+  store's size churns everything and makes the diff unreadable. TQ-400e-1 owns
+  this rule and its test shape; point at it, do not restate it in a competing
+  form. Note that fix_ac_orphans.py's case-4 branch violates it today.
+
+  ABSTENTION OVER ACTION. Evidence the tool cannot trust produces a REPORTED
+  abstention — never a silent skip, and never a write. A skipped record is
+  invisible, and invisibility is the same defect one level down. This tree needs
+  the rule more than most: populations 1 and 3 are precisely records where the
+  correct action is to do nothing AND SAY SO.
+
+  ==========================================================================
+  ONE HARD REFUSAL, STATED AT L0 SO IT IS INHERITED RATHER THAN REDISCOVERED
+  ==========================================================================
+  NOTHING IN THIS TREE WRITES work_status, AT ANY LEVEL. Refused, not deferred.
+  This tree makes the child set true; it never decides what is finished on the
+  strength of the set it just corrected. That would manufacture a done claim on
+  the one field the whole phantom-done edifice rests on, using evidence the tree
+  itself had just written — a closed loop. Flipping the badge stays with
+  mark_ac_done.py and its own evidence gate.
+
+  The temptation here is sharper than it was for ACS-1300, and the BA should
+  expect to feel it: the motivating investigation was a sweep of composites marked
+  done with unfinished children, so "we just fixed the child list, now recompute
+  the badge" is the obvious next line. It is refused. Correcting the count and
+  re-judging the claim are two acts, and only the first belongs here.
+
+  ==========================================================================
+  MEASUREMENTS ARE PROVISIONAL AND LIVE ONLY IN notes, NEVER IN A criteria BLOCK
+  ==========================================================================
+  Every figure above carries the date and the branch it was computed on. A
+  criterion pinned to a number is falsified by the next commit that changes it.
+  Per ACS-1100 (inherited), any figure a descendant reports must state its
+  denominator and its exclusions — and in this tree "47" without the four-way
+  breakdown is exactly the kind of confident, unreconcilable number ACS-1100
+  exists to prevent.

@@ -1,0 +1,69 @@
+id: ACS-1400a-3
+components:
+  - ac_store
+  - commit_guardian
+title: "A check handed nothing does not look like a check that found nothing"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a commit that stages no requirement records at all,
+  And a second commit that stages one child record whose structural parent names
+    it and one whose structural parent does not,
+  When each is checked at the moment it lands,
+  Then the first states that it examined no requirement records,
+  And the second states how many requirement records it examined and reports the
+    one violation it found among them,
+  And the two outcomes are told apart from the check's own output without reading
+    its exit code.
+depends_on:
+  - ACS-1400a
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: related
+    status: exists
+    relevance: "THE DOCUMENTED HATCH, AND THE HONEST THING TO DO ABOUT IT AT COMMIT TIME. The check reads only the commit's staged set, so a record nobody is touching is structurally unreachable from here — and no amount of hardening changes that, which is why ACS-1400b exists as a different instrument. What IS closable here is the ambiguity: today a commit that staged nothing and a commit that staged clean records both exit 0 with no output. Naming the examined population converts the first from a silent pass into a stated non-answer."
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "THE PRECEDENT AND ITS SCAR, IN THIS SAME COMPONENT. For eight days a bare-directory argument matched zero files, printed a success message and exited 0 — a defence that reported clean while checking nothing, and the project's own written instruction prescribed the form that triggered it. Its fix is the model: state the count examined, and make a zero-file run non-silent. CLAUDE.md's AC-store hygiene section records the whole episode."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: related
+    status: exists
+    relevance: "STANDING, INHERITED, NOT DUPLICATED. Every figure a descendant reports must state the total it was measured against. This AC is that obligation applied to the smallest possible answer — a commit-time check reporting zero findings."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: internal
+notes: |
+  THE THIRD MEANING OF SILENCE, AND THE ONLY ONE THAT CANNOT BE REMOVED — only
+  made visible. ACS-1400a-1 and ACS-1400a-2 remove the other two. This record
+  deliberately does NOT try to make the commit-time check store-aware: that is
+  ACS-1400b's instrument, and a commit-time check that walked the whole store
+  would report findings the committer cannot act on, which is the same
+  unsatisfiable-gate pressure ACS-1400a-1-i guards against.
+
+  WHY THIS IS WORTH A RECORD AT ALL. Three defences documented in this repo's
+  CLAUDE.md turned out to be no-ops that reported clean: the feedback-categories
+  path check, the schema validator's bare-directory glob, and a merge audit run
+  against a stale reference. The shared shape is that a run which examined
+  nothing was indistinguishable from a run that found nothing. This AC is the
+  local fix for that shape on this check.
+
+  DELIBERATELY NOT A COUNT OF VIOLATIONS. The number that matters is the
+  denominator — records examined — not the numerator. A check reporting "0
+  violations" while having examined 0 records is the exact defect.

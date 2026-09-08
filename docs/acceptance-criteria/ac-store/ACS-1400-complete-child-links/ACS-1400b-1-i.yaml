@@ -1,0 +1,64 @@
+id: ACS-1400b-1-i
+components:
+  - ac_store
+title: "The scheduled run consumes the existing scan's real verdict rather than re-deciding it"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing at least one child record its parent does not name,
+  When the recurring store-wide check runs,
+  Then the set of records it reports is exactly the set the existing store-wide
+    scan reports for that same store, with no record present in one and absent
+    from the other,
+  And when the existing scan is made to report a different set for the same store,
+    the recurring check's report changes to match it without the recurring check
+    being altered,
+  And the recurring check reaches its delivered-or-not outcome from the scan's own
+    result, so a scan that reported findings cannot be followed by a delivery
+    stating there were none.
+depends_on:
+  - ACS-1400b-1
+doc_links:
+  - path: scripts/ac_store/scan_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "THE SINGLE DETECTOR. `find_orphaned_children()` performs the correct single-hop check across every record at every level and has done so since 2026-06-08. The second Then is the anti-drift clause: if the recurring check has its own copy of the rule, changing the scan will not change the report, and the two readers will diverge silently — which this repo has already paid for once."
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "THE WORKING WIRING MODEL. It is the AC-store check that DID get wired to a required CI gate, so its invocation shape is the precedent to copy rather than invent."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: internal
+notes: |
+  A TECHNICAL CONSTRAINT ON ACS-1400b-1 THAT EXISTS BECAUSE THE OBVIOUS
+  IMPLEMENTATION IS THE WRONG ONE. Wiring a schedule is easy; the tempting
+  shortcut is to re-derive the orphan set inside the scheduled job, because that
+  avoids depending on a script's output format. That shortcut creates a second
+  reader of the same evidence, and the two drift.
+
+  THE SECOND Then IS WHAT MAKES THIS FALSIFIABLE RATHER THAN A STYLE PREFERENCE.
+  Asserting "it calls the scan" is satisfied by code that calls the scan and then
+  ignores it — the phantom-done shape this repo's CLAUDE.md documents for gates
+  and runners. Perturbing the scan and requiring the report to follow proves the
+  result is consumed in control flow, not merely invoked.
+
+  DELIBERATELY SILENT ON OUTPUT FORMAT. Whether the scan should grow a structured
+  output mode so the scheduled job need not parse prose is an implementation
+  choice, not a behaviour. The criterion holds either way.

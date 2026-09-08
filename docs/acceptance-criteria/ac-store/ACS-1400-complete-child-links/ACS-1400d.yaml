@@ -1,0 +1,114 @@
+id: ACS-1400d
+components:
+  - ac_store
+title: "Two different kinds of link stop competing for one place to live"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  What a requirement is made of, and what proves it, are recorded separately.
+
+  Recording the tests that prove a requirement can no longer displace the record of
+  the parts it is made of, and neither has to be guessed at from the shape of the
+  other — so the same drift cannot quietly re-accumulate once it has been cleared.
+depends_on:
+  - ACS-1400
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "STATES THE PROBLEM IN ITS OWN WORDS at the covered_by Scope Convention: the field holds test file paths OR direct-child AC IDs, 'mixing the two on one record is legal and occurs in the store today', with no discriminator. Its table of the five tools that read the field is the ready-made blast-radius inventory for this L1 — check_ac_parent_covered_by, scan_ac_orphans, done_proof `_resolve_all_child_ids`, approve_acs, check_ac_limits. START THE ENUMERATION FROM THAT TABLE AND THEN VERIFY IT AGAINST THE REPO; a table is a claim about readers, not a guarantee of completeness."
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "NAMES THIS L1'S WORK AS THE REAL FIX AND PLACES IT OUT OF ITS OWN SCOPE, TWICE — the direct provenance of this L1. Its notes: 'A SEPARATE FIELD WOULD DISSOLVE THIS ENTIRELY — a distinct place for child ids and for test links, so neither reader has to infer which it is looking at. That is a schema change well outside this tree's scope.' Its it_requirements: 'THE SCHEMA CHANGE THAT WOULD DISSOLVE THIS IS OUT OF SCOPE... do not add a discriminator field to the schema as a side effect.' Its abstention is the cost of this L1 not existing."
+  - path: scripts/ac_store/done_proof.py
+    relationship: related
+    status: exists
+    relevance: "THE READER WITH THE MOST AT STAKE AND THE HARDEST MIGRATION. `_has_resolvable_child` currently infers the field's meaning by whether entries RESOLVE to real records — an inference this L1 makes unnecessary but which must keep working, unchanged in verdict, for every legacy record throughout the transition. ACS-1300a-3 warns specifically that `level` and the id string are both wrong proxies for this decision. Its verdicts before and after are the sharpest available regression oracle."
+  - path: docs/acceptance-criteria/ac-store/ACS-800-stable-ac-identity/ACS-800.yaml
+    relationship: related
+    status: exists
+    relevance: "THE PRECEDENT FOR A WHOLE-STORE SCHEMA MIGRATION IN THIS COMPONENT, AND A POSSIBLE COLLISION — CHECK BEFORE SPECIFYING. ACS-800 decouples AC identity from tree position and its ACS-800e already commits to updating every tool that derives structure from the id string, naming check_ac_parent_covered_by.py among them. Two migrations touching the same readers should be sequenced or combined deliberately, not discovered mid-flight. ACS-800e is the single most likely place for this L1 to duplicate existing committed work."
+  - path: scripts/ac_store/ac_coverage_resolver.py
+    relationship: related
+    status: exists
+    relevance: "ANTI-DUPLICATION — READ BEFORE SPECIFYING ANY TRAVERSAL. Named by filename; this PO did not read it. If the child-versus-test resolution already lives here, the migration should route through it rather than adding a parallel reader. Two readers of the same evidence drift, and this repo has paid for that once already."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+  - component-diagram
+notes: |
+  DECOMPOSITION DELIBERATELY DEFERRED (BA, 2026-09-08): this L1 has no children on
+  purpose, pending BrainCandy's scope ruling on whether the field split belongs in
+  this tree or in its own L0. It is the most expensive item here — every reader of
+  the coverage field is affected — and ACS-1300a-3 already placed it out of scope
+  twice. Its emptiness is a held decision, not an oversight. ACS-1400a, b and c
+  were decomposed in the same pass; ACS-1400c-2 carries the consequence, requiring
+  the reconciliation pass to abstain out loud on the population this L1 owns and to
+  name this record as what must be settled first, so a permanent deferral leaves a
+  visible, reasoned gap rather than a silent one.
+
+  THE DURABLE FIX FOR THE LARGEST POPULATION, AND THE ONE ITEM IN THIS TREE THE
+  USER SHOULD CONSCIOUSLY DECIDE ABOUT. Flagged at the approval gate rather than
+  buried: this is the most expensive L1 here by a wide margin, because every reader
+  of the field is affected and the store is large.
+
+  WHY IT IS IN THIS TREE AT ALL. Twenty-six of the forty-seven current gaps exist
+  because one field carries two meanings with no discriminator: a tool wrote a test
+  link into a record's covered_by and the child links were never there. Without
+  this L1, ACS-1400a/b/c will keep detecting and re-repairing that same slice, and
+  ACS-1400c must permanently abstain on it — so a quarter of the problem stays
+  open by design. It is also DELIBERATELY HOMELESS: ACS-1300a-3 declares it the
+  real fix and out of scope in the same breath, twice. A root cause that two trees
+  have now declined to own does not stop being the root cause.
+
+  IF IT IS DEFERRED, DEFER IT LOUDLY. Splitting it into its own L0 is a perfectly
+  reasonable call and this tree survives it — a, b and c remain coherent and
+  valuable, with c abstaining on population 2 indefinitely. What must not happen is
+  quiet omission, which is how it became homeless in the first place. If the user
+  defers it, record the deferral and the reason on ACS-1400's notes.
+
+  THE MIGRATION IS THE WHOLE JOB; ADDING A FIELD IS THE TRIVIAL PART. The BA should
+  spend the L2 budget on: enumerating every reader (start from ac-schema.md's table
+  of five, then verify against the repo — the table is a claim, not a guarantee);
+  the back-compatibility posture for records that never migrate; and the transition
+  order. Beware the deploy-manifest trap documented in CLAUDE.md — a hook importing
+  a module that is not in the build deploy list crashes at hook runtime while unit
+  tests pass, and once these gates are required that blocks every merge.
+
+  BIND THE PROOF TO EXISTING READERS' REAL VERDICTS, NOT TO FIELD PRESENCE. The
+  falsifiable claim is that done_proof reaches the SAME composite-versus-leaf
+  verdict for every record before and after the migration, and that the back-link
+  check reaches the same verdict too. Compute both against the real functions on
+  the real post-migration store; a re-implementation of their rules inside a test
+  will pass while production uses a different rule. This is exactly how
+  ACS-1300a-3 binds its own equivalent claim.
+
+  BYTE STABILITY STILL APPLIES, AND IS HARDEST HERE. A migration touching every
+  record is the maximum-churn operation in this store; a record needing no change
+  must not be opened. Inherit TQ-400e-1's rule and test shape.
+
+  DOCUMENTATION: `[reference-doc]` because ac-schema.md is the normative definition
+  of the field and every authoring agent reads it — the split is meaningless if the
+  schema still describes one dual-purpose field. `[component-diagram]` because the
+  set of readers of this field, and which of the two links each one consumes, is
+  precisely the thing nobody currently has written down, and is what made the
+  collision invisible for as long as it was.

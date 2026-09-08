@@ -1,0 +1,80 @@
+id: ACS-1400a-2
+components:
+  - ac_store
+  - commit_guardian
+title: "A check that could not look says so, instead of passing"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a child record whose structural parent cannot be located anywhere in the
+    store,
+  And a second child record whose identifier is of a shape from which no
+    structural parent can be derived at all,
+  And a third child record whose structural parent is present and does name it,
+  When a commit staging all three is checked at the moment it lands,
+  Then neither of the first two is reported as having passed,
+  And each of the first two is reported through the same did-not-run channel the
+    check already uses for an unreachable prerequisite, naming the record and
+    stating which prerequisite could not be reached,
+  And the third is reported as a pass in that same run, so a did-not-run outcome
+    is a decision this run reached about specific records rather than the whole of
+    what it did.
+depends_on:
+  - ACS-1400a
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: related
+    status: exists
+    relevance: "BOTH HATCHES AND THE READY-MADE VOCABULARY ARE ALREADY IN THIS ONE FILE. The parent-absent case prints a WARNING and returns an empty violation list, which is indistinguishable at the exit code from a clean pass. The undeliverable-parent case returns an empty list with no output at all. The channel to reuse is `_emit_could_not_check` / `OUTCOME_COULD_NOT_CHECK` from the shared check_outcome module, added by GE-120a-1 for exactly this meaning — it emits a machine-readable RESULT line independent of exit code. Do not invent a second channel."
+  - path: scripts/ac_store/ac_parent_id.py
+    relationship: related
+    status: exists
+    relevance: "`derive_parent_id` is purely lexical and returns None for a bare PREFIX-NNN identifier, which is the second Given. Today the check treats that as 'root-level, no parent by definition' and returns silently — correct for a genuine root, wrong for the whole id families where it makes a real parent structurally underivable. The check must say which of the two it concluded."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "ESTABLISHED THE DID-NOT-RUN OUTCOME AND ITS SEMANTICS. Inherit them; this AC extends the existing outcome to two more cannot-run shapes in the same file rather than defining a third meaning for silence."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  THE L1'S CENTRAL INSIGHT, EXPRESSED AS A BEHAVIOUR. The check's silence
+  currently means three different things and only one of them is a pass. This AC
+  removes two of the three. ACS-1400a-1 removes the dependency-list one and
+  ACS-1400a-3 makes the was-never-handed-anything case legible, so between the
+  three, silence becomes unambiguous.
+
+  VERIFIED 2026-09-08 THAT NEITHER HATCH IS CURRENTLY FIRING ON THE STORE. Running
+  the real hook once per orphan child produced 21 blocks and 26 silences, and all
+  26 silences were the dependency-list hatch — none was the parent-absent or
+  underivable-parent shape. That is a fact about today's store, not about the
+  check: both shapes are reachable in the code and both return an empty violation
+  list. So this AC must be proved against a store constructed to contain them,
+  and a test that merely runs the check over the current store will pass without
+  exercising either branch. That trap is the reason this is its own record.
+
+  THE THIRD Given IS THE ANTI-VACUITY HALF AND MUST STAY IN THE SAME RUN. "The
+  check reports did-not-run" is trivially satisfied by a check that reports
+  did-not-run for everything. Only the pairing distinguishes a check that
+  adjudicated from one that abdicated.
+
+  NEITHER OUTCOME IS DECIDED HERE TO BLOCK OR ANNOUNCE. GE-120 owns that
+  disposition and the existing outcome is deliberately independent of the exit
+  code. This AC settles only that the outcome is emitted and is distinguishable
+  from a pass.

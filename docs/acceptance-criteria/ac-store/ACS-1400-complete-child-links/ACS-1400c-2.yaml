@@ -1,0 +1,97 @@
+id: ACS-1400c-2
+components:
+  - ac_store
+title: "Where the coverage list resolves to nothing, the pass abstains and names what has to be settled first"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing a parent whose coverage list holds only entries that
+    resolve to no record in the store, and which has a child it does not name,
+  And, in the same store, a parent whose coverage list already names at least one
+    real child and which omits another child it has,
+  When the one-off adjudicated pass is run over that store,
+  Then the first parent's file is byte-for-byte identical to its content before
+    the run,
+  And the first parent is reported as an abstention naming the record, stating
+    that its coverage list resolves to no record so appending a child would change
+    what that list is taken to mean, and naming the separate decision that has to
+    be settled before it can be repaired,
+  And the second parent gained the child it was missing in that same run, so the
+    abstention was a decision this run reached rather than the whole of what it
+    did,
+  And the abstention is reported through the same channel every other abstention
+    in the pass uses.
+depends_on:
+  - ACS-1400c
+  - ACS-1400c-1
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: related
+    status: exists
+    relevance: "WHY THIS POPULATION IS A DANGEROUS WRITE AND NOT A TIDY-UP. `_has_resolvable_child` decides composite-versus-leaf by whether ANY coverage entry resolves to a real record, and `verify_done_eligible` routes on that decision — a composite derives its proof from its children, a leaf must carry its own test. A parent whose entries all resolve to nothing reads as a leaf today; appending one child id flips it to composite and changes what the store believes about whether it can be finished. Re-measured 2026-09-08: 25 of the 47 current gaps sit under such a parent, across ten parents, of which BP-100b alone carries eleven."
+  - path: docs/acceptance-criteria/ac-store/ACS-1400-complete-child-links/ACS-1400d.yaml
+    relationship: related
+    status: exists
+    relevance: "THE DECISION THE ABSTENTION NAMES. This population exists because one field carries two meanings with no discriminator, and it cannot be repaired safely until child links and test links have separate homes. ACS-1400d is currently held at L1 pending a scope ruling and has deliberately not been decomposed, so this abstention is open-ended by design rather than a temporary staging step — the pass must be correct and complete with this population permanently outstanding."
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "ABSTAINS ON THE MIRROR IMAGE OF THIS POPULATION AND SUPPLIES THE PATTERN. Its rule — classify by whether entries RESOLVE, never by entry shape, by the level field, or by the id string — is the one to inherit, because a legacy record can hold test-file paths where child ids would go and both proxies are wrong for exactly the records at issue."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "OWNS BYTE STABILITY AND ITS TEST SHAPE — inherit, do not restate. Byte stability means the file is never opened for writing, not that it is rewritten identically: a load-and-dump round trip preserves every value while reformatting quoting, key order and line wrapping, which at this store's size makes the diff unreadable."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE RECORD THAT MAKES THE ACS-1400d DEFERRAL SURVIVABLE. ACS-1400d is
+  held at L1 pending a scope ruling and was deliberately not decomposed in this
+  pass. Without it, the largest single population here can never be repaired
+  safely — so rather than let it be quietly omitted from the reconciliation, this
+  AC requires the pass to abstain on it out loud and to name what is blocking it.
+  An abstention that says why is a finding; a silent omission is the same defect
+  one level down.
+
+  THE ABSTENTION IS OPEN-ENDED, NOT A HOLDING POSITION. If ACS-1400d is never
+  built, this pass is still complete and still correct — it will simply always
+  report this population as outstanding with a stated reason. That is the property
+  that lets ACS-1400c ship without waiting on the most expensive item in the tree.
+
+  CLASSIFY BY RESOLUTION, NOT BY SHAPE — inherited from ACS-1300a-3 verbatim and
+  worth the repetition because the wrong proxies are so tempting. The obvious
+  implementation is to check whether an entry looks like a file path. Re-measured
+  2026-09-08 across the real store, the resolution test and the shape test do not
+  agree: the ten parents in this population hold entries that resolve to nothing,
+  and separating them from the twelve whose coverage list is simply empty requires
+  resolution, not inspection.
+
+  A MEASUREMENT CORRECTION THE IMPLEMENTER SHOULD HAVE. The L0 notes describe this
+  population as 26 records across 11 parents. Re-measured by resolution on this
+  branch it is 25 across 10; the eleventh parent, KM-KGS-100e-6, has an entirely
+  empty coverage list and so falls under the empty-list group of 12 rather than
+  this one. Same tree, same underlying cause, different signal — and since this AC
+  keys off the signal rather than a list of ids, that record will be dispositioned
+  as an empty-list case. Whether that is the right answer for it is a question for
+  the report's reader, which is exactly why every record must appear in the
+  report.
+
+  THE THIRD Then IS THE PAIRING DISCIPLINE AND IT MUST NOT BE SPLIT OUT. "The file
+  is unchanged" is satisfied by a tool that does nothing. Only a genuine repair in
+  the same invocation makes the abstention evidence of a decision.
