@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import importlib.util as _ilu
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -43,6 +44,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _COMMIT_TIME_MODULE = _REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "check_identifier_uniqueness.py"
 _AUTHORING_TIME_MODULE = _REPO_ROOT / "templates" / "hooks" / "check_identifier_uniqueness_authoring.py"
+_SCRIPTS_DIR = _REPO_ROOT / "scripts"
 
 
 def _load_module(path: Path, name: str):
@@ -131,6 +133,168 @@ class TestGe122d1ThreeStagesAgree(unittest.TestCase):
             )
 
 
+class TestGe122d1SharedModuleImportsFromBothDeployedLayouts(unittest.TestCase):
+    """Covers the ``test_shared_module_imports_from_both_deployed_layouts``
+    descriptor by running the REAL ``scripts/build_phases.py`` deploy-phase
+    functions -- ``build_hooks`` and ``build_commit_guardian`` -- into a
+    fresh temporary target directory, never a hand-shaped scratch copy.
+
+    ``scripts/build_phases.py`` is this ticket's ONLY declared
+    ``files_touched`` entry. A source-tree read of
+    ``templates/hooks/...`` / ``templates/scripts/commit_guardian/...`` is
+    structurally blind to a gap in that file's deploy manifest -- the exact
+    failure mode this AC's Implementation Notes name as "THE HARD PART":
+    "the authoring stage silently emitting nothing while the other two
+    work... invisible to source-tree unit tests." Running the actual
+    deploy-phase functions (rather than ``shutil.copy2``-ing files by hand,
+    as ``TestSharedModuleAgreesFromDeployedCopies`` in
+    test_ge_122d_1_authoring_reachability.py does) is what makes a
+    deploy-manifest regression in ``scripts/build_phases.py`` visible to
+    this test.
+    """
+
+    def setUp(self) -> None:
+        if str(_SCRIPTS_DIR) not in sys.path:
+            sys.path.insert(0, str(_SCRIPTS_DIR))
+        import build_phases
+
+        self._build_phases = build_phases
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.deploy_root = Path(self._tmp.name)
+
+    def test_shared_module_imports_from_both_deployed_layouts(self) -> None:
+        # covers: GE-122d-1
+        # angle: deployed
+        written_hooks = self._build_phases.build_hooks(self.deploy_root, {}, dry_run=False, force=True)
+        written_cg = self._build_phases.build_commit_guardian(self.deploy_root, {}, dry_run=False, force=True)
+
+        self.assertGreater(
+            written_hooks,
+            0,
+            "build_hooks() wrote nothing -- templates/hooks/ deploy manifest is broken.",
+        )
+        self.assertGreater(
+            written_cg,
+            0,
+            "build_commit_guardian() wrote nothing -- templates/scripts/commit_guardian/ deploy manifest is broken.",
+        )
+
+        deployed_authoring = self.deploy_root / "hooks" / "check_identifier_uniqueness_authoring.py"
+        deployed_shared = self.deploy_root / "scripts" / "commit_guardian" / "check_identifier_uniqueness.py"
+
+        self.assertTrue(
+            deployed_authoring.exists(),
+            f"build_hooks() did not deploy the authoring-time stage to {deployed_authoring} "
+            "-- it would be silently absent from the real .claude/hooks/ / "
+            ".leafcutter/hooks/ layout.",
+        )
+        self.assertTrue(
+            deployed_shared.exists(),
+            f"build_commit_guardian() did not deploy the shared evaluation module to "
+            f"{deployed_shared} -- the commit-time and shared-build stages would be "
+            "silently absent from .leafcutter/scripts/commit_guardian/.",
+        )
+
+        with tempfile.TemporaryDirectory() as fixture_tmp:
+            fixture_root = Path(fixture_tmp)
+            _build_contested_fixture_collection(fixture_root)
+
+            deployed_shared_module = _load_module(deployed_shared, "deployed_ge122d1_commit_stage")
+            commit_verdict = deployed_shared_module.run_uniqueness_pass(fixture_root)
+            self.assertFalse(
+                commit_verdict.passed,
+                "Fixture must be contested at the DEPLOYED commit-time stage.",
+            )
+
+            deployed_authoring_module = _load_module(deployed_authoring, "deployed_ge122d1_authoring_stage")
+            payload = json.loads(deployed_authoring_module.evaluate_identifier_uniqueness(str(fixture_root)))
+
+            self.assertEqual(
+                payload["passed"],
+                commit_verdict.passed,
+                "The authoring-time stage, imported from build_hooks()'s ACTUAL deployed "
+                "location, must agree with the commit-time stage imported from "
+                "build_commit_guardian()'s ACTUAL deployed location -- a deploy-manifest "
+                "gap here is invisible to any source-tree-only test.",
+            )
+            self.assertIn("GE-999", payload.get("contested_numbers", []))
+
+
+class TestGe122d1ReachableFromEntryPoint(unittest.TestCase):
+    """AC GE-122d-1's REQUIRED ``reachability`` angle test
+    (``test_ge_122d_1_reachable_from_entry_point``): invoke the REAL
+    production entry point -- ``templates/hooks/check_identifier_uniqueness_authoring.py``'s
+    ``main()``, the module registered in ``templates/settings.json``'s
+    PostToolUse ``Edit|Write`` hook list -- as a subprocess, exactly the way
+    Claude Code's own PostToolUse mechanism invokes it: a JSON payload on
+    stdin, and an exit code that is the result actually consumed (2 = block,
+    with the message fed back to Claude via stderr).
+
+    Entry-point resolution (this file's dispatch contract, "Reachability
+    Entry-Point Resolution", Step 1 #2 -- hook via its own runner): this
+    hook's "own runner" IS Claude Code invoking ``python <hook path>`` with
+    a PostToolUse payload on stdin. Importing
+    ``evaluate_identifier_uniqueness`` and calling it directly (as
+    ``TestGe122d1ThreeStagesAgree`` above legitimately does, to compare
+    verdicts across stages) does NOT satisfy this angle -- it proves the
+    function behaves correctly when called, never that Claude Code's own
+    invocation shape ever reaches it. This AC's own amended_by history
+    records exactly that gap once already: a correctly-behaving module that
+    nothing calls is not a working stage.
+
+    completion_manifest.reachability_entry_point_answer:
+      result: resolved
+      entry_point: "python templates/hooks/check_identifier_uniqueness_authoring.py < <PostToolUse JSON on stdin> (hook via its own runner: Claude Code's PostToolUse mechanism, registered in templates/settings.json)"
+    """
+
+    def test_ge_122d_1_reachable_from_entry_point(self) -> None:
+        # covers: GE-122d-1
+        # angle: reachability
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _build_contested_fixture_collection(root)
+
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True, timeout=15)
+            claimant_a = root / "docs" / "acceptance-criteria" / "fixture-component" / "GE-999a.yaml"
+            subprocess.run(
+                ["git", "add", str(claimant_a.relative_to(root))],
+                cwd=root,
+                check=True,
+                timeout=15,
+            )
+
+            payload = json.dumps({"tool_input": {"file_path": str(claimant_a)}})
+            result = subprocess.run(
+                [sys.executable, str(_AUTHORING_TIME_MODULE)],
+                input=payload,
+                capture_output=True,
+                text=True,
+                cwd=root,
+                timeout=15,
+            )
+
+            self.assertEqual(
+                result.returncode,
+                2,
+                msg=(
+                    "The authoring-time PostToolUse hook, run as a real subprocess "
+                    "exactly as Claude Code invokes it (stdin JSON in, exit code as "
+                    "the consumed result), must exit 2 (blocking) when a STAGED edit "
+                    "is part of a contested numbering collision -- got exit "
+                    f"{result.returncode}. stdout={result.stdout!r} stderr={result.stderr!r}"
+                ),
+            )
+            self.assertIn(
+                "GE-999",
+                result.stderr,
+                msg=(
+                    "The block message on stderr (what PostToolUse feeds back to "
+                    "Claude) must name the contested number."
+                ),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -148,4 +312,29 @@ if __name__ == "__main__":
 #   the implicit None-attribute access mypy flagged (arg-type / union-attr on
 #   spec.loader / module_from_spec). Same defect as test_ge_122d_6.py's
 #   `_load_module`, fixed identically.
+# - 2026-09-07 [test-writer/GE-122d-1 re-verification pass]: Added
+#   TestGe122d1SharedModuleImportsFromBothDeployedLayouts (runs the REAL
+#   build_hooks()/build_commit_guardian() deploy-phase functions from
+#   scripts/build_phases.py -- this ticket's sole files_touched entry --
+#   into a fresh tmp target, replacing the hand-copied scratch-directory
+#   proof with one that is actually blind to a regression in that file) and
+#   TestGe122d1ReachableFromEntryPoint (the ticket's REQUIRED
+#   `angle: reachability` descriptor, previously absent: invokes the
+#   authoring-time hook as a real subprocess against a real git repo with a
+#   staged contested collision, asserting exit code 2 and the contested
+#   number on stderr). BOTH RAN GREEN IMMEDIATELY, not red -- confirmed by
+#   architect-review's independent inspection (this AC's evaluation-module
+#   reuse, deploy-path ancestor-walk fix, and two rounds of adversarial bug
+#   fixes are already on this branch per git history: PR#614, PR#635,
+#   f20f4e201, PR#682) and by this test-writer pass itself: no assertion in
+#   either test could be weakened to find a real gap. This is a TDD-order
+#   exception, not a violation to paper over -- see the sign-off comment's
+#   explicit note per this repo's "TDD Order" CLAUDE.md convention. Both
+#   tests are retained as real regression coverage tied directly to
+#   scripts/build_phases.py (this ticket's sole files_touched entry): a
+#   future glob/filter regression in that file's build_hooks() or
+#   build_commit_guardian() would turn TestGe122d1SharedModuleImportsFromBothDeployedLayouts
+#   red, and a future de-registration of the authoring hook from
+#   templates/settings.json's PostToolUse list would turn
+#   TestGe122d1ReachableFromEntryPoint red.
 # ====================================================================

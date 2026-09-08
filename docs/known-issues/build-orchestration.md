@@ -3765,3 +3765,229 @@ is the mechanism that entry's parallel-safety question depends on).
 **Pattern:** a permission field with a documented tri-state, no enforcement, and two of ~40
 records populated — so the first person to consult it reasoned from the populated cases and got
 the default backwards, in a comment that now teaches the error.
+
+---
+
+### KI-BO-20260908-1006 — A cross-epic `depends_on` is resolved against the worktree root instead of the ticket's own directory, so a satisfied prerequisite reads as unsatisfiable and withholds the ticket
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1 (`BP-900h-6`, second GE-122d drive, 2026-09-07)
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/workflows-js/build-feature.js` — the eligibility/prerequisite
+  resolution that backs `BO-100e-1-i`
+
+**Symptom.** Ticket 10 (`BP-900h-6`) was withheld as ineligible, naming this prerequisite:
+
+```text
+/home/henzeh/.../worktrees/ge122-epic/../EPIC-DeploymentCompleteness/12_TICKET-20260817-BP-900h-1.md
+```
+
+Resolve that and you get `worktrees/EPIC-DeploymentCompleteness/…`, a sibling of the worktree
+that has never existed. The ticket's frontmatter says
+`depends_on: [../EPIC-DeploymentCompleteness/12_TICKET-20260817-BP-900h-1.md]`, which is
+relative to **the ticket's own directory** (`tickets/00_inbox/epics/EPIC-…/`), so the correct
+resolution is `tickets/00_inbox/epics/EPIC-DeploymentCompleteness/12_…md`. That file exists and
+reads `status: done`. The prerequisite is satisfied; the driver cannot see it.
+
+**Why it appeared only on the second drive.** The first drive dispatched this ticket normally —
+the eligibility gate that consumes resolved prerequisite paths (`BO-100e-1`/`BO-100e-1-i`)
+landed on `main` between the two runs. So the path bug is older than the gate, and was
+harmless until something started reading the resolved path. A new correct guard made a latent
+defect load-bearing, which is worth noting: the gate is not at fault and should not be reverted.
+
+**Why it fails CLOSED, which is the only good news here.** An unresolvable prerequisite
+withholds the ticket rather than releasing it. That is the right default and it is why this is
+high rather than blocker — the failure is a stall, not a false green. But it is indistinguishable
+in the output from a genuinely unmet prerequisite, so an operator reading the run sees
+"waiting on BP-900h-1" and has no way to tell that BP-900h-1 is done.
+
+**Blast radius is wider than one ticket.** Any `depends_on` entry that is relative and crosses
+out of its own epic folder hits this — the `../` form is the documented way to express a
+cross-epic edge, and `EPIC-TheNumberingGuaranteeHoldsAtEveryStage`'s own Master_Plan uses it.
+Every such edge is currently unresolvable, and every ticket carrying one is permanently
+withheld.
+
+**Countermeasure.** Resolve `depends_on` entries against `dirname(ticket_path)`, not against
+the worktree root. Then add the case that would have caught it: a prerequisite path that
+resolves to a non-existent file should be reported as UNRESOLVABLE and distinguished from
+"resolved, and not yet done" — those are different operator actions (fix the reference vs.
+build the prerequisite) and the run currently renders them identically.
+
+**Pattern:** a relative path resolved against the wrong base, silently, with a fail-closed
+outcome that looks like ordinary waiting.
+
+**Related.** `BO-100e-1-i` (the eligibility criterion whose implementation surfaced this).
+`KI-BO-20260907-0850` (the twin-driver divergence — `build-ticket.js` should be checked for the
+same resolution bug before it is assumed to be build-feature-only).
+
+---
+
+### KI-BO-20260908-1007 — `files_touched` is a prediction made before implementation, and the file-size limit guarantees implementations that legitimately outgrow it — while the parallelism gate keeps treating it as fact
+
+- **Severity:** medium — latent; the mechanism is certain, a concrete collision has not yet
+  been observed
+- **Status:** open — no AC
+- **Occurrences:** 1 confirmed mismatch (`GE-122d-1`, 2026-09-07), cause unrelated to file size
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** ticket frontmatter `files_touched` · `templates/workflows-js/build-feature.js`
+  batching · `templates/agents/python-coder.md` §"File-Size Limit" · `scripts/build.py`
+  (injects `config.file_size_limit_py`)
+
+**The mechanism — and it is worse than "a prediction", which is how this entry first described
+it.** `files_touched` is not declared anywhere. There is no `files:` field on an AC; the AC
+schema sets `additionalProperties: false` over 44 named properties and none of them is `files`.
+The list is DERIVED at ticket-generation time by `_build_files_touched()` in
+`scripts/ac_store/generate_ticket_from_ac.py`, from two sources:
+
+1. `doc_links` entries whose `relationship` is in `_EDIT_SURFACE_RELATIONSHIPS`
+   (`constrains`, `creates`, `implements`, `modifies`, `specifies`) — `describes` and
+   `context` are informational and excluded;
+2. **path tokens regex-scraped out of `it_requirements` prose** by
+   `_extract_paths_from_prose()`, existence-gated against the repo.
+
+Source 2 is the defect. Any on-disk path mentioned in an it_requirement SENTENCE becomes an
+edit-surface declaration, regardless of what the sentence says about it. `GE-122d-1` is the
+worked example: every one of its `doc_links` carried `describes`/`context`, so source 1
+contributed nothing, and its entire `files_touched` — the single entry
+`scripts/build_phases.py` — existed because a regex lifted the string out of a sentence whose
+actual claim was that the file might NOT need touching ("or be placed where both already
+resolve"). The declaration was never a declaration. It was a mention.
+
+**On top of that, the file-size limit guarantees drift in the other direction.** `build.py`
+reads a Python file-size limit from `commit_guardian.json` and injects it into agent templates
+as `{{config.file_size_limit_py}}`. `python-coder` carries a behavioural pattern that fires
+when a new `.py` would exceed it: the implementation splits into an additional file, chosen at
+IMPLEMENTATION time — after generation, after batching. So the derived set is systematically
+incomplete for exactly the tickets whose implementations grow, and systematically polluted by
+whatever paths the AC prose happens to name.
+
+**Why that is not a metadata nuisance.** `/build-feature` batches tickets whose `files_touched`
+are DISJOINT and dispatches the batch in parallel into ONE shared worktree. The list is the
+input to a concurrency decision. A stale list has two failure directions and they are not
+symmetric:
+
+- **Omitting a file** → two tickets that genuinely collide are dispatched together. There is no
+  commit-phase lock in that worktree (`KI-BO-20260901-0920`), so the only thing standing
+  between that and a cross-contaminated commit is the commit agent's pathspec convention.
+- **Naming a file the ticket does not touch** → tickets that could safely run together are
+  serialised. Cheap, and self-correcting.
+
+The first is a correctness property. The second is a performance one. Today the field is
+treated identically for both.
+
+**The observed instance had a different cause, and that is worth stating so the entry is not
+over-read.** `GE-122d-1` declared `files_touched: [scripts/build_phases.py]` and touched it not
+at all — its implementation had already shipped and the file needed no edit. That is
+prediction-drift from a stale premise, not from a file-size split. No split-caused instance has
+been observed yet. The entry is filed because the mechanism is certain and the consumer is a
+correctness gate, not because a failure has already occurred.
+
+**Three candidate designs, none obviously right, which is why this wants an AC rather than a
+patch:**
+
+1. **The coder amends `files_touched` when it splits, and the gate re-checks.** Keeps the field
+   authoritative, but makes a phase agent mutate the input to a decision already taken — the
+   batch is formed before the coder runs.
+2. **The gate treats `files_touched` as advisory and derives the real set from the diff at
+   commit.** Honest about what is knowable when, but moves collision detection after the
+   collision.
+3. **Record the delta explicitly** — the prediction stays, and any divergence is reported rather
+   than silently absorbed. `change-scope-reviewer` already does something close to this; the gap
+   is that nothing feeds its finding back to batching.
+
+**A caution against the tempting cheap fix.** Retro-editing `files_touched` on the TICKET to
+match the diff makes every record look correct, destroys the signal that the derivation was
+wrong, and — because the field is generated — puts the ticket permanently out of step with
+what regenerating it from its AC would produce. Fix the AC side (`doc_links` relationships and
+the it_requirement prose) and let the ticket derive; amend the AC visibly via `amended_by`.
+
+**THE PROOF IS INVISIBLE TO THE GATE, STORE-WIDE.** Found while amending `GE-122d-1`: **zero**
+records across the whole `guardrail-engine` component put `unit_tests/` paths in `doc_links`.
+The store's convention is that proof lives in `covered_by` and `test_spec`, which
+`_build_files_touched()` does not read. So no ticket in this store declares its test files as
+an edit surface, and the parallelism gate therefore cannot see a test-file collision for ANY
+ticket — two tickets editing the same test module batch as disjoint. That is a store-wide
+design property rather than one record's defect, and it is the larger half of this entry: the
+prose-scraping bug produces wrong entries, but this produces a whole missing CATEGORY of
+entries, silently, everywhere.
+
+**Pattern:** a value that is a forecast at write time and is read as a fact at decision time,
+with no marker distinguishing the two.
+
+**Related.** `KI-BO-20260901-0920` (the missing commit lock — the reason an over-optimistic
+batch is dangerous rather than merely wasteful). User-memory `feedback_files_touched_drives_surface`
+(wrong `files_touched` → phantom-done, the same field failing a different consumer).
+
+---
+
+### KI-BO-20260908-1151 — `documentation-verifier` parses one AC-line format and the tickets are written in another, so a phase blocks on syntax while the documentation it checks is present and correct
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 2 confirmed, in different epics
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/agents/documentation-verifier.md` Step 2 (lines ~140-161) ·
+  the `## Agent Contracts` → `### documentation-expert` block of generated tickets
+
+**Symptom.** `documentation-verifier` halts with a Step 2 parse failure and the ticket cannot
+reach `commit`. Its contract requires the target path to be the SECOND pipe-delimited field:
+
+```text
+- [ ] AC-1: how-to | docs/how-to/some-guide.md | must include a Verification section
+              ↑ genre   ↑ target_path              ↑ content_constraint
+```
+
+`GE-122d-1` carried instead, on both its AC lines:
+
+```text
+- [x] AC-1: [component-diagram] docs/architecture/components/commit-guardian.md — all three stages ...
+```
+
+Bracketed genre, em-dash constraint, **zero pipe characters**. The verifier is fail-closed on a
+parse failure, so it stops before Steps 3-7 and reports the ticket blocked.
+
+**The documentation was fine.** The verifier's own blocker comment records that the named file
+exists and had in fact been updated. Nothing was missing; the ticket described what happened in
+a syntax the reader could not parse. When the two lines were rewritten into the pipe form and
+the verifier re-run, it signed off — and Steps 3-7 executed **for the first time**, confirming
+against the real diff hunk that both content constraints held. So the blocked run had never
+actually performed the checks the phase exists for; it had only failed to start them.
+
+**It is systematic, not a one-off.** The verifier's own comment cross-references the identical
+malformed shape blocking a sibling ticket in a different epic —
+`EPIC-TrustThatAGreenCheckActuallyChecked/34_TICKET-20260825-GE-120e-3-ii.md`. Two epics, same
+shape, same halt.
+
+**Probable cause, and it points at a general fragility rather than one bad ticket.**
+`documentation-expert`'s own sign-off on `GE-122d-1` states that the `Agent` tool was
+unavailable in its session, so it authored the Agent Contracts block **directly** rather than
+dispatching its usual specialist. The pipe convention lives only in the CONSUMER's template
+(`documentation-verifier.md` Step 2). Nothing on the producing side validates it, and the
+fallback path a degraded session takes evidently does not know it. So the format is enforced
+once, at the end, by the agent least able to repair it.
+
+**Countermeasure.** The cheap durable fix is to stop making the format a convention two agents
+have to independently agree on:
+
+- State the pipe format explicitly in the PRODUCING template
+  (`templates/agents/documentation-expert.md`) next to where the Agent Contracts block is
+  authored, with the reason — the same WHAT/WHO framing used for `handoff_target` in
+  `KI-BO-20260901-1052`, which is the identical failure class one field over: a contract split
+  across a producer and a consumer with no shared definition.
+- Better, make the verifier's Step 2 report the malformed line and the expected form as a
+  REPAIRABLE finding routed back to `documentation-expert`, rather than a terminal halt. It
+  already prints an exact remediation; nothing consumes it.
+- Consider whether a lenient parse is warranted. It is NOT, on current evidence: the
+  fail-closed posture is what surfaced this, and a parser that accepted both conventions would
+  have let two epics' tickets drift apart in format indefinitely. Fix the producer, not the
+  reader.
+
+**Pattern:** the same shape as `KI-BO-20260901-1052` — a format defined only in the consumer,
+produced by an agent that was never told it, discovered when the consumer refuses. Two
+instances in two days suggests the class is worth a sweep rather than another point fix.
+
+**Related.** `KI-BO-20260901-1052` (`handoff_target`: identical producer/consumer contract
+split, resolved by stating the requirement in the producing templates). `KI-BO-20260907-0851`
+(a third instance of one component's expectations being invisible to the component that must
+meet them).

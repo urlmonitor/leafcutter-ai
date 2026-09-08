@@ -36,13 +36,34 @@ depends_on:
   - GE-122d
   - GE-122a-1
 doc_links:
-  - path: docs/architecture/components/commit-guardian.md
-    relationship: describes
+  - path: templates/hooks/check_identifier_uniqueness_authoring.py
+    relationship: modifies
     status: exists
+    relevance: "STAGE 1 OF 3 — the authoring-time entry point, and the only stage this criterion had to reconcile. It holds no copy of the rule: it loads the shared evaluator by ancestor walk (importlib.util.spec_from_file_location off Path(__file__)) and branches on the shared compute_commit_disposition(verdict, staged_paths).blocking, not on raw verdict.passed. That single line is the mechanism by which the three-way disagreement was closed, so this is the file a re-implementation edits."
+  - path: templates/settings.json
+    relationship: modifies
+    status: exists
+    relevance: "Registers the authoring-time hook as a PostToolUse entry. Reachability, not presence, is what this criterion needs from stage 1 — the record's 2026-08-31 amendment reverted a done flip precisely because the hook existed and nothing invoked it. 0 occurrences before this AC's work, 1 after."
   - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: "STAGE 3 OF 3 — the shared-build stage, added by this AC's work as a `pre-commit run check-identifier-uniqueness` step. The 'AC store valid' job already implements this principle for the acceptance-criterion guards: it runs them THROUGH pre-commit rather than invoking the scripts directly, explicitly 'so the merge-time and commit-time rule sets are literally the same config and cannot drift apart'. That technique is reused here, which collapses stages 2 and 3 to one configuration by construction."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: modifies
+    status: exists
+    relevance: "The component doc carrying the three-stage description. Edited as part of this AC's work, so it is an edit surface and not merely descriptive."
+  - path: templates/scripts/commit_guardian/check_identifier_uniqueness.py
     relationship: context
     status: exists
-    relevance: "The 'AC store valid' job already implements this principle for the acceptance-criterion guards: it runs them THROUGH pre-commit rather than invoking the scripts directly, explicitly 'so the merge-time and commit-time rule sets are literally the same config and cannot drift apart'. Reuse that reasoning."
+    relevance: "STAGE 2 OF 3 and the shared evaluator itself — run_uniqueness_pass lives here, and this is the module the other two stages load. NOT an edit surface for this criterion: it is GE-122a-1's deliverable (see expects_from) and was already shipped when this AC's work began. Named so the rule's actual home is findable; declaring it as an edit surface would over-claim and would serialize this work against every GE-122a ticket."
+  - path: templates/scripts/commit_guardian/_commit_disposition.py
+    relationship: context
+    status: exists
+    relevance: "Holds compute_commit_disposition, the one function both the commit-time and authoring-time stages branch on. Imported by this AC's work, not edited by it — the reconciliation happened at the call site in the authoring hook."
+  - path: scripts/build_phases.py
+    relationship: context
+    status: exists
+    relevance: "The deploy mechanism this criterion's it_requirements discuss, kept named for that reason and DELIBERATELY NOT an edit surface. Measured 2026-09-08: `git diff --stat -- scripts/build_phases.py` is empty and three independent agents concurred no edit was needed. build_hooks() copies every .py in templates/hooks/ and build_commit_guardian() copies all of templates/scripts/commit_guardian/, both generically to every platform directory — there is no per-module deploy map for these two directories, so the it_requirement's 'or be placed where both already resolve' branch holds and no future shared module can require an edit here either. It was previously this AC's ONLY declared file, harvested as a prose token rather than authored as a declaration."
   - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
     relationship: context
     status: exists
@@ -59,7 +80,7 @@ assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   - "The shared element is GE-122a-1's evaluation module, imported by all three stage entry points. Each stage owns only its own adaptation — reading its input, rendering its output and choosing its disposition — and none may hold a copy of the rule. A stage-specific special case is the thing this criterion is written to make fail."
-  - "THE HARD PART IS DEPLOY-PATH, NOT DESIGN. The three stages run from two different deployed layouts: the authoring-time hook from `.claude/hooks/`, the commit-time and build-time stages from `.leafcutter/scripts/commit_guardian/`. One shared module must be importable from BOTH, which means it must appear in both deploy paths in `scripts/build_phases.py` (or be placed where both already resolve). Getting this wrong presents as the authoring stage silently emitting nothing while the other two work — a three-way disagreement in exactly the shape this criterion forbids, and invisible to source-tree unit tests."
+  - "THE HARD PART IS DEPLOY-PATH, NOT DESIGN. The three stages run from two different deployed layouts: the authoring-time hook from `.claude/hooks/`, the commit-time and build-time stages from `.leafcutter/scripts/commit_guardian/`. One shared module must be importable from BOTH — either by appearing in both of the build pipeline's deploy phases (the hooks phase and the commit-guardian phase; the file carrying them is named in doc_links rather than spelled out here, so it is not harvested as an edit surface) or by being placed where both already resolve. ANSWERED 2026-09-08, by the second branch: neither deploy phase needed an edit, because each copies its whole source directory generically rather than from a per-module deploy map, and the authoring hook resolves the shared module by an ancestor walk to the deployed commit-guardian directory rather than by a package import. Getting this wrong presents as the authoring stage silently emitting nothing while the other two work — a three-way disagreement in exactly the shape this criterion forbids, and invisible to source-tree unit tests."
   - "Follow the precedent the `AC store valid` job records: the build stage should invoke the commit-time gate THROUGH pre-commit rather than calling the script directly, 'so the merge-time and commit-time rule sets are literally the same config and cannot drift apart'. That collapses two of the three stages to one configuration by construction, leaving only the authoring stage to reconcile."
   - "The single-rule-change test needs a real, minimal extension seam — the rule's recognised number shapes must be data or a single named constant, so that 'made in ONE place' is a meaningful instruction rather than a matter of the tester's judgement about which edit counts. Name that seam in the implementation."
   - "Verify by executing all three stages, never by comparing registrations. Three registrations pointing at one script name is satisfied by three stages that all silently no-op — and this repository already holds guards that are registered nowhere and guards that are deployed and never invoked, so the presence of a name proves nothing."
@@ -256,10 +277,89 @@ amended_by:
     KI-CG-20260901-authoring-hook-scans-the-whole-collection-on-every-edit at low
     severity rather than changed here, because narrowing the authoring scan without
     narrowing the commit scan is precisely how this criterion gets broken again.
+- reason: edit-surface-corrected-to-where-the-implementation-actually-lives
+  date: '2026-09-08'
+  by: it-po
+  entry: >-
+    EDIT SURFACE ONLY. criteria, title, depends_on, req_status, work_status,
+    covered_by and implemented_by are untouched; the criteria are correct and
+    were not the stale thing. doc_links gained six entries and one it_requirements
+    bullet was reworded.
+
+    WHAT WAS WRONG. This record's derived edit surface was ONE file,
+    scripts/build_phases.py — measured, not assumed: _build_files_touched() from
+    scripts/ac_store/generate_ticket_from_ac.py returned exactly
+    ['scripts/build_phases.py'] against the pre-edit record. It was not a
+    declaration at all. Every doc_link carried an informational relationship
+    (describes/context), so source 2 of that function contributed nothing, and the
+    single entry arrived only because source 1 regex-scraped the literal path out
+    of an it_requirements sentence. The one file it named turned out to need no
+    edit, and it named nothing that did.
+
+    WHY THAT IS A CORRECTNESS DEFECT AND NOT UNTIDINESS. The ticket's
+    files_touched is derived from this list, and /build-feature's parallelism gate
+    batches tickets whose file sets are disjoint. A surface that names the wrong
+    files can let two genuinely-colliding tickets be dispatched in parallel into
+    one shared worktree.
+
+    THE SURFACE NOW DECLARED, taken from 8cc9fe3cf (PR #682, the fast-lane build of
+    this AC) rather than inferred: templates/hooks/check_identifier_uniqueness_authoring.py
+    (stage 1, +300 lines, the only stage that had to be reconciled),
+    templates/settings.json (its PostToolUse registration — the reachability half),
+    .github/workflows/ci.yml (stage 3, the through-pre-commit shared-build step),
+    and docs/architecture/components/commit-guardian.md (promoted describes ->
+    modifies; it was edited in the 2026-09-08 drive).
+
+    NAMED BUT DELIBERATELY NOT AN EDIT SURFACE, because a pointer and a write-claim
+    are different things: templates/scripts/commit_guardian/check_identifier_uniqueness.py
+    (stage 2 AND the shared run_uniqueness_pass evaluator — GE-122a-1's deliverable
+    per expects_from, already shipped before this AC's work began) and
+    _commit_disposition.py (imported by the reconciliation, not edited by it).
+    Declaring GE-122a-1's module here would over-claim and serialize this work
+    against every GE-122a ticket.
+
+    ON scripts/build_phases.py, WHICH IS THE ONE REAL JUDGEMENT CALL. Kept named,
+    demoted to relationship: context. The case for keeping it as an edit surface is
+    the safety bias of the gate — a false collision costs throughput, a missed one
+    costs corruption — plus this repo's standing rule that a hook gaining a shared
+    dependency must be added to the build deploy manifest. That rule is real but
+    applies to build_ac_store's hardcoded deploy_map, a different phase. For the two
+    phases this AC actually depends on the question is closed, not open: build_hooks()
+    copies every .py in templates/hooks/ and build_commit_guardian() copies all of
+    templates/scripts/commit_guardian/, both generically, so there is no per-module
+    entry for a future shared module to be missing from. The "might need editing next
+    time" argument is therefore measurably false here rather than merely unlikely,
+    and against that, declaring a 2000-line file that is touched by most
+    build-pipeline tickets would permanently serialize this work for no safety
+    return. Deleting the name outright was rejected too — it loses the pointer to the
+    mechanism the criteria discuss. context keeps the pointer and records WHY no edit
+    was needed, which is strictly more than the record held before, where the path
+    was present as a regex accident with no stated reason.
+
+    PROSE REWORD, and the precedent for it. The it_requirements deploy-path bullet
+    now names the two deploy phases and defers the path to doc_links, instead of
+    spelling scripts/build_phases.py out inline; it also records that the
+    "or be placed where both already resolve" branch is the one that held.
+    Without this the demotion would be defeated, because _extract_paths_from_prose
+    harvests any on-disk path token regardless of the sentence around it.
+    GE-123d-3 and GE-123d-4-i were amended the same way on 2026-09-01 for the same
+    mechanism. The requirement's substance is unchanged — the constraint still
+    stands, it is now answered.
+
+    VERIFIED: 9/9 GE-122d-1 tests green across the five files in covered_by;
+    `git diff --stat -- scripts/build_phases.py` empty; ci.yml:480 and
+    templates/settings.json:109 both confirmed present and both introduced by
+    8cc9fe3cf.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_guards/test_ge_122d_1_build_stage_parity.py
+- unit_tests/commit_guardian/test_ge_122d_1.py
+- unit_tests/commit_guardian/test_ge_122d_1_no_stage_disagreement.py
+- unit_tests/commit_guardian/test_ge_122d_1_single_rule_change.py
+- unit_tests/commit_guardian/test_ge_122d_1_authoring_reachability.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/01_TICKET-20260825-GE-122d-1.md
+- scripts/build_phases.py
 change_target:
   - code
   - pipeline

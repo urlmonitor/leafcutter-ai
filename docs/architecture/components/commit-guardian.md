@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-08-31
+last_updated: 2026-09-07
 components:
   - commit_guardian
   - git_vcs_operations
@@ -272,6 +272,40 @@ staged-vs-`origin/main`-vs-in-flight-branch comparison rather than reimplementin
 script is now registered as the `check-decision-number-uniqueness` hook in
 `hooks_manifest.hooks` — as of 2026-08-18 it is the first time it has ever executed; see
 [ADR-029 Amendment 1](../adrs/ADR-029-adr-number-collision-prevention.md#amendment-1--2026-08-18--fail-open-is-narrowed-to-the-guards-own-defects)
-for the fail-open narrowing this registration depended on. `check_identifier_uniqueness.py`
-itself is not yet registered in any hook manifest — wiring it into the three
-commit-lifecycle stages is `GE-122d-1`'s scope, not this pass's.
+for the fail-open narrowing this registration depended on.
+
+### One Rule, Three Stages, One Answer (`GE-122d-1`)
+
+`check_identifier_uniqueness.py`'s `run_uniqueness_pass()` / `compute_commit_disposition()`
+(the `GE-122a-1` evaluation module described above) is now wired into all three points in
+the commit lifecycle where a contested number could otherwise be judged differently, and
+each stage adapts only its own input/output — none holds a second copy of the rule:
+
+- **Authoring time** — `check_identifier_uniqueness_authoring.py` (a Claude Code
+  `PostToolUse Edit|Write` hook) imports the shared module by walking up from its own file
+  location rather than a fixed relative import, because this hook deploys to three
+  different depths relative to the shared module (`templates/hooks/` in the source tree,
+  `.leafcutter/hooks/` for Claude Code, `.leafcutter/gemini/hooks/` for Antigravity/Gemini —
+  the last of which is *not* a sibling of `scripts/commit_guardian/`, so a fixed hop count
+  breaks it). `build_hooks()` in `scripts/build_phases.py` deploys every non-underscore
+  `*.py` under `templates/hooks/` generically to each of these targets, and
+  `build_commit_guardian()` deploys every file (including the `_`-prefixed support modules)
+  under `templates/scripts/commit_guardian/` to `scripts/commit_guardian/` — neither
+  function needed a new per-file `deploy_map` entry for this AC, since both already copy
+  the shared module's directory as a whole.
+- **Commit time** — registered as the `check-identifier-uniqueness` hook in
+  `hooks_manifest.hooks` (`commit_guardian.json`), invoked via `pre-commit` like every
+  other named check in this file.
+- **Shared-build time** — the `numbering-guarantee-valid` CI job (`.github/workflows/ci.yml`)
+  runs `pre-commit run check-identifier-uniqueness` — the same technique the `AC store
+  valid` job already uses for the acceptance-criterion guardrails — rather than invoking
+  `check_identifier_uniqueness.py` directly, so the shared-build and commit-time rule sets
+  are literally the same pre-commit config and cannot drift apart. It is a separate CI job
+  from `ac-store-valid` because this check is `always_run` / whole-collection-scoped rather
+  than scoped to `docs/acceptance-criteria/*.yaml`.
+
+The recognised number shapes each namespace scanner treats as contested are declared as
+data/constants in `_uniqueness_types.py` (shared by `_uniqueness_scanners.py` and
+`_work_items_scanner.py`), so extending the rule to contest a previously-accepted shape is a
+single edit that all three stages observe on their next invocation, with no second or third
+definition to update.
