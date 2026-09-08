@@ -467,6 +467,19 @@ _GREEN_LABELS: dict = {
         "ac_store_path": "/tmp/fastlane-wt-bo2400c/docs/acceptance-criteria",
         "created": True,
     },
+    # The worktree location is confirmed against git rather than taken from the
+    # creation agent, which has twice returned a path it composed (BO-2400f
+    # 2026-08-11, UXP-700d 2026-09-07). The workflow requires the reported path
+    # to appear verbatim in this raw output, so the green baseline must satisfy
+    # that: a raw block the path is genuinely quoted from.
+    "fastlane-worktree-verify": {
+        "worktree_path": "/tmp/fastlane-wt-bo2400c",
+        "raw": (
+            "worktree /tmp/fastlane-wt-bo2400c\n"
+            "HEAD 0000000000000000000000000000000000000000\n"
+            "branch refs/heads/fast-lane/bo-stub-1"
+        ),
+    },
     "resolve-connected": {
         "ac_ids": ["BO-STUB-1"],
         "message": "1 to build",

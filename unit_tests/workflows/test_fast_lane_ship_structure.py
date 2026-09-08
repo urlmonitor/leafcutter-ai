@@ -517,7 +517,7 @@ class TestWorktreePathIsConfirmedFromGit(unittest.TestCase):
     def test_the_path_must_be_quoted_from_the_raw_git_output(self) -> None:
         self.assertRegex(
             self.content,
-            r"raw\s*\.\s*includes\s*\(",
+            r"gitRaw\s*\.\s*includes\s*\(\s*gitReportedPath\s*\)",
             "The confirmed path must be checked for presence in the raw git "
             "output it was supposedly read from. A path absent from that output "
             "was invented rather than quoted, which is the one failure mode this "
@@ -526,11 +526,29 @@ class TestWorktreePathIsConfirmedFromGit(unittest.TestCase):
 
     def test_an_unconfirmed_path_halts_instead_of_proceeding(self) -> None:
         self.assertIn(
-            "Could not confirm the fast-lane worktree location from git",
+            "does not appear in",
             self.content,
-            "An unconfirmed worktree path must halt with a message naming both "
-            "the claim and what git reported. Proceeding on it is what sent the "
-            "resolver to a non-existent directory.",
+            "A path git did not actually print must halt with a message naming "
+            "both the reported path and git's raw output. That path was composed "
+            "rather than quoted, which is what sent the resolver to a "
+            "non-existent directory.",
+        )
+
+    def test_silence_from_git_falls_back_rather_than_halting(self) -> None:
+        """An unanswered probe is not evidence of fabrication.
+
+        The first version of this guard halted whenever the verification
+        dispatch returned nothing. That made the whole lane unrunnable any time
+        one extra agent call hiccupped -- a worse failure mode than the bug it
+        prevents, and it broke every fixture that walks this workflow without
+        stubbing the new label. Only a positive contradiction halts now.
+        """
+        self.assertRegex(
+            self.content,
+            r"gitReportedPath\s*\|\|\s*claimedWorktreePath",
+            "With no answer from git the workflow must fall back to the phase "
+            "agent's claim, leaving it no worse off than before this guard "
+            "existed, rather than refusing to run at all.",
         )
 
     def test_no_hardcoded_worktrees_convention_is_assumed(self) -> None:

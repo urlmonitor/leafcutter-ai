@@ -698,6 +698,20 @@ _REAL_WORKTREE_LABEL = {
     "created": True,
 }
 
+# The lane confirms the worktree location against git and lets git outrank the
+# creation agent when the two disagree. A fixture that moves the worktree must
+# therefore say so in BOTH places; overriding only the creation label would
+# leave the stub self-contradictory, and the workflow would correctly believe
+# git over it.
+_REAL_WORKTREE_VERIFY_LABEL = {
+    "worktree_path": str(_REPO_ROOT),
+    "raw": (
+        f"worktree {_REPO_ROOT}\n"
+        "HEAD 0000000000000000000000000000000000000000\n"
+        "branch refs/heads/fast-lane/bo-stub-1"
+    ),
+}
+
 
 def _extract_architecture_path(prompt: str, worktree_path: str) -> str:
     """Pull the literal architecture-layer path out of *prompt*, rooted at
@@ -725,7 +739,10 @@ def test_named_architecture_path_resolves_in_the_workspace():
     """
     sibling = _get_sibling()
     result = sibling._run_ship(
-        extra_labels={"fastlane-worktree": _REAL_WORKTREE_LABEL}
+        extra_labels={
+            "fastlane-worktree": _REAL_WORKTREE_LABEL,
+            "fastlane-worktree-verify": _REAL_WORKTREE_VERIFY_LABEL,
+        }
     )
     assert result.error == "", f"Harness error: {result.error}"
 

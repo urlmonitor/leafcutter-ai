@@ -740,26 +740,33 @@ const worktreeVerify = await agent(
   }
 );
 
-// A path that does not appear in the raw git output it was supposedly read from
-// was invented, not quoted — the one failure mode this step exists to catch.
-const verifiedWorktreePath =
-  worktreeVerify &&
-  worktreeVerify.worktree_path &&
-  worktreeVerify.raw &&
-  worktreeVerify.raw.includes(worktreeVerify.worktree_path)
-    ? worktreeVerify.worktree_path
-    : "";
+// Trust git over the agent, but only where git actually answered.
+//
+// Three states, deliberately distinguished:
+//   - git quoted a path      -> use it; it outranks the agent's claim.
+//   - git said nothing       -> fall back to the claim. An unanswered probe is
+//                               not evidence of fabrication, and halting the
+//                               lane every time one extra dispatch hiccups is a
+//                               worse failure mode than the bug this guards.
+//   - git answered, and the reported path is absent from its own raw output
+//                            -> HALT. That path was invented, not quoted, and
+//                               it is the exact failure seen on BO-2400f
+//                               (2026-08-11) and UXP-700d (2026-09-07).
+const gitReportedPath =
+  worktreeVerify && worktreeVerify.worktree_path ? worktreeVerify.worktree_path : "";
+const gitRaw = (worktreeVerify && worktreeVerify.raw) || "";
 
-if (!verifiedWorktreePath) {
+if (gitReportedPath && !gitRaw.includes(gitReportedPath)) {
   return {
     status: "error",
     message:
-      `Could not confirm the fast-lane worktree location from git for branch ` +
-      `${branch}. The worktree phase claimed "${claimedWorktreePath}". ` +
-      `git worktree list --porcelain reported: ` +
-      `${JSON.stringify(worktreeVerify && worktreeVerify.raw)}. ` +
-      `Proceeding on an unconfirmed path is what sent the resolver to a ` +
-      `non-existent directory on BO-2400f and UXP-700d.`,
+      `The worktree location reported for branch ${branch} does not appear in ` +
+      `the git output it was supposedly read from, so it was composed rather ` +
+      `than quoted. Reported: "${gitReportedPath}". git worktree list ` +
+      `--porcelain returned: ${JSON.stringify(gitRaw)}. The worktree phase ` +
+      `separately claimed "${claimedWorktreePath}". Proceeding on an invented ` +
+      `path is what sent the resolver to a non-existent directory on BO-2400f ` +
+      `and UXP-700d.`,
     failing_phase: "worktree",
     claimed_worktree_path: claimedWorktreePath,
     branch,
@@ -767,7 +774,7 @@ if (!verifiedWorktreePath) {
   };
 }
 
-const worktreePath = verifiedWorktreePath;
+const worktreePath = gitReportedPath || claimedWorktreePath;
 // Derive the AC store root deterministically from the worktree path — do NOT
 // trust worktreeResult.ac_store_path. The store lives at a fixed convention
 // (<worktree>/docs/acceptance-criteria) inside every worktree cut from
