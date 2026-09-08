@@ -2803,7 +2803,7 @@ location-based condition naming a path that a *consumer install does not create*
 is running in rather than against the package's own. That is a design decision about the
 gate's frame of reference, and it wants an AC of its own rather than a patch.
 
-**Related.** `BP-100k-4-ii` (the kind-based half, done). `BP-100n-4` (the same gate's
+**Related.** `BP-100k-4-ii` (the kind-based half, done). `BP-1600a-2` (the same gate's
 opposite defect — it walks only registered hooks, so an unregistered script is invisible;
 `todo`). `BP-900h-6-iii` (the consumer simulation must exercise a language-absent adopter, so
 this class is caught by CI rather than by hand).
@@ -2814,7 +2814,7 @@ one was in scope.
 
 **Scope note — this closes only the too-strict half.** The check still walks only
 *registered* hooks, so a script the registry never mentions remains invisible to it
-(`BP-100n-4` and its siblings, `todo` on `main` as of this fix). That is a distinct, still-open
+(`BP-1600a-2` and its siblings, `todo` on `main` as of this fix). That is a distinct, still-open
 defect and is not resolved by this entry's closure.
 
 ---
@@ -3310,7 +3310,7 @@ require the key to be present — the same disk-versus-declaration comparison
 `KI-CG-20260831-hook-scripts-never-invoked` asks for one layer down. Both are the same
 omission: a check that reads the declaration and never the thing declared.
 
-**Not fixed here, deliberately.** Found while enriching `BP-100n-4-ii`, which was steered away
+**Not fixed here, deliberately.** Found while enriching `BP-1600a-2-ii`, which was steered away
 from copying the pattern and carries an `it_requirement` saying why. Repairing two approved,
 done records is a store-integrity change with its own blast radius and belongs in its own
 change rather than riding along with unrelated criteria.
@@ -3319,7 +3319,7 @@ change rather than riding along with unrelated criteria.
 described a real key, instead of copying it because a validator had passed it.
 
 **Related.** `KI-CG-20260831-hook-scripts-never-invoked` (the same declaration-versus-reality
-gap, one layer down). `BP-100n-4-ii` (the record that declined to repeat it). `BO-2000d` (the
+gap, one layer down). `BP-1600a-2-ii` (the record that declined to repeat it). `BO-2000d` (the
 thin-or-fictional-spec rule this violates).
 
 **Pattern:** a validator that checks a declaration is well-formed and never checks that what

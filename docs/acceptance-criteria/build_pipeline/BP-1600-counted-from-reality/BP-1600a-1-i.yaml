@@ -43,12 +43,12 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-1.yaml"
     relationship: parent
     status: exists
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-ii.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2-ii.yaml"
     relationship: related
     status: exists
     relevance: >-
       THE SAME CONTRACT, ALREADY WRITTEN FOR THE COMMIT-GATE SURFACE — REUSE ITS VOCABULARY,
-      DO NOT MINT A SECOND ONE. BP-100n-4-ii (approved) fixes the run summary there at four
+      DO NOT MINT A SECOND ONE. BP-1600a-2-ii (approved) fixes the run summary there at four
       numbers, requires the unlistable and the successfully-empty directory to be named as
       two different situations, and refuses to let either become a zero-findings clean exit.
       Every one of those decisions is repeated here for this surface and none is

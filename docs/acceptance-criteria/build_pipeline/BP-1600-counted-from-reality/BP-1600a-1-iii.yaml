@@ -51,7 +51,7 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-1.yaml"
     relationship: parent
     status: exists
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-i.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2-i.yaml"
     relationship: related
     status: exists
     relevance: >-
