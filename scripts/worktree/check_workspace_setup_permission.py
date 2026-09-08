@@ -54,6 +54,22 @@ ARCHITECTURE: Pure stdlib. Resolves the repository root the run is actually
     the verdict denies permission or the registry could not be read/parsed
     -- a non-zero exit is reserved for a totally malformed invocation
     (e.g. unparseable CLI arguments), never for a well-formed denial.
+
+    Beyond `permits`/`outcome`/`agent_id`/`location`, the verdict carries
+    outcome-specific detail so the caller's report can state more than the
+    bare enum value (ACD-2100b-1 AC-2, ACD-2100b-2 AC-4, ACD-2100b-3-i AC-1
+    -- closing information-loss gaps between what `_load_registry()` and
+    `_resolve_agent_outcome()` observe and what previously only reached
+    `logger.warning()`):
+      - "read_failure": `reason` (a human-readable sentence distinguishing
+        "no file at that location" from "permission refused" -- the two
+        different OSError causes) and `detail` (the raw exception text).
+      - "parse_failure": `reason`, plus the underlying
+        `json.JSONDecodeError`'s own `position` / `line` / `column` and
+        `detail`.
+      - "no_entries_collection": `agents_type` (the malformed value's
+        Python type name) and, when it is a JSON scalar, `agents_value`
+        (the value itself).
 """
 
 from __future__ import annotations
@@ -172,32 +188,74 @@ def resolve_repo_root(start_dir: Path) -> Path | None:
     return _probe_children_for_repo_root(start_dir.parent)
 
 
-def _load_registry(registry_path: Path) -> tuple[object | None, str | None]:
+def _load_registry(registry_path: Path) -> tuple[object | None, dict[str, object] | None]:
     """Read and parse the agent registry at ``registry_path``.
 
-    Returns ``(registry_json, outcome)`` where ``outcome`` is None on
-    success, or one of "read_failure" / "parse_failure" naming why the
-    registry could not be used. This is external I/O (a file read), so
-    every failure path here is a named exception type logged at WARNING,
-    never a bare or silently swallowed except (repository error-handling
-    policy; these are the exact failure paths ACD-2100b-1 and ACD-2100b-2
-    own).
+    Returns ``(registry_json, failure)`` where ``failure`` is None on
+    success, or a dict the caller merges directly into the verdict on
+    failure. ``failure`` always carries ``outcome`` ("read_failure" or
+    "parse_failure") plus a human-readable ``reason`` and a raw ``detail``
+    string -- never just the bare outcome name, which is all a
+    ``logger.warning()`` call alone would surface to the caller (ACD-2100b-1
+    AC-2, ACD-2100b-2 AC-4: the verdict, not stderr, is what the workflow can
+    report from).
+
+    The read failure is split into ``FileNotFoundError`` and
+    ``PermissionError`` (both `OSError` subclasses) specifically so "no file
+    at this location" and "permission refused to open it" -- two different
+    remedies -- produce two different ``reason`` values rather than
+    collapsing into a single "read_failure" with no other distinguishing
+    field (ACD-2100b-1 AC-2). This is external I/O (a file read and a JSON
+    parse), so every failure path here is a named exception type logged at
+    WARNING, never a bare or silently swallowed except (repository
+    error-handling policy).
     """
     try:
         raw_text = registry_path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        logger.warning("Could not read agent registry at %s: %s", registry_path, exc)
+        return None, {
+            "outcome": "read_failure",
+            "reason": "No file exists at the resolved registry location.",
+            "detail": str(exc),
+        }
+    except PermissionError as exc:
+        logger.warning("Could not read agent registry at %s: %s", registry_path, exc)
+        return None, {
+            "outcome": "read_failure",
+            "reason": (
+                "The process was denied permission to read the resolved "
+                "registry location."
+            ),
+            "detail": str(exc),
+        }
     except OSError as exc:
         logger.warning("Could not read agent registry at %s: %s", registry_path, exc)
-        return None, "read_failure"
+        return None, {
+            "outcome": "read_failure",
+            "reason": "The registry could not be read.",
+            "detail": str(exc),
+        }
     try:
         return json.loads(raw_text), None
     except json.JSONDecodeError as exc:
         logger.warning(
             "Agent registry at %s did not parse as JSON: %s", registry_path, exc
         )
-        return None, "parse_failure"
+        return None, {
+            "outcome": "parse_failure",
+            "reason": (
+                f"JSON interpretation failed at line {exc.lineno}, column "
+                f"{exc.colno} (character offset {exc.pos})."
+            ),
+            "position": exc.pos,
+            "line": exc.lineno,
+            "column": exc.colno,
+            "detail": str(exc),
+        }
 
 
-def _resolve_agent_outcome(registry_json: object, agent_id: str) -> str:
+def _resolve_agent_outcome(registry_json: object, agent_id: str) -> tuple[str, dict[str, object]]:
     """Resolve ``agent_id``'s entry in the registry's ``agents`` collection
     into one of three distinct, representable outcomes -- never collapsing
     any of them into another (mirrors templates/workflows-js/
@@ -216,19 +274,31 @@ def _resolve_agent_outcome(registry_json: object, agent_id: str) -> str:
                                 fact from "agent_not_found", never folded
                                 into it (ACD-2100b-3-i).
 
+    Returns ``(outcome, extra)`` where ``extra`` is a dict of additional
+    verdict fields the caller merges in. It is only ever populated for
+    "no_entries_collection", where it names the malformed value's type
+    (``agents_type``) and, when the value itself is a JSON scalar, the value
+    itself (``agents_value``) -- so a report can say what was actually found
+    in the agent-entries collection's place instead of discarding it once
+    ``isinstance(agents, list)`` is known False (ACD-2100b-3-i AC-1). Every
+    other outcome returns an empty ``extra`` dict.
+
     Pure function: no I/O, no external calls -- exceptions are never caught
     here (repository error-handling policy Rule 4).
     """
     agents = registry_json.get("agents") if isinstance(registry_json, dict) else None
     if not isinstance(agents, list):
-        return "no_entries_collection"
+        extra: dict[str, object] = {"agents_type": type(agents).__name__}
+        if agents is None or isinstance(agents, (bool, int, float, str)):
+            extra["agents_value"] = agents
+        return "no_entries_collection", extra
     match = next(
         (entry for entry in agents if isinstance(entry, dict) and entry.get("id") == agent_id),
         None,
     )
     if match is None:
-        return "agent_not_found"
-    return "granted" if match.get("permits_shell") is True else "permission_denied"
+        return "agent_not_found", {}
+    return ("granted" if match.get("permits_shell") is True else "permission_denied"), {}
 
 
 def build_verdict(repo_root: Path | None, agent_id: str) -> dict:
@@ -250,22 +320,25 @@ def build_verdict(repo_root: Path | None, agent_id: str) -> dict:
         }
 
     registry_path = repo_root / REGISTRY_RELATIVE_PATH
-    registry_json, load_outcome = _load_registry(registry_path)
-    if load_outcome is not None:
-        return {
+    registry_json, load_failure = _load_registry(registry_path)
+    if load_failure is not None:
+        verdict: dict[str, object] = {
             "permits": False,
-            "outcome": load_outcome,
             "agent_id": agent_id,
             "location": str(registry_path),
         }
+        verdict.update(load_failure)
+        return verdict
 
-    outcome = _resolve_agent_outcome(registry_json, agent_id)
-    return {
+    outcome, agent_extra = _resolve_agent_outcome(registry_json, agent_id)
+    verdict = {
         "permits": outcome == "granted",
         "outcome": outcome,
         "agent_id": agent_id,
         "location": str(registry_path),
     }
+    verdict.update(agent_extra)
+    return verdict
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -316,3 +389,21 @@ if __name__ == "__main__":
 #   filesystem primitive, ADR-030) and into a real script the plan-feature
 #   skill runs directly, so the registry read no longer requires an agent
 #   dispatch round-trip. (#EPIC-StartingNewWorkTheProperWayAlways/12)
+# - 2026-09-08 [python-coder]: Closed four information-loss gaps between what
+#   _load_registry()/_resolve_agent_outcome() observe at the point of failure
+#   and what the returned verdict actually carries (previously the detail was
+#   passed to logger.warning() and discarded): (1) ACD-2100b-1 AC-2 -- an
+#   absent registry and a permission-refused registry now carry different
+#   `reason` text instead of colliding on outcome="read_failure" alone;
+#   (2) ACD-2100b-2 AC-4 -- a parse_failure verdict now carries the
+#   json.JSONDecodeError's own position/line/column; (3) ACD-2100b-3-i AC-1 --
+#   a no_entries_collection verdict now names the malformed value's type
+#   (agents_type) and, when scalar, the value itself (agents_value). Also
+#   updated templates/workflows-js/plan-feature.js's outcomeMessages so the
+#   read_failure report renders the verdict's location/reason (previously a
+#   single static string, byte-identical for both Given conditions) and so
+#   the permission_denied report names the `permits_shell` field literally
+#   (ACD-2100b-3 AC-4; confirmed against the real, deployed
+#   config/agent_registry.json before naming it). All four production
+#   changes are additive fields alongside the existing six-value `outcome`
+#   enum -- no outcome value was renamed or collapsed.

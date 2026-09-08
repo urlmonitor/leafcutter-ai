@@ -47,19 +47,6 @@ _PAUSE_RESUME_SUBSTRATE_JS = (
 
 _TIMEOUT = 30  # seconds; all agent() calls are synchronous mocks
 
-# Explicit cancel label_responses — simulates a human deliberately cancelling at
-# every gate, rather than the headless-timeout path.
-_EXPLICIT_CANCEL_RESPONSES = {
-    "covered-route-gate": {"choice": "cancel"},
-    "pt-gate-mockdata": {"action": "cancel"},
-    "pt-gate-mockup": {"action": "cancel"},
-    "pt-gate-flow": {"action": "cancel"},
-    "gate-po": {"action": "cancel"},
-    "gate-ba": {"action": "cancel"},
-    "final-gate": {"action": "defer"},
-    "step-4-merge-gate": {"status": "blocked"},
-}
-
 # Label responses that guide finalize-feature.js through pre-flight and steps
 # 1-3 so the step-4-merge-gate is actually reached in harness tests.
 # step-4-merge-gate is intentionally absent here; tests that need to pause it
@@ -304,8 +291,31 @@ def test_paused_state_distinct_from_cancelled():
     # covers: BO-2300a-2
     """
     A paused run (headless, no answer available) dispatches pause-persist and
-    is resumable. A cancelled run (explicit cancel answer) does NOT dispatch
+    is resumable. A cancelled run — reached via a genuine args.resume_answer
+    cancel decision, the only channel that can still resolve a gate under
+    ACD-2100c-1 (docs/acceptance-criteria/ac-driven-dev/
+    ACD-2100-entry-point-unblocked/ACD-2100c-1.yaml) — does NOT dispatch
     pause-persist and is not resumable.
+
+    SUPERSEDED MECHANISM, SAME PROTECTION. The "cancelled" half of this test
+    originally fed `_EXPLICIT_CANCEL_RESPONSES` — direct replies to the
+    live-gate dispatch at every gate — into label_responses. ACD-2100c-1
+    closes that live channel entirely: `resolveGate()`
+    (templates/workflows-js/plan-feature.js) no longer ever calls
+    `liveGateFn`, for any gate, so those direct answers are never consulted
+    and the run pauses instead at whichever gate it reaches — the exact
+    behaviour unit_tests/workflows/test_acd_2100c_1.py's own
+    `test_run_does_not_advance_past_a_decision_point_before_an_answer_arrives`
+    requires. That collapsed both halves of this test onto the same
+    "pauses" outcome, making the paused-vs-cancelled distinction
+    unassertable via the old mechanism. Classified test_drift (Source-of-
+    Truth Discipline Rule 1) — production is correct per ACD-2100c-1's own
+    signed-off red_baseline; this test asserted the pre-ACD-2100c-1 contract.
+
+    What this test still protects, unchanged: "paused" and "cancelled" are
+    genuinely distinct terminal states, and reaching "cancelled" (now only
+    possible via args.resume_answer) still means no pause-persist dispatch
+    and a distinct "cancelled" status — never conflated with a paused run.
     """
     # Paused run: headless gate → must emit pause-persist
     paused_result = run_workflow_under_e2(
@@ -321,18 +331,35 @@ def test_paused_state_distinct_from_cancelled():
         f"Got labels: {[c.label for c in paused_result.agent_calls]}"
     )
 
-    # Cancelled run: explicit cancel → no pause-persist
+    # Cancelled run: a genuine cancel decision delivered on the ONLY channel
+    # that can resolve a gate under ACD-2100c-1 (args.resume_answer) → no
+    # pause-persist.
+    cancel_answer = {"gate_id": "final-gate", "type": "single_choice", "action": "cancel"}
     cancelled_result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses=_with_workspace_permission(_EXPLICIT_CANCEL_RESPONSES),
+        label_responses=_with_workspace_permission(
+            {"read-pause-record": {"exists": True, "stale": False}}
+        ),
+        args={"run_id": "test-bo2300a2-cancelled-distinct", "resume_answer": cancel_answer},
     )
     assert cancelled_result.error == "", f"Harness error on cancelled run: {cancelled_result.error}"
 
     cancelled_pauses = _pause_calls(cancelled_result)
     assert len(cancelled_pauses) == 0, (
-        "Explicitly cancelled run must NOT dispatch pause-persist. "
+        "A genuine cancel decision delivered via args.resume_answer must NOT "
+        "dispatch pause-persist. "
         f"Got {len(cancelled_pauses)} pause-persist call(s)."
+    )
+
+    # The terminal status itself must be the distinct "cancelled" value — not
+    # merely "not paused" — preserving what this test exists to establish.
+    assert cancelled_result.result is not None and isinstance(cancelled_result.result, dict), (
+        f"Expected a terminal payload dict from the cancelled run. Got: {cancelled_result.result!r}"
+    )
+    assert cancelled_result.result.get("status") == "cancelled", (
+        "A genuinely cancelled run must report status 'cancelled', distinct "
+        f"from a paused run's 'paused_awaiting_input'. Got: {cancelled_result.result!r}"
     )
 
 

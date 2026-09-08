@@ -152,18 +152,29 @@ def test_ac2_pt_gate_cancel_status_is_distinct_from_ok():
     independently — a fix that only patches the AC-pipeline branch leaves
     this one still reporting "ok" for a cancelled product-truth stage.
 
-    Drives the PT phase to the mock-data-only outcome (a single PT stage,
-    "mockdata") and cancels at its gate via a genuine, non-refusal live-gate
-    answer (`{"action": "cancel"}` — the same shape the existing suite's
-    `_EXPLICIT_CANCEL_RESPONSES` uses to model a user's own cancel choice, as
-    opposed to BO-2300a-1's refusal-shaped defect).
+    SUPERSEDED MECHANISM, SAME PROTECTION (ACD-2100c-1, docs/acceptance-
+    criteria/ac-driven-dev/ACD-2100-entry-point-unblocked/ACD-2100c-1.yaml).
+    This test originally delivered the cancel decision as a DIRECT reply to
+    the "pt-gate-mockdata" live dispatch (`{"action": "cancel"}` — the same
+    shape the sibling suite's `_EXPLICIT_CANCEL_RESPONSES` used to model a
+    user's own cancel choice). ACD-2100c-1 closes that live channel entirely:
+    `resolveGate()` no longer ever calls `liveGateFn`, so a direct reply is
+    never consulted and the run pauses instead (observed: status
+    `pause_persist_failed`, since the mocked pause-persist-verify dispatch
+    cannot really confirm a durable write). Only `args.resume_answer` can
+    resolve a gate now. Drives the SAME cancel decision through that channel
+    with the ADR-024 fail-closed `read-pause-record` mock this older test
+    never needed to stub (there was no resume path to fail-close on before).
+    Classified test_drift (Source-of-Truth Discipline Rule 1) — production is
+    correct per ACD-2100c-1's own signed-off red_baseline; this test asserted
+    the pre-ACD-2100c-1 contract.
 
-    RED today: the terminal payload's `status` field is the literal string
-    "ok" — verified empirically (2026-08-26, this branch, HEAD) via an ad-hoc
-    harness run before writing this assertion; the cancellation is recorded
-    only in `message` (prose) and `cancelled_at` (a field the AC pipeline
-    itself never reads back).
+    What this control still protects, unchanged: a genuinely cancelled
+    product-truth-gate run must report status "cancelled", never "ok" — the
+    distinct-status behaviour BO-2300a-2 exists to establish, now proven via
+    the one channel that can still reach a decision.
     """
+    cancel_answer = {"gate_id": "pt-gate-mockdata", "type": "single_choice", "action": "cancel"}
     label_responses = {
         "pt-classify": {
             "outcome": "mock-data-only",
@@ -176,13 +187,20 @@ def test_ac2_pt_gate_cancel_status_is_distinct_from_ok():
             "artifact_paths": ["docs/product-truth/mock-data/test-comp/test.mock.json"],
             "flow_ref": None,
         },
-        "pt-gate-mockdata": {"action": "cancel"},
+        # Fail-closed contract (ADR-024): resolveGate applies a resume_answer
+        # only when read-pause-record confirms a durable record exists.
+        "read-pause-record": {"exists": True, "stale": False},
+    }
+    args = {
+        "run_id": "test-ac2-pt-gate-cancel",
+        "resume_answer": cancel_answer,
     }
 
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
         label_responses=label_responses,
+        args=args,
     )
     assert result.error == "", f"Harness error: {result.error}"
     assert result.result is not None and isinstance(result.result, dict), (

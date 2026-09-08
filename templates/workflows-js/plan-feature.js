@@ -810,47 +810,28 @@ async function scanCommittedStages(authoringWorktreePath) {
 /**
  * Resolve orphaned AC draft files discovered by scanOrphanedAcDrafts().
  *
- * Presents the user with a yes/no/discard choice.
+ * ACD-2100c-1: the yes/no/discard choice itself is now obtained by the
+ * caller through resolveGate()/pauseAtGate() (the same ADR-024 mechanism
+ * every other decision point in this file routes through) BEFORE this
+ * function is invoked — never by this function dispatching an agent() call
+ * of its own to ask. This function only APPLIES an already-obtained
+ * `userChoice`.
  *
  * @param {Array<{filePath: string, acId: string}>} orphans - Orphan list from scanOrphanedAcDrafts().
  * @param {string}      acStoreDir          - AC store directory path.
  * @param {string}      runId               - Current run id (for commit message).
  * @param {string|null} authoringWorktreePath - Absolute path to the dedicated authoring worktree.
+ * @param {string}      userChoice          - "yes" | "no" | "discard" (or shorthand y/n/d),
+ *                                            already obtained via resolveGate() by the caller.
  * @returns {Promise<{action: "continue"|"abort"}>} "continue" to proceed to Stage 0; "abort" to exit.
  */
-async function resolveOrphanedDrafts(orphans, acStoreDir, runId, authoringWorktreePath) {
+async function resolveOrphanedDrafts(orphans, acStoreDir, runId, authoringWorktreePath, userChoice) {
   // Build a git command prefix helper.
   const gitCmd = authoringWorktreePath
     ? (sub) => `git -C "${authoringWorktreePath}" ${sub}`
     : (sub) => `git ${sub}`;
-  const acIds = orphans.map((o) => o.acId).sort();
-  const N = orphans.length;
-  const acIdList = acIds.join(", ");
 
-  // Present the user with the three-way choice.
-  let userChoice;
-  try {
-    const choiceResult = await agent(
-      `Found ${N} uncommitted AC file${N !== 1 ? "s" : ""} from a prior session: [${acIdList}]. ` +
-      `(yes/no/discard)\n\n` +
-      `Present this message EXACTLY to the user and ask them to choose:\n` +
-      `  yes     — commit the orphaned files before starting new work.\n` +
-      `  no      — abort the workflow (files remain on disk, must be resolved manually).\n` +
-      `  discard — delete the orphaned files and start with a clean working tree.\n\n` +
-      `Return ONLY a JSON object: { "choice": "yes" | "no" | "discard" }`,
-      { agentType: "status-checker", label: "resolve-orphans-choice" }
-    );
-    let parsed;
-    try {
-      parsed = parseAgentJson(choiceResult, { stage: "resolve-orphans-choice", agent: "status-checker" });
-    } catch (_parseErr) {
-      parsed = null;
-    }
-    userChoice = (parsed && parsed.choice) ? parsed.choice.toLowerCase().trim() : "no";
-  } catch (_choiceErr) {
-    // Cannot parse choice — default to "no" (safe-abort).
-    userChoice = "no";
-  }
+  userChoice = (typeof userChoice === "string") ? userChoice.toLowerCase().trim() : "no";
 
   // Normalize shorthand aliases.
   if (userChoice === "y") { userChoice = "yes"; }
@@ -1571,28 +1552,20 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     return applyAnswerByType(args.resume_answer, incomingType);
   }
 
-  // No matching resume_answer: call the live gate.
-  let gateAnswer = null;
-  if (typeof liveGateFn === "function") {
-    try { gateAnswer = await liveGateFn(); } catch (_err) { gateAnswer = null; }
-  }
-  // Valid explicit decision — UNLESS it is the dispatched gate agent refusing the
-  // role rather than a human answering (AC BO-2300a-1 / KI-ACD-005). A refusal is
-  // well-formed and carries a valid `action`, so the shape check above cannot tell
-  // it from a real decision; accepting it silently converted "no reachable human
-  // answerer" into "the user chose cancel" and discarded the run's work.
-  if (gateAnswer !== null && gateAnswer !== undefined && typeof gateAnswer === "object" &&
-      (typeof gateAnswer.action === "string" || typeof gateAnswer.choice === "string")) {
-    if (!isAgentRefusal(gateAnswer)) {
-      return gateAnswer;
-    }
-    log(
-      "[plan-feature] Gate '" + gateId + "' was answered by a REFUSAL from the dispatched " +
-      "gate agent, not by a human. Treating it as 'no reachable human answerer' and pausing " +
-      "the run instead of acting on it."
-    );
-  }
-  // Headless, unparseable, or an agent refusal: pause and persist.
+  // No matching resume_answer: the ONLY remaining channel that reaches the
+  // person running the route is a pause-and-persist record surfaced through
+  // this run's own terminal payload (ACD-2100c-1 / KI-ACD-005). `liveGateFn`
+  // is still accepted as a parameter — every one of the five existing call
+  // sites, plus any future one, still builds and passes it — but it is
+  // deliberately NEVER invoked. Its whole purpose was to dispatch an agent()
+  // call to obtain a human answer by proxy, which is exactly the dispatch
+  // this AC forbids ("no dispatch whose purpose was to obtain an answer to
+  // any of the five"). Leaving the closure unread rather than deleting the
+  // parameter (which would force a signature change at every call site) is
+  // what makes the guard live on THIS function — the class every decision
+  // point routes through — instead of on a per-site opt-out that a sixth,
+  // newly added gate would have to remember to apply.
+  void liveGateFn;
   return pauseAtGate(gateId, runId, context, descriptor);
 }
 
@@ -1689,7 +1662,14 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
     };
   }
 
-  return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
+  // Carry the actual question content in the terminal payload (ACD-2100c-1):
+  // in this sandboxed E2 body the run's own top-level return value is the
+  // ONLY channel back to the caller (the /plan-feature skill, running in the
+  // human's own session). A bare `gate_id`/`status` pair forces that caller
+  // to separately look up what is being asked; `question` is the exact
+  // object already built above for the persisted record, just never
+  // returned until now.
+  return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId, question: question };
 }
 
 /**
@@ -2271,9 +2251,23 @@ if (workspaceSetupPermission.permits !== true) {
     ? workspaceSetupPermission.outcome
     : "unknown";
   const outcomeMessages = {
+    // ACD-2100b-1 AC-2: an absent registry and a permission-refused registry
+    // both classify as outcome="read_failure" on the pre-flight side (see
+    // scripts/worktree/check_workspace_setup_permission.py's `_load_registry()`),
+    // but that script now attaches a distinguishing `location` and `reason`
+    // to the verdict for exactly this case -- render both here rather than
+    // the old single static string, so the two Given conditions produce
+    // genuinely different reports instead of a byte-identical one.
     read_failure:
-      "The workspace-setup permission pre-flight could not read the agent registry " +
-      "(config/agent_registry.json). Halting before any authoring agent is dispatched.",
+      "The workspace-setup permission pre-flight could not read the agent registry" +
+      (typeof workspaceSetupPermission.location === "string"
+        ? " at '" + workspaceSetupPermission.location + "'"
+        : " (config/agent_registry.json)") +
+      ". " +
+      (typeof workspaceSetupPermission.reason === "string"
+        ? workspaceSetupPermission.reason + " "
+        : "") +
+      "Halting before any authoring agent is dispatched.",
     parse_failure:
       "The workspace-setup permission pre-flight read the agent registry successfully " +
       "but its contents could not be interpreted as valid JSON. Halting before any " +
@@ -2288,12 +2282,18 @@ if (workspaceSetupPermission.permits !== true) {
       "The agent registry (config/agent_registry.json) could not be used: its 'agents' field is " +
       "not a list of agent entries. Halting before any authoring agent is dispatched. Fix " +
       "config/agent_registry.json so that 'agents' is a list of agent entries.",
+    // ACD-2100b-3 AC-4: the denied report must direct the reader at the
+    // permission setting to change, not just state the denial in prose --
+    // name the `permits_shell` field of config/agent_registry.json literally
+    // (confirmed the real field name via `_resolve_agent_outcome()` and the
+    // deployed config/agent_registry.json before naming it here).
     permission_denied:
       "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
       workspaceSetupAgentId + "', which is listed in the agent registry (config/agent_registry.json) " +
       "but is not permitted to run repository-mutating shell commands. Halting before any authoring " +
-      "agent is dispatched. Report this mis-assignment to the operator: step='worktree-setup', " +
-      "agent='" + workspaceSetupAgentId + "'.",
+      "agent is dispatched. Fix config/agent_registry.json's permits_shell field for agent '" +
+      workspaceSetupAgentId + "' to true, or report this mis-assignment to the operator: " +
+      "step='worktree-setup', agent='" + workspaceSetupAgentId + "'.",
   };
   const deniedMessage = outcomeMessages[outcome] || (
     "The workspace-setup permission pre-flight denied permission for agent '" +
@@ -2391,7 +2391,56 @@ if (wtPayload) {
 // -------------------------------------------------------------------------
 const orphans = await scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath);
 if (orphans.length > 0) {
-  const recoveryOutcome = await resolveOrphanedDrafts(orphans, acStoreDir, runId, authoringWorktreePath);
+  const orphanAcIds = orphans.map((o) => o.acId).sort();
+  const orphanN = orphans.length;
+  const orphanAcIdList = orphanAcIds.join(", ");
+  // ADR-024: resolveGate checks args.resume_answer before ever considering a
+  // live decision — and (ACD-2100c-1) never dispatches liveGateFn at all, so
+  // this closure's own agent() call is built for API-shape parity with the
+  // other four gates but is never actually invoked.
+  const _orphanGateResult = await resolveGate(
+    "resolve-orphans-choice",
+    async () => {
+      const raw = await agent(
+        `Found ${orphanN} uncommitted AC file${orphanN !== 1 ? "s" : ""} from a prior session: [${orphanAcIdList}]. ` +
+        `(yes/no/discard)\n\n` +
+        `Present this message EXACTLY to the user and ask them to choose:\n` +
+        `  yes     — commit the orphaned files before starting new work.\n` +
+        `  no      — abort the workflow (files remain on disk, must be resolved manually).\n` +
+        `  discard — delete the orphaned files and start with a clean working tree.\n\n` +
+        `Return ONLY a JSON object: { "choice": "yes" | "no" | "discard" }`,
+        { agentType: "status-checker", label: "resolve-orphans-choice" }
+      );
+      let parsed;
+      try {
+        parsed = parseAgentJson(raw, { stage: "resolve-orphans-choice", agent: "status-checker" });
+      } catch (_orphanParseErr) {
+        parsed = null;
+      }
+      return (parsed && typeof parsed.choice === "string") ? parsed : null;
+    },
+    args,
+    { orphans: orphanAcIds },
+    {
+      type: "single_choice",
+      options: ["yes", "no", "discard"],
+      prompt:
+        `Found ${orphanN} uncommitted AC file${orphanN !== 1 ? "s" : ""} from a prior session: ` +
+        `[${orphanAcIdList}]. Choose: yes (commit them before starting new work), ` +
+        `no (abort; resolve manually), or discard (delete them and start clean).`,
+    },
+    args.run_id || "default-run"
+  );
+  if (_orphanGateResult && _orphanGateResult.status &&
+      ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_orphanGateResult.status)) {
+    return _orphanGateResult;
+  }
+  // Fail CLOSED, not destructively — see the covered-route gate below. A
+  // missing decision here must never be treated as the user choosing "no";
+  // resolveGate() only ever reaches this line via a validated resume_answer,
+  // so an absent .action/.choice at this point is itself a gate failure.
+  const orphanChoice = (_orphanGateResult && (_orphanGateResult.action || _orphanGateResult.choice)) || "no";
+  const recoveryOutcome = await resolveOrphanedDrafts(orphans, acStoreDir, runId, authoringWorktreePath, orphanChoice);
   if (recoveryOutcome.action === "abort") {
     return {
       status: "error",
