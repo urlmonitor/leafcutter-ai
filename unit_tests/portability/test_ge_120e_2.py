@@ -162,12 +162,13 @@ except (ImportError, ModuleNotFoundError):
 
 _DETERMINATION_MISSING_MSG = (
     "scripts.commit_guardian.change_set_source.determine_change_set_sources "
-    "does not exist yet (checked both templates/scripts/commit_guardian/ "
-    "source and the scripts/commit_guardian/ deployed copy via the dotted "
-    "import scripts.commit_guardian.change_set_source). GE-120e-2 has not "
-    "landed. See this test file's module docstring 'CONTRACT ASSUMED' for "
-    "the exact shape required: determine_change_set_sources(manifest_path) "
-    "-> a result exposing .handed_its_files / .self_deriving / .failures."
+    "does not exist yet (checked only the scripts/commit_guardian/ deployed "
+    "copy, via the dotted import scripts.commit_guardian.change_set_source — "
+    "this import resolves against the deployed tree only and never consults "
+    "templates/scripts/commit_guardian/ source). GE-120e-2 has not landed. "
+    "See this test file's module docstring 'CONTRACT ASSUMED' for the exact "
+    "shape required: determine_change_set_sources(manifest_path) -> a result "
+    "exposing .handed_its_files / .self_deriving / .failures."
 )
 
 # ---------------------------------------------------------------------------
