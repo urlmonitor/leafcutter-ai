@@ -4160,3 +4160,151 @@ Also worth settling while in the code: the Python and TypeScript scanners genuin
 - `docs/reference/false-green-mechanisms.md` — the `pass_filenames` no-op and the deployed-layout no-op are both instances of "a check that examined nothing must not look like a check that found nothing."
 
 **Pattern:** a gate's registration is a decision about the existing repo, not about the gate — and the population it will judge is exactly the thing no CI check measures, because CI does not run pre-commit.
+
+**Per-gate entries follow.** The census above is the shared context; each gate below is a separate unit of work with its own numbers, its own ratchet shape, and its own definition of done. The governing rule for all of them, set 2026-09-08: **grandfather what exists, enforce on everything new.** A gate that refuses today's repo is not ready; a gate that lets new debt in is not worth registering. Both halves are required.
+
+---
+
+### KI-CG-20260908-gate-complexity — `check-complexity` judges every function absolutely, so registering it refuses 49 existing files including the two most-edited in the repo
+
+- **Severity:** high (as a blocker to registration) — the gate itself is dormant and harms nothing today.
+- **Status:** open — no AC. Needs its own session.
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `templates/scripts/commit_guardian/check_complexity.py:197` (`main`), `:130` (`process_staged_file`); limit `MAX_COMPLEXITY_SCORE = 15` from `config.py`.
+
+**The numbers.** 49 of 915 tracked `.py` files contain at least one function over 15. Worst: `scripts/ac_store/generate_ticket_from_ac.py` (75), `scripts/build_helpers.py` (65), `scripts/build.py` (44), `scripts/knowledge_query.py` (44), `scripts/build_referential_integrity.py` (41), `scripts/build_phases.py` (39), `templates/scripts/commit_guardian/check_ac_governance.py` (46), `scripts/build_orchestration/fast_lane.py` (26). Excluded dirs are only `alembic` and `legacy`.
+
+**Why it cannot be registered as-is.** `main()` recomputes each staged file's scores from current content and refuses on any over-limit function. There is no reference to `HEAD` anywhere in the module. So the refusal is not "you made this worse" — it is "this file contains an old offender", which blocks an unrelated docstring fix, and blocks the very commit that would start decomposing the offending function. `build.py` and `fast_lane.py` being on the list means routine work stops.
+
+**Ratchet shape — NOT `check-file-size`'s.** Line count is one scalar per file; complexity is a score *per function*, so there is no single number to compare. Two workable designs, cheapest first: (a) per-file count of over-limit functions must not increase versus `HEAD` — simple, robust to renames within a file, but permits swapping a 16 for a 75; (b) per-function comparison keyed by qualified name, refusing a new over-limit function or an increase in an existing one — accurate, but needs a name-matching story for renamed/moved functions. Start with (a); it is strictly better than today and does not need the rename story.
+
+**Definition of done.** All 49 files remain committable and editable; a NEW function over 15, or an existing one made worse, is refused; the gate is registered. Prove the second clause with a mutation test, not a grep.
+
+---
+
+### KI-CG-20260908-gate-root-files — `check-root-files` refuses 5 legitimate root files and matches `M`, so registering it makes `ruff.toml` and `LEAFCUTTER_VERSION` permanently uneditable
+
+- **Severity:** high (as a blocker to registration); trivial to fix.
+- **Status:** open — no AC. Smallest of the set; likely a single short session.
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `templates/scripts/commit_guardian/check_root_files.py:34` (`git diff --cached --name-status`), `:51` (the status filter); allowlist at `commit_guardian.json` → `root_files.allowed_files` / `allowed_extensions`.
+
+**The numbers.** 5 of 12 tracked root files violate: `ruff.toml`, `requirements-dev.txt`, `build-self.sh`, `SETUP.md`, `LEAFCUTTER_VERSION`. The shipped allowlist permits `poetry.lock` and `pyproject.toml` but this repo uses `requirements-dev.txt`; permits `setup.sh` and `init-db.sh` but not `build-self.sh`; permits `README.md`/`BOOTSTRAP.md`/`CLAUDE.md` but not `SETUP.md`; and its only allowed extension is `.json`, so `.toml` and the extensionless `LEAFCUTTER_VERSION` both fall through.
+
+**Why this is worse than it sounds.** Line 51 matches `A`, `M` **and** `R`. So it is not "no new root files" — it is "these five may never be modified again." Bumping `LEAFCUTTER_VERSION` is part of every release; editing `ruff.toml` is routine lint maintenance.
+
+**This one needs no ratchet — the allowlist is simply wrong for this repo.** It encodes another project's conventions. Fix by adding the five names to `root_files.allowed_files` (and consider `.toml` in `allowed_extensions`). A `HEAD`-existence grandfather is the fallback if some of the five are judged genuinely unwanted, but the straightforward reading is that all five belong at the root of this repo and the config is stale.
+
+**Definition of done.** The five are allowlisted deliberately, one line of rationale each; a genuinely new unauthorized root file is still refused; the gate is registered. Watch the consumer case — the allowlist ships to adopters, so anything added must be defensible as a general default, not just as this repo's convenience.
+
+---
+
+### KI-CG-20260908-gate-test-ac-tags — `check-test-ac-tags` is one absent config key away from refusing 5,566 test functions
+
+- **Severity:** high (latent) — currently `warn`, so it blocks nothing; flipping one key blocks nearly the whole test suite.
+- **Status:** open — no AC. Needs its own session, and the largest backlog of the set.
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `templates/scripts/commit_guardian/check_test_ac_tags.py`; mode resolves to `warn` because `test_ac_tag_enforcement` is **absent** from `commit_guardian.json`.
+
+**The numbers.** **5,566 test functions across 595 of 597 test files** carry no `# covers: XX-NNN` tag. Only 2 files are fully tagged. Registered in `warn` mode this is 0 blocking and a very large amount of console noise; registered in error mode it stops essentially all test work.
+
+**Ratchet shape — this one does have a scalar.** Untagged-function count per file must not increase versus `HEAD`. That makes every existing untagged test permanently tolerated while any newly added test must carry a tag, which is precisely the "guard all new work" rule. It also degrades correctly under refactors: moving a tagged test between files raises one file's count and lowers another's, so per-file comparison needs the "new file starts at 0" case handled explicitly.
+
+**Sequencing note.** Do not attempt a bulk backfill of 5,566 tags. The tags must name real ACs, and `check_done_proof`'s Python scanner additionally requires the tag to sit *inside* a test function (see `KI-CG-20260908-covers-tag-must-be-inside-a-test-function` above) — a mechanical backfill would produce thousands of tags pointing at nothing, which `_collect_dangling_tags` is supposed to reject. Ratchet first, backfill opportunistically.
+
+**Definition of done.** Existing 5,566 stay green; a newly added untagged test function is refused; `test_ac_tag_enforcement` is present and its value deliberate.
+
+---
+
+### KI-CG-20260908-gate-test-fixture-bloat — `check-test-fixture-bloat` is disabled by an absent config section, hiding 499 violations, and only one of its three axes ratchets cleanly
+
+- **Severity:** medium (latent) — section absent → `enabled` defaults `False`.
+- **Status:** open — no AC. Needs its own session.
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `templates/scripts/commit_guardian/check_test_fixture_bloat.py`; `test_fixture_bloat` **absent** from `commit_guardian.json`. It does carry a `grandfathered_paths` list, currently empty.
+
+**The numbers.** **499 violations across 266 files**: 328 inline-dict (>5 keys), 160 line-count (>500 lines), 11 parametrize-rows (>3).
+
+**Ratchet shape — mixed, and that is the interesting part.** The `line_count` axis ratchets exactly like `check-file-size` (one scalar per file, compare to `HEAD`) and could reuse `_file_size_ratchet.py` directly rather than growing a second implementation of the same idea. The `inline_dict` and `parametrize_rows` axes have no single scalar — they need "count of over-limit AST nodes in this file must not increase." The existing empty `grandfathered_paths` list is a third, cruder option: enumerate the 266 files. Prefer the ratchet; a path list of 266 entries rots the moment a file is renamed.
+
+**Definition of done.** The 499 stay green; a new oversized fixture is refused on each of the three axes; `line_count` shares the `check-file-size` ratchet rather than reimplementing it.
+
+---
+
+### KI-CG-20260908-gate-ticket-test-requirements — registered as configured, `check-ticket-test-requirements` would inspect nothing; wired correctly it fails 252 tickets
+
+- **Severity:** high — this is the one gate whose registration would actively create a false green.
+- **Status:** open — no AC. Needs its own session; fix the wiring BEFORE registering.
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `templates/scripts/commit_guardian/check_ticket_test_requirements.py`; the proposed manifest entry sets `files: ^tickets/.*\.md$` with **`pass_filenames: false`**.
+
+**The mechanism.** With `pass_filenames: false`, `run_hook.py` forwards zero arguments; the script's `main()` then falls back to `sys.stdin.readlines()`. With empty stdin it checks 0 files and exits 0. Registering it therefore adds a manifest entry that reports success having examined nothing — the exact false-assurance shape the census AC exists to remove, reproduced one level up by the fix for it.
+
+**The numbers, if wired correctly.** **252 of 370 code tickets** have no populated `## Test Requirements` block.
+
+**Ratchet shape.** Non-scalar: a per-file boolean — did this ticket have a populated block at `HEAD`? An existing under-specified ticket stays editable; a newly created code ticket must declare test requirements.
+
+**Confidence caveat, carried from the census.** The stdin fallback was confirmed to check 0 files with empty stdin, but `pre_commit` is not importable in this environment so what pre-commit actually attaches to a hook's stdin was not observed. The gate receives no filenames either way; if stdin were attached to something unexpected the failure mode would be a hang rather than a clean pass. Confirm against a real pre-commit invocation as step one of the session.
+
+**Definition of done.** `pass_filenames: true` (or an internal `git diff --cached` scan), verified to actually receive the staged tickets; the 252 grandfathered; a new code ticket without test requirements refused.
+
+---
+
+### KI-CG-20260908-gate-ac-done-on-merge — the only gate of the twelve that writes, never run here, and registration points it at 354 tickets
+
+- **Severity:** medium — zero blocking risk, non-zero store-mutation risk.
+- **Status:** open — no AC. Needs its own session; dry-run before registering.
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `templates/scripts/commit_guardian/hooks/check_ac_done_on_merge.py`; proposed as `stages: [post-merge]`.
+
+**What it does.** For every `.md` in `git diff HEAD~1 HEAD` carrying `status: done` plus `source_ac`, it shells out to `mark_ac_done.py`. It always returns 0, so it can never block a merge. **354 tracked tickets carry both fields.**
+
+**Why it still needs a session.** It is the only one of the twelve with a side effect, it has never executed in this repo, and `mark_ac_done.py` mutates the AC store — the store this whole guardrail family exists to keep honest. A first run against 354 live records is not the place to discover a mismatch between what the hook thinks `status: done` means and what `mark_ac_done.py` does with it. Note also that `mark_ac_done.py` gates on a passing covers-tagged test but does not populate `implemented_by`, so a bulk run could produce records that are `done` with empty implementation evidence — the phantom-done shape, created by the tool meant to prevent it.
+
+**Definition of done.** A dry-run mode exists and has been run against all 354 with its diff reviewed; the `implemented_by` question is answered explicitly; only then registered. No ratchet needed — it does not refuse anything.
+
+---
+
+### KI-CG-20260908-gate-folder-density — `check-folder-density`'s grandfather compares `git ls-files`, which already includes staged additions, so its blocking branch is unreachable
+
+- **Severity:** low — safe to register, but it is not an enforcing gate and would print a warning block on most commits.
+- **Status:** open — no AC.
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `templates/scripts/commit_guardian/check_folder_density.py`; limit 15 non-`.md`, non-`__init__.py` files per directory.
+
+**The mechanism.** It computes `before_counts` from `git ls-files` to decide whether a directory was already over the limit. But `git ls-files` lists staged-but-uncommitted additions, so in a real pre-commit run `before == after` — every over-limit directory takes the `before > limit → warning` branch and the blocking branch is never reached. The grandfather is not too lenient by design; it is accidentally total.
+
+**The numbers.** 107 of 261 directories are over 15, up to 174 files in `docs/acceptance-criteria/ac-driven-dev`. Registering as-is prints a "PRE-EXISTING DENSITY" block naming them on most commits.
+
+**Fix.** Take `before_counts` from `HEAD` (`git ls-tree`), not `git ls-files`. That makes the existing grandfather work as intended: the 107 stay tolerated, and adding a 16th file to a compliant directory is refused. This is a genuine ratchet already written — it just reads the wrong source.
+
+**Definition of done.** `before_counts` reads `HEAD`; the 107 stay green; adding a file that takes a compliant directory over 15 is refused; noise is bounded.
+
+---
+
+### KI-CG-20260908-gate-doc-links — `check-doc-links` returns 0 unconditionally, so registering it adds a gate that cannot fail
+
+- **Severity:** low.
+- **Status:** open — no AC.
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `templates/scripts/commit_guardian/check_doc_links.py` — `main()` returns 0 on every path.
+
+**The numbers.** Population is 117 files (798 of 915 `.py` excluded by `EXCLUDED_DIRS` = tests, unit_tests, templates, debugging, alembic, legacy — note that excludes **all** of `templates/`). 13 warnings in 9 files today.
+
+**The decision this needs.** Only 13 violations, so unlike the others there is no grandfathering problem — it could enforce almost immediately. The session's real question is whether the `EXCLUDED_DIRS` scoping is right: excluding all of `templates/` means the canonical source of every deployed script is exempt from doc-link traceability, which is likely backwards for this repo.
+
+**Definition of done.** Either it enforces (13 fixed, non-zero exit wired) or it is deliberately documented as advisory and registered as such. A gate that silently cannot fail is the worst of the three states.
+
+---
+
+### KI-CG-20260908-gate-ticket-ac-limits-and-the-three-inert — the one gate ready to register today, and three whose population is empty here
+
+- **Severity:** low.
+- **Status:** open — no AC. Probably one short session covering all four.
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+
+**`check-ticket-ac-limits` — ready, with one caveat.** Limits are ≤7 ACs per agent block and ≤20 per ticket; measured maximum is 10 total and 7 per-agent (the check is `> 7`, so 7 passes). 0 violations across 1,295 tickets. **The caveat:** that result was obtained by forcing the repo root. Run from the deployed path in this workspace the hook is a silent no-op — `leafcutter-ai/scripts/commit_guardian` symlinks into `.leafcutter/`, which contains its own `.git`, and `_find_project_root()` walks up from `__file__` rather than CWD, stopping at `/home/henzeh/projects/leafcutter/.leafcutter`. Measured from there: **1,295 of 1,295 tickets unreadable → all skipped → exit 0 having read nothing.** Same family as the `.security-allowlist` symlink hazard in `CLAUDE.md`. Registering it is safe; trusting a green run of the deployed hook is not.
+
+**`check-pytest-style`, `check-sql-complexity`, `check-sql-dependencies` — inert here.** Populations are empty: no `unit_tests/live_trader/`, and **0 `.sql` files tracked**. All three report 0 because they inspect nothing, which is materially different from compliance and must not be recorded as a pass. They are harmless to register and would become live if the repo ever gains SQL or that test directory. The session's question is whether a permanently-inert gate should be registered at all, or removed — an unregistered script that inspects nothing and a registered one that inspects nothing are both dead weight, but only the second one looks like coverage.
+
+**Definition of done.** `check-ticket-ac-limits` registered, with the deployed-layout no-op noted where a reader will hit it. An explicit keep-or-delete decision on the three inert scripts, recorded either way.

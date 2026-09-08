@@ -4283,3 +4283,66 @@ creation date destroys the one field that would otherwise reveal it had been rep
 the source being read, in its cross-root form. **Related:** `KI-BP-20260907-0722` and `KI-BP-009`
 are the same family — a build step whose target is computed from one root and applied to another,
 reported as success.
+
+---
+
+### KI-BP-20260908-declaring-files-tempdir-path — the declaring-files scanner treats any `<anything> / "_name.py"` as a deployed sibling-module load, so a runtime-generated file written into a tempdir is demanded in the deployed tree
+
+- **Severity:** medium — fails closed (a spurious "missing declaring file", never a silent pass), but it blocks two required CI checks at once and the error names a file that is not supposed to exist, so the diagnosis is not obvious from the message.
+- **Status:** open — no AC. Worked around at the call site, not fixed at the scanner.
+- **Occurrences:** 1 · **First seen:** 2026-09-08 (`BO-2900a-1-i`, PR #724) · **Last seen:** 2026-09-08
+- **Where:** `scripts/ci/_declaring_files_scan.py:268-276`, in `_helper_module_declaring_files`.
+
+**The mechanism.** The branch checks `isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div)` and then inspects only `node.right`: if the right operand is a string constant matching `_HELPER_FILENAME_RE` (a leading-underscore `.py` name), the file is recorded as a declaring file that must exist under the deployed root. **The left operand is never examined.**
+
+The comment immediately above it says otherwise:
+
+```python
+# Only a Path-join right operand counts as "loading a sibling
+# file" (Path(__file__).resolve().parent / "_x.py"). A bare
+# string constant elsewhere (e.g. name.endswith("_test.py"))
+# is not a file-load and must not be treated as one.
+```
+
+That comment describes a `__file__`-anchored join, and the parenthetical even spells out the anchored form — but no code tests for it. The distinction the comment claims is the exact distinction the scanner cannot make.
+
+**What it cost.** `done_proof.py`'s `_observe_reachability` materialises a runner script into a `TemporaryDirectory`:
+
+```python
+script_path = Path(tmp_dir) / "_reachability_runner.py"
+```
+
+Identical AST shape to a sibling-module load, so the scanner demanded a deployed `scripts/ac_store/_reachability_runner.py` — a file that never exists, being written fresh per invocation and dying with the tempdir. It failed the consumer-install job (which runs the scanner directly) and four cases in `unit_tests/portability/test_bp_900h_4_i.py` (which reach the same scanner through real `git clone --local` layouts). One cause, two checks, no shared symptom text.
+
+**Workaround applied, and why it is not the fix.** Changed to `Path(tmp_dir, "_reachability_runner.py")`, which yields a `Call` node instead of a `BinOp` and no longer matches. Same path, same behaviour, and it is a syntax dodge: the next person to write `Path(x) / "_y.py"` for a non-sibling reason hits the same wall with no clue why, and nothing in the codebase warns them.
+
+**Fix direction.** Test the left operand for `__file__` anchoring. The module already has exactly such a predicate — `_is_file_anchored_ancestor_walk` at `:99` — and already applies it at `:187`, though there it is handed an `ast.FunctionDef`, so it likely needs adapting rather than calling as-is on a `BinOp`'s left operand. Either way the concept is present in the file and simply is not consulted on this branch. If a tempdir-anchored join must still be distinguishable in some ambiguous case, prefer refusing to classify over classifying wrongly. Whatever is chosen, correct the comment: it currently documents a stricter rule than the code implements, which is what made the defect hard to see while reading the very lines that contain it.
+
+**Related.**
+- `KI-BP-20260908-declaring-files-helper-wrapped-import` (below) — same function's exemption logic, the other direction: an import that IS optional but is not recognised as such.
+- `docs/reference/false-green-mechanisms.md` — not a false green (this one fails closed), but the same root shape: a comment asserting a check that the code does not perform.
+
+**Pattern:** an AST pattern-match that recognises a syntactic shape and infers intent from it, with the comment describing the intent and the code matching only the shape.
+
+---
+
+### KI-BP-20260908-declaring-files-helper-wrapped-import — only an import written lexically inside `try/except ImportError` is treated as optional, so guarding the *call* instead of the *import* reads as a hard dependency
+
+- **Severity:** medium — fails closed, blocks the consumer-install check, and pushes authors toward duplicating an import at every call site rather than factoring it into a helper.
+- **Status:** open — no AC. Worked around by inlining the import; the scanner is unchanged.
+- **Occurrences:** 1 · **First seen:** 2026-09-08 (`BO-2900d-2`, PR #729) · **Last seen:** 2026-09-08
+- **Where:** `scripts/ci/_declaring_files_scan.py:212-231` (`_import_error_guarded_names`), consumed at `:247`.
+
+**The mechanism.** `_import_error_guarded_names` walks for `ast.Try` nodes with an `ImportError` handler and collects import names **inside that node's body**. Exemption is therefore purely lexical: the `import` statement must itself sit within the `try` block. An import inside a helper function whose *call site* is wrapped in `try/except ImportError` is not collected, so the imported module is reported as a declaring file the guardrail cannot run without.
+
+**What it cost.** `done_proof.py` reached the shared BO-2900d reachability seam through a `_load_reachability_seam()` helper. The helper's call was correctly guarded — an absent seam degraded to "no exemptions" exactly as intended — but because the `from _reachability_inventory import ...` sat inside the helper rather than inside the `try`, the scanner demanded `scripts/commit_guardian/_reachability_inventory.py` exist in a consumer install that has no reason to ship it.
+
+**Why this is not simply "write it the other way".** The helper existed for a reason: one import site, one docstring explaining the optionality, one place to change. The scanner's rule quietly forbids that factoring for any optional dependency, and forbids it *silently* — nothing says "your guard is in the wrong place", only "this file is missing". The workaround (inline the import into the `try` at its single call site) happened to be fine here because there was exactly one call site; with two or more, the rule forces duplicated import-and-guard blocks.
+
+**Fix direction, in preference order.** (1) Follow one level of indirection: if a name is imported inside a function whose every call site is `ImportError`-guarded, treat it as guarded. Sound but needs a call-graph walk the module does not currently do. (2) Honour an explicit opt-out marker — a recognised comment or a module-level `__optional_declaring_files__` tuple — so an author can state optionality the scanner cannot infer. Cheaper, and it makes the claim reviewable. (3) At minimum, improve the message: when a leading-underscore sibling import is reported missing, say that a `try/except ImportError` **around the import statement itself** is what marks it optional. That converts the current dead end into a one-line fix for whoever hits it next.
+
+**Related.**
+- `KI-BP-20260908-declaring-files-tempdir-path` (above) — same function, the mirror-image error: a shape that is *not* a dependency being treated as one.
+- The "New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest" convention in `CLAUDE.md` — this scanner is the mechanical enforcement of that rule; both entries are about it over-reaching.
+
+**Pattern:** a static analyser inferring optionality from lexical position, where the property it is actually trying to detect (does this code tolerate the module's absence?) is a runtime one.
