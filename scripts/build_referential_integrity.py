@@ -1367,6 +1367,50 @@ def _add_data_file_candidates(
             deploy_root_relative.add(deploy_rel)
 
 
+def _relative_to_root_without_symlink_escape(candidate: Path, root: Path) -> str:
+    """Return *candidate*'s path relative to *root*, without a false ``.leafcutter/`` prefix.
+
+    A deployed script's sibling directory can itself be a SYMLINK in a
+    self-hosted, already-built worktree: ``install_shims()`` (ADR-016) leaves
+    ``<package_root>/scripts/commit_guardian`` as a symlink into
+    ``<package_root>/.leafcutter/scripts/commit_guardian`` once it has run.
+    ``candidate`` is already constructed *root*-relative by pure path
+    arithmetic (see ``_eval_static_path`` / ``_module_name_candidates`` --
+    every component is either *root* itself, one of its already-resolved
+    ancestors, or a literal string segment), so ``candidate.relative_to(root)``
+    without resolving is already correct and never crosses the symlink.
+    ``candidate.resolve()`` DOES cross it: it follows
+    ``scripts/commit_guardian`` to its real target and returns
+    ``.leafcutter/scripts/commit_guardian/...`` instead -- a path Set B never
+    contains, so the guard reports a live, correctly-deployed dependency as
+    undeployed (BO-2900d-1/-2 fast-lane build, 2026-09-07: the first
+    ``sys.path.insert``-based cross-directory import from ``scripts/ac_store/``
+    into the ``commit_guardian`` family, so the first code to actually walk
+    through this symlink during closure analysis).
+
+    Falls back to the resolved form for any candidate that is not already
+    *root*-relative as constructed (every other candidate shape this module
+    produces) -- unchanged behaviour for every case this fix does not target.
+
+    Args:
+        candidate: The already *root*-relative-by-construction absolute path.
+        root: The closure/module root (see ``compute_intra_package_closure``).
+
+    Returns:
+        POSIX-style path string relative to *root*.
+
+    Raises:
+        ValueError: Neither the unresolved nor the resolved form of
+            *candidate* is relative to *root* -- the same "not part of this
+            closure" signal ``relative_to`` always raises, preserved for the
+            caller's existing ``except ValueError: continue``.
+    """
+    try:
+        return candidate.relative_to(root).as_posix()
+    except ValueError:
+        return candidate.resolve().relative_to(root).as_posix()
+
+
 def _closure_walk(
     script: Path,
     root: Path,
@@ -1427,7 +1471,7 @@ def _closure_walk(
         if not candidate.is_file():
             continue
         try:
-            rel = candidate.resolve().relative_to(root).as_posix()
+            rel = _relative_to_root_without_symlink_escape(candidate, root)
         except ValueError:
             continue
         if rel not in closure:

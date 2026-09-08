@@ -1,0 +1,576 @@
+id: BP-1600a-1
+components:
+  - build_pipeline
+  - precommit_hooks
+title: "The population of session hook scripts the wiring census walks is taken from the scripts present on disk, so a script the settings surface never invokes is reported as run by nothing — the surface that carries the harness's own guards has never been counted"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the project keeps the scripts that run in response to the assistant
+    harness's own tool calls together in one place, and that place holds both
+    scripts sitting directly in it and any scripts held in subdirectories of it,
+  And a settings surface declares which of those scripts the harness runs, at
+    which tool-call event, by naming each one inside a command it executes,
+  When the wiring census runs,
+  Then the population it examines is every hook script held anywhere beneath that
+    place, subdirectories included, obtained by listing that place at run time,
+  And each script in that population is identified by its position within that
+    place rather than by its bare filename, so two scripts sharing a filename at
+    different positions are two members of the population and a wiring naming one
+    of them is never read as covering the other,
+  And the wired population is obtained by reading the settings surface the project
+    ships and taking from each configured entry the hook script that entry's
+    command executes, so neither side of the comparison is a set written into the
+    census itself,
+  And every script present in that place that no configured entry executes is
+    reported by name, together with the statement that nothing runs it, and the
+    run fails,
+  And a script that at least one configured entry executes is not reported at all,
+  And given one new hook script is added to that place and nothing else in the
+    project changes,
+  When the census runs again,
+  Then the newly added script is among those reported as run by nothing, and the
+    number of scripts the census states it examined is exactly one greater than
+    the number it stated before — establishing that the population was enumerated
+    from the tree rather than recited from a list,
+  And the same holds when that one new script is added inside a subdirectory of
+    that place rather than directly in it — a script the census cannot see is a
+    script the census cannot report, and a population that stops at the top level
+    silently excuses everything held below it.
+depends_on:
+  - BP-1600a
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE FORMER PARENT, AND THE NEIGHBOURING RULE THIS RECORD MUST NOT BE READ AS. BP-100n
+      owns "an absence is reported as an absence, never as nothing to check" — what a guard
+      does when it finds nothing where something should be. This record's own fail-closed
+      clause is an instance of that rule and was the reason BP-100n was the honest parent
+      while this record was its sixth child. It moved because its PRIOR question — how the
+      population under examination is arrived at — is a different rule, now named by BP-1600a.
+      Read BP-100n-1, -2 and -5 as the absence-reporting siblings this record no longer sits
+      beside.
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SIBLING CENSUS ON THE OTHER SURFACE, AND THE BOUNDARY IS ITS OWN FIRST GIVEN.
+      BP-100n-4 (approved, high) enumerates the commit-gate scripts against the gate
+      registry the commit-time configuration is generated from. Its first Given scopes it
+      to "the repository keeps its commit-gate scripts together in one place" — the
+      commit-guardian script directory — so it structurally cannot reach the surface this
+      record covers. That is its stated scope, not an oversight, and this record must not
+      be closed as a duplicate of it nor it as a duplicate of this. REUSE ITS SHAPE
+      WHOLESALE: run-time population on both sides, path identity beneath the directory,
+      report by name, fail the run, and the added-script discriminator as the clause that
+      cannot pass on a literal list. What must NOT be reused is its registry-reading rule —
+      that surface names scripts on entry lines of a manifest, this one names them inside
+      shell commands and in a different layout (see BP-1600a-1-ii).
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-ii.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The stated-counts and fail-closed contract already written for the commit-gate
+      surface. BP-1600a-1-i is its counterpart here and deliberately mirrors its vocabulary
+      rather than minting a second one; read it before implementing either.
+  - path: "docs/reference/false-green-mechanisms.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE EXEMPLAR OF THE WHOLE M9 FAMILY LIVES ON THIS SURFACE AND NO CENSUS HAS EVER
+      EXAMINED IT. M9a's worked example is a guard in this very directory that is
+      registered, correctly wired, running on every edit, and unable to refuse: three of
+      its four gated prefixes resolve out from under themselves through the installed-tree
+      symlinks and never match, and the fourth names a directory this project does not
+      have. The Scheduled work paragraph of M9 names BP-100n-4 as the mechanical
+      enumeration of the class "across the commit-guardian surface" — the qualifier is the
+      gap this record closes.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY — REFUSAL, NOT ENUMERATION, AND THE TWO MUST BE CROSS-READ. GE-120f (draft,
+      critical) owns whether a guard has ever been seen to refuse anything, and names the
+      same worked example this record's own doc_link cites. This record owns the prior
+      question on this surface: which scripts are in the invoked set at all. A script this
+      census reports as run by nothing has no refusal to demonstrate, and a script this
+      census reports as wired may still be unable to refuse — neither verdict implies the
+      other. GE-120f previously carried a note claiming BP-100n-4 already enumerated its
+      exemplar; that claim was false, and this record is what makes it true for this
+      surface.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-6.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY — THE THIRD ENUMERATION, ALSO ON THE COMMIT-GATE SURFACE. GE-120c-6 sweeps
+      the guard directory ("every check script living where the commit-guardian's check
+      scripts live") against the deployed commit registry. Same inversion, same directory,
+      different reference set from BP-100n-4 — and neither of the two reaches this surface.
+      Its rule that "a registration the commit path never reads is not a registration" is
+      the precedent BP-1600a-1-ii applies here to a wiring that exists only in a copy the
+      project does not ship.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122a-2.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      READ BEFORE TRIAGING ANYTHING THIS CENSUS REPORTS. This approved record already fixes
+      the disposition of one of the scripts the census will name on its first run, and that
+      disposition is DISSOLUTION — extract its detection into the shared uniqueness pass —
+      not registration. It also records the script as verified never to have run. This
+      census reports; it must never demand that a reported script be wired, and its day-one
+      triage must not overwrite a disposition another approved record already owns.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122e-2.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      Records the second script the census will name, as "registered nowhere, so it will
+      not fire today", and records the collision that makes wiring it a sequencing decision
+      rather than a free one: it blocks a tracked move of a work-item file on a non-main
+      branch, which is exactly what that repair performs. Wiring it during this census's
+      day-one triage would break that repair. This is the concrete reason the census must
+      have a grounded third state (BP-1600a-1-iii) rather than only wired-or-failing.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126d-3.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      THE NATURAL DATA MODEL, AND THE REASON IT IS NOT THIS RECORD'S PARENT. GE-126d-3
+      (approved) declares the legs of registration once as data, read by both the authoring
+      procedure and a parity check, with one wording per leg. A settings-surface leg slots
+      into that declaration naturally and SHOULD be added there rather than described a
+      second time here. It is not the parent because its subject is completing registration
+      for a check BEING ADDED — prospective, one check at a time, measured at authoring
+      time — whereas this record is a retrospective census over everything already sitting
+      in the directory, whose whole value is finding what nobody was following a procedure
+      for. Filing a census beneath the procedure would put the population question beneath
+      one way of not creating new members of it.
+  - path: "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500a.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      OWNS THE MUTATION-PROOF SHAPE — DO NOT BUILD IT HERE. Where a clause of this record
+      asserts that something is NOT reported, the injection that gives it a red baseline is
+      named in this record's notes and must be executed, but the machinery for demanding,
+      recording and honouring a substitute falsifiability proof belongs to TQ-500a and must
+      not be reinvented on this surface.
+  - path: "templates/settings.json"
+    relationship: describes
+    status: exists
+    relevance: >-
+      The wiring surface: an object of tool-call events, each holding matcher groups whose
+      entries carry the command the harness runs. Every entry today wraps the script in a
+      shell command that walks up to the installed hook directory before invoking it, so
+      the script is named in the INSTALLED layout inside a command string, never as a bare
+      field. That shape is why BP-1600a-1-ii exists as its own record.
+  - path: "templates/hooks/readme_read_guard.py"
+    relationship: describes
+    status: exists
+    relevance: >-
+      The M9a worked example, and the reason this surface deserves a census before any
+      other: the poster child for a guard that cannot fire lives here, is wired, and would
+      be reported by this census as WIRED — correctly. Read it as the standing warning that
+      passing this census is not evidence of protection, only of connection.
+  - path: "docs/known-issues/commit-guardian.md"
+    relationship: context
+    status: exists
+    relevance: >-
+      Holds KI-CG-20260831-hook-scripts-never-invoked, the source finding for the sibling
+      census, including the Method section that explains why a census must be taken from
+      what the configuration executes rather than from names that resemble ids, and the
+      control that makes such a finding trustworthy (scripts observed running and observed
+      not running). NOTE FOR WHOEVER PICKS THIS UP: that register holds no entry for the
+      settings surface. The finding behind this record is recorded here in notes and
+      nowhere else yet.
+  - path: "CLAUDE.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding on every
+      descriptor here, and "New Hook / Gate Dependencies Must Be in the Build
+      Deploy-Manifest" is the failure this surface produces when a census helper is not
+      deployed alongside the hooks it examines.
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO DISCRIMINATOR FOR WHAT COUNTS AS A HOOK SCRIPT — DECIDED DELIBERATELY, AND THIS IS
+    A DEVIATION FROM THE SIBLING CENSUS THAT MUST NOT BE SILENTLY UNDONE. BP-100n-4's
+    surface needed a predicate to separate gates from helper modules, and the winning one
+    there was an executable entry point. Measured on this surface at 468e0490f: the hook
+    directory holds thirteen files, all thirteen are Python, and all thirteen carry an
+    executable entry point — so that predicate admits the entire directory and discriminates
+    nothing today, while excluding, tomorrow, any hook that runs its work at module level
+    without one. The population here is therefore every FILE listed beneath the hook
+    directory, with no predicate. Directory membership is the whole contract of this place:
+    the build enumerates every file in it and installs each one. An over-inclusive
+    population produces a report that names something which turns out not to be a hook,
+    which is noisy and safe and is disposed of through the grounded record in BP-1600a-1-iii;
+    an under-inclusive population produces "nothing unwired, all clean", which is the defect
+    class this record exists to police. If a future implementer wants a predicate, the
+    burden is to show it cannot exclude a real hook.
+  - >-
+    BOTH SIDES ENUMERATED AT RUN TIME, AND NEITHER MAY BE A LITERAL. The disk side by
+    listing the hook directory recursively; the wired side by reading the shipped settings
+    surface and extracting, from each configured entry, the script its command executes. A
+    frozenset of known filenames, a hard-coded expected total, or a hand-maintained pattern
+    list reproduces the exact defect one level up — which is how the sibling surface's
+    incumbent guard fails. The decisive descriptor is the added-script one: add one file,
+    and the reported set must contain it while the stated examined-count rises by exactly
+    one, both read from the census's own output.
+  - >-
+    THE LISTING IS RECURSIVE EVEN THOUGH THE DIRECTORY IS FLAT TODAY. Verified at
+    468e0490f: the hook directory contains no subdirectories. Recursion therefore costs
+    nothing now and is required anyway, because the sibling surface learned this the
+    expensive way — its subdirectory held five gate scripts, three of them live and one
+    invoked by nothing, and a non-recursive population silently excused all five. Identity
+    is the path beneath the hook directory for the same reason recursion forces it there:
+    two files with one basename at two positions are two members.
+  - >-
+    HOST AND LAYERING ARE OPEN AND MUST BE DECIDED BEFORE IMPLEMENTATION, NOT DURING IT.
+    Three candidate homes exist and they are not equivalent: a commit-time gate beside the
+    sibling census (which examines a surface the commit path does not read, but is where a
+    reader will look for it); a build-time check inside the phase that already enumerates
+    every file in the hook directory to install it (which holds the disk-side population
+    already, and whose findings a consumer sees at install time); or a portability sweep
+    beside the harness that runs deployed checks out of process. Whichever is chosen, the
+    two populations must be produced by ONE callable that a second caller can consume
+    without re-deriving them, so a future gate consumes this verdict rather than growing a
+    third enumeration of the same directory.
+  - >-
+    THE CENSUS MUST NOT BE DEFEATED BY THE MECHANISM THAT DEFEATED ITS OWN EXEMPLAR. The
+    installed hook directory and the installed settings surface are reached through
+    symlinks into the installed tree, and resolving a path through them is precisely what
+    makes the M9a guard on this surface unable to match anything. A census that compares
+    resolved real paths on one side against unresolved declared paths on the other will
+    find nothing in common and report every script as unwired — the mirror-image false
+    positive, and the one whose natural remedy is switching the census off. Decide the
+    resolution rule once, apply it to both sides, and state it in the run's output.
+  - >-
+    PACKAGE SURFACE — CONSIDERED AND NOT DECLARED. The registries the package-surface
+    declaration hook watches are the agent registry, the skill registry, the paths registry
+    and the commit-guardian registry. The settings surface is none of them, and this record
+    adds no id to any of them. If day-one triage wires a script by adding an entry to the
+    settings surface, that still touches no watched registry. Re-check this if the
+    implementation lands the grounded register of BP-1600a-1-iii inside the commit-guardian
+    registry rather than beside the settings surface; that choice would change the verdict
+    and the record must be amended before it is built.
+  - >-
+    DEPLOY-MANIFEST BOUNDARY. Files in the hook directory are installed into the harness's
+    hook directory by the build, and commit-guardian scripts into a different installed
+    location. Any module the census imports must be present in whichever installed layout
+    the census actually runs from, or it raises a missing-module error at run time while
+    unit tests importing from the source tree stay green. This is the repository's most
+    frequently repeated deployment defect and the deployed descriptor exists to make it
+    visible rather than latent.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT. The template directory is canonical and the installed
+    tree is a build output the build overwrites. Edit the template and re-run the build. A
+    fix applied only to the build output disappears on the next build; a fix applied only
+    to the template leaves the running configuration unchanged and the work unverified.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around
+    directory listing and around reading and parsing the settings surface; log at WARNING or
+    higher or re-raise; no bare or blind excepts. A swallowed listing error must never
+    become an empty population — that is the precise fail-open shape BP-1600a-1-i exists to
+    make impossible.
+test_spec:
+  - name: test_bp_100n_6_added_hook_script_is_reported_and_the_examined_count_rises_by_one
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      THE DECISIVE ANTI-LITERAL DESCRIPTOR — WRITE THIS ONE FIRST. Over a fixture copy of
+      the real hook directory and the real shipped settings surface, execute the census as a
+      process and capture two things from its own output: the stated examined-count and the
+      set of scripts reported as run by nothing. Then write ONE new hook file into that
+      directory, change nothing else, and execute the census again. The new file must appear
+      in the reported set and the stated examined-count must be exactly one greater than the
+      first run's. Both numbers are read from the census's output, never from a literal
+      expected value. No implementation carrying a list of script names — however that list
+      is spelled — can pass this.
+  - name: test_bp_100n_6_added_script_inside_a_subdirectory_is_reported_the_same_way
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      The same exercise with the new file placed in a subdirectory of the fixture hook
+      directory rather than directly in it. This is the only red baseline for the recursion
+      decision: the real directory is flat today, so every non-recursive implementation
+      passes every other descriptor here.
+  - name: test_bp_100n_6_every_script_no_entry_executes_is_reported_and_the_run_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Over the repository's real hook directory and real shipped settings surface, the
+      executed census reports by name every script no configured entry executes, states of
+      each that nothing runs it, and exits non-zero. The assertion is count-and-membership
+      based over the census's own reported set — never a comparison against a hard-coded
+      list of today's names, which would pass while the next one escaped.
+  - name: test_bp_100n_6_a_script_an_entry_executes_is_not_reported_at_all
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      A script executed by at least one configured entry appears in NO reported class —
+      not as run by nothing, not as deliberately unwired. NAMED MUTATION (mandatory, run it,
+      do not merely describe it): build the wired set by matching each script's bare
+      filename against the raw text of the settings surface instead of against the script
+      each command executes. Under that injection this descriptor must go RED — a script
+      whose name appears in the surface outside any executed command is then counted as
+      wired — and must return to green on revert. Without the injection this clause is green
+      on arrival, because today nothing is reported at all.
+  - name: test_bp_100n_6_two_scripts_sharing_a_filename_at_two_positions_are_two_members
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A fixture directory holding the same filename at the top level and inside a
+      subdirectory, with only the top-level one executed by an entry, reports the
+      subdirectory copy as run by nothing. Goes red on bare-filename identity, which silently
+      covers the second copy with the first one's wiring — the false negative in the one
+      direction this census exists to close.
+  - name: test_bp_100n_6_census_is_emitted_through_the_entry_point_that_actually_runs_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      PRODUCTION ENTRY POINT. Run the census through the surface that will invoke it in
+      practice — whichever of the three candidate hosts the implementation chose, invoked the
+      way that host invokes it — and assert that the per-script verdicts and the summary
+      appear in that host's own output stream, and that the exit status is the host's outcome
+      rather than an advisory note. A census computed by a function nothing calls is inert,
+      which is the defect class this record belongs to.
+  - name: test_bp_100n_6_deployed_copy_runs_the_census_over_the_installed_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After a real build, the DEPLOYED copy of the census and every module it imports load
+      and run in a cold process — a helper missing from the deploy manifest surfaces here as
+      a missing-module error rather than passing. Over the real installed hook directory and
+      the real installed settings surface, reached through the symlinks that defeated this
+      surface's own worked example, the census resolves both sides to one identity and does
+      NOT report every script as unwired. Source-tree greenness cannot substitute: the
+      symlink resolution only exists in the installed layout.
+test_rationale: |
+  Every clause of this record is green on arrival on the repository as it stands, for the
+  single trivial reason that no census of this surface exists and nothing is reported at
+  all. That is the shape this whole family is about, and it is why the two clauses that
+  assert something is NOT reported carry executable injections rather than notes asking
+  someone to confirm the test is meaningful.
+
+  The added-script descriptor is written first because it is the only one that cannot pass
+  on an implementation holding a literal list, however that list is spelled: it adds a file
+  the list cannot know about and requires the stated count to move by exactly one. The
+  subdirectory variant is separated from it deliberately — the real directory is flat, so
+  without that descriptor the recursion requirement has no red baseline and every
+  non-recursive implementation passes.
+
+  The raw-text injection defends the not-reported-at-all clause, and it reconstructs the
+  most likely wrong implementation on this surface rather than a hypothetical one: the
+  scripts are named inside shell command strings, so a substring search over the settings
+  document returns the right answer today and the wrong answer the first time a script's
+  name appears anywhere that is not executed.
+
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", no descriptor here
+  may be satisfied by reading the census's source or the settings surface as text; a text
+  assertion stays green on precisely the dead enumeration being prevented. Every descriptor
+  executes the census as a process and asserts on its emitted output and exit status, and
+  the deployed descriptor runs the built copy through the installed symlinks, because that
+  layout is where this surface's own exemplar failure lives.
+delivers_to:
+  - agent: python-coder
+    ac_id: BP-1600a-1-i
+    contract: >-
+      The two enumerated populations — hook scripts listed from disk, and scripts executed
+      by the shipped settings surface — whose sizes BP-1600a-1-i requires to be stated and
+      whose unavailability or emptiness it converts from a silent clean exit into a named,
+      non-zero failure.
+  - agent: python-coder
+    ac_id: BP-1600a-1-ii
+    contract: >-
+      The wired-population extraction seam. BP-1600a-1-ii fixes what may be taken from the
+      settings surface as a wiring, how a script named in the installed layout is resolved
+      to the script held in the authored layout, and which copies of that surface count.
+  - agent: python-coder
+    ac_id: BP-1600a-1-iii
+    contract: >-
+      The per-script verdict set and the run summary, into which BP-1600a-1-iii inserts the
+      deliberately-unwired verdict and its count, and whose run-by-nothing class a
+      groundless record falls back into.
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by:
+  - reason: authored-at-ba-stage-with-mechanism-fields
+    by: business-analyst
+    at: 2026-09-07
+    note: >-
+      it_requirements, test_spec and test_rationale were authored in the same pass as
+      criteria at the user's explicit instruction ("behaviour in criteria, mechanism in
+      it_requirements"), rather than being left for a separate technical-enrichment pass.
+      They are open to IT PO revision; criteria are not. readiness stays draft — approval is
+      the user's gate and no approval is implied by the presence of the mechanism fields.
+  - reason: "split: BP-100n -> BP-100n + BP-1600a [Pattern C, 6 L2 children -> 5 + 1], 2026-09-07"
+    by: product-owner
+    at: 2026-09-07
+    note: >-
+      RENAMED BP-100n-6 -> BP-1600a-1; children -6-i/-ii/-iii -> -1-i/-1-ii/-1-iii. The user
+      chose SPLIT over child_limit_override, as this record's own PARENT AND CAPACITY note
+      asked. Nothing about the requirement changed: criteria, readiness (draft), priority
+      (high) and work_status (todo) are untouched. The new parent BP-1600a names the rule this
+      record shares with BP-100n-3 and BP-100n-4 — the population a check walks is taken from
+      reality, never from a list that can omit things — and the new L0 BP-1600 exists because
+      BP-100 sits at exactly its child_limit_override of 13 and its own note reserved that
+      ceiling to force this decision rather than absorb it. Only this record moved of the
+      three cluster members: BP-100n-3 is done with covers-tags in shipped source, and
+      BP-100n-4 is cited from roughly sixty places plus five more on the unmerged PR #726.
+      See BP-1600a's notes for the migration path.
+superseded_by: null
+covered_by:
+  - BP-1600a-1-i
+  - BP-1600a-1-ii
+  - BP-1600a-1-iii
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  MEASURED IN THIS WORKTREE AT 468e0490f, 2026-09-07, AND TREAT EVERY NUMBER HERE AS AN
+  OBSERVATION WITH A DATE ATTACHED RATHER THAN AS A REQUIREMENT. The hook directory holds
+  thirteen files, all Python, all carrying an executable entry point, and the directory is
+  flat — no subdirectories. The shipped settings surface wires eleven of them across four
+  matcher groups over two tool-call events. Two are executed by no entry:
+  check_ticket_no_branch_move.py and check_ticket_state_integrity.py. Both are installed by
+  the build, so both reach consumer projects; both carry unit tests under tests/; both are
+  green; neither has ever run. The counting rule that produced these figures is "every file
+  listed beneath the hook directory" on the disk side and "the last script token of the
+  command each configured entry executes" on the wired side. No number in this paragraph may
+  be written into criteria or into a test assertion — BP-1600a-1-i requires the census to
+  STATE its populations in every run, and a number the census prints from what it examined
+  cannot go stale while a number written into a requirement can only go stale.
+
+
+  WHY THIS SURFACE AND NOT ONLY THE OTHER ONE. Two registration surfaces exist in this
+  project and until now only one has been counted. BP-100n-4 owns the commit-gate scripts
+  against the gate registry; GE-120c-6 sweeps the same directory against the deployed commit
+  registry; both are scoped, by their own first clauses, to where the commit-guardian check
+  scripts live. Nothing has ever compared the harness hook directory against the settings
+  surface. That is not a small omission: the worked example of the entire M9 family in
+  docs/reference/false-green-mechanisms.md is a guard in THIS directory — registered,
+  correctly wired, running on every edit, and unable to refuse, because three of its four
+  gated prefixes resolve out from under themselves through the installed-tree symlinks and
+  the fourth names a directory this project does not have. The poster child for a guard that
+  cannot fire sits on the one surface no census examines.
+
+
+  WHAT THIS RECORD DOES NOT DECIDE, STATED SO IT IS NOT DECIDED BY ACCIDENT. The census
+  reports; the disposition of each reported script stays open and is owned elsewhere. One of
+  the two scripts it will name on its first run already has an approved disposition and it is
+  NOT registration: GE-122a-2 requires its detection to be extracted into the shared
+  uniqueness pass, and records it as verified never to have run. The other is named in
+  GE-122e-2 as "registered nowhere, so it will not fire today", together with the reason
+  wiring it is a sequencing decision rather than a free one — it blocks a tracked move of a
+  work-item file on a non-main branch, which is exactly what that repair performs. A census
+  that demanded registration would contradict one approved record and break another. Hence
+  the third state in BP-1600a-1-iii, and hence the clause there forbidding the census to state
+  what should be done with a script it reports.
+
+
+  HOW IT LANDS: BLOCKING, WITH DAY-ONE TRIAGE IN THE SAME CHANGE. The recommendation carried
+  over from the sibling surface's analysis applies here unchanged and is repeated because the
+  bootstrapping question is sharper on this surface — these hooks run on every tool call, so
+  a census that lands blocking and stays red risks wedging ordinary work. Two tempting
+  answers are both refused. Report-only, exiting zero, is the defect class being fixed: a
+  check that reports and passes is what every precedent in the known-issues register actually
+  shipped. A pinned allowlist of today's two names is suppression wearing a ratchet's
+  clothes, and it also silently exempts the third script the day it appears. The answer is
+  the third: land it failing, and triage the whole reported set in the same change through
+  the grounded records of BP-1600a-1-iii, whose grounds must cite the record that owns each
+  script's fate. Two scripts is a small enough set for that to be realistic, and both already
+  have owning records to cite. IF THE SET TURNS OUT LARGER ON THE DAY, take the set from the
+  census's own first run and do not resolve the difficulty by weakening the census.
+
+
+  MUTATIONS FOR THE ABSENCE-ASSERTING CLAUSE. "A script an entry executes is not reported at
+  all" is green on arrival by construction, because today nothing is reported at all.
+  MUTATION: build the wired set by matching bare filenames against the raw text of the
+  settings surface rather than against the script each command executes. Under that injection
+  a script named anywhere in the document — a permission entry, an unexecuted value, a
+  comment — counts as wired, and the clause must fail and then return to green on revert. The
+  injection is not hypothetical: on this surface the scripts are named inside shell command
+  strings, so a substring search is the natural first implementation and it returns the right
+  answer today.
+
+
+  PARENT AND CAPACITY — A REAL PROBLEM, RECORDED RATHER THAN QUIETLY SOLVED. BP-100n is the
+  honest parent: its own sentence is "a guard that finds nothing where something should be
+  says so, instead of passing", and its criteria say that an empty result "looks, from inside
+  the guard, exactly like there is nothing here to check" — which is this census's fail-closed
+  requirement verbatim, and BP-100n-4 is the sibling census already living there. BP-100n was
+  at its five-L2 cap when this record was written, so this record makes it six and the
+  child-limit guard will report it. NO child_limit_override WAS ADDED. That was deliberate:
+  raising an override to silence a guard, in a record whose entire subject is guards that were
+  silenced, is the wrong instinct even when the override is a sanctioned field. Two remedies
+  exist and the choice is the user's. The precedent in this family is a SPLIT — BP-100k was at
+  eight children on a live override and was split into BP-100k plus BP-100n, discharging the
+  override rather than raising it, and GE-120f chose a new L1 over a sixth child for the same
+  reason. If BP-100n is split, this record and its three children RENAME, because the
+  child-limit and parent-link guards derive a parent from the id string rather than from
+  covered_by. The alternative is an explicit override on BP-100n with a stated ground. Until
+  one is chosen, the cap finding is left visible on purpose.
+
+
+  RESOLVED, 2026-09-07 — THE SPLIT WAS CHOSEN AND THIS RECORD IS ON THE OTHER SIDE OF IT. The
+  paragraph above is left standing as the reasoning that was offered, not because it is still
+  the live state. The user chose SPLIT. No override was added anywhere, and BP-100n's five
+  remaining children put it back at its cap rather than over it. This record and its three
+  children were renamed from BP-100n-6/-i/-ii/-iii to BP-1600a-1/-i/-ii/-iii and moved to
+  BP-1600a, exactly as the paragraph predicted a split would require.
+
+  ONE THING THE PARAGRAPH GOT WRONG, AND IT MATTERS FOR THE NEXT PERSON. It assumed the split
+  would produce a new L1 SIBLING under BP-100. It cannot: BP-100 carries
+  child_limit_override: 13 and has exactly 13 active L1 children, and its own amendment note
+  states the waiver "is left at exactly the current count, so the next L1 added to BP-100
+  trips the gate and forces this conversation rather than sliding under a margin". A sibling
+  L1 would have been that next L1, so the only ways to place one were to raise BP-100's
+  override — the same instinct this record declined — or to give the new L1 a new L0. The
+  latter was chosen: BP-1600, following the precedent BP-1300 set and documented in its own
+  notes when it was placed outside BP-100 for this identical reason.
+
+  WHY THE OTHER TWO CLUSTER MEMBERS DID NOT COME. BP-100n-3 and BP-100n-4 share this record's
+  rule and belong under BP-1600a on the merits. BP-100n-3 is work_status done with covers-tags
+  in scripts/build_phases.py and a test file named after it; renaming it would break an
+  evidence chain inside a structural move. BP-100n-4 is cited from roughly sixty places, and
+  the open, unmerged PR #726 adds five more from a branch that cannot be edited from here.
+  BP-1600a's notes carry the migration path and its precondition. Both remain under BP-100n
+  for now, which is why the absence-reporting parent still hosts two population records.
+
+
+  ADJACENT RECORDS THAT MUST NOT BE CLOSED AS DUPLICATES OF THIS ONE, OR IT OF THEM. BP-100n-4
+  owns enumeration on the commit-gate surface. GE-120c-6 owns the deployed-registry sweep of
+  the same directory. GE-120f owns whether a guard in any set can refuse. GE-126d-3 owns the
+  single declaration of registration legs that a settings leg should be added to. TQ-500a owns
+  the substitute-falsifiability machinery this record's injections use but must not rebuild.
+  Five neighbours, none of them sufficient, and the two scripts this census names are the
+  proof: they are enumerated by nothing, swept by nothing, have no refusal to demonstrate
+  because they never run, were never taken through a registration procedure, and are covered
+  by green tests.

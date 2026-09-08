@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-08-31
+last_updated: 2026-09-07
 components:
   - commit_guardian
   - git_vcs_operations
@@ -20,6 +20,7 @@ related_code:
   - templates/scripts/commit_guardian/check_identifier_uniqueness.py
   - templates/scripts/commit_guardian/check_adr_collision.py
   - templates/scripts/commit_guardian/_authored_change.py
+  - templates/scripts/commit_guardian/_operation_record.py
   - templates/scripts/commit_guardian/change_set_source.py
   - templates/scripts/commit_guardian/check_contract_shrinking.py
   - templates/scripts/commit_guardian/check_doc_frontmatter.py
@@ -130,6 +131,93 @@ pattern set by `_resolve_root.py` (one small leaf module in the package,
 imported by name), but solves a different problem: `_resolve_root.py`
 resolves a *prerequisite* (the project root); `_authored_change.py`
 derives the *change set* itself.
+
+### Undoing or Replaying a Recorded Change Is Scoped the Same Way as a Merge: `_operation_record.py` (`GE-120e-4`)
+
+`GE-120e-1`'s derivation above narrowed the scope only when `MERGE_HEAD` was
+present, so a bare `git revert` of a large recorded changeset, or a
+conflicted `git cherry-pick` of a change already recorded elsewhere, was
+still attributed entirely to whoever staged the undo or the copy — the same
+false-positive class the merge case already fixed, on two operations that
+carry someone else's content just as literally as a merge does. `GE-120e-4`
+extends the SAME shared source rather than adding a second derivation:
+`templates/scripts/commit_guardian/_operation_record.py` generalizes the
+single `MERGE_HEAD` probe into one predicate checked identically over three
+git operation-record refs — `MERGE_HEAD`, `REVERT_HEAD`, `CHERRY_PICK_HEAD`
+(`_OPERATION_RECORDS`, in that fixed but non-prioritising order, since git
+never allows two of these to be in progress at once) — and
+`_authored_change.py` consumes whichever one `detect_operation_record()`
+reports present, if any, in place of its old single-ref check.
+
+- **One general predicate, never a merge-specific branch.** The AC's fourth
+  clause explicitly forbids deciding the change set by asking "is a merge in
+  particular under way" — `detect_operation_record()` answers only "which
+  operation record, if any, is present" and hands that ref to the same
+  scoping call `_authored_change.py` already made for `MERGE_HEAD`. Reviewers
+  extending this family to a fourth operation record should add it to
+  `_OPERATION_RECORDS` and, if its incoming state is not the ref itself (see
+  next point), to `scope_ref()` — never as a new `if`/`elif` arm keyed on
+  "which operation is this".
+- **`scope_ref()` is a data lookup over git's own reference frames, not a
+  behavioural branch.** `MERGE_HEAD` and `CHERRY_PICK_HEAD` each name the
+  incoming content directly, so the record itself is the rev-expression to
+  diff against. `REVERT_HEAD` instead names the commit being UNDONE — a
+  revert's result equals that commit's *parent* tree, and reverting `HEAD`
+  even sets `REVERT_HEAD` to the same SHA as `HEAD` itself, so scoping
+  against `REVERT_HEAD` verbatim would compare the staged tree to its own
+  pre-image and exclude nothing (this was confirmed empirically against a
+  real revert fixture before landing — see `_operation_record.py`'s
+  `scope_ref()` docstring). `scope_ref("REVERT_HEAD")` therefore returns
+  `"REVERT_HEAD~1"`; the other two records return themselves unchanged. This
+  is the same "differs from the operation's own incoming state is authored,
+  matches it is carried-in" predicate GE-120e-1 established, extended by data
+  rather than by branching on operation identity.
+- **Plumbing resolution, never a hard-coded `<root>/.git`.** The three
+  operation-record refs are files under the git *directory*, which
+  `resolve_git_dir()` resolves via `git rev-parse --git-dir` — required
+  because drives in this repository run inside linked git worktrees, where
+  the git directory is not `<root>/.git`; a hard-coded path would make the
+  whole probe a silent no-op in exactly the environment the underlying
+  defect was observed in.
+- **Zero additional subprocess invocations.** The prior single
+  `git rev-parse -q --verify MERGE_HEAD` call is replaced by resolving the
+  git directory once (needed anyway for worktree-safety) and checking file
+  existence directly under it for all three candidates — the ticket's
+  performance budget ("at most one additional git invocation beyond
+  GE-120e-1's derivation") is met with a net decrease, not an increase, and
+  the derivation still never walks history.
+- **No consumer edit required, and `states` stays opaque provenance.**
+  Both named consumers (`check_contract_shrinking.py`,
+  `check_doc_frontmatter.py`) already read only `len(states) > 1` rather than
+  pattern-matching the literal string `"MERGE_HEAD"` inside
+  `AuthoredChange.states`, so extending `states` to also read
+  `["HEAD", "REVERT_HEAD"]` or `["HEAD", "CHERRY_PICK_HEAD"]` required no
+  consumer change. Any future consumer that special-cases on a literal
+  operation-record name found inside `states` would reintroduce, one layer
+  up, the "decided by asking whether a merge in particular is under way"
+  failure mode this AC's fourth clause forbids in the derivation itself —
+  `states` is provenance for error messages, not a mode selector, per
+  [ADR-038](../adrs/ADR-038-commit-guardian-shared-change-set-derivation.md)'s
+  original intent.
+- **The ordinary-commit path is unchanged.** With none of the three records
+  present, `detect_operation_record()` returns `None` and the derivation
+  remains byte-identical to `git diff --cached` against `HEAD` alone — the
+  same negative control GE-120e-1 established, now proven to hold under the
+  generalized three-way probe rather than narrowed by it.
+
+`_operation_record.py` is split out as a sibling leaf module (rather than
+grown inside `_authored_change.py`) to keep `_authored_change.py` under this
+project's 400-line file-size limit; it imports nothing beyond the standard
+library and is imported only by `_authored_change.py`, following the same
+small-leaf-module shape as `_resolve_root.py`. See AC `GE-120e-4` under
+`docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/` for
+the full Gherkin spec, including the coverage note requiring each operation
+to be exercised as a real repository operation rather than a merge fixture.
+An amendment to [ADR-038](../adrs/ADR-038-commit-guardian-shared-change-set-derivation.md)
+generalizing its Decision §4 scoping clause from "`MERGE_HEAD` present" to
+"any of the three operation records present" is pending as of this writing
+(architect-review recorded the amendment's required content on this AC's
+ticket; see that ticket's Sign-offs for current `adr-author` status).
 
 ### Recorded Change-Set Source Per Entry: `change_set_source` (`GE-120e-2`)
 

@@ -29,7 +29,8 @@ Exit Codes:
         the previous-length history is empty)
     1 - One or more files exceed limits, or grew while already over
     2 - INDETERMINATE: the previous-length source could not be reached at
-        all, or a resolvable HEAD blob could not be interpreted
+        all, a resolvable HEAD blob could not be interpreted, or a staged
+        file's CURRENT content could not be opened or decoded (GE-127a-1-i)
 
 Usage:
     poetry run python scripts/commit_guardian/check_file_size.py
@@ -45,8 +46,9 @@ project_root = find_project_root()
 
 from _file_size_ratchet import (
     EMPTY_HISTORY_REASON,
+    CurrentLengthUnmeasurableError,
     PreviousLengthSourceError,
-    count_content_lines,
+    measure_current_length,
     resolve_head_covered_paths,
     resolve_previous_lengths,
 )
@@ -106,28 +108,34 @@ def count_lines(filepath: str) -> int:
     """
     Count all lines in a file (excluding docstrings and block comments).
 
-    Delegates the actual counting rule to count_content_lines(), the same
-    pure function used to measure a file's previous (HEAD blob) length, so
-    the current-length and previous-length measurements can never drift
-    apart by even one line.
+    Delegates the actual counting rule to measure_current_length(), which in
+    turn calls count_content_lines() -- the same pure function used to
+    measure a file's previous (HEAD blob) length, so the current-length and
+    previous-length measurements can never drift apart by even one line.
+
+    A path that does not exist on disk (a staged DELETION) is deliberately
+    NOT one of the two unmeasurable situations -- see GE-127a-1-i's scope
+    boundary -- so it is checked here, before delegating, and reported as
+    0 without raising. This is the ONLY caller-visible zero this function
+    ever returns; every other unmeasurable state raises instead.
 
     Args:
         filepath: Path to the file to count.
 
     Returns:
-        Total number of lines in the file, or 0 if it cannot be read.
+        Total number of lines in the file, or 0 if the path does not exist
+        (a staged deletion, out of this check's scope).
+
+    Raises:
+        CurrentLengthUnmeasurableError: the file exists but cannot be opened
+            at all, or its content cannot be decoded as UTF-8 -- the two
+            situations GE-127a-1-i requires to be named and refused rather
+            than silently measured as zero.
     """
-    path = Path(filepath)
-    if not path.exists():
+    if not Path(filepath).exists():
         return 0
 
-    try:
-        content = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError) as exc:
-        print(f"⚠️  Could not read {filepath} to measure its length: {exc}", file=sys.stderr)
-        return 0
-
-    return count_content_lines(content)
+    return measure_current_length(filepath)
 
 
 def get_limit_for_extension(filepath: str) -> int:
@@ -306,8 +314,9 @@ def main() -> int:
         that shrank/stayed the same, or the previous-length history is
         empty), 1 (a file exceeds its limit or grew while already
         oversized), or 2 (INDETERMINATE — the previous-length source could
-        not be reached at all, or a resolvable HEAD blob could not be
-        interpreted).
+        not be reached at all, a resolvable HEAD blob could not be
+        interpreted, or a staged file's CURRENT content could not be opened
+        or decoded).
     """
     # Ensure header output (emojis) works on Windows
     if sys.stdout.encoding.lower() != "utf-8":
@@ -336,14 +345,18 @@ def main() -> int:
     failed_files: list[tuple[str, int, int]] = []
     passed_files: list[tuple[str, int, bool]] = []  # (path, lines, is_new)
 
-    for filepath, is_new in covered_files.items():
-        verdict, lines, reference = _classify_file(filepath, is_new, previous_lengths)
-        if verdict == "grew":
-            grown_files.append((filepath, reference, lines))
-        elif verdict == "too_large":
-            failed_files.append((filepath, lines, reference))
-        else:
-            passed_files.append((filepath, lines, is_new))
+    try:
+        for filepath, is_new in covered_files.items():
+            verdict, lines, reference = _classify_file(filepath, is_new, previous_lengths)
+            if verdict == "grew":
+                grown_files.append((filepath, reference, lines))
+            elif verdict == "too_large":
+                failed_files.append((filepath, lines, reference))
+            else:
+                passed_files.append((filepath, lines, is_new))
+    except CurrentLengthUnmeasurableError as exc:
+        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
+        return 2
 
     # Print results
     print("\n📏 File Size Check\n")
@@ -374,6 +387,19 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-07 [python-coder/GE-127a-1 + GE-127a-1-i]: Registered `check-file
+  -size` in commit_guardian.json's hooks_manifest.hooks (always_run: true,
+  the script resolves its own staged-file set) -- the gate previously had
+  correct comparison logic but ran at no commit at all. Replaced
+  count_lines()'s swallow-and-return-0 behaviour on an unreadable/undecodable
+  CURRENT file with a new CurrentLengthUnmeasurableError (raised by the new
+  sibling measure_current_length() in _file_size_ratchet.py), caught in
+  main() and reported as INDETERMINATE (exit 2) naming which of the two
+  situations occurred ("cannot be opened at all" vs. "not readable as text
+  in the encoding the standard reads") -- reusing BP-100n-4-ii's verdict
+  vocabulary unchanged. A staged deletion (path does not exist) is excluded
+  from this branch explicitly in count_lines() and still reports 0 without
+  raising, per GE-127a-1-i's own out-of-scope carve-out.
 - 2026-09-01 [python-coder/GE-127b-1 + GE-127b-1-i]: Added the ratchet: an
   already-oversized file (previous HEAD length over its limit) that GROWS is
   refused, naming both the previous and new lengths; one that shrinks or
