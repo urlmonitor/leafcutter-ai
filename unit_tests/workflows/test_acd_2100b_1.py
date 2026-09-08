@@ -1,63 +1,59 @@
 """
 MODULE: test_acd_2100b_1
 GOAL: Behavioral tests for ACD-2100b-1 -- "A registry the startup check cannot
-    read is reported as unreadable and names what it tried to read."
+    read is reported as unreadable and names what it tried to read" --
+    WORKFLOW-LEVEL (reporting) half.
 
-INCIDENT BEING REGRESSION-TESTED (KI-ACD-009, false verdict / Mechanism M8
-    inverted): templates/workflows-js/plan-feature.js's Pre-Stage-0
-    Workspace-Setup Dispatch Permission Gate (around line 2020) reads
-    `config/agent_registry.json` via `buildRepoAnchoredReadCommand()`, then
-    does:
+    This file covers the halt-and-render behaviour of templates/workflows-js/
+    plan-feature.js's Pre-Stage-0 Workspace-Setup Dispatch Permission Gate.
+    The companion SCRIPT-level tests (the classification decision itself,
+    including the confirmed AC-2 gap) live in
+    unit_tests/ac_driven_dev/test_acd_2100b_1.py -- read that file's module
+    docstring before this one.
 
-        if (registryParsed && typeof registryParsed.output === "string") {
-          const registryJson = JSON.parse(registryParsed.output);
-          ...
-        }
-        // on ANY parse failure (including an EMPTY stdout caused by the read
-        // command itself failing with exit_code != 0 -- e.g. no file at the
-        // resolved location, or permission refused) permitsShell stays false
-        // and the run falls into the SAME halt message used for a
-        // successfully-read registry that genuinely denies the agent:
-        //
-        //   "...that agent's registered charter (config/agent_registry.json)
-        //    does not permit running repository-mutating shell commands...
-        //    Fix ... config/agent_registry.json's permits_shell field..."
+SURFACE CHANGE: ACD-2100b-5 moved the registry read out of this workflow's
+    sandboxed body (no filesystem primitive under the E2 engine, ADR-030) and
+    into scripts/worktree/check_workspace_setup_permission.py, invoked by the
+    plan-feature skill BEFORE the workflow runs. The workflow now reads
+    `args.workspace_setup_permission` -- a pre-computed verdict -- and, when
+    `.permits !== true`, renders one of a small, fixed set of canned messages
+    keyed SOLELY by `.outcome` (see plan-feature.js's `outcomeMessages` map,
+    ~line 2253). It makes NO agent() dispatch on the check's own behalf at
+    all (confirmed: no call carries the old
+    "resolve-workspace-setup-permission" label under this design). This
+    file's tests therefore supply the verdict directly via `args` and observe
+    the workflow's own halt and rendered report -- never a live registry read
+    inside the workflow, which no longer happens.
 
-    The read command's own `exit_code` is never inspected, so "the registry
-    could not be read" (an I/O fact) and "the registry was read and denies
-    this agent" (a permission fact) collapse into one indistinguishable
-    report -- and that report actively asserts a permission verdict the check
-    never established, and points the reader at `permits_shell`, a setting
-    that has nothing to do with an absent file or a denied read.
+WHY THE TESTS BELOW NO LONGER ASSERT A `resolve-workspace-setup-permission`
+    DISPATCH: the PRIOR version of this file drove a real, on-disk registry
+    through a self-contained Node-subprocess harness and asserted that label's
+    presence as proof "the check executed at all". That dispatch has been
+    REMOVED BY DESIGN (ACD-2100b-5, work_status: done) -- asserting its
+    presence today would be asserting a fact this workflow no longer makes
+    true, on a design its own sibling AC deliberately retired. Reachability
+    is proven here instead by observing that the workflow's OWN CONSUMED,
+    RETURNED result reflects the halt and that no step AFTER the check
+    (`resolve-worktree-setup-script-path` / `worktree-setup`) is ever
+    dispatched -- the correct evidence for "the args-supplied verdict was
+    consumed in control flow" under the new design.
 
-WHY A SINGLE ABSENT-REGISTRY FIXTURE CANNOT PROVE THE WHOLE AC: the Then
-    clause requires the reason to DISTINGUISH "no file at that location" from
-    "permission refused" -- two remedies, two reasons. A fixture that only
-    ever exercises "no file" can pass a fix that hardcodes one canned reason
-    string for every unreadable-registry case, which is the same defect one
-    level down (KI-ACD-009's own diagnosis: "collapsing them recreates the
-    defect"). This file therefore builds TWO independently-unreadable
-    registries -- one absent entirely, one present on disk but with read
-    permission withheld from the process -- and asserts their reports differ.
-
-HOW THE REAL SIDE EFFECT IS EXERCISED (Real-Artifact Behavioral Test
-    Mandate): mirrors unit_tests/workflows/test_acd_2100a_1.py's and
-    test_acd_2100a_3.py's own harness (`_run_plan_feature_real`), which is
-    intentionally NOT the shared `_workflow_engine_harness.py` mock -- that
-    mock stubs every agent() call with a canned response and never actually
-    runs a shell command, so it cannot tell us whether a REAL absent file or a
-    REAL permission-denied read produces the reported behavior. This file's
-    harness ACTUALLY EXECUTES every "Run the following command
-    ...:\\n<cmd>\\nReturn JSON: ..." dispatch via a real Node child_process,
-    against a real git repository and a real, on-disk (or deliberately
-    absent/unreadable) registry file.
-
-TDD note: templates/workflows-js/plan-feature.js does not yet distinguish an
-    unreadable registry from a successfully-read, permission-denying one, nor
-    does it distinguish "absent" from "permission refused" within that. All
-    four tests below are expected to be RED until python-coder implements
-    that distinction (inspecting the read command's own exit_code /
-    diagnostic rather than only its stdout).
+A GAP CARRIED FORWARD FROM THE CLASSIFICATION SURFACE -- NOW CLOSED, ASSERTION
+    KEPT AS THE REGRESSION GUARD: when this file was first authored,
+    check_workspace_setup_permission.py's `build_verdict()` mapped BOTH "no
+    file" and "permission refused" to the identical `outcome: "read_failure"`
+    (see unit_tests/ac_driven_dev/test_acd_2100b_1.py's module docstring),
+    and this workflow rendered its message SOLELY from `.outcome`, so the two
+    Given conditions this AC names produced a byte-IDENTICAL rendered report
+    here too. That gap was closed by ACD-2100b-5's port: the verdict now
+    carries a distinguishing `reason`/`detail`, and plan-feature.js's
+    `outcomeMessages` now interpolates it, so the two Given conditions render
+    genuinely different reports.
+    `test_permission_refused_and_absent_verdicts_render_different_reports`
+    below asserts what AC-2 requires (the two reports differ) and now PASSES
+    against the current plan-feature.js -- the assertion is unchanged from
+    when it was authored to expose the gap, and remains as the honest,
+    direct-to-the-operator guard against this collapse reappearing.
 
 TICKET: 07_TICKET-20260826-ACD-2100b-1.md
 AC: ACD-2100b-1
@@ -66,7 +62,6 @@ AC: ACD-2100b-1
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -77,46 +72,22 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
+from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
+_PREFLIGHT_SCRIPT = (
+    _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
+)
 
-_TIMEOUT = 40  # seconds; includes real git I/O.
-_REGISTRY_READ_LABEL = "resolve-workspace-setup-permission"
-_MIS_ASSIGNMENT_LABEL = "workspace-setup-mis-assignment"
+_TIMEOUT = 20
 _SETUP_RELATED_LABELS = ("resolve-worktree-setup-script-path", "worktree-setup")
 
-# Reason-vocabulary markers used to prove the two unreadable-registry causes
-# produce genuinely DIFFERENT reasons, not one canned string reused for both
-# (the "collapsing them recreates the defect" hazard the ticket names).
-_ABSENT_REASON_MARKERS = (
-    "no such file",
-    "not found",
-    "does not exist",
-    "no file exists",
-    "missing",
-    "could not resolve",
-)
-_PERMISSION_REASON_MARKERS = (
-    "permission denied",
-    "not readable",
-    "access denied",
-    "denied",
-    "could not open",
-)
-
 # Vocabulary this report must never contain -- a statement about agent
-# permission, or a pointer at a permission setting (AC-3 / AC-4).
-_FORBIDDEN_PERMISSION_VERDICT_MARKERS = (
-    "permit",  # covers permit/permits/permitted/does not permit
-    "permits_shell",
-)
+# permission, or a pointer at a permission setting (AC-3/AC-4).
+_FORBIDDEN_PERMISSION_VERDICT_MARKERS = ("permit", "permits_shell")
 
-
-def _is_root() -> bool:
-    try:
-        return os.geteuid() == 0
-    except AttributeError:
-        return False
+_UNREADABLE_PHRASES = ("could not be read", "could not read", "cannot be read", "unreadable")
 
 
 def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
@@ -125,21 +96,7 @@ def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess
     )
 
 
-def _make_repo_fixture(
-    tmp_path: Path,
-    *,
-    registry_present: bool,
-    registry_permission_denied: bool = False,
-) -> Path:
-    """Build the Given: a REAL git repository ("the project") in which the
-    agent registry the startup check resolves to either does not exist at
-    all, or exists but cannot be opened for reading.
-
-    Layout:
-        tmp_path/project/                                    <- real git repo
-          .leafcutter/config/agent_registry.json              <- present iff
-                                                                   registry_present
-    """
+def _make_repo_fixture(tmp_path: Path, *, registry_present: bool) -> Path:
     repo_dir = tmp_path / "project"
     repo_dir.mkdir(parents=True)
     _run(["git", "init", "-b", "main", str(repo_dir)])
@@ -148,459 +105,254 @@ def _make_repo_fixture(
     (repo_dir / "README.md").write_text("seed\n", encoding="utf-8")
     _run(["git", "-C", str(repo_dir), "add", "README.md"])
     _run(["git", "-C", str(repo_dir), "commit", "-m", "seed"])
-
     if registry_present:
         registry_path = repo_dir / ".leafcutter" / "config" / "agent_registry.json"
         registry_path.parent.mkdir(parents=True)
-        registry_path.write_text(
-            json.dumps({"agents": [{"id": "worktree-agent", "permits_shell": True}]}),
-            encoding="utf-8",
-        )
-        if registry_permission_denied:
-            registry_path.chmod(0o000)
-
+        registry_path.write_text(json.dumps({"agents": []}), encoding="utf-8")
     return repo_dir
 
 
-def _resolved_registry_location(repo_dir: Path) -> str:
-    return str(repo_dir / ".leafcutter" / "config" / "agent_registry.json")
-
-
-# ---------------------------------------------------------------------------
-# The real-execution harness (self-contained copy of the equivalent harness in
-# test_acd_2100a_1.py / test_acd_2100a_3.py, per those files' own convention
-# of not depending on _workflow_engine_harness.py's private internals).
-# ---------------------------------------------------------------------------
-
-_SHIM_TEMPLATE = r"""
-'use strict';
-
-const { execSync } = require('child_process');
-
-const __RUN_CWD__ = __RUN_CWD_JSON__;
-const __labelResponses__ = __LABEL_RESPONSES_JSON__;
-const __capturedCalls__ = [];
-
-const _CMD_RE = /Run the following command[^\n]*:\n([^\n]+)\n/;
-
-async function agent(promptOrOpts, opts) {
-  var label =
-    (opts && opts.label) ||
-    (typeof promptOrOpts === 'object' && promptOrOpts && promptOrOpts.label) ||
-    null;
-
-  var record = { prompt: promptOrOpts, opts: opts || null, real_result: null };
-  var response;
-
-  if (label !== null && Object.prototype.hasOwnProperty.call(__labelResponses__, label)) {
-    response = __labelResponses__[label];
-  } else if (typeof promptOrOpts === 'string') {
-    var m = promptOrOpts.match(_CMD_RE);
-    if (m) {
-      // Mirrors template_compiler.inject_config's resolution of the ONE
-      // build-time placeholder this file's fixture cares about (see
-      // config/skills_config.default.json: "output_root": ".leafcutter").
-      var cmd = m[1].replace(/\{\{config\.output_root\}\}/g, '.leafcutter');
-      var real = { output: '', exit_code: 0, stderr: '' };
-      try {
-        var out = execSync(cmd, { cwd: __RUN_CWD__, encoding: 'utf8', timeout: 15000 });
-        real.output = out;
-      } catch (e) {
-        real.output = (e.stdout || '').toString();
-        real.stderr = (e.stderr || '').toString();
-        real.exit_code = (e.status === null || e.status === undefined) ? 1 : e.status;
-      }
-      record.real_result = real;
-      response = { output: real.output, exit_code: real.exit_code, stderr: real.stderr };
-    } else {
-      response = { status: 'ok', message: 'stub', passed: true, exit_code: 0, output: '' };
-    }
-  } else {
-    response = { status: 'ok', message: 'stub', passed: true, exit_code: 0, output: '' };
-  }
-
-  __capturedCalls__.push(record);
-  return response;
-}
-
-async function parallel(thunksArg) {
-  var results = [];
-  if (Array.isArray(thunksArg)) {
-    for (var i = 0; i < thunksArg.length; i++) {
-      var fn = thunksArg[i];
-      if (typeof fn === 'function') {
-        try { results.push(await fn()); } catch (_e) { results.push(null); }
-      }
-    }
-  }
-  return results;
-}
-
-async function pipeline(stepsArg) { return parallel(stepsArg); }
-
-async function phase(name, fn) {
-  if (typeof fn === 'function') { return fn(); }
-}
-
-function log(_msg) {}
-
-function workflow() {
-  throw new Error('workflow() cannot be called from within a running workflow.');
-}
-
-const budget = Object.freeze({ tokens_used: 0, tokens_limit: null });
-
-const args = Object.assign({
-  target_file: 'stub/target.py',
-  root_cause: 'stub root cause for harness execution',
-  location_hint: 'line 1',
-  symptom: 'stub symptom',
-  userInput: 'stub user input',
-  ac: 'BO-STUB-1',
-}, __ARGS_JSON__);
-
-(async function __body__() {
-// BEGIN TARGET SCRIPT
-__SCRIPT_BODY__
-// END TARGET SCRIPT
-})().then(function (result) {
-  process.stdout.write(JSON.stringify({
-    calls: __capturedCalls__,
-    result: (typeof result === 'undefined' ? null : result),
-  }));
-}).catch(function (err) {
-  process.stderr.write('harness: top-level error: ' + String(err) + '\n');
-  process.stdout.write(JSON.stringify({
-    calls: __capturedCalls__,
-    result: null,
-    error: String(err),
-  }));
-});
-"""
-
-
-def _strip_exports(source: str) -> str:
-    """Minimal ESM `export` stripper (self-contained copy; see module docstring)."""
-    lines = source.splitlines()
-    out: list[str] = []
-    for line in lines:
-        stripped = line.lstrip()
-        if stripped.startswith("export default "):
-            out.append("/* export default stripped */")
-        elif stripped.startswith("export {"):
-            out.append("/* export block stripped */")
-        elif stripped.startswith("export "):
-            indent = len(line) - len(stripped)
-            out.append(" " * indent + stripped[len("export "):])
-        else:
-            out.append(line)
-    return "\n".join(out)
-
-
-def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict:
-    """Drive the REAL templates/workflows-js/plan-feature.js top-level body,
-    with every "Run the following command ...:\\n<cmd>\\n" agent() dispatch
-    ACTUALLY EXECUTED (not mocked) via a real Node child_process with `cwd`
-    set to the given directory. Returns the parsed
-    {calls: [...], result: ..., error?: ...} payload.
+def _real_preflight_verdict(repo_dir: Path, agent_id: str = "worktree-agent") -> dict:
+    """Run the REAL pre-flight script (not a hand-typed stand-in for its
+    output shape) against `repo_dir` and return its parsed verdict -- the
+    seam this file feeds into the REAL workflow consumer via `args`.
     """
-    source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
-    body = _strip_exports(source)
-
-    shim = (
-        _SHIM_TEMPLATE
-        .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
-        .replace("__LABEL_RESPONSES_JSON__", json.dumps(label_responses))
-        .replace("__ARGS_JSON__", json.dumps(args))
-        .replace("__SCRIPT_BODY__", body)
+    proc = subprocess.run(
+        [sys.executable, str(_PREFLIGHT_SCRIPT), "--agent-id", agent_id],
+        cwd=str(repo_dir),
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT,
     )
-
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".js", prefix="acd_2100b1_", delete=False, encoding="utf-8"
-    ) as tmp:
-        tmp_path = Path(tmp.name)
-        tmp.write(shim)
-
-    try:
-        proc = subprocess.run(
-            ["node", str(tmp_path)], capture_output=True, text=True, timeout=_TIMEOUT
-        )
-    finally:
-        tmp_path.unlink(missing_ok=True)
-
-    stdout = proc.stdout or ""
-    if not stdout.strip():
+    if not proc.stdout.strip():
         raise AssertionError(
-            "harness produced no stdout at all.\n"
-            f"returncode={proc.returncode}\nstderr={proc.stderr[:2000]!r}"
+            f"Pre-flight script produced no stdout. returncode={proc.returncode} "
+            f"stderr={proc.stderr[:2000]!r}"
         )
-    try:
-        payload = json.loads(stdout)
-    except json.JSONDecodeError as exc:
-        raise AssertionError(
-            f"harness produced non-JSON stdout: {exc}\n"
-            f"stdout={stdout[:2000]!r}\nstderr={proc.stderr[:2000]!r}"
-        ) from exc
-
-    payload["_stderr"] = proc.stderr
-    payload["_returncode"] = proc.returncode
-    return payload
+    return json.loads(proc.stdout)
 
 
-def _calls_with_label(payload: dict, label: str) -> list:
-    calls = payload.get("calls", [])
-    return [
-        c for c in calls
-        if isinstance(c.get("opts"), dict) and c["opts"].get("label") == label
-    ]
+def _setup_calls(result) -> list:
+    return [c for c in result.agent_calls if c.label in _SETUP_RELATED_LABELS]
 
 
-def _calls_with_any_label(payload: dict, labels: tuple) -> list:
-    calls = payload.get("calls", [])
-    return [
-        c for c in calls
-        if isinstance(c.get("opts"), dict) and c["opts"].get("label") in labels
-    ]
-
-
-def _combined_report_text(payload: dict) -> str:
-    """Everything a human operator could plausibly read after this run: the
-    final structured result's message, PLUS the text of every agent() prompt
-    dispatched as a reporting/halt step. The AC's own test_rationale notes
-    the buggy code "also prints a message" via a separate dispatched agent()
-    call in addition to the returned result, so checking only one surface
-    would let a forbidden phrase hide in the other.
-    """
-    parts: list[str] = []
-    result = payload.get("result")
-    if isinstance(result, dict):
-        parts.append(json.dumps(result))
-    for call in payload.get("calls", []):
-        prompt = call.get("prompt")
-        if isinstance(prompt, str):
-            parts.append(prompt)
-        elif isinstance(prompt, dict):
-            parts.append(json.dumps(prompt))
-    parts.append(payload.get("_stderr") or "")
+def _report_text(result) -> str:
+    parts = []
+    if isinstance(result.result, dict):
+        parts.append(json.dumps(result.result))
+    parts.append(result.error or "")
+    parts.append(result.stderr or "")
     return "\n".join(parts)
-
-
-def _registry_read_reason(payload: dict) -> str:
-    """The read command's own real stderr/stdout for the registry-read
-    dispatch -- the ground truth for what actually failed and why, captured
-    from the REAL executed shell command (not the workflow's own report).
-    """
-    reads = _calls_with_label(payload, _REGISTRY_READ_LABEL)
-    if not reads:
-        return ""
-    real = reads[0].get("real_result") or {}
-    return f"{real.get('stderr', '')}\n{real.get('output', '')}"
 
 
 class TestUnreadableRegistryReport(unittest.TestCase):
 
-    def test_absent_registry_is_reported_as_unreadable_with_the_location_tried(self):
+    def test_absent_registry_is_reported_as_unreadable(self):
         # covers: ACD-2100b-1
         # angle: criterion
-        """AC-1/AC-2: no file exists at the resolved registry location; the run
-        stops and its report contains that location and states the read
-        failed because nothing is there.
+        """AC-1/AC-2 (report half): a real `read_failure` verdict -- sourced
+        by actually running the real pre-flight script against a repository
+        with no registry file at all (the seam: real producer -> real
+        consumer) -- makes the workflow halt and state the registry could not
+        be read. The specific location-naming half of AC-1 is proven on the
+        classification surface (unit_tests/ac_driven_dev/test_acd_2100b_1.py),
+        where the location is actually computed.
         """
-        with tempfile.TemporaryDirectory(prefix="acd2100b1_absent_") as tmp:
+        with tempfile.TemporaryDirectory(prefix="acd2100b1_wf_absent_") as tmp:
             repo_dir = _make_repo_fixture(Path(tmp), registry_present=False)
-            payload = _run_plan_feature_real(repo_dir, label_responses={}, args={})
+            verdict = _real_preflight_verdict(repo_dir)
 
-            report = _combined_report_text(payload)
+        self.assertEqual(
+            verdict.get("outcome"), "read_failure",
+            f"Test construction error: expected outcome='read_failure'. verdict={verdict!r}",
+        )
 
-            location = _resolved_registry_location(repo_dir)
-            self.assertIn(
-                location, report,
-                "The report does not name the exact location that was tried "
-                f"({location!r}). report={report!r}",
-            )
+        result = run_workflow_under_e2(
+            _PLAN_FEATURE_JS,
+            timeout=_TIMEOUT,
+            args={"workspace_setup_permission": verdict},
+        )
+        self.assertEqual(result.error, "", f"Harness error: {result.error}")
 
-            self.assertTrue(
-                any(
-                    phrase in report.lower()
-                    for phrase in ("could not be read", "cannot be read", "unreadable")
-                ),
-                "The report does not state that the registry could not be "
-                f"read. report={report!r}",
-            )
+        self.assertFalse(
+            _setup_calls(result),
+            f"A step after the permission check ran, but the run must halt "
+            f"at the check. calls={[c.label for c in result.agent_calls]}",
+        )
+        self.assertIsInstance(
+            result.result, dict,
+            f"Expected a structured, CONSUMED halt result. result={result.result!r}",
+        )
+        self.assertNotEqual(
+            result.result.get("status"), "ok",
+            f"The run did not stop for an unreadable registry. result={result.result!r}",
+        )
 
-            result = payload.get("result")
-            self.assertIsInstance(
-                result, dict,
-                f"Expected a structured halt result, got: {result!r}",
-            )
-            self.assertNotEqual(
-                (result or {}).get("status"), "ok",
-                f"The run did not stop for an unreadable registry. result={result!r}",
-            )
+        report = _report_text(result).lower()
+        self.assertTrue(
+            any(phrase in report for phrase in _UNREADABLE_PHRASES),
+            f"The report does not state the registry could not be read. report={report!r}",
+        )
 
     def test_unreadable_registry_report_contains_no_permission_verdict(self):
         # covers: ACD-2100b-1
         # angle: criterion
-        """AC-3/AC-4: the same report (absent-registry case) contains no
-        statement about any agent being permitted or not permitted to run
-        repository commands, and does not name a permission setting --
-        asserted as an absence, because the buggy code also prints a message.
+        """AC-3/AC-4: the read_failure report contains no statement about any
+        agent being permitted or not permitted to run repository commands,
+        and does not name a permission setting.
         """
-        with tempfile.TemporaryDirectory(prefix="acd2100b1_no_verdict_") as tmp:
-            repo_dir = _make_repo_fixture(Path(tmp), registry_present=False)
-            payload = _run_plan_feature_real(repo_dir, label_responses={}, args={})
+        verdict = {
+            "permits": False,
+            "outcome": "read_failure",
+            "agent_id": "worktree-agent",
+            "location": "/example/repo/.leafcutter/config/agent_registry.json",
+        }
+        result = run_workflow_under_e2(
+            _PLAN_FEATURE_JS,
+            timeout=_TIMEOUT,
+            args={"workspace_setup_permission": verdict},
+        )
+        self.assertEqual(result.error, "", f"Harness error: {result.error}")
 
-            report = _combined_report_text(payload).lower()
+        report = _report_text(result).lower()
+        for marker in _FORBIDDEN_PERMISSION_VERDICT_MARKERS:
+            self.assertNotIn(
+                marker, report,
+                f"The report on an unreadable registry contains a "
+                f"permission-verdict marker ({marker!r}). report={report!r}",
+            )
 
-            for marker in _FORBIDDEN_PERMISSION_VERDICT_MARKERS:
-                self.assertNotIn(
-                    marker, report,
-                    "The report on an unreadable registry contains a "
-                    f"permission-verdict marker ({marker!r}), but AC-3/AC-4 "
-                    "require it to contain no statement about agent "
-                    f"permission and no pointer at a permission setting. "
-                    f"report={report!r}",
-                )
-
-    def test_permission_refused_registry_reports_a_different_reason_than_absent(self):
+    def test_permission_refused_and_absent_verdicts_render_different_reports(self):
         # covers: ACD-2100b-1
         # angle: boundary
-        """AC-2: a registry file present but with read permission withheld
-        from the process produces a report naming the location and a reason
-        distinct from the nothing-is-there reason.
+        """AC-2 (see module docstring): the criteria require the report to
+        distinguish "no file" from "permission refused". Feeding two real
+        `read_failure` verdicts -- one sourced from an absent-registry
+        repository, one from a permission-refused registry -- through the
+        REAL workflow renders reports that differ, which is the guarantee
+        this test protects.
+
+        This was a real gap when first authored -- `outcomeMessages.read_failure`
+        was a single static string that did not reference the verdict's
+        `location` (or any other field), so any two `read_failure` verdicts
+        rendered byte-identical reports regardless of why the read failed.
+        This was the same gap unit_tests/ac_driven_dev/test_acd_2100b_1.py
+        documented at the classification layer. It was closed by
+        ACD-2100b-5's port, which threaded the verdict's distinguishing
+        reason into `outcomeMessages`; the assertion remains here, unweakened,
+        as the guard against it returning.
         """
+        import os
+        import stat as _stat
+
+        def _is_root() -> bool:
+            try:
+                return os.geteuid() == 0
+            except AttributeError:
+                return False
+
         if _is_root():
             self.skipTest(
-                "Running as root -- file permission bits do not deny reads, "
-                "so this boundary cannot be constructed."
+                "Running as root -- file permission bits do not deny reads."
             )
 
-        with tempfile.TemporaryDirectory(prefix="acd2100b1_absent_cmp_") as tmp_absent:
-            repo_dir_absent = _make_repo_fixture(
-                Path(tmp_absent), registry_present=False
-            )
-            payload_absent = _run_plan_feature_real(
-                repo_dir_absent, label_responses={}, args={}
-            )
-            report_absent = _combined_report_text(payload_absent).lower()
+        with tempfile.TemporaryDirectory(prefix="acd2100b1_wf_absent_cmp_") as tmp_absent:
+            repo_absent = _make_repo_fixture(Path(tmp_absent), registry_present=False)
+            verdict_absent = _real_preflight_verdict(repo_absent)
 
-        with tempfile.TemporaryDirectory(prefix="acd2100b1_denied_") as tmp_denied:
-            repo_dir_denied = _make_repo_fixture(
-                Path(tmp_denied),
-                registry_present=True,
-                registry_permission_denied=True,
-            )
+        with tempfile.TemporaryDirectory(prefix="acd2100b1_wf_denied_cmp_") as tmp_denied:
+            repo_denied = Path(tmp_denied) / "project"
+            repo_denied.mkdir(parents=True)
+            _run(["git", "init", "-b", "main", str(repo_denied)])
+            _run(["git", "-C", str(repo_denied), "config", "user.email", "test@example.com"])
+            _run(["git", "-C", str(repo_denied), "config", "user.name", "Test"])
+            (repo_denied / "README.md").write_text("seed\n", encoding="utf-8")
+            _run(["git", "-C", str(repo_denied), "add", "README.md"])
+            _run(["git", "-C", str(repo_denied), "commit", "-m", "seed"])
+            registry_path = repo_denied / ".leafcutter" / "config" / "agent_registry.json"
+            registry_path.parent.mkdir(parents=True)
+            registry_path.write_text(json.dumps({"agents": []}), encoding="utf-8")
+            registry_path.chmod(0o000)
             try:
-                payload_denied = _run_plan_feature_real(
-                    repo_dir_denied, label_responses={}, args={}
-                )
+                verdict_denied = _real_preflight_verdict(repo_denied)
             finally:
-                # Restore read permission so TemporaryDirectory cleanup (and
-                # any later inspection) is never blocked by our own fixture.
-                registry_path = (
-                    repo_dir_denied / ".leafcutter" / "config" / "agent_registry.json"
-                )
-                registry_path.chmod(0o644)
+                registry_path.chmod(_stat.S_IRUSR | _stat.S_IWUSR)
 
-            report_denied = _combined_report_text(payload_denied).lower()
+        self.assertEqual(verdict_absent.get("outcome"), "read_failure")
+        self.assertEqual(verdict_denied.get("outcome"), "read_failure")
 
-            location_denied = _resolved_registry_location(repo_dir_denied)
-            self.assertIn(
-                location_denied, _combined_report_text(payload_denied),
-                "The report for a permission-refused registry does not name "
-                f"the location that was tried ({location_denied!r}). "
-                f"report={report_denied!r}",
-            )
+        result_absent = run_workflow_under_e2(
+            _PLAN_FEATURE_JS, timeout=_TIMEOUT,
+            args={"workspace_setup_permission": verdict_absent},
+        )
+        result_denied = run_workflow_under_e2(
+            _PLAN_FEATURE_JS, timeout=_TIMEOUT,
+            args={"workspace_setup_permission": verdict_denied},
+        )
+        self.assertEqual(result_absent.error, "")
+        self.assertEqual(result_denied.error, "")
 
-            reason_denied = _registry_read_reason(payload_denied).lower()
-            self.assertTrue(
-                any(marker in reason_denied for marker in _PERMISSION_REASON_MARKERS),
-                "The real, executed registry-read command for the "
-                "permission-refused fixture did not actually fail for a "
-                f"permission reason -- test construction error. reason={reason_denied!r}",
-            )
-
-            self.assertNotEqual(
-                report_absent, report_denied,
-                "The report for a permission-refused registry is identical "
-                "to the report for an absent registry -- the two distinct "
-                "failure causes must produce distinguishable reasons.",
-            )
-
-            self.assertFalse(
-                any(marker in report_denied for marker in _ABSENT_REASON_MARKERS),
-                "The permission-refused report reuses the nothing-is-there "
-                f"vocabulary instead of stating its own distinct reason. "
-                f"report={report_denied!r}",
-            )
-            self.assertFalse(
-                any(marker in report_absent for marker in _PERMISSION_REASON_MARKERS),
-                "The absent-registry report reuses permission-refused "
-                f"vocabulary instead of stating its own distinct reason. "
-                f"report={report_absent!r}",
-            )
+        self.assertNotEqual(
+            json.dumps(result_absent.result, sort_keys=True),
+            json.dumps(result_denied.result, sort_keys=True),
+            "AC-2 requires the absent-registry report and the "
+            "permission-refused report to differ, but plan-feature.js's "
+            "outcomeMessages.read_failure renders the identical static "
+            "string for both, regardless of the verdict's other fields. "
+            f"result_absent={result_absent.result!r} "
+            f"result_denied={result_denied.result!r}",
+        )
 
     def test_unreadable_registry_halts_the_run_at_the_check(self):
         # covers: ACD-2100b-1
         # angle: reachability
-        """Driving the REAL workflow (via a real Node subprocess, not by
-        importing a helper) with the registry unreadable stops the run at the
-        check -- no step after the check runs -- and the halt is what the
-        caller observes (the returned result, not a value merely computed
-        and discarded).
+        """Driving the REAL workflow entry point (via run_workflow_under_e2,
+        never by importing a helper function) with a read_failure verdict
+        supplied through args stops the run before the step after the check
+        -- and the halt is what the caller observes in the workflow's own
+        CONSUMED, returned result, not merely a value computed and discarded.
         """
-        with tempfile.TemporaryDirectory(prefix="acd2100b1_halt_") as tmp:
-            repo_dir = _make_repo_fixture(Path(tmp), registry_present=False)
-            payload = _run_plan_feature_real(repo_dir, label_responses={}, args={})
+        verdict = {
+            "permits": False,
+            "outcome": "read_failure",
+            "agent_id": "worktree-agent",
+            "location": "/example/repo/.leafcutter/config/agent_registry.json",
+        }
+        result = run_workflow_under_e2(
+            _PLAN_FEATURE_JS,
+            timeout=_TIMEOUT,
+            args={"workspace_setup_permission": verdict},
+        )
+        self.assertEqual(result.error, "", f"Harness error: {result.error}")
 
-            registry_read_calls = _calls_with_label(payload, _REGISTRY_READ_LABEL)
-            self.assertTrue(
-                registry_read_calls,
-                "The startup check's own registry-read dispatch never ran -- "
-                f"cannot prove the check executed at all. calls={payload.get('calls')}",
-            )
+        self.assertFalse(
+            _setup_calls(result),
+            "A step after the unreadable-registry check ran, but the run "
+            f"must stop at the check. calls={[c.label for c in result.agent_calls]}",
+        )
 
-            downstream_calls = _calls_with_any_label(payload, _SETUP_RELATED_LABELS)
-            self.assertFalse(
-                downstream_calls,
-                "A step after the unreadable-registry check ran "
-                f"(labels={_SETUP_RELATED_LABELS}), but the run must stop at "
-                f"the check. calls={payload.get('calls')}",
+        self.assertIsInstance(
+            result.result, dict,
+            f"The caller observes no structured halt result at all "
+            f"(result={result.result!r}) -- the halt must be CONSUMED in "
+            "control flow (returned), not merely computed and discarded.",
+        )
+        self.assertNotEqual(
+            result.result.get("status"), "ok",
+            f"The run's own observable result does not reflect a halt. result={result.result!r}",
+        )
+        result_text = json.dumps(result.result).lower()
+        self.assertTrue(
+            any(phrase in result_text for phrase in _UNREADABLE_PHRASES),
+            f"The halted run's own observable result does not state the "
+            f"registry could not be read. result={result.result!r}",
+        )
+        for marker in _FORBIDDEN_PERMISSION_VERDICT_MARKERS:
+            self.assertNotIn(
+                marker, result_text,
+                f"The halted run's own observable result contains a "
+                f"permission-verdict marker ({marker!r}). result={result.result!r}",
             )
-
-            result = payload.get("result")
-            self.assertIsInstance(
-                result, dict,
-                "The caller observes no structured halt result at all "
-                f"(result={result!r}) -- the halt must be CONSUMED in "
-                "control flow (returned), not merely computed and discarded.",
-            )
-            self.assertNotEqual(
-                (result or {}).get("status"), "ok",
-                f"The run's own observable result does not reflect a halt. result={result!r}",
-            )
-
-            # Halting alone is NOT sufficient proof for this AC: the existing
-            # (buggy) code already halts on any registry problem -- it fails
-            # closed today, just with the wrong diagnosis (KI-ACD-009). What
-            # the CALLER must observe is the corrected unreadable-registry
-            # report, not merely a halt of some kind, or this test would pass
-            # unchanged before python-coder's fix.
-            result_text = json.dumps(result or {}).lower()
-            self.assertTrue(
-                any(
-                    phrase in result_text
-                    for phrase in ("could not be read", "cannot be read", "unreadable")
-                ),
-                "The halted run's own observable result does not state that "
-                f"the registry could not be read. result={result!r}",
-            )
-            for marker in _FORBIDDEN_PERMISSION_VERDICT_MARKERS:
-                self.assertNotIn(
-                    marker, result_text,
-                    "The halted run's own observable result contains a "
-                    f"permission-verdict marker ({marker!r}). result={result!r}",
-                )
 
 
 if __name__ == "__main__":
