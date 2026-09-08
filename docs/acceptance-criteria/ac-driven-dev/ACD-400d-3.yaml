@@ -50,7 +50,7 @@ it_requirements:
   - "The absent-urgency fixture must omit the field entirely from the written record, not write it empty or null — the population this verdict speaks for, roughly three records in ten of the real store, is the key-absent shape."
   - "The same-answer clause must be tested by building two stores that differ in exactly one field and comparing the two whole offered lists. Asserting only the three-way order admits any rule that gives the absent case a tier of its own just above or below the middle, which reorders real work whenever an absent-urgency and a middle-urgency record share a size."
   - "The recorded sizes must be arranged as the criteria specify, with the absent-urgency record the smaller. Equalising them makes the identifier decide and the test then says nothing about which tier the absent case landed in."
-  - "This AC authorises no change to the default. Whether the generous absent-urgency posture should be reconciled with the harsh absent-approval posture in ACD-400c-2 is an open question with BrainCandy; the implementation must not settle it."
+  - "This AC authorises no change to the default. Whether the generous absent-urgency posture should be reconciled with the harsh absent-approval posture in ACD-400c-2 was RULED ON by BrainCandy 2026-09-08: KEEP BOTH AS THEY SHIP. The asymmetry is accepted deliberately. The implementation must still not settle it, now because doing so would reverse a ruling rather than pre-empt an open question."
 test_spec:
   - name: test_work_naming_no_urgency_is_ranked_as_middle_urgency
     target_dir: unit_tests/ac_store/
@@ -105,5 +105,12 @@ notes: |
 
   THIS IS A STATEMENT OF SHIPPED BEHAVIOUR. The scope fence in ACD-400d's notes applies:
   whether a generous default is the right default is BrainCandy's call, not this AC's.
+
+  RULED 2026-09-08 BY BrainCandy: KEEP IT. The generous absent-urgency default stays,
+  and so does the harsh absent-approval default in ACD-400c-2 — the asymmetry between
+  them is accepted rather than left pending. This AC therefore now records a chosen
+  behaviour, not merely an observed one. Its criteria are unchanged, because they
+  already described what ships; what changed is that an implementer who "tidies" this
+  default is now reversing a decision instead of resolving an ambiguity.
 
   AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.

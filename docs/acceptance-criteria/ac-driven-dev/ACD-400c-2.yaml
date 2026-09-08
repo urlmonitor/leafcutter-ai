@@ -49,7 +49,7 @@ it_requirements:
   - "The verdict must be obtained by executing the scanner over a temporary store through its real command surface; no assertion about the source text of scan_ac_store.py satisfies this AC."
   - "The absent-field fixture must omit the approval key entirely from the written record. A record written with an empty string, a null, or the key present-but-blank tests a different input than the one the criteria name, and the population of ~30% of the real store this AC speaks for is the key-absent shape."
   - "The same-answer clause must be tested by building two stores that differ in exactly one field and comparing the two full answers, not by asserting each store's answer against a separately-written expectation. Comparing the answers is what forbids a future implementation that gives the absent case a tier of its own."
-  - "This AC authorises no change to the default. The inconsistency it records against ACD-400d-3 — absent approval is treated harshly, absent urgency generously — is an open question with BrainCandy and must not be resolved in either direction by the implementation."
+  - "This AC authorises no change to the default. The inconsistency it records against ACD-400d-3 — absent approval is treated harshly, absent urgency generously — was RULED ON by BrainCandy 2026-09-08: KEEP BOTH DEFAULTS AS THEY SHIP. The asymmetry is accepted deliberately, not tolerated pending a decision. The implementation must still not resolve it in either direction, and the reason is now stronger rather than weaker: changing either default would contradict a ruling instead of pre-empting an open question. This AC and ACD-400d-3 are the paired written account of that accepted asymmetry."
 test_spec:
   - name: test_a_record_with_no_recorded_approval_is_withheld
     target_dir: unit_tests/ac_store/
@@ -109,9 +109,15 @@ notes: |
   generously (the work is ranked as though it were middle-urgency — ACD-400d-3). Both
   postures ship today; both are defensible in isolation; the inconsistency between them
   was invisible until both were written down, which is the whole argument for writing
-  them down. NO CHANGE IS PROPOSED to either. If BrainCandy decides the two defaults
-  should be harmonised, this AC and ACD-400d-3 are the two records to amend, and the
-  criteria in each state the chosen behaviour explicitly rather than by omission, so a
-  ruling either way is a visible edit rather than a silent drift.
+  them down. NO CHANGE IS PROPOSED to either.
+
+  RULED 2026-09-08 BY BrainCandy: KEEP BOTH DEFAULTS AS THEY SHIP. The asymmetry is
+  accepted, not merely unresolved. That distinction is the point of recording it here:
+  a reader who rediscovers the inconsistency next year should find a decision, not an
+  open question they are tempted to close on their own initiative. The paragraph above
+  is kept verbatim as the case that was put; this paragraph is its answer. Harmonising
+  the two defaults now requires reversing a ruling, and this AC together with
+  ACD-400d-3 are still the two records that would have to be amended to do it — which
+  was always the point of stating each behaviour explicitly rather than by omission.
 
   AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.

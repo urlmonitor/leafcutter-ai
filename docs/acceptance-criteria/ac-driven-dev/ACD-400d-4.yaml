@@ -87,8 +87,21 @@ risk_surface: contract_boundary
 notes: |
   AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Decomposes ACD-400d.
 
-  OPEN PRODUCT QUESTION — WRITTEN AGAINST OBSERVED BEHAVIOUR, NOT AGAINST A POLICY.
-  ESCALATED TO BrainCandy, NOT ANSWERED HERE.
+  RULED 2026-09-08 BY BrainCandy: KEEP THE SHIPPED BEHAVIOUR. Ruling (a) of the three
+  named below. The question recorded here is now CLOSED, and this AC is the written
+  account of a behaviour that is chosen rather than merely observed. Nothing in the
+  criteria changes — they already described what ships — but their standing does: an
+  implementation that adds case-insensitive matching, whitespace trimming, a warning on
+  an unrecognised value, or vocabulary validation on this path now contradicts a
+  decision rather than pre-empting an undecided one. The it_requirement forbidding those
+  four additions stands unamended and is the enforcement of this ruling.
+
+  The reasoning below is kept verbatim rather than deleted, because a ruling that
+  discards the argument it ruled on cannot be revisited by anyone who was not present
+  for it. Read it as the case that was considered and decided, not as a live question.
+
+  ORIGINAL FRAMING, AS ESCALATED — OPEN PRODUCT QUESTION, WRITTEN AGAINST OBSERVED
+  BEHAVIOUR, NOT AGAINST A POLICY.
 
     An author who means "critical" and types "Critical" gets work that sorts BELOW
     everything marked low. The mistake is silent in both directions: the queue reports
