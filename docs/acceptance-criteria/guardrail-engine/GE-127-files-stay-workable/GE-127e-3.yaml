@@ -1,0 +1,453 @@
+id: GE-127e-3
+title: "The refusal offers only help that actually arrives, and a bare verdict is preferred to a promise nothing keeps"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked file of a kind the size standard covers is refused for its
+    length, and the refusal names a further action — something to run, something
+    to read, a helper to use, or a specialist to bring in,
+  When the reader carries out that action exactly as the refusal states it, from
+    the place the refusal says to carry it out,
+  Then the action can be carried out as stated, and it produces the thing the
+    refusal says it produces,
+  And given the refusal states that any work was already done on the author's
+    behalf before they read it,
+  When that claim is checked against what the run producing the refusal actually
+    did,
+  Then that work is observable as having occurred during that run,
+  And the refusal contains no statement that anything will be done on the
+    author's behalf after the refusal is issued,
+  And given instead a refusal that names no further action at all and claims no
+    work of any kind,
+  When the author reads it,
+  Then this criterion is satisfied — a refusal that offers nothing is acceptable
+    and a refusal that offers something that does not arrive is not, because the
+    second converts a known gap into a false belief while the first leaves the
+    gap visible.
+depends_on:
+  - GE-127e
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122c-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ANTI-PRECEDENT AND ITS MECHANICAL LESSON, BOTH RECORDED IN THIS COMPONENT
+      ALREADY — READ IT BEFORE IMPLEMENTING. That record documents
+      check_glossary_coverage.py: published as automatically dispatching a triage
+      specialist, its own docstring returns "Always 0 (fail-open contract)" and its
+      dispatch path stamps every input with the reason "standalone-mode placeholder".
+      It also settles the mechanics this record depends on: a git pre-commit hook is
+      a subprocess at commit time — it can BLOCK and PRINT, it CANNOT bring in an
+      agent; only a live-session hook can. A file-size refusal is emitted at commit
+      time, so any sentence in it promising that a specialist has been or will be
+      engaged is unkeepable by construction. NOT A DUPLICATE: GE-122c-1 owns the
+      identifier-collision guard's authoring-time dispatch and REQUIRES one; this
+      record owns what a commit-time size refusal may claim, and requires that it
+      claim nothing it cannot keep.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The incumbent refusal points the author at a refactoring helper. Whether that
+      pointer survives this record is decided by running it: if the named helper can
+      be used as the message states and does what the message says, it stays; if it
+      cannot, the sentence is deleted rather than softened. This is the concrete
+      first application of the criterion and it must be performed, not assumed.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      Carries the substance. This record forbids empty promises and would be
+      satisfied by a refusal that says nothing at all; GE-127e-1 is what makes saying
+      nothing insufficient. The two are complementary floors and neither may absorb
+      the other.
+  - path: docs/acceptance-criteria/code-review/CR-100-refactoring-guidance/CR-100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THIS IS WHERE THE FENCE BITES HARDEST. Pointing the author at a
+      review that has not been run is exactly the promise this record forbids. If a
+      refusal cites anything CR-100's work produces, the cited thing must already
+      exist and be reachable at the moment of the refusal. Reuse what CR-100
+      produces; do not promise it into existence, and do not widen CR-100 to absorb
+      this.
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, SAME READING. A refusal that says a safe restructuring will be
+      performed, or has been prepared, is claiming INF-800's work. It may not, unless
+      that work demonstrably happened in the run that produced the refusal.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Establishes what the commit-time surface can and cannot do, which is the
+      whole ceiling on what a refusal is permitted to promise.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is the entire method
+      here: the only admissible evidence for "the action can be carried out" is
+      carrying it out. Asserting that the refusal mentions a helper, or that a
+      dispatch function is defined, is precisely how the anti-precedent stayed green.
+  - path: templates/workflows/code-refactoring-specialist.md
+    relationship: context
+    status: exists
+    relevance: >-
+      IT PO — THE ARTIFACT BEHIND THE SENTENCE THAT SHIPS TODAY, AND THE FIRST APPLICATION
+      IS NOT HYPOTHETICAL. This is what `/code-refactoring-specialist` resolves to; it is
+      deployed as a slash command in the workspace install, so the pointer is not simply
+      dead. But read step 1 before deciding the sentence survives: it instructs running
+      `python .agent/skills/code-analysis/scripts/analyze_structure.py <file>`, and a search
+      of the whole workspace at enrichment time found no file of that name anywhere. That is
+      a promise one level down from the refusal, and the criterion's evidence bar reaches it
+      — carrying out the action as stated is what settles whether it produces the thing the
+      refusal says it produces. Note also that a pre-commit refusal is read in a terminal:
+      whether a slash command is an action the reader can carry out FROM THE PLACE THE
+      REFUSAL SAYS TO CARRY IT OUT is exactly what the first descriptor must establish
+      rather than assume.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. WATCHED_REGISTRIES binds hooks_manifest.hooks
+    (by id) and the document's own top level (by mapping key) on commit_guardian.json. This
+    record adds neither: its whole effect is to audit, and where necessary DELETE, sentences
+    in a printed message. Deleting text registers nothing. `check-file-size` is already a
+    manifest id and `file_size` already a top-level key, both read in this worktree. Plain
+    -list spec form; no config_schema_fragment invented to satisfy the structured-spec
+    validator.
+  - >-
+    THE FIRST APPLICATION IS AN INVENTORY OF EVERY SENTENCE THE GUARD PRINTS, AND IT MUST BE
+    PERFORMED RATHER THAN ASSUMED. The audited population is every sentence in the refusal,
+    including all of the ones inherited from the incumbent message: the refactor-and-split
+    instruction, the do-not-strip-content warning, the `@documentation-expert` branch, the
+    `/code-refactoring-specialist` branch, the generic fallback branch, and the parenthetical
+    about enforcing the check over time. Each is either evidenced by carrying it out or
+    deleted. There is no third disposition — softening a sentence to "consider" leaves the
+    reader exactly where a dead dispatch leaves them, which is the failure GE-122c-1 records.
+  - >-
+    THREE MEASURED FACTS ABOUT THE INCUMBENT SENTENCES, RECORDED SO THE AUDIT STARTS FROM
+    EVIDENCE RATHER THAN FROM SCRATCH — AND NONE OF THEM IS THE VERDICT, WHICH ONLY RUNNING
+    THE ACTION CAN GIVE. (a) `/code-refactoring-specialist` resolves to
+    templates/workflows/code-refactoring-specialist.md and IS deployed as a slash command in
+    the workspace install, so the pointer is not simply dead. (b) That workflow's own step 1
+    instructs running `python .agent/skills/code-analysis/scripts/analyze_structure.py`, and
+    no file of that name exists anywhere in the workspace — a promise one level below the
+    refusal, which this criterion's evidence bar reaches. (c) The `@documentation-expert`
+    branch fires only for a path ending `.md`, and `.md` is not in checked_extensions, so
+    that branch is unreachable at every commit: an unreachable sentence cannot be evidenced
+    by carrying it out and is therefore deleted, not defended.
+  - >-
+    A COMMIT-TIME HOOK CAN BLOCK AND PRINT; IT CANNOT BRING IN AN AGENT. That is settled in
+    this component by GE-122c-1 and it is the ceiling on what any sentence here may claim. No
+    sentence may state or imply that a specialist has been engaged, that a review has been
+    run, that anything has been queued, or that a report will follow. The pre-commit process
+    exits and nothing survives it. Any capability that genuinely requires a live session
+    belongs to a live-session surface and must be named as something the READER does, never
+    as something that has been done or will be done for them.
+  - >-
+    "ALREADY DONE" IS A CLAIM ABOUT THE RUN THAT PRINTED THE SENTENCE, AND MUST BE OBSERVABLE
+    IN THAT RUN. If the refusal says work was performed on the author's behalf — a file
+    parsed, an analysis computed, a candidate division derived — that work must be evidenced
+    from the same invocation, not from a prior run, not from a cache and not from a
+    capability that exists somewhere in the package. The description GE-127e-1 produces is
+    the one such claim this tree creates, and it is honest precisely because it is computed
+    in that run and printed in that message.
+  - >-
+    DELETION IS THE COMPLIANT MOVE AND MUST NOT BE TRADED FOR SUBSTITUTION. This record is a
+    ceiling, not a floor: a refusal that offers nothing passes it. The pressure an implementer
+    will feel — to replace a deleted sentence with a vaguer one so the message does not look
+    empty — is exactly how the incumbent message came to exist. The floor is GE-127e-1's, and
+    is met by describing the file, never by adding a sentence in order to have one.
+  - >-
+    THE AUDIT HAS NO STANDING ENFORCEMENT MECHANISM AND MUST NOT ACQUIRE A FAKE ONE. Do not
+    add an approved-sentence allowlist, a message-template registry, or a lint rule that
+    checks the refusal text against a fixture — every one of those passes on a guard that
+    delivers nothing, which is the family of assertions GE-122c-1's coverage note rules out.
+    The durable enforcement is the descriptors below, which carry out whatever the message
+    names.
+  - >-
+    Must follow the repo error-handling policy for any action-verification code that reaches
+    the filesystem or a subprocess: specific-exception try/except, log at WARNING or higher or
+    re-raise, no bare or blind excepts. Note that verification belongs in the TEST, not in the
+    gate — the gate must not attempt to check its own message at commit time, which would put
+    I/O of unknown cost on every refusal.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE. The message the author
+    actually reads is printed by the DEPLOYED copy under
+    .leafcutter/scripts/commit_guardian/. A sentence deleted only from
+    templates/scripts/commit_guardian/check_file_size.py leaves the unkeepable promise on
+    screen at every real commit while the source-tree tests report it gone. Re-run `python
+    scripts/build.py --target-dir .` as part of the change, and let the deployed descriptor
+    below be the thing that proves it.
+test_spec:
+  - name: test_ge_127e_3_every_action_the_refusal_names_is_carried_out_and_produces_what_it_says
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Produce a real refusal from a real commit attempt, extract every further action it
+      names — something to run, something to read, a helper to use, a specialist to bring in
+      — and CARRY EACH ONE OUT, exactly as stated, from the place the refusal says to carry
+      it out. Each must be performable and must produce the thing the refusal says it
+      produces. Extraction is from the actual emitted text, so a sentence added later is
+      audited automatically rather than needing the test updated. NAMED MUTATION (mandatory,
+      run it, do not merely describe it — the BA's injection 1): "the action can be carried
+      out as stated, and it produces the thing the refusal says it produces" — MUTATION:
+      append to the refusal one sentence naming a helper that the run does not invoke and
+      that cannot be carried out as written — the exact shape of the recorded anti-precedent,
+      e.g. a sentence stating that a refactoring specialist has been engaged for this file.
+      Under that injection this clause must go RED, and must return to green on revert.
+      Without this injection the clause is satisfied by a refusal that names nothing, which
+      is today's state for every sentence except the helper pointer.
+  - name: test_ge_127e_3_the_incumbent_helper_pointer_is_disposed_of_by_running_it_not_by_assumption
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      THE FIRST APPLICATION, AGAINST THE MESSAGE THAT SHIPS TODAY. Refuse a real over-limit
+      `.py` file and take the shipped sentence that names `/code-refactoring-specialist` at
+      its word: establish, by carrying it out, whether that action is available to the reader
+      of a terminal refusal and whether it produces an intelligent split of the named file.
+      The chain is followed all the way down — the workflow exists and is deployed, but its
+      own step 1 runs
+      `python .agent/skills/code-analysis/scripts/analyze_structure.py <file>`, which was
+      found nowhere in the workspace at enrichment time. Whichever way the evidence falls,
+      the sentence either stays because it was run or is deleted; a softened wording fails
+      this descriptor. The same treatment is applied to the `@documentation-expert` branch,
+      which cannot fire at all while `.md` is absent from checked_extensions, and to the
+      generic fallback branch.
+  - name: test_ge_127e_3_a_claim_that_work_was_already_done_is_observable_in_that_same_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      For every statement in the refusal that work was performed on the author's behalf
+      before they read it, check the claim against what the run that produced the refusal
+      actually did — same invocation, no cache, no prior run, no capability that merely
+      exists in the package. The description GE-127e-1 produces is the intended passing case
+      and must be shown to pass by being computed in that run; a claim sourced from anywhere
+      else fails.
+  - name: test_ge_127e_3_the_refusal_makes_no_promise_about_anything_happening_afterwards
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The refusal contains no statement that anything will be done on the author's behalf
+      after it is issued. Asserted against the real emitted text of a real refusal, and
+      against the process itself: nothing is queued, spawned, scheduled or written for later
+      consumption during the run. NAMED MUTATION (mandatory, run it — the BA's injection 2):
+      "the refusal contains no statement that anything will be done on the author's behalf
+      after the refusal is issued" — MUTATION: append a sentence stating that the file has
+      been queued for follow-up, or that a report will be produced for it. Under that
+      injection this clause must go RED, and must return to green on revert. This is the
+      future-tense version of the same defect and it is the one most likely to be added in
+      good faith by an implementer who has built the queueing but not the consuming end.
+  - name: test_ge_127e_3_a_refusal_that_offers_nothing_at_all_satisfies_this_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE CEILING STATED AS A PERMISSION, WHICH IS WHAT MAKES DELETION COMPLIANT. A refusal
+      naming no further action and claiming no work of any kind passes this record. The
+      descriptor exists so that removing an unkeepable sentence is demonstrably not a
+      regression against this criterion, and so that no implementer is pressured into adding
+      a sentence in order to have one. Its counterpart floor lives in GE-127e-1, and this
+      descriptor deliberately does not assert it.
+  - name: test_ge_127e_3_the_audited_text_is_the_one_the_registered_hook_actually_emits
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. The text under audit is captured from the registered hook
+      path's own output stream, not from a message-assembling helper called in-process. A
+      message that is honest when assembled directly and different when printed through the
+      hook is the only thing this descriptor can catch, and it is the difference between
+      auditing what the author reads and auditing what the code intended them to read.
+  - name: test_ge_127e_3_the_deployed_copy_carries_no_unkeepable_sentence_in_a_cold_process
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, run the DEPLOYED copy in a cold process and re-run the action audit
+      against ITS refusal. This is the descriptor that catches the specific way this record
+      fails silently: a sentence deleted from the canonical template but never built leaves
+      the unkeepable promise on screen at every real commit while every source-tree test
+      reports it gone.
+test_rationale: |
+  Every arm of this criterion asserts an absence or a property of text that may not be present
+  at all, and all of them are green on arrival against a refusal that names nothing. That is
+  why both of the BA's injections are carried into descriptors verbatim rather than restated
+  as prose: without them, an implementation that deletes the helper pointer and adds nothing
+  passes this record trivially and would keep passing after someone later re-adds a promise.
+
+  The evidence bar is not negotiated down here. "The action can be carried out" is evidenced by
+  CARRYING IT OUT in the test, from a real refusal produced by a real commit attempt. The
+  descriptors deliberately exclude the entire family of assertions GE-122c-1's coverage note
+  rules out for the same reason in this same component: that the refusal contains a path which
+  exists on disk, that a helper is registered somewhere, that a dispatch function is defined,
+  or that the text matches an approved list of sentences. Each of those passes on a guard that
+  delivers nothing, which is precisely how the anti-precedent stayed green while every author
+  who read it believed they were covered.
+
+  Actions are extracted from the actual emitted text rather than from a list the test authored.
+  A fixed list would make the audit stale the moment a sentence is added, and a later sentence
+  is exactly the shape of the second injection — a queueing promise added in good faith by
+  someone who built half of it.
+
+  The permission descriptor is not filler. Read alone this record is passed by a refusal that
+  offers nothing, and that is deliberate; stating the ceiling as a permission is what makes
+  deleting an unkeepable sentence the compliant move rather than something an implementer will
+  quietly avoid by softening the wording instead. The deployed descriptor is likewise not
+  redundant with the reachability one: reachability proves the audited text is what the hook
+  path emits, deployed proves it is what the BUILT copy emits, and only the second catches the
+  unbuilt deletion.
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-127e-3-i
+    contract: >-
+      The honesty ceiling and the named-line discipline it implies: any state the refusal
+      reports must be one the run actually reached, stated in its own words rather than
+      papered over. GE-127e-3-i applies that ceiling to the one state where the description
+      could not be produced, and inherits from here the rule that a substitute sentence is
+      worse than saying nothing.
+expects_from:
+  ac_id: GE-127a-1
+  contract: >-
+    The refusal and the single outcome stream it is emitted through. This record adds
+    no content to it; it constrains what that content is permitted to CLAIM, and
+    applies to every sentence in the refusal including any inherited from the
+    incumbent message.
+origin_agent: business-analyst
+created: 2026-09-08
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-08
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: this record''s whole effect
+    is to audit and where necessary DELETE sentences in a printed message, which registers
+    nothing; neither of the two containers WATCHED_REGISTRIES binds on commit_guardian.json
+    (hooks_manifest.hooks by id, the document''s own top level by mapping key) gains an entry,
+    and both were read in this worktree. COMPLEXITY M. THE FIRST APPLICATION WAS PARTLY
+    MEASURED AT ENRICHMENT AND THE FINDINGS ARE RECORDED IN it_requirements SO THE AUDIT STARTS
+    FROM EVIDENCE — but the verdict is left to the descriptors, because only carrying the
+    action out settles it: (a) `/code-refactoring-specialist` resolves to
+    templates/workflows/code-refactoring-specialist.md and IS deployed as a slash command, so
+    the pointer is not simply dead; (b) that workflow''s own step 1 instructs running
+    `python .agent/skills/code-analysis/scripts/analyze_structure.py`, and no file of that name
+    exists anywhere in the workspace — an unkeepable promise one level below the refusal, which
+    this criterion''s evidence bar reaches; (c) the `@documentation-expert` branch fires only
+    for `.md`, which is not in checked_extensions, so it is unreachable at every commit and
+    cannot be evidenced by carrying it out. A new doc_link to the workflow template carries
+    those facts to the implementer. GE-122c-1''s mechanical ceiling is written in as a
+    constraint: a commit-time hook can block and print, it cannot bring in an agent, so no
+    sentence may claim a specialist has been or will be engaged. Two explicit prohibitions on
+    fake enforcement: no approved-sentence allowlist or message-template fixture (the family
+    GE-122c-1''s coverage note rules out), and no self-checking of the message inside the gate
+    at commit time. declares_side_effect false: the record removes text and adds none; every
+    Then clause reports to a stream and sets an exit status. test_spec: seven executing
+    descriptors, two carrying the BA''s named mutations verbatim, one performing the first
+    application against the shipped message, one the permission arm that makes deletion
+    compliant, one through the registered hook entry point and one on the deployed copy — the
+    last being the only one that catches a sentence deleted from the template but never built.'
+superseded_by: null
+covered_by:
+  - GE-127e-3-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS COMPONENT HAS THE SCAR, AND IT IS ALREADY WRITTEN DOWN TWICE. A gate here is
+  published as automatically bringing in a triage specialist and does not; its
+  dispatch path stamps every input with a placeholder reason and it returns success
+  unconditionally. Every author who read that line believed they were covered. The
+  L1's notes name this as load-bearing and they are right: a message naming a tool
+  that is not invoked is WORSE than a bare verdict, because a bare verdict leaves a
+  visible gap while a false promise closes it in the reader's head.
+
+  WHY THE LAST ARM SAYS "SATISFIED" AND NOT "INSUFFICIENT". Read alone, this record
+  is passed by a refusal that offers nothing — and that is deliberate, because the
+  alternative is a criterion that pressures an implementer to add a sentence in order
+  to have one, which is how the incumbent message came to exist. The substance
+  obligation lives in GE-127e-1 and the specificity obligation in GE-127e-2. This
+  record is the ceiling, not the floor, and stating the ceiling as a permission is
+  what makes deleting an unkeepable sentence the compliant move rather than a
+  regression.
+
+  THE FIRST APPLICATION IS NOT HYPOTHETICAL AND MUST BE PERFORMED. The refusal that
+  ships today names a refactoring helper. Run it, as the message says to run it, from
+  where the message says to run it. If it works as described, the sentence stays and
+  the record is satisfied by evidence rather than by assumption. If it does not, the
+  sentence is deleted. There is no third disposition — softening the wording to
+  "consider" leaves the reader in the same place and is the failure mode GE-122c-1
+  records as indistinguishable from a dead dispatch from the author's point of view.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Every arm of this
+  criterion asserts an absence or a property of text that may not be present, and all
+  of them are green on arrival against a refusal that names nothing. Written so the
+  IT PO can lift them verbatim into test descriptors.
+
+  (1) "the action can be carried out as stated, and it produces the thing the
+      refusal says it produces" — MUTATION: append to the refusal one sentence naming
+      a helper that the run does not invoke and that cannot be carried out as written
+      — the exact shape of the recorded anti-precedent, e.g. a sentence stating that
+      a refactoring specialist has been engaged for this file. Under that injection
+      this clause must go RED, and must return to green on revert. Without this
+      injection the clause is satisfied by a refusal that names nothing, which is
+      today's state for every sentence except the helper pointer.
+
+  (2) "the refusal contains no statement that anything will be done on the author's
+      behalf after the refusal is issued" — MUTATION: append a sentence stating that
+      the file has been queued for follow-up, or that a report will be produced for
+      it. Under that injection this clause must go RED, and must return to green on
+      revert. This is the future-tense version of the same defect and it is the one
+      most likely to be added in good faith by an implementer who has built the
+      queueing but not the consuming end.
+
+  THE EVIDENCE BAR, STATED SO IT IS NOT NEGOTIATED DOWN AT ENRICHMENT. "The action
+  can be carried out" is evidenced by carrying it out in the test, from a real
+  refusal produced by a real commit attempt. It is NOT evidenced by asserting the
+  refusal contains a path that exists on disk, nor by asserting a helper is
+  registered somewhere, nor by asserting the text matches an approved list of
+  sentences. GE-122c-1's coverage note rules out that entire family of assertions for
+  the same reason, in the same component, and its reasoning transfers unchanged: each
+  of them passes on a guard that delivers nothing.
+
+  BOUNDARY WITH GE-127d, WHICH IS EASY TO BLUR AND THE L1 SAYS SO. GE-127d requires
+  the limit and the quoted length to be TRUE and reproducible. This record requires
+  the OFFER OF HELP to be true. A gate can quote a perfectly accurate number and
+  still promise a tool that does not exist, and it can offer scrupulously honest help
+  about a limit it is not enforcing.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity,
+  it_requirements, test_spec, test_rationale and declares_side_effect. Both mutations
+  above are written to be turned directly into test descriptors.
