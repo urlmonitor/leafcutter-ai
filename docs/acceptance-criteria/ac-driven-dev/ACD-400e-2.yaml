@@ -1,0 +1,137 @@
+id: ACD-400e-2
+components:
+  - ac_driven_dev
+title: "The three older records that describe the queue wrongly are corrected, and the queue is left alone"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three existing records — ACD-400, ACD-400a and ACD-400a-1 — each state in
+    their own criteria how the queue chooses work, and each disagrees with what the
+    queue does: two of them name an order of two keys where three are consulted, and
+    all three present the admission tests as a set that omits approval,
+  When the statement each record makes is turned into a store built exactly as that
+    record describes and the queue is asked which work is ready,
+  Then the queue's answer is the one that record predicts, for each of the three
+    records in turn,
+  And the record that was corrected demonstrably disagreed beforehand: run against
+    the same three records as they stand today, the same check reports a disagreement
+    for each of them,
+  And the correction is a change to what those three records say and not to what the
+    queue does — for any store, the work the queue offers and the order it offers it
+    in are the same after the correction as before,
+  And no lifecycle field on any of the three records is altered: only the wording of
+    what each says about selection changes.
+depends_on: [ACD-400e, ACD-400e-1]
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a-1.yaml
+    relationship: modifies
+    status: exists
+    relevance: "PRIMARY RECORD TO RECONCILE — wrong in both directions at once. Both quotes independently confirmed verbatim 2026-09-08. Sort: 'the ready list is sorted by estimated_complexity ascending (S before M before L before XL) then by AC id ascending' — the queue consults urgency first (ACD-400d-1). Filter: 'only files with level L2 or L3 AND work_status: todo AND status: active are included in the ready output' — the word 'only' makes an enumeration of three exhaustive where four tests are applied (ACD-400c-1). This is the record whose two halves would have been split across ACD-400c and ACD-400d, and the reason ACD-400e exists as its own L1."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a.yaml
+    relationship: modifies
+    status: exists
+    relevance: "SECOND RECORD TO RECONCILE. Quote confirmed verbatim 2026-09-08: 'And the ready list is sorted by estimated_complexity then AC id'. Its Then clause also enumerates the filter as 'only L2/L3 ACs that are active, todo, and unblocked', again omitting approval. NOTE ITS CHILD CAP: this L1 is full at five L2s and forbids a child_limit_override, so no reconciliation work may be hung beneath it — which is why this AC lives under ACD-400e. NOTE ALSO its work_status is in_progress after a documented correction from a false done; ACD-400e's notes forbid touching it, and the last clause of the criteria above states that fence as a testable condition."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400.yaml
+    relationship: modifies
+    status: exists
+    relevance: "THIRD RECORD TO RECONCILE, one level up. Quote confirmed verbatim 2026-09-08: its L0 criteria describes ready work as 'a scanner identifies which leaf-level ACs are ready for implementation (todo, unblocked, active)' — the same omission of approval. Amending an existing criteria body is governed by the store's authorship protection and by check_ac_governance.py, whose authorised writers include business-analyst and any human identity; the decision to amend is the user's, which is why this AC states the required end state rather than performing it."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "IT-PO FINDING 2026-09-08 — A FOURTH SURFACE, NOT IN THIS AC'S SCOPE. Line 17 reads '/build-ac selects the next highest-priority ready AC'. It is the only place in the repo that gets urgency-first roughly right, and it is still silent on the approval gate. It is deliberately NOT added to this AC's three records: the BA scoped this AC to records whose criteria bodies are protected fields, and widening it here would change a criteria body, which is forbidden at this stage. Raised to BrainCandy as a recommended follow-up."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Every pytest invocation used to run or verify this check must set AC_ENFORCE_STRICT=1, or a red result is masked as an xfail and reads green."
+  - "AMENDING A CRITERIA BODY REQUIRES AN AUDIT-TRAIL ENTRY OR THE COMMIT IS REFUSED. check_ac_governance.py treats `criteria` as a protected field and, on any change to an existing record's criteria, requires that record's `amended_by` list to gain a NEW entry relative to HEAD (ACS-400c-2 / ACS-400c-2-i — a list that exists but is not extended is refused just as an untouched one is). All three amended records need their own new entry in the same commit. This is the gate that actually runs and nothing in the criteria mentions it."
+  - "THE AMENDMENT MUST BE MADE UNDER AN IDENTITY THE GOVERNANCE GATE AUTHORISES. check_ac_governance.py permits protected-field writes only from product-owner, business-analyst, it-po, or an identity absent from agent_registry.json (i.e. a human). A coder identity present in the registry is refused. If the implementing agent runs with its own identity set, the amendment half of this AC is blocked and must be escalated rather than worked around by unsetting the identity."
+  - "`amended_by` is the ONLY lifecycle-adjacent field this AC may write, and it may write it only as the audit trail the gate above demands. ACD-400a is work_status: in_progress after a documented correction from a false done; work_status, readiness, req_status, status, priority and covered_by on all three records must be identical before and after."
+  - "The red baseline must be captured with the SAME check that later reports green — not a separate ad-hoc probe. Run it against the three records as they stand, record the three disagreements it reports, then amend, then re-run. Two different checks either side of the change prove nothing about the change."
+  - "The queue must be untouched. scripts/ac_store/scan_ac_store.py must be byte-identical before and after this AC, and the offer it returns for any store must be unchanged. Making the record and the queue agree by editing the queue satisfies every clause of the criteria and silently redirects every subsequent build — it is the specific hazard ACD-400c was raised to close."
+  - "The check must reach its verdict by building the store each record describes and asking the queue, never by comparing the record's wording against the scanner's source text. Both sides here are text, which makes this an unusually inviting place to write a check that passes on dead prose."
+  - "Reuse the checker delivered by ACD-400e-1b rather than authoring a second, parallel comparison. Two independent implementations of prose-versus-queue agreement will disagree with each other before either disagrees with the queue."
+test_spec:
+  - name: test_the_three_records_disagree_with_the_queue_before_the_amendment
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Run against ACD-400, ACD-400a and ACD-400a-1 as they stand before the amendment, the check reports a disagreement for each of the three — the red baseline that proves the correction corrected something real."
+  - name: test_each_amended_record_now_predicts_what_the_queue_answers
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "After the amendment, a store built exactly as each of the three records describes produces the answer that record predicts, for each record in turn."
+  - name: test_the_queue_behaves_identically_before_and_after_the_correction
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Across the fixture stores used by the ACD-400c and ACD-400d families, the offered list and its order are unchanged by this AC — the record moved, not the queue."
+  - name: test_no_lifecycle_field_on_the_three_records_was_altered
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "docs/acceptance-criteria/ac-driven-dev/{ACD-400,ACD-400a,ACD-400a-1}.yaml"
+    description: "Reading the three real committed records, work_status, readiness, req_status, status, priority and covered_by hold the values they held before the amendment, with amended_by the only non-criteria field to have gained an entry."
+test_rationale: "Without the red-baseline test this AC is satisfied by a check that finds no disagreement among three records that were never wrong — which is exactly what a dead check reports. Without the queue-unchanged test it is satisfied by deleting the approval gate. The two together are what make the correction provable and safe, and neither can be inferred from the other."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400e-1b
+  contract: "The agreement checker — given a statement about selection, materialises the store it describes, invokes the scanner's command surface, and returns {statement, predicted, observed, agrees}. This AC feeds it the selection claims extracted from the three records' criteria bodies instead of from the reference page."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Decomposes ACD-400e.
+
+  THE THREE QUOTES WERE VERIFIED INDEPENDENTLY BEFORE THIS AC WAS WRITTEN, not inherited
+  from the PO's summary. All three are verbatim. So is the code they contradict: the
+  queue's answers were obtained by executing it over purpose-built temp stores, not by
+  reading it. A mis-transcribed quote inherited into an L2 would be worse than the gap it
+  was meant to close, so the check was run rather than assumed.
+
+  THE FOURTH CLAUSE IS THE ANTI-VACUITY GUARANTEE ACD-400e'S NOTES DEMAND. Without it,
+  this AC is satisfied by a check that finds no disagreement among three records that were
+  never wrong — which is exactly what a dead check reports. Requiring that the same check,
+  run against the records as they stand TODAY, reports a disagreement for each of the
+  three makes the correction provable: something that genuinely contradicted the queue was
+  genuinely corrected. It is the pattern of a red baseline, expressed inside the
+  requirement rather than left to a test plan.
+
+  THE FIFTH CLAUSE FORBIDS THE CHEAPEST WRONG FIX. Two things disagree; only one of them
+  is wrong. An implementer who reads "make the record and the queue agree" can satisfy it
+  by changing the queue — deleting the approval test, or dropping the urgency key — and
+  every other sentence here would still hold. That would silently redirect every
+  subsequent build, which is the precise hazard ACD-400c was raised to close. Requiring
+  the offer to be unchanged for any store makes the record the thing that moves.
+
+  THE SIXTH CLAUSE FENCES OFF THE LIFECYCLE FIELDS, per ACD-400e's notes. ACD-400a is
+  work_status: in_progress after a documented correction from a false done, and nothing in
+  this tree may touch it. Stated in the criteria rather than only in a note because a fence
+  that only exists in prose is not one a test can hold.
+
+  WHY THE REPAIR IS ONE AC AND NOT THREE. The same two errors run through all three
+  records, and ACD-400a-1 carries both of them in one file. Splitting the repair per record
+  would put two independent edits into ACD-400a-1 with no owner for their interaction;
+  splitting it per error would put two edits into that same file from different ACs, with
+  a guaranteed conflict for whichever lands second. That is the shotgun-surgery shape
+  ACD-400e was created to avoid, and it would be reintroduced one level down.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.
