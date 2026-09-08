@@ -1,4 +1,4 @@
-id: BP-100n-4-ii
+id: BP-1600a-2-ii
 components:
   - build_pipeline
 title: "The check states how many gate scripts it compared, and a run that compared none is an unresolved run that fails — a comparison that never happened must not be able to look like a comparison that found nothing wrong"
@@ -37,9 +37,9 @@ criteria: |
     stated number is what establishes the run as clean — a run is never reported
     clean on the strength of having found nothing to report.
 depends_on:
-  - BP-100n-4
+  - BP-1600a-2
 doc_links:
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml"
     relationship: parent
     status: exists
   - path: "docs/known-issues/commit-guardian.md"
@@ -143,7 +143,7 @@ it_requirements:
     and exit 1 for a reported finding. Every new unresolvable condition here — unlistable
     directory, empty directory, unreadable registry, unparseable registry — reports through
     that same line and that same exit status. Do not mint a third verdict vocabulary and do
-    not widen the exit-status set; BP-100n-4's reported-finding case keeps exit 1, so the two
+    not widen the exit-status set; BP-1600a-2's reported-finding case keeps exit 1, so the two
     outcomes stay distinguishable.
   - >-
     THE INDETERMINATE PATHS MUST BE EXERCISED FOR REAL. Mirrors BP-100k-4-i's standing
@@ -314,7 +314,7 @@ test_rationale: |
   behind source-tree imports.
 delivers_to: null
 expects_from:
-  ac_id: BP-100n-4
+  ac_id: BP-1600a-2
   contract: >-
     The enumerated disk-side and registry-side populations whose sizes this criterion
     requires to be stated, and whose unavailability or emptiness it converts from a
@@ -353,6 +353,26 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-31'
+- reason: renamed-and-moved-BP-100n-4-ii-to-BP-1600a-2-ii
+  by: product-owner
+  at: '2026-09-07'
+  note: >-
+    THIS RECORD WAS BP-100n-4-ii UNTIL 2026-09-07, and its parent BP-100n-4 is now BP-1600a-2.
+    Address change only — criteria, readiness (approved), req_status, work_status, priority,
+    test_spec and it_requirements are untouched. It moved with its parent, which was lifted out
+    of BP-100n into BP-1600a because a commit-gate census belongs with the settings-surface
+    census (BP-1600a-1) under an L1 about populations taken from reality, not under a parent
+    whose title is about absence-reporting. The rename is forced rather than cosmetic: a
+    child's parent is derived from its ID STRING and not from covered_by (GE-106), so a moved
+    child keeping the old prefix would still be counted against BP-100n. NOTE FOR ANYONE
+    FOLLOWING A POINTER TO THIS RECORD'S VERDICT VOCABULARY: this AC's "INDETERMINATE:
+    reason=<text>" contract with its 0/1/2 exit statuses is cited by GE-127b-1-i, by
+    unit_tests/commit_guardian/test_ge_127b_1_i.py and by
+    templates/scripts/commit_guardian/_file_size_ratchet.py. All three were updated to the new
+    id in the same change; the vocabulary itself is unchanged. The old id was rewritten
+    wherever it appears as an identifier, including in the amendment history above; the full
+    reasoning for that choice, and the two surfaces deliberately left alone, are recorded once
+    on BP-1600a-2 rather than repeated here.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -365,7 +385,7 @@ notes: >-
   validated), KI-CG-018 (exits 0 without inspecting anything, and its own "did I look?"
   diagnostic cannot fire on the paths where it did not), and the AC-store validator's
   bare-directory no-op, which made the documented defence against store rot itself a no-op
-  for eight days while reporting clean the whole time. The check specified in BP-100n-4 has
+  for eight days while reporting clean the whole time. The check specified in BP-1600a-2 has
   two independent populations to resolve, either of which can come back empty, so it has two
   new routes into that state on the day it lands.
 

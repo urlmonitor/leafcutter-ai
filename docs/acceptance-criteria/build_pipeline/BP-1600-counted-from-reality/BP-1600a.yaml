@@ -22,16 +22,19 @@ criteria: |
 depends_on:
   - BP-1600
 doc_links:
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml"
     relationship: related
     status: exists
     relevance: >-
-      THE SIBLING CENSUS ON THE COMMIT-GATE SURFACE, AND THE INTENDED SECOND CHILD
-      OF THIS L1 — but not yet, and not from here. BP-100n-4 is the same shape as
-      BP-1600a-1 on a different surface: run-time population on both sides, path
-      identity, report by name, fail the run. It belongs under this L1 on the
-      merits. It has NOT been moved, because moving it means renaming it, and it
-      is cited from roughly sixty places. See this record's notes.
+      THE SIBLING CENSUS ON THE COMMIT-GATE SURFACE, AND NOW THE SECOND CHILD OF
+      THIS L1 — the move landed 2026-09-07, and this text previously said it had
+      not. BP-1600a-2 (formerly BP-100n-4) is the same shape as BP-1600a-1 on a
+      different surface: run-time population on both sides, path identity, report
+      by name, fail the run. BP-1600a-1 counts the SETTINGS surface, BP-1600a-2
+      counts the COMMIT-GATE surface; that is the whole difference between them,
+      and it is why they are two children of one L1 rather than one record. Read
+      them together before building either — the two censuses must agree about
+      what a "script" is and must not grow two different exemption models.
   - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-3.yaml"
     relationship: related
     status: exists
@@ -55,9 +58,11 @@ origin_agent: BrainCandy
 created: 2026-09-07
 amended_by:
   - "split: BP-100n -> BP-100n + BP-1600a [Pattern C, 6 L2 children -> 5 + 1], 2026-09-07. BP-100n had six L2 children against a cap of five and no child_limit_override, deliberately: the record that made it six (the former BP-100n-6) is about guards that were silenced, and its author declined to silence a guard to land it. The user chose SPLIT over override, following the family precedent — BP-100k sat at eight on a live override and was split into BP-100k + BP-100n, discharging the override rather than renewing it. The former BP-100n-6 and its three technical-constraint children were renamed BP-1600a-1 and BP-1600a-1-i/-ii/-iii and moved here. The rename is forced: check_ac_limits.py and the parent-link hooks derive a child's parent from its id string, not from covered_by (GE-106), so a moved child keeping its old prefix would still count against BP-100n."
+  - "split follow-up: BP-100n-4 -> BP-1600a-2 [the deferred second half], 2026-09-07. This L1 goes from one child to two. BP-100n-4 and its two technical-constraint children BP-100n-4-i / -4-ii were renamed BP-1600a-2 / -2-i / -2-ii and moved into this feature folder. WHY THIS RECORD AND NOT BP-100n: the two are the same category — BP-1600a-1 is the census of the SETTINGS surface, BP-1600a-2 is the census of the COMMIT-GATE surface, and both state the rule this L1 exists to name, that the population a check walks is taken from reality and never from a list that can omit things. BP-100n's own title is about absence-reporting, which a census is not. THE PRECONDITION IS DISCHARGED: the original split deferred this move solely because PR #726 was open and unmerged and added five references to BP-100n-4 on an uneditable branch. #726 merged; those five (GE-120c-6, GE-120f, KM-ADM-001, TQ-100b-5, TQ-100c-2-i) were visible and were rewritten with the rest. PURE STRUCTURAL MOVE: criteria text, readiness (BP-1600a-2 stays approved), req_status, work_status and priority are untouched on all three moved records, and no child_limit_override was added. This L1 and its L0 BP-1600 remain readiness: draft — the four approved leaf records under them were approved individually and the composites were not. Citation sweep: 232 occurrences measured across 50 files, 224 rewritten. The 8 left standing are 5 in dated changelog entries and 3 in a generated agent card; both exclusions are argued in this record's notes."
 superseded_by: null
 covered_by:
   - BP-1600a-1
+  - BP-1600a-2
 implemented_by: []
 documentation_triggers:
   - reference-doc
@@ -83,15 +88,20 @@ notes: |
       links criterion to code to green test — the one chain this whole store
       exists to keep honest — and would force implementation-source edits inside
       what is supposed to be a structural bookkeeping change.
-    - BP-100n-4 is readiness: approved and is cited from roughly sixty places: the
-      whole of the GE-127 feature folder, GE-126b-5 and -5-i, the GE-120f family,
-      BO-210a-2, docs/reference/false-green-mechanisms.md (which names it as
-      scheduled work), the guardrail-engine PROJECT_CONTEXT.md, a ticket, and
+    - BP-1600a-2 (then BP-100n-4) is readiness: approved and was, at the time of
+      the split, cited from what this record estimated as roughly sixty places:
+      the whole of the GE-127 feature folder, GE-126b-5 and -5-i, the GE-120f
+      family, BO-210a-2, docs/reference/false-green-mechanisms.md (which names it
+      as scheduled work), the guardrail-engine PROJECT_CONTEXT.md, a ticket, and
       unit_tests/commit_guardian/test_ge_127b_1_i.py. On top of that, the OPEN and
-      UNMERGED PR #726 (branch ac-authoring/census-ownership) adds five more
+      UNMERGED PR #726 (branch ac-authoring/census-ownership) added five more
       references to it — from GE-120c-6, GE-120f, KM-ADM-001, TQ-100b-5 and
-      TQ-100c-2-i — on a branch that is not visible from here and must not be
-      edited from here.
+      TQ-100c-2-i — on a branch that was not visible from the split's worktree and
+      must not have been edited from there. THE ESTIMATE WAS LOW BY ABOUT FOUR
+      TIMES, WHICH IS THE POINT WORTH KEEPING: when the move was actually executed
+      on 2026-09-07 the measured figure was 232 occurrences across 50 files, not
+      sixty. The decision to defer was right for a reason stronger than the one
+      given.
     - The former BP-100n-6 and its three children are cited by nothing outside
       their own family. Its own notes anticipated the rename.
 
@@ -110,13 +120,54 @@ notes: |
   a second surface's census as a sixth child of a parent whose title is about
   absence-reporting — would have hidden the category rather than named it.
 
-  MIGRATION PATH FOR BP-100n-4, AND ITS PRECONDITION. When PR #726 has MERGED,
-  BP-100n-4 (with BP-100n-4-i and -4-ii) should be renamed BP-1600a-2 (with -2-i
-  and -2-ii) and moved here, as its own deliberate change whose entire content is
-  the rename and its citation sweep. The precondition is the merge: doing it now
-  would land five dangling references on a branch nobody can fix from here.
-  BP-100n-3 is a separate judgement and probably stays where it is — a done record
-  with covers-tags in source is not worth renaming for tidiness. Until BP-100n-4
-  moves, this L1 and its L0 will both draw the sparse-parent advisory, which is
-  non-blocking and is an accurate description of the situation rather than a
-  problem to suppress.
+  MIGRATION OF BP-100n-4 — DONE, 2026-09-07. This block previously read as a
+  future instruction: "when PR #726 has MERGED, BP-100n-4 (with BP-100n-4-i and
+  -4-ii) should be renamed BP-1600a-2 (with -2-i and -2-ii) and moved here, as its
+  own deliberate change whose entire content is the rename and its citation
+  sweep." That is what happened. #726 merged, its five added references were
+  therefore visible and were rewritten with all the others, and the move ran as
+  its own change containing nothing but the rename and the sweep. This L1 now has
+  two children and no longer draws the sparse-parent advisory.
+
+  WHAT THE SWEEP ACTUALLY COST, RECORDED BECAUSE THE ESTIMATE WAS WRONG BY 4x.
+  Measured immediately before the move: 232 occurrences across 50 files — 160 bare
+  BP-100n-4, 17 BP-100n-4-i, 49 BP-100n-4-ii, of which 30 were folder-qualified
+  doc_link paths that had to be rewritten to the NEW feature folder in a separate,
+  earlier pass. The ordering matters and is the one trap in this shape of move: a
+  single bare-id replacement run first turns
+  "BP-100-reliable-builds/BP-100n-4.yaml" into
+  "BP-100-reliable-builds/BP-1600a-2.yaml" — right id, wrong folder, and a
+  doc_link that resolves to nothing. Longest-match-first, always. The bare id was
+  verified to be a clean prefix of both children (a uniq scan over every
+  BP-100n-4* form returned exactly three variants and no BP-100n-40 or similar),
+  which is what made one textual pass safe for all three records.
+
+  BP-100n-3 is a separate judgement and stays where it is — a done record with
+  covers-tags in shipped source is not worth renaming for tidiness, and renaming
+  it would break the criterion-to-code-to-test evidence chain from inside a
+  structural move. So BP-100n keeps one population record under an
+  absence-reporting title. That residue is deliberate and is the last of it.
+
+  WHAT THE SWEEP DID NOT REWRITE, AND WHY — 8 of the 232 occurrences. The rule
+  applied everywhere else was that an AC id is an ADDRESS, not a claim: a stale
+  address preserves no evidence, it destroys the only information the address
+  carried, because the referent still exists and the reader can no longer reach
+  it. So the old id was rewritten even inside amended_by entries and notes that
+  describe decisions taken while the record was still called BP-100n-4. Two
+  surfaces are outside that rule:
+
+    - changelogs/ (5 occurrences in 4 dated entries). A changelog's subject IS the
+      historical event — "commit 7c014f693 amends BO-210a-2 and BP-100n-4" is a
+      statement about what a specific commit touched on a specific day. Rewriting
+      it would make it describe a commit that never touched a file of that name.
+      Here the old name is load-bearing as a description of the past, which is the
+      one place the address-not-claim argument does not reach.
+    - docs/agents/cards/python-coder.card.md (3 occurrences). Generated by
+      scripts/generate_agent_cards.py from the AC store. Hand-editing a build
+      output is the wrong surface — it is corrected by regeneration, and the store
+      it derives from is now correct. Note that this file also carried unrelated
+      uncommitted regeneration output at the time of the move, so it was left
+      entirely alone rather than partially hand-patched.
+
+  Anyone grepping BP-100n-4 in future will therefore find it only in dated release
+  notes and a regenerable index, never in a live pointer.

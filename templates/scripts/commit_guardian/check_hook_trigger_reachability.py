@@ -613,7 +613,7 @@ if __name__ == "__main__":
 #   test-only escape hatch restoring the pre-fix behavior (required by
 #   test_bp_100k_4_ii.py's mutation-proof test). Deliberately narrow in
 #   scope, per this AC's own constraints: does not widen which HOOKS this
-#   check inspects (BP-100n-4 and siblings, "the check walks only
+#   check inspects (BP-1600a-2 and siblings, "the check walks only
 #   registered hooks", remain a separate, unbuilt-as-of-this-AC defect).
 #   (#BP-100k-4-ii)
 # ====================================================================

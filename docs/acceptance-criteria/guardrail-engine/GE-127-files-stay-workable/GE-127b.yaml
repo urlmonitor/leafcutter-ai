@@ -22,12 +22,12 @@ criteria: |
 depends_on:
   - GE-127
 doc_links:
-  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
     relationship: depends_on
     status: exists
     relevance: >-
       PRECONDITION, NOT SCOPE. This is the criterion that makes switching the
-      gate on survivable, and switching it on is BP-100n-4's day-one triage. The
+      gate on survivable, and switching it on is BP-1600a-2's day-one triage. The
       dependency runs this way round and matters for sequencing: without the
       ratchet, that triage's only options for this script are register-and-block
       -everything or disposition-it-away. Do not restate the census here.

@@ -74,7 +74,7 @@ notes: |
   opens with one L2. The child-limit hook's sparse advisory (fewer than three
   children) will fire on both; it is non-blocking and it is correct. The cluster
   this L0 names has three known members today — BP-100n-3 (platform set taken from
-  the build's own platform set), BP-100n-4 (commit-gate population taken from the
+  the build's own platform set), BP-1600a-2 (commit-gate population taken from the
   scripts on disk) and BP-1600a-1 (session-hook population taken from the scripts
   on disk) — and only the third could be moved without breaking evidence links
   that already exist. See BP-1600a's notes for the migration path and its
