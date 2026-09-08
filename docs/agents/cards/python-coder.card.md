@@ -1291,6 +1291,7 @@ flowchart TD
 - BP-1400c-1-i: The /about route is loaded headlessly and a non-200 or render error on it blocks the pull request
 - BP-1401: next_diagram_seq.py scans docs/architecture/ recursively so it sees diagrams in the diagrams/ subdirectory
 - BP-1500d-1: The record of what was installed is written into the project that received it, and accounts for that project
+- BP-1500d-1-i: The record describes the producing end truthfully -- where the package stood, and which of its files the deployment came from -- or says plainly that it cannot
 - BP-1500d-2: The record still reads after the project is moved, copied or opened somewhere else
 - BP-1500d-3: A build that cannot produce the record stops and says so, instead of warning once and reporting success
 - BP-1500d-4: A check that finds no readable record says so, instead of returning the all-clear it returns when nothing is wrong

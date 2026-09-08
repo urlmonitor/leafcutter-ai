@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-26
+last_updated: 2026-09-07
 components:
   - ac_store
 related_docs:
@@ -1508,6 +1508,108 @@ instinct, and this is the cost of doing it without an escape hatch.
 
 ---
 
+### KI-ACS-20260907-0920 — Nothing compares an AC's fields against each other, so a record can carry two clauses that contradict — and in one case the contradicted clause predicted verbatim the defect that shipped
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 2 (both found 2026-09-07 while reading records for other reasons)
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/ac_store/validate_ac_schema.py` and the `AC store valid` required CI
+  gate — both validate each field's *shape* against `config/ac_store_schema.json`; neither
+  compares one field's *content* against another's. Also the PO/BA/IT-PO authoring gates,
+  which approve a record without a self-consistency pass.
+
+**The gap in one line.** Every check on an AC record is either per-field (is this a string,
+is this enum member valid) or cross-record (does this parent's `covered_by` list its
+children). **Nothing is cross-field within a single record** — not requirement-vs-requirement,
+not requirement-vs-criteria, not `expects_from`-vs-`notes`. A record can therefore state a
+thing and its negation, pass the required gate, and be approved.
+
+Both instances below were found by a human reading the record. That is the only detector
+there is.
+
+**Instance 1 — `BP-1500d-3.yaml`, and this is the consequential one, because the losing
+clause was right.**
+
+Verified 2026-09-07 in a worktree at `origin/main` (`e2b1eb7ea`), quoted verbatim.
+
+`expects_from: BP-1500d-1` (`:95`) states the consequence of building `-3` without `-1`:
+
+> "…plus the ability to place that harness in a state where the record CAN be produced. The
+> second half is what makes this AC's paired success run possible; **without it only the
+> failure verdict is observable and the AC can be satisfied by a build that refuses every
+> out-of-package target.**"
+
+`notes` (`:238`), recording the IT-PO's ordering conclusion:
+
+> "Neither edge went into depends_on, so no cycle exists between -1 and -3; **they can land
+> in either order.**"
+
+**Why the second is wrong and the first is right.** The "either order" reasoning is a
+*cycle* argument — it establishes only that no dependency loop exists, which is true. It
+then reports that result as an *ordering* verdict, which does not follow. Read the two
+cases separately and the asymmetry is immediate: `-1`-first is fine, and that is the case
+the note examined; `-3`-first leaves only the failure verdict observable, and that case was
+never analysed. It is the broken one.
+
+**This shipped.** `BP-1500d-3` was built before `-1`. The outcome is the one its own
+`expects_from` names in advance — a build satisfying the AC by refusing every out-of-package
+target. The record contained the warning, three clauses from the conclusion that overrode it,
+for the entire time.
+
+**Instance 2 — `ACS-1300a-1-i.yaml`, already repaired, recorded because the repair is the
+evidence.** An earlier enrichment carried an `it_requirements` clause forbidding the trimming
+of a trailing punctuation character alongside another requiring a trailing comma be
+normalised away. Mutually exclusive; both approved.
+
+It is **no longer live** — do not go looking for it in the file. It was corrected in place on
+2026-09-01, and the correction is what documents it: `it_requirements[1]` (`:52`) now opens
+*"CORRECTED 2026-09-01, AND THIS SUPERSEDES THE EARLIER 'MUST NOT TRIM A TRAILING PUNCTUATION
+CHARACTER' REQUIREMENT, WHICH WAS WRONG AND CONTRADICTED ITS OWN NEIGHBOUR"*, and the
+amendment note (`:140-144`) records the contradiction so it is *"not reintroduced"*.
+
+That repair is a good outcome and it is also the finding. The record was approved carrying
+the contradiction, no gate objected at any point, and it was fixed only because someone read
+the two clauses side by side and noticed. Instance 1 is what the same absence costs when
+nobody happens to read carefully enough in time.
+
+**Why "an author should be more careful" is the wrong fix.** These clauses are far apart in a
+long record — 143 lines apart in instance 1 — written at different times by different agents
+(BA, then IT-PO amendment), and each is locally reasonable. The contradiction exists only in
+the pair. That is precisely the shape a mechanical comparison is good at and a sequential
+reader is bad at.
+
+**Fix direction, cheapest first.**
+
+1. **Make the ordering claim checkable, not prose.** An `expects_from` contract that says a
+   dependency's absence weakens this AC's own verification *is* an ordering constraint. Either
+   mirror it into `depends_on` or add a validator rule that refuses a `notes` ordering verdict
+   contradicting a live `expects_from`. Note this is the same field pair as `KI-ACD-015`, from
+   the other side: that entry is about `expects_from` being invisible to the **sequencer**;
+   this one is about it being invisible to the **record's own reasoning**. A validator rule
+   asserting `expects_from`/`depends_on` agreement — which `KI-ACD-015` already proposes as
+   its fix — would catch instance 1 as a side effect. **Fixing that one rule closes both.**
+2. **A cross-field review pass at approval.** An authoring gate that reads the record's
+   clauses pairwise and asks only "can both of these be true at once". Cheap, catches
+   instance 2's shape, and needs no schema change.
+
+**A trap for whoever fixes this.** Do not model it as "reject contradictions". Instance 1's
+two clauses are not formally contradictory — one is about cycles, one about ordering; they are
+both true statements about different things. What was wrong was treating the cycle result as
+answering the ordering question. A rule that only catches literal negation-pairs would have
+caught instance 2 and missed instance 1, which is the expensive one.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — a check whose scope excludes the
+place the defect lives. Every field in both records passed every check that exists; the
+defect was in the relationship between fields, which no check has ever looked at.
+
+**Related.** `KI-ACD-015` (`expects_from` invisible to the build sequencer — same field pair,
+and its proposed validator rule would close instance 1 here); `KI-ACS-013` (`delivers_to` and
+`expects_from` keyed on different things, and *"nothing validates either"* — the structural
+half of the same unvalidated-contract surface).
+
+---
+
 ### KI-ACS-20260907-reachability-boilerplate-denies-the-test_spec-printed-above-it — the generated ticket tells the test author the AC declared nothing, six paragraphs below the six things it declared
 
 - **Severity:** medium — never blocks, and is wrong in the one direction that costs work:
@@ -1568,3 +1670,126 @@ two are independent and the gate one was blocking.
 **Pattern:** boilerplate that was true of the case it was written for, promoted to
 unconditional, so it now asserts the opposite of what the same document proves two
 paragraphs earlier.
+
+---
+
+### KI-ACS-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1 observed directly; the exposure is every AC-store change ever verified locally
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/ac_store/validate_ac_schema.py` versus
+  `templates/scripts/commit_guardian/check_ac_schema.py:619`
+
+**Symptom.** Two tools validate AC YAML. Everything in this repository — CLAUDE.md's own
+"AC-store hygiene" pre-flight, every agent instruction, every sign-off — reaches for the
+standalone one. The required CI gate runs the other. **They do not apply the same rules.**
+
+```
+$ grep -n validate_test_contract scripts/ac_store/validate_ac_schema.py
+                                        (no match)
+$ grep -n validate_test_contract templates/scripts/commit_guardian/check_ac_schema.py
+619:    errors.extend(validate_test_contract(path, data))
+```
+
+So a run reporting
+
+```
+OK: all 3820 AC YAML files are valid.
+```
+
+is a genuine pass of a **strictly weaker** rule set than the one that decides whether the
+commit lands. The count is real, the files were read, nothing is broken — and the result still
+does not answer the question the operator asked it.
+
+**Observed.** During the 2026-09-07 census work, an agent amended six records, ran
+`validate_ac_schema.py` across four components, reported four clean runs each naming a nonzero
+count, and pushed. CI then failed the required `AC store valid` check on
+`validate_test_contract` — a rule the local tool cannot see. The local verification was
+performed correctly and proved the wrong thing.
+
+**Why this is high.** It is not a missing check; it is a check that *reports success in the
+vocabulary of the check you wanted*. The output is indistinguishable from the stronger run, so
+there is no signal to investigate, and the divergence is invisible until a PR is already open.
+Every agent in this repository currently has a green-looking local gate that under-tests
+relative to CI, and CLAUDE.md prescribes it by name.
+
+**Remediation.** Either make `validate_ac_schema.py` call the same validator set as
+`check_ac_schema.py` — one rule set, two entry points — or make its output state which rule
+set it ran and that it is not the gate. The first is better: two tools that answer "is this AC
+valid?" differently is the divergence, and documenting the divergence preserves it. If they
+must stay separate, a parity test asserting the validator list is identical would at least
+fail when they drift again.
+
+**Related.** `KI-ACS-001` (the same script's bare-directory no-op — the second time this file
+has looked like it checked something it did not).
+`docs/reference/false-green-mechanisms.md` → M9, and `unit_tests/README.md` §8.
+
+**Pattern:** two implementations of the same question, one of which is the gate and the other
+of which is the one everybody runs.
+
+---
+
+### KI-ACS-20260907-approved-code-acs-with-no-test-contract-sit-on-main-until-something-stages-them
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 2 confirmed (`UXP-600a`, `TQ-100c-2-i`); the store has not been swept
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `templates/scripts/commit_guardian/_ac_schema_validators.py` —
+  `validate_test_contract`, and the staged-file scoping it inherits
+
+**Symptom.** `validate_test_contract` refuses an approved code AC that declares no
+`test_spec`. It is a **forward ratchet**: it evaluates only the records present in the current
+commit's index. A record that was approved before the rule shipped, and has not been re-staged
+since, carries the violation indefinitely and is reported by nothing.
+
+`TQ-100c-2-i` on `origin/main`:
+
+```
+level: L3
+readiness: approved
+assigned_agent: python-coder
+change_target: code
+                        <- no test_spec, no test_required
+```
+
+Title: *"An AC marked done with zero covering tests is flagged by the integrity check."* An
+approved code AC, specifying an integrity check, with no test contract — sitting on the default
+branch, unflagged.
+
+**How it surfaced, which is the instructive part.** Nobody went looking. A separate change
+corrected an unrelated false claim in that record's `it_requirements`. Editing the file staged
+it; staging it put it in front of the ratchet for the first time since the rule existed; CI
+failed. **The defect was found by an edit that had nothing to do with it.**
+
+That makes the true population unknown. Two are confirmed only because two records happened to
+be touched. `UXP-600a` (`change_target: schema`, `frontend-coder`) slipped the same way and is
+additionally `readiness: reviewed`, which the ratchet also scopes out.
+
+**Why medium and not high.** The direction is safe — these are unproven records, not falsely
+proven ones, and the ratchet does close over anything actively worked on. It earns a place in
+the register because the *population is unmeasured* and because each instance surfaces at the
+worst moment: as a CI failure on an unrelated PR, where it reads as "this change broke
+something" rather than "this change revealed something."
+
+**Remediation.**
+
+1. **Sweep the store out of band** and count. Until that number exists, every estimate of the
+   AC store's health is an estimate of the staged subset. This is the whole remediation as far
+   as knowing the problem goes.
+2. Decide the disposition per record — write the contract, or reclassify honestly to non-code.
+   Note the reclassification path is the tempting wrong answer when the record genuinely
+   specifies code, which `TQ-100c-2-i` does.
+3. Consider a whole-store run of this specific rule on push to main, in the shape of the
+   existing `AC store valid (whole store, push to main)` job, so the backlog is a number that
+   moves rather than a series of ambushes.
+
+**Related.** `KI-ACS-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks`
+(above) — the reason a local pass does not surface these either.
+The CLAUDE.md note under "AC-store commits — stage the parent alongside the child", which
+documents the same staged-scope blindness for a different pair of fields.
+
+**Pattern:** a forward ratchet is a promise about new work, not a statement about the store —
+and its silence about old work is easy to read as a clean bill of health.
