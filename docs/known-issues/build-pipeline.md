@@ -1207,7 +1207,51 @@ overwrites the shared parent manifest with one that no gate can use. Any fix sho
 "target is a worktree of this repo" as a first-class case, not an exotic one — `/feature`,
 `worktree-agent` and `building-epics` all create worktrees by design.
 
-**Symptom.** The build's own record of what it wrote is not written to the install it
+**SYMPTOM CORRECTED 2026-09-07 — THE WRITE-TARGET CLAIM BELOW IS NO LONGER TRUE, AND THIS
+ENTRY NEEDS RE-SCOPING BY ITS OWNER.** `BP-1500d-1` and `BP-1500d-3` — the ACs this entry
+is filed against, via their parent `BP-1500d` — both landed on 2026-09-07 (merged in #715
+and #689) and closed most of what this entry documents. Read against current source on the
+same date:
+
+- The record's own directory is resolved from the **target** whenever a target is supplied,
+  falling back to the package only in the no-target call shape. It is therefore the target
+  by default, not "always the package's own directory, never `--target-dir`".
+- A real build invoked through the ordinary command line into a receiving project that is a
+  **sibling** of the producing package, under a system temp root, wrote the record into the
+  **receiving** project — the case the Symptom paragraph says produces no manifest at all.
+- The output-mapping keys are computed against the target as their base, not against
+  `package_root.parent`, so the anchor this entry names as the single common cause of all
+  its symptoms is gone.
+- The fail-open half is closed for the trigger that remains reachable: the record-writing
+  step now returns its failure to the build's exit path, which reports it naming the record
+  and the target project and then exits non-zero.
+
+Every line number cited in the **Where** field and in the paragraphs below predates that
+work and no longer locates what it names — the surviving broad handler sits roughly a
+thousand lines from the line this entry cites for it.
+
+**What is still true, and is the only part of this entry that should be relied on:** the
+SHAPE — a record computation that gives up, an empty record written anyway, and a
+per-artifact success line printed for that record before any failure is reported. A reader
+who stops at the build's first statement about the record is still told it was written.
+`KI-BP-008` is the same fail-open shape and is unaffected by any of the above.
+
+Two further findings from the same 2026-09-07 pass, neither closed: the account of the
+**producing** package (where it stood, and which of its own files the deployment came from)
+is still position-relative and is `BP-1500d-1-i`, still open; and a record entry can now be
+keyed to the receiving project's root and **still point outside it**, when a managed file's
+destination is reached by a parent step — exit 0, a full record, an empty failure field.
+That is a record that is produced and untruthful rather than one that could not be
+produced, and it is `BP-1500d-1-ii`, authored 2026-09-07.
+
+**Status line, for the owner:** this entry still reads `open — AC: BP-1500d`. A large part
+of what it documents has been fixed underneath it, so it wants either closing against the
+two merged ACs with the residue re-filed, or amending down to the surviving shape.
+
+The original text is kept verbatim below, as the 2026-08-25 observation it was.
+
+**Symptom (as observed 2026-08-25 — see the correction above before acting on any of it).**
+The build's own record of what it wrote is not written to the install it
 describes. `scripts/build_helpers.py:185` computes
 `manifest_path = package_root / ".build_manifest.json"` — always the package's own
 directory, never `--target-dir`. Running `python3 scripts/build.py --target-dir
