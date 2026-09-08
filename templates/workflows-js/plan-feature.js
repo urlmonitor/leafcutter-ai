@@ -3121,7 +3121,17 @@ for (const step of pipeline) {
           ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_finalGateResult.status)) {
         return _finalGateResult;
       }
-      const finalDecision = _finalGateResult || { action: "defer" };
+      // ACD-2100c-2: resolveGate() never returns a falsy value -- every path
+      // out of it is either one of the four pause-related statuses handled
+      // above (which return before this line), or a decision object from
+      // applyAnswerByType(). The `|| { action: "defer" }` fallback that used
+      // to sit here was therefore unreachable dead code (confirmed by
+      // architect-review and covered by this ticket's tests, which assert
+      // the terminal status is exactly "paused_awaiting_input" on the
+      // unattended path -- never the "defer" this fallback would have
+      // produced if it were ever reached). Removed for clarity; no behaviour
+      // change.
+      const finalDecision = _finalGateResult;
 
       const finalAction = finalDecision.action.toLowerCase();
       const priority = VALID_PRIORITIES.includes(finalDecision.priority)
