@@ -1,0 +1,69 @@
+id: TKT-016
+components:
+  - ticket_creation_pipeline
+  - ac_store
+readiness: reviewed
+priority: medium
+title: "The epic back-reference an AC records is a repo-relative path, on every route that writes one"
+component: ticket-creation
+status: active
+criteria: |
+  Given a goal AC whose leaf criteria are assembled into an epic,
+    And the assembly is invoked with an absolute inbox directory -- the form this
+      repository's own shell convention requires of every path argument,
+  When the assembly rewrites each leaf AC's recorded implementation back-reference
+    from the loose ticket it first wrote to the epic-folder ticket it moved that
+    ticket into,
+  Then the recorded back-reference is a path relative to the worktree root,
+    And it contains no absolute filesystem prefix and no user's home directory,
+    And it names the same file the loose back-reference named before the move,
+  And given the assembly cannot establish a worktree root at all,
+  When it would otherwise record an absolute path,
+  Then it says so rather than recording one silently, because a back-reference that
+    resolves only on the machine that wrote it is worse than a missing one: it looks
+    like evidence.
+
+  So a criterion's record of what implemented it is portable, and the store does not
+  accumulate paths that are dead for every reader except its author.
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human user"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  FOUND IN USE, 2026-09-08, generating the BO-400e epic. All five leaf ACs came back
+  carrying an absolute path:
+
+    implemented_by:
+    - /home/henzeh/projects/leafcutter/worktrees/bo400e-acs/tickets/00_inbox/epics/...
+
+  ROOT CAUSE -- an asymmetry between two sibling call sites, not a missing feature.
+  goal_to_epic.py has two places that rewrite the back-reference after assembly:
+
+    :2145  relativises BOTH the old path and the new path      <- correct
+    :2353  relativises ONLY the old path, writes new absolute  <- the defect
+
+  At :2353 the old path is carefully relativised so the lookup MATCHES what
+  generate_ticket_from_ac.py stored, and then the replacement value is passed
+  through untouched. The comment above it explains the relativisation of the old
+  path and is silent about the new one, which is how the asymmetry reads as
+  intentional on a skim.
+
+  `_derive_worktree_from_inbox()` is NOT at fault -- verified by calling it with the
+  exact argument used: it returned the correct worktree root. The relativisation
+  machinery works; one call site does not use it.
+
+  WHY IT MATTERS MORE THAN A COSMETIC PATH. implemented_by is evidence -- it is what
+  a reader consults to find the ticket that delivered a criterion, and what the
+  whole-store checks will eventually read. An absolute path resolves for exactly one
+  person on one machine and is silently dead for everyone else, while still looking
+  populated. Committing one also puts a developer's home directory into the shared
+  store.
+
+  THE SECOND CLAUSE IS NOT PADDING. The `if worktree_root is not None:` guard at both
+  sites falls through silently when the root cannot be derived, so an underivable
+  root and a correctly-derived one produce indistinguishable output. That is the same
+  shape as the defences this repository has already had to repair for reporting
+  success from a run that checked nothing.

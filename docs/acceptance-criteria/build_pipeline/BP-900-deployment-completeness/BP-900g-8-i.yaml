@@ -9,7 +9,7 @@ req_status: active
 readiness: approved
 priority: high
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
 criteria: |
   Given the derived intra-package dependency closure of BP-900g-8,
@@ -165,9 +165,34 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: implementation
+  by: python-coder
+  at: 2026-09-08
+  note: 'Added unit_tests/test_bp_900g_8_i.py implementing the four test_spec entries
+    (boundary x2, reachability+must_block, deployed), reusing BP-900g-8''s proven
+    shutil.copytree scratch-package + subprocess-build harness. All four pass under
+    AC_ENFORCE_STRICT=1. Non-vacuity confirmed by mutation: stubbing
+    _check_intra_package_closure_guard() to unconditionally return 0 in build.py
+    made 3 of the 4 tests fail red (the second-hop, newly-added-module, and
+    combined deployed-tree tests -- the ones whose assertions depend on the guard
+    actually blocking); the fourth (out-of-package false-positive control) is
+    unaffected by design, since its non-vacuity comes from asserting directly on
+    compute_intra_package_closure()''s returned set rather than on block behavior.
+    The mutation was reverted before this commit; scripts/build.py is unchanged
+    from before this pass. This closes the specific gap BP-900g-8''s 2026-09-01
+    amendment flagged as "reported as a recommendation for human judgement, not
+    acted on": the decisive newly-added-module test (test 3 here) empirically
+    confirms compute_intra_package_closure() is genuinely derived from the code,
+    not a currently-complete enumeration -- a brand-new module written into the
+    package tree inside the test, resolved by an already-deployed script, with
+    zero manifest/list/allowlist edits, is caught by the real build and named in
+    its failure output. work_status flipped to done via mark_ac_done.py''s
+    coverage-gated path (--test-root), not by hand. criteria untouched.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/test_bp_900g_8_i.py
+implemented_by:
+  - unit_tests/test_bp_900g_8_i.py
 change_target: pipeline
 risk_surface: internal
 notes: |

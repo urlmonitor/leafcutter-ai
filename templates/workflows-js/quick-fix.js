@@ -178,6 +178,8 @@ const PUSH_SCHEMA = {
     branch: { type: 'string' },
     pr_url: { type: 'string' },
     pr_opened: { type: 'boolean' },
+    compare_url: { type: 'string' },
+    pr_command: { type: 'string' },
     message: { type: 'string' },
   },
   required: ['status'],
@@ -1028,8 +1030,15 @@ Run single, simple commands only.
 
 4. If no PR exists, ASK THE USER whether to open one, showing the title and a summary.
    Opening a PR is outward-facing, so it stays behind an explicit confirmation.
-   If the user declines, return status="ok" with pr_opened=false, pr_url="" and a message
-   giving the compare URL so they can open it themselves later.
+   If the user declines (or there is no interactive user to ask), return status="ok" with
+   pr_opened=false, pr_url="", AND ALSO return:
+     - compare_url: the compare URL for this branch, e.g.
+       https://github.com/<org>/<repo>/compare/main...${activeBranch}?expand=1
+       Derive <org>/<repo> from git -C "${worktreeRoot}" remote get-url origin.
+     - pr_command: the exact command that would open the PR, e.g.
+       gh pr create --base main --head "${activeBranch}" --title "<title>" --body-file <path>
+   These two fields are how the caller opens the PR themselves later without re-deriving
+   anything — do not omit them just because the message text also mentions the compare URL.
 
 5. On confirmation, write the PR body to a FILE with the Write tool (for example
    /tmp/quick-fix-pr-body-${ac_id}.md) and pass it with --body-file:
@@ -1059,9 +1068,34 @@ if (!pushResult || pushResult.status === 'blocked') {
 // Done
 // ---------------------------------------------------------------------------
 
+// pr_opened=false covers two different endings: a PR already existed (pr_url is
+// populated, nothing left to do) and no PR exists at all (pr_url is empty — the
+// confirmation gate in step 4 above was declined or unanswered). Only the second
+// shape is an outstanding action owned by the caller; the first is done.
+const prNotOpened = !pushResult.pr_opened && !pushResult.pr_url
+const prOpenCommand = pushResult.pr_command ||
+  `gh pr create --base main --head "${activeBranch}" --title "<title>" --body-file <path>`
+const outstandingAction = prNotOpened
+  ? {
+      type: 'pr_not_opened',
+      owner: 'caller',
+      reason: 'Opening a pull request is outward-facing and stays behind an explicit ' +
+        'confirmation gate. No confirmation was given during this run, so quick-fix ' +
+        'intentionally stopped short of opening one — the caller must open it.',
+      branch: activeBranch,
+      compare_url: pushResult.compare_url || '',
+      command: prOpenCommand,
+    }
+  : null
+
 return {
   status: 'ok',
-  message: `/quick-fix complete.\n\n  AC:        ${ac_id} — ${ac_title}\n  Test:      ${testFile}  [green, mutation-proved]\n  Fix:       ${target_file}\n  Changelog: ${changelogResult.entry_path}\n  Commit:    ${commitResult.commit_sha || '(see git log -1)'}\n  Worktree:  ${worktreeRoot}${selfIsolated ? ' (self-isolated)' : ' (in place)'}\n  Branch:    ${activeBranch}\n  PR:        ${pushResult.pr_url || 'none — not opened'}`,
+  action_required: prNotOpened,
+  outstanding_action: outstandingAction,
+  message: `/quick-fix complete.\n\n  AC:        ${ac_id} — ${ac_title}\n  Test:      ${testFile}  [green, mutation-proved]\n  Fix:       ${target_file}\n  Changelog: ${changelogResult.entry_path}\n  Commit:    ${commitResult.commit_sha || '(see git log -1)'}\n  Worktree:  ${worktreeRoot}${selfIsolated ? ' (self-isolated)' : ' (in place)'}\n  Branch:    ${activeBranch}\n  PR:        ${pushResult.pr_url || 'none — not opened'}` +
+    (prNotOpened
+      ? `\n\n  *** ACTION REQUIRED ***\n  No pull request was opened. Opening it is now YOUR responsibility.\n  Compare: ${outstandingAction.compare_url || '(derive from branch above)'}\n  Command: ${outstandingAction.command}`
+      : ''),
   ac_id,
   ac_path,
   parent_ac_path,

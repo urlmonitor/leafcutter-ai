@@ -1,0 +1,153 @@
+id: GE-120g-3
+title: "The guidance a check author reads states what declaring a role commits the check to, and states that a refusal comes from an objection"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the published guidance an author of a new check is directed to before
+    declaring which role that check takes,
+  When that author reads what the roles mean,
+  Then the guidance states the obligation each role carries — that a check declaring
+    the judging role must leave the working copy exactly as it found it, and that a
+    check needing to alter anything declares the other role instead,
+  And it states that the obligation follows from the declared role alone, with no
+    per-check exemption and no list to be added to,
+  And it states that a refusal an author meets comes from some check's objection and
+    never from the act of a check having run,
+  And it no longer presents the declared role as only an input to deciding which
+    failures may be repaired for the author automatically,
+  And an author who follows the written guidance exactly meets the behaviour the
+    checks actually enforce, so the written rule and the enforced rule agree at the
+    point where they could disagree,
+  And it describes the obligation as in force rather than as forthcoming, optional,
+    or as something a later pass will supply.
+depends_on:
+  - GE-120g
+  - GE-120g-1
+  - GE-120g-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120g.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE SURFACE THAT CURRENTLY SAYS THE WRONG THING, AND THE PARENT'S OWN STATED REASON FOR
+      A DOCUMENTATION TRIGGER. Today it presents the declared role as routing information —
+      which failures the automatic repair path may self-heal. After this record it must state
+      the behavioural obligation. Whether the text belongs here, on the check family's own
+      front page, or on a dedicated reference page is the documentation author's decision;
+      the criterion is that it sits where the author is already looking.
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The other surface check authors read, with a standing caution recorded by GE-120f-5: it
+      already describes at least one check as live with enforcement when that is not the case.
+      A page that describes the state of the family is a page that can be wrong about the
+      family.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-102-transform-tier-autofix/GE-102.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      WHERE THE ROLE VOCABULARY CAME FROM AND WHAT THIS DOCUMENT MUST NOT REDEFINE. GE-102
+      minted the declaration and owns what a check that fixes as it goes does. The guidance
+      this record requires ADDS the obligation the judging role carries; it does not restate,
+      narrow or contradict the fixing behaviour, and it must use GE-102's names rather than a
+      second set of words for the same two roles.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE IN-FLIGHT SIBLING WRITING TO THE SAME PAGE FOR A DIFFERENT REASON, AND NOT A
+      DUPLICATE. GE-120f-5 requires the procedure for REGISTERING a check to state that a
+      check carries a declared known-bad input and that a declaration is not a demonstration.
+      This record requires the guidance to state what the ROLE a check declares obliges it to
+      do at commit time. Same page, different obligation; whichever lands second adds its
+      section rather than rewriting the other's, and neither may be closed as the other.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: context
+    status: exists
+    relevance: >-
+      READ-ONLY, OWNED ELSEWHERE, EXPLICITLY OUT OF SCOPE. A companion entry for the false-RED
+      shape is recommended by the parent, but that catalogue is a different surface with a
+      different author. This record is not satisfied by writing there, and writing there does
+      not satisfy it.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+delivers_to: null
+expects_from:
+  - ac_id: GE-120g-1
+    contract: >-
+      The obligation as actually enforced on a check that declares the judging role — the
+      working copy left exactly as it was, under an ordinary commit, in a working copy that
+      excludes nothing. The guidance states this; the agreement clause fails if the two
+      diverge.
+  - ac_id: GE-120g-2
+    contract: >-
+      The provenance rule as actually enforced — a commit refused only where some check
+      reported an objection, with the check and its objection named. The guidance states this
+      as what an author can rely on.
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  WHY THIS RECORD EXISTS. The parent carries documentation_triggers [reference-doc] and states
+  the reason directly: the guidance a check author reads today describes the declared role as
+  routing information, so the opposite of the rule this tree establishes is what is currently
+  written down. That is a documentation failure and neither behavioural sibling fixes it. No
+  diagram record is produced — the parent triggers only the one type.
+
+  THE AGREEMENT CLAUSE IS WHAT STOPS THIS BEING PROSE. Every other clause is satisfied by
+  writing sentences. The agreement clause is a property of two artifacts and can be exercised:
+  it fails when the rule a reader is told to follow and the behaviour the checks enforce
+  diverge. This component already records the anti-precedent — a check documented as taking a
+  remediation action its own code never takes, believed by authors for months. A
+  documented-but-dead rule is worse than none, because authors believe they are covered.
+
+  NAMED MUTATION FOR THE AGREEMENT CLAUSE — EXECUTE IT. INJECTION: change the written guidance
+  so the obligation is described as recommended rather than required, leaving the enforced
+  behaviour unchanged. Under that injection an author following the guidance exactly writes a
+  judging check that alters the working copy and is stopped by a rule the guidance did not
+  warn them about; this clause must go RED and return to green on revert. The mirror injection
+  is equally valid and worth running: leave the guidance as written and relax the enforced
+  rule. Either divergence must be caught, because the defect is the gap and not its direction.
+
+  SECOND NAMED MUTATION, FOR THE NO-EXEMPTION CLAUSE — EXECUTE IT. This clause asserts an
+  absence and is green on any text that simply says nothing about exemptions. INJECTION: write
+  the guidance so it describes a way for a particular check to be excused from the obligation.
+  Under that injection every other clause here stays green — the obligation is stated, the
+  place is right, the roles are named — and only this clause goes RED. That is the exact shape
+  by which a rule with no opt-out becomes a rule with one, and it is the reason GE-120g-1-i
+  exists on the behavioural side.
+
+  ARRIVAL COLOURS. Every clause is RED on arrival: no such statement is written anywhere
+  today, and the surface currently says the opposite. The final clause — described as in force
+  rather than forthcoming — passes trivially the moment the text is written, so it is the one
+  to distrust; it exists to stop the guidance landing ahead of the behaviour and describing an
+  intention.
+
+  NO COUNT MAY APPEAR IN THE TEXT THIS RECORD PRODUCES. How many judging checks alter the
+  working copy by some route has not been measured and the parent forbids assuming it. The
+  guidance states the obligation; how widespread the defect is belongs to whatever measures
+  it, with the date and the state it was measured at. The population figure that MAY be
+  stated, if any is, is the one that has been measured and is dated — 62 registered checks,
+  56 judging and 6 fixing, in this worktree on 2026-09-07 — and never GE-120e's stale 54.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's.

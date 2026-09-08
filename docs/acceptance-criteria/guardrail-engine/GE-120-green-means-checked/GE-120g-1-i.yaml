@@ -1,0 +1,111 @@
+id: GE-120g-1-i
+title: "The leave-it-as-you-found-it rule binds a check by the role it declares, so a check declared to fix as it goes is not caught by it and no judging check can be let off it"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a working copy prepared as for the parent record — nothing excluded from
+    version control, and the byproducts of an earlier run of the checks already
+    tracked content,
+  And a check whose declared role is to fix what it finds as it goes,
+  And a change is staged that this check has something to fix,
+  When the author performs an ordinary commit — no extra command, no extra flag, and
+    nothing invoked by hand,
+  Then the alteration that check makes to the working copy is not reported as a
+    breach of the rule that a judging check leaves the working copy as it found it,
+  And given a check that has just been added to the set, declaring the judging role,
+    and named on no list held anywhere,
+  When the author performs an ordinary commit that check takes part in,
+  Then that check is bound by the rule from the moment it declares the judging role,
+  And no check that declares the judging role is excused from the rule — there is no
+    entry, flag, list or ground by which one can be.
+depends_on:
+  - GE-120g-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120g-1.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: configures
+    status: exists
+    relevance: >-
+      WHERE THE ROLE IS DECLARED AND WHY THAT MAKES THIS RECORD SMALL. The declaration
+      already exists on every registered entry and the split is total — measured in this
+      worktree 2026-09-07: 62 entries, 56 judging, 6 fixing, none undeclared. Totality is
+      what makes the second half of this criterion enforceable without inventing an axis:
+      a check that needs to look AND alter declares the other role, rather than the rule
+      acquiring an exception.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-102-transform-tier-autofix/GE-102.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      THE BOUNDARY THIS RECORD SITS EXACTLY ON, AND MUST NOT CROSS. GE-102 owns what a
+      check declared to fix as it goes actually does. This record says only that the
+      judging rule does not reach it. No clause here states, implies or constrains the
+      fixing behaviour itself, and a decomposition that reaches for it has taken work from
+      GE-102.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS ITS OWN RECORD AND NOT A CLAUSE OF THE PARENT. Both mutations below turn ONLY
+  this record red; the parent stays green under each. That asymmetry is the test for whether
+  a candidate belongs in its own file, and it holds here: an implementation can hold every
+  judging check to the rule (parent green) while either breaking the six checks that fix as
+  they go, or quietly growing a waiver list.
+
+  FIRST NAMED MUTATION — EXECUTE IT. For the clause "the alteration that check makes is not
+  reported as a breach". This clause asserts an absence and is green on any implementation
+  that enforces nothing. INJECTION: apply the leave-it-as-you-found-it requirement to every
+  registered check regardless of the role it declares. Under that injection an ordinary
+  commit of a change that a fixing check repairs must be REFUSED, this record must go RED,
+  and the parent must stay GREEN. Revert must restore the completed commit. This is the
+  cheap over-correction a hasty implementation reaches for — a blanket rule over all 62 —
+  and it breaks six working checks in a way no clause of the parent can see.
+
+  SECOND NAMED MUTATION — EXECUTE IT. For the clause "there is no entry, flag, list or
+  ground by which one can be". INJECTION: add a place where a check may be named as exempt
+  from the rule and put one judging check on it, leaving its declared role unchanged. Under
+  that injection the exempted check may alter the working copy during an ordinary commit
+  while still declaring that it judges; this record must go RED naming that check, and must
+  return to green on revert. Without this injection the clause is satisfied by an
+  implementation that has simply never been asked for an exemption.
+
+  SEEDING APPLIES HERE TOO AND IS NOT REPEATED IN FULL. Both mutations need the fixture the
+  parent describes — the fresh-install shape with nothing excluded from version control, and
+  the byproducts made tracked content by running one check FIRST and adding afterwards. This
+  repository cannot be that fixture as it stands. Read the parent's notes before building
+  either descriptor; a mutation run against an unseeded working copy passes and means
+  nothing.
+
+  WHY THE SECOND CLAUSE IS NOT A PER-CHECK WAIVER IN DISGUISE. The parent's rule is scoped by
+  a declaration the manifest already carries, and this record is what keeps that scoping
+  honest in both directions: a fixing check is out of scope because of what it declares, and
+  a judging check cannot be taken out of scope by anything at all. An exemption registry is
+  precisely the silent opt-out the tier cut was chosen to close, and this component already
+  has two such registries for other purposes — which is why the injection is realistic rather
+  than hypothetical.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's.

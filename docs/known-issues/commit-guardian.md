@@ -4023,51 +4023,87 @@ operation the surrounding procedure tells you to perform.
 
 ---
 
-### KI-CG-20260908-1520 — `check-file-size` has no merge-commit awareness, so merging `main` into any branch is blocked by `main`'s own accumulated file growth
+### KI-CG-20260908-ratchet-reads-pre-merge-head — `check-file-size`'s ratchet resolves a file's previous length from `HEAD`, which during a merge is the branch's pre-merge tip, so a file long-standing on `origin/main` but absent from the branch is judged against the absolute limit and can refuse a merge for content the merge did not author
 
-- **Severity:** medium
-- **Status:** open
+- **Severity:** high — blocks any merge of `origin/main` into any branch, for anyone, whenever main holds a covered file over its line limit that the branch does not yet have. Not specific to this branch or to the two files below; they are today's instances, and the next oversized file added to main re-triggers it against every branch that still lacks it.
+- **Status:** RESOLVED 2026-09-08 (`62410ca66`, PR #752) — the ratchet is now merge-aware: `_merge_head_path()` in `_file_size_ratchet.py:353` reads `MERGE_HEAD`, and a file's permitted previous length during a merge is the MOST PERMISSIVE (maximum) across every parent, not `HEAD`'s alone. Covered by `unit_tests/commit_guardian/test_ki_cg_20260908_file_size_ratchet_merge_aware.py`, whose descriptors drive real `git init` / `git merge --no-commit` states and invoke the real `check_file_size.py` as a subprocess. Specified after the fact by `GE-127b-2`. Verified live: merge `928e53ad9` — the very merge this entry was filed from, retried after the fix landed — passed `check-file-size` with no `SKIP`. The `SKIP=check-file-size` bypass on `d0271d413` was used once, for that one earlier merge, and is not needed again.
+- **ID reconciliation, because searching for the obvious id finds nothing.** The fixing commit and its test docstring both cite `KI-CG-20260908-file-size-ratchet-refuses-merge-commits`. **That id was never filed** — no register contains it. This entry, filed independently against the same defect, is the only record. A reader who greps the id named in the test will conclude the KI is missing rather than that it is under a different slug; that is what this bullet exists to prevent. Do not file the other id — one defect, one entry.
+- **Occurrences:** 1 observed live merge, refusing 2 files simultaneously; the mechanism is structural, not incidental, and will recur on the next oversized file `origin/main` gains.
+- **First seen:** 2026-09-07 (`check-file-size` registered live, GE-127a-1, `c13c22da4` / PR #728) · **Last seen:** 2026-09-08 (merge `d0271d413` refused on inherited content)
+- **Where:** `templates/scripts/commit_guardian/_file_size_ratchet.py:194-230` (`_read_head_blob_bytes`; hardcoded `git show HEAD:<path>` at `:214`), `:287-314` (`get_previous_length`; hardcoded `git cat-file -e HEAD:<path>` at `:301`), `:233-284` (`resolve_head_covered_paths`; hardcoded `git rev-parse --verify HEAD` at `:265` and `git ls-tree -r --name-only HEAD` at `:272`) · `templates/scripts/commit_guardian/check_file_size.py:275-305` (`_classify_file`; falls through to the absolute-limit branch at `:303-304` whenever `previous_lengths.get(filepath)` at `:294` returns `None`)
+
+**Symptom.** Merging `origin/main` into `fast-lane/ge-127a-1` — a merge whose only real conflict was three marker lines in `GE-127a-1.yaml` — was refused with:
+
+```text
+❌ FILE TOO LARGE:
+   unit_tests/portability/test_ge_120e_2_i.py
+   Lines: 462 (Limit: 400)
+❌ FILE TOO LARGE:
+   unit_tests/portability/test_ge_120e_4.py
+   Lines: 501 (Limit: 400)
+```
+
+Both files were already committed on `origin/main` via `eaf49388b` and are untouched by the branch — confirmed with `git ls-tree origin/main --name-only <path>` (both present) and by checking every pre-merge commit on the branch for either filename (neither appears).
+
+**Mechanism.** The ratchet (GE-127b-1, `c7fb650a3`, #710) exists precisely so an already-oversized file can still be worked on without every ordinary commit to it being refused: it reads the file's length at `HEAD` and only refuses a file that has *grown* past that. But every lookup in `_file_size_ratchet.py` is hardcoded to the literal ref `HEAD` — `git show HEAD:<path>`, `git cat-file -e HEAD:<path>`, `git rev-parse --verify HEAD`, `git ls-tree -r --name-only HEAD` — with no branch for a merge in progress. **During a merge, `HEAD` is the branch's PRE-merge tip**, not the merge result and not `origin/main`. A file that has lived on `origin/main` for any length of time but has never yet existed on the branch has no `HEAD` blob, so `get_previous_length` returns `None`; `check_file_size.py`'s `_classify_file` then falls straight past the ratchet branch (`previous is not None and previous > limit`, `:296`) to the plain `lines > limit` comparison, and the file is judged against the absolute 400-line limit as if it were new content the merge itself introduced — when in fact the merge introduces none of it.
+
+**Blast radius is everyone, not this branch.** Nothing about the mechanism is specific to `fast-lane/ge-127a-1` or to these two test files. `check_file_size.py`'s own module docstring notes the ratchet was built to avoid "refusing essentially every commit that touches one of the ~200 files already over their limit" — and that same population is exactly what makes this structural rather than a one-off: any branch merging `origin/main` hits this the moment main holds a covered file over its limit that the branch does not yet have. The two files named above are today's instances; the next oversized file landed on main reproduces the same refusal against every other in-flight branch.
+
+**Workaround used, and its scope.** `SKIP=check-file-size` was applied to the merge commit only (`d0271d413`), recorded in that commit's own message. This is a bypass, used once, for this merge, and nothing more — `check-file-size` remains fully active for ordinary commits, which is where its ratchet logic continues to do its job correctly.
+
+**Fix direction — SHIPPED, see Status above; retained as the reasoning behind what was built.** Resolve the previous-length source from `MERGE_HEAD` (or the merge's other parent) instead of `HEAD` whenever a merge is in progress, so a file inherited from main is judged against main's own copy under the ratchet — exactly as any other already-oversized file already is. A merge commit authors no new content of its own; judging content it did not write against the absolute limit, rather than against where that content already stood, is the wrong question. Splitting the two named files is explicitly NOT the fix: it clears today's instance and leaves the `HEAD`-only lookup in place to refuse the next branch against the next oversized file main gains.
+
+**The other reading, and why it loses.** One could argue a merge should be exactly the moment to refuse debt entering a branch, on the theory that letting it through defers a problem. It loses here because the debt is not entering anything: it already exists on `origin/main`, unconditionally, regardless of whether any given branch ever merges it in. The branch merging main has no authorship over that file and no way to have prevented its state. Refusing the merge does not stop the debt from existing — it only makes `origin/main` unmergeable into any branch that has not already independently split the same files, which is a strictly worse outcome than the debt itself.
+
+**Related.**
+- `GE-127b-1` (`c7fb650a3`, #710) — the ratchet this defect lives inside; its HEAD-vs-limit logic is correct for an ordinary commit and wrong only for the merge case this entry covers.
+- `GE-127a-1` (`c790986b9`, #728) — registered `check-file-size` as `always_run`, which is what turned this from a latent gap (the hardcoded `HEAD` lookup had existed since GE-127b-1) into a live, commit-blocking condition — the same way registration did for the two entries below.
+- `KI-BP-20260907-no-gitignore-for-consumers` (`docs/known-issues/build-pipeline.md:4141`) — same registration event, a different way it turned a latent condition into a live one.
+- `KI-BP-20260907-bootstrap-swallows-build-failure` (`docs/known-issues/build-pipeline.md:1990`) and `KI-BO-20260907-resume-replays-cached-resolver` (`docs/known-issues/build-orchestration.md:2886`) — same-day neighbours in the sibling registers, cross-referenced only as same-day context, not because they share this defect's mechanism.
+
+**Pattern:** registering a gate as `always_run` is what turns a latent, always-true condition (here: a ref lookup that was never merge-aware) into a live, repo-wide blocker — the third instance of that shape filed within the same week.
+
+---
+
+### KI-CG-20260908-covers-tag-must-be-inside-a-test-function — the pre-commit done-proof gate accepts a Python `# covers:` tag anywhere in the file while CI's oracle counts it only inside a test function, so a tag can pass locally and fail the required check with two different accounts of the same file
+
+- **Severity:** medium — does not corrupt state and cannot produce a false *green*; it costs a full push/CI round-trip per occurrence and, until diagnosed, reads as "CI disagrees with my passing local hook" rather than as a placement rule. Every AC newly linked to an existing Python test can hit it.
+- **Status:** open — no AC. Worked around per-occurrence by moving the tag inside the test functions.
 - **Occurrences:** 1
-- **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
-- **Where:** `templates/scripts/commit_guardian/check_file_size.py` and
-  `templates/scripts/commit_guardian/_file_size_ratchet.py` (GE-127a-1 crossing refusal,
-  GE-127b-1 ratchet)
+- **First seen:** 2026-09-08 (`GE-127b-2`, PR #750) · **Last seen:** 2026-09-08
+- **Where:** `scripts/ac_store/done_proof.py:873-879` — `_scan_single_test_file` builds `lineno_to_function` and then `function = lineno_to_function.get(lineno)` / `if function is None: continue`, so `COVERS_TAG_RE` is never even applied to a line outside a function body. Contrast `_scan_single_ts_file` (`:958-968`), which applies the same regex to **every** line of a `.ts`/`.tsx` file with no enclosing-function requirement — so the rule this entry describes is Python-only, and the two scanners in the same module disagree with each other as well.
 
-**Symptom.** Merging `origin/main` into a branch that had diverged by 29 commits, the gate
-refused the merge commit with **17 files "GREW WHILE ALREADY OVER ITS LIMIT"** and **6 new
-files over the 400-line cap** — among them `scripts/build.py`, `scripts/build_phases.py`,
-`scripts/ac_store/done_proof.py` and `unit_tests/commit_guardian/test_bp_100k_4_ii.py`.
+**Symptom.** `GE-127b-2` was linked to an existing test by adding `# covers: GE-127b-2` immediately below that file's module docstring — the natural place, next to the `MODULE:`/`COVERS:` header the file already carried. The pre-commit gate passed:
 
-**The merge authored none of it.** Every flagged file was already on `origin/main` at the
-moment of the merge, at the flagged size, and the branch had not touched any of them.
-`test_bp_100k_4_ii.py` is 1165 lines at `origin/main` today. The growth was authored by the
-commits the merge is *bringing in*, each of which passed this same gate when it only touched a
-few files at a time.
+```text
+Check Done Proof (BO-2500b — covers-tag presence gate)...................Passed
+```
 
-**Cause.** `check_file_size.py` contains no merge handling of any kind — no `MERGE_HEAD`
-check, no second-parent logic, nothing that distinguishes "this commit wrote these lines" from
-"these lines arrived from the other parent". On a merge commit every incoming file is
-attributed to the merger.
+The commit was pushed and the required CI check failed:
 
-**Why this is worse than a nuisance.** The gate's only two exits are both wrong. Refactoring
-~20 of `main`'s files inside a conflict resolution is a large unrelated change riding in on a
-merge — precisely the kind of thing the ratchet exists to prevent — and it touches files the
-branch never wrote. The alternative is a bypass, which is what was taken here
-(`SKIP=check-file-size`, recorded in the merge commit's own message). Either way the gate has
-trained the operator to skip it, and a gate routinely skipped on a whole class of commit is
-not enforcing anything on that class.
+```text
+[check-done-proof] GE-127b-2: no linked test found for GE-127b-2
+```
 
-**Not a CI-required check.** It appears nowhere in `.github/workflows/`, so the bypass cannot
-produce a false green on a PR. That bounds the damage and is the reason the skip was
-acceptable — but it also means the escape is invisible to anyone reading CI.
+Same tag, same file, same AC, two verdicts. Moving the tag inside three test functions made both pass with no other change.
 
-**Fix direction.** Detect the merge commit (`MERGE_HEAD` present, or a second parent) and
-attribute per file: a file whose staged content equals the other parent's is inherited, not
-authored, and is out of scope for both the crossing refusal and the ratchet. A file the merge
-*resolved* — genuinely different from both parents — is authored and should still be judged.
-That distinction is available from git at no analytical cost, and it is the same
-authored-versus-inherited question `_authored_change.py` already answers elsewhere in this
-component; check whether that helper can be reused before writing a second one.
+**Mechanism.** The two gates are different code answering different questions. The pre-commit hook asks whether the tag text is *present*. CI's oracle asks which *tests* to run as proof, so it needs a nodeid — and it gets one by mapping each tag's line number to its enclosing function, discarding any line that has none. That is a defensible design: a module-level tag names no test to run. The defect is not the requirement, it is that the requirement is **enforced silently by one gate and not stated by the other**. Nothing in the pre-commit output, in the hook's name ("covers-tag presence gate"), or in the CI failure text ("no linked test found") says *the tag exists but is in the wrong place*. The CI message in particular actively misleads: the linked test does exist and is named in the AC's own `covered_by`.
 
-**Pattern:** a gate that measures a property of the *tree* while claiming to measure a
-property of the *change*, so it bills the person who moved the code to the person who wrote it.
+**Why this is medium and not high.** It fails closed. A misplaced tag makes an AC look *unproven*, never proven — so it cannot let phantom-done through, which is the failure mode this whole family exists to prevent. It is the local gate being too permissive relative to CI, not CI being too permissive. The cost is a wasted round-trip and a confusing diagnosis, not a wrong belief about the codebase.
+
+**Fix direction.** Two independent parts, and the second matters more than the first.
+
+1. Make the messages name the real cause. When `_collect_linked_tests` finds no tags for an AC, the oracle already has `all_tags`; it does not currently look for tags it *discarded*. Have `_scan_single_test_file` retain out-of-function tags as a distinct kind and report "found `# covers: <id>` at `<file>:<line>` but it is not inside a test function, so it names no test to run" instead of "no linked test found". That converts a five-step diagnosis into a one-line read.
+2. Make the pre-commit gate ask the same question as CI, or say that it does not. A local gate whose pass does not imply the required check's pass is worth less than its name suggests — this is the same shape as the composite done-proof / `ac-fulfillment-gate` disagreement quick-fixed on 2026-09-08: two surfaces judging one fact by different rules, with only one of them required.
+
+Also worth settling while in the code: the Python and TypeScript scanners genuinely differ here, and it is not clear the difference is deliberate. If a module-level tag in a `.ts` file counts, either it should count in Python too or the TS scanner is over-accepting.
+
+**A second, unrelated thing the same investigation surfaced, recorded so it is not lost.** The descriptors in that test file carry `# covers: KI-CG-20260908-file-size-ratchet-refuses-merge-commits` — a KI id, not an AC id, and one no register contains (see the entry above). The oracle's `_collect_dangling_tags` exists precisely to report tags pointing at nonexistent ACs, yet the build is green with three of them present. Either dangling tags are collected and not acted on, or KI-shaped ids are silently tolerated. Not investigated here; flagged as the next thing to pull on.
+
+**Diagnostic note — the check exits 0 when it checks nothing.** Run from the wrong working directory, `check_done_proof.py --mode ci-changed --base origin/main` resolves an empty changed-set and prints only `[check-done-proof] exemptions in force: 0`, exit 0 — byte-identical to a run that evaluated the AC and passed. During this investigation the first local reproduction "passed" for exactly that reason. Use `env --chdir=<worktree> python scripts/...` and treat a silent pass as unproven until the run has named something. This is `docs/reference/false-green-mechanisms.md`'s "a check that examined nothing must not look like a check that found nothing" in the same file this entry is about.
+
+**Related.**
+- `KI-CG-20260908-ratchet-reads-pre-merge-head` (above) — same PR, same day; that one is about which ref the ratchet reads, this one about where a tag may sit. They share only the commit that surfaced both.
+- `docs/reference/false-green-mechanisms.md` — the diagnostic note above is an instance of the "checked nothing" mechanism catalogued there.
+
+**Pattern:** two gates over one fact, where the cheap local one is more permissive than the required remote one, and neither states the rule that separates them.

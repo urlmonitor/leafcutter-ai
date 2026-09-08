@@ -1,0 +1,186 @@
+id: GE-120g-1
+title: "An ordinary commit leaves the working copy holding exactly the content it held before, whether the checks let it through or refuse it"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a working copy that excludes nothing from version control, so that anything
+    appearing beside the installed checks becomes tracked content rather than being
+    passed over,
+  And the byproducts an earlier run of those checks left beside them are already
+    tracked content in that working copy,
+  And a change is staged that every registered check accepts,
+  When the author performs an ordinary commit — no extra command, no extra flag, and
+    nothing invoked by hand,
+  Then every check whose declared role is to judge reports that it found nothing to
+    object to,
+  And when the attempt is over the working copy's tracked content is identical to
+    what it was before the attempt began, and the attempt has left nothing new of
+    any kind beside the installed checks,
+  And the commit completes,
+  And given instead a change is staged that one of those same checks objects to,
+  When the author performs an ordinary commit,
+  Then the commit does not complete,
+  And the working copy's tracked content is again identical to what it was before
+    that attempt began — being looked at leaves the work untouched whether the
+    looking ends in acceptance or in refusal.
+depends_on:
+  - GE-120g
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120g.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: configures
+    status: exists
+    relevance: >-
+      THE VOCABULARY THIS CRITERION IS WRITTEN OVER AND THE POPULATION IT BINDS. Every
+      registered entry declares its role, the split is total (measured in this worktree
+      2026-09-07: 62 entries, 56 judging, 6 fixing, none undeclared), and all 62 are
+      dispatched through one shared runner — so a property of that runner is a property
+      of the whole family and the rule has no silent opt-out. Inherited from the parent;
+      re-measure rather than citing GE-120e's stale "54".
+  - path: templates/scripts/commit_guardian/run_hook.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE ONE PLACE THE PROPERTY IS DECIDED FOR ALL 62, AND THE RECORD THAT CURRENTLY
+      MIS-CITES IT. Half of this criterion already ships here and is cited by GE-127a-1's
+      implemented_by, where no criterion constrains it and no descriptor exercises it.
+      Once this record is built and covered the citation belongs under this subtree.
+      Performing that correction is NOT in scope here. NOTE ALSO, for whoever applies the
+      mutation in notes: this template is canonical; the copy the checks actually run from
+      is the installed one, and a mutation applied to the template alone does not land and
+      fails GREEN.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-102-transform-tier-autofix/GE-102.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      THE OTHER SIDE OF THE SAME VOCABULARY, DELIBERATELY NOT RESTATED HERE. GE-102 minted
+      the role declaration and owns the positive behaviour of a check that fixes as it goes.
+      This record constrains only the judging side. Nothing here says what a fixing check
+      does, and nothing here may be discharged by changing what one does.
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      THE ADJACENT GAP THIS RECORD MUST NOT ABSORB, AND THE REASON THE FIRST GIVEN IS
+      WRITTEN AS IT IS. That a fresh install carries no exclusion file, so anything left
+      beside the installed checks becomes tracked content, is BP-900's subject (approved,
+      critical). Here it is the CONDITION the guarantee must hold under, never the remedy:
+      an implementation that satisfies this record by arranging for the byproducts to be
+      excluded from version control has moved the work into BP-900's tree and left this
+      criterion unmet.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      NEAREST SIBLING AND THE BOUNDARY MOST EASILY BLURRED. GE-120e owns a REAL objection
+      attributed to the wrong author. Here nothing objected at all. Misattributed objection
+      versus objection-free refusal; neither closes the other.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      READ-ONLY CONTEXT, OWNED ELSEWHERE. Every mechanism catalogued there is a false GREEN;
+      this is a false RED, which is why it is absent. A companion entry is recommended by
+      the parent and this record is neither satisfied by writing one nor blocked by its
+      absence.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Describes the commit-time invocation shape every clause here is written
+      against.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding on this record
+      specifically. A test that reads the runner's source, or that asserts the launch
+      environment contains a particular setting, stays green on exactly the untested
+      property this record exists to pin — and stays green in this repository, where the
+      condition is latent. Every clause here is an outcome of attempting a real commit.
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120g-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  GREEN ON ARRIVAL ON THE KNOWN MECHANISM, AND GREEN HERE FOR A SECOND REASON THAT IS
+  WORSE. Half of this criterion already ships: the shared runner no longer lets a delegated
+  check leave byproducts beside the installed checks. Zero tests assert it — verified in
+  this worktree 2026-09-07, the whole-suite grep for the setting and the environment helper
+  returns exactly one hit and it is a test harness configuring its OWN subprocess, not an
+  assertion about the runner. So an ordinary red-baseline run comes up green and proves
+  nothing.
+  THE SECOND REASON IS THE TRAP: this repository's own exclusion file passes over the
+  byproducts entirely (verified 2026-09-07, .gitignore lines 41-42), so the first Given is
+  FALSE here and the mutation below is silently inert. A mutation proof run in this
+  repository and reported as passing is a false green about a false red. The fixture must be
+  constructed to the fresh-install shape explicitly; it cannot be this repository as it
+  stands.
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSES — EXECUTE IT, DO NOT DESCRIBE IT. The two
+  clauses "the working copy's tracked content is identical to what it was before" and "the
+  attempt has left nothing new of any kind beside the installed checks" both assert an
+  absence, and both are green on any implementation on which nothing ever changes anything.
+
+    SEEDING (mandatory, and the order is load-bearing). Build a working copy in the
+    fresh-install shape: the checks installed, and NO exclusion entry covering what a
+    delegated check writes beside them — in particular no entry for the interpreter's
+    compiled-module cache directory or its files. Then, IN THIS ORDER: (1) run one check
+    once, so the cache directory and its files come into existence beside the installed
+    checks; (2) `git add -A`, so those files become tracked content; (3) commit that as the
+    fixture's baseline. Seeding BEFORE the run stages nothing, the fixture then holds no
+    tracked byproducts, and the mutation passes — which is the specific way this proof fails
+    quietly.
+
+    INJECTION: revert the runner's environment helper so the delegated check process is
+    launched bare, with no environment argument at all — the state before the shipped fix.
+    Under that injection, in the seeded fixture, an ordinary commit of a change every check
+    accepts must be REFUSED and the tracked byproducts must differ after the attempt. Revert
+    must restore both the untouched tree and the completed commit.
+
+    IF THE MUTATION DOES NOT GO RED, THE FIXTURE IS WRONG — NOT THE RECORD. Treat a green
+    mutation run as a defective fixture and fix the fixture before believing any result from
+    it. The two ways it goes quietly are: an exclusion entry still covering the byproducts,
+    and seeding performed before the first run rather than after it.
+
+  WHY THE REFUSED-ATTEMPT CLAUSE IS HERE AND IS NOT GE-120g-2's. The second half of this
+  criterion asserts the tree is untouched on the path where a check DOES object. It is the
+  same guarantee applied to the other path, and it is what stops this record being satisfied
+  by an implementation that leaves the tree alone because nothing ever looks at anything: the
+  checks that left the working copy untouched are demonstrably the same checks that were able
+  to refuse. What it deliberately does NOT assert is WHY the refusal happened — the
+  provenance of a refusal is GE-120g-2's whole subject and is not restated here.
+
+  THE FIRST GIVEN IS A CONDITION, NEVER A REMEDY. "A working copy that excludes nothing from
+  version control" is written into the Given precisely so the guarantee cannot be discharged
+  by adding an exclusion. See the BP-900 doc_link: the missing exclusion file in a fresh
+  install is a real gap with a real owner, and it is not this one.
+
+  NO COUNT MAY BE STATED OR IMPLIED, BY THIS RECORD OR BY ANY TEST OF IT. How many judging
+  checks alter the working copy by some route other than the compiled-module cache has not
+  been measured, and the parent forbids assuming it. The criterion is written over "every
+  check whose declared role is to judge" without asserting how many of them the shipped fix
+  already satisfies. A descriptor that pins a number is out of contract.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's; the named mutation and its
+  seeding step above are written to be turned directly into test descriptors, and losing the
+  seeding step makes this record untestable in practice.

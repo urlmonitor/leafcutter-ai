@@ -51,6 +51,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - GE-127b-1
+  - GE-127b-2
 implemented_by:
   - "templates/scripts/commit_guardian/_file_size_ratchet.py"
   - "templates/scripts/commit_guardian/check_file_size.py"

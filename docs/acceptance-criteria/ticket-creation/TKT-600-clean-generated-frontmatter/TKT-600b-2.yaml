@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: critical   # owner decision at the approval gate, 2026-09-01
 roadmap_phase: phase_1
