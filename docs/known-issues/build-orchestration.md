@@ -4131,3 +4131,107 @@ contract side.
 as input — so the recorded outcome of a failure permanently removes the work from the only
 mechanism that could address it, while every report about that work continues to list it as
 owed.
+
+---
+
+### KI-BO-20260908-1030 — The fast lane guards its verdicts against fabrication and passes the pointers to their evidence through unchecked, so `tests_written` can name a file that does not contain the tests
+
+**Severity:** medium for `tests_written` (broken audit trail); **high** for `files_modified`,
+which is the same unchecked shape but drives dispatch rather than reporting.
+**Found:** 2026-09-08, on the `INF-400c-4-iv` fast-lane run (PR #755).
+**Component:** build-orchestration (`templates/workflows-js/fast-lane-ship.js`).
+
+**What was observed.** The run's terminal payload reported six tests written to
+`tests/knowledge/test_harvest_learnings.py`, as fully-qualified pytest node ids:
+
+```
+tests/knowledge/test_harvest_learnings.py::TestAbsentSinkExitStatusEqualsTheEmptySinkExitStatus::test_absent_sink_exit_status_equals_the_empty_sink_exit_status
+```
+
+The tests were actually written to a **new** file,
+`tests/knowledge/test_harvest_learnings_inf400c4iv.py`.
+
+This is worse than a dead link, and the difference is the whole point of the entry. The
+reported path **exists** — a real, tracked, 98 KB file — and contains **none** of the six
+reported classes (`grep -c TestAbsentSink` → `0`). So every reported node id is
+unresolvable, and says so only if you actually run it:
+
+```
+$ pytest "tests/knowledge/test_harvest_learnings.py::TestAbsentSinkExitStatus...::test_..."
+ERROR: not found: .../test_harvest_learnings.py::TestAbsentSinkExitStatus...::test_...
+(no match in any of [<Module test_harvest_learnings.py>])
+no tests ran in 0.04s
+```
+
+An auditor who opens the named file finds a large, plausible, entirely unrelated test module
+and concludes the reported tests were never written. The work was real and the tests were
+genuinely red-before/green-after (verified independently by reverting the implementation to
+`origin/main`: all 6 fail). Only the citation was wrong — which is precisely the citation an
+audit of "were these tests really written" depends on.
+
+**Mechanism.** `tests_written` is **self-reported by the test-writer agent** in free-form
+JSON (`fast-lane-ship.js:1056`), and passed straight through to the terminal payload
+(`:1604`):
+
+```js
+tests_written: (testWriterResult && testWriterResult.tests_written) || [],
+```
+
+Nothing between those two lines checks that the paths exist, that the node ids collect, or
+that they appear in the run's own diff.
+
+**The asymmetry is the tell.** The same prompt that requests `tests_written` carries an
+explicit anti-fabrication clause — but only for the verdict:
+
+> `CRITICAL: gate_passed and reason MUST reflect the real gate output — do NOT fabricate
+> them. Fail closed: if the gate's JSON cannot be parsed or "gate_passed" is absent, report
+> gate_passed: false.`
+
+So the run defends *the claim that the gate passed* and leaves *the pointer to the evidence
+for that claim* unguarded. A reader who cannot resolve the citation has no way to check the
+verdict the citation exists to support.
+
+**`files_modified` is the same shape and matters more.** It is likewise self-reported by the
+coder (`:1146`) and passed through unchecked (`:1605`) — but it is not merely reported. It
+**drives dispatch topology** (`:1342-1346`):
+
+```js
+const filesModified = (coderResult && coderResult.files_modified) || [];
+const releasablePaths = filesModified.filter(
+  (p) => !CHANGELOG_EXEMPT_PREFIXES.some((prefix) => p.startsWith(prefix)));
+const changelogRequired = releasablePaths.length > 0;
+```
+
+An under-reported `files_modified` therefore skips the changelog agent entirely, and the run
+opens a PR that fails the required "Changelog entry present" check — `KI-BO-001`, already on
+the register as its own recurring failure. An over-report demands an entry the change does
+not owe. On the observed run `files_modified` happened to be correct; nothing in the workflow
+would have noticed if it were not.
+
+**Trap.** Neither field's wrongness is visible in a green run. Every gate passed on PR #755,
+the review passed, the changelog was correctly required and written, and the payload's
+`status` was `ok`. The defect surfaces only when someone tries to *use* the citation —
+which, by construction, is after the run has been accepted.
+
+**Fix direction.**
+1. Validate `tests_written` before it reaches the payload: each entry must resolve under
+   `pytest --collect-only`, in the run's own worktree. A node id that does not collect is a
+   failed run, not a cosmetic slip.
+2. Prefer deriving both lists from the run's own diff (`git diff --name-only` against the
+   base commit the run already records as `base_commit`) rather than accepting the agent's
+   account of what it did. The workflow already knows the base; the diff is authoritative and
+   free.
+3. Where derivation is not possible, cross-check the self-report against the diff and refuse
+   on disagreement — the same fail-closed posture `gate_passed` already gets.
+4. Extend the prompt's `CRITICAL:` clause to the evidence pointers, as an interim measure
+   only. A prompt instruction is weaker than a check and should not be the resting state for
+   `files_modified`, which is load-bearing.
+
+**Related.** `KI-BO-001` (missing changelog entry fails a required check — the concrete
+downstream failure an unchecked `files_modified` produces). `KI-BO-20260831-1520` (the same
+run's green gate reporting narrower truth than its wording implies). The broader family is
+the repo's standing one: a report whose shape implies verification that never happened.
+
+**Pattern:** a pipeline that fail-closes on the verdict and fail-opens on the citation — so
+the artifact proving the verdict is the one thing nobody checked, and the report stays green
+while its own audit trail points somewhere else.
