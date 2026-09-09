@@ -925,3 +925,148 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
             f"The apply-approval dispatch must name {ba_ac_id!r} exactly once, not "
             f"duplicate it. Prompt: {approval_prompt!r}"
         )
+
+
+def test_h1_itpo_author_skipped_when_resume_answer_targets_an_earlier_gate():
+    # covers: ACD-2100c-3-i
+    # angle: seam
+    """Regression for pr-reviewer finding H-1 (this ticket's 2026-09-08 comment
+    on ACD-2100c-3-i): `isResuming` (plan-feature.js ~3031) is computed as
+    `!!(args && args.resume_answer)` -- true for every pipeline step still
+    remaining in the `for (const step of pipeline)` loop for the rest of THIS
+    process invocation, not only for the step the run actually paused at.
+
+    architect-review's justification ("this step's own gate is necessarily the
+    one decision point the run could actually be paused at") holds ONLY for
+    the FIRST uncommitted step a resumed invocation reaches. It is false for
+    every step after it: on a multi-stage route, a successful mid-pipeline
+    resume lets the SAME process continue past the approved gate into the
+    NEXT step's own iteration of the pipeline loop, with `args.resume_answer`
+    untouched (still naming the gate the run resumed AT, not the one it is now
+    at). `_resumeAnswerForThisStep` and `_resumeAction` are correctly null for
+    that next step (its own `stepGateId` does not match the stale
+    `resume_answer.gate_id`), but `isResuming` never checks `gate_id` at all
+    -- so it stays true, `skipAuthorOnResume` wrongly evaluates true, and that
+    next step's own authoring dispatch is skipped, even though nothing ever
+    authored it.
+
+    This test forces the "behavioral" route (ba -> itpo) -- the smallest
+    route with a step AFTER the one the run pauses at -- via the
+    `stage-0-triage` stub (mirrors the neighbouring H-2 test's route-forcing
+    convention in this file). Unlike the H-2 test, this one does NOT seed a
+    synthetic pre-existing pause record: it drives an actual pause at the
+    real FIRST gate ("gate-ba") via a genuine headless run, then resumes in a
+    second, independent process supplying the answer that gate was waiting
+    on. That resumed process's own pipeline loop then advances, in the SAME
+    invocation, into the "itpo" step -- the step this defect skips.
+
+    Per the ticket's dispatch mandate: assert on the run's own recorded
+    dispatch list (the harness's captured `labels`), never on internal
+    variables reached into directly -- this mirrors every other assertion in
+    this file's `test_resume_in_a_new_process_continues_from_the_decision_point`
+    and `test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate`.
+
+    Expected to be RED against current production code: `stage-itpo-author`
+    is ABSENT from the resumed run's own labels.
+    """
+    with tempfile.TemporaryDirectory(prefix="acd2100c3i_h1_") as tmp:
+        fixture = _make_worktree_fixture(Path(tmp))
+        _assert_worktree_has_no_installed_leafcutter(fixture["worktree_path"])
+
+        run_id = "acd2100c3i-h1-run"
+        behavioral_triage_stub = {
+            "route": "behavioral",
+            "existing_acs": [],
+            "parent_l1_id": "H1SKIP-L1",
+            "rationale": "forced for H-1 regression test",
+        }
+
+        # Run 1 (headless): force the "behavioral" route (ba -> itpo) and let
+        # the run pause at the FIRST, non-final gate ("gate-ba") -- never
+        # supplying a resume_answer.
+        payload1 = _run_plan_feature_real(
+            fixture["worktree_path"],
+            label_responses={"stage-0-triage": behavioral_triage_stub},
+            args=_permitted_args(run_id=run_id),
+        )
+        assert not payload1.get("error"), (
+            f"Headless run must not crash. error={payload1.get('error')} "
+            f"stderr={payload1.get('_stderr', '')[:2000]}"
+        )
+        labels1 = _labels(payload1)
+        assert labels1.count("stage-ba-author") == 1, (
+            f"Sanity: the 'ba' stage's own author step must run exactly once "
+            f"before the run pauses at its gate. Labels: {labels1}"
+        )
+        assert "stage-itpo-author" not in labels1, (
+            "Sanity: 'itpo' is the step AFTER the gate this run pauses at in "
+            f"run 1 -- it must not have run yet. Labels: {labels1}"
+        )
+        result1 = payload1.get("result")
+        assert isinstance(result1, dict) and result1.get("status") == "paused_awaiting_input", (
+            f"Sanity: the headless run must pause. Got: {result1!r}"
+        )
+        gate_id = result1.get("gate_id")
+        assert gate_id == "gate-ba", (
+            "Test construction error: the 'behavioral' route's first gate must "
+            "be the non-final 'gate-ba' -- this test needs a real step AFTER "
+            f"the resumed decision point to exist. Got: {gate_id!r}"
+        )
+
+        record_path = _pause_record_path(fixture["project_dir"], run_id)
+        assert record_path.exists(), f"No pause record on disk at {record_path} after run 1."
+
+        # Run 2: a brand-new, independent process resumes, naming the SAME
+        # gate run 1 paused at ("gate-ba") and approving it. "behavioral" has
+        # a SECOND stage ("itpo") after "ba", so approving this gate does NOT
+        # end the pipeline -- the SAME process's `for` loop advances into the
+        # "itpo" step's own iteration, with `args.resume_answer` unchanged
+        # from what was supplied for "gate-ba".
+        resume_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+        label_responses = {
+            "stage-0-triage": behavioral_triage_stub,
+            # commitStageOutput()'s internal branch-check + commit dispatch,
+            # forced to succeed so the run actually commits the "ba" stage and
+            # the for-loop genuinely advances into the "itpo" step -- without
+            # this, an early commit error would return before the "itpo" step
+            # is ever reached, making the assertion below vacuous.
+            "branch-check": {"output": "ac-authoring/h1-skip-test", "exit_code": 0},
+            "commit-stage-output": {"status": "ok", "message": "committed successfully"},
+        }
+        payload2 = _run_plan_feature_real(
+            fixture["worktree_path"],
+            label_responses=label_responses,
+            args=_permitted_args(run_id=run_id, resume_answer=resume_answer),
+        )
+        assert not payload2.get("error"), (
+            f"Resumed multi-stage run must not crash. error={payload2.get('error')} "
+            f"stderr={payload2.get('_stderr', '')[:2000]}"
+        )
+        labels2 = _labels(payload2)
+
+        # Sanity: the run really did move past the "ba" gate it resumed AT
+        # (it must not be re-authored) -- otherwise the itpo-author assertion
+        # below would be vacuous (the run would never reach the "itpo" step
+        # at all).
+        assert labels2.count("stage-ba-author") == 0, (
+            "Test construction error / AC-1 regression: the 'ba' stage the run "
+            f"resumed AT must not be re-authored. Labels: {labels2}"
+        )
+
+        # H-1: the resumed run's OWN dispatch record must show the 'itpo'
+        # step's authoring agent actually ran -- it is the step AFTER the one
+        # this run resumed at, was never authored by run 1 (asserted above),
+        # and is never gated behind `committedStageKeys` (that stage is not
+        # committed to git until AFTER the final gate approves). Skipping it
+        # leaves the "itpo" stage treated as already-authored when nothing
+        # authored it.
+        assert labels2.count("stage-itpo-author") == 1, (
+            "H-1 (pr-reviewer, 2026-09-08): the it-po authoring dispatch for "
+            "the step AFTER the one this run resumed at was skipped. "
+            "`isResuming` in plan-feature.js (~line 3031) is computed as "
+            "`!!(args && args.resume_answer)` with no gate_id check, so it "
+            "stays true for every step remaining in the pipeline once ANY "
+            "resume_answer is present -- not only the step the run actually "
+            "paused at. This makes the 'itpo' stage look already-authored "
+            f"when nothing authored it. Resumed run's own labels: {labels2}"
+        )

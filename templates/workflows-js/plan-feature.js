@@ -1494,6 +1494,52 @@ function applyAnswerByType(answer, type) {
 }
 
 /**
+ * Peek the durable pause record for a run WITHOUT applying or clearing
+ * anything (read-only). ACD-2100c-3-i: the pipeline loop's per-step
+ * authoring-dispatch decision must know which gate the run is ACTUALLY
+ * paused at BEFORE it decides whether to skip re-authoring — the
+ * Implementation Notes require "the subject binding must be checked before
+ * any part of the answer is acted on." A naive comparison of a supplied
+ * resume_answer's own gate_id against the current step's gate is not that
+ * check: it only ever asks "does the answer claim to be for this step?",
+ * which an answer naming a DIFFERENT decision point always answers "no" —
+ * even when this step is genuinely the one being waited on — so the
+ * mismatch never suppresses the authoring dispatch that precedes
+ * resolveGate()'s own (later, correct) detection of the same mismatch.
+ *
+ * FAIL CLOSED toward "not paused here": any absent, stale, or unreadable
+ * record resolves to null. A false affirmative here would wrongly suppress
+ * a genuinely fresh step's authoring dispatch — the ACD-2100c-3 H-1
+ * regression (a later, uncommitted step in the SAME resumed invocation
+ * must still be authored normally) that this must not reintroduce.
+ *
+ * @param {string} runId - Current run identifier.
+ * @returns {Promise<string|null>} The gate_id the run is genuinely paused
+ *   at right now, or null when there is nothing (valid) to resume.
+ */
+async function peekPausedGateId(runId) {
+  const _peekPrompt =
+    "Read the durable pause record for this run (READ-ONLY — do not act on " +
+    "it or clear it). Run exactly:\n" +
+    "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
+    "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
+  const _rawPeek = await agent(_peekPrompt, { agentType: "status-checker", label: "peek-pause-record" });
+  let _peekParsed;
+  try {
+    _peekParsed = (typeof _rawPeek === "string")
+      ? parseAgentJson(_rawPeek, { stage: "peek-pause-record", agent: "status-checker" })
+      : _rawPeek;
+  } catch (_peekErr) {
+    _peekParsed = null;
+  }
+  if (!_peekParsed || _peekParsed.exists !== true || _peekParsed.stale === true) {
+    return null;
+  }
+  const _peekedRecord = _peekParsed.record;
+  return (_peekedRecord && typeof _peekedRecord.gate_id === "string") ? _peekedRecord.gate_id : null;
+}
+
+/**
  * Resume-aware interactive gate resolver (ADR-024).
  *
  * CORRECTNESS INVARIANT (ADR-024 Rule 4):
@@ -3004,7 +3050,6 @@ for (const step of pipeline) {
   const stepGateId = step.gate === "final" ? "final-gate" : `gate-${step.stage}`;
   const _resumeAnswerForThisStep =
     (args && args.resume_answer && args.resume_answer.gate_id === stepGateId) ? args.resume_answer : null;
-  const isResumingThisStep = !!_resumeAnswerForThisStep;
   // "edit" is the one resume answer that does NOT move past this step's gate
   // — it re-dispatches the author WITH the supplied feedback, exactly like a
   // live edit-retry, so the authoring dispatch below must never be skipped
@@ -3012,7 +3057,23 @@ for (const step of pipeline) {
   const _resumeAction = _resumeAnswerForThisStep
     ? (_resumeAnswerForThisStep.action || _resumeAnswerForThisStep.choice || null)
     : null;
-  const skipAuthorOnResume = isResumingThisStep && _resumeAction !== "edit";
+  // ACD-2100c-3-i: the subject binding (is THIS step the decision the run is
+  // ACTUALLY paused at?) must be checked BEFORE any part of a supplied
+  // resume_answer is acted on — checking only whether the SUPPLIED answer
+  // names this step's gate is not that check, because an answer naming a
+  // DIFFERENT decision point always fails that comparison even when this
+  // step genuinely is the one being waited on (the mismatch case this AC
+  // covers). peekPausedGateId() reads the durable record directly, so the
+  // determination is anchored to the real, on-disk pause state rather than
+  // to whatever gate_id the (possibly wrong) answer claims. Only consulted
+  // when a resume is actually being attempted (args.resume_answer present)
+  // — a fresh, non-resumed invocation never pays for this extra read.
+  let isPausedAtThisStep = false;
+  if (args && args.resume_answer) {
+    const _actualPausedGateId = await peekPausedGateId(args.run_id || "default-run");
+    isPausedAtThisStep = _actualPausedGateId === stepGateId;
+  }
+  const skipAuthorOnResume = isPausedAtThisStep && _resumeAction !== "edit";
 
   while (!approved) {
     // ACD-2100c-3 AC-1/AC-2: on a resume whose answer moves past this step's
