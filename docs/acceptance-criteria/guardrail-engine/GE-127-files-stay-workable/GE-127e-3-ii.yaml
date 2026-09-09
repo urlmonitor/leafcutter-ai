@@ -1,0 +1,186 @@
+id: GE-127e-3-ii
+title: "Every tool named by an instruction a refusal sends the author to actually exists"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a refusal from the file-size gate names a command for the author to run,
+  And that command's own instructions invoke one or more tools by path,
+  When each of those paths is resolved against the repository the author is
+    working in,
+  Then every one of them exists,
+  And given an instruction is introduced that invokes a tool at a path which
+    does not exist,
+  When the same resolution is performed,
+  Then it is reported, naming the command, the instruction, and the path that
+    did not resolve — so that the absence is a stated finding rather than
+    something the author discovers by running it.
+depends_on:
+  - GE-127e-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e-3.yaml
+    relationship: parent
+    status: exists
+    relevance: >-
+      The behaviour this constrains. GE-127e-3 requires that every action a
+      refusal names be carriable exactly as written and produce what it claims.
+      That is stated about the refusal's own text; this record carries it ONE HOP
+      FURTHER, to the instructions inside the artifact the refusal points at. The
+      distinction is the whole reason the defect below survived: the pointer from
+      the guard to the command resolves, so every check that stopped at the
+      refusal's own text passed.
+  - path: templates/workflows/code-refactoring-specialist.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE INSTANCE, VERIFIED BY HAND 2026-09-08. Line 12, step 1 of the command
+      `check_file_size.py:234` sends every blocked author to, instructs running
+      `python .agent/skills/code-analysis/scripts/analyze_structure.py <file>`. A
+      `find` across the whole workspace returns nothing for that filename and no
+      `.agent/skills/code-analysis/` directory exists. The remaining four steps of
+      the command are intact and useful; only step 1's tool invocation is dead.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: related
+    status: exists
+    relevance: >-
+      Holds the pointer, at `:234` and `:236`. NOT the defect and NOT to be
+      changed by this record — the guard naming a command that exists is correct
+      behaviour. The break is inside the command it names.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      `KI-CG-20260908-file-size-refusal-advises-a-dead-command` is this record's
+      originating instance and is closed by it.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" applies with a
+      caveat worth stating, because a careless reading forbids the only test that
+      works here. The artifact under test IS text — it is a prompt an agent reads
+      — so there is no runtime behaviour to drive. What makes the descriptor
+      behavioural rather than grep-shaped is that it RESOLVES each extracted path
+      against the filesystem: it asserts about the world, not about the presence
+      of a string. A test that merely asserted the dead line was absent would pass
+      the moment the line was deleted and would never catch the next dead pointer.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE, MEASURED. `_package_surface_registry.WATCHED_REGISTRIES`
+    binds `hooks_manifest.hooks` (by id) and `commit_guardian.json`'s own top level
+    (by mapping key). This record adds neither: it deletes one line from a command
+    template and adds a test. Do not mint a `config_schema_fragment` to satisfy the
+    structured-spec validator — BP-100k-4 and BP-100k-4-i both declared keys that
+    were never created, and repeating that makes the machine-checked spec less
+    trustworthy than no spec.
+  - >-
+    THE FIX IS DELETION, NOT SUBSTITUTION, AND THIS IS DECIDED. Do not create
+    `analyze_structure.py`, and do not point the instruction at a different tool.
+    GE-127e-1 specifies a per-file description engine that produces exactly the
+    "deterministic map of the file" this instruction asks for; building a second one
+    now is the duplication GE-127e's CR-100 and INF-800 fences exist to prevent.
+    GE-127e-3's fourth arm makes a refusal that offers nothing explicitly compliant,
+    precisely so that removing a false promise is never blocked by a requirement to
+    promise something.
+  - >-
+    EXTRACT PATHS, DO NOT HARDCODE THEM. The descriptor must discover the invoked
+    paths from the command file's own text at run time and resolve each one. A test
+    that asserts the single known-bad string is absent is satisfied by this one
+    deletion and blind to the next dead pointer — which is the failure mode that
+    produced this record. Resolve relative to the repository root as the author
+    would experience it.
+  - >-
+    SCOPE THE POPULATION EXPLICITLY AND STATE THE CHOICE. The command file also
+    routes to `@documentation-expert` for `.md` files, and `.md` is not in
+    `file_size.checked_extensions` (`['.py', '.sql']`), so that branch is
+    unreachable from this gate. It is inert, not broken, and is OUT OF SCOPE here —
+    an agent reference is not a tool invoked by path. Constrain the descriptor to
+    instructions that invoke something by filesystem path.
+test_spec:
+  - name: test_ge_127e_3_ii_every_path_invoked_tool_in_the_named_command_resolves
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Extract every filesystem path invoked by an instruction in
+      templates/workflows/code-refactoring-specialist.md — the command
+      check_file_size.py's refusal names — and resolve each against the repository
+      root. Every one must exist. Paths are DISCOVERED from the file's text at run
+      time, never hardcoded in the test. RED TODAY: step 1 invokes
+      `.agent/skills/code-analysis/scripts/analyze_structure.py`, which does not
+      exist anywhere in the workspace.
+  - name: test_ge_127e_3_ii_an_instruction_naming_a_missing_tool_is_reported_with_command_instruction_and_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      NAMED MUTATION (mandatory, run it, do not merely describe it). Write a copy of
+      the command file into a temporary directory with one added instruction
+      invoking a path that does not exist, and run the same resolution against it.
+      It must report, and the report must name the command, the instruction, and the
+      unresolved path. Without this arm the first descriptor is satisfied by a check
+      that resolves nothing and reports nothing — which is precisely how a dead
+      pointer survived in the shipped artifact.
+test_rationale: |
+  The first descriptor is the red baseline and is red today for the real reason:
+  the shipped command's step 1 names a script that has never existed in this
+  repository.
+
+  The second descriptor exists because the first, alone, is satisfiable by a check
+  that extracts zero paths — it would go green the moment the offending line is
+  deleted, and stay green forever afterwards regardless of whether the check still
+  works. That is KI-TQ-010's shape and this component's most-repeated defect: a
+  scanner that examined 169 files, compared none, and exited 0 (KI-CG-034). The
+  mutation forces the extraction and the reporting to be real.
+
+  Neither descriptor greps for the known-bad string. Both resolve discovered paths
+  against the filesystem, so they assert about the world rather than about text, and
+  both keep working against a dead pointer nobody has seen yet.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/commit_guardian/test_ge_127e_3_ii.py"
+implemented_by:
+  - "templates/workflows/code-refactoring-specialist.md"
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS AN L3 UNDER GE-127e-3 AND NOT A FIFTH L2 UNDER GE-127e. GE-127e has
+  four L2 children against a cap of five, so a sibling would fit — the constraint is
+  not capacity, it is shape. GE-127e-3 already owns "the refusal offers only help
+  that actually arrives". This record does not add a new behaviour; it pins WHERE
+  that obligation reaches: one hop past the refusal's own text, into the artifact the
+  refusal names. That is a technical constraint on an already-specified behaviour,
+  which is what the Roman-suffix level is for. Filing it as an L2 would put two
+  records in the tree claiming the same promise and let an implementer satisfy
+  whichever is cheaper.
+
+  WHAT THIS RECORD DOES NOT CLOSE. GE-127e-3 has three other arms — no future-tense
+  promise, "already done" claims checked against the run that produced the refusal,
+  and a bare verdict being explicitly compliant. Landing this record does NOT make
+  GE-127e-3 done, and its work_status must not be flipped on the strength of this
+  fix alone. One instance of a violation removed is not the criterion satisfied.
+
+  THE DEFECT'S SHAPE, WHICH IS THE REASON THE RECORD IS WORTH HAVING. Every hop but
+  the last resolved. The guard names a command; the command exists and is deployed;
+  the command names a script; the script does not exist. Any check that stopped at
+  "does the slash command resolve" reported healthy. The generalisable lesson is that
+  a pointer chain is only as good as its last hop, and the only way to know is to
+  follow it all the way down — which is what the descriptors do.
