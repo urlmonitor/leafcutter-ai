@@ -1549,7 +1549,94 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     if (recCheck.stale === true) {
       return { status: "unresumable_stale", run_id: runId, gate_id: gateId };
     }
-    return applyAnswerByType(args.resume_answer, incomingType);
+    const decision = applyAnswerByType(args.resume_answer, incomingType);
+
+    // ACD-2100c-3 AC-1/AC-2: carry the pause record's own context snapshot
+    // back to the caller so the step(s) BEFORE this decision point are not
+    // re-dispatched on resume -- the caller recovers the AC ids already
+    // drafted (and left on disk, untouched) by the paused run from the
+    // persisted record instead of re-running the authoring agent.
+    const _pausedRecord = (recCheck && recCheck.record) || null;
+    if (_pausedRecord && _pausedRecord.context && typeof _pausedRecord.context === "object") {
+      decision._resumedContext = _pausedRecord.context;
+    }
+
+    // ACD-2100c-3 AC-4: once the resumed run has moved PAST this decision
+    // point, no record of it waiting must remain on disk. "edit" does NOT
+    // move past the gate -- it re-dispatches the step with feedback and
+    // re-presents essentially the same decision -- so the record is
+    // deliberately left in place for that one answer type; every other
+    // answer clears it here, before the caller performs the work (commit /
+    // PR / terminal return) that actually commits the run past the gate.
+    // Ordering matters (see this ticket's Implementation Notes): if the
+    // process dies between this clear and that later work, the run is left
+    // uncommitted-but-not-listed-as-waiting rather than the worse state of
+    // committed-yet-still-listed-as-waiting.
+    if (decision.action !== "edit") {
+      const _clearPrompt =
+        "This paused run has been resumed and is moving past the decision point " +
+        "it was waiting on. Clear its durable pause record so it no longer shows " +
+        "as waiting. Run exactly:\n" +
+        "  " + buildPauseStoreCommand("clear --run-id " + runId) + "\n" +
+        "Return EXACTLY the command's JSON stdout.";
+      const _clearRaw = await agent(_clearPrompt, { agentType: "status-checker", label: "clear-pause-record" });
+
+      // VERIFY THE CLEAR — do not take the dispatch result on trust. Mirrors
+      // pauseAtGate()'s "VERIFY THE PERSIST" block above: a prior version of
+      // this function discarded the dispatch result and unconditionally
+      // proceeded as though AC-4's requirement ("no record of it waiting
+      // remains on disk") were met. If the dispatch fails, or
+      // pause_store.py clear exits 1 on an OSError during unlink, or the
+      // LLM-mediated layer returns something unparseable, that must be
+      // surfaced, never silently swallowed.
+      let _clearParsed = null;
+      try {
+        _clearParsed = (typeof _clearRaw === "string")
+          ? parseAgentJson(_clearRaw, { stage: "clear-pause-record", agent: "status-checker" })
+          : _clearRaw;
+      } catch (_clearParseErr) {
+        _clearParsed = null;
+      }
+      let _clearVerified = !!(_clearParsed && _clearParsed.ok === true);
+
+      if (_clearVerified) {
+        // Read back through the same command resolveGate()'s resume-check
+        // read uses above, so the verify can never disagree with where the
+        // clear actually landed.
+        try {
+          const _clearVerifyRaw = await agent(
+            "Confirm the pause record was cleared. Run exactly:\n" +
+            "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
+            "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.",
+            { agentType: "status-checker", label: "clear-pause-record-verify" }
+          );
+          const _clearVerifyParsed = (typeof _clearVerifyRaw === "string")
+            ? parseAgentJson(_clearVerifyRaw, { stage: "clear-pause-record-verify", agent: "status-checker" })
+            : _clearVerifyRaw;
+          _clearVerified = !!(_clearVerifyParsed && _clearVerifyParsed.exists === false);
+        } catch (_clearVerifyErr) {
+          _clearVerified = false;
+        }
+      }
+
+      if (!_clearVerified) {
+        // Fail loudly, not silently: a stale record left behind makes this
+        // run look permanently paused to any later reader (AC-4). This does
+        // NOT block the caller from proceeding past the gate — the answer
+        // has already been validated and applied above, and the ordering
+        // comment before this block explains why the clear happens before
+        // the caller's own commit/PR/terminal-return work — but the failure
+        // must be observable, not discarded.
+        log(
+          "[plan-feature][WARNING] Could not verify the durable pause record for run '" +
+          runId + "' (gate '" + gateId + "') was cleared after resume. A stale record " +
+          "may remain on disk. clear-pause-record result: " + JSON.stringify(_clearParsed)
+        );
+        decision._clearVerifyFailed = true;
+      }
+    }
+
+    return decision;
   }
 
   // No matching resume_answer: the ONLY remaining channel that reaches the
@@ -2909,64 +2996,96 @@ for (const step of pipeline) {
   let approved = false;
   let acFeedback = "";
 
+  // ACD-2100c-3 AC-1: the gate id this step's decision point is presented
+  // under. Used to detect that THIS process invocation is resuming a run
+  // that previously paused right here, so the authoring dispatch below (the
+  // step BEFORE the decision point) is not re-run for an answer that moves
+  // past the gate.
+  const stepGateId = step.gate === "final" ? "final-gate" : `gate-${step.stage}`;
+  const _resumeAnswerForThisStep =
+    (args && args.resume_answer && args.resume_answer.gate_id === stepGateId) ? args.resume_answer : null;
+  const isResumingThisStep = !!_resumeAnswerForThisStep;
+  // "edit" is the one resume answer that does NOT move past this step's gate
+  // — it re-dispatches the author WITH the supplied feedback, exactly like a
+  // live edit-retry, so the authoring dispatch below must never be skipped
+  // for it (skipping would drop the feedback on the floor).
+  const _resumeAction = _resumeAnswerForThisStep
+    ? (_resumeAnswerForThisStep.action || _resumeAnswerForThisStep.choice || null)
+    : null;
+  const skipAuthorOnResume = isResumingThisStep && _resumeAction !== "edit";
+
   while (!approved) {
-    // Dispatch the authoring agent, directing AC writes to the dedicated
-    // authoring worktree's AC store path (AC BO-1500a-1).
-    stepResult = await agent(
-      `You are running as part of the /plan-feature pipeline (route: ${effectiveRoute}). ` +
-      (acFeedback
-        ? `The user reviewed your previous attempt and requested changes — address this feedback: ${acFeedback}. `
-        : "") +
-      `Write AC YAML files ONLY to ${acStoreDir}. ` +
-      "Do NOT write AC files to docs/acceptance-criteria/ relative to the current checkout — " +
-      `use the absolute path ${acStoreDir} instead. ` +
-      "Do NOT create or modify any files in tickets/. " +
-      "After writing, return a JSON object: { \"status\": \"ok\", \"acs_written\": [\"ACD-...\", ...] }\n" +
-      // Flow → BA handoff: when a product-truth flow was approved this run, the BA
-      // derives L2/L3 from the flow's steps (self-discovered via index.json — a
-      // structured flow_ref input is inert) and reports a flow_backlinks map the
-      // reconciliation step writes back into step.implements.
-      (step.stage === "ba" && ptFlowProduced
-        ? "A product-truth flow was approved for this request" +
-          (ptFlowRef ? ` (${ptFlowRef})` : "") +
-          ". Derive the L2/L3 ACs FROM THE FLOW'S STEPS. The flow is self-discoverable via " +
-          "docs/product-truth/index.json — rely on that discovery, not a passed flow_ref. " +
-          "ALSO return a flow_backlinks map in your JSON response: " +
-          "{ \"<flow step id>\": [\"<AC id>\", ...] } linking each flow step to the AC ids you derived from it. " +
-          // FLOW-DERIVED-AC PARENTING RULE (orphan-prevention): every L2/L3 you derive
-          // from a flow step MUST have an L1 parent, or scan_ac_orphans.py /
-          // check_ac_parent_covered_by (pre-commit hooks) will flag it. Give an
-          // explicit anchor in BOTH branches — never leave a flow-derived AC parentless.
-          (parent_l1_id
-            ? `Parent every flow-derived L2/L3 under the run's L1 ${JSON.stringify(parent_l1_id)} so none is orphaned. `
-            : `Anchor the derived L2s under the L1 for component ${JSON.stringify(ptComponent)} so they are not orphaned — ` +
-              `this run has no triage L1 (parent_l1_id is null), so on the strategic route use the L1 the ` +
-              `product-owner authored earlier in this run, otherwise use the flow's covering L1 (via index.json by_component). ` +
-              `Do NOT leave any flow-derived AC without an L1 parent; if no component L1 exists, report the missing L1 rather than orphaning the ACs. `) +
-          "\n"
-        : "") +
-      `user_request: ${JSON.stringify(request)}\n` +
-      `component: ${JSON.stringify(component)}\n` +
-      `parent_l1_id: ${JSON.stringify(parent_l1_id)}\n` +
-      `route: ${JSON.stringify(effectiveRoute)}\n` +
-      `ac_store_path: ${JSON.stringify(acStoreDir)}`,
-      { agentType: step.agent, label: `stage-${step.stage}-author` }
-    );
+    // ACD-2100c-3 AC-1/AC-2: on a resume whose answer moves past this step's
+    // gate, do NOT re-dispatch the authoring agent — the drafted work already
+    // on disk from the paused run is what must carry forward unchanged, and
+    // re-dispatching here is exactly the "repeat the steps before the
+    // decision point" this AC forbids. The AC ids from the paused run are
+    // recovered below from the persisted pause record (via resolveGate()'s
+    // `_resumedContext`), not re-derived from a fresh authoring dispatch. An
+    // "edit" resume answer is excluded from this skip (see
+    // skipAuthorOnResume above) — it dispatches normally, below.
+    let written;
+    if (skipAuthorOnResume) {
+      written = [];
+    } else {
+      // Dispatch the authoring agent, directing AC writes to the dedicated
+      // authoring worktree's AC store path (AC BO-1500a-1).
+      stepResult = await agent(
+        `You are running as part of the /plan-feature pipeline (route: ${effectiveRoute}). ` +
+        (acFeedback
+          ? `The user reviewed your previous attempt and requested changes — address this feedback: ${acFeedback}. `
+          : "") +
+        `Write AC YAML files ONLY to ${acStoreDir}. ` +
+        "Do NOT write AC files to docs/acceptance-criteria/ relative to the current checkout — " +
+        `use the absolute path ${acStoreDir} instead. ` +
+        "Do NOT create or modify any files in tickets/. " +
+        "After writing, return a JSON object: { \"status\": \"ok\", \"acs_written\": [\"ACD-...\", ...] }\n" +
+        // Flow → BA handoff: when a product-truth flow was approved this run, the BA
+        // derives L2/L3 from the flow's steps (self-discovered via index.json — a
+        // structured flow_ref input is inert) and reports a flow_backlinks map the
+        // reconciliation step writes back into step.implements.
+        (step.stage === "ba" && ptFlowProduced
+          ? "A product-truth flow was approved for this request" +
+            (ptFlowRef ? ` (${ptFlowRef})` : "") +
+            ". Derive the L2/L3 ACs FROM THE FLOW'S STEPS. The flow is self-discoverable via " +
+            "docs/product-truth/index.json — rely on that discovery, not a passed flow_ref. " +
+            "ALSO return a flow_backlinks map in your JSON response: " +
+            "{ \"<flow step id>\": [\"<AC id>\", ...] } linking each flow step to the AC ids you derived from it. " +
+            // FLOW-DERIVED-AC PARENTING RULE (orphan-prevention): every L2/L3 you derive
+            // from a flow step MUST have an L1 parent, or scan_ac_orphans.py /
+            // check_ac_parent_covered_by (pre-commit hooks) will flag it. Give an
+            // explicit anchor in BOTH branches — never leave a flow-derived AC parentless.
+            (parent_l1_id
+              ? `Parent every flow-derived L2/L3 under the run's L1 ${JSON.stringify(parent_l1_id)} so none is orphaned. `
+              : `Anchor the derived L2s under the L1 for component ${JSON.stringify(ptComponent)} so they are not orphaned — ` +
+                `this run has no triage L1 (parent_l1_id is null), so on the strategic route use the L1 the ` +
+                `product-owner authored earlier in this run, otherwise use the flow's covering L1 (via index.json by_component). ` +
+                `Do NOT leave any flow-derived AC without an L1 parent; if no component L1 exists, report the missing L1 rather than orphaning the ACs. `) +
+            "\n"
+          : "") +
+        `user_request: ${JSON.stringify(request)}\n` +
+        `component: ${JSON.stringify(component)}\n` +
+        `parent_l1_id: ${JSON.stringify(parent_l1_id)}\n` +
+        `route: ${JSON.stringify(effectiveRoute)}\n` +
+        `ac_store_path: ${JSON.stringify(acStoreDir)}`,
+        { agentType: step.agent, label: `stage-${step.stage}-author` }
+      );
 
-    // Tolerant parse: the authoring agent may return a JSON STRING; read fields
-    // off the parsed object so acs_written/flow_backlinks aren't silently dropped.
-    let stepResultObj;
-    try {
-      stepResultObj = parseAgentJson(stepResult, { stage: `stage-${step.stage}-author`, agent: step.agent });
-    } catch (_stepResultParseErr) {
-      stepResultObj = {};
-    }
-    const written = (stepResultObj && stepResultObj.acs_written) ? stepResultObj.acs_written : [];
-    allAcsWritten.push(...written);
+      // Tolerant parse: the authoring agent may return a JSON STRING; read fields
+      // off the parsed object so acs_written/flow_backlinks aren't silently dropped.
+      let stepResultObj;
+      try {
+        stepResultObj = parseAgentJson(stepResult, { stage: `stage-${step.stage}-author`, agent: step.agent });
+      } catch (_stepResultParseErr) {
+        stepResultObj = {};
+      }
+      written = (stepResultObj && stepResultObj.acs_written) ? stepResultObj.acs_written : [];
+      allAcsWritten.push(...written);
 
-    // Capture the BA's reported flow_backlinks for the post-BA reconciliation step.
-    if (step.stage === "ba" && stepResultObj && stepResultObj.flow_backlinks && typeof stepResultObj.flow_backlinks === "object") {
-      baFlowBacklinks = stepResultObj.flow_backlinks;
+      // Capture the BA's reported flow_backlinks for the post-BA reconciliation step.
+      if (step.stage === "ba" && stepResultObj && stepResultObj.flow_backlinks && typeof stepResultObj.flow_backlinks === "object") {
+        baFlowBacklinks = stepResultObj.flow_backlinks;
+      }
     }
 
     // Present gate to the user. ADR-024: resolveGate checks args.resume_answer first.
@@ -3019,6 +3138,16 @@ for (const step of pipeline) {
         };
       }
       const gateDecision = _midGateResult;
+
+      // ACD-2100c-3 AC-1/AC-2: this step's authoring dispatch was skipped
+      // above because this process is resuming right at this gate — recover
+      // the AC ids the paused run already drafted from the record resolveGate()
+      // just read, rather than treating `written` as empty (which would
+      // silently drop them from the commit / cancel messaging below).
+      if (skipAuthorOnResume && gateDecision._resumedContext && Array.isArray(gateDecision._resumedContext.acs)) {
+        written = gateDecision._resumedContext.acs;
+        allAcsWritten.push(...written);
+      }
 
       const action = gateDecision.action.toLowerCase();
 
@@ -3132,6 +3261,37 @@ for (const step of pipeline) {
       // produced if it were ever reached). Removed for clarity; no behaviour
       // change.
       const finalDecision = _finalGateResult;
+
+      // ACD-2100c-3 AC-1/AC-2: the it-po authoring dispatch was skipped above
+      // because this process is resuming right at the final gate — recover
+      // the AC ids the paused run already drafted (and left on disk,
+      // untouched) from the record resolveGate() just read, instead of
+      // treating `written`/`allAcsWritten` as empty.
+      if (skipAuthorOnResume && finalDecision._resumedContext) {
+        if (Array.isArray(finalDecision._resumedContext.acs)) {
+          written = finalDecision._resumedContext.acs;
+        }
+        // H-2 fix: `all_acs` is the pre-pause snapshot of EVERY AC id drafted
+        // by the time this run paused — both already-committed earlier
+        // stages AND this (final-gate) stage's own not-yet-committed ids.
+        // The earlier-committed stages were ALREADY re-added a few dozen
+        // lines above via the independent git-log crash-resume reconstruction
+        // (`committedStageKeys`), so a blind push here double-counts them.
+        // But the snapshot is NOT a strict subset of that reconstruction: the
+        // reconstruction only recovers ids for stages visible in git log
+        // (i.e. already committed), while this stage's own ids are still
+        // uncommitted at pause time and exist ONLY in this snapshot — a
+        // blind drop of this block would silently lose them (turning a
+        // visible double-count into an invisible under-count, which is worse).
+        // Union with de-duplication is therefore the only correct merge.
+        if (Array.isArray(finalDecision._resumedContext.all_acs)) {
+          for (const _resumedAcId of finalDecision._resumedContext.all_acs) {
+            if (!allAcsWritten.includes(_resumedAcId)) {
+              allAcsWritten.push(_resumedAcId);
+            }
+          }
+        }
+      }
 
       const finalAction = finalDecision.action.toLowerCase();
       const priority = VALID_PRIORITIES.includes(finalDecision.priority)
