@@ -246,3 +246,81 @@ over the 7-cap. `ACD-1800`/`ACD-1600` concern what a unit of work is, not which
 one is picked. `ACD-400a` itself is full at five L2s and forbids an override.
 `ACD-400` now carries five L1s against the 7-cap; no `child_limit_override` is
 authored and none may be added.
+
+## ACD-2200 / ACD-2300 adoption + backfill: framing note for the BA and IT PO (2026-09-09, PO)
+
+Two NEW sibling root L0s, `origin_agent: BrainCandy`, `readiness: draft`,
+`priority: medium`, four L1s each (three free slots in each; no
+`child_limit_override` is authored and none may be added):
+
+- `ACD-2200-adoption-floor/` — *"Turn the standards on in a codebase that was not
+  built under them."* `roadmap_phase: phase_1` (claim argued in its notes).
+- `ACD-2300-backfill-existing-code/` — *"Code that already exists gets the
+  requirements and the proof it never had."* Deliberately **unphased**, flagged for
+  the user; `depends_on: [ACD-2200]`.
+
+Full evidence, confidence labels and the rejected alternatives live in the two
+L0s' `notes`. **Read those before decomposing.** Five things generalise beyond
+this pair.
+
+1. **ONE REQUEST CAN BE TWO L0s WHEN THE REGISTER ALREADY SEQUENCES IT.** The
+   brief asked for backfill tooling. `KI-CG-20260908-gate-test-ac-tags` ends
+   "Ratchet first, backfill opportunistically" — so the floor and the backfill are
+   independently shippable and already ordered by evidence. Splitting on that seam
+   also avoided a single L0 at exactly the 7-L1 cap with zero headroom.
+
+2. **A LIVE CONTRADICTION BETWEEN TWO STORE RECORDS, RAISED AND NOT RESOLVED.**
+   `ACD-800` (readiness reviewed, unbuilt since 2026-06-05) promises to backfill
+   `(implemented_by, work_status)` from "text similarity and keyword heuristics".
+   `ACS-1300`'s L0 forbids any record in its tree from writing `work_status` at
+   all, and marks the refusal "not to be revisited". Both cannot be right.
+   `ACD-2300` sides with `ACS-1300` and authors **no** field reconciler.
+   `ACD-800` needs amending or retiring — a **user decision**, not the BA's.
+   Note also that `ACD-800`'s method presumes a history of done TICKETS, which an
+   adopting project does not have.
+
+3. **CHECK WHETHER AN AC COVERS YOUR GAP FOR A DISJOINT POPULATION.** The brief's
+   "connect existing tests to existing ACs" reads as already-owned by `ACS-1300a`
+   — and is, for tests that ALREADY carry a tag (exact mechanical join, 549
+   records). The unowned population is the 5,566 test functions with **no tag at
+   all**, where there is no join key and the link must be *proposed*. Same
+   sentence, disjoint populations, different risk. `ACD-2300b` is scoped to the
+   second only. Generalises the ACD-400 lesson one step: before framing a gap,
+   check not only whether an AC covers it *wrongly* but whether one covers a
+   *neighbouring population* under wording that sounds identical.
+
+4. **`implemented_by` DOES NOT NEED A RECONCILER — AUTHOR IN THE DIRECTION WHERE
+   THE EVIDENCE ALREADY EXISTS.** A criterion derived from a function knows the
+   function, so the implementation evidence is a by-product of authoring and can
+   never be empty. A criterion matched to code afterwards always can. That is why
+   the field lives inside `ACD-2300a` rather than in a fourth L1. It is the
+   structural fix for the phantom-done shape recorded at
+   `KI-CG-20260908-gate-ac-done-on-merge`.
+
+5. **THE GUARANTEE L1 IS NOT OPTIONAL AND ITS NEGATIVE ARMS ARE THE LOAD-BEARING
+   HALF.** `ACD-2300d` exists because the cheapest implementation of `a`, `b` and
+   `c` satisfies all three while violating every safety property. Precedent:
+   `ACS-1300c` and `TQ-400e`. Every clause is a promise about what does **not**
+   happen, so each needs a behaviour where the tool is fed untrustworthy evidence
+   and correctly refuses to write — proved by **running it**, per CLAUDE.md's
+   "Gate / Workflow ACs — Verify Behaviorally, Not by Grep".
+
+**Inherited, not restated** (do not author children for these): `ACS-1100`
+(state your denominator), `ACS-1300`'s byte-stability and abstention-over-action
+rules and its absolute `work_status` refusal, `TQ-400e-1`'s do-not-write rule,
+`GE-127b`'s per-file ratchet as the worked example of ONE standard's floor, and
+`TQ-500`/`GE-120`/`GE-126` for "an adopted standard must be able to fail".
+`BP-1600a-2` is a precondition **in this repository only**, not a general
+dependency — an adopting project gets the wiring from the install and still faces
+`ACD-2200`'s problem.
+
+**Do not bake a measured figure into any criteria block in either tree.** Every
+number (5,566 / 499 / 252 / 49 / 354 / 549 / ~87) is a property of THIS repository
+on one day. Both capabilities must work on a repository nobody here has counted.
+
+**Identifier.** Highest taken ACD root is now `ACD-2300`. Established free
+2026-09-09 by four checks, none a directory listing (loose namespace-root records
+`ACD-1400`–`ACD-1405` are invisible to one): store-wide `^id: ACD-` scan (highest
+was `ACD-2100`); whole-worktree grep excluding `.git`; a grep of the shared main
+working tree; `git grep` against `origin/main`. Re-verify at merge time —
+id allocation here is known-broken (KI-ACD-008).

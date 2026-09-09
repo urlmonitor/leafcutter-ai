@@ -1,0 +1,100 @@
+id: ACD-2200c
+components:
+  - ac_driven_dev
+  - onboarding
+readiness: draft
+priority: medium
+title: "The debt you grandfathered stays on the record and can only shrink"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Tolerated is not forgotten — the backlog is counted and never grows.
+
+  Everything a standard tolerates on the day it is adopted is counted and stays
+  visible for as long as it is tolerated. That count can go down and never up.
+  It is never reduced by loosening the standard or by writing the offenders onto
+  a permanent list of exceptions.
+depends_on:
+  - ACD-2200
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Two findings here are load-bearing for this L1 and both are counter-examples
+      rather than examples. First, the folder-density gate's grandfather is
+      "accidentally total" — it derives the before-state from a source that already
+      includes the pending change, so before always equals after and the refusing
+      branch is unreachable. A grandfather that tolerates everything forever is
+      indistinguishable from no standard, and it reports a reassuring block of text
+      while doing it. Second, the fixture-bloat gate ships an exception list that is
+      currently empty, and the census's own judgement on filling it is "prefer the
+      ratchet; a path list of 266 entries rots the moment a file is renamed".
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      INHERITED, NOT DUPLICATED. The tolerated count this L1 publishes is an answer
+      about a body of records and is bound by ACS-1100's standing rule: state the
+      total it was measured against and what was excluded. A tolerated count that
+      shrinks because the denominator moved is the failure ACS-1100 exists to
+      prevent, and it would read here as progress.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  WHY THIS IS A SEPARATE L1 FROM ACD-2200b AND MUST STAY SEPARATE. ACD-2200b is a
+  PERMISSION: you may keep working on something that already falls short. This is
+  an OBLIGATION: the shortfall stays counted and cannot be made to disappear. They
+  have different populations, different implementations, and a project can satisfy
+  either while failing the other. Merged into one L1, an implementer satisfies the
+  permission — which is the cheap half and the visibly useful one — and the
+  obligation is quietly dropped. The precedent for splitting exactly here is
+  GE-127a versus GE-127b, whose notes give the same reasoning in the same words.
+
+  THE FAILURE THIS PREVENTS IS THE ONE THE USER NAMED AS THE WHOLE POINT.
+  BrainCandy's rule was "establish a floor and stop the bleeding", not "make the
+  numbers zero". A floor with no visible count degenerates within months into a
+  permanent amnesty that nobody remembers granting, and the project is back where
+  it started with a reassuring green tick on top. The count is what makes
+  "tolerated" a temporary state rather than a verdict.
+
+  MONOTONICITY IS THE FALSIFIABLE PART AND IT NEEDS A NEGATIVE TEST. "The count can
+  only go down" is satisfied trivially by any implementation that never
+  recalculates. The BA must specify at least one behaviour where the count WOULD
+  rise and is refused, and CLAUDE.md is explicit that a grep for the rule's prose
+  is not evidence for a rule of this shape — it must be proved by executing the
+  path.
+
+  THREE WAYS A COUNT FALSELY SHRINKS, ALL THREE OBSERVED IN THIS REPOSITORY AND
+  NONE OF THEM PROGRESS:
+    1. The standard was loosened. The census's complexity entry names raising the
+       limit as one of the two instinctive non-solutions.
+    2. The offender left the population — renamed, moved, or excluded by a scoping
+       change. The doc-links gate excludes an entire first-party directory today,
+       which the census flags as "likely backwards for this repo".
+    3. The measurement stopped reaching the population. The ticket-ac-limits gate
+       reports zero violations across 1,295 tickets from the deployed layout by
+       finding all 1,295 unreadable and skipping them. A count of zero produced
+       that way is the same shape as progress and must not be recorded as any.
+
+  RELATIONSHIP TO ACD-2300, STATED SO NEITHER TREE ANNEXES THE OTHER: this L1
+  publishes the size of the tolerated backlog. ACD-2300 is how that backlog is
+  worked down. Neither is required for the other to be valuable — a project can
+  hold a visible, monotonic backlog forever and still be strictly better off than
+  it is today, which is exactly the "ratchet first, backfill opportunistically"
+  sequencing the register prescribes.

@@ -1,0 +1,96 @@
+id: ACD-2200a
+components:
+  - ac_driven_dev
+  - onboarding
+readiness: draft
+priority: medium
+title: "Know what adopting a standard will cost before you commit to it"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  See the real distance to each standard before you switch any of them on.
+
+  Before a standard is taken up you are shown how far the project currently sits
+  from it — counted from what is actually in the project, alongside the total it
+  was counted against. Adopting, deferring or reshaping a standard becomes a
+  decision made on a measurement rather than on a guess.
+depends_on:
+  - ACD-2200
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-CG-20260908-dormant-gate-registration-census IS THIS L1 PERFORMED BY HAND,
+      once, for one repository. Read it as the shape of the output rather than as
+      the output: its table of twelve gates against "would it block today?" and a
+      count is close to the report this L1 promises. Its own closing pattern line is
+      the argument for automating it — "a gate's registration is a decision about
+      the existing repo, not about the gate — and the population it will judge is
+      exactly the thing no CI check measures".
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      STANDING CONTRACT THIS L1 INHERITS, NOT A PARENT AND NOT A DUPLICATE.
+      ACS-1100 (scope: standing) governs whether an ANSWER about a body of records
+      states its own denominator and its exclusions. Every figure this L1's report
+      emits is bound by it. The reason it is load-bearing here rather than
+      decorative is recorded in ACS-1300's notes: a stale denominator carried
+      forward beside a freshly recomputed numerator drifted silently and read as
+      more complete than it was, inside the evidence section of a tree about records
+      that say false things. A cost report with an unlabelled denominator is the
+      same defect aimed at an adoption decision.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+documentation_triggers:
+  - how-to
+notes: |
+  WHY THIS IS FIRST AND WHY IT IS NOT MERELY A REPORT. Every one of the nine
+  per-gate known-issue entries opens with "The numbers" and every one of them
+  exists because the numbers were not known when the decision to register was
+  taken. The census records the consequence plainly: a pull request registering
+  twelve gates "was green on all six required checks" while not one of the twelve
+  had executed against the repository it would gate. "The first thing that actually
+  ran one of these gates was a developer's own commit."
+
+  So the value here is not a document. It is that the adoption decision has an
+  input at all. An adopter who cannot see the distance can only discover it by
+  switching a standard on and watching work stop.
+
+  THE HAZARD THIS L1 MUST NOT REPRODUCE — AND IT IS THIS COMPONENT'S SIGNATURE
+  FAILURE. A measurement run that resolved to nothing must not be reportable as a
+  measurement of zero. Three separate defences documented in CLAUDE.md turned out
+  to be no-ops that reported clean for days or weeks: the AC-store validator's
+  bare-directory glob (exit 0 having checked zero files, for eight days), the
+  feedback-categories path (wrong for months, reporting a missing file on every
+  worktree), and a merge audit comparing against a stale ref. The census adds two
+  more of its own — a gate whose wiring forwards no filenames and reports success
+  having examined nothing, and a gate that returns success from the deployed layout
+  having found 1,295 of 1,295 tickets unreadable. A cost report that says "0" must
+  be distinguishable from one that looked at nothing. This is the single most
+  important property for the BA to make falsifiable.
+
+  SEQUENCING NOTE FOR THE BA. This L1 is a prerequisite in practice for ACD-2200b
+  and ACD-2200c — the floor is taken from a measurement and the tolerated set is
+  the thing measured — but it is NOT specified as a dependency, because the report
+  is independently valuable to a project that never adopts a single standard. Do
+  not add a depends_on edge that makes the report unshippable on its own.
+
+  OUT OF SCOPE, NAMED SO IT IS NOT ABSORBED: whether a standard is wired up at all
+  is BP-1600a-2's subject, and whether a standard's verdict is trustworthy is
+  TQ-500 / GE-120 / GE-126. This L1 measures distance-to-compliance for standards
+  that are wired and trustworthy. Both fences are on the parent's doc_links.

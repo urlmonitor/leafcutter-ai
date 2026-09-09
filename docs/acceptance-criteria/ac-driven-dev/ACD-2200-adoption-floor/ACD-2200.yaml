@@ -1,0 +1,259 @@
+id: ACD-2200
+components:
+  - ac_driven_dev
+  - onboarding
+  - commit_guardian
+readiness: draft
+priority: medium
+title: "Turn the standards on in a codebase that was not built under them"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Switch the standards on today without fixing thousands of things first.
+
+  A project that takes up this way of working part-way through its life meets a
+  wall. Every standard it would like to hold new work to is already broken in
+  hundreds of places, so switching one on stops all work, and leaving it off
+  protects nothing. Both options are bad and the second is the one everybody
+  picks, so the project keeps accumulating exactly the debt the standard exists
+  to prevent. After this goal a codebase that was never built under these
+  standards can hold new work to them from its first day. What is already there
+  is tolerated and stays workable. What is added or changed from now on is held
+  to the standard. The tolerated backlog is a counted number that can only go
+  down. You are shown what adopting will cost before you commit to it, you take
+  the standards up one at a time at whatever pace suits you, and you can put one
+  back down without unpicking the rest.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-CG-20260908-dormant-gate-registration-census AND the nine per-gate
+      entries that follow it are the measured shape of this goal's problem, and
+      the source of the governing rule stated verbatim in that census: "grandfather
+      what exists, enforce on everything new. A gate that refuses today's repo is
+      not ready; a gate that lets new debt in is not worth registering. Both halves
+      are required." READ THAT SECTION BEFORE DECOMPOSING ANYTHING HERE. Do not
+      restate its counts inside a criteria block — they are dated measurements of
+      one repository at one commit, and this goal must hold for a repository nobody
+      here has measured.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE WORKED EXAMPLE OF ONE STANDARD'S RATCHET — INHERIT IT AS PRECEDENT AND DO
+      NOT RESTATE IT. GE-127b is the keystone of its own tree and already owns the
+      per-file ratchet for file length: a file over the line may be worked on but
+      not made larger, judged against that file's own previous size rather than any
+      threshold. That is ONE standard's mechanism. This goal owns the property that
+      every standard a project adopts has such a floor, that the floor is taken once
+      at adoption from what is actually there, and that the tolerated set is counted
+      and monotonic. An L2 here that specifies a line-count comparison is in the
+      wrong tree.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION IN THIS REPOSITORY ONLY — NOT SCOPE, AND NOT A GENERAL
+      DEPENDENCY. BP-1600a-2 (approved, high, phase_1) owns the census of guard
+      scripts present on disk and invoked by nothing, and its day-one triage is what
+      registers or dispositions each one. Whether a standard is WIRED UP is that
+      record's subject. Whether a standard that is wired up can be switched on
+      without stopping all work is this goal's subject. An adopting project that
+      installs the package gets the wiring for free and still faces this goal's
+      problem, which is why this is a doc_link and not a depends_on edge.
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      STANDING CONTRACT THIS TREE INHERITS RATHER THAN RESTATES. The census records
+      that four of the twelve dormant guards are "registered-shaped but
+      non-enforcing", one "inspects nothing", and one "returns 0 unconditionally" —
+      so a naive adoption produces a registry of standards that cannot fail. That is
+      genuinely a hazard for this goal and it is ALREADY OWNED, three times over:
+      TQ-500 (checks that can fail), GE-120 (green means checked) and GE-126 (checks
+      answer truthfully). An L1 here asserting "an adopted standard is one that can
+      actually fail" would be a fourth statement of the same promise. Inherited, not
+      duplicated. If decomposition finds a gap those three do not reach, raise it
+      with the user rather than authoring it here.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1900-safe-migration/ACD-1900.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      SAME COMPONENT AND SAME SHAPE OF PROMISE — DIFFERENT MIGRATION. ACD-1900
+      operationalises ADR-026 and governs how THIS project moves from the v1 build
+      model to v2 without breaking itself. This goal governs how ANY project moves
+      from having no standards to having them. Their reversibility promises rhyme
+      and their subjects do not overlap. Neither may be closed as a duplicate of the
+      other, and ACD-1900 must not be widened to absorb this.
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2200a
+  - ACD-2200b
+  - ACD-2200c
+  - ACD-2200d
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-09-09, product-owner, on BrainCandy's brief). The request was for
+  "backfill tooling that lets an existing codebase adopt this AC-driven,
+  proof-of-done system incrementally". This L0 is HALF of the answer and is
+  deliberately the FIRST half. Its sibling ACD-2300 is the backfill itself and
+  carries a depends_on edge to this record.
+
+  ==========================================================================
+  WHY THE REQUEST WAS SPLIT — AND WHY THIS HALF IS THE PRIORITY
+  ==========================================================================
+  BrainCandy asked for backfill and then set the governing rule for it in the same
+  session: "On all new work we need to have the guards, to not end up in the same
+  situation we are in now." Backfill is explicitly NOT making the numbers zero. It
+  is establishing a floor and stopping the bleeding.
+
+  Those are two independently valuable and independently shippable products, and
+  the known-issues register already sequences them in exactly this order without
+  using these words. KI-CG-20260908-gate-test-ac-tags ends with the instruction
+  "Ratchet first, backfill opportunistically." A floor with no backfill is a
+  complete, valuable outcome: the project stops getting worse from that day. A
+  backfill with no floor is the failure mode the user named, because the backlog
+  refills behind you while you work through it.
+
+  So: ACD-2200 is the floor and does not depend on any backfill existing.
+  ACD-2300 is the backfill and depends on this. Building 2300 first is the wrong
+  order and this note is the reason.
+
+  A SINGLE L0 SPANNING BOTH WAS CONSIDERED AND REJECTED. It needed seven L1s,
+  which is exactly the hard cap, leaving no room for the documentation L1 or the
+  cross-cutting guarantee that later decomposition reliably discovers is needed.
+  Two L0s at four L1s each leaves three free slots in each. The cap arithmetic
+  precedent is ACS-1300's notes.
+
+  ==========================================================================
+  ONE L0 OR TWO ON THE OTHER AXIS — ADOPTION BY OTHERS VERSUS OUR OWN DEBT
+  ==========================================================================
+  BrainCandy asked explicitly whether "other repos adopting this" and "paying down
+  our own debt" are one goal or two. DECIDED: ONE, and it is not a close call.
+
+  They are the same mechanism pointed at two populations. This repository is the
+  first customer and its measured numbers — 5,566 untagged test functions, 499
+  fixture-bloat violations, 252 tickets with no test requirements, 49 files over
+  the complexity limit — are the acceptance fixture for a capability that must
+  also work on a repository nobody here has seen. Splitting them produces two
+  trees that must behave identically and will drift, and it invites the specific
+  failure of building "our debt" as a one-off script and "adopters" as a product.
+
+  The component already holds the precedent for keeping these together: ACD-1900g
+  is dogfood-on-self-host-first, proving on this project before any other project
+  is asked to adopt. That is INHERITED FRAMING here, not a new L1 — do not author
+  a fifth child restating it.
+
+  ==========================================================================
+  THE L1 CUT — BY GUARANTEE, NOT BY GATE
+  ==========================================================================
+  Do NOT re-cut this as one L1 per dormant guard. The census names twelve and each
+  has its own known-issue entry, its own ratchet shape and its own definition of
+  done. Twelve near-identical L1s would hide that they are eleven instances of two
+  promises, and would put this tree at four times its cap.
+
+    - ACD-2200a — FORESIGHT: you know the cost before you commit.
+    - ACD-2200b — THE FLOOR: what exists stays workable, what is new is held.
+    - ACD-2200c — MONOTONICITY: the tolerated set is counted and can only shrink.
+    - ACD-2200d — PACE AND REVERSIBILITY: one standard at a time, and back down.
+
+  ACD-2200b AND ACD-2200c ARE DELIBERATELY SEPARATE and must not be merged. (b) is
+  a PERMISSION — you may keep working on what is already short. (c) is an
+  OBLIGATION — the shortfall stays counted and cannot be made to vanish. Merged,
+  the cheapest implementation satisfies (b) perfectly by exempting the offenders
+  and calling it done, which is precisely one of the two non-solutions GE-127's
+  notes identify ("raise the number until nothing fails, or exempt the offenders —
+  both leave the project exactly where it is"). The same reasoning that keeps
+  GE-127a and GE-127b apart applies here unchanged.
+
+  ==========================================================================
+  THE EVIDENCE, WITH CONFIDENCE LABELS — CARRY THEM THROUGH, UPGRADE NEITHER
+  ==========================================================================
+  All figures below are from the census at df1f0cfb5, dated 2026-09-08, over THIS
+  repository. Per ACS-1100 (honest coverage answers, scope: standing, inherited)
+  any figure a child of this tree reports must state the total it was measured
+  against and what was excluded.
+
+    - DERIVED TWICE INDEPENDENTLY AND IN AGREEMENT: 49 of 915 tracked .py files
+      hold a function over the complexity limit; 5 of 12 tracked root files
+      violate the root-file allowlist; the root-file check matches A, M and R so
+      it forbids EDITING those five rather than merely adding new ones.
+    - SINGLE MEASUREMENT PASS, UNVERIFIED BY A SECOND METHOD: 5,566 untagged test
+      functions across 595 of 597 test files; 499 fixture-bloat violations across
+      266 files; 252 of 370 code tickets with no populated test-requirements
+      block; 354 tickets that a post-merge write hook would act on; 107 of 261
+      directories over the folder-density limit.
+    - EXPLICITLY UNCERTAIN IN THE SOURCE AND NOT TO BE PRESENTED OTHERWISE: what
+      pre-commit attaches to a hook's stdin was not observed, so the
+      "inspects nothing" finding for the ticket-test-requirements gate is
+      confirmed only for the empty-stdin case.
+    - NOT MEASURED AND NOT TO BE ASSERTED ANYWHERE IN THIS TREE: the same figures
+      for any other repository. This capability's whole point is that it works on
+      a codebase nobody here has counted.
+
+  A NUMBER IN A CRITERIA BLOCK IS A DEFECT IN THIS TREE. Every figure above is a
+  property of one repository on one day. Criteria state the guarantee; the numbers
+  live here and in the register.
+
+  ==========================================================================
+  THE TRAP THAT APPLIES TO THIS HALF
+  ==========================================================================
+  BrainCandy named two traps. Both are principally ACD-2300's, and both are
+  encoded there. The one that reaches THIS tree is the third state a standard can
+  be in: not off, not enforcing, but registered and unable to fail. The census
+  found six of twelve in some version of that state, and it is the worst of the
+  three because it looks like coverage. As recorded in doc_links, that hazard is
+  already owned by TQ-500, GE-120 and GE-126 and is INHERITED here rather than
+  restated. ACD-2200a is the record that makes it hard to fall into by accident,
+  because a standard whose measured distance-to-compliance is zero on a repository
+  that visibly violates it is a report that has caught its own defect.
+
+  ==========================================================================
+  ROADMAP — phase_1 IS CLAIMED AND THE CLAIM IS ARGUED
+  ==========================================================================
+  phase_1's outcome is "Stable MVP that installs into any project and helps the
+  user build good software — portable, self-onboarding, and reliable enough to use
+  across multiple repos." A package that installs into any project but whose
+  standards can only be switched on in a project that was built under them is not
+  reliable across multiple repos in any sense the outcome means. This goal is the
+  missing half of "installs into any project". Its sibling ACD-2300 makes a weaker
+  claim and is deliberately left unphased — see that record.
+
+  No roadmap or vision file was modified while authoring this. If the user
+  disagrees with the phase_1 claim, drop roadmap_phase rather than inventing a
+  phase for it.
+
+  ==========================================================================
+  IDENTIFIER
+  ==========================================================================
+  ACD-2200 established free on 2026-09-09 by four independent checks, none of
+  which is a directory listing (this component holds loose namespace-root records
+  ACD-1400 through ACD-1405 that a folder listing misses):
+    (1) every `^id: ACD-` value across the whole AC store — highest is ACD-2100;
+    (2) a whole-worktree grep for the literals ACD-2200 and ACD-2300 excluding
+        .git — no hits;
+    (3) a grep of the shared main working tree at
+        /home/henzeh/projects/leafcutter/leafcutter-ai — no hits;
+    (4) `git grep` for both literals against origin/main — no hits.
+  Per this store's standing rule, RE-VERIFY at merge time rather than trusting this
+  paragraph — id allocation here is known-broken (KI-ACD-008).
+
+  Authored at the PO stage. L0 and L1 only. No L2, no test_spec, no
+  it_requirements and no declares_side_effect, by design. declares_side_effect is
+  omitted rather than set false, matching every sibling in this folder and the
+  component PROJECT_CONTEXT note that the field has no slot in the schema.

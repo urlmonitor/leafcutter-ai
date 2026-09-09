@@ -4110,12 +4110,12 @@ Also worth settling while in the code: the Python and TypeScript scanners genuin
 
 ---
 
-### KI-CG-20260908-dormant-gate-registration-census — twelve commit-guardian scripts have never been registered, and a census of what each would actually do finds only one that both enforces and passes; four are non-enforcing because a config key is absent, one inspects nothing because of its `pass_filenames` wiring, and two would deadlock ordinary work
+### KI-CG-20260909-dormant-gate-registration-census — twelve commit-guardian scripts have never been registered, and a census of what each would actually do finds only one that both enforces and passes; four are non-enforcing because a config key is absent, one inspects nothing because of its `pass_filenames` wiring, and two would deadlock ordinary work
 
 - **Severity:** medium — nothing is broken today; every one of these gates is dormant. It is filed because the numbers below are the cost of turning any of them on, and that cost is currently invisible: a PR registering them goes green on all six required checks without a single one of the twelve ever executing against the repo it would gate.
 - **Status:** open — no AC. Measured, not acted on. `BP-1600a-2` (formerly `BP-100n-4`, renamed by PR #740) proposes registering all twelve; this entry is the measurement that should scope it, and is filed independently of that PR's fate.
 - **Occurrences:** 1 census.
-- **First seen:** 2026-09-08 (census run at `df1f0cfb5`) · **Last seen:** 2026-09-08
+- **First seen:** 2026-09-09 (census run at `df1f0cfb5`) · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/` — the twelve scripts named below, none present in `commit_guardian.json`'s `hooks_manifest.hooks`.
 
 **Why the numbers were never known.** `ci.yml` runs six named AC hooks by name (`ci.yml:294-299`); it never runs `pre-commit run --all-files`. So the pre-commit gate population is not exercised by CI at all, and a PR that registers new gates is never tested against the code it will gate. The registration PR was green on all six required checks. The first thing that actually ran one of these gates was a developer's own commit.
@@ -4161,15 +4161,15 @@ Also worth settling while in the code: the Python and TypeScript scanners genuin
 
 **Pattern:** a gate's registration is a decision about the existing repo, not about the gate — and the population it will judge is exactly the thing no CI check measures, because CI does not run pre-commit.
 
-**Per-gate entries follow.** The census above is the shared context; each gate below is a separate unit of work with its own numbers, its own ratchet shape, and its own definition of done. The governing rule for all of them, set 2026-09-08: **grandfather what exists, enforce on everything new.** A gate that refuses today's repo is not ready; a gate that lets new debt in is not worth registering. Both halves are required.
+**Per-gate entries follow.** The census above is the shared context; each gate below is a separate unit of work with its own numbers, its own ratchet shape, and its own definition of done. The governing rule for all of them, set 2026-09-09: **grandfather what exists, enforce on everything new.** A gate that refuses today's repo is not ready; a gate that lets new debt in is not worth registering. Both halves are required.
 
 ---
 
-### KI-CG-20260908-gate-complexity — `check-complexity` judges every function absolutely, so registering it refuses 49 existing files including the two most-edited in the repo
+### KI-CG-20260909-gate-complexity — `check-complexity` judges every function absolutely, so registering it refuses 49 existing files including the two most-edited in the repo
 
 - **Severity:** high (as a blocker to registration) — the gate itself is dormant and harms nothing today.
 - **Status:** open — no AC. Needs its own session.
-- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/check_complexity.py:197` (`main`), `:130` (`process_staged_file`); limit `MAX_COMPLEXITY_SCORE = 15` from `config.py`.
 
 **The numbers.** 49 of 915 tracked `.py` files contain at least one function over 15. Worst: `scripts/ac_store/generate_ticket_from_ac.py` (75), `scripts/build_helpers.py` (65), `scripts/build.py` (44), `scripts/knowledge_query.py` (44), `scripts/build_referential_integrity.py` (41), `scripts/build_phases.py` (39), `templates/scripts/commit_guardian/check_ac_governance.py` (46), `scripts/build_orchestration/fast_lane.py` (26). Excluded dirs are only `alembic` and `legacy`.
@@ -4182,11 +4182,11 @@ Also worth settling while in the code: the Python and TypeScript scanners genuin
 
 ---
 
-### KI-CG-20260908-gate-root-files — `check-root-files` refuses 5 legitimate root files and matches `M`, so registering it makes `ruff.toml` and `LEAFCUTTER_VERSION` permanently uneditable
+### KI-CG-20260909-gate-root-files — `check-root-files` refuses 5 legitimate root files and matches `M`, so registering it makes `ruff.toml` and `LEAFCUTTER_VERSION` permanently uneditable
 
 - **Severity:** high (as a blocker to registration); trivial to fix.
 - **Status:** open — no AC. Smallest of the set; likely a single short session.
-- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/check_root_files.py:34` (`git diff --cached --name-status`), `:51` (the status filter); allowlist at `commit_guardian.json` → `root_files.allowed_files` / `allowed_extensions`.
 
 **The numbers.** 5 of 12 tracked root files violate: `ruff.toml`, `requirements-dev.txt`, `build-self.sh`, `SETUP.md`, `LEAFCUTTER_VERSION`. The shipped allowlist permits `poetry.lock` and `pyproject.toml` but this repo uses `requirements-dev.txt`; permits `setup.sh` and `init-db.sh` but not `build-self.sh`; permits `README.md`/`BOOTSTRAP.md`/`CLAUDE.md` but not `SETUP.md`; and its only allowed extension is `.json`, so `.toml` and the extensionless `LEAFCUTTER_VERSION` both fall through.
@@ -4199,11 +4199,11 @@ Also worth settling while in the code: the Python and TypeScript scanners genuin
 
 ---
 
-### KI-CG-20260908-gate-test-ac-tags — `check-test-ac-tags` is one absent config key away from refusing 5,566 test functions
+### KI-CG-20260909-gate-test-ac-tags — `check-test-ac-tags` is one absent config key away from refusing 5,566 test functions
 
 - **Severity:** high (latent) — currently `warn`, so it blocks nothing; flipping one key blocks nearly the whole test suite.
 - **Status:** open — no AC. Needs its own session, and the largest backlog of the set.
-- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/check_test_ac_tags.py`; mode resolves to `warn` because `test_ac_tag_enforcement` is **absent** from `commit_guardian.json`.
 
 **The numbers.** **5,566 test functions across 595 of 597 test files** carry no `# covers: XX-NNN` tag. Only 2 files are fully tagged. Registered in `warn` mode this is 0 blocking and a very large amount of console noise; registered in error mode it stops essentially all test work.
@@ -4216,11 +4216,11 @@ Also worth settling while in the code: the Python and TypeScript scanners genuin
 
 ---
 
-### KI-CG-20260908-gate-test-fixture-bloat — `check-test-fixture-bloat` is disabled by an absent config section, hiding 499 violations, and only one of its three axes ratchets cleanly
+### KI-CG-20260909-gate-test-fixture-bloat — `check-test-fixture-bloat` is disabled by an absent config section, hiding 499 violations, and only one of its three axes ratchets cleanly
 
 - **Severity:** medium (latent) — section absent → `enabled` defaults `False`.
 - **Status:** open — no AC. Needs its own session.
-- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/check_test_fixture_bloat.py`; `test_fixture_bloat` **absent** from `commit_guardian.json`. It does carry a `grandfathered_paths` list, currently empty.
 
 **The numbers.** **499 violations across 266 files**: 328 inline-dict (>5 keys), 160 line-count (>500 lines), 11 parametrize-rows (>3).
@@ -4231,11 +4231,11 @@ Also worth settling while in the code: the Python and TypeScript scanners genuin
 
 ---
 
-### KI-CG-20260908-gate-ticket-test-requirements — registered as configured, `check-ticket-test-requirements` would inspect nothing; wired correctly it fails 252 tickets
+### KI-CG-20260909-gate-ticket-test-requirements — registered as configured, `check-ticket-test-requirements` would inspect nothing; wired correctly it fails 252 tickets
 
 - **Severity:** high — this is the one gate whose registration would actively create a false green.
 - **Status:** open — no AC. Needs its own session; fix the wiring BEFORE registering.
-- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/check_ticket_test_requirements.py`; the proposed manifest entry sets `files: ^tickets/.*\.md$` with **`pass_filenames: false`**.
 
 **The mechanism.** With `pass_filenames: false`, `run_hook.py` forwards zero arguments; the script's `main()` then falls back to `sys.stdin.readlines()`. With empty stdin it checks 0 files and exits 0. Registering it therefore adds a manifest entry that reports success having examined nothing — the exact false-assurance shape the census AC exists to remove, reproduced one level up by the fix for it.
@@ -4250,11 +4250,11 @@ Also worth settling while in the code: the Python and TypeScript scanners genuin
 
 ---
 
-### KI-CG-20260908-gate-ac-done-on-merge — the only gate of the twelve that writes, never run here, and registration points it at 354 tickets
+### KI-CG-20260909-gate-ac-done-on-merge — the only gate of the twelve that writes, never run here, and registration points it at 354 tickets
 
 - **Severity:** medium — zero blocking risk, non-zero store-mutation risk.
 - **Status:** open — no AC. Needs its own session; dry-run before registering.
-- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/hooks/check_ac_done_on_merge.py`; proposed as `stages: [post-merge]`.
 
 **What it does.** For every `.md` in `git diff HEAD~1 HEAD` carrying `status: done` plus `source_ac`, it shells out to `mark_ac_done.py`. It always returns 0, so it can never block a merge. **354 tracked tickets carry both fields.**
@@ -4265,11 +4265,11 @@ Also worth settling while in the code: the Python and TypeScript scanners genuin
 
 ---
 
-### KI-CG-20260908-gate-folder-density — `check-folder-density`'s grandfather compares `git ls-files`, which already includes staged additions, so its blocking branch is unreachable
+### KI-CG-20260909-gate-folder-density — `check-folder-density`'s grandfather compares `git ls-files`, which already includes staged additions, so its blocking branch is unreachable
 
 - **Severity:** low — safe to register, but it is not an enforcing gate and would print a warning block on most commits.
 - **Status:** open — no AC.
-- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/check_folder_density.py`; limit 15 non-`.md`, non-`__init__.py` files per directory.
 
 **The mechanism.** It computes `before_counts` from `git ls-files` to decide whether a directory was already over the limit. But `git ls-files` lists staged-but-uncommitted additions, so in a real pre-commit run `before == after` — every over-limit directory takes the `before > limit → warning` branch and the blocking branch is never reached. The grandfather is not too lenient by design; it is accidentally total.
@@ -4282,11 +4282,11 @@ Also worth settling while in the code: the Python and TypeScript scanners genuin
 
 ---
 
-### KI-CG-20260908-gate-doc-links — `check-doc-links` returns 0 unconditionally, so registering it adds a gate that cannot fail
+### KI-CG-20260909-gate-doc-links — `check-doc-links` returns 0 unconditionally, so registering it adds a gate that cannot fail
 
 - **Severity:** low.
 - **Status:** open — no AC.
-- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/check_doc_links.py` — `main()` returns 0 on every path.
 
 **The numbers.** Population is 117 files (798 of 915 `.py` excluded by `EXCLUDED_DIRS` = tests, unit_tests, templates, debugging, alembic, legacy — note that excludes **all** of `templates/`). 13 warnings in 9 files today.
@@ -4297,11 +4297,11 @@ Also worth settling while in the code: the Python and TypeScript scanners genuin
 
 ---
 
-### KI-CG-20260908-gate-ticket-ac-limits-and-the-three-inert — the one gate ready to register today, and three whose population is empty here
+### KI-CG-20260909-gate-ticket-ac-limits-and-the-three-inert — the one gate ready to register today, and three whose population is empty here
 
 - **Severity:** low.
 - **Status:** open — no AC. Probably one short session covering all four.
-- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 
 **`check-ticket-ac-limits` — ready, with one caveat.** Limits are ≤7 ACs per agent block and ≤20 per ticket; measured maximum is 10 total and 7 per-agent (the check is `> 7`, so 7 passes). 0 violations across 1,295 tickets. **The caveat:** that result was obtained by forcing the repo root. Run from the deployed path in this workspace the hook is a silent no-op — `leafcutter-ai/scripts/commit_guardian` symlinks into `.leafcutter/`, which contains its own `.git`, and `_find_project_root()` walks up from `__file__` rather than CWD, stopping at `/home/henzeh/projects/leafcutter/.leafcutter`. Measured from there: **1,295 of 1,295 tickets unreadable → all skipped → exit 0 having read nothing.** Same family as the `.security-allowlist` symlink hazard in `CLAUDE.md`. Registering it is safe; trusting a green run of the deployed hook is not.
 
