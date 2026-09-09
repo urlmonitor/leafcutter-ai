@@ -598,6 +598,18 @@
             "description": "Scope qualifier for this AC (e.g. 'standing' for standing/permanent requirements that persist across sprints).",
             "minLength": 1
         },
+        "product": {
+            "description": "Product-root ownership marker (UXP-700d-2). Set only on AC records that describe an example product shipped alongside the project's own record (e.g. the fern-and-fig demo plant shop under UXP-210-buy-a-plant / UXP-220-track-an-order), never on the project's own work. When present and different from the project's own product root, the ready-leaf scanner (scripts/ac_store/scan_ac_store.py's _is_example_content()) excludes the record from both the ready and blocked sets and reports it via the JSON output's set_aside_count instead of dropping it — separation, not deletion (ADR-022). Absent (the common case) on every AC that belongs to the project's own record.",
+            "oneOf": [
+                {
+                    "type": "string",
+                    "minLength": 1
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
         "child_limit_override": {
             "description": "Per-parent override that raises (never lowers) the default child count hard cap for this specific AC. When set to an integer N, the check-ac-tree-limits hook uses max(default_cap, N) as the effective cap for this parent. An override below the default cap is silently ignored (fail-open). An OVERRIDE ACTIVE audit line is emitted to stderr when the override is active and child_count exceeds the default. This field is a temporary, audited escape hatch -- it should be removed once the structural reorganisation (e.g. AC-UID-decoupling) is complete. Only meaningful on L0 and L1 ACs (the only levels with a child hard cap).",
             "oneOf": [

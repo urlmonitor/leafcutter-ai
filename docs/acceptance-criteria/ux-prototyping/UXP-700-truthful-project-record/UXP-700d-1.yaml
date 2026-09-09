@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: approved
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
