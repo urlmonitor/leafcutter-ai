@@ -6,8 +6,8 @@ priority: medium
 title: "Keyword-and-component matching discovers medium-confidence implementations"
 component: ac-driven-dev
 level: L1
-status: active
-req_status: active
+status: deprecated
+req_status: superseded
 work_status: todo
 criteria: |
   Given an AC has work_status: todo and implemented_by: [],
@@ -25,9 +25,29 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "RETIRED 2026-09-09 with the whole ACD-800 tree, on BrainCandy's decision ('retire as it will not work properly'). Reasoning in ACD-800's notes; this record's own reason in notes below."
+    by: product-owner
 superseded_by: null
 covered_by: [ACD-800b-1]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+notes: |
+  RETIRED 2026-09-09 with the whole ACD-800 tree. Decision, mechanism and the
+  live-code hazard are recorded once, in ACD-800's notes — read those.
+
+  THIS RECORD'S OWN REASON, AND IT IS THE WEAKEST EVIDENCE IN THE TREE. The
+  join is "two or more shared title keywords after stop-word filtering, plus a
+  component overlap". Two words in common between two titles is not evidence
+  that one implements the other; on a store of thousands of records with a
+  shared vocabulary it is close to a coincidence detector. Retirement reason 2
+  applies in full — the match target is a done ticket an adopting project does
+  not have — and reason 1 applies at one remove: this pass produces the
+  "medium" confidence label, and the tree's own design keeps medium out of the
+  auto-write path precisely because this evidence was known to be too weak to
+  act on. A signal explicitly too weak to write on is not worth building a
+  discovery capability around.
+
+  BUILT, DESPITE THE FIELDS. Implemented as `_pass2_keyword_overlap` in
+  scripts/ac_store/cross_reference_audit.py.

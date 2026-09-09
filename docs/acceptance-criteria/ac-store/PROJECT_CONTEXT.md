@@ -274,8 +274,13 @@ it is a `scope: standing` contract explicitly "not a home for" other surfaces; t
 tree INHERITS it (every figure states its denominator) rather than parenting under
 it. ACS-400b/e are the wrong subject and near cap. TQ-400d is the opposite direction
 (finished records that cannot be proven); TQ-400a/e are at or over the L2 cap.
-ACD-800 is the closest subject match but commits to heuristic discovery and to
-backfilling `work_status` — parenting there would require rewriting its goal.
+ACD-800 was the closest subject match but committed to heuristic discovery and to
+backfilling `work_status` — parenting there would have required rewriting its
+goal. It was retired outright on 2026-09-09 (`status: deprecated`, no successor)
+for those same reasons, so it is no longer available as a graft target at all;
+the rejection recorded here was correct and is now moot. Do not read its
+retirement as freeing up its subject: the tagged-link repair job is `ACS-1300a`'s
+and the propose-a-link-from-evidence job is `ACD-2300`'s.
 
 CAP ARITHMETIC: 3 L1s against the 7-cap. The BA's decomposition needed five L2s,
 which under a single L1 fills the 5-cap with zero room for a documentation AC and

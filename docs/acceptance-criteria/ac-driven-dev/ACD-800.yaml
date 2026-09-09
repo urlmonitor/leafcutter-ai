@@ -6,8 +6,8 @@ priority: medium
 title: "Existing implementations are automatically discovered and linked to their ACs"
 component: ac-driven-dev
 level: L0
-status: active
-req_status: active
+status: deprecated
+req_status: superseded
 work_status: todo
 criteria: |
   Given the AC store contains ACs that describe behaviours already implemented
@@ -28,9 +28,153 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "RETIRED 2026-09-09 on BrainCandy's decision, quoted verbatim: 'retire as it will not work properly.' Whole tree retired — this L0 and all ten descendants (ACD-800a, a-1, a-2, b, b-1, c, c-1, c-2, d, d-1). status set to deprecated with NO successor; req_status set to superseded. Full reasoning, the routing for the one part that was carried forward, and a live-code hazard this retirement does NOT remove are in this record's notes. Read the notes before acting on this record."
+    by: product-owner
 superseded_by: null
 covered_by: [ACD-800a, ACD-800b, ACD-800c, ACD-800d]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+notes: |
+  ==========================================================================
+  RETIRED 2026-09-09 — DECISION, SCOPE, AND MECHANISM
+  ==========================================================================
+  BrainCandy's decision, verbatim: "retire as it will not work properly."
+
+  SCOPE. The whole tree is retired, not this file alone: ACD-800 and all ten
+  descendants — ACD-800a, ACD-800a-1, ACD-800a-2, ACD-800b, ACD-800b-1,
+  ACD-800c, ACD-800c-1, ACD-800c-2, ACD-800d, ACD-800d-1. Each child was judged
+  on its own content and each carries its own short note; none was retired
+  merely for tidiness. ACD-800d (the JSON report) was the one considered
+  separately for survival and did not survive — see "WHAT WAS CARRIED FORWARD"
+  below.
+
+  MECHANISM — WHY `deprecated` AND NOT `superseded_by: ACD-2300`.
+  `status: deprecated` is the schema's state for "criterion is retired; retained
+  for audit" (docs/reference/ac-schema.md, Status Lifecycle). It is correct here
+  because there is NO successor. ACD-2300 is not one: its notes state that it
+  "authors NO general store-field reconciler" and that the field-reconciliation
+  job was DROPPED rather than inherited. Naming it in `superseded_by` would
+  assert a handover that did not happen, and would send a reader looking in
+  ACD-2300 for a replacement promise that is deliberately absent there.
+  The in-store precedent is exact and was itself a correction of this same
+  mistake: FIN-100e-1 was retired with no successor, initially marked
+  `status: superseded_by` with `superseded_by: null`, and later corrected to
+  `deprecated` on the grounds that the `superseded_by` state requires the
+  `superseded_by` field to name a replacement. Same shape, same resolution.
+  Enforcement behaviour is identical either way — check_ac_coverage.py excludes
+  both states.
+
+  `req_status: superseded`. The req_status enum is {active, draft, approved,
+  superseded} — it has no `deprecated` member. Leaving it `active` next to
+  `status: deprecated` would be a record whose surface disagrees with its
+  content, so `superseded` is set as the enum's only terminal value. It carries
+  NO implication of a named successor here; the absence of one is recorded by
+  `status: deprecated` plus `superseded_by: null`.
+
+  ==========================================================================
+  WHY IT WAS RETIRED — TWO INDEPENDENT REASONS, BOTH ON THE RECORD
+  ==========================================================================
+  1. IT SPECIFIES THE PHANTOM-DONE TRAP AS A FEATURE. This L0 commits to
+     backfilling "(implemented_by, work_status)" for matches found "using text
+     similarity and keyword heuristics". Writing the finished-state field from a
+     similarity score is an automated assertion of proof that nobody observed —
+     the exact mechanism catalogued in docs/reference/false-green-mechanisms.md.
+     ACS-1300's L0 refuses that write in the strongest terms available in this
+     store: "This is a refusal, not a phasing decision, and it is not to be
+     revisited by the BA, the IT PO, or an implementer who notices how easy it
+     would be."
+     STATE THIS PRECISELY, because the store has been describing it loosely.
+     ACS-1300 scopes that refusal to ITS OWN TREE ("no AC in the tree, at any
+     level"). It therefore never bound ACD-800, and this was never a literal
+     contradiction between two records. What it was is two trees holding
+     incompatible philosophies about one field, with only one of them having
+     written its philosophy down as a binding rule. That is the honest
+     description, and it is enough on its own to retire this tree: the
+     philosophy ACD-800 encodes is the one this repository exists to prevent.
+  2. ITS METHOD PRESUMES SOMETHING AN ADOPTING REPO DOES NOT HAVE. The matching
+     evidence is a history of DONE TICKETS (ACD-800a matches an AC's criteria
+     against a done ticket's "## Acceptance Criteria" section; ACD-800b matches
+     title keywords against done-ticket titles). A project adopting leafcutter
+     has no such history, so the mechanism cannot work at all for the adoption
+     case — which is now the primary case, per ACD-2200 and ACD-2300. On a fresh
+     adopter the tool's own filter finds zero done tickets and the capability
+     silently returns nothing. This reason is independent of the safety
+     objection and would retire the tree by itself.
+
+  ==========================================================================
+  WHAT WAS CARRIED FORWARD, AND WHERE TO GO INSTEAD
+  ==========================================================================
+  A reader who lands here looking for "how does existing work get connected to
+  the record" should go to ACD-2300 (ac-driven-dev/ACD-2300-backfill-existing-
+  code/). It carries forward the PURPOSE — existing code earning real
+  requirements and real proof — and explicitly refuses this tree's METHOD. Its
+  ACD-2300d makes the refusal falsifiable: nothing it produces marks work
+  finished, and nothing records evidence it did not observe.
+  ACD-800d (the persistent reviewable JSON report) was the only child with a
+  plausible independent life, and was considered separately. It does not
+  survive: its schema is defined entirely in terms of the matcher's output —
+  `matches[]` of {ac_id, ticket_path, confidence: high|medium, reason} — so the
+  `confidence` vocabulary and the ticket_path join are the heuristic's own,
+  not a general reporting contract. The reviewability requirement it was
+  reaching for is carried forward in a stronger form by ACD-2300d, which
+  requires abstentions to be reported rather than silently skipped.
+  For the ADJACENT job that IS owned — repairing links where a test already
+  carries a `# covers:` tag and the record forgot it — the owner is ACS-1300a.
+  That is an exact mechanical id-to-id join, explicitly "NOT text similarity,
+  NOT keyword heuristics". It is not a successor to this tree and does not
+  inherit anything from it; it is named here only so a reader does not conclude
+  that link repair is unowned.
+
+  ==========================================================================
+  THIS RETIREMENT DOES NOT REMOVE THE HAZARD — THE CODE SHIPPED AND IS LIVE
+  ==========================================================================
+  FOUND WHILE EXECUTING THIS RETIREMENT, AND IT CONTRADICTS THE PREMISE THE
+  RETIREMENT WAS REQUESTED UNDER. This tree was believed unbuilt since
+  2026-06-05 — every record here says `work_status: todo` and
+  `implemented_by: []`, and ACD-2300's notes, ACD-2300a's doc_links and both
+  PROJECT_CONTEXT.md files all describe ACD-800 as "unbuilt". That is wrong.
+  The implementation exists, is tested, and is deployed:
+    - scripts/ac_store/cross_reference_audit.py (595 lines), shipped by
+      EPIC-ACDrivenDevelopment ticket 05 (commits d83bbfa1c, 95acc5e0d). Its
+      module docstring maps AC-1..AC-6 onto exactly this tree's six L2s.
+    - tests/ac_store/test_cross_reference_audit.py carries `# covers:` tags for
+      ACD-800a-1, a-2, b-1, c-1, c-2 and d-1 — all six L2s.
+    - It is in the build deploy-manifest (scripts/build_phases.py), and
+      unit_tests/test_bp_900a_1.py asserts its deployment, so it is copied into
+      every consumer project.
+    - cross_reference_audit.py line 457 is literally `ac_data["work_status"] =
+      "done"`. ACS-1300c-1-i already measured this on 2026-09-01 and records it
+      as "THE CONCRETE TRAP".
+  CONSEQUENCE THE USER MUST DECIDE, NOT RESOLVED HERE. Retiring the requirement
+  withdraws the ONLY specification governing a tool that is still installed and
+  still writes the finished-state field. Before this change the tool did a
+  forbidden thing that a reviewed requirement legitimately asked for; after it,
+  the tool does a forbidden thing that no requirement backs at all. That is
+  arguably a worse state, and it is not fixable from inside the AC store. The
+  follow-up — delete the script, remove it from the deploy-manifest, or strip
+  its `--apply` path and its two work_status/implemented_by writes — is a code
+  change outside this retirement's scope and is deliberately left open.
+  A SECOND, SHARPER EDGE: `_filter_todo_acs` selects candidate ACs on
+  `work_status == "todo" and not implemented_by` and does NOT read `status`.
+  Deprecating these records therefore does not exclude them from the tool's own
+  input set — the retired ACD-800 records remain eligible match candidates for
+  the tool ACD-800 specified.
+
+  WHY `work_status` WAS LEFT AT `todo` DESPITE THE ABOVE. Flipping it to `done`
+  would assert completion of a requirement that is being withdrawn in the same
+  edit, and no gate reads work_status on a deprecated record. The field is
+  inaccurate and is knowingly left inaccurate; this paragraph is the correction.
+  Anyone auditing "unbuilt ACD records" should not count this tree.
+
+  KNOWN SIDE EFFECT OF DEPRECATING. Per docs/reference/ac-schema.md,
+  check_test_ac_tags.py "emits a warning if any test still tags this AC". The
+  six `# covers:` tags in tests/ac_store/test_cross_reference_audit.py will
+  therefore start warning. That is correct behaviour and is the intended signal
+  — it is the mechanism by which the live-code hazard above stays visible
+  instead of going quiet. Do not silence it by removing the tags; resolve it by
+  deciding the fate of the script.
+
+  READINESS LEFT AT `reviewed`. It records that the record was reviewed, which
+  remains true, and the scanner ignores both `reviewed` and deprecated records.

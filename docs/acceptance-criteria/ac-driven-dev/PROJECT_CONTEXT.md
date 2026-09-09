@@ -269,15 +269,31 @@ this pair.
    independently shippable and already ordered by evidence. Splitting on that seam
    also avoided a single L0 at exactly the 7-L1 cap with zero headroom.
 
-2. **A LIVE CONTRADICTION BETWEEN TWO STORE RECORDS, RAISED AND NOT RESOLVED.**
-   `ACD-800` (readiness reviewed, unbuilt since 2026-06-05) promises to backfill
-   `(implemented_by, work_status)` from "text similarity and keyword heuristics".
-   `ACS-1300`'s L0 forbids any record in its tree from writing `work_status` at
-   all, and marks the refusal "not to be revisited". Both cannot be right.
-   `ACD-2300` sides with `ACS-1300` and authors **no** field reconciler.
-   `ACD-800` needs amending or retiring — a **user decision**, not the BA's.
-   Note also that `ACD-800`'s method presumes a history of done TICKETS, which an
-   adopting project does not have.
+2. **A DISAGREEMENT BETWEEN TWO STORE RECORDS — RESOLVED 2026-09-09 BY RETIRING
+   `ACD-800`.** `ACD-800` promised to backfill `(implemented_by, work_status)`
+   from "text similarity and keyword heuristics". `ACS-1300`'s L0 forbids any
+   record **in its own tree** from writing `work_status`, a refusal it marks "not
+   to be revisited". Note the precision: that scoping means the two never
+   literally contradicted each other — they were two trees holding incompatible
+   philosophies about one field, only one of which had written its philosophy
+   down as a binding rule. That was still enough. BrainCandy retired `ACD-800`
+   and all ten descendants ("retire as it will not work properly"): `status:
+   deprecated`, `req_status: superseded`, **no successor named**. `ACD-2300` is
+   not its successor — it deliberately authors **no** field reconciler and
+   inherited nothing. The second, independent ground for retirement stands on its
+   own: `ACD-800`'s method presumes a history of done TICKETS, which an adopting
+   project does not have.
+   **Two things a reader must not conclude from this.** First, link repair is not
+   unowned — the case where a test already carries a `# covers:` tag and the
+   record forgot it belongs to `ACS-1300a`, by exact mechanical id-to-id join.
+   Second, and more important, **the hazard was not removed with the
+   requirement**. `ACD-800` was believed unbuilt; it is not.
+   `scripts/ac_store/cross_reference_audit.py` shipped in
+   `EPIC-ACDrivenDevelopment` ticket 05, is in the build deploy-manifest (so it is
+   installed into every consumer), and line 457 still executes
+   `ac_data["work_status"] = "done"`. Retiring the spec withdrew the only
+   requirement governing a live tool. Deciding the code's fate is an open
+   follow-up — see `ACD-800`'s notes.
 
 3. **CHECK WHETHER AN AC COVERS YOUR GAP FOR A DISJOINT POPULATION.** The brief's
    "connect existing tests to existing ACs" reads as already-owned by `ACS-1300a`
