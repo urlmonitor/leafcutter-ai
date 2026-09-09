@@ -144,5 +144,6 @@ flowchart TD
 - BP-1300a-3: Reference doc specifies canonical-source skill-pointer resolution for the build
 - BP-1300b-3: Reference doc states the canonical-source-resolution rule for all guardrails
 - BP-1300c-4: Reference doc lists the warn-to-fail checks and the drive-context rule
+- BP-1500g-5: The ownership boundary of an installed project is written down: what the build claims, and what stays the adopter's
 - TKT-200e-3: Reference doc defines the premise-capture format for tickets
 - TQ-100e-2: Reference doc for the enforcement rollout stages and their controlling configuration

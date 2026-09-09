@@ -152,6 +152,14 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     deployed content, rather than beside the package sources, in every
     install shape (AC INF-400c-4-v).
 
+    AC INF-400c-4-iii: the SAME declaration also records
+    ``operational_telemetry_stream``, the absolute path of the operational
+    stream (``<project_root>/debugging/logs/agent_telemetry.jsonl``). One
+    artefact names both streams so the knowledge-sink reader
+    (``harvest_learnings.py``) and the operational-stream emitter
+    (``emit_event.py``) share one anchor instead of each computing its own
+    directory and silently drifting apart.
+
     A NOTE is always printed alongside the write: a build has no reliable way
     to tell whether the directory it was pointed at is an already-installed
     project's own root or a separate, isolated working directory of a
@@ -187,16 +195,44 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     #   to relieve the GE-127b-1 file-size ratchet blocking INF-400c-4-iii and
     #   INF-400c-4-i. Re-exported from build_phases.py so build.py's existing
     #   import keeps working. (#INF-400c-4-iii, #INF-400c-4-i)
+    # - 2026-09-09 [python-coder]: Extended to also write
+    #   operational_telemetry_stream into the same config/knowledge_sink.json
+    #   artefact (AC INF-400c-4-iii), naming the absolute, build-time-fixed
+    #   operational-stream path (<project_root>/debugging/logs/agent_telemetry.jsonl)
+    #   alongside the pre-existing knowledge_emission_sink key. This is the one
+    #   artefact templates/skills/agent-telemetry/scripts/emit_event.py now reads
+    #   for its own --log default, so the knowledge sink and the operational
+    #   stream share one anchor instead of drifting as two independently-computed
+    #   values. Authored against build_phases.py before PR #769 moved this
+    #   function here; re-applied to the post-extraction text rather than
+    #   replayed as a remembered diff.
+    #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-iii)
     """
     import build_phases as _bp
 
     project_root = target_root.parent
     sink_path = project_root / "debugging" / "logs" / "knowledge_emissions.jsonl"
-    content = json.dumps({"knowledge_emission_sink": str(sink_path)}, indent=2) + "\n"
+    # AC INF-400c-4-iii: the operational/telemetry stream is declared in this
+    # SAME artefact, one absolute path fixed at build time, so emit_event.py
+    # (the operational-stream producer) and this knowledge-sink declaration
+    # share one anchor instead of drifting as two independently-computed
+    # values. Distinct filename, same directory as the historical default.
+    operational_stream_path = project_root / "debugging" / "logs" / "agent_telemetry.jsonl"
+    content = (
+        json.dumps(
+            {
+                "knowledge_emission_sink": str(sink_path),
+                "operational_telemetry_stream": str(operational_stream_path),
+            },
+            indent=2,
+        )
+        + "\n"
+    )
     output_path = target_root / "config" / "knowledge_sink.json"
 
     if _bp._write(output_path, content, dry_run, force):
         print(f"  config/knowledge_sink.json -> {sink_path}")
+        print(f"  config/knowledge_sink.json -> {operational_stream_path} (operational stream)")
         print(
             "  NOTE: this build declares the knowledge-emission SINK for "
             "THIS working directory. A separate, isolated working directory "

@@ -387,6 +387,18 @@ flowchart TD
 - ACD-400b-7: Generated standalone ticket's depends_on never leaks AC-level dependencies and passes the frontmatter guard
 - ACD-400b-7-i: A ticket generated from an AC that depends on its parent AC commits without a frontmatter-guard block
 - ACD-400b-8: Dotfile-prefixed paths referenced by an AC survive ticket generation with their leading dot intact
+- ACD-400c-1: Only work whose approval has been recorded is offered by the build queue
+- ACD-400c-1-ii: An approval that is not recorded in the exact recognised wording does not count as approval
+- ACD-400c-2: Work carrying no recorded approval is withheld, and that is the stated verdict rather than an unstated default
+- ACD-400c-3: The approval requirement holds whatever question is asked of the queue, including an inventory of everything
+- ACD-400d-1: Recorded urgency is the first thing the queue consults, ahead of size
+- ACD-400d-2: Equally urgent work is separated by size and then by identifier, giving one settled order every time
+- ACD-400d-2-i: Work whose size is missing or unreadable is ranked after every readable size, and is still offered
+- ACD-400d-3: Work that names no urgency is ranked as middle-urgency, by a stated verdict rather than by omission
+- ACD-400d-4: Work recording an urgency the queue does not recognise sinks beneath every recognised urgency, and is still offered
+- ACD-400e-1b: Every statement in the written account is checked by building the store it describes and asking the queue
+- ACD-400e-2: The three older records that describe the queue wrongly are corrected, and the queue is left alone
+- ACD-400e-3: A written account that stops matching the queue is caught when it stops, not months later
 - ACD-500a: The ticket prioritizer merges AC readiness into its output with a single opt-in flag
 - ACD-500a-1: Merged output contains both ticket and AC entries sorted by unified priority
 - ACD-500a-1-i: Merged output is empty when both ticket backlog and AC store return zero ready items
@@ -1219,6 +1231,7 @@ flowchart TD
 - BP-100k-2: Every deployed output the build produces is recorded in the manifest's output mapping, so the output-drift gate has something to compare
 - BP-100k-3: An artifact the build deliberately does not police is a declared exemption; an unrecorded, undeclared artifact is a reported gap, never a pass
 - BP-100k-3-i: A freshly built, unmodified tree yields zero uncomparable artifacts and a clean drift run — the stricter reporting raises no false alarms
+- BP-100k-3-ii: The action a drift gate prescribes is one that, carried out, clears the report -- and where the build cannot produce the artifact, the gate does not send the reader to the build
 - BP-100k-4: A registered commit gate whose activation condition can never match anything the repository is able to stage is reported as unreachable and blocks — a gate that cannot fire is not protection
 - BP-100k-4-i: The reachability check raises no false alarm on gates that can fire, and fails rather than passing when it cannot determine reachability at all
 - BP-100k-4-ii: A trigger that matches nothing because the project holds no file of that kind is a gate with nothing to do, not a gate that cannot fire — the two are told apart by what a checkout could ever produce, never by what it holds today
@@ -1292,11 +1305,25 @@ flowchart TD
 - BP-1400c-1: A blocking route-render check headlessly loads every web-app route and fails on a non-200 or a console/render error
 - BP-1400c-1-i: The /about route is loaded headlessly and a non-200 or render error on it blocks the pull request
 - BP-1401: next_diagram_seq.py scans docs/architecture/ recursively so it sees diagrams in the diagrams/ subdirectory
+- BP-1500b-1: An installed artifact the package can no longer produce is removed, named in the report, and no longer reachable
+- BP-1500b-1-i: The sweep reaps the installed tree being rebuilt, in every layout, and never a second tree on the same machine
+- BP-1500b-2: Orphans are derived from the package's current sources, never from a maintained list of known-stale names
+- BP-1500b-3: A clean sweep states the installed tree it examined and how much of it, so the all-clear is checkable
+- BP-1500b-3-i: A sweep that examined nothing says so, and never borrows the wording of a sweep that found nothing
+- BP-1500b-4: Files the build never produced are left untouched, and recognised as such without an exception list
 - BP-1500d-1: The record of what was installed is written into the project that received it, and accounts for that project
 - BP-1500d-1-i: The record describes the producing end truthfully -- where the package stood, and which of its files the deployment came from -- or says plainly that it cannot
+- BP-1500d-1-ii: No entry in the record points outside the project the record describes -- an account is untruthful whether it could not be written or was written wrong
 - BP-1500d-2: The record still reads after the project is moved, copied or opened somewhere else
 - BP-1500d-3: A build that cannot produce the record stops and says so, instead of warning once and reporting success
 - BP-1500d-4: A check that finds no readable record says so, instead of returning the all-clear it returns when nothing is wrong
+- BP-1500g-1: A capability the adopter added themselves is still there, and still runs, after the ordinary everyday build
+- BP-1500g-1-i: The opt-in mode whose purpose is removal still does not remove the adopter's work, wherever they put it
+- BP-1500g-1-ii: A build that cannot proceed without taking the adopter's content stops instead, and no run that took it is a successful one
+- BP-1500g-2: The package's own capabilities arrive and are usable in the same project, out of the same run, in which the adopter's survived
+- BP-1500g-2-i: When the adopter's own capability and one the package ships answer to the same name, neither is taken silently
+- BP-1500g-3: It survives the second build and the tenth, and it survives the upgrade
+- BP-1500g-3-i: The adopter's work is not kept safe by a rule that also stops the package's own content being brought up to date
 - BP-1600a-1: The population of session hook scripts the wiring census walks is taken from the scripts present on disk, so a script the settings surface never invokes is reported as run by nothing — the surface that carries the harness's own guards has never been counted
 - BP-1600a-1-i: The census states how many hook scripts it examined and how many wirings it read, and a run that could not establish either population is an unresolved run that fails — an unlistable directory and a directory that lists empty are two different facts and must be named as two
 - BP-1600a-1-ii: A script counts as run only when a shipped wiring executes it — the two sides name the same script in two different layouts and are resolved to one identity, a name that merely appears in the settings document is not a wiring, and a wiring that executes nothing is reported too
@@ -1347,6 +1374,7 @@ flowchart TD
 - BP-400c-2-i: trend_report.py handles empty or absent feedback.jsonl gracefully
 - BP-400c-3: trend_report.py computes week-over-week trend indicators
 - BP-400c-4: Date filtering via --since limits report to matching entries only
+- BP-600d-5: Quick-fix reports a not-opened PR as an outstanding action owned by the caller
 - BP-700b-1: Agent registry entry has default_status not_needed
 - BP-700b-2: Trigger conditions match only frontend file extensions
 - BP-700c-4: Agent registry entry preserves all existing selection criteria and metadata
@@ -1586,6 +1614,7 @@ flowchart TD
 - GE-120a-2-i: A check registered without a cannot-run disposition is named as a gap, never silently defaulted
 - GE-120a-3: The AC-schema check reports a non-authoritative result when it cannot load the schema it validates against
 - GE-120a-4: An inspection that resolved none of the targets it was given does not report success
+- GE-120a-6: A check that could not be started at all names what could not be started, in the reader's own words, and the commit does not complete
 - GE-120b-1: The AC-parent-covered-by check reaches the same verdict with and without the deployed-layout link
 - GE-120b-1-i: A working copy with no deployed layout at all still does not pass silently
 - GE-120b-2: Checks obtain their prerequisites through one shared resolution path, not one private copy each
@@ -1609,6 +1638,9 @@ flowchart TD
 - GE-120f-3: The liveness run states how many checks it actually put an input through, that figure moves when the population moves, and a run that put an input through none fails as unresolved
 - GE-120f-4: A check joins the protected family only by declaring what it must refuse, read from where it is registered — so the next check inherits the requirement by existing rather than by someone remembering
 - GE-120f-4-i: A check that was already registered when the requirement arrived is subject to it identically, and a ground that is a fact about when a check was registered is no ground at all
+- GE-120g-1: An ordinary commit leaves the working copy holding exactly the content it held before, whether the checks let it through or refuse it
+- GE-120g-1-i: The leave-it-as-you-found-it rule binds a check by the role it declares, so a check declared to fix as it goes is not caught by it and no judging check can be let off it
+- GE-120g-2: A commit is refused only because a check objected, and a set of verdicts that objects to nothing always lets it through
 - GE-122a-1: A whole-collection pass reports every number claimed by two artifacts
 - GE-122a-1-i: A collision is found even when only one claimant is in the current change set
 - GE-122a-1-ii: Excusing a merged-in decision record must not excuse the author's own record claiming the same number
@@ -1744,9 +1776,15 @@ flowchart TD
 - GE-127a-1-i: A file whose length cannot be established is refused and named, never reported as within its permitted length
 - GE-127b-1: A change that leaves an already-oversized file longer than it was is refused; one that leaves it the same or shorter is allowed
 - GE-127b-1-i: A run that could not establish any previous length says which situation it is in and refuses, and a clean run states how many files it compared
+- GE-127b-2: During a merge, a file's permitted previous length is the most permissive across every parent, so a file inherited from an incoming branch is not judged as newly authored
 - GE-127c-1: The outcome states which kinds of file it measured, so a kind that was never measured is not read as having passed
 - GE-127d-1: The published rule and the enforced rule are checked against each other, and no fact the standard accepts about a change is left without effect on its verdict
 - GE-127d-2: The length a file is quoted at is one the author can arrive at themselves by following a published measurement rule
+- GE-127e-1: The refusal accounts for what is inside the file it refused, and names a division of that file in terms of those same parts
+- GE-127e-2: Two different oversized files are not given the same advice, and changing what is in a file changes the advice it gets
+- GE-127e-3: The refusal offers only help that actually arrives, and a bare verdict is preferred to a promise nothing keeps
+- GE-127e-3-i: Guidance that could not be produced is said so plainly, and whether guidance exists never moves the commit verdict in either direction
+- GE-127e-4: Everything needed to choose arrives with the refusal, the division is offered as a starting point, and declining it costs nothing
 - INF-1000a-1: Detect stale fixtures when a required field is added to a schema
 - INF-1000a-1-i: Schema file with no required-field changes passes without scanning fixtures
 - INF-1000a-1-ii: Fixture files that already contain the new field are not flagged
