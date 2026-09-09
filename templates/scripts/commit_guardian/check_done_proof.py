@@ -15,6 +15,9 @@ ARCHITECTURE: Four public symbols consumed by tests and the CLI:
     check_staged_done_proofs(staged_yaml_paths, *, test_root) -> list[dict]
         STATIC pre-commit check. Scans test_root for covers tags; returns
         violation dicts for done ACs that have no tag. No subprocess calls.
+        ACs with ``test_required: false`` are silently exempted — same
+        exemption semantics as the two CI functions below, kept in parity so
+        a documentation-only AC does not pass CI while failing pre-commit.
     check_all_done_acs(*, ac_root, test_root) -> list[dict]
         CI-authoritative check. Calls verify_done_eligible (from done_proof)
         for every done AC under ac_root; returns violation dicts for ineligible
@@ -376,6 +379,17 @@ def check_staged_done_proofs(
     hook.  Only ACs staged as ``done`` are evaluated (bounded blast radius);
     ACs in any other work_status are silently ignored.
 
+    ACs with ``test_required: false`` (the Python boolean ``False``, not the
+    string ``"false"``) are silently exempted and never checked for a covers
+    tag.  This mirrors the exemption already applied by the CI-authoritative
+    functions :func:`check_all_done_acs` and :func:`check_changed_done_acs` —
+    it covers documentation ACs and prompt-convention ACs where a covers-tagged
+    test is structurally impossible.  An absent or ``True`` value for
+    ``test_required`` is always enforced.  The exemption keys ONLY on the AC
+    record's own declared ``test_required`` field — never on whether a tag
+    happens to be missing — so it cannot be triggered by the very condition
+    (no tag found) it is meant to exempt from.
+
     Args:
         staged_yaml_paths: Paths to staged AC YAML files to evaluate.  May
             include non-done ACs — they are skipped automatically.
@@ -406,6 +420,8 @@ def check_staged_done_proofs(
         if not ac_id:
             continue
         ac_id_str = str(ac_id)
+        if data.get("test_required") is False:
+            continue
         if ac_id_str not in all_covered_ids:
             violations.append(
                 {
