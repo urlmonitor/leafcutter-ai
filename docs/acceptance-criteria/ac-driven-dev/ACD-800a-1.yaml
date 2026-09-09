@@ -6,8 +6,8 @@ priority: medium
 title: "Audit finds exact-criteria matches at high confidence"
 component: ac-driven-dev
 level: L2
-status: active
-req_status: active
+status: deprecated
+req_status: superseded
 work_status: todo
 criteria: |
   Given AC ACD-800a-1 has a criteria field containing multi-line Gherkin text
@@ -28,9 +28,25 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "RETIRED 2026-09-09 with the whole ACD-800 tree, on BrainCandy's decision ('retire as it will not work properly'). Reasoning in ACD-800's notes."
+    by: product-owner
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+notes: |
+  RETIRED 2026-09-09 with the whole ACD-800 tree. Decision, mechanism and the
+  live-code hazard are recorded once, in ACD-800's notes — read those.
+
+  THIS RECORD'S OWN REASON. It is the read-only behaviour of the similarity
+  matcher retired at ACD-800a: the evidence is a done ticket, which an adopting
+  project does not have (retirement reason 2). Nothing here is salvageable
+  independently — with no matcher there is no "confidence: high" to report.
+
+  BUILT, DESPITE THE FIELDS. Implemented in
+  scripts/ac_store/cross_reference_audit.py and covered by a green test tagged
+  `# covers: ACD-800a-1` in tests/ac_store/test_cross_reference_audit.py. That
+  tag will now warn (check_test_ac_tags.py warns on tags naming a deprecated
+  AC) — that warning is intended; see ACD-800's notes.

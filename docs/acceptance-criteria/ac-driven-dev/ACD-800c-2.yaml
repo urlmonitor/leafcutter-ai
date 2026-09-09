@@ -6,8 +6,8 @@ priority: medium
 title: "--apply is idempotent for already-linked ACs"
 component: ac-driven-dev
 level: L2
-status: active
-req_status: active
+status: deprecated
+req_status: superseded
 work_status: todo
 criteria: |
   Given AC ACD-800a-1 already has implemented_by containing
@@ -27,9 +27,24 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "RETIRED 2026-09-09 with the whole ACD-800 tree, on BrainCandy's decision ('retire as it will not work properly'). Reasoning in ACD-800's notes and ACD-800c's."
+    by: product-owner
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+notes: |
+  RETIRED 2026-09-09 with the whole ACD-800 tree. Decision, mechanism and the
+  live-code hazard are recorded once, in ACD-800's notes — read those.
+
+  THIS RECORD'S OWN REASON. Idempotency is a genuinely good property and was
+  the right thing to specify, but it is idempotency OF the forbidden write:
+  "work_status remains done (not re-set)". It guarantees the phantom-done badge
+  is awarded exactly once rather than not at all, so it cannot outlive the
+  operation it protects. It also uses ACD-800a-1 as its own worked example,
+  which makes it unreadable once that record is retired.
+
+  BUILT, DESPITE THE FIELDS. Covered by a green test tagged
+  `# covers: ACD-800c-2` in tests/ac_store/test_cross_reference_audit.py.

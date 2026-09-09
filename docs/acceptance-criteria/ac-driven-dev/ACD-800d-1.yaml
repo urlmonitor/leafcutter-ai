@@ -6,8 +6,8 @@ priority: medium
 title: "JSON report is written to debugging/logs/ with defined schema"
 component: ac-driven-dev
 level: L2
-status: active
-req_status: active
+status: deprecated
+req_status: superseded
 work_status: todo
 criteria: |
   Given the cross-reference audit tool has completed a run (in either
@@ -34,9 +34,23 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "RETIRED 2026-09-09 with the whole ACD-800 tree, on BrainCandy's decision ('retire as it will not work properly'). Reasoning in ACD-800's notes and ACD-800d's."
+    by: product-owner
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+notes: |
+  RETIRED 2026-09-09 with the whole ACD-800 tree. Decision, mechanism and the
+  live-code hazard are recorded once, in ACD-800's notes — read those.
+
+  THIS RECORD'S OWN REASON. It is the concrete JSON schema for the report
+  retired at ACD-800d, and it is where the dependency on the retired method is
+  most explicit: the schema literally pins `"confidence": "high" | "medium"`
+  and a `ticket_path` join. Both are the matcher's vocabulary. With no matcher
+  there is no confidence tier to serialise and no ticket to point at.
+
+  BUILT, DESPITE THE FIELDS. Covered by a green test tagged
+  `# covers: ACD-800d-1` in tests/ac_store/test_cross_reference_audit.py.

@@ -59,16 +59,21 @@ doc_links:
     relationship: related
     status: exists
     relevance: >-
-      CLOSEST SUBJECT MATCH IN THIS COMPONENT AND A LIVE CONTRADICTION THAT NEEDS A
-      USER DECISION — see this record's notes. ACD-800 (readiness reviewed, unbuilt
-      since 2026-06-05) promises to discover which done TICKETS match which unlinked
-      records "using text similarity and keyword heuristics" and to backfill
-      "(implemented_by, work_status)". ACS-1300 forbids exactly that second field
-      from being written from derived evidence, in a refusal its notes mark as "not
-      to be revisited". Two approved-or-reviewed records in this store therefore
-      disagree about whether a tool may award a finished badge from a heuristic
-      match. This tree sides with ACS-1300 and authors no field reconciler; the
-      disagreement is flagged, not resolved.
+      CLOSEST SUBJECT MATCH IN THIS COMPONENT — NOW RETIRED, AND THE DISAGREEMENT
+      IS SETTLED IN THIS TREE'S FAVOUR. UPDATED 2026-09-09. ACD-800 and all ten of
+      its descendants were retired (status deprecated, req_status superseded, no
+      successor) on BrainCandy's decision, "retire as it will not work properly".
+      It had promised to discover which done TICKETS match which unlinked records
+      "using text similarity and keyword heuristics" and to backfill
+      "(implemented_by, work_status)". Two reasons retired it: writing the
+      finished-state field from a similarity score is the phantom-done mechanism
+      stated as a feature, and its evidence is a done-ticket history an adopting
+      project does not have. THIS TREE IS NOT ITS SUCCESSOR and ACD-800 does not
+      name one — the field-reconciliation job was dropped, not handed over, so do
+      not read ACD-2300 as owing anything ACD-800 promised. Read ACD-800's notes
+      before assuming the hazard is gone: its implementation SHIPPED
+      (scripts/ac_store/cross_reference_audit.py, deployed to consumers) and still
+      writes work_status; retiring the requirement did not remove the code.
   - path: docs/known-issues/commit-guardian.md
     relationship: describes
     status: exists
@@ -157,24 +162,42 @@ notes: |
   ADDED, AND THE USER DID NOT ASK FOR IT — ACD-2300d, the guarantee. See below.
 
   ==========================================================================
-  A CONTRADICTION IN THE STORE THAT THIS AUTHORING SURFACED — FOR THE USER AT THE
-  APPROVAL GATE. NOT RESOLVED HERE.
+  A DISAGREEMENT IN THE STORE THAT THIS AUTHORING SURFACED — RESOLVED 2026-09-09
+  BY RETIRING ACD-800. RECORD KEPT FOR THE REASONING.
   ==========================================================================
-  ACD-800 (this component, readiness reviewed, req_status active, unbuilt since
-  2026-06-05) commits in its own L0 criteria to backfilling "(implemented_by,
-  work_status)" for matches found "using text similarity and keyword heuristics".
-  ACS-1300 (ac-store, authored 2026-09-01) forbids any record in its tree from
-  writing work_status at all, and marks that refusal as not to be revisited.
+  RESOLUTION FIRST. ACD-800 and its whole tree (a, a-1, a-2, b, b-1, c, c-1, c-2,
+  d, d-1) are RETIRED as of 2026-09-09 — status deprecated, req_status
+  superseded, no successor named — on BrainCandy's decision, quoted verbatim:
+  "retire as it will not work properly." This tree stands as authored and needs
+  no amendment; it already sided with ACS-1300 and authored no field reconciler.
+  The full reasoning lives in ACD-800's notes.
 
-  Both cannot be right. The store currently holds one record promising a heuristic
-  tool that awards finished badges and another record whose central safety property
-  is that no tool may. Whichever way the user decides, ACD-800 needs amending or
-  retiring — and note that ACD-800's method presumes a history of completed TICKETS
-  to match against, which an adopting project does not have, so its usefulness for
-  the adoption case is limited independently of the safety question.
+  WHAT THE DISAGREEMENT ACTUALLY WAS — corrected, because this record originally
+  overstated it. ACD-800 commits in its L0 criteria to backfilling
+  "(implemented_by, work_status)" for matches found "using text similarity and
+  keyword heuristics". ACS-1300 (ac-store, authored 2026-09-01) forbids writing
+  work_status — but scopes that refusal to ITS OWN TREE ("no AC in the tree, at
+  any level"). It therefore never bound ACD-800, and this was NOT a literal
+  contradiction between two records, as the paragraph here previously implied.
+  It was two trees holding incompatible PHILOSOPHIES about one field, with only
+  one of them having written its philosophy down as a binding rule. That is the
+  accurate description and it was still sufficient grounds to retire: the
+  philosophy ACD-800 encoded is the one this repository exists to prevent.
+  The second, independent ground was never a safety question at all — ACD-800's
+  method presumes a history of completed TICKETS to match against, which an
+  adopting project does not have, so it could not work for the adoption case
+  regardless of how the field question was decided.
 
-  I did not amend ACD-800. Raising it is this record's obligation; deciding it is
-  not.
+  WHAT THE RETIREMENT DID NOT DO, AND WHY IT MATTERS TO THIS TREE. ACD-800 was
+  believed unbuilt. It is not: scripts/ac_store/cross_reference_audit.py shipped
+  in EPIC-ACDrivenDevelopment ticket 05, is in the build deploy-manifest, and
+  line 457 still executes `ac_data["work_status"] = "done"`. Retiring the
+  requirement withdrew the specification and left the tool installed. An
+  implementer of ACD-2300b who goes looking for reusable enumeration helpers
+  will still find a working apply path that does the forbidden thing — now with
+  no requirement backing it at all. ACS-1300c-1-i already treats this exact code
+  as its fixture. Reuse `_detect_worktree_root`, `_load_ac_yamls` and
+  `_write_report`; never `_apply_backfill`.
 
   ==========================================================================
   THE TWO TRAPS — WHERE EACH IS ENCODED AND WHY IT IS ENCODED AS A CONSTRAINT
@@ -238,19 +261,83 @@ notes: |
   from ACD-1900g and is not re-authored as a child here.
 
   ==========================================================================
-  ROADMAP — DELIBERATELY UNPHASED, FOR THE USER AT THE APPROVAL GATE
+  ROADMAP — RESOLVED 2026-09-09: NO CURRENT PHASE CLAIMS THIS TREE, ARGUED
   ==========================================================================
-  No roadmap_phase is claimed. phase_1's exit criteria are about clean installs,
-  build idempotency and truthful build reporting, and working down an existing
-  record backlog does not advance any of them. Its sibling ACD-2200 DOES claim
-  phase_1 and argues the claim, because being able to switch standards on in an
-  existing codebase is part of "installs into any project". This tree makes the
-  weaker claim and says so rather than borrowing its sibling's. ACS-1200 and
-  ACS-1300 set the precedent of leaving such a tree unphased; ACS-1300's notes
-  record that ACS-1100's phase_1 claim "reads as over-claiming". Either a phase
-  claims this tree or it stays unphased backlog.
+  This section previously left the question open ("Either a phase claims this
+  tree or it stays unphased backlog"). BrainCandy asked for it to be decided
+  rather than left open ("let PO fix it"). DECIDED: `roadmap_phase` is
+  deliberately ABSENT, and the absence is the answer rather than an omission.
+  All six phases in docs/roadmap.json were checked by their exit criteria, not
+  by their titles.
 
-  No roadmap or vision file was modified while authoring this.
+  phase_1 (Stable Portable MVP) — REJECTED, and this is the closest call. Its
+  four exit criteria are: clean install on a blank project, `build.py
+  --validate-only` returning 0, consecutive builds producing zero git diff, and
+  a truthful self-host build. Not one of them moves when the AC store's CONTENT
+  changes; they are all about the build producing correct artifacts. The
+  tempting argument is the one ACD-2200 makes — "installs into any project" —
+  but the two trees sit on opposite sides of that phrase. ACD-2200 makes
+  adoption POSSIBLE: without the floor, switching a standard on in an existing
+  codebase stops all work, so there is no working install at all. ACD-2300
+  makes an adoption already achieved MORE VALUABLE. A project that has ACD-2200
+  and not ACD-2300 has a genuine, working, honest install: new work is held to
+  the standard and the tolerated backlog is counted and can only go down. That
+  is the whole of what phase_1 promises. Claiming phase_1 here would be
+  borrowing the sibling's argument for a weaker case — precisely the
+  over-claiming ACS-1300's notes warn about.
+
+  phase_acbuild_3_migration — REJECTED, and it is a deliberate trap worth
+  naming because its wording matches almost exactly. Its exit criterion reads
+  "Opt-in idempotent backfill ships (dry-run, --ac-store-dir, preserves notes
+  blocks); >=1 consumer migrated green". That backfill migrates EXISTING
+  RECORDS INTO THE NEW SCHEMA SHAPE — schema_version skew, the phase-2a
+  deliverable-checklist fields. It is a FORMAT migration over records that
+  already exist. This tree CREATES records for code that has none: a CONTENT
+  backfill. Same word, disjoint populations. This is exactly the failure mode
+  this component's own PROJECT_CONTEXT.md lesson 3 warns about — "check not
+  only whether an AC covers it wrongly but whether one covers a NEIGHBOURING
+  population under wording that sounds identical" — and it would be a poor
+  showing to fall into it in this record's own roadmap section.
+
+  phase_acbuild_1 / 2a / 2b — REJECTED on subject. All three are about moving
+  the unit of work onto the requirement (schema slots, deliverable checklists,
+  sign-off relocation, ticket thinning). None concerns where a requirement's
+  CONTENT comes from. phase_2 (version upgrades, contribution workflow, config
+  schema validation) and phase_3 (packaging, distribution) — rejected on
+  subject, no argument needed.
+
+  WHY ABSENCE IS A LEGITIMATE ENCODING AND NOT A DODGE. `roadmap_phase` has no
+  "none" member in ac_store_schema.json (it is an optional string with
+  minLength 1), so inventing a sentinel value would break the field's contract
+  with docs/roadmap.json. Absence is already a first-class, queryable state:
+  roadmap_query.py reports ACs with no roadmap_phase assigned. This tree is
+  therefore recorded as what it actually is — valuable work that no CURRENT
+  phase's outcome depends on. The precedent is in-store: ACS-1200 and ACS-1300
+  are both unphased for the same reason.
+
+  WHAT WOULD HAVE TO BE TRUE FOR IT TO CLAIM A PHASE — the condition is stated
+  so this is falsifiable rather than a permanent shrug. Any ONE of:
+    (a) A phase acquires an exit criterion about the RECORD's completeness
+        rather than the BUILD's correctness — e.g. "a repository adopting
+        leafcutter reaches N% of its behaviour described by requirements". No
+        phase carries such a criterion today; that is the actual reason this
+        tree is homeless, and it is a gap in the roadmap, not a defect in the
+        tree.
+    (b) phase_acbuild_3's consumer-migration criterion is widened from schema
+        migration to content backfill. Then this tree becomes the mechanism
+        that criterion depends on and should claim it outright.
+    (c) ACD-2200 ships and the counted backlog turns out NOT to be a tolerable
+        steady state for a real adopter — i.e. the floor alone leaves the
+        install unusable in practice. That would retroactively make this tree
+        part of phase_1's "installs into any project", and the phase_1 claim
+        rejected above should be revisited on that evidence.
+  Until one of those holds, this is unphased backlog by decision, not by
+  neglect.
+
+  No roadmap or vision file was modified, either while authoring this record or
+  while resolving the phase question on 2026-09-09. Option (a) above is a
+  roadmap change and is NOT proposed here — it is offered as the condition, for
+  BrainCandy to accept or decline separately.
 
   ==========================================================================
   IDENTIFIER AND CAPS
