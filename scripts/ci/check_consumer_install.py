@@ -34,7 +34,32 @@ ARCHITECTURE: A single CLI entry point (``main``) that composes five small,
     ``pre-commit install`` + real ``git commit`` over the built tree and
     reports which guards the commit path actually executed — the "use it,
     don't just build it" half BP-900h-1..BP-900h-2 leave uncovered, since a
-    guard only speaks when a commit is attempted.
+    guard only speaks when a commit is attempted. ``_maybe_probe_route_before_install``
+    is a sixth small step (ACD-2100d-3): it takes the BEFORE route-start
+    reading, or skips entirely when ``--skip-build`` means no installer runs
+    in this invocation — see the ACD-2100d-3 EXTENSION note below.
+
+ACD-2100d-3 EXTENSION: between step (1) and step (2) above, if
+``target_dir/.leafcutter/workflows/plan-feature.js`` already exists (a
+route deployed by some prior install, real or seeded), this script probes
+it via ACD-2100d-1's shared ``unit_tests/_installed_route_probe.py``
+harness for its BEFORE stopping point. After step (3) verifies the
+deployed tree, the SAME target is probed again for its AFTER stopping
+point, and a verdict comparing the two readings is printed: a project
+that did not reach its first question BEFORE the install is reported
+PRECONDITION NOT MET (exit 3, never a pass) regardless of the after
+reading; one that reached it before but not after is reported a
+route-start regression (exit 1) naming both readings; otherwise both
+readings are printed and the pipeline continues. When no route is
+deployed yet (a genuinely fresh scratch install), this whole check is
+skipped — the existing empty-scratch-directory CI usage stays green.
+This before/after measurement only runs when ``--skip-build`` is NOT
+given: ACD-2100d-3's Given/When are both about an invocation that
+actually runs the installer, and several already-`done` ACs
+(BP-900h-1, BP-900h-6-i, BP-900h-6-ii) legitimately re-invoke this
+script with ``--skip-build`` against a target_dir that already has a
+deployed, non-git route, for purposes unrelated to route start (see
+``main()``'s inline comment and pr-reviewer finding H-1, 2026-09-08).
 
 Usage::
 
@@ -57,10 +82,20 @@ Exit codes:
     1 — build.py exited non-zero, the deployed tree is missing scripts/ or
         agents/, one or more compiled-template script references do not
         resolve to a deployed file (unresolved paths are named on stderr),
-        or (with --use-install) the commit failed or its executed-guard
-        record was empty.
+        a route-start regression was found (ACD-2100d-3: the project
+        reached its first startup question before the install but no
+        longer does after it), or (with --use-install) the commit failed
+        or its executed-guard record was empty.
     2 — usage/environment error (bad --package-dir, filesystem error, or the
-        reference-resolution modules could not be imported).
+        reference-resolution or shared installed-route-probe modules could
+        not be imported).
+    3 — ACD-2100d-3's Given precondition was not met: a route already
+        deployed at --target-dir did not reach its first startup question
+        BEFORE this run's own installer invocation, so no before/after
+        comparison could be made. Never conflated with a pass (0) or a
+        plain failure (1). Never produced when --skip-build is given (no
+        installer runs in that invocation, so the before/after measurement
+        does not apply — see the ACD-2100d-3 EXTENSION note above).
 """
 from __future__ import annotations
 
@@ -82,6 +117,7 @@ if str(_THIS_DIR) not in sys.path:
     # running it as __main__.
     sys.path.insert(0, str(_THIS_DIR))
 
+from _route_start_regression_check import probe_route_before_install, verdict_after_install
 from _use_install_step import check_target_entitlement, run_use_install_and_report
 
 _MINIMAL_SKILLS_CONFIG: dict[str, str] = {
@@ -94,6 +130,9 @@ def _ensure_scratch_environment(target_dir: Path) -> int:
 
     Never clobbers a caller-supplied ``skills_config.json`` — only writes one
     when the file does not already exist.
+
+    Args:
+        target_dir: Scratch consumer-install directory to create/seed.
 
     Returns:
         0 on success, 2 on any filesystem error.
@@ -122,6 +161,12 @@ def _ensure_scratch_environment(target_dir: Path) -> int:
 
 def _maybe_run_build(package_dir: Path, target_dir: Path, skip_build: bool) -> int:
     """Run ``build.py --target-dir <target_dir>`` unless ``skip_build`` is set.
+
+    Args:
+        package_dir: Path to the leafcutter-ai package checkout containing
+            ``scripts/build.py``.
+        target_dir: Scratch consumer-install directory to build into.
+        skip_build: When true, skip invoking build.py entirely.
 
     Returns:
         0 on success (or when skipped), 1 when build.py exits non-zero
@@ -159,6 +204,12 @@ def _resolve_output_root(target_dir: Path) -> Path:
 
     Reads the ``output_root`` key, defaulting to ``.leafcutter`` when the key
     is absent or the file cannot be parsed.
+
+    Args:
+        target_dir: Scratch consumer-install directory.
+
+    Returns:
+        The resolved output root path (``target_dir / output_root_name``).
     """
     config_path = target_dir / "skills_config.json"
     output_root_name = ".leafcutter"
@@ -178,6 +229,9 @@ def _resolve_output_root(target_dir: Path) -> Path:
 
 def _verify_deployed_tree(target_dir: Path) -> tuple[Path, int]:
     """Verify the deployed output root contains ``scripts/`` and ``agents/``.
+
+    Args:
+        target_dir: Scratch consumer-install directory that was built into.
 
     Returns:
         A ``(output_root, code)`` pair: ``code`` is 0 on success, or 1 with
@@ -211,6 +265,13 @@ def _import_audit_modules(package_dir: Path) -> tuple[ModuleType, ModuleType]:
     as-is (per the ticket's Implementation Notes — the matching rules are not
     reimplemented here).
 
+    Args:
+        package_dir: Path to the leafcutter-ai package checkout.
+
+    Returns:
+        A ``(build_referential_integrity, build_propagation_audit)`` module
+        pair.
+
     Raises:
         ImportError: if either module cannot be imported.
     """
@@ -224,7 +285,14 @@ def _import_audit_modules(package_dir: Path) -> tuple[ModuleType, ModuleType]:
 
 
 def _collect_deployed_scripts(scripts_dir: Path) -> set[str]:
-    """Walk ``scripts_dir`` and return the set of deployed ``scripts/<relpath>`` strings."""
+    """Walk ``scripts_dir`` and return the set of deployed ``scripts/<relpath>`` strings.
+
+    Args:
+        scripts_dir: The deployed output root's ``scripts/`` directory.
+
+    Returns:
+        The set of deployed ``"scripts/<relpath>"`` strings.
+    """
     deployed: set[str] = set()
     if not scripts_dir.is_dir():
         return deployed
@@ -242,6 +310,11 @@ def _collect_deployed_scripts(scripts_dir: Path) -> set[str]:
 
 def _check_unresolved_references(package_dir: Path, output_root: Path) -> int:
     """Reuse the BP-900b/BP-900c reference-resolution machinery against the deployed tree.
+
+    Args:
+        package_dir: Path to the leafcutter-ai package checkout.
+        output_root: The deployed output root verified by
+            ``_verify_deployed_tree``.
 
     Returns:
         0 when every compiled-template script reference resolves to a
@@ -325,8 +398,62 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _maybe_probe_route_before_install(
+    skip_build: bool, package_dir: Path, target_dir: Path
+) -> tuple[str | None, ModuleType | None, int | None]:
+    """Take ACD-2100d-3's BEFORE route-start reading, unless this invocation
+    will not actually run the installer.
+
+    ACD-2100d-3's Given is "a run reaches the first question ... BEFORE the
+    installer is run" and its When is "the current installer is run against
+    that project" -- both presuppose an invocation that actually installs.
+    ``skip_build`` means no installer runs in THIS invocation at all, so
+    there is no before/after pair to measure: the "before" and "after"
+    states would be the same, unchanged, already-deployed tree. Several
+    already-``done`` ACs (BP-900h-1, BP-900h-6-i, BP-900h-6-ii) legitimately
+    re-invoke this script with ``--skip-build`` against a ``target_dir``
+    that already carries a deployed, non-git route, for purposes unrelated
+    to route-start regression (re-checking references, exercising the
+    use-install commit path). Probing route start there manufactured a
+    false PRECONDITION NOT MET, because the real ``plan-feature.js``'s
+    repository-resolution pre-flight halts on any target without git
+    ancestry -- an artifact of these callers' own git-init timing, not a
+    genuine before/after regression. See pr-reviewer finding H-1,
+    2026-09-08.
+
+    Args:
+        skip_build: The parsed ``--skip-build`` flag.
+        package_dir: Path to the leafcutter-ai package checkout.
+        target_dir: Scratch consumer-install directory to probe.
+
+    Returns:
+        A ``(before_stopping_point, probe_module, error_code)`` triple.
+        ``error_code`` is ``None`` on success (including the skipped case,
+        where the other two members are also ``None``), or 2 when the
+        shared installed-route probe cannot be imported.
+    """
+    if skip_build:
+        return None, None, None
+    try:
+        before_stopping_point, probe_module = probe_route_before_install(package_dir, target_dir)
+    except ImportError as exc:
+        print(f"ERROR: could not import shared installed-route probe: {exc}", file=sys.stderr)
+        return None, None, 2
+    return before_stopping_point, probe_module, None
+
+
 def main(argv: list[str] | None = None) -> int:
-    """Entry point. Returns an exit code (0 = OK, 1 = simulation failed, 2 = usage/environment error)."""
+    """Entry point.
+
+    Args:
+        argv: Command-line arguments (excluding argv[0]), or ``None`` to use
+            ``sys.argv[1:]``.
+
+    Returns:
+        An exit code — see this module's own "Exit codes" docstring section
+        above (0 = OK, 1 = simulation failed, 2 = usage/environment error,
+        3 = ACD-2100d-3 precondition not met).
+    """
     parser = _build_arg_parser()
     args = parser.parse_args(argv)
 
@@ -362,6 +489,12 @@ def main(argv: list[str] | None = None) -> int:
     if setup_code != 0:
         return setup_code
 
+    before_stopping_point, probe_module, probe_error_code = _maybe_probe_route_before_install(
+        args.skip_build, package_dir, target_dir
+    )
+    if probe_error_code is not None:
+        return probe_error_code
+
     build_code = _maybe_run_build(package_dir, target_dir, args.skip_build)
     if build_code != 0:
         return build_code
@@ -369,6 +502,17 @@ def main(argv: list[str] | None = None) -> int:
     output_root, tree_code = _verify_deployed_tree(target_dir)
     if tree_code != 0:
         return tree_code
+
+    if before_stopping_point is not None:
+        try:
+            message, verdict_code = verdict_after_install(before_stopping_point, probe_module, target_dir)
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"ERROR: after-install route-start probe failed: {exc}", file=sys.stderr)
+            return 2
+        if verdict_code != 0:
+            print(message, file=sys.stderr)
+            return verdict_code
+        print(message)
 
     refs_code = _check_unresolved_references(package_dir, output_root)
     if refs_code != 0:
@@ -403,4 +547,45 @@ if __name__ == "__main__":
 #   build_propagation_audit.build_broken_ref_report() unmodified (per the
 #   ticket's Implementation Notes) rather than reimplementing the matching
 #   rules BP-900b-1/BP-900c-1 already built. (#EPIC-DeploymentCompleteness/12)
+# - 2026-09-08 [python-coder/EPIC-StartingNewWorkTheProperWayAlways/22]: Wired
+#   ACD-2100d-3's before/after route-start regression check into this
+#   ALREADY-GATED entry point rather than adding a second script, per the
+#   ticket's own "wire into the gate that already runs" instruction, and
+#   reused ACD-2100d-1's shared unit_tests/_installed_route_probe.py harness
+#   as-is rather than duplicating it. Probes target_dir's pre-existing
+#   deployed route (if any) before _maybe_run_build() runs, then probes the
+#   same target again after _verify_deployed_tree() succeeds, and reports a
+#   verdict distinguishing precondition-not-met (exit 3, before never
+#   reached the first question) from a route-start regression (exit 1,
+#   before did but after does not) from a pass (exit 0, both readings
+#   printed). A fresh scratch install with nothing yet deployed skips the
+#   whole check (before/probe_module stay None) so the existing
+#   empty-scratch-directory CI usage is unaffected.
+#   (#EPIC-StartingNewWorkTheProperWayAlways/22)
+# - 2026-09-09 [python-coder/EPIC-StartingNewWorkTheProperWayAlways/22,
+#   regression fix]: pr-reviewer's H-1 finding (2026-09-08 16:32) reproduced a
+#   regression on 5 pre-existing, already-`done` AC tests sharing this entry
+#   point (BP-900h-1's test_consumer_simulation_detects_unresolved_reference;
+#   BP-900h-6-i's test_bp900h6i_an_entitled_disposable_target_still_completes;
+#   BP-900h-6-ii's three accounting tests): each re-invokes this script with
+#   --skip-build against a target_dir that already has a deployed, non-git
+#   route, for purposes unrelated to route-start (reference-checking,
+#   use-install accounting). The route-start probe fired anyway, and the
+#   REAL plan-feature.js's repository-resolution pre-flight halts on any
+#   target without git ancestry, so `before` read `halted:error` and every
+#   one of these invocations was misreported PRECONDITION NOT MET (exit 3)
+#   before its own actual check ever ran. Fix: gate the whole before/after
+#   route-start measurement on `not args.skip_build` — ACD-2100d-3's Given
+#   ("a run reaches the first question ... BEFORE the installer is run") and
+#   When ("the current installer is run") both presuppose an invocation that
+#   actually installs; --skip-build means no installer runs in THIS
+#   invocation, so there is no before/after pair to measure at all. The real
+#   CI job (.github/workflows/ci.yml) never passes --skip-build, so this
+#   ticket's own guarantee is unaffected for the invocation it actually
+#   gates. Verified: all 4 of this ticket's own tests
+#   (unit_tests/portability/test_acd_2100d_3.py — none of which use
+#   --skip-build) remain green; all 5 previously-regressed tests are green
+#   again; full unit_tests/portability/ suite: 86 passed (was 81 passed / 5
+#   failed before this fix), under AC_ENFORCE_STRICT=1.
+#   (#EPIC-StartingNewWorkTheProperWayAlways/22)
 # ====================================================================
