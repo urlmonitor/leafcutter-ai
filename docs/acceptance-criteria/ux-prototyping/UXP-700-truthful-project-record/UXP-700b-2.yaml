@@ -86,4 +86,4 @@ notes: |
   the Given and close with a varying-population clause. This is the record that makes UXP-700b-1
   falsifiable - without per-check figures, "it examined something" is an assertion the checker
   makes about itself with nothing behind it.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

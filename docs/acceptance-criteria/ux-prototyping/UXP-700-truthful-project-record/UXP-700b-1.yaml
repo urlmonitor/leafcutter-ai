@@ -92,4 +92,4 @@ notes: |
   is fine; reporting success when the check never examined anything is not. The reconciliation
   is written as its own record, UXP-700b-1-i, so an implementer cannot satisfy this AC by
   making every degraded run fail.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

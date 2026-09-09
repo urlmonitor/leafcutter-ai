@@ -71,4 +71,4 @@ notes: |
   discriminator here, because the 18 example criteria and every AC in the UXP-700 tree share
   component: ux-prototyping. The discriminator has to be the product the criteria describe, as
   UXP-700d-1 establishes for artifacts.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

@@ -68,4 +68,4 @@ notes: |
   Named mutation: delete one entry from what the deploy phase writes. Only this record and
   UXP-700a-4 turn red. If any sibling also reddens, the mutation was too coarse and the
   isolation clause has not been implemented.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

@@ -72,4 +72,4 @@ notes: |
   index down; this AC makes the generator able to produce one from nothing, so a record that
   loses its index, or was created before the install wrote one, is recoverable without hand
   authoring.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

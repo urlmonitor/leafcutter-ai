@@ -103,4 +103,4 @@ notes: |
   about what verdict the checker should reach on an empty record - that is UXP-700b-1. The
   last clause of UXP-700a-1-i ("not the clean-pass verdict") is the single deliberate seam
   between the two and is stated there as a constraint, not as this AC's own subject.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

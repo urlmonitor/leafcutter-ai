@@ -66,4 +66,4 @@ notes: |
   is the one that matters most in six months: the whole tree reads as hostile to the example
   content, and without an explicit statement that ADR-022 and UXP-550/UXP-593 require it, a
   future cleanup will delete fern-and-fig and break mock mode.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

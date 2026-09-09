@@ -65,4 +65,4 @@ notes: |
   UNVERIFIED: docs/architecture/components/ux-prototyping.md is recorded as planned because its
   existence was not confirmed during this authoring pass. The diagram author should confirm the
   destination page before writing.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

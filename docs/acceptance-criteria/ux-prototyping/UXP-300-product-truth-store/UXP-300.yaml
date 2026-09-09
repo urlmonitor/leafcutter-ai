@@ -71,4 +71,4 @@ test_spec:
     framework: unittest
 change_target: config
 risk_surface: internal
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

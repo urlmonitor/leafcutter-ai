@@ -63,4 +63,4 @@ notes: |
   last clause exists because the single most likely reaction to this feature landing is someone
   on Windows treating fourteen separator-only index mismatches as fourteen drifted journeys and
   "fixing" the record.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

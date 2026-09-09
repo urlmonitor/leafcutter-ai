@@ -91,4 +91,4 @@ notes: |
   Those are two different registries and the IT PO must decide which one artifact labels resolve
   against BEFORE this is built - resolving against the wrong one turns every existing artifact
   into a finding. This is flagged as an open question, not settled here.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

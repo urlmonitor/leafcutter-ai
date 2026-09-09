@@ -65,4 +65,4 @@ notes: |
   to the example product, so the project's own screen population is zero. See UXP-700d-4, which
   owns the reporting of a type whose entire population is example content; this record owns the
   simpler case of a type whose population is zero.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

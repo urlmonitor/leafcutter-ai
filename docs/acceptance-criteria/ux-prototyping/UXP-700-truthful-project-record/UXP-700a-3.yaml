@@ -72,4 +72,4 @@ notes: |
   UXP-700d is about how the example content is kept apart from a project's own record and its
   own work queue INSIDE a store that holds both. They are different failures closed by
   different code: this one by the deploy manifest, that one by the store's structure.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

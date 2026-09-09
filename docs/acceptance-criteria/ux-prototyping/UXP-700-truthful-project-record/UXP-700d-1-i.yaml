@@ -66,4 +66,4 @@ test_spec:
 notes: |
   Named mutation: replace the location predicate with a literal list of the current example
   artifact ids. UXP-700d-1 stays green; only this record turns red.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

@@ -75,4 +75,4 @@ notes: |
   The unit of the rule is visibility, not blocking. Three distinct outcomes are required by
   this record together with UXP-700b-1: nothing-examined, degraded, checked-and-sound. A design
   that collapses degraded into either neighbour fails this record.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

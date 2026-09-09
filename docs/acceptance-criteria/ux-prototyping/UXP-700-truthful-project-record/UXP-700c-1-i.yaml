@@ -67,4 +67,4 @@ notes: |
   Named mutation: fold unresolvable into resolved. UXP-700c-1's tests all stay green because
   every pointer it feeds is classifiable; only this record turns red. That asymmetry is why it
   is a record of its own rather than a clause of the parent.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

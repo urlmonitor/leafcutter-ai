@@ -69,4 +69,4 @@ notes: |
   Two Given/When/Then scenarios in one record is intentional: this is the negative control for
   UXP-700b-3 and a control needs both its arms in the same record, or one arm can be
   implemented and the other quietly dropped.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

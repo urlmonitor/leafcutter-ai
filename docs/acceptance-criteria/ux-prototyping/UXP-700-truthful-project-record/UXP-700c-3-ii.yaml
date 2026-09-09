@@ -77,4 +77,4 @@ notes: |
   (fail-open)" and exiting 0, while the same check on the same staged files blocked with six
   violations once the layout was right. Same check, same repo, opposite verdicts decided purely
   by workspace layout. Reuse GE-120's vocabulary here; do not mint a second one.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

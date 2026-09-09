@@ -82,4 +82,4 @@ notes: |
 
   The criteria deliberately describe the three by what they say rather than only by id, so the
   record survives an id change; the ids are pinned in doc_links and test_spec.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

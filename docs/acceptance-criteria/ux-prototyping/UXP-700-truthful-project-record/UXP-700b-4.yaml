@@ -65,4 +65,4 @@ notes: |
   Produced because UXP-700b declares documentation_triggers: [reference-doc]. The fourth clause
   was added because an undocumented exemption is how this rule will decay: a check exempted for
   a good reason and a check nobody got round to look identical in a list.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

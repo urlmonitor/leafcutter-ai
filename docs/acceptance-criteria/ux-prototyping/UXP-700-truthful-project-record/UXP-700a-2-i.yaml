@@ -58,4 +58,4 @@ test_spec:
 notes: |
   The four lookups are index.json by_component, by_entity, by_flow and by_ac. Named here rather
   than in criteria so the criterion survives a rename of the index fields.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

@@ -63,4 +63,4 @@ notes: |
   Produced because UXP-700a declares documentation_triggers: [how-to]. The fourth clause is
   load-bearing and must not be dropped in review: it is the only place a reader is told that
   the fern-and-fig example is not theirs, which is the reader-facing half of UXP-700d.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

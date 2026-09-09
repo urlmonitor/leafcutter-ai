@@ -103,4 +103,4 @@ notes: |
 
   DELIBERATELY NOT PROPOSED HERE: deleting, deprecating or superseding the example criteria.
   They are the worked example the tooling ships. Only their eligibility as work changes.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

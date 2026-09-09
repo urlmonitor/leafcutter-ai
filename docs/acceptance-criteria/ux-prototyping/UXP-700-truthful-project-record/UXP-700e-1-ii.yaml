@@ -74,4 +74,4 @@ notes: |
   Named mutation for the last clause: replace the population test with a date comparison. The
   first two tests still pass on a store that happens to be fully backfilled; only the third
   turns red. That is why the clause is asserted separately.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

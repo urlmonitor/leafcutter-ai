@@ -76,4 +76,4 @@ notes: |
 
   Paired acceptable input lives in UXP-700b-3-i so this AC cannot be discharged by making every
   such check refuse unconditionally.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

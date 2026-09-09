@@ -92,4 +92,4 @@ notes: |
   existing axis can carry this meaning before minting a second field - but note it is currently
   absent from the acceptance-criteria store entirely, which is the half of the problem that
   matters most here.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

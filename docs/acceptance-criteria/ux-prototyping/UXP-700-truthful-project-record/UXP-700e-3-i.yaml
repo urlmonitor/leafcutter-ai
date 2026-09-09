@@ -88,4 +88,4 @@ notes: |
   regeneration after this lands WILL rewrite the three affected journeys, so that run is not a
   no-op. The idempotency test must be read as "no change after the shape has settled", and
   whoever builds this should expect one deliberate churn commit.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

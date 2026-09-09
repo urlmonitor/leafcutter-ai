@@ -84,4 +84,4 @@ notes: |
   maxLength, steps has no maxItems, tags has no pattern, component is free text. This AC
   introduces the measurement; the transition rules that stop it breaking the store on day one
   are UXP-700e-1-i and UXP-700e-1-ii and must land in the same piece of work.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

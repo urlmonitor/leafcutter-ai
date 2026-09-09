@@ -82,4 +82,4 @@ notes: |
   the floor asks only "does the target exist", needs no external tooling, and is always on;
   UXP-700c-2 is the content tier that asks whether the target still says what the record claims.
   The floor must not be made to depend on the content tier, or a tooling gap disables both.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

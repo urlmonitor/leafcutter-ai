@@ -95,4 +95,4 @@ notes: |
   SECOND-ORDER RISK for the IT PO: the second clause ("the verdict IS the gate's verdict") is
   what stops the checker being wired in as an advisory that prints and always succeeds. That is
   the most likely way this lands green while changing nothing.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

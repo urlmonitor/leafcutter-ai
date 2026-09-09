@@ -65,4 +65,4 @@ notes: |
   Produced because UXP-700e declares documentation_triggers: [reference-doc]. The third clause
   is the one that pays for itself: the current 14 hand-written index descriptions exist because
   nobody could tell from the record which of the two texts was the authored one.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

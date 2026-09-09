@@ -90,4 +90,4 @@ notes: |
 
   SEPARATION, NOT DELETION - non-negotiable per the L1 and ADR-022. Any implementation that
   removes fern-and-fig fails this AC, not passes it.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord

@@ -69,4 +69,4 @@ notes: |
   scaffold files into a directory the tooling does not own. An install that unconditionally
   writes the scaffold would satisfy UXP-700a-1 in full while destroying an adopter's record on
   upgrade, which is the failure UXP-700 exists to prevent, arriving from the tooling itself.
-target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
+target_epic: EPIC-TruthfulProjectRecord
