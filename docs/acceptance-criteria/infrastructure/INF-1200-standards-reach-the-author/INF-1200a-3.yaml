@@ -1,4 +1,4 @@
-id: INF-1200d-3
+id: INF-1200a-3
 title: "Whether a standard's check currently runs does not decide whether its audience hears about it"
 component: infrastructure
 components:
@@ -28,11 +28,25 @@ criteria: |
   And at no point does the set of standards carried outward depend on which
     checks the project reaches.
 depends_on:
-  - INF-1200d
+  - INF-1200a
 doc_links:
-  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200d.yaml
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200a.yaml
     relationship: parent
     status: exists
+    relevance: >-
+      REPARENTED FROM INF-1200d ON THE BA'S OWN OBJECTION, 2026-09-09. This record was
+      first filed under d (the standards axis) because that is where BP-1600 was fenced.
+      The BA then argued in its own report that the reason a reachability filter is
+      forbidden is a TIMING reason — it rebuilds "you find out when you are stopped" one
+      layer up — and timing is INF-1200a's subject, not d's. Moved on that argument.
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FORMER PARENT. d owns generality over the SET of standards carried; this record owns
+      the fact that a standard's delivery does not wait on its check being reached. The
+      two remain adjacent and the mutation below deliberately leaves every arm of
+      INF-1200d-1 green, which is what keeps them distinguishable after the move.
   - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
     relationship: related
     status: exists
@@ -165,7 +179,7 @@ it_requirements:
     A manifest that cannot be read is irrelevant here by construction — if reading it can affect
     this code path at all, the prohibition above has already been violated.
 test_spec:
-  - name: test_inf_1200d_3_a_standard_with_a_reached_check_and_one_without_are_carried_alike
+  - name: test_inf_1200a_3_a_standard_with_a_reached_check_and_one_without_are_carried_alike
     target_dir: unit_tests/prompt_assembly/
     framework: unittest
     type: behavioral
@@ -177,7 +191,7 @@ test_spec:
       file stated, and the two are carried alike — same shape of statement, no qualifier attached to
       one and not the other. The unreached state is set up by the test rather than read off today's
       configuration.
-  - name: test_inf_1200d_3_a_check_beginning_to_be_reached_does_not_change_what_its_owner_is_told
+  - name: test_inf_1200a_3_a_check_beginning_to_be_reached_does_not_change_what_its_owner_is_told
     target_dir: unit_tests/prompt_assembly/
     framework: unittest
     type: behavioral
@@ -188,7 +202,7 @@ test_spec:
       unchanged; rebuild and capture again. What the brief states about that standard is UNCHANGED
       — asserted as content equality, not as still-present, so a carrier that appends "(enforced at
       commit time)" fails here rather than passing.
-  - name: test_inf_1200d_3_a_check_ceasing_to_be_reached_does_not_change_what_its_owner_is_told
+  - name: test_inf_1200a_3_a_check_ceasing_to_be_reached_does_not_change_what_its_owner_is_told
     target_dir: unit_tests/prompt_assembly/
     framework: unittest
     type: behavioral
@@ -199,7 +213,7 @@ test_spec:
       — with its declaration unchanged, rebuild, and assert content equality against the earlier
       brief. Two transitions in opposite directions are what make the independence observable once
       today's declared-but-unreachable fixture disappears.
-  - name: test_inf_1200d_3_the_reachability_filter_injection_reds_all_three_arms_and_leaves_every_arm_of_d_1_green
+  - name: test_inf_1200a_3_the_reachability_filter_injection_reds_all_three_arms_and_leaves_every_arm_of_d_1_green
     target_dir: unit_tests/prompt_assembly/
     framework: unittest
     type: behavioral
@@ -216,7 +230,7 @@ test_spec:
       mutation produces a delivery that is fully general over standards, walks the declaration
       properly, and is still wrong — which is precisely why the coupling cannot be left to be
       noticed. An injection run that also reddens d-1 is a FAILURE of this descriptor.
-  - name: test_inf_1200d_3_the_three_unreached_standards_reach_their_owners_against_the_real_configuration
+  - name: test_inf_1200a_3_the_three_unreached_standards_reach_their_owners_against_the_real_configuration
     target_dir: unit_tests/prompt_assembly/
     framework: unittest
     type: integration

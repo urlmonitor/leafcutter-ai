@@ -59,7 +59,6 @@ superseded_by: null
 covered_by:
   - INF-1200d-1
   - INF-1200d-2
-  - INF-1200d-3
 implemented_by: []
 change_target:
   - config

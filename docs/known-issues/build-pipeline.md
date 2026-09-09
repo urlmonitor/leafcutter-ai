@@ -4416,3 +4416,64 @@ Identical AST shape to a sibling-module load, so the scanner demanded a deployed
 - The "New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest" convention in `CLAUDE.md` — this scanner is the mechanical enforcement of that rule; both entries are about it over-reaching.
 
 **Pattern:** a static analyser inferring optionality from lexical position, where the property it is actually trying to detect (does this code tolerate the module's absence?) is a runtime one.
+
+---
+
+### KI-BP-20260909-injector-falls-back-to-a-literal-400 — the build's file-size injector swallows every read failure and tells every agent 400, whatever the config actually declares
+
+- **Severity:** medium — the failure is silent and the wrong value is plausible, which is what makes it worse than a crash. It cannot corrupt a commit (the GATE still reads the real config), but it can make every agent's brief disagree with the gate that judges it, with nothing anywhere reporting a discrepancy.
+- **Status:** open. Specified but not built: `INF-1200f-1` ("the figure in your brief is the figure your work is judged against") is authored against exactly this shape and records it as must-not-reproduce; `INF-1200b-2`'s derived-delivery mechanism is where the real fix lands.
+- **Occurrences:** 1 (structural — true of every build since the injector was added)
+- **First seen:** 2026-09-09, found while enriching `INF-1200` · **Last seen:** 2026-09-09
+- **Where:** `scripts/build.py:272-285` (`_inject_file_size_limit`)
+
+**Symptom.** There is none. That is the entry.
+
+**Mechanism.** The injector reads `file_size.line_limits['.py']` out of `templates/scripts/commit_guardian/commit_guardian.json` and publishes it to agent templates as `{{config.file_size_limit_py}}`. Its whole body is wrapped:
+
+```python
+py_limit: int = 400  # ultimate fallback
+try:
+    ...
+    py_limit = int(py_limit)
+except (OSError, json.JSONDecodeError, TypeError, ValueError):
+    pass  # Fallback already set to 400
+config["file_size_limit_py"] = py_limit
+```
+
+If the config is unreadable, malformed, or holds a non-integer, every agent template is compiled telling its reader the limit is **400** — with no warning, no build failure, and no marker in the output. The gate itself is unaffected: `check_file_size.py` reads the config directly at commit time. So the two surfaces silently disagree, and the direction of the disagreement is unbounded — if the declared limit were 600, every agent would be told 400 and would split files that never needed splitting.
+
+**Why this is a Rule 3 violation and not a judgement call.** `CLAUDE.md`'s Error Handling Policy Rule 3 requires every `except` block to log at WARNING or higher, or re-raise. `pass` with a comment is neither. Note the precise reading, because it matters for the fix: Rule 2 is NOT violated — exception types are named. The defect is that a failed measurement is converted into a successful-looking value, which is the same shape as `KI-CG-034` (a scanner that examined 169 files, compared none, exited 0) and `GE-127a-1-i` (an unreadable file reported as "0 lines - OK").
+
+**Fix direction.** The fallback constant is the problem, not the try/except. A build that cannot read the declared limit must not publish a number: either fail the build, or publish an explicit unavailability marker the template can render as such. A second literal `400` living in `build.py` is, in `INF-1200f-1`'s terms, a second figure by another name — and note it is a *third* copy, since `file_size.default_limit` is also 400. Whatever replaces it, the number must appear in exactly one place.
+
+**Related.**
+- `INF-1200f-1` and `INF-1200b-2` — the criteria that own this; this entry should be closed by their implementation rather than separately.
+- `KI-CG-034`, `GE-127a-1-i` — same shape (unmeasured reported as measured) on other surfaces.
+- `KI-BP-20260909-standards-declare-no-applicability` (below) — found in the same pass, and the two together are why a generic injector cannot simply be written over the existing config.
+
+**Pattern:** a fallback constant that is indistinguishable, downstream, from a real measurement.
+
+---
+
+### KI-BP-20260909-standards-declare-no-applicability — only one of four configured guardrails says which kinds of file it governs; for the rest it lives in the script's filename
+
+- **Severity:** medium — nothing is broken today, because three of the four never run. It is filed because it is a **precondition** for `INF-1200`: a generic "tell every owner of a file type its standards" mechanism cannot be built over this config, and that is not obvious from reading any one section.
+- **Status:** open — no AC of its own. Promoted into `INF-1200d-1`'s `it_requirements` as a measured constraint on that record's implementation.
+- **Occurrences:** 1 (structural)
+- **First seen:** 2026-09-09, found while enriching `INF-1200` · **Last seen:** 2026-09-09
+- **Where:** `templates/scripts/commit_guardian/commit_guardian.json` — `file_size` (has `checked_extensions`), `complexity:25` (`max_score: 15`), `sql_complexity:33` (`max_score: 75`), `folder_density:141` (`max_files_per_folder: 15`)
+
+**Symptom.** `file_size` declares `checked_extensions: ['.py', '.sql']` and per-extension `line_limits`. The other three declare a threshold and an `excluded_dirs` list and nothing else. There is no field anywhere saying that `complexity` governs Python, or that `sql_complexity` governs SQL. That fact exists only in the scripts' filenames and in each script's own hardcoded extension check.
+
+**Why it matters beyond tidiness.** `INF-1200` is about joining two registries: `agent_registry.json`'s `owns_file_extensions` (which agent owns which file type) against the declared standards (which standard applies to which file type). The first side of that join exists. The second side exists for exactly one of four standards. So a walk that tried to derive "who must be told what" would today produce a correct answer for `file_size` and an empty answer for the other three — not an error, an *empty result*, which is the failure mode this repo has repeatedly found hardest to see.
+
+**Interaction with the registration gap, which is the part that makes this easy to misread.** `complexity`, `sql_complexity` and `folder_density` also have no `hooks_manifest` entry, so they never run (that is `BP-1600a-2`'s census, not this entry). It is tempting to conclude the missing applicability does not matter because the guards are inert. It matters more, not less: when one of them is registered, it starts refusing commits for a standard no agent was ever told about, because there was no way to tell them.
+
+**Fix direction.** Give every standards section the same shape `file_size` already has — an explicit statement of the kinds of file it governs — before anything tries to walk them. Do NOT infer applicability from the script filename: that is the same lexical-inference mistake catalogued two entries above, and it silently breaks the moment a script is renamed or a section governs two kinds of file. This is cheap now and expensive after a generic consumer exists.
+
+**Related.**
+- `INF-1200d-1` — carries this as a measured constraint; the tree cannot be implemented without it.
+- `BP-1600a-2` — owns whether these three are registered. Different question, same three sections; do not conflate the two fixes.
+
+**Pattern:** a registry where one entry carries the field a future consumer needs and its siblings carry it implicitly, in their names.

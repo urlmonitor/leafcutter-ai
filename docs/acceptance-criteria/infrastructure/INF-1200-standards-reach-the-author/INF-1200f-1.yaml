@@ -151,7 +151,7 @@ it_requirements:
     part of this record specifies how the length is measured, which lines count, what happens when
     it is exceeded, or whether the measurement is reproducible — those are GE-127d's and GE-127a's,
     and specifying them in two places produces two rules. Equally, nothing here requires that a
-    figure be APPLIED at all, which is what keeps this record consistent with INF-1200d-3.
+    figure be APPLIED at all, which is what keeps this record consistent with INF-1200a-3.
   - >-
     SATISFY INF-600a-4 RATHER THAN ROUTING AROUND IT. Every figure a brief refers to must be
     declared by that specialist. Whatever carries figures outward must keep that true; the
@@ -346,7 +346,7 @@ notes: |
   figure is in play rather than two. Which figure is correct is the user's decision at
   approval; whether the measurement is reproducible is GE-127d's subject; whether a
   figure is applied at all is not required here, which is what keeps this record
-  consistent with INF-1200d-3.
+  consistent with INF-1200a-3.
 
   NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO can
   lift them verbatim into test descriptors.

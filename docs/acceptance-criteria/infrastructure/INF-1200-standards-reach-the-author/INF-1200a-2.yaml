@@ -141,7 +141,7 @@ it_requirements:
     this record by causing the unreached checks to run has answered someone else's record
     and left this one untested.
   - >-
-    SEE INF-1200d-3, WHICH OWNS THE SYMMETRIC OBLIGATION FROM THE STANDARDS AXIS. This
+    SEE INF-1200a-3, WHICH OWNS THE SYMMETRIC OBLIGATION FROM THE STANDARDS AXIS. This
     record fixes that what a specialist is told does not depend on anything HAVING HAPPENED;
     d-3 fixes that the SET of standards carried does not depend on which checks are
     reachable, and adds the two transitions. They are consistent, neither subsumes the
@@ -283,7 +283,7 @@ notes: |
   BP-1600a-2's, it is approved, and it is fenced above. It IS this record's job to
   ensure the telling is not silently coupled to the running, because that coupling is
   the single cheapest way to reintroduce "you find out when you are stopped". See
-  INF-1200d-3, which owns the same coupling from the standards axis and states the
+  INF-1200a-3, which owns the same coupling from the standards axis and states the
   symmetric obligation; the two are consistent and neither may be closed as the other.
 
   NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift

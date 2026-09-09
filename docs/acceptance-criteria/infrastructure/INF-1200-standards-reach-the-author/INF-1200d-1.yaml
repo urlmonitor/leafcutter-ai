@@ -43,7 +43,7 @@ doc_links:
       Several standards this record would carry are also not registered to run. Making
       them RUN is BP-1600a-2's approved, high-priority work. Every clause here is
       discharged by the telling and none by the registering; no clause mentions a
-      manifest, a registry or a census, and none may be added. INF-1200d-3 owns the
+      manifest, a registry or a census, and none may be added. INF-1200a-3 owns the
       positive statement that the two are independent.
   - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-4-i.yaml
     relationship: related
@@ -158,7 +158,7 @@ it_requirements:
     FENCED — DISCHARGED BY THE TELLING, NEVER BY THE REGISTERING. Several standards this record
     carries are also not registered to run; making them run is BP-1600a-2's approved,
     high-priority work. No implementation here may inspect hooks_manifest, count scripts, add an
-    entry, or be deferred until that record lands. INF-1200d-3 owns the positive statement that
+    entry, or be deferred until that record lands. INF-1200a-3 owns the positive statement that
     the two are independent and its descriptors are the ones that would catch a coupling
     introduced here.
   - >-
