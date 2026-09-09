@@ -288,3 +288,118 @@ Figures with their method and denominator are in ACS-1300's notes; an independen
 re-measurement was in flight when the tree was authored. A criterion pinned to a
 number is falsified by the next commit that changes it — the hand-typed "244 of 607"
 in the artifact map is the in-house example.
+
+## ACS-1400 complete-child-links: framing note for the BA/IT-PO (2026-09-08, PO)
+
+ACS-1400 ("Trust a finished claim, because nothing it covers was left out of the
+count") is a NEW root L0 in ac-store, slug folder `ACS-1400-complete-child-links/`,
+four L1 children ACS-1400a–d, origin_agent BrainCandy, readiness draft, priority
+medium, `roadmap_phase: phase_1`. Subject: the parent→CHILD relation in `covered_by`
+— the set of parts a composite's done-claim is judged against.
+
+**THE GOVERNANCE MAP IS NOW SIX TREES.** ACS-200 test coverage of live ACs
+(structurally broken — no L0 file); ACS-400 who may edit a definition; ACS-900
+code lifecycle of a retired AC; ACS-1200 the parked pre-decomposition state;
+ACS-1300 the requirement→TEST link; **ACS-1400 the parent→CHILD link.** ACS-1300
+and ACS-1400 are the two halves of one overloaded field — see ACS-1400d.
+
+**WHY A SIBLING L0 AND NOT A GRAFT ONTO ACS-1300 (do not re-litigate).** ACS-1300
+was the serious candidate — same field, four free L1 slots, and its notes already
+carry the parent/child disagreement measurement. It was rejected **by that tree's
+own written instruction**, not by PO judgement. `ACS-1300a-3` (approved,
+BA-authored) states: *"Repairing a stale child list is NOT this tree's job. It is a
+different operation on a different relation, it already has a tool in
+scripts/ac_store/fix_ac_orphans.py... This AC abstains and reports; it must not
+grow a child-list repair."* ACS-1300 explicitly disclaims all done-status
+consequence ("it unblocks nothing"); ACS-1400 is entirely about done-status
+trustworthiness. ACS-1300a-3 is the hand-off point — treat it as the seam.
+
+**READ THIS BEFORE DECOMPOSING — "47 ORPHANS" IS FOUR POPULATIONS WITH OPPOSITE
+CORRECT ACTIONS.** Measured 2026-09-08, whole store, branch `ac/orphaned-children`.
+Do NOT let any criterion say "reconcile the orphans."
+
+1. **6 deliberate — MUST NEVER BE REPAIRED.** KM-200a–f. `covered_by` is empty on
+   purpose under the cheap-capture convention; the merge only landed with
+   `SKIP=check-ac-parent-covered-by`. Already owned by ACS-1200a/b, which states
+   pre-existing orphans must not be swept up.
+2. **26 — the field is carrying two meanings.** 11 parents (ACS-300g-1, ACS-300i-1,
+   BP-100b, BP-100b-6, INF-100c-1, INF-100c-3, KM-KGS-100e-1/5/6, UXP-544, UXP-545)
+   hold ONLY test paths in `covered_by`. **Repair here has TEETH**: appending a
+   child id flips `done_proof._has_resolvable_child` from leaf to composite,
+   changing what the store believes can be finished. ACS-1300a-3 abstains on
+   exactly these.
+3. **~5 on records that are themselves `status: superseded_by`** (BO-100d-1,
+   BO-100d-2, TKT-100a, TKT-100f; BP-100b too). ac-schema.md's status lifecycle is
+   SILENT on whether a retired parent lists retired children — settle the
+   convention before implementing.
+4. **~10 of plain stale drift** — the shape the brief described. BO-100d (4),
+   FIN-100h (1), UXP-400a/410a/412a/420a/421a (5).
+
+**THE COMMIT-TIME HOOK HAS THREE ESCAPE HATCHES, NOT THE ONE CLAUDE.md DOCUMENTS.**
+CLAUDE.md describes only the staged-set gap. `_check_file` ALSO returns `[]` unless
+the ID-derived parent appears in the child's own `depends_on` — **that alone exempts
+26 of the 47**, so staging the parent would have changed nothing for a majority.
+Third: parent-absent-from-index fails open with a WARNING. Its silence means three
+different things and only one is a pass; reuse the existing
+`OUTCOME_COULD_NOT_CHECK` vocabulary already in that file rather than inventing a
+second channel.
+
+**BOTH THE SCAN AND THE REPAIR ALREADY EXIST — CHECK BEFORE SPECIFYING EITHER.**
+`scan_ac_orphans.py` is correct and has been since 2026-06-08; it is wired to
+**nothing** (zero references in `.github/`, `config/`, `templates/config/`,
+`.pre-commit-config.yaml`). That is ACS-1400b's whole gap — wiring, not capability.
+`fix_ac_orphans.py` performs the bulk repair with **no adjudication whatsoever**:
+run today it repairs all 47, undoing the KM-200 decision and performing 25 writes
+with done-proof consequences; its case-4 branch `yaml.dump`s whole files (violating
+byte stability) and its docstring's claim that the hook "blocks all commits that
+touch AC files" is false. **ACS-1400c is a safety problem on an existing tool, not
+a greenfield build.** The urgency of this tree is that the unsafe repair is one
+command away and the brief that prompts it is already written down.
+
+**L1 SPLIT (decompose each into L2; do NOT re-cut at L1).** Seam is *when the answer
+is produced and who acts on it*.
+- **ACS-1400a** — at commit time; close the three hatches so silence is unambiguous.
+  Collides with **ACS-1200a on the same file** (this makes it stricter, that makes it
+  more permissive) — sequence them. `[reference-doc]`: ac-schema.md currently
+  describes an unconditional blocking rule the code does not implement.
+- **ACS-1400b** — out-of-band store-wide reporting. A required gate that blocks on 47
+  pre-existing orphans is unshippable before c runs; report first, block later, and
+  say so. Copy `validate_ac_schema.py`'s wiring **and its scar** (bare-directory
+  no-op exited 0 having checked zero files for eight days) — state the population
+  examined. `[how-to]`.
+- **ACS-1400c** — the adjudicated one-off pass. **"Done" is NOT zero orphans**; a
+  store reporting six labelled deliberate exclusions is healthy, and any criterion
+  binding success to zero forces the six wrong repairs. `[how-to]`.
+- **ACS-1400d** — split the field so child links and test links have separate homes.
+  The durable fix for population 2. `[reference-doc, component-diagram]`.
+
+**ACS-1400d IS FLAGGED FOR THE USER, NOT ASSUMED.** ACS-1300a-3 names the field
+split as "the real fix" and places it out of scope **twice** — it is deliberately
+homeless, and it is the root cause of the largest population. It is also by far the
+most expensive item here. Deferring it to its own L0 is reasonable and a/b/c survive
+it; what must not happen is quiet omission, which is how it became homeless.
+
+**INHERITED FROM ACS-1300, IN THAT TREE'S OWN FORM — DO NOT RE-DERIVE.** Byte
+stability (TQ-400e-1 owns the rule and the test shape: DO NOT WRITE, not
+write-the-same) and abstention-over-action (reported abstention, never a silent
+skip). This tree needs abstention more than ACS-1300 did, because populations 1 and
+3 are records where the correct action is to do nothing AND SAY SO.
+
+**EVERY SAFETY GUARANTEE IN THIS TREE IS SATISFIED BY A TOOL THAT DOES NOTHING.**
+"Left the parked records alone", "byte-stable", "changed no done-proof verdict" are
+all trivially true of a no-op. Each must be asserted in the SAME invocation as a
+repair that genuinely happened — copy ACS-1300a-3's pairing test. Bind outcomes to
+`done_proof`'s and the back-link hook's **real verdicts**, not to re-implementations.
+And note the hook reads the git index or `HOOK_TEST_FILES`, never argv, so any test
+must confirm it actually saw the file.
+
+**HARD REFUSAL, INHERITED: nothing in this tree writes `work_status`, at any level.**
+The temptation is sharper here than in ACS-1300 because the motivating investigation
+was a sweep of composites marked done with unfinished children, so "we just fixed the
+child list, now recompute the badge" is the obvious next line. Correcting the count
+and re-judging the claim are two acts; only the first belongs here.
+
+GENERAL LESSON WORTH REUSING BEYOND THIS TREE: a single confident integrity number is
+usually several populations with opposite correct actions. Triage per-record before
+specifying any store-wide cleanup — and check whether the tool you are about to
+commission already exists and is the hazard rather than the gap.

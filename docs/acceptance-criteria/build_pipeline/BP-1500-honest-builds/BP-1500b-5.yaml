@@ -1,0 +1,150 @@
+id: BP-1500b-5
+title: "Reference documentation lets a reader predict what the sweep removes and what it will never touch"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  Given the orphan sweep behaves as BP-1500b-1 through BP-1500b-4 describe,
+  When a reader who has never seen the implementation consults the build
+    pipeline's reference documentation,
+  Then it states how the sweep decides an installed artifact is an orphan, in
+    terms of the package's current sources rather than any stored list of names,
+  And it states, by category rather than by filename, what the sweep will never
+    remove and why -- adopter-owned files, machine-local run-time state, and the
+    link entries the build itself created,
+  And it states exactly what the clean result reports, and how a reader
+    reproduces that stated scope by hand to check it,
+  And it names the two directions apart in one place: residue, which this sweep
+    removes, and incompleteness, which the deploy-declaration check already
+    refuses to ship, so a reader does not take a fix for one as covering the
+    other,
+  And, given any one file in an installed tree, that reader can predict from the
+    documentation alone whether the sweep would remove it, without reading the
+    build's source.
+depends_on:
+  - BP-1500b
+  - BP-1500b-1
+  - BP-1500b-2
+  - BP-1500b-3
+  - BP-1500b-4
+doc_links:
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "The existing home for this project's catalogue of checks that report success without having examined anything. A vacuous all-clear from a sweep with no notion of orphans belongs in that catalogue; check before creating a new reference page."
+  - path: docs/reference/build-telemetry.md
+    relationship: describes
+    status: exists
+    relevance: "Existing reference for what the build reports about itself -- the natural neighbour for the clean-result scope statement, and the file to check for overlap before adding a new one."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8-ii.yaml"
+    relationship: describes
+    status: exists
+    relevance: "The incompleteness direction the documentation must name apart from residue. Approved, done, merged 2026-09-07."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The build_pipeline component's detail_ref in docs/components.json, and the THIRD candidate home the AC's notes ask to be checked before a new page is created. Whatever page this lands on, this one must at minimum stop describing a build that silently keeps residue."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-005, KI-BP-009 and KI-BP-010 are the entries whose status changes when this work lands. Reconcile them in the same change; a reference page describing a fixed sweep beside an open KI saying it never runs is a contradiction a reader will resolve the wrong way."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "CHECK THE THREE EXISTING PAGES BEFORE CREATING A FOURTH. docs/reference/false-green-mechanisms.md already owns the catalogue of checks that report success having examined nothing (the BP-1500b-3 half); docs/reference/build-telemetry.md already owns what the build reports about itself (the scope-statement half); docs/build-pipeline.md is the component's detail_ref and describes the compilation the sweep joins. A new page is justified only if the sweep's decision rule fits none of them, and the AC's notes name scattering one rule across several records as this store's recurring failure."
+  - "The decision rule must be documented in terms of the package's CURRENT sources and the provenance record, and must contain no list of filenames a reader could mistake for the mechanism. If the prose can be satisfied by a maintained list, it will be read as describing one."
+  - "The never-removed categories must be stated by CATEGORY with the reason attached -- adopter-owned files, machine-local run-time state, build-created link entries -- never by filename. Naming settings.local.json as an example is fine; naming it as the rule is the documented form of the exception-list shortcut BP-1500b-4 forbids in code."
+  - "The clean-result section must give the reader an executable reproduction: the actual shell commands that recompute the two stated counts from the stated scope. A description of the counts is not a reproduction, and the reproduce-by-hand clause is the check the reporter actually performed to find the live orphan."
+  - "The residue-versus-incompleteness distinction must appear ONCE, in one place, with both directions stated side by side and each pointing at the mechanism that enforces it (this sweep; the deploy-declaration check of BP-900g-8-ii). Two half-explanations on two pages is the failure this clause exists to prevent."
+  - "Reconcile the known-issues register in the same change: KI-BP-005, KI-BP-009 and KI-BP-010 all describe behaviour this work alters. Documentation that describes the fixed sweep while an open KI states the cleanup never runs leaves a reader with two sources and no way to choose."
+  - "Do not document behaviour that has not landed. If any of BP-1500b-1 through BP-1500b-4 ships partially, the documentation must describe what the sweep actually does -- an aspirational reference page is a false-green in prose, which is the precise subject of the page it would sit next to."
+  - "The acceptance test for the whole page is its last Then clause and it is cheap to run: hand a reader who has not seen the implementation two files -- a machine-local settings file and the retired fast-lane-build workflow -- and see whether they predict both verdicts correctly from the documentation alone. Prose that cannot pass that has satisfied the other clauses and failed the AC."
+test_spec:
+  - name: test_bp_1500b_5_the_documented_never_removed_categories_match_the_classifiers_keep_verdicts
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Doc-parity, in the shape unit_tests/docs/ already uses. Extract the never-removed categories from the reference documentation and assert the provenance classifier returns a keep verdict for a representative input of each. Fails when the classifier gains or loses a category and the documentation does not follow -- the drift that makes a reference page confidently wrong."
+  - name: test_bp_1500b_5_the_documented_reproduce_by_hand_commands_reproduce_the_reported_counts
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Run a real build over a small target, then execute the reproduction commands exactly as the documentation gives them and compare their output to the two counts the build reported. Turns the reproduce-by-hand clause from a claim about the prose into a claim about the world, and is the only entry that can catch documentation that describes a scope the sweep does not walk."
+test_rationale: |
+  A DOCS AC WOULD NORMALLY TAKE test_required: false, AND THIS ONE DOES NOT,
+  DELIBERATELY. Two of its clauses assert a correspondence between the prose
+  and the running code -- the never-removed categories must match what the
+  classifier actually keeps, and the stated reproduction must actually
+  reproduce the reported counts -- and a correspondence is executable even
+  when one side of it is prose. This repository already has the pattern
+  (unit_tests/docs/test_artifact_graph_doc_parity.py), so this is the local
+  convention rather than an invention.
+
+  THE COVERAGE IS DELIBERATELY PARTIAL AND THE BOUNDARY IS WORTH STATING. The
+  AC's remaining clauses -- that the rule is expressed in terms of current
+  sources, that the two directions are named apart in one place, and above all
+  that a reader can predict the verdict for an arbitrary file -- are
+  comprehension properties. A test asserting a page CONTAINS a phrase passes
+  on prose that is present and useless, which is grep-coverage of exactly the
+  kind this repo's conventions forbid for gates. Those clauses are enforced by
+  the review gate written into it_requirements: hand a reader
+  settings.local.json and the retired fast-lane-build workflow and check both
+  predictions. That is a human check, and pretending otherwise by adding a
+  string-presence test would make the AC look better covered than it is.
+delivers_to:
+  agent: documentation-expert
+  contract: "Reference documentation, placed on one of the three existing pages unless a new page is justified in the ticket, covering: the orphan decision rule in terms of current sources plus provenance; the never-removed categories with reasons, stated by category; the clean-result scope statement with executable commands that reproduce its two counts; and a single side-by-side statement of residue versus incompleteness naming the mechanism enforcing each. Plus reconciled KI-BP-005, KI-BP-009 and KI-BP-010 entries in docs/known-issues/build-pipeline.md."
+expects_from:
+  - ac_id: BP-1500b-2
+    contract: "The orphan decision rule as implemented -- recomputed producible set plus the provenance lookup -- which is what the documentation must describe rather than paraphrase."
+  - ac_id: BP-1500b-3
+    contract: "The per-run scope record {examined_root, walked_locations, installed_artifacts_inspected, current_sources_compared}, whose field names and reported paths the reproduce-by-hand commands must target."
+  - ac_id: BP-1500b-4
+    contract: "The provenance verdict vocabulary {produced_by_this_package, not_produced, unattributable} and the three never-removed categories, which the documentation must state by category rather than by filename."
+origin_agent: BrainCandy
+created: 2026-09-07
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-07'
+    reason: "Added assigned_agent (documentation-expert, taking the BA's nomination), estimated_complexity (M), it_requirements, test_spec, test_rationale, delivers_to, expects_from, and two doc_links. Criteria, title and depends_on unchanged. Two judgement calls recorded: (1) test_required: false was NOT taken, though this is a change_target: docs AC -- two of its clauses assert a correspondence between prose and running code, which is executable, and unit_tests/docs/ already holds doc-parity tests of that shape; the remaining comprehension clauses are left to a stated human review gate rather than covered by a string-presence test that would overstate coverage. (2) An it_requirement adds reconciliation of KI-BP-005, KI-BP-009 and KI-BP-010 in the same change, since a reference page describing a fixed sweep beside an open KI saying the cleanup never runs gives a reader two sources and no way to choose."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  WHY THIS AC EXISTS. The parent L1 carries documentation_triggers:
+  [reference-doc], so a documentation AC is required alongside the behavioural
+  ones. It is scoped to a reference document rather than a how-to because the
+  reader's question is "would it delete this file?", which is a lookup, not a
+  procedure.
+
+  assigned_agent IS DELIBERATELY UNSET, as it is on every AC in this batch --
+  the IT PO owns technical enrichment for this run. For the record, the BA
+  documentation-trigger table nominates documentation-expert for a reference-doc
+  AC; that is a suggestion to the IT PO, not a decision taken here.
+
+  THE LAST Then CLAUSE IS THE ACCEPTANCE TEST FOR THE OTHERS. Prose that
+  describes the sweep in general terms can satisfy the first four clauses and
+  still leave a reader unable to answer the only question they will ever
+  actually ask. Predicting the verdict for a specific file is what makes the
+  documentation load-bearing, and it is checkable: hand a reader
+  settings.local.json and the retired fast-lane-build workflow and see whether
+  they get both right.
+
+  DO NOT CREATE A NEW REFERENCE PAGE WITHOUT CHECKING THE TWO LINKED ONES FIRST.
+  false-green-mechanisms.md already exists precisely for checks that report
+  success having examined nothing, which is the BP-1500b-3 half of this work. A
+  third page on the same theme would repeat the store's own recurring failure of
+  scattering one rule across several records.

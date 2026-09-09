@@ -1,0 +1,116 @@
+id: ACD-400d-3
+components:
+  - ac_driven_dev
+title: "Work that names no urgency is ranked as middle-urgency, by a stated verdict rather than by omission"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three pieces of work are ready to be picked up: one recording medium urgency
+    and a large size, one recording no urgency at all and a small size, and one
+    recording low urgency and a small size,
+  When the queue is asked which work is ready,
+  Then the piece with no recorded urgency is offered first, ahead of the
+    medium-urgency piece only because it is the smaller of the two, and ahead of the
+    low-urgency piece because low ranks beneath middle,
+  And a store that differs only in whether that piece records medium urgency or
+    records none at all yields the identical offer, so work naming no urgency is
+    ranked exactly as middle-urgency work is — not ahead of it, not behind it, and
+    not in a tier of its own,
+  And the piece is offered in every case: naming no urgency affects only where the
+    work sits in the offer.
+depends_on: [ACD-400d, ACD-400d-1]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "Verified by execution 2026-09-08: a temp store holding a medium/L leaf, a no-urgency/S leaf and a low/S leaf returned them in the order no-urgency, medium, low. The no-urgency piece beat the medium piece only on size and beat the low piece on urgency — which is the observable signature of it being ranked as middle-urgency rather than as a separate tier. Tagged `describes`, not `modifies`."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400c-2.yaml
+    relationship: related
+    status: exists
+    relevance: "THE OPPOSITE POSTURE ON THE OTHER FIELD, and the reason both are worth stating. A record that names no urgency is treated generously here; a record that records no approval is withheld entirely there. Both ship today, both are defensible alone, and the inconsistency between them is visible only because both are now written down. Neither AC proposes a change; if BrainCandy rules that the two defaults should agree, these are the two records to amend."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Confirmed 2026-09-08 at line 47: the urgency field is documented as optional and 'Present on ~69 % of records', with no statement of what a consumer does when it is absent. Roughly three records in ten are being ranked by a verdict the schema never mentions."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the queue whose absent-urgency verdict this AC pins."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Every pytest invocation used to run or verify these tests must set AC_ENFORCE_STRICT=1, or a red result is masked as an xfail and reads green."
+  - "The order must be obtained by executing the scanner over a temporary store through its real command surface; neither a source-text assertion nor a direct call to the private sort helper satisfies this AC."
+  - "The absent-urgency fixture must omit the field entirely from the written record, not write it empty or null — the population this verdict speaks for, roughly three records in ten of the real store, is the key-absent shape."
+  - "The same-answer clause must be tested by building two stores that differ in exactly one field and comparing the two whole offered lists. Asserting only the three-way order admits any rule that gives the absent case a tier of its own just above or below the middle, which reorders real work whenever an absent-urgency and a middle-urgency record share a size."
+  - "The recorded sizes must be arranged as the criteria specify, with the absent-urgency record the smaller. Equalising them makes the identifier decide and the test then says nothing about which tier the absent case landed in."
+  - "This AC authorises no change to the default. Whether the generous absent-urgency posture should be reconciled with the harsh absent-approval posture in ACD-400c-2 was RULED ON by BrainCandy 2026-09-08: KEEP BOTH AS THEY SHIP. The asymmetry is accepted deliberately. The implementation must still not settle it, now because doing so would reverse a ruling rather than pre-empt an open question."
+test_spec:
+  - name: test_work_naming_no_urgency_is_ranked_as_middle_urgency
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Three ready leaves — medium/L, no-urgency/S and low/S — are offered in the order no-urgency, medium, low: ahead of the medium piece on size alone and ahead of the low piece on urgency."
+  - name: test_absent_urgency_and_explicit_medium_yield_the_identical_offer
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Two stores differing only in whether the record omits the urgency field or records it as medium produce the identical offered list, pinning the absent case to the middle tier rather than to a tier of its own."
+  - name: test_naming_no_urgency_never_removes_the_work_from_the_offer
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "The record with no recorded urgency is present in the offered list in every arrangement tested — absent urgency affects position only."
+test_rationale: "The three-way order alone is satisfied by a family of rules that place the absent case anywhere between high and low, including a dedicated tier. Comparing two whole answers across a one-field difference eliminates that family in a single assertion and is cheap to build."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400c-1
+  contract: "The temp-AC-store fixture builder and the scanner-invocation helper; the builder must support omitting the urgency field entirely, distinct from writing it empty or null."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Decomposes ACD-400d.
+
+  THE SAME-ANSWER CLAUSE IS WHAT PINS THE VERDICT. Asserting only the three-way order
+  would be satisfied by any rule that puts a no-urgency piece somewhere between high and
+  low — including a rule that gives it a tier of its own just above or just below medium,
+  which would reorder real work whenever a no-urgency piece and a medium piece are the
+  same size. Requiring that the absent case and the explicit-medium case produce the
+  identical offer removes that whole family of near-misses in one sentence, and it is
+  cheap to test: build the store twice, change one field, compare the two lists.
+
+  WHY THE SIZES ARE ARRANGED THE WAY THEY ARE. The no-urgency piece is deliberately given
+  the smaller size and the medium piece the larger, so that the no-urgency piece leads the
+  offer for a reason the criteria can name (size, at equal urgency) rather than for an
+  unexplained one. Had both been the same size the identifier would decide, and the test
+  would tell a reader nothing about which tier the absent case landed in.
+
+  THIS IS A STATEMENT OF SHIPPED BEHAVIOUR. The scope fence in ACD-400d's notes applies:
+  whether a generous default is the right default is BrainCandy's call, not this AC's.
+
+  RULED 2026-09-08 BY BrainCandy: KEEP IT. The generous absent-urgency default stays,
+  and so does the harsh absent-approval default in ACD-400c-2 — the asymmetry between
+  them is accepted rather than left pending. This AC therefore now records a chosen
+  behaviour, not merely an observed one. Its criteria are unchanged, because they
+  already described what ships; what changed is that an implementer who "tidies" this
+  default is now reversing a decision instead of resolving an ambiguity.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.

@@ -1,0 +1,155 @@
+id: BP-1500g-3-i
+title: "The adopter's work is not kept safe by a rule that also stops the package's own content being brought up to date"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given a project holding both an adopter-authored capability and a capability the
+    package ships, and the package's own version of the capability it ships has
+    changed since that project was last built,
+  When that project is rebuilt with the ordinary everyday command,
+  Then the copy of the package's capability in that project matches the package's
+    current version of it,
+  And the adopter's capability is present and unchanged by that same run,
+  And the run does not need to be told which of the two is which by a list of
+    names someone maintains, so a capability either party adds tomorrow gets the
+    same treatment as the ones present today.
+depends_on:
+  - BP-1500g-3
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-009's smaller fallback fix is exactly the maintained list the last Then clause rules out here -- it protects the capabilities somebody remembered to declare and loses the next one. The entry says as much itself, calling it strictly weaker. It is recorded there as an option; this clause is why it is not sufficient on its own."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500b-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "READ FOR THE DESIGN CONSTRAINT, NOT THE CONTENT. That AC forbids the same maintained-list shortcut for the future sweep, on the negative side. Whatever tells package content from adopter content here has to be compatible with the rule that AC states, because the sweep will consult the same distinction. The rule itself is that AC's and is deliberately not restated in this criteria."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THIS AC REACHES THE WRITE PATH, NOT ONLY THE REMOVAL PATH, AND THAT IS WHAT MAKES IT A DISTINCT PIECE OF WORK. Every sibling record constrains what the build may DELETE. This one constrains what it must still OVERWRITE: the copy of a shipped item in the project has to be brought up to the package's current version. So the ownership verdict BP-1500g-1 establishes has to be consulted by the overwrite decision as well, and an implementation that wires it only into the removal path leaves the package's content frozen while passing every survival test in the set."
+  - "THE OVER-CORRECTION IS THE LIKELY FAILURE AND IT HAS NO SYMPTOM. Told that the build destroys adopter content, the natural repair is to stop touching what is already there. That satisfies BP-1500g-1, BP-1500g-3 and every survival assertion, and silently pins the package's own content at whatever version the project first received -- a defect nobody notices until someone asks why a fix they shipped never reached anybody. The first two Then clauses must hold in ONE run for this reason, and must be asserted of one run."
+  - "THE DISTINCTION MUST BE DATA-DRIVEN, NOT A MAINTAINED LIST OF NAMES. The third Then clause rules out the run being told which of the two is which by a list somebody keeps, so that a capability either party adds tomorrow gets the same treatment as the ones present today. KI-BP-009's smaller fallback -- an allowlist of names the cleanup must not remove -- is exactly that list, and the entry itself concedes it is strictly weaker. Note this is the same prohibition BP-1500b-4 states for the future orphan sweep; the two must AGREE, and if the implementer finds they cannot, that is a finding to raise rather than a conflict to resolve quietly in one of the records."
+  - "EXEMPTION FROM UPDATING MUST DERIVE FROM A PROPERTY OF THE DATA, NOT FROM A NAME. `this path is not attributable to the package` is a property; `this path is called X` is not. Anything that reduces to a name check re-creates the maintained list under another spelling and fails the third clause the day an item nobody wrote down appears."
+  - "THE PREDICATE HAS TO BE BUILT, NOT REPAIRED -- AND KI-BP-009 IS MISLEADING ON THIS EXACT POINT. Its paragraph `the concept already exists in the code; the layout contradicts it` points at the `project_skills_dir` / `in_project` predicate in `scripts/build_phases.py`. That resolution leg was REMOVED on 2026-08-18 under BP-1300a-1 -- six days BEFORE that paragraph was written on 2026-08-25 -- and is confirmed absent from origin/main 1cce5b48a as of 2026-09-08. The observation about the layout stands; the pointer to existing code does not. Budget for building the distinction rather than fixing one."
+  - "PRIOR ART TO READ BEFORE INVENTING A THIRD MECHANISM, AS INPUT AND NOT AS A MANDATE: `config/skill_registry.json` and its schema already carry a `portable` boolean whose false case is documented as domain-specific items deployed only under the project-local location. Whether that is a data-driven property or a maintained list in disguise is a judgement for the implementer -- it is a declaration file, which is the shape the third clause is suspicious of -- but it is the nearest existing structure and should be assessed rather than ignored."
+  - "The update decision must be idempotent and byte-stable: a run that finds the project's copy already matching the package's current version must not rewrite it, so repeated builds do not churn file mtimes and cannot be mistaken for the beginning of a change."
+  - "Must follow the project error handling policy on the overwrite path; a swallowed write error is how the package's content silently stops being updated, which is precisely the defect this AC guards."
+test_spec:
+  - name: test_bp_1500g_3_i_the_package_copy_is_updated_and_the_adopter_copy_is_untouched_in_the_same_run
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter>   (one no-flag run, both assertions taken from it)"
+    description: "The first two Then clauses, asserted of ONE run because they are only meaningful together. Given a project holding both an adopter capability and a shipped one, and a package whose version of the shipped one has changed since that project was last built: after a single no-flag build, the shipped copy matches the package's current version AND the adopter's is byte-identical. Splitting these across two runs is the shape that hides the over-correction."
+  - name: test_bp_1500g_3_i_a_build_that_never_updates_anything_already_written_fails_this_contract
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "THE OVER-CORRECTION DIFFERENTIAL, and this contract's centre of gravity. Construct the frozen-tree behaviour -- the build leaves every path it has already written alone -- and require the update assertion above to be RED against it while every survival assertion in the sibling records stays green. Encodes as executable code the fact that the most natural repair for the parent defect fails here, so a future simplifier meets it in the suite rather than in prose."
+  - name: test_bp_1500g_3_i_a_capability_added_by_either_party_after_the_implementation_gets_the_same_treatment
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "THE THIRD CLAUSE'S CONTROL, and the reason a list cannot pass. Mint TWO items inside the test body under names generated at run time: one injected into the package's template sources, one placed as adopter content. The package one is updated when the package's version of it changes; the adopter one is never touched. No list written before the test ran can contain either name, so any maintained-list implementation -- including KI-BP-009's own allowlist fallback -- passes the first entry and fails here."
+  - name: test_bp_1500g_3_i_the_update_decision_derives_from_attributability_not_from_a_path_or_name_pattern
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "At the seam, without a filesystem: the predicate returns update for content the build can attribute to the package and leave-alone for content it cannot, for inputs that are identical in name, extension and directory and differ only in attributability. Fails any implementation whose decision can be predicted from the path alone."
+  - name: test_bp_1500g_3_i_an_already_current_package_copy_is_not_rewritten
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Idempotence on the write path: when the project's copy already matches the package's current version, a second run does not rewrite it. Without this, `always overwrite everything attributable` passes the update entry and churns the tree on every build, which is indistinguishable to an adopter from the beginning of a change."
+  - name: test_bp_1500g_3_i_a_shipped_item_retired_by_the_package_is_still_acted_on_while_the_adopter_content_is_not
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "THE BOUNDARY AGAINST BP-1500b-1, ASSERTED WITHOUT RESTATING IT. That AC requires an item the package can no longer produce to be removed from an installed project; this AC requires the adopter's to survive the same run. The two sides have to be told apart, and this entry is the one that proves the implementation can: retired package item acted on, adopter item untouched, in one run. It asserts the DISCRIMINATION, not BP-1500b-1's removal requirement, which stays that AC's."
+test_rationale: |
+  THE OVER-CORRECTION DIFFERENTIAL IS THE REASON THIS CONTRACT EXISTS AND IS
+  THE ONLY ENTRY THAT CANNOT BE DERIVED FROM THE CRITERIA BY READING THEM
+  FORWARD. Every survival test in this AC set goes green the moment the build
+  stops touching what is already there, and that repair is both plausible and
+  invisible: its symptom is a fix that shipped and never reached anybody,
+  months later, attributed to something else. Running the frozen-tree
+  alternative against this AC's update assertion and requiring red keeps the
+  counter-example executable.
+
+  THE TWO-MINTED-NAMES ENTRY IS THE THIRD CLAUSE, NOT AN EMBELLISHMENT OF IT.
+  The clause says a capability either party adds tomorrow gets the same
+  treatment as the ones present today, and only names that did not exist when
+  the implementation was written can distinguish a general rule from a
+  memorised one. Minting one on each side in the same test is what makes it a
+  test of the DISTINCTION rather than of either half; this mirrors the control
+  BP-1500b-2 and BP-1500b-4 use on their own sides, deliberately, because the
+  same shortcut is available here.
+
+  THE FIRST TWO CLAUSES ARE ONE ENTRY ON PURPOSE. They are individually
+  trivial and jointly the whole AC. Two entries over two runs would each pass
+  against an implementation that cannot do both at once, which is the exact
+  state the AC describes.
+
+  THE RETIRED-ITEM ENTRY ASSERTS DISCRIMINATION, NOT BP-1500b-1's REQUIREMENT.
+  The AC's doc_links flag that boundary explicitly and instruct that BP-1500b-1's
+  removal rule not be restated. The entry is written so it fails only when the
+  build cannot tell the two sides apart -- it does not re-specify what removal
+  of a retired item should look like.
+
+  RUNTIME. Six entries, four real build subprocesses over small scratch trees.
+  Inside the done-proof pytest budget as fixed by PR #706 (30s collection floor,
+  300s per linked test file, overridable via
+  LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS). Not shaped by the retired 60s
+  ceiling.
+delivers_to:
+  agent: python-coder
+  contract: "The attributability predicate in its two-sided form, usable by the WRITE path as well as the removal path: attributable(installed_path) -> bool, derived on each run from the recomputed template sources and the build's own provenance record, where true licenses an update to the package's current version and false forbids any modification. The removal path consumes the same predicate as its veto (BP-1500g-1, BP-1500g-1-i). Across the L1 boundary, BP-1500b-4's per-file provenance rule for the future orphan sweep must agree with this predicate -- that AC's COEXISTENCE it_requirement already records the dependency in prose; if the two cannot be reconciled, raise it rather than resolving it quietly in either record."
+expects_from:
+  ac_id: BP-1500g-3
+  contract: "The run-time reconciliation invariant reconcile(claim_set, removal_set, ownership_verdict) and the multi-run/upgrade sequence it is evaluated over. This AC adds the write side to that reconciliation: within the same sequence, content the verdict attributes to the package must be brought to the package's current version, so `claimed` must license an update rather than only a removal. A reconciliation that treats the claim set as removal-only satisfies BP-1500g-3 and freezes the package's content."
+origin_agent: BrainCandy
+created: 2026-09-08
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-08'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (M), it_requirements, test_spec, test_rationale, delivers_to and expects_from. Criteria, title, depends_on and doc_links UNCHANGED; readiness remains draft. WHAT THE ENRICHMENT ADDS. (1) The scope finding that sets this AC's complexity: it is the only record in the set that reaches the WRITE path. Every sibling constrains what the build may delete; this one requires the package's copy to still be UPDATED, so the ownership verdict must be consulted by the overwrite decision too. An implementation that wires the verdict only into the removal path passes every survival test and freezes the package's content -- a defect with no symptom until a shipped fix is found never to have reached anybody. (2) An over-correction DIFFERENTIAL was added: the frozen-tree behaviour is constructed and this AC's update assertion required to be RED against it, in the shape BP-1500b-4 uses for its rejected-rule test. (3) The third clause's control mints TWO names at run time, one on each side, because only a name that did not exist when the implementation was written can tell a general rule from a memorised one -- and this is where KI-BP-009's own allowlist fallback fails. (4) CORRECTION CARRIED INTO THE it_requirements: KI-BP-009's `the concept already exists in the code` paragraph points at the `project_skills_dir` / `in_project` predicate in `scripts/build_phases.py`, but that leg was REMOVED on 2026-08-18 under BP-1300a-1, six days before that paragraph was written, and is absent from origin/main 1cce5b48a. The layout observation stands; the pointer to existing code does not, and an implementer budgeting to repair a predicate that has been deleted will under-estimate this AC. Raised as a caveat; KI-BP-009 is not this agent's file to edit. (5) `config/skill_registry.json`'s `portable` boolean is named as prior art to ASSESS rather than adopt -- it is a declaration file, which is the shape the third clause is suspicious of."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  THE FAILURE THIS CATCHES IS THE OVER-CORRECTION. Told that the build destroys
+  adopter content, the natural repair is to make the build stop touching what is
+  already there. That satisfies BP-1500g-1, BP-1500g-3 and every survival test in
+  the set, and it silently freezes the package's own content at whatever version
+  the project first received -- a defect with no symptom until someone wonders why
+  a fix they shipped never reached anybody. The first two Then clauses have to
+  hold together in one run for that reason.
+
+  WHY THE THIRD CLAUSE IS HERE AND NOT LEFT TO BP-1500b-4. That AC forbids the
+  maintained-list shortcut for the orphan sweep, which does not exist yet. This
+  clause is the same prohibition applied to the distinction the build has to draw
+  TODAY in order to update one thing and leave another alone -- available now,
+  and needed whether or not the sweep is ever built. The two must agree, which is
+  why that AC is linked as a design constraint. If the implementer finds they
+  cannot agree, that is a finding to raise, not a conflict to resolve quietly in
+  one of the two records.

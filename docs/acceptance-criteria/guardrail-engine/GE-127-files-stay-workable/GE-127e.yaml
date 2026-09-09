@@ -64,7 +64,11 @@ origin_agent: BrainCandy
 created: 2026-09-01
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-127e-1
+  - GE-127e-2
+  - GE-127e-3
+  - GE-127e-4
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

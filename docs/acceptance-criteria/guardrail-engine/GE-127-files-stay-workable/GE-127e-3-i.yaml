@@ -1,0 +1,435 @@
+id: GE-127e-3-i
+title: "Guidance that could not be produced is said so plainly, and whether guidance exists never moves the commit verdict in either direction"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked file of a kind the size standard covers stands above its
+    permitted length, and no description of what is inside it can be produced —
+    its content cannot be resolved into the parts the description is built from,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, exactly as it would have had the description
+    been produced,
+  And the outcome states that no description of that file's contents could be
+    produced and names the reason,
+  And the outcome offers no parts, no division, and no substitute wording that
+    reads as advice about that file,
+  And given a tracked file of a covered kind stands BELOW its permitted length
+    and a description of what is inside it could be produced,
+  When the author performs an ordinary commit,
+  Then the commit completes and nothing about that file is reported — a file is
+    never refused because guidance about it could be produced, only because of
+    its length,
+  And given the same undescribable file is then brought below its permitted
+    length while remaining undescribable,
+  When the author performs an ordinary commit,
+  Then the commit completes and no could-not-be-described statement is made about
+    it — the statement is attached to a refusal, and is not a finding of its own.
+depends_on:
+  - GE-127e-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ADJACENT FLOOR, AND THE ONE THIS RECORD MUST NOT DUPLICATE OR CONTRADICT.
+      That record governs a file whose LENGTH cannot be established: it is refused,
+      named, and never reported as within its permitted length. This record governs a
+      file whose length WAS established and found over, but whose CONTENTS could not
+      be described. The two are different failures of two different steps, and the
+      second must not be allowed to reopen the first: an undescribable file whose
+      length is known is still an ordinary length finding, and the description failure
+      is reported alongside that finding rather than replacing it. Reuse whatever
+      unavailability vocabulary that record's enrichment pins; do not mint a second
+      one.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The description whose absence this record governs. GE-127e-1's no-division arm
+      covers a file that was described successfully and has no seam between its parts;
+      this covers a file that could not be described at all. Different states, and
+      collapsing them costs the author the only signal that distinguishes a genuinely
+      indivisible file from a step that failed.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The host. Its recorded defect is a swallowed read error becoming a measured
+      length of zero and a PASSED verdict. Adding a description step to this guard
+      adds a second place with the same opportunity, and the failure would be quieter:
+      a description step that raises and is caught could turn a refusal into a
+      completed commit, silently undoing GE-127a and GE-127b for that file.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      The register of this shape in this component — a check that examined inputs,
+      concluded nothing, and exited clean. Read it before choosing how the
+      description step reports its own failure.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The commit-time invocation shape and the outcome stream the
+      could-not-be-described statement must appear on.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Error Handling Policy Rules 1-4. The description step performs I/O and parsing,
+      so it must be wrapped with named exceptions and must log at WARNING or higher or
+      re-raise; the re-raise-equivalent here is the could-not-be-described statement.
+      A swallowed error must never become an absent description that also relaxes the
+      verdict.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. WATCHED_REGISTRIES binds exactly two
+    containers on commit_guardian.json: hooks_manifest.hooks (by entry id) and the
+    document's own top level (by mapping key). This record adds neither — it changes how
+    one unproducible result is reported inside an existing gate. Both containers were read
+    in this worktree: `check-file-size` is already a manifest id, `file_size` is already
+    one of the 37 top-level keys, and anything nested inside `file_size` is invisible to
+    the watcher. Plain-list spec form, and no config_schema_fragment invented to satisfy
+    the structured-spec validator — the BP-100k-4 / BP-100k-4-i fictional-key precedent is
+    not repeated.
+  - >-
+    THE UNAVAILABILITY VOCABULARY IS REUSED, THE EXIT STATUS IS NOT — THIS IS THE DECISION
+    THE BA DEFERRED AND IT IS TAKEN HERE, WITH ITS REASONING. GE-127a-1-i pinned
+    BP-1600a-2-ii's contract for a file whose LENGTH could not be established: an
+    "INDETERMINATE: reason=<text>" line naming which situation occurred, at exit 2,
+    alongside exit 0 clean and exit 1 for a measured finding. That contract is reused HERE
+    IN ITS LINE SHAPE AND ITS NAMING DISCIPLINE — a single machine-readable token, followed
+    by `reason=` and a specific reason, naming the situation that actually occurred — and
+    is NOT reused in its exit status. The substantive difference decides it: a failure to
+    MEASURE leaves the verdict unknown, which is what exit 2 means; a failure to DESCRIBE
+    leaves the verdict perfectly known — the file's length was established and found over
+    — and only the advice missing. This record positively requires the commit to be refused
+    in that case, so the run must exit 1 with the ordinary refusal for that file, carrying
+    the could-not-be-described line INSIDE that file's refusal block on the same stream.
+    Routing it to exit 2 would be a defect three times over: it would move the verdict,
+    which the title of this record forbids; it would collapse the very distinction
+    GE-127a-1-i's third clause exists to hold, by making a known-over file report as
+    indeterminate; and structurally the exit-2 paths in main() print to stderr and return
+    immediately, suppressing the refusal block this line is required to be attached to.
+  - >-
+    THIS IS NOT A THIRD VERDICT SET, AND THE GUARD ALREADY DEMONSTRATES WHY. check_file_size
+    already emits "EMPTY HISTORY: reason=<text>" — the same token-and-reason line shape as
+    INDETERMINATE, deliberately named distinctly, and deliberately NOT carrying exit 2,
+    because an empty previous-length history is a legitimate completing result. The
+    could-not-be-described state is the same construction applied to a different step: one
+    shared line grammar, one naming discipline, and a status decided by the VERDICT rather
+    than by the token. Choose a token in that grammar which cannot be misread as either of
+    the existing two, and record it in the guard's own module docstring alongside them.
+  - >-
+    NAME THE REASON SPECIFICALLY, AND DO NOT COLLAPSE DISTINCT CAUSES. "Could not be
+    described" will have more than one cause — content that will not parse into parts, a
+    part set that cannot account for half the quoted length (GE-127e-1 routes that state
+    here), a kind for which no extractor exists. These are different facts about the world
+    and the reason text must say which occurred, exactly as GE-127a-1-i requires the two
+    measurement situations to be named separately. A single shared sentence for all causes
+    costs the author the only information that tells a genuinely unparseable file from a
+    gap in the gate.
+  - >-
+    THE DESCRIPTION STEP MUST BE STRUCTURALLY INCAPABLE OF MOVING THE VERDICT. The verdict
+    is computed from length alone and must be fixed BEFORE the description step runs, so no
+    outcome of that step — success, failure, or an exception — can change whether the commit
+    completes. Do not compute the verdict from anything the description produced, and do not
+    let the description step raise into the classification loop. The recorded defect on this
+    guard's measurement step is the same shape one step earlier, and this one would be
+    quieter: a caught exception in the description step turning a refusal into a completed
+    commit silently undoes GE-127a and GE-127b for exactly the files hardest to describe,
+    and no test in either of those records would notice, because their fixtures describe
+    cleanly.
+  - >-
+    THE STATEMENT IS AN ATTACHMENT TO A REFUSAL, NEVER A FINDING OF ITS OWN. A file that is
+    within its permitted length produces no could-not-be-described line even when it is
+    undescribable, and no exit-status change. Gate the emission on the file already having
+    been refused, not on the description step having been attempted — the cheap
+    implementation reports the failure wherever it occurs and would break GE-127a-1's
+    silence arm from a direction that record cannot see.
+  - >-
+    Must follow the repo error-handling policy: the description step performs I/O and
+    parsing, so specific-exception try/except, and log at WARNING or higher or re-raise. The
+    re-raise-equivalent here is the could-not-be-described line itself. A swallowed error
+    must never become an absent description that also relaxes the verdict, and must never
+    become an empty parts list that reads to the author as "this file has no parts".
+  - >-
+    EXERCISE THE UNDESCRIBABLE STATE FOR REAL. Make the content genuinely unresolvable into
+    parts at run time — a covered file whose bytes do not parse, or whose structure yields
+    no locatable part — never by asserting that an error branch exists in the source.
+    BP-100k-4-i's standing constraint applies unchanged, and this record's own notes say so:
+    a source assertion stays green on precisely the swallow-and-continue implementation this
+    record forbids.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE. Edit
+    templates/scripts/commit_guardian/ only; scripts/commit_guardian/ and the repo-root
+    .pre-commit-config.yaml are untracked build outputs overwritten by build.py, and
+    templates/commit-guardian/commit_guardian.json is a decoy. Re-run `python
+    scripts/build.py --target-dir .` — the hook runs from the deployed layout, so an unbuilt
+    failure path is unverified however green the source-tree tests are.
+test_spec:
+  - name: test_ge_127e_3_i_an_undescribable_over_limit_file_is_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Stage a covered file that stands above its permitted length and whose content is
+      genuinely unresolvable into parts at run time, and perform an ordinary commit. The
+      commit must not complete, exactly as it would have had the description been produced,
+      and the exit status must be the ordinary finding status — not the indeterminate one.
+      NAMED MUTATION (mandatory, run it, do not merely describe it — the BA's injection 1):
+      "the commit does not complete, exactly as it would have had the description been
+      produced" — MUTATION: make the description step, on failing to resolve a file's
+      content into parts, yield an empty description and allow the run to continue to a
+      clean result for that file. Under that injection the commit completes for a file that
+      is over its permitted length; this clause must go RED, failing BY THE COMMIT OUTCOME
+      as well as by the text, and must return to green on revert. This is the exact shape
+      already recorded in this guard for the measurement step, and it is the reason this
+      record exists rather than being trusted to the implementer.
+  - name: test_ge_127e_3_i_the_outcome_states_that_no_description_could_be_produced_and_names_the_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      The refusal carries a could-not-be-described line for that file, naming the specific
+      reason — content that would not parse, a part set that could not account for the
+      quoted length, or no extractor for the kind — rather than one shared sentence for
+      every cause. Two runs exercising two different causes must produce two different
+      reasons, which is what stops the line degrading into a second fixed sentence.
+  - name: test_ge_127e_3_i_no_substitute_advice_stands_in_for_the_missing_description
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      The outcome offers no parts, no division, and no substitute wording that reads as
+      advice about that file. NAMED MUTATION (mandatory, run it — the BA's injection 2):
+      "the outcome offers no parts, no division, and no substitute wording that reads as
+      advice about that file" — MUTATION: when the description cannot be produced, fall back
+      to a fixed sentence of general refactoring advice. Under that injection this clause
+      must go RED, and must return to green on revert. Without it the clause is an absence
+      and is green against any implementation that emits nothing. This injection is the
+      anti-precedent in miniature: a placeholder standing in for a result, indistinguishable
+      to the reader from the real thing.
+  - name: test_ge_127e_3_i_a_describable_file_under_its_limit_commits_and_is_not_refused_for_having_guidance
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A covered file standing BELOW its permitted length, for which a description could be
+      produced, commits cleanly with nothing about it reported. NAMED MUTATION (mandatory,
+      run it — the BA's injection 3): "a file is never refused because guidance about it
+      could be produced, only because of its length" — MUTATION: refuse any file for which
+      named parts could be produced, regardless of its measured length. Under that injection
+      this arm must go RED, failing by the commit outcome, and must return to green on
+      revert. Without it the arm is satisfied by a guard that refuses nothing at any commit,
+      which is today's implementation exactly.
+  - name: test_ge_127e_3_i_an_undescribable_file_under_its_limit_produces_no_could_not_be_described_statement
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE ARM THAT STOPS THE FIX OVERSHOOTING. Take the same undescribable file, bring it
+      below its permitted length while it remains undescribable, and commit. The commit
+      completes and no could-not-be-described statement is made about it — the statement is
+      an attachment to a refusal, not a finding of its own. Without this descriptor the
+      cheap implementation reports the failure wherever it occurs and makes every commit
+      touching an undescribable file noisy, breaking GE-127a-1's silence arm from a
+      direction that record cannot see.
+  - name: test_ge_127e_3_i_the_could_not_be_described_state_does_not_take_the_indeterminate_exit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE VOCABULARY DECISION MADE EXECUTABLE. Three runs, distinguished by exit status and
+      by token: a covered file measured and found over but undescribable exits with the
+      ordinary finding status carrying its refusal block and the could-not-be-described
+      line; a covered file whose LENGTH cannot be established still takes GE-127a-1-i's
+      INDETERMINATE path at exit 2; a clean run exits 0. An author, and pre-commit, can tell
+      the three apart without inspecting anything else. This is the descriptor that fails if
+      someone later routes the description failure through the indeterminate path — which
+      would move the verdict and collapse GE-127a-1-i's third clause.
+  - name: test_ge_127e_3_i_the_could_not_be_described_line_reaches_the_registered_hook_output_and_status
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the gate through the registered hook path with an
+      undescribable over-limit file staged and assert the line and its named reason appear
+      in the hook's own output stream, inside that file's refusal block, with the commit
+      outcome carried by the exit status rather than an advisory note. A state printed by a
+      function nothing at commit time calls is inert, and a line printed on a stream the
+      hook does not surface is invisible to the author.
+  - name: test_ge_127e_3_i_the_deployed_copy_still_refuses_an_undescribable_over_limit_file_in_a_cold_process
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy and every module it imports load and run in a cold
+      process — a description module placed outside templates/scripts/commit_guardian/
+      without a scripts/build_phases.py deploy-map entry surfaces here as
+      ModuleNotFoundError rather than passing, and would in production be an import error at
+      commit time whose handling could itself relax the verdict. With an undescribable
+      over-limit file staged, the deployed run refuses the commit and emits the named line.
+test_rationale: |
+  The clause carrying the actual guarantee — the commit does not complete, exactly as it
+  would have had the description been produced — is asserted BY THE COMMIT OUTCOME and not
+  merely by the text, because a gate that prints a worried message and exits 0 is
+  indistinguishable from a passing one to pre-commit, which reads only the status. All three
+  of the BA's injections are carried into descriptors verbatim; two of them are required to
+  fail by the commit outcome for exactly that reason.
+
+  The undescribable state is produced by making the content genuinely unresolvable at run
+  time. This record's own notes rule out the alternative, and BP-100k-4-i's standing
+  constraint says why: a test asserting that an error branch exists in the source stays green
+  on precisely the swallow-and-continue implementation this record forbids — which is the
+  shape already recorded on this guard's measurement step, one step earlier in the same run.
+
+  The seam descriptor is where the deferred vocabulary decision becomes falsifiable rather
+  than a note in a field. Three runs, three statuses, three tokens: an undescribable but
+  measured file exits with the ordinary finding status, an unmeasurable file still takes
+  GE-127a-1-i's INDETERMINATE exit 2, and a clean run exits 0. Nothing else in the tree fails
+  if someone later routes the description failure through the indeterminate path, and that
+  routing would move the verdict — which is the one thing this record's title forbids.
+
+  The two boundary descriptors are what stop the fix overshooting in the two available
+  directions: the under-limit describable file proves guidance never becomes a reason to
+  refuse, and the under-limit undescribable file proves the statement is an attachment to a
+  refusal rather than a finding of its own. Without the second, every commit touching an
+  undescribable file becomes noisy and GE-127a-1's silence arm breaks from a direction that
+  record cannot see.
+delivers_to: null
+expects_from:
+  ac_id: GE-127e-1
+  contract: >-
+    The per-file description and the division built from it. This record adds the one
+    input state for which they cannot be produced, and requires that state to be a
+    named result carried on an unchanged refusal — never a silent omission, never a
+    generic sentence standing in for the description, and never a change to whether
+    the commit completes.
+origin_agent: business-analyst
+created: 2026-09-08
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-08
+  note: 'criteria untouched. UNAVAILABILITY VOCABULARY DECIDED, WHICH THE BA EXPLICITLY LEFT TO
+    THE IT PO: the LINE SHAPE and naming discipline of GE-127a-1-i / BP-1600a-2-ii are reused —
+    one machine-readable token, `reason=`, and a specific reason naming the situation that
+    actually occurred — and the EXIT STATUS is deliberately not. A failure to MEASURE leaves the
+    verdict unknown, which is what exit 2 means; a failure to DESCRIBE leaves the verdict
+    perfectly known (measured, over) and only the advice missing, and this record positively
+    requires the commit to be refused. So the run exits with the ordinary finding status and
+    carries the could-not-be-described line INSIDE that file''s refusal block. Routing it to
+    exit 2 would move the verdict (which this record''s title forbids), collapse GE-127a-1-i''s
+    third clause by making a known-over file report as indeterminate, and structurally suppress
+    the refusal block — main()''s exit-2 paths print to stderr and return immediately. This is
+    NOT a third verdict set: the guard already emits "EMPTY HISTORY: reason=<text>" in the same
+    grammar at exit 0, so the house rule is one shared line grammar with the status decided by
+    the verdict, not by the token. PACKAGE SURFACE FALSE, AND MEASURED: neither watched
+    container on commit_guardian.json gains an entry; `check-file-size` and `file_size` already
+    exist and anything nested in `file_size` is unwatched. No fictional config_schema_fragment.
+    COMPLEXITY S: the code is a wrapped failure path plus a printed line, matching GE-127a-1-i''s
+    sizing for the same shape one step earlier. STRUCTURAL REQUIREMENT ADDED: the verdict must be
+    fixed BEFORE the description step runs, so no outcome of that step can change whether the
+    commit completes — the quiet version of the defect already recorded on this guard''s
+    measurement step. Reason text must distinguish its causes (unparseable content, a part set
+    under GE-127e-1''s half threshold, no extractor for the kind) rather than share one sentence.
+    declares_side_effect false: every Then clause reports to a stream and sets an exit status.
+    test_spec: eight executing descriptors, three carrying the BA''s named mutations verbatim
+    (two of them failing by the commit outcome), one seam descriptor that makes the vocabulary
+    decision falsifiable across three statuses, two boundary descriptors that stop the fix
+    overshooting, one through the registered hook entry point and one on the deployed copy.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PARENTED UNDER GE-127e-3 RATHER THAN DIRECTLY UNDER GE-127e, FOR THE SAME TWO
+  REASONS GE-127a-1-i RECORDS. Semantically this is the negative edge of the honesty
+  obligation: when no help can be produced, saying so plainly is the only honest
+  output, and a generic sentence in its place is the anti-precedent reproduced inside
+  the fix. Mechanically, the store's id format admits no roman-suffixed child of an
+  L1, so an L3 must hang from an L2.
+
+  WHY THIS IS A SEPARATE RECORD AND NOT A CLAUSE. GE-127e-3 constrains what the
+  refusal may CLAIM. This constrains what happens to the VERDICT when the thing being
+  claimed cannot be produced, and the two are independently satisfiable: an
+  implementation can be scrupulously honest about having no guidance while a caught
+  exception in the description step quietly lets the commit through. That would undo
+  GE-127a and GE-127b for exactly the files hardest to describe, and no test in either
+  of those records would notice, because their fixtures describe cleanly.
+
+  THE THIRD ARM EXISTS SO THE FIX DOES NOT OVERSHOOT. Once a could-not-be-described
+  state exists, the cheap implementation reports it wherever it occurs. That would
+  make every commit touching an undescribable file noisy even when the file is
+  comfortably within its permitted length, and would break GE-127a-1's silence arm
+  from a direction that record cannot see. The statement is an attachment to a
+  refusal, not a finding.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO
+  can lift them verbatim into test descriptors. The undescribable state must be
+  produced by making the content genuinely unresolvable at run time, never by
+  asserting an error branch exists in the source — a source assertion stays green on
+  precisely the swallow-and-continue implementation this record forbids.
+
+  (1) "the commit does not complete, exactly as it would have had the description
+      been produced" — MUTATION: make the description step, on failing to resolve a
+      file's content into parts, yield an empty description and allow the run to
+      continue to a clean result for that file. Under that injection the commit
+      completes for a file that is over its permitted length; this clause must go RED,
+      failing BY THE COMMIT OUTCOME as well as by the text, and must return to green
+      on revert. This is the exact shape already recorded in this guard for the
+      measurement step, and it is the reason this record exists rather than being
+      trusted to the implementer.
+
+  (2) "the outcome offers no parts, no division, and no substitute wording that reads
+      as advice about that file" — MUTATION: when the description cannot be produced,
+      fall back to a fixed sentence of general refactoring advice. Under that
+      injection this clause must go RED, and must return to green on revert. Without
+      it the clause is an absence and is green against any implementation that emits
+      nothing. This injection is the anti-precedent in miniature: a placeholder
+      standing in for a result, indistinguishable to the reader from the real thing.
+
+  (3) "a file is never refused because guidance about it could be produced, only
+      because of its length" — MUTATION: refuse any file for which named parts could
+      be produced, regardless of its measured length. Under that injection the
+      second arm must go RED, failing by the commit outcome, and must return to green
+      on revert. Without it the arm is satisfied by a guard that refuses nothing at
+      any commit, which is today's implementation exactly.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity,
+  it_requirements, test_spec, test_rationale and declares_side_effect. The verdict
+  vocabulary for the could-not-be-described state is deliberately unpinned — the
+  recommendation is to reuse whatever GE-127a-1-i's enrichment settled for the
+  could-not-be-measured state rather than mint a second one, but that is a technical
+  judgement and must be recorded when it is taken.

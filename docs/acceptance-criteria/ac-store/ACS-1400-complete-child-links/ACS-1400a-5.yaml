@@ -1,0 +1,72 @@
+id: ACS-1400a-5
+components:
+  - ac_store
+title: "The written rule and the enforced rule say the same thing"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the written reference for the requirement store describes the parent
+    back-link rule as blocking and unconditional,
+  When the strengthened commit-time check ships,
+  Then the written reference states the rule the check actually enforces,
+    including the cases where the check declines to run and the case where a
+    deliberately parked tree is exempt,
+  And a reader who has only the written reference correctly predicts the check's
+    outcome for a child whose dependency list does not name its structural parent,
+    for a child whose structural parent cannot be located, and for a child of a
+    parked tree,
+  And the reference states, for each of those three, whether the outcome is a
+    pass, a violation, an exemption, or a did-not-run.
+depends_on:
+  - ACS-1400a
+  - ACS-1400a-1
+  - ACS-1400a-2
+  - ACS-1400a-4
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "THE TEXT THAT MUST CHANGE. Two places currently describe an unconditional blocking rule the code does not implement: the covered_by field table, which labels this check blocking, and the 'Authoring agents — parent covered_by update (mandatory)' section, which states the protocol without any of the three ways the check can decline. Both descriptions are currently truer than the code, which is the condition that let the gap persist unnoticed."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+    relationship: related
+    status: exists
+    relevance: "CARRIES THE SAME OBLIGATION AGAINST THE SAME FILE — coordinate, do not collide. ACS-1200a's own reference-doc trigger is described there as mandatory rather than nice-to-have, for the identical reason: shipping the exemption without amending this reference leaves the written rule contradicting the enforced one. Both edits land in the same section; whichever ships second must not revert the first."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - docs
+risk_surface: internal
+notes: |
+  THE DOCUMENTATION AC FOR ACS-1400a'S `reference-doc` TRIGGER. Intended author is
+  the documentation expert; the agent assignment is left for the IT PO to set.
+
+  IT IS NOT A TIDY-UP. The written reference asserting a stronger rule than the
+  code enforces is not a cosmetic mismatch — it is the mechanism by which the gap
+  survived. Every authoring agent reads this reference and acts as though the
+  back-link is guaranteed; the guarantee was never there, and nothing in the
+  written rule would have told them.
+
+  THE CRITERION IS WRITTEN AS A PREDICTION TEST FOR A REASON. "The reference is
+  updated" is satisfied by any edit. Naming the three specific cases and requiring
+  the reference to state the outcome for each makes the claim falsifiable by
+  reading the text against the check's real behaviour, and it pins the three
+  meanings of silence that ACS-1400a-1, ACS-1400a-2 and ACS-1400a-4 respectively
+  resolve.
+
+  DEPENDS ON THE THREE BEHAVIOURAL ACs, DELIBERATELY. The reference cannot be
+  written before the rules it describes are settled, and writing it early is how
+  it drifts again.

@@ -188,3 +188,61 @@ a stalled repo is a different risk from a false green.
 - L1 `criteria` is customer-benefit language with no engineering jargon. The
   technical findings, hazards, and verified code references go in `notes`, where
   the BA and IT PO read them.
+
+## ACD-400c/d/e scanner selection rules: framing note for the BA/IT-PO (2026-09-08, PO)
+
+Three new L1s grafted onto the EXISTING `ACD-400` (loose files in
+`ac-driven-dev/`, alongside `ACD-400a.yaml`), origin_agent BrainCandy, readiness
+draft, priority medium, roadmap_phase phase_1. Subject: the two selection rules
+in `scripts/ac_store/scan_ac_store.py` that decide what the whole build system
+works on next, neither of which any acceptance criterion governs.
+
+- **ACD-400c** — the approval gate (`_is_approved`, line 189). UNSPECIFIED.
+- **ACD-400d** — the ordering rule (`_sort_ready`, lines 353-370). MIS-specified.
+- **ACD-400e** — one true written account; reconciles the records that disagree.
+  `depends_on` names c and d as genuine build-order prerequisites.
+
+**Read the `notes` on all three before decomposing — they carry the verified
+findings.** Four points that generalise beyond this tree:
+
+1. **UNSPECIFIED AND MIS-SPECIFIED ARE DIFFERENT GAPS AND WARRANT DIFFERENT
+   WORK.** BrainCandy's brief described both rules as ungoverned. One is. The
+   other is described by `ACD-400a` and `ACD-400a-1`, and what they say is false
+   — a two-key sort (complexity, id) against a shipped three-key sort (priority,
+   complexity, id). Before framing any "no AC covers X" gap, check whether an AC
+   covers X *wrongly*; a wrong statement is worse than silence, and it needs a
+   reconciliation owner that a pure specification AC does not provide.
+
+2. **A THIRD L1 EARNS ITS PLACE WHEN TWO SIBLINGS EACH OWN HALF OF THE SAME
+   FILE.** `ACD-400a-1` is wrong in both directions at once. Hanging the repair
+   as an L2 under each rule L1 produces two changes to one record, each fixing
+   half, with a guaranteed conflict. Reconciliation as its own L1 depending on
+   both is the clean shape. This is the shotgun-surgery smell applied to the AC
+   store rather than to code.
+
+3. **`test_readiness_gate.py` IS NOT COVERAGE FOR THE SCANNER'S APPROVAL GATE.**
+   It covers `classify_readiness()` in `goal_to_epic.py` (ACD-1200b-1/-2), a
+   different surface. Name-similar tests are the easiest false-green in this
+   repo; grep the import, not the filename.
+
+4. **TWO SELECTORS, TWO DELIBERATELY OPPOSITE READINESS RULES — DO NOT UNIFY
+   THEM.** `BO-2400f-2` (approved, done) makes fast-lane selection
+   readiness-agnostic and `BO-2400f-12-ii` forbids readiness, priority,
+   req_status and status from the producibility decision. `BO-2400f-2` even
+   defines itself by contrast — "unlike the normal ready-batch scan" — so an
+   approved criterion in another component currently rests on a rule nobody
+   wrote down. Any L2 that harmonises the two selectors contradicts an approved AC.
+
+**Flagged to the user, NOT authored, and must not be pulled into an L2 here:**
+the approval test runs before ready/blocked classification (line 1000 precedes
+line 1008), so an excluded record appears in neither list and in no count. That
+is an `ACS-1100` (honest coverage answers, `scope: standing`) obligation about
+what the scanner OUTPUTS, not about how it SELECTS. Inherited, not duplicated.
+
+**Placement candidates rejected** (do not re-litigate): `ACS-1000` is not an L0
+despite its folder name — the file is `level: L2`. `ACS-1100` is `scope:
+standing` and explicitly not a home for other surfaces. `ACS-100` is at nine L1s,
+over the 7-cap. `ACD-1800`/`ACD-1600` concern what a unit of work is, not which
+one is picked. `ACD-400a` itself is full at five L2s and forbids an override.
+`ACD-400` now carries five L1s against the 7-cap; no `child_limit_override` is
+authored and none may be added.
