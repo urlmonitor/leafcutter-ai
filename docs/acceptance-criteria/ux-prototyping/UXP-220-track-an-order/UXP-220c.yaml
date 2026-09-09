@@ -1,4 +1,5 @@
 id: UXP-220c
+product: fern-and-fig
 components:
   - ux_prototyping
 readiness: reviewed
