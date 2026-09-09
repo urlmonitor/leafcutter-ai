@@ -37,7 +37,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700b-1-ii.md
 change_target: code
 risk_surface: internal
 test_required: true
@@ -64,3 +65,4 @@ notes: |
   to the example product, so the project's own screen population is zero. See UXP-700d-4, which
   owns the reporting of a type whose entire population is example content; this record owns the
   simpler case of a type whose population is zero.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

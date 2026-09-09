@@ -40,7 +40,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700d-1-i.md
 change_target: code
 risk_surface: internal
 test_required: true
@@ -65,3 +66,4 @@ test_spec:
 notes: |
   Named mutation: replace the location predicate with a literal list of the current example
   artifact ids. UXP-700d-1 stays green; only this record turns red.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

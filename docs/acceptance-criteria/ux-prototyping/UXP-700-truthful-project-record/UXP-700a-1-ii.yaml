@@ -40,7 +40,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700a-1-ii.md
 change_target:
   - code
   - config
@@ -68,3 +69,4 @@ notes: |
   scaffold files into a directory the tooling does not own. An install that unconditionally
   writes the scaffold would satisfy UXP-700a-1 in full while destroying an adopter's record on
   upgrade, which is the failure UXP-700 exists to prevent, arriving from the tooling itself.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

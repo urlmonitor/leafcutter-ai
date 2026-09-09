@@ -47,7 +47,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - UXP-700e-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700e-3.md
 change_target:
   - code
   - schema
@@ -90,3 +91,4 @@ notes: |
   Those are two different registries and the IT PO must decide which one artifact labels resolve
   against BEFORE this is built - resolving against the wrong one turns every existing artifact
   into a finding. This is flagged as an open question, not settled here.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

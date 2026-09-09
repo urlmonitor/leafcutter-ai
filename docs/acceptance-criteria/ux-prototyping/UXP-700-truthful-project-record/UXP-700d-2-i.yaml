@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: approved
-work_status: in_progress
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -42,12 +42,14 @@ expects_from:
 origin_agent: business-analyst
 created: 2026-09-07
 amended_by:
+- reason: '2026-09-09: work landed in 42684dcb (PR #770). Marked done after confirming a covers-tagged test exists for this id and passes with AC_ENFORCE_STRICT=1, so the pass is not the runner masking a failure because the AC was not yet done -- which is exactly what it was doing until the deployed commit_guardian shim was refreshed from its template.'
 - action: approved
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700d-2-i.md
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -80,3 +82,4 @@ notes: |
 
   The criteria deliberately describe the three by what they say rather than only by id, so the
   record survives an id change; the ids are pinned in doc_links and test_spec.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

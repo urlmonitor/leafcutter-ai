@@ -42,7 +42,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700a-3.md
 change_target:
   - code
   - config
@@ -71,3 +72,4 @@ notes: |
   UXP-700d is about how the example content is kept apart from a project's own record and its
   own work queue INSIDE a store that holds both. They are different failures closed by
   different code: this one by the deploy manifest, that one by the store's structure.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

@@ -42,7 +42,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700d-4.md
 change_target: code
 risk_surface: internal
 test_required: true
@@ -79,3 +80,4 @@ notes: |
   This AC does NOT require anyone to author real mockups. It requires the state to be visible.
   Whether to author them is a product decision the report should provoke, not one this record
   makes.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

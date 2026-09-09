@@ -47,7 +47,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - UXP-700e-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700e-2.md
 change_target:
   - code
   - schema
@@ -94,3 +95,4 @@ notes: |
 
   This is NOT UXP-700c's drift. UXP-700c is the record's agreement with the code; this is the
   record's agreement with itself, caused by growth.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

@@ -40,7 +40,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700c-1-i.md
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -66,3 +67,4 @@ notes: |
   Named mutation: fold unresolvable into resolved. UXP-700c-1's tests all stay green because
   every pointer it feeds is classifiable; only this record turns red. That asymmetry is why it
   is a record of its own rather than a clause of the parent.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

@@ -51,7 +51,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700e-4.md
 change_target: docs
 risk_surface: internal
 test_required: false
@@ -64,3 +65,4 @@ notes: |
   Produced because UXP-700e declares documentation_triggers: [reference-doc]. The third clause
   is the one that pays for itself: the current 14 hand-written index descriptions exist because
   nobody could tell from the record which of the two texts was the authored one.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

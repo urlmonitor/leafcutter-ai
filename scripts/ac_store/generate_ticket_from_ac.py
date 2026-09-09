@@ -3725,7 +3725,15 @@ def main(argv: list[str] | None = None) -> int:
     # Compute repo-root-relative path to the AC file for ac_traceability.
     # ac_path is guaranteed to be under ac_root (found by _find_ac_by_id),
     # so relative_to(ac_root.parent.parent) always succeeds.
-    ac_store_path = str(ac_path.relative_to(ac_root.parent.parent))
+    #
+    # as_posix(), not str(): this value is an identifier written into ticket
+    # frontmatter and read back by ac-fulfillment-gate, which runs in CI on
+    # Linux. str() renders with os.sep, so a ticket generated on Windows records
+    # a path with backslashes that resolves nowhere on the machine that has to
+    # read it. The same defect shipped in generate_product_truth.py and made the
+    # product-truth validator unpassable on Windows; _canonicalise_ticket_path
+    # in this very file already guards against it with .replace(chr(92), "/").
+    ac_store_path = ac_path.relative_to(ac_root.parent.parent).as_posix()
 
     # Dry-run / verify: build the ticket in memory, print it, and (for --verify)
     # append a readiness report. Neither path writes a file.

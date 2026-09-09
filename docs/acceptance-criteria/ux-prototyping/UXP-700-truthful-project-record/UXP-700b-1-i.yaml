@@ -42,7 +42,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700b-1-i.md
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -74,3 +75,4 @@ notes: |
   The unit of the rule is visibility, not blocking. Three distinct outcomes are required by
   this record together with UXP-700b-1: nothing-examined, degraded, checked-and-sound. A design
   that collapses degraded into either neighbour fails this record.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

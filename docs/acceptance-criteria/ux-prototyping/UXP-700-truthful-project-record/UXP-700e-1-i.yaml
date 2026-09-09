@@ -40,7 +40,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700e-1-i.md
 change_target:
   - code
   - schema
@@ -79,3 +80,4 @@ notes: |
   The number 120 is used here as the concrete worked example because it is the figure the
   measurement was taken against. It is not fixed by this record - UXP-700e-1 owns where bounds
   are declared, and the actual value is a product decision.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

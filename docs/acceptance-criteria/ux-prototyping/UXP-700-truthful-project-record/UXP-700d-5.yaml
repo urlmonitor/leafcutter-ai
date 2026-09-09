@@ -52,7 +52,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700d-5.md
 change_target: docs
 risk_surface: internal
 test_required: false
@@ -65,3 +66,4 @@ notes: |
   is the one that matters most in six months: the whole tree reads as hostile to the example
   content, and without an explicit statement that ADR-022 and UXP-550/UXP-593 require it, a
   future cleanup will delete fern-and-fig and break mock mode.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

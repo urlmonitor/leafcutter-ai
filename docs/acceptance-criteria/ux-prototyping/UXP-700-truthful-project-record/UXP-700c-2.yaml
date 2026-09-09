@@ -50,7 +50,8 @@ superseded_by: null
 covered_by:
   - UXP-700c-2-i
   - UXP-700c-2-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700c-2.md
 change_target:
   - code
   - schema
@@ -91,3 +92,4 @@ notes: |
   human confirmed the journey against the code. Reusing those fields for this purpose would
   make every journey permanently current, since the generator rewrites them on every run. The
   IT PO must not resolve this AC onto the existing asof fields.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

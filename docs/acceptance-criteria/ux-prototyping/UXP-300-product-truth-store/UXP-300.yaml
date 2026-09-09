@@ -41,7 +41,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-300.md
 test_required: true
 test_spec:
   - name: test_every_registered_artifact_resolves_under_a_declared_store_directory
@@ -70,3 +71,4 @@ test_spec:
     framework: unittest
 change_target: config
 risk_surface: internal
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

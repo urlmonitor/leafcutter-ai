@@ -47,7 +47,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700c-5.md
 change_target: docs
 risk_surface: internal
 test_required: false
@@ -64,3 +65,4 @@ notes: |
   UNVERIFIED: docs/architecture/components/ux-prototyping.md is recorded as planned because its
   existence was not confirmed during this authoring pass. The diagram author should confirm the
   destination page before writing.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

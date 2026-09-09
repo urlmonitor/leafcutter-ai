@@ -49,7 +49,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700c-4.md
 change_target: docs
 risk_surface: internal
 test_required: false
@@ -62,3 +63,4 @@ notes: |
   last clause exists because the single most likely reaction to this feature landing is someone
   on Windows treating fourteen separator-only index mismatches as fourteen drifted journeys and
   "fixing" the record.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And

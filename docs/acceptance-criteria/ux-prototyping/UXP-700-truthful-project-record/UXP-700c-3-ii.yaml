@@ -40,7 +40,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700c-3-ii.md
 change_target:
   - code
   - pipeline
@@ -76,3 +77,4 @@ notes: |
   (fail-open)" and exiting 0, while the same check on the same staged files blocked with six
   violations once the layout was right. Same check, same repo, opposite verdicts decided purely
   by workspace layout. Reuse GE-120's vocabulary here; do not mint a second one.
+target_epic: EPIC-WhatYourProjectSaysAboutItselfIsTrue,And
