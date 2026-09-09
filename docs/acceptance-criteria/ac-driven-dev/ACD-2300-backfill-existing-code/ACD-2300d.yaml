@@ -1,0 +1,129 @@
+id: ACD-2300d
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "Nothing is recorded as proven unless it was actually checked"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  The tool records what it observed and never what it assumed.
+
+  Everything this capability writes can be traced back by a person to the thing
+  that was observed. It never marks work finished. It never records proof it did
+  not see. When it cannot establish something it says so and writes nothing,
+  rather than filling the gap with the most likely answer. What it proposes
+  arrives in pieces small enough to genuinely review, so accepting a batch stays
+  a real decision instead of a formality.
+depends_on:
+  - ACD-2300
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE EXACT PRECEDENT FOR THIS L1's EXISTENCE AND SHAPE — inherit its reasoning
+      rather than re-deriving it. ACS-1300c is the trust envelope of its own tree:
+      awards nothing, rewrites nothing already correct, abstains out loud. Its parent
+      states why it is an L1 and not a note, in terms that transfer verbatim: "a
+      refusal that lives only in prose is not falsifiable, and the cheapest
+      implementation of (a) satisfies (a) perfectly while violating every guarantee
+      in (c). (c) is the guard on the guard."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      ALREADY OWNS THE UNTOUCHED-RECORD RULE — POINT AT IT, DO NOT RESTATE IT IN A
+      COMPETING FORM. Its requirements state the load-bearing shape: leaving a record
+      unchanged means DO NOT WRITE, not write-the-same, because a load-and-dump round
+      trip preserves every value while reformatting quoting, key order and line
+      wrapping. At this store's size that churns everything and makes the change
+      unreadable — which would make this L1's own review promise unkeepable.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Both traps in their filed form. KI-CG-20260908-gate-ac-done-on-merge is Trap 2
+      verbatim — the finished-state tool "gates on a passing covers-tagged test but
+      does not populate implemented_by, so a bulk run could produce records that are
+      done with empty implementation evidence — the phantom-done shape, created by
+      the tool meant to prevent it" — and its definition of done requires a dry run
+      reviewed against all 354 affected records before the tool is ever pointed at
+      them. KI-CG-20260908-gate-test-ac-tags is Trap 1.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+documentation_triggers:
+  - reference-doc
+notes: |
+  THIS L1 IS THE GUARD ON THE GUARD AND IT WAS NOT IN THE BRIEF'S FOUR JOBS. It was
+  added because BrainCandy asked that both traps be encoded as constraints on
+  acceptable behaviour, and because a constraint stated only in the parent's prose
+  is not something anyone can fail. The cheapest implementation of ACD-2300a, b and
+  c satisfies all three of them completely while violating every clause here.
+
+  THE ONE SENTENCE THE WHOLE TREE TURNS ON, taken from the user's own framing:
+  BOTH TRAPS SHARE ONE ROOT CAUSE — AUTOMATION THAT WRITES AN ASSERTION OF PROOF
+  RATHER THAN AN OBSERVATION OF EVIDENCE. Every clause in the criteria above is that
+  distinction made checkable at a different field.
+
+  THE FOUR CLAUSES AND WHY EACH IS SEPARATELY NECESSARY:
+
+    1. TRACEABLE. Anything written can be followed back by a person to what was
+       observed. Without this the other three are unverifiable in principle, because
+       there is nothing to compare the record against.
+
+    2. NEVER MARKS WORK FINISHED. Trap 2. This is INHERITED FROM ACS-1300, whose L0
+       states it as a refusal rather than a phasing decision — "no AC in the tree, at
+       any level, may write the finished-state field ... not to be revisited by the
+       BA, the IT PO, or an implementer who notices how easy it would be." That
+       sentence is reproduced here because the temptation is stronger in this tree,
+       not weaker: a backfill run that has just observed a criterion, its code and
+       its passing test is one field away from a completion badge, and it will have
+       assembled everything that makes awarding one look obviously correct. Note the
+       live contradiction raised in ACD-2300's notes: ACD-800 promises the opposite.
+       This L1 is where that promise is refused for this tree.
+
+    3. NEVER RECORDS PROOF IT DID NOT SEE, AND ABSTAINS OUT LOUD. Trap 1's general
+       form. The abstention must be REPORTED, never a silent skip — ACS-1300's
+       inherited rule is "a skipped record is invisible, and invisibility is the same
+       defect one level down." A tool that quietly processes 4,000 of 5,566 items and
+       reports success has told the reader something false about the other 1,566.
+
+    4. REVIEWABLE IN PIECES. This is the clause that makes the other three real
+       rather than ceremonial, and it is the one an implementer will treat as a
+       preference. Every safeguard above depends on a human actually looking. A
+       proposal set of five thousand items is not reviewed, it is accepted — and an
+       accepted-in-bulk proposal set is Trap 1 with a signature on it. Batch size is
+       therefore a correctness property of this capability and not a usability nicety.
+
+  A NEGATIVE CONTROL IS MANDATORY AND A GREP IS NOT EVIDENCE. Every clause above is
+  a promise about what does NOT happen, and this repository's recorded history is
+  that such promises pass their tests while being false. CLAUDE.md's "Gate / Workflow
+  ACs — Verify Behaviorally, Not by Grep" exists because the fast-lane feature, built
+  specifically to defeat phantom-done, shipped a runner that passed its grep-only
+  structural tests while never executing its own gates. The BA must specify at least
+  one behaviour per clause where the tool is fed evidence it cannot trust and the
+  correct outcome is a reported refusal to write, proved by running it.
+
+  BYTE STABILITY IS INHERITED, NOT RE-DERIVED — see TQ-400e-1 in doc_links. It also
+  serves clause 4 directly: a run that reformats every record it opens produces a
+  change nobody can review, which defeats the review promise even when every
+  individual write is correct.
+
+  WHAT THIS L1 DOES NOT COVER, SO IT IS NOT MISTAKEN FOR A UNIVERSAL HONESTY
+  CONTRACT: whether a check that reports success actually ran is GE-120's and
+  TQ-500's; whether an answer states its denominator is ACS-1100's, inherited by this
+  whole tree. This L1 governs only what THIS capability writes into the record.

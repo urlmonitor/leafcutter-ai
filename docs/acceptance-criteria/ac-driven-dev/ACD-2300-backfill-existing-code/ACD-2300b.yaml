@@ -1,0 +1,105 @@
+id: ACD-2300b
+components:
+  - ac_driven_dev
+  - ac_store
+  - testing_quality
+readiness: draft
+priority: medium
+title: "Tests you already wrote get credited to what they prove"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  A test that already proves a requirement stops being invisible proof.
+
+  Tests that exist but are attached to nothing are matched to the requirements
+  they actually prove, and each match is put to you before it is recorded. A link
+  that is recorded is a link that was verified. A test whose subject cannot be
+  established stays unattached and is reported as unattached — it is never
+  attached to a requirement invented to receive it.
+depends_on:
+  - ACD-2300
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE BOUNDARY THAT DEFINES THIS L1'S POPULATION — READ IT FIRST. ACS-1300a owns
+      the case where a test ALREADY CARRIES an identifier and the record has
+      forgotten it: an exact mechanical join, 549 records, no heuristics. This L1
+      owns the disjoint case where no identifier exists, so nothing can be joined and
+      the link must be proposed. The two populations do not intersect by
+      construction — a test either carries a tag or it does not. Neither may be
+      closed as a duplicate of the other, and this L1 must not re-implement the
+      join.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      KI-CG-20260908-gate-test-ac-tags measures this L1's population — 5,566 test
+      functions across 595 of 597 test files, only 2 files fully tagged — and states
+      the prohibition this L1 exists to honour: "Do not attempt a bulk backfill of
+      5,566 tags ... a mechanical backfill would produce thousands of tags pointing
+      at nothing". Also relevant, from
+      KI-CG-20260908-covers-tag-must-be-inside-a-test-function: two checks disagree
+      today about where a link may sit, so a link can satisfy one and fail the other.
+      A proposal that is valid by one account and invalid by the other is not a
+      verified link.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+notes: |
+  THIS L1 CARRIES TRAP 1 AND THE NEGATIVE ARM OF ITS CRITERIA IS THE LOAD-BEARING
+  HALF. "A link that is recorded is a link that was verified" is satisfied
+  trivially by a tool that records nothing. "A test whose subject cannot be
+  established stays unattached and is reported as unattached" is not satisfiable by
+  a tool that links everything, and it is the arm an implementer will drop if it is
+  left implicit. Both are in the criteria for that reason. The BA must make the
+  second falsifiable — a case where the evidence is genuinely ambiguous and the
+  correct behaviour is a reported abstention rather than a best guess. Precedent for
+  the shape: ACS-1300 inherits "abstention over action — evidence the tool cannot
+  trust produces a REPORTED abstention, never a silent skip and never a write. A
+  skipped record is invisible, and invisibility is the same defect one level down."
+
+  WHY THIS IS THE MOST DANGEROUS OF THE FOUR CHILDREN. It is the only one whose
+  output is consumed automatically by other machinery. A recorded link is read by
+  the done-proof path, by the coverage checks and by the reporting layer, so a
+  wrong link does not sit inert — it produces confident wrong answers downstream,
+  which is precisely how a green check comes to mean nothing. The pre-existing rate
+  of this exact defect in this repository is measured: of 937 distinct link
+  identifiers found in the test tree on 2026-09-01, roughly 87 name a record that
+  does not exist. That is the failure mode already occurring by hand at a rate a
+  bulk pass could multiply by sixty.
+
+  A NAME MATCH IS NOT EVIDENCE, AND THIS REPOSITORY HAS BEEN CAUGHT BY IT. The
+  ac-driven-dev PROJECT_CONTEXT records it as a standing warning: a test module was
+  taken as coverage for a surface it does not touch, on the strength of the
+  filename, and the note concludes "name-similar tests are the easiest false-green
+  in this repo; grep the import, not the filename." Any decomposition whose match
+  rests on identifier similarity has reproduced that defect at scale.
+
+  A SECOND-ORDER TRAP THE BRIEF DID NOT NAME AND THE BA SHOULD SIZE EARLY: this L1
+  and ACD-2300a can each manufacture the other's missing half. A test with no
+  obvious subject and a criterion with no obvious proof are a tempting pair, and
+  pairing them because each solves the other's problem is the purest form of writing
+  an assertion where an observation belongs. The two must be linked on evidence
+  about what the test actually exercises, never on mutual convenience.
+
+  ORDERING WITH ACD-2300a IS A REAL QUESTION AND IS NOT SETTLED HERE. Running this
+  L1 after criteria have been proposed gives it far more to match against; running
+  it first credits proof that exists today against records that exist today. Both
+  are defensible and the answer probably differs between an adopting project (few
+  records, many tests) and this one (many records, many tests). Left to the BA with
+  the constraint that neither ordering may make the other unusable.

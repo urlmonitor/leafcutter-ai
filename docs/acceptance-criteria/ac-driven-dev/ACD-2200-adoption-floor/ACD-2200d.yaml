@@ -1,0 +1,94 @@
+id: ACD-2200d
+components:
+  - ac_driven_dev
+  - onboarding
+readiness: draft
+priority: medium
+title: "Take the standards up one at a time and put one back down when you need to"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Each standard is adopted on its own and can be stepped back safely.
+
+  Standards are taken up individually and in whatever order suits the project,
+  each moving from off to advisory to enforced only when you decide it should.
+  Any one of them can be stepped back down without disturbing the others and
+  without losing the ground already gained.
+depends_on:
+  - ACD-2200
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The evidence that all-at-once is the current default and that it is wrong. The
+      census scopes a single proposal to register twelve gates together and then
+      finds that they are in at least five materially different states — two would
+      deadlock ordinary work, four cannot fail, one inspects nothing, one writes to
+      the record instead of refusing anything, and three inspect an empty
+      population. Its own conclusion is that each is "a separate unit of work with
+      its own numbers, its own ratchet shape, and its own definition of done". That
+      sentence is this L1's justification.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1900-safe-migration/ACD-1900.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      ADJACENT PROMISE, DIFFERENT SUBJECT — do not merge and do not treat as a
+      parent. ACD-1900 makes THIS project's move to the v2 build model reversible in
+      one step, staged behind a two-stage flag with a kill switch. That is a
+      well-tested shape for the same kind of guarantee and is worth reusing; it is
+      not the same guarantee, because its subject is one project's internal
+      migration and this one's is an arbitrary project's adoption of standards it
+      chooses individually.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+  - state-diagram
+notes: |
+  WHY THIS EARNS ITS OWN L1 RATHER THAN BEING A PROPERTY OF ACD-2200b. ACD-2200b
+  governs the boundary between old and new WITHIN one standard. This governs the
+  relationship BETWEEN standards and the direction of travel through their states.
+  A project can have a perfect ratchet on every standard and still be unable to
+  adopt, because adoption is offered as one switch over all of them.
+
+  THE THREE STATES ARE THE REASON FOR THE state-diagram TRIGGER, AND THE MIDDLE ONE
+  IS NOT DECORATIVE. Off, advisory, enforced. Advisory is what makes the cost real
+  before it is binding, and the register shows both failure directions around it:
+  a standard registered in advisory mode over 5,566 items is "0 blocking and a very
+  large amount of console noise", while a standard whose advisory state is its
+  PERMANENT state is the "gate that cannot fail" the census calls the worst of the
+  three states. So advisory must be a passage, not a destination, and the
+  transitions must be a thing the project chooses rather than a thing it discovers.
+
+  STEPPING BACK IS THE PART THAT WILL BE DROPPED IF IT IS NOT MADE FALSIFIABLE. The
+  precedent for how badly a one-way adoption goes is in the register: the file-size
+  gate was registered on 2026-09-07 and was blocking merges repo-wide within a day,
+  and the only remediation its refusal offered pointed at a command whose own first
+  step runs a script that does not exist. The value of stepping back is measured on
+  exactly that day. A criterion satisfied only by an implementation nobody has ever
+  reversed is not satisfied.
+
+  "WITHOUT LOSING THE GROUND ALREADY GAINED" IS LOAD-BEARING AND IS THE SEAM WITH
+  ACD-2200c. Stepping a standard back to advisory must not reset its tolerated
+  count to whatever the project looks like at that moment, because that would make
+  step-back-then-step-forward a laundering mechanism for new debt. The count
+  belongs to ACD-2200c; this L1 must not be decomposed in a way that lets a state
+  transition rewrite it.
+
+  OUT OF SCOPE, NAMED SO IT IS NOT ABSORBED: which standards a project SHOULD adopt,
+  and in what order. That is advice, and advice is CR-100's territory. This L1 owns
+  that the choice exists and is safe to change, not what the right choice is.

@@ -1,0 +1,101 @@
+id: ACD-2200b
+components:
+  - ac_driven_dev
+  - onboarding
+  - commit_guardian
+readiness: draft
+priority: medium
+title: "What you already have stays workable and what you add is held to the standard"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Existing shortfalls never block your work — new ones are refused at the door.
+
+  Working on something that already falls short of a standard is never refused
+  for a shortfall it did not introduce, so nothing in the project becomes
+  untouchable on the day a standard is adopted. Introducing a new shortfall, or
+  making an existing one worse, is refused.
+depends_on:
+  - ACD-2200
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ONE FULLY-SPECIFIED INSTANCE OF THIS PROMISE IN THE STORE — READ IT, DO
+      NOT RESTATE IT. GE-127b owns the ratchet for file length and its notes already
+      state the derivable three-arm shape (grew, refuse; same-or-smaller, allow even
+      though still over; no previous size, out of scope) and mark the negative arm
+      mandatory because every positive arm is satisfied by an implementation that
+      permits everything. That last point transfers here verbatim and is the single
+      most useful thing to inherit. What does NOT transfer is the scalar: line count
+      is one number per file and most standards are not.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The per-gate entries are a catalogue of ratchet SHAPES and the catalogue is
+      the point. Four distinct shapes appear across nine entries — a per-file
+      scalar; a per-file COUNT of over-limit items where no single scalar exists
+      (complexity, untagged tests, fixture bloat); a per-file BOOLEAN (did this
+      ticket have test requirements before?); and SET MEMBERSHIP with no scalar at
+      all (root files), where the census concludes the answer is a corrected
+      allowlist rather than a ratchet. A criterion here that presumes one shape
+      fits all four is wrong on three of them.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  THIS IS THE KEYSTONE OF ACD-2200 AND THE HALF THE USER CARES MOST ABOUT. Every
+  other child of this L0 is worth less without it. Its promise is what makes a
+  standard switchable on the day it is adopted rather than after a remediation
+  project nobody will fund.
+
+  THE TWO NON-SOLUTIONS, AND BOTH ARE THE DEFAULT INSTINCT. GE-127's notes name
+  them: "raise the number until nothing fails, or exempt the offenders — both leave
+  the project exactly where it is." A criterion beneath this L1 that is satisfied
+  by either is not a criterion. The obligation half — that the tolerated set is
+  counted and can only shrink — lives in the sibling ACD-2200c precisely so that
+  neither non-solution can satisfy this one quietly.
+
+  THE COMPARISON IS AGAINST THE PROJECT'S OWN PREVIOUS STATE, NOT AGAINST A
+  THRESHOLD, AND THE REFERENCE POINT IS ITSELF A HAZARD. The live file-size gate is
+  the cautionary tale and it is filed:
+  KI-CG-20260908-ratchet-reads-pre-merge-head records that resolving a file's
+  previous state from the current branch tip means that during a merge the
+  reference point is the branch's PRE-merge state, so content long-standing
+  elsewhere is judged as new and a merge is refused for something the merge did not
+  author. That gate went live on 2026-09-07 and was blocking merges repo-wide
+  within a day. Whatever "previous state" means here must be defined against a
+  reference the BA can name, and the merge case must be one of the behaviours, not
+  a footnote.
+
+  FOUR RATCHET SHAPES, NOT ONE — see doc_links. The most important consequence for
+  decomposition is that the SET-MEMBERSHIP case may have no ratchet at all. The
+  census's conclusion on root files is that the allowlist is simply wrong for the
+  project and the fix is to correct it, with an existence grandfather only as a
+  fallback. So this L1's promise must be satisfiable by "the standard was
+  mis-specified for this project and was corrected", not only by "a comparison was
+  added". Forcing every standard through a comparison mechanism is how a correct
+  standard gets a ratchet it does not need and a wrong standard keeps being wrong.
+
+  AN ADOPTER-FACING CONSTRAINT THE CENSUS RAISES AND THIS TREE INHERITS: whatever
+  is allowlisted or tolerated by default ships to every project that installs the
+  package. The census puts it as "anything added must be defensible as a general
+  default, not just as this repo's convenience". A criterion here satisfied by
+  hard-coding this repository's five root filenames has solved one project's
+  problem and shipped it to everyone else's.
