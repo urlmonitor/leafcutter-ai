@@ -1,0 +1,428 @@
+id: INF-1200f-2
+title: "The one pairing that already has this property keeps it, at every point in the brief that holds it today"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the pairing of a kind of file and a specialist for which the figure in
+    that specialist's material already resolves to the figure applied to its work,
+    from a single declaration,
+  When the carrying of standards is generalised to further kinds of file and
+    further specialists,
+  Then that specialist's material still states the applied figure at every point
+    in it at which a figure for that kind of file is stated today, and at no fewer
+    points,
+  And the point at which that specialist is instructed to stop and ask before
+    producing work that would exceed the figure still states the applied figure,
+    rather than a fixed figure, a rounded figure, or none,
+  And given the declared figure for that kind of file is then changed,
+  When that specialist begins work,
+  Then every one of those points states the changed figure,
+  And given a further kind of file with its own standard is added to that same
+    specialist's ownership,
+  When it begins work,
+  Then the points already stating the original kind of file's figure are
+    unchanged, so covering more does not cost the pairing that was already
+    covered.
+depends_on:
+  - INF-1200f
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200f.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200f-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      f-1 requires the two figures to be one figure and to move together, anywhere the
+      property holds. This requires the one place it ALREADY holds to be no worse off
+      after generalisation — same number of points, same trigger, same fidelity. f-1 is
+      satisfied by a single correct statement at the top of a brief; this is not, and
+      that difference is the whole record.
+  - path: templates/agents/python-coder.md
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PAIRING THIS RECORD IS ABOUT, AND THE BEHAVIOUR TO PRESERVE RATHER THAN
+      REPLACE. Its material refers to a limit for the kind of file it owns in several
+      places, including a trigger that makes it stop and ask BEFORE producing
+      over-length work rather than after, and every one of those references resolves to
+      the figure that will actually be applied. It is the working cell of the grid and
+      the only evidence in the project that the whole idea works.
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Holds the step that makes the above true today, reading one figure for one kind of
+      file out of the declaration at build time. Generalising or replacing it is
+      expected; regressing what it currently delivers is what this record forbids.
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200b-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE RECORD MOST LIKELY TO BE SATISFIED AT THIS ONE'S EXPENSE, AND THE TENSION IS
+      REAL RATHER THAN APPARENT. b-2 requires that no authored instruction carry a
+      standard, which invites replacing this pairing's several in-context references
+      with one derived block. This record requires the several references to survive.
+      Both can hold — the references may resolve from the declaration without being
+      authored — but an implementer who reads only b-2 will not build that, and an
+      implementer who reads only this one will leave the hand edit in place. They must
+      be read together.
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      a-1 requires the standard to be in the material rather than pointed at. This goes
+      further for the one pairing where it is already true: the standard is not merely
+      present but present AT THE MOMENTS OF DECISION, which is what makes it change the
+      work rather than decorate the brief.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", and the post-merge
+      diff-audit convention by analogy: this record is a deliberate non-regression
+      audit, and its arms are the "every deletion must be one you can explain" rule
+      applied to the content of a brief rather than to a merge.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. WHERE MULTI-POINT PLACEMENT EITHER EXISTS OR DOES NOT. This document
+      describes the compile step that turns templates/agents/*.md into
+      .claude/agents/*.md. Placing a standard at several semantically-chosen points
+      inside one brief is a capability of that step, not of the declaration and not of
+      the ownership record. If the compile step can only prepend or append a block,
+      this record cannot be satisfied and the design must change before implementation
+      starts, not after.
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Channel 6 is the agent template, frontmatter and body, resolved at spawn.
+      The stop-and-ask trigger this record protects lives in the frontmatter behaviour
+      list rather than in the body prose, so "the brief" spans both and a placement
+      mechanism that reaches only the body loses the single most valuable reference
+      point.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. This record is a non-regression obligation on the
+    generalisation. It registers nothing: no hooks_manifest.hooks id, no new top-level key on
+    commit_guardian.json, no agent entry, no skill entry, no paths.json surface. Its arms change the
+    VALUE of an existing nested key and add an owned extension to an existing agent entry, neither of
+    which is a watched addition. Plain-list spec form; no fictional config_schema_fragment.
+  - >-
+    THE PRESERVATION FLOOR, PINNED FROM THE TREE AS IT STANDS RATHER THAN FROM THE BA'S NOTE.
+    Measured in this worktree: templates/agents/python-coder.md references
+    `{{config.file_size_limit_py}}` at exactly FIVE points — line 36 and line 38 (the
+    `config_requirements` self-declaration INF-600a-4 requires: the key name and its description,
+    source `build_injected`), line 145 (the `File-Size Limit` behaviour entry's `trigger:` value,
+    "New .py file would exceed ... lines"), line 286 (the `## File-Size Limit (plan before writing)`
+    instruction) and line 674 (the warn-tier context-capsule completion signal). Three of the five
+    are in-context references; two are the self-declaration. FIVE IS THE FLOOR for the
+    at-no-fewer-points arm, and it is deliberately a floor rather than an exact number — adding
+    points is fine, removing them is the regression. Re-measure before implementation starts, since a
+    legitimate change may move the count; do not take five from this paragraph as gospel if the file
+    has moved on.
+  - >-
+    THE b-2 / f-2 TENSION, COSTED EXPLICITLY — THE SAME TEXT IS RECORDED ON INF-1200b-2 AND THE TWO
+    MUST BE READ TOGETHER. b-2 requires that no hand-authored instruction carry a standard: strip
+    every reference from the instructions their authors write, rebuild, and every specialist is still
+    correct. This record requires those several in-context references to survive at no fewer points,
+    including one embedded mid-instruction. Both hold ONLY if the derived mechanism can place content
+    at MULTIPLE, SEMANTICALLY-CHOSEN POINTS inside one brief — materially harder than injecting one
+    block, and stated in neither L1. An implementer who reads only b-2 will build the single block;
+    an implementer who reads only this record will leave the hand edit in place.
+  - >-
+    THE FAILURE MODE, STATED PLAINLY: THE CHEAP BUILD LOOKS LIKE PROGRESS IN EVERY COUNT. One derived
+    standards block at the top of every brief satisfies b-2 completely and quietly fails this record.
+    And the numbers all improve — specialists informed rises from one to three, kinds of file covered
+    from one to two or more, standards carried from one to four, and INF-1200e's uninformed-pairing
+    census falls toward zero. The only thing that got worse is the one thing that already worked, and
+    no count in this tree can see it. This record is the only one that can. Treat its
+    at-no-fewer-points and trigger arms as hard gates on b-2's implementation, not as a style
+    preference, and reject a single-block design at design time rather than discovering it here.
+  - >-
+    THE ADMISSIBLE SHAPE. A placement marker that names NO standard, NO kind of file and NO figure —
+    declaring only that a decision point exists here and that the standards governing what this
+    specialist owns belong at it — survives b-2's removal (it references no standard) and satisfies
+    this record (it can sit at all five points, including inside the trigger). Adding a standard adds
+    no marker and adding a kind of file to an owner adds no marker, so INF-1200b-1's change-set arm is
+    unaffected. The design choice is the implementer's; what is not open is that a mechanism which
+    cannot place at several points inside one brief, spanning frontmatter and body, fails this record.
+  - >-
+    THE TRIGGER ARM IS NAMED SEPARATELY BECAUSE IT IS THE FIRST THING TO GO, AND IT CROSSES AN AGENT
+    BOUNDARY. Line 145 is the `trigger:` value of a frontmatter behaviour entry — the only place in
+    that brief where the figure is attached to an ACTION rather than to a fact, and the most awkward
+    reference to generalise. A generalisation that carries the figure into a standards block and drops
+    it out of the trigger has kept the letter of every other record in this tree and lost the thing
+    that made this pairing work. If converting it requires RE-WORDING the instruction rather than
+    substituting the figure's source, that re-wording is llm-expert's surface (templates/agents/*.md
+    behavioural prose) and must be handed off, not performed by the coder.
+  - >-
+    NO ROUNDED, DEFAULTED OR PRESENTATION-FORMATTED FIGURE AT ANY POINT. Every one of the preserved
+    points must state the applied figure, not a fixed figure, not a rounded one, and not none. A figure
+    that is nearly right at the moment of decision is a second figure, and it fails INF-1200f-1's
+    comparison at the same time — which is the BA's second mutation here.
+  - >-
+    THE LAST ARM IS AN INTERFERENCE CHECK AND ITS FIXTURE IS A REAL ONE. Once a specialist owns two
+    kinds of file with standards — which INF-1200c-2 requires to work — supplying the second must not
+    overwrite, reorder or dilute the first. Measured: python-coder already declares
+    owns_file_extensions with two entries, one of which carries a declared limit and one of which does
+    not, so giving the second a standard is a one-line change rather than a synthetic configuration.
+    Assert content equality of the already-stated points across that change, not merely their
+    continued presence.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the declaration
+    read and the brief write; log at WARNING or higher or re-raise; no bare or blind excepts. A marker
+    that fails to resolve must fail the build loudly — an unresolved token shipped at the stop-and-ask
+    trigger is worse than the hand-authored figure it replaced, because it reads as an instruction and
+    contains no figure at all.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT. Edit templates/agents/python-coder.md and
+    templates/scripts/commit_guardian/commit_guardian.json only; .claude/agents/ is an untracked build
+    output overwritten by build.py. Re-run `python scripts/build.py --target-dir .` as part of the
+    change (ADR-001), and count the preserved points in the COMPILED brief, never in the template — a
+    template with five markers that compiles to one block passes a template count and fails this
+    record.
+test_spec:
+  - name: test_inf_1200f_2_the_working_pairings_brief_states_the_applied_figure_at_no_fewer_points_than_before
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE PRESERVATION ARM. Count the points at which the COMPILED brief of the one pairing that
+      already has this property states a figure for the kind of file it owns, before the
+      generalisation and after it, and assert the count did not fall. The floor is read from the tree
+      as it stands at implementation time rather than hard-coded, and every counted point must state
+      the APPLIED figure — the count alone is not the assertion. Count in the compiled output, never
+      in the template: a template with five markers that compiles to one block passes a template count
+      and fails this record.
+  - name: test_inf_1200f_2_the_stop_and_ask_trigger_still_states_the_applied_figure
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE TRIGGER ARM, NAMED SEPARATELY BECAUSE IT IS THE FIRST THING TO GO. The point at which that
+      specialist is instructed to stop and ask before producing work that would exceed the figure
+      still states the APPLIED figure — not a fixed figure, not a rounded one, and not none. It is the
+      only place in that brief where the figure is attached to an action rather than to a fact, it
+      lives in the frontmatter behaviour list rather than in body prose, and a placement mechanism
+      that reaches only the body loses it while satisfying every other record in the tree.
+  - name: test_inf_1200f_2_every_preserved_point_states_the_changed_figure_after_a_declaration_change
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Change the declared figure for that kind of file and rebuild. EVERY one of the preserved points
+      states the changed figure — asserted point by point, not on the first occurrence, because a
+      mechanism that resolves the standards block freshly while leaving one in-context reference on a
+      snapshot passes a first-occurrence check and is exactly the drift this L1 exists to prevent.
+  - name: test_inf_1200f_2_giving_the_same_specialist_a_second_covered_kind_of_file_leaves_the_first_kinds_points_unchanged
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE INTERFERENCE ARM. Add a standard for a second kind of file that specialist already owns —
+      a one-line change, since it already declares two owned extensions of which only one carries a
+      limit — and rebuild. The points already stating the original kind of file's figure are
+      UNCHANGED, asserted as content equality rather than continued presence, so an overwrite, a
+      reorder or a dilution is caught. Covering more must not cost the pairing that was already
+      covered.
+  - name: test_inf_1200f_2_the_single_derived_block_injection_reds_this_records_two_arms_while_five_sibling_records_stay_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE SEVEN-WAY EXPERIMENT. MUTATION:
+      generalise by replacing that specialist's several in-context figure references with a single
+      derived statement of its standards at one place in the brief, removing the stop-and-ask
+      reference. Under that injection: INF-1200a-1, INF-1200b-2, INF-1200c-1, INF-1200d-1 and
+      INF-1200f-1 must ALL STAY GREEN for that specialist — it is informed, from one declaration,
+      faithfully, with no authored statement of its own; the at-no-fewer-points arm must go RED; and
+      the trigger arm must go RED. All outcomes must be observed together and all must revert. THE
+      FIVE GREEN OUTCOMES ARE THE ENTIRE JUSTIFICATION FOR THIS RECORD EXISTING SEPARATELY and must be
+      asserted, not assumed: this mutation is a clean, defensible, well-engineered generalisation that
+      every other criterion in the tree reports as a success, and it makes the one thing that
+      currently works worse. An injection run that reddens any of the five is a FAILURE of this
+      descriptor, because it would mean the fixture is not exercising a correct generalisation.
+  - name: test_inf_1200f_2_the_rounded_value_injection_reds_the_changed_figure_arm_and_f_1s_comparison_while_the_point_count_and_trigger_stay_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's SECOND NAMED MUTATION, CARRIED VERBATIM. MUTATION: keep all the reference points but
+      resolve them from a value rounded or defaulted for presentation. Under it the point-count and
+      trigger arms stay green and the changed-figure arm goes RED, and INF-1200f-1's comparison goes
+      RED with it. All four outcomes must be observed together and all must revert. A figure that is
+      nearly right at the moment of decision is a second figure; the two surviving greens are what
+      make it survive review.
+  - name: test_inf_1200f_2_the_preserved_points_and_the_deployed_gates_figure_agree_in_a_cold_process
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/build.py --target-dir <temporary target root>"
+    description: >-
+      PRODUCTION ENTRY POINT. After a real build, in a cold process, every preserved point in the
+      DEPLOYED brief under .claude/agents/ states the figure the DEPLOYED gate applies — resolved
+      from the config beside the deployed script, not from the tracked template. A marker left
+      unresolved in the written file surfaces here rather than passing; an unresolved token at the
+      stop-and-ask trigger is worse than the hand-authored figure it replaced, because it reads as an
+      instruction and contains no figure at all.
+test_rationale: |
+  This record is a deliberate non-regression audit, so its descriptors are before-and-after
+  comparisons over the one pairing that already works rather than assertions about a correct end
+  state. The floor is a count read from the tree at implementation time and not hard-coded, and every
+  counted point must state the applied figure — the count alone would pass on five occurrences of a
+  stale number.
+
+  Every count is taken in the COMPILED brief, never in the template. A template carrying five markers
+  that compiles down to a single block passes a template-side count and fails the thing this record
+  protects, and that is precisely the shape the BA's mutation installs.
+
+  The trigger arm is separate because it is the first thing to go and because it lives in the
+  frontmatter behaviour list rather than in body prose. A placement mechanism that reaches only the
+  body satisfies the point count approximately, satisfies every other record in the tree exactly, and
+  loses the only reference where the figure is attached to an action.
+
+  The changed-figure arm asserts point by point rather than on the first occurrence, because the
+  realistic partial failure is a mechanism that resolves the standards block freshly while leaving one
+  in-context reference on a snapshot. The interference arm asserts content equality rather than
+  continued presence, for the same reason: a shared-accumulator placement reorders and dilutes rather
+  than deletes.
+
+  The BA's mutations are carried verbatim and both are mixed-outcome, the first spectacularly so. Its
+  five stay-green siblings are asserted explicitly rather than assumed, because they ARE the argument
+  for this record existing: the injected generalisation is clean, defensible and well-engineered,
+  every other criterion in the tree reports it as a success, and it makes the working cell worse. An
+  injection run that reddens any of the five means the fixture is not exercising a correct
+  generalisation and is a failure of the descriptor, not a stronger result.
+delivers_to: null
+expects_from:
+  ac_id: INF-1200b-2
+  contract: >-
+    The multi-point placement mechanism: the ability to fill several semantically-chosen points
+    inside ONE compiled brief — spanning frontmatter behaviour entries and body prose — from the
+    INF-1200b-1 join, driven by markers that name no standard, no kind of file and no figure. That
+    shape is the only one in which b-2's removal arm and this record's at-no-fewer-points and trigger
+    arms can both hold; a single derived block satisfies b-2 and fails this record, so the two must be
+    built together.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: this is a non-regression obligation
+    that registers nothing — its arms change the value of an existing nested key and add an owned
+    extension to an existing agent entry, neither a watched addition. No fictional fragment.
+    COMPLEXITY M. THE PRESERVATION FLOOR IS PINNED FROM THE TREE, NOT FROM THE BA''s NOTE:
+    templates/agents/python-coder.md references {{config.file_size_limit_py}} at five points — lines
+    36 and 38 (the config_requirements self-declaration INF-600a-4 requires), 145 (the File-Size Limit
+    behaviour entry''s trigger value), 286 (the plan-before-writing instruction) and 674 (the warn-tier
+    context-capsule completion signal); three in-context, two self-declaration. Five is a FLOOR, and
+    the record requires a re-measure before implementation since a legitimate change may move it. THE
+    b-2/f-2 TENSION IS COSTED HERE AND ON b-2 IN THE SAME TERMS: both hold only if the mechanism can
+    place at multiple semantically-chosen points inside one brief, spanning frontmatter and body — the
+    cheap single block satisfies b-2, fails this, and improves every count anyone runs (specialists
+    1→3, kinds 1→2+, standards 1→4, e''s census →0), so its arms are hard gates on b-2''s design rather
+    than a preference. THE TRIGGER ARM CROSSES AN AGENT BOUNDARY: line 145 is a frontmatter trigger
+    value, and any RE-WORDING of that instruction is llm-expert''s surface and must be handed off.
+    COUNTS ARE TAKEN IN THE COMPILED BRIEF, never the template, because a template with five markers
+    compiling to one block passes a template count. THE CHANGED-FIGURE ARM IS ASSERTED POINT BY POINT
+    and the interference arm as content equality, because the realistic failures are a single stale
+    in-context reference and a reordering rather than a deletion. BOTH BA MUTATIONS CARRIED VERBATIM
+    WITH THEIR STAY-GREEN HALVES ASSERTED — five sibling records green under the single-block
+    injection, point-count and trigger green under the rounded-value injection; an injection reddening
+    any of the five is recorded as a FAILURE. declares_side_effect true. test_spec: seven executing
+    descriptors, two carrying the BA''s mutations and one on the deployed brief in a cold process.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE PRESERVATION OBLIGATION, STATED EXPLICITLY BECAUSE IT IS EASY TO LOSE IN A
+  REWRITE. One pairing already delivers this property correctly, from a single
+  declaration. Any generalisation must leave that pairing at least as faithful and at
+  least as useful as it is now. A rebuild that regresses the working cell while covering
+  more cells has made things worse, and a decomposition that does not say so invites
+  exactly that trade — because the trade looks like progress in every count anyone will
+  run.
+
+  WHY "AT NO FEWER POINTS" IS A CRITERION AND NOT A STYLE NOTE. A figure stated once, in
+  a section headed with the project's standards, is easy to skip and easy to forget by
+  the time a decision is being made. A figure stated at the points where the decision
+  arises — including in a trigger that makes the specialist stop and ask before
+  producing work that would exceed it — is what changes the work. The count is a proxy
+  for that, and it is the only proxy a test can hold. It is deliberately a floor rather
+  than an exact number: adding points is fine, removing them is the regression.
+
+  THE TRIGGER ARM IS NAMED SEPARATELY BECAUSE IT IS THE FIRST THING TO GO. It is the
+  most specific, most awkward reference to generalise — it is embedded in an instruction
+  rather than in a list — and it is the single most valuable one, because it is the only
+  place where the figure is attached to an action rather than to a fact. A
+  generalisation that carries the figure into a standards block and drops it out of the
+  trigger has kept the letter of every other record here and lost the thing that made
+  this pairing work.
+
+  THE LAST ARM IS THE INTERFERENCE CHECK. Once a specialist owns two kinds of file with
+  standards — which INF-1200c-2 requires to work — there is a real risk that supplying
+  the second overwrites, reorders or dilutes the first. Stating it as an arm means the
+  regression is caught in the tree that caused it, rather than noticed months later by
+  someone wondering why the trigger stopped firing.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: generalise by replacing that specialist's several in-context figure
+  references with a single derived statement of its standards at one place in the brief,
+  removing the stop-and-ask reference. Under that injection:
+    - INF-1200a-1, INF-1200b-2, INF-1200c-1, INF-1200d-1 and INF-1200f-1 must ALL STAY
+      GREEN for that specialist — it is informed, from one declaration, faithfully, with
+      no authored statement of its own;
+    - the at-no-fewer-points arm must go RED;
+    - the trigger arm must go RED.
+  All outcomes must be observed together and all must revert. The five green outcomes
+  are the entire justification for this record existing separately: this mutation is a
+  clean, defensible, well-engineered generalisation that every other criterion in the
+  tree reports as a success, and it makes the one thing that currently works worse.
+
+  A SECOND MUTATION WORTH RUNNING. MUTATION: keep all the reference points but resolve
+  them from a value rounded or defaulted for presentation. Under it the point-count and
+  trigger arms stay green and the changed-figure arm goes RED, and INF-1200f-1's
+  comparison goes RED with it. A figure that is nearly right at the moment of decision
+  is a second figure.
+
+  MEASURED, 2026-09-09, IN THIS WORKTREE. One specialist's material refers to the figure
+  for the kind of file it owns in five places, one of which is a stop-and-ask trigger
+  and one of which is a completion signal. Five is today's floor for the first arm; the
+  IT PO should pin the count from the tree as it stands at enrichment rather than from
+  this note, since a legitimate change may move it before implementation starts.
+
+  DELIBERATELY NOT NAMED IN THE CRITERIA: the specialist, the kind of file, and the
+  figure. The pairing is identified by the property it already has, which is both
+  sufficient to find it and stable if it is renamed.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. Both
+  mutations above, including which records must stay green, are written to be turned
+  directly into test descriptors.

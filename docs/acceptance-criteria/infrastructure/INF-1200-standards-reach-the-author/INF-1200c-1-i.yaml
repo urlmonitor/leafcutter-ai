@@ -1,0 +1,294 @@
+id: INF-1200c-1-i
+title: "A kind of file the ownership record assigns to nobody gets no invented owner and stops nothing"
+component: infrastructure
+components:
+  - infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a kind of file that carries a standard and which the project's ownership
+    record assigns to no specialist at all,
+  When the audience for that kind of file's standards is determined,
+  Then no specialist is told that kind of file's standards — no owner is
+    inferred from a specialist's name, from a neighbouring kind of file, from a
+    configured default, from the specialist that owns the most kinds of file, or
+    from any source other than the ownership record,
+  And every other kind of file's standards reach their owners in the same run, so
+    an unassigned kind of file does not halt the delivery or reduce what anyone
+    else is told,
+  And the condition — a standard whose kind of file has no assigned owner — is
+    distinguishable in what the run reports from a kind of file that has an owner
+    and whose owner was told.
+depends_on:
+  - INF-1200c-1
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200c-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/agent-registry/AR-100-technology-ownership/AR-100.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE RECORD THIS ONE REFUSES TO DO THE WORK OF. AR-100 owns that every kind of
+      file in the codebase genuinely has an owning specialist. An unassigned kind of
+      file is AR-100's defect, and the only correct behaviour here is to decline to
+      paper over it. Guessing an owner converts a visible gap in an approved record
+      into a confidently wrong telling that nobody will question, because the
+      specialist that receives it has no way to know it is not the owner.
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED — THE REPORT SURFACE IS e's, THE DISTINGUISHABILITY IS THIS RECORD's.
+      INF-1200e owns naming uninformed specialists and owns what the report looks like.
+      This record requires only that this particular condition is not absorbed into
+      silence by the delivery itself before any report can see it. It proposes no
+      second census and specifies no report format; a clause here that did has crossed
+      into e and must be withdrawn.
+  - path: config/agent_registry.json
+    relationship: related
+    status: exists
+    relevance: >-
+      The record consulted, and the one that must NOT be extended to make this case go
+      away. Adding a catch-all owner here would satisfy the letter of the first arm by
+      creating the fiction the arm exists to forbid.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Declares standards per kind of file with no reference to who owns them, so an
+      unassigned covered kind of file is representable today and costs one line to
+      construct as a fixture.
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The record consulted, and the one whose gaps this constraint refuses to
+      paper over. Measured in this worktree, fifty-seven of sixty agents declare no
+      owns_file_extensions at all, and the union of the three that do is
+      {.py, .js, .sql, .tsx, .jsx, .vue, .svelte, .html, .css, .scss} — so a covered
+      kind of file outside that union is unowned, and constructing one costs a single
+      line in the declaration.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The delivery-completes arm is an assertion about a whole build run: every
+      other specialist's brief must still be produced and still carry its standards. That
+      is observable only because the compile is a single pass over all agent templates,
+      which this document describes.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. This record adds no hooks_manifest id, no new
+    top-level key on commit_guardian.json, no agent entry, no skill entry and no paths.json
+    surface. Its fixture — a covered kind of file assigned to nobody — is a nested addition to
+    file_size.checked_extensions and file_size.line_limits, both inside the existing
+    `file_size` top-level key and therefore invisible to the mapping_keys container, which is
+    bound to dotted path "" only. Plain-list spec form; no fictional config_schema_fragment.
+  - >-
+    THE THREE WRONG ANSWERS, EXCLUDED IN THE ORDER AN IMPLEMENTER REACHES FOR THEM. (1) CRASH:
+    one unassigned kind of file must not stop every other specialist being told — a fail-closed
+    delivery turns AR-100's paperwork gap into a project-wide outage. (2) GUESS: no owner may be
+    inferred from a specialist's name, from a neighbouring kind of file, from a configured
+    default, from the specialist that owns the most kinds of file, or from any source other
+    than the ownership record — this is the worst of the three because it is invisible and
+    confident, and the specialist that receives the telling has no way to know it is not the
+    owner. (3) SWALLOW: the condition must not vanish before anything can see it. Implement all
+    three as one branch with a named outcome, not as three separate defences.
+  - >-
+    THE OUTCOME MUST NAME A THIRD STATE, DISTINCT FROM BOTH OF THE OTHER TWO. A kind of file
+    whose standard has no assigned owner must be distinguishable in the run's own report from
+    (a) a kind of file whose owner was told and (b) a specialist correctly told nothing because
+    it owns nothing covered. Three states, not a boolean. Producing them as a boolean plus a
+    log line is the shape that gets filtered out within a month.
+  - >-
+    FENCED — THE REPORT SURFACE IS INF-1200e's, THE DISTINGUISHABILITY IS THIS RECORD's. e-1
+    owns naming uninformed specialists and owns what the examination's report looks like. This
+    record requires only that the delivery does not absorb this condition into silence before
+    any report can see it. Propose no second census, specify no report format, and add no
+    config for one. See also INF-1200d-1-i, which owns what the run may CLAIM about an
+    empty-audience standard; this owns what the run may DO about an unowned kind of file. An
+    implementation can decline to guess and still report the standard as delivered — that is
+    d-1-i's catch and this record cannot see it.
+  - >-
+    THE FIXTURE MUST NOT BE MADE TO GO AWAY BY EXTENDING THE OWNERSHIP RECORD. Adding a
+    catch-all owner to config/agent_registry.json would satisfy the letter of the first arm by
+    creating exactly the fiction the arm exists to forbid. State this as a prohibition on the
+    implementation, not merely as a note on the test.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    registry and declaration reads; log at WARNING or higher or re-raise; no bare or blind
+    excepts. The unassigned-kind branch is a NORMAL outcome, not an error path — it must not be
+    implemented as a caught exception, because an exception handler is where a "helpful"
+    fallback owner gets added later.
+test_spec:
+  - name: test_inf_1200c_1_i_a_covered_kind_of_file_with_no_assigned_owner_is_told_to_nobody
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Declare a standard for a kind of file the ownership record assigns to no specialist —
+      one line in the declaration, since the union of all owned extensions is measurable and
+      finite — and build into a temporary target. No compiled brief in the target states that
+      kind of file's standards. Asserted across EVERY produced brief, not just the plausible
+      candidates, because "guess" most often lands on the specialist that owns the most kinds
+      of file rather than on a name match.
+  - name: test_inf_1200c_1_i_every_other_kind_of_files_standards_still_reach_their_owners_in_the_same_run
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      In that same run, every other covered kind of file's standards reach their owners and no
+      owner is told less than it would have been without the unassigned kind present. The run
+      completes. This is the anti-crash arm: a fail-closed delivery turns AR-100's paperwork gap
+      into a project-wide outage, and the comparison is against a build of the same target
+      WITHOUT the unassigned kind so "reduced what anyone else is told" is observable rather
+      than assumed.
+  - name: test_inf_1200c_1_i_the_unowned_condition_is_distinguishable_in_the_run_report_from_a_told_owner
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      The run's own outcome distinguishes three states by inspection: a kind of file whose
+      owner was told, a kind of file with no assigned owner, and a specialist correctly told
+      nothing because it owns nothing covered. Placing two of the three on the same value is the
+      failure; the assertion is that the three are pairwise different in the outcome, read from
+      the outcome alone.
+  - name: test_inf_1200c_1_i_the_largest_owner_fallback_injection_reds_the_no_invented_owner_arm_and_c_1_exclusion_while_delivery_completes_stays_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's FIRST NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE THREE-WAY EXPERIMENT.
+      MUTATION: when the ownership record assigns a covered kind of file to no specialist, fall
+      back to the specialist that owns the largest number of kinds of file. Under that
+      injection: the no-invented-owner arm must go RED, because a specialist is told the
+      standards for a kind of file it does not own; the delivery-completes arm must STAY GREEN,
+      because the fallback is exactly what keeps the run finishing; and INF-1200c-1's exclusion
+      arm must ALSO go RED, since a non-owner has been told. All three must be observed and all
+      must revert. THE GREEN OUTCOME IS THE POINT OF RUNNING IT: the fallback is attractive
+      precisely because it makes everything else look healthier, and only this arm can see the
+      cost.
+  - name: test_inf_1200c_1_i_the_report_nothing_injection_reds_only_the_distinguishability_arm
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's SECOND NAMED MUTATION, CARRIED VERBATIM. MUTATION: treat an unassigned covered
+      kind of file as fully handled and report nothing about it. Under it the first two arms stay
+      green and the distinguishability arm goes RED. All three outcomes observed, all reverted.
+      This is the cheapest implementation of all and it is what "nothing to do here" looks like
+      from the inside; the two surviving greens are what make it look correct.
+test_rationale: |
+  This record adds no behaviour of its own, so no descriptor may assert that a new function
+  exists. Each is a build run over an input the ownership record has nothing to say about,
+  observed three ways: what reached nobody, what still reached everybody else, and what the run
+  said about it. That is the exact seam where a join between two independently-maintained
+  records goes wrong and where the temptation to be helpful does the most damage.
+
+  The no-invented-owner arm is asserted across every produced brief rather than against the
+  plausible candidates. The default guess an implementer reaches for is not a name match but the
+  specialist that owns the most kinds of file, and a descriptor that checks only the
+  name-plausible agents would miss it — which is precisely what the BA's first mutation
+  installs.
+
+  The delivery-completes arm is a comparison against a build of the same target WITHOUT the
+  unassigned kind of file present. "The run finished" is not the claim; "nobody else was told
+  less" is, and only the paired run makes the second observable.
+
+  Both of the BA's mutations are carried verbatim and both are mixed-outcome. The first keeps
+  delivery-completes GREEN — that surviving green is the whole reason to run it, since the
+  fallback's appeal is that it makes every other count look healthier. The second keeps the first
+  two arms green and reddens only distinguishability. An injection run that reddens everything
+  has destroyed the property the BA built in and is a failure of the descriptor.
+delivers_to: null
+expects_from:
+  ac_id: INF-1200c-1
+  contract: >-
+    The audience derivation for a kind of file — the set of specialists the ownership record
+    assigns it, read fresh at compile time. This record constrains its behaviour on the single
+    input where that set is EMPTY: no owner inferred from any other source, the run completing
+    for every other pairing, and the condition surfaced as a named third outcome rather than
+    absorbed into the told/not-told boolean.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: no watched container is
+    touched — the fixture is a nested addition to file_size.checked_extensions /
+    file_size.line_limits inside the existing top-level `file_size` key, and mapping_keys on
+    commit_guardian.json is bound to dotted path "" only. No fictional fragment. COMPLEXITY S:
+    one branch on an already-specified derivation plus its named outcome. MEASURED FIXTURE: the
+    union of all owned extensions across the registry''s three extension-owning agents is
+    {.py,.js,.sql,.tsx,.jsx,.vue,.svelte,.html,.css,.scss}, so a covered-but-unowned kind of file
+    costs one declaration line. THE NO-INVENTED-OWNER ARM IS ASSERTED ACROSS EVERY PRODUCED
+    BRIEF, not the name-plausible candidates, because the default guess is the largest owner
+    rather than a name match — which is exactly what the BA''s first mutation installs. THE
+    DELIVERY-COMPLETES ARM IS A PAIRED RUN against a build without the unassigned kind, so
+    "reduced what anyone else is told" is observable rather than assumed. BOTH BA MUTATIONS
+    CARRIED VERBATIM WITH THEIR STAY-GREEN HALVES INTACT — delivery-completes green under the
+    largest-owner fallback, the first two arms green under report-nothing. The unassigned branch
+    is required to be a NORMAL outcome, not a caught exception, because an exception handler is
+    where a helpful fallback owner gets added later. declares_side_effect true: the first arm
+    asserts an absence in files the build writes to .claude/agents/. test_spec: five executing
+    descriptors, two carrying the BA''s mutations.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS AN L3 AND NOT AN L2. It adds no behaviour of its own. It constrains how
+  INF-1200c-1's already-specified derivation behaves on the one input where the
+  ownership record has nothing to say — which is the exact seam where a join between
+  two independently-maintained records goes wrong, and the exact seam where the
+  temptation to be helpful does the most damage.
+
+  THE THREE WRONG ANSWERS, IN THE ORDER AN IMPLEMENTER REACHES FOR THEM. (1) Crash, so
+  one unassigned kind of file stops every other specialist being told — a fail-closed
+  delivery that turns AR-100's paperwork gap into a project-wide outage. (2) Guess, by
+  matching the kind of file against a specialist's name or falling back to a default —
+  the worst of the three, because it is invisible and it is confident. (3) Swallow, so
+  the condition never surfaces anywhere — which is this project's documented signature
+  failure and the reason INF-1200e exists at all. The three arms exclude them in that
+  order.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: when the ownership record assigns a covered kind of file to no specialist,
+  fall back to the specialist that owns the largest number of kinds of file. Under that
+  injection:
+    - the no-invented-owner arm must go RED, because a specialist is told the standards
+      for a kind of file it does not own;
+    - the delivery-completes arm must STAY GREEN, because the fallback is exactly what
+      keeps the run finishing;
+    - INF-1200c-1's exclusion arm must ALSO go RED, since a non-owner has been told.
+  All three must be observed and all must revert. The green outcome is the point of
+  running it: the fallback is attractive precisely because it makes everything else
+  look healthier, and only this arm can see the cost.
+
+  A SECOND MUTATION FOR THE THIRD ARM. MUTATION: treat an unassigned covered kind of
+  file as fully handled and report nothing about it. Under it the first two arms stay
+  green and the distinguishability arm goes RED. This is the cheapest implementation of
+  all and it is what "nothing to do here" looks like from the inside.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. Both
+  mutations above are written to be turned directly into test descriptors.

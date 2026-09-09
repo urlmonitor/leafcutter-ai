@@ -1,0 +1,346 @@
+id: INF-1200d-2
+title: "A standard that is not a number travels in the terms it was declared in"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a standard for a kind of file that is not a threshold — a rule, a
+    prohibition or an exclusion, declared without any figure — and a specialist
+    the ownership record assigns that kind of file,
+  When that standard is declared in the one place standards are declared and the
+    specialist then begins work,
+  Then that standard is stated in its material in the terms it was declared in,
+  And it is not reduced to a figure, not accompanied by a figure nobody declared,
+    and not omitted for having none,
+  And given a threshold standard is declared for the same kind of file alongside
+    it,
+  When the specialist begins work,
+  Then both are stated, each in its own terms, and neither displaces the other,
+  And given the non-threshold standard's declared wording is then changed with
+    nothing else altered,
+  When the specialist begins work again,
+  Then the changed wording is what is stated, so a standard expressed as words is
+    carried with the same fidelity as one expressed as a number.
+depends_on:
+  - INF-1200d
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200d-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      d-1 requires a standard the delivery has never carried to arrive. This requires
+      the delivery not to have quietly narrowed what a standard may BE while satisfying
+      it. The two are independent: a fully general walk over the declaration that
+      extracts a numeric value from each entry passes every arm of d-1 and fails every
+      arm here.
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200f-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE FENCE IS EASY TO MISS. f-1 is written about a FIGURE, because
+      fidelity between two surfaces is only sharply observable when there is a value to
+      compare. A non-threshold standard has no figure and is therefore outside f-1's
+      arms by construction. That is a deliberate gap and it is closed here by the
+      changed-wording arm, not by widening f-1.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      EVERY STANDARD IT DECLARES TODAY IS A THRESHOLD, AND THAT IS THE HAZARD. A
+      mechanism built against these four examples will be numeric-only, will look
+      complete, and will have decided — without anyone recording the decision — what a
+      standard is allowed to be. It also already holds per-check material that is not a
+      threshold at all, such as excluded directories, which is a ready non-numeric
+      fixture.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. Nothing here proposes a new standard, a new rule, or a new prohibition,
+      and nothing here decides what the project should hold work to. It requires only
+      that the carrier not constrain the shape of what the project may declare.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", and the real-artifact
+      spot-check section. A fixture whose non-threshold standard was invented to fit the
+      carrier reproduces the carrier's own bias — the documented shape of this
+      project's worst phantom-done incident.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. THE READY NON-NUMERIC FIXTURE IS DESCRIBED HERE AND IT IS REAL. Measured in
+      this worktree, three of the four standard-bearing sections already carry
+      per-check material that is not a threshold: complexity and sql_complexity each
+      declare excluded_dirs ['alembic', 'legacy'], and folder_density declares an
+      eight-entry excluded_dirs plus exempt_extensions ['.md'] and exempt_filenames
+      ['__init__.py']. An exclusion is a standard expressed as a rule, it exists on
+      disk today, and nobody is told any of it — so the arrival arm has a fixture drawn
+      from reality rather than one invented to fit the carrier.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The carrier whose output shape this record constrains. Whether prose can be
+      placed in a brief as faithfully as a number is a property of the compile step,
+      and the changed-wording arm is a paired run across it.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED, AND THIS IS THE RECORD WHERE THE TRIGGER IS MOST
+    LIKELY TO FIRE. A non-threshold standard declared NESTED inside the existing per-check
+    top-level section whose subject it belongs to is unwatched: mapping_keys on
+    commit_guardian.json is bound to dotted path "" only, and file_size, complexity,
+    sql_complexity and folder_density are already among its thirty-six top-level keys. So
+    package_surface is FALSE for the nested design. THE TRIGGER, STATED SO IT IS RAISED RATHER
+    THAN DISCOVERED: a rule or prohibition that belongs to NO existing check has no section to
+    live in, and giving it one adds a watched top-level mapping key. If the implementation needs
+    that, check-package-surface-declaration refuses the commit; re-declare this record
+    package_surface: true with a real config_schema_fragment for the actual key first. No
+    fictional fragment is minted here — BP-100k-4 and BP-100k-4-i both minted fragments for keys
+    that were never created, and that precedent is deliberately not repeated.
+  - >-
+    THE DECLARATION SHAPE DECISION IS EXPLICIT AND RECORDED, WHICH IS WHAT THE L1 DEMANDS. Prefer
+    NESTING the non-threshold standard inside the existing per-check section that owns its
+    subject, rather than creating a parallel top-level standards section. The reason is not
+    tidiness: a parallel section that also restates the figures already declared per check is two
+    copies of one declaration that agree today, which is exactly the shape INF-1200f-1's second
+    mutation exists to forbid. If a design genuinely needs a new home for a rule that belongs to
+    no check, that is a legitimate finding and must be raised with the package-surface
+    consequence above, not adopted silently.
+  - >-
+    THE CARRIED CONTENT MUST NOT BE NARROWED TO A NUMBER, AND THAT IS THE WHOLE RECORD. A carrier
+    that extracts a numeric value from each declaration entry, and skips entries from which no
+    number can be read, is fully general over standards, passes every arm of INF-1200d-1, and has
+    silently decided what a standard is allowed to be. State the requirement as a shape property:
+    what travels is the declared content in the terms it was declared in — a figure where a figure
+    was declared, wording where wording was declared — and a declaration from which no figure can
+    be read is carried, never skipped.
+  - >-
+    NO INVENTED FIGURE AND NO FIXED SENTENCE. The non-threshold standard must not be reduced to a
+    figure, must not be accompanied by a figure nobody declared (including a default), and must
+    not be omitted for having none. Equally it must not be replaced by a fixed acknowledgement
+    such as "this kind of file is subject to additional rules" — that is arrival without content
+    and is the non-numeric equivalent of the pointer INF-1200a-1's mutation forbids. The
+    changed-wording arm is the only observation that separates carrying the standard from
+    acknowledging one exists.
+  - >-
+    ONE KIND OF FILE MAY CARRY BOTH SHAPES AT ONCE, SO THE CARRIER MAY NOT MODEL "THE STANDARD FOR
+    A KIND OF FILE" AS A SINGLE VALUE. A carrier holding one value per kind of file passes both
+    single-standard arms and loses one of the two when a rule and a threshold govern the same kind.
+    This is a cardinality requirement on the same join INF-1200c-2 constrains from the other axis,
+    and it must be satisfied by the same join rather than by a second code path.
+  - >-
+    THE FIXTURE MUST BE DRAWN FROM REALITY, NOT INVENTED TO FIT THE CARRIER. Every standard on
+    disk expressed as a THRESHOLD is a threshold, but non-threshold material already exists in
+    the same document: excluded_dirs on complexity and sql_complexity, and excluded_dirs plus
+    exempt_extensions and exempt_filenames on folder_density. Use one of those for the arrival arm
+    rather than authoring a tidy prose standard, because a fixture invented to fit the carrier
+    reproduces the carrier's own bias — CLAUDE.md's real-artifact section records that as the
+    shape of this project's worst phantom-done incident.
+  - >-
+    FENCED. Nothing here proposes a new standard, a new rule or a new prohibition, and nothing here
+    decides what the project should hold work to. It requires only that the carrier not constrain
+    the shape of what the project may declare. Also fenced from INF-1200f-1, which is written about
+    a FIGURE by construction: a non-threshold standard has no figure and is outside f-1's arms
+    deliberately, and that gap is closed by the changed-wording arm here rather than by widening
+    f-1.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    declaration read and every brief write; log at WARNING or higher or re-raise; no bare or blind
+    excepts. A declaration entry whose shape the carrier does not recognise must fail loudly rather
+    than being skipped — a silently skipped entry is precisely the numeric-only narrowing this
+    record exists to catch, arriving as a caught exception instead of as a design decision.
+test_spec:
+  - name: test_inf_1200d_2_a_standard_declared_without_a_figure_is_stated_in_the_terms_it_was_declared_in
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      Using non-threshold material that already exists in the declaration — an exclusion rule, not
+      a prose standard authored for the test — build into a temporary target and read the owner's
+      compiled brief. The standard is stated in the terms it was declared in: not reduced to a
+      figure, not accompanied by a figure nobody declared, and not omitted for having none. Also
+      assert the negative that defeats a broadcast: a specialist that does not own that kind of
+      file has no statement of that rule in its brief.
+  - name: test_inf_1200d_2_a_rule_and_a_threshold_on_the_same_kind_of_file_are_both_stated_each_in_its_own_terms
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Declare a threshold standard for the same kind of file the non-threshold one governs, and
+      build. Both are stated in the owner's brief, each in its own terms, and neither displaces the
+      other. Two standards of different shapes on one kind of file is the smallest configuration in
+      which a carrier that models "the standard for a kind of file" as a single value loses one of
+      them, and it passes both single-standard arms.
+  - name: test_inf_1200d_2_changing_the_declared_wording_moves_what_the_brief_states
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Change the non-threshold standard's declared wording with nothing else altered and rebuild.
+      What the brief states is the CHANGED wording — a paired run whose pass condition is that the
+      statement MOVED, not that a plausible statement appeared. This is the only arm that separates
+      carrying the standard from acknowledging that one exists: a carrier emitting a fixed sentence
+      whenever a non-threshold entry is present passes both arrival arms and fails here.
+  - name: test_inf_1200d_2_the_numeric_only_injection_reds_all_three_arms_and_leaves_every_arm_of_d_1_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's FIRST NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE FOUR-WAY EXPERIMENT.
+      MUTATION: derive each carried standard by reading a numeric value out of its declaration,
+      skipping any declaration from which no number can be read. Under that injection: the arrival
+      arm must go RED, because the non-threshold standard is dropped; the two-standards arm must go
+      RED, because only the threshold survives; the changed-wording arm must go RED; and every arm
+      of INF-1200d-1 must STAY GREEN, because a newly declared THRESHOLD standard still arrives
+      with no delivery step of its own. All four outcomes must be observed together and all must
+      revert. THE GREEN OUTCOME IS THE POINT: this mutation is a fully general, correctly derived,
+      genuinely future-proof carrier that has silently decided a standard is a number, and only
+      this record can fail on it. An injection run that also reddens d-1 is a FAILURE of this
+      descriptor.
+  - name: test_inf_1200d_2_the_fixed_sentence_injection_reds_only_the_changed_wording_arm
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's SECOND NAMED MUTATION, CARRIED VERBATIM. MUTATION: state a fixed sentence for any
+      non-threshold standard rather than its declared wording. Under it the first two arms stay
+      green and the changed-wording arm goes RED. All three outcomes observed, all reverted. It is
+      the cheapest way to pass an arrival assertion and it tells the specialist nothing it did not
+      already know; the two surviving greens are what make it look like a working feature.
+test_rationale: |
+  Every standard on disk today is a threshold, so a decomposition shaped around thresholds
+  produces a mechanism that cannot carry a rule, a prohibition or an exclusion — and it passes
+  every other record in this tree, because every other record's fixtures are thresholds too. The
+  narrowing does not appear as a bug; it appears as a working feature with a shape nobody chose.
+  So the descriptors here are built around a non-threshold standard and around the one arm that
+  can tell carriage from acknowledgement.
+
+  The arrival descriptor is required to use non-threshold material that ALREADY EXISTS in the
+  declaration — the excluded_dirs, exempt_extensions and exempt_filenames entries on complexity,
+  sql_complexity and folder_density — rather than a tidy prose standard authored for the test. A
+  fixture invented to fit the carrier reproduces the carrier's own bias, which CLAUDE.md's
+  real-artifact section records as the shape of this project's worst phantom-done incident, and the
+  bias here is precisely "a standard is a value with a name".
+
+  The changed-wording arm is a paired run whose pass condition is that the statement MOVED. Without
+  it, a carrier that emits a fixed sentence whenever a non-threshold entry is present passes both
+  arrival arms while telling the specialist nothing it did not already know — arrival without
+  content, the non-numeric equivalent of the pointer INF-1200a-1's mutation forbids.
+
+  Both of the BA's mutations are carried verbatim. The first is mixed-outcome and its stay-green
+  half — every arm of d-1 — is asserted explicitly, because that green is what shows the injected
+  carrier is fully general, correctly derived and still wrong. The second keeps the two arrival
+  arms green and reddens only the changed-wording arm. An injection run that reddens everything has
+  destroyed the property the BA built in.
+delivers_to: null
+expects_from:
+  ac_id: INF-1200d-1
+  contract: >-
+    The declaration walk — the per-section traversal that yields, for each declared standard, the
+    kinds of file it governs and the content to be carried. This record constrains what that
+    content may BE: the declared content in the terms it was declared in, a figure where a figure
+    was declared and wording where wording was, with a figureless declaration carried rather than
+    skipped and never accompanied by a figure nobody declared.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE FOR THE NESTED DESIGN, AND THIS IS THE RECORD
+    WHERE THE TRIGGER IS MOST LIKELY TO FIRE — declaring a non-threshold standard nested inside the
+    existing per-check top-level section that owns its subject is unwatched (mapping_keys on
+    commit_guardian.json is bound to dotted path "" only), but a rule belonging to NO existing check
+    has no section to live in and giving it one adds a watched top-level key. That is recorded as a
+    raise-it-first trigger with the re-declaration requirement stated, and NO fictional
+    config_schema_fragment is minted — the BP-100k-4 / BP-100k-4-i precedent of minting fragments
+    for keys that were never created is deliberately not repeated. THE DECLARATION-SHAPE DECISION IS
+    RECORDED EXPLICITLY as the L1 demands: prefer nesting, because a parallel standards section that
+    restates per-check figures is two copies of one declaration that agree today, which is exactly
+    what INF-1200f-1''s second mutation forbids. COMPLEXITY M. THE REAL NON-NUMERIC FIXTURE IS
+    MEASURED AND ITS USE IS MANDATORY: complexity and sql_complexity each declare excluded_dirs
+    [alembic, legacy], and folder_density declares an eight-entry excluded_dirs plus
+    exempt_extensions [.md] and exempt_filenames [__init__.py] — non-threshold material on disk
+    today that nobody is told, so the arrival arm need not invent a prose standard and reproduce the
+    carrier''s own bias. BOTH BA MUTATIONS CARRIED VERBATIM WITH THEIR STAY-GREEN HALVES ASSERTED —
+    every arm of d-1 green under numeric-only, the two arrival arms green under the fixed sentence.
+    declares_side_effect true. test_spec: five executing descriptors.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE HAZARD THE L1 SAID WOULD BE MISSED, WRITTEN AS THE RECORD THAT CATCHES IT. Every
+  standard on disk today is a threshold. A decomposition shaped around thresholds will
+  produce a mechanism that cannot carry a standard expressed as a rule, a prohibition or
+  an exclusion — and it will pass every other record in this tree, because every other
+  record's fixtures will be thresholds too. The narrowing will not appear as a bug. It
+  will appear as a working feature with a shape nobody chose.
+
+  THE L1 IS EXPLICIT ABOUT THE ALTERNATIVE AND SO IS THIS RECORD. If enrichment decides
+  to constrain the shape of what can travel — for good reasons, such as an existing
+  declaration format that has nowhere to put prose — that must be an explicit, recorded
+  decision with its own record, not an artefact of the first four examples. Discovering
+  at implementation time that this record cannot be satisfied without reshaping the
+  declaration is a legitimate finding and should be raised as one. Silently satisfying
+  the threshold arms and leaving the rest is not.
+
+  WHY THE THIRD ARM PAIRS A RULE WITH A THRESHOLD ON THE SAME KIND OF FILE. Two
+  standards of different shapes governing one kind of file is where a carrier that
+  models "the standard for a kind of file" as a single value fails, and it is the
+  smallest configuration in which that failure is visible. A carrier that holds one
+  value per kind of file passes both single-standard arms and loses one of the two here.
+
+  WHY THE FOURTH ARM EXISTS. A carrier can pass the arrival arms by emitting a fixed
+  sentence whenever a non-threshold entry is present — "this kind of file is subject to
+  additional rules" — which is arrival without content, and is the non-numeric
+  equivalent of a pointer. Changing the declared wording and requiring the statement to
+  MOVE is the only arm that separates carrying the standard from acknowledging that one
+  exists.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: derive each carried standard by reading a numeric value out of its
+  declaration, skipping any declaration from which no number can be read. Under that
+  injection:
+    - the arrival arm must go RED, because the non-threshold standard is dropped;
+    - the two-standards arm must go RED, because only the threshold survives;
+    - the changed-wording arm must go RED;
+    - every arm of INF-1200d-1 must STAY GREEN, because a newly declared THRESHOLD
+      standard still arrives with no delivery step of its own.
+  All four outcomes must be observed together and all must revert. The green outcome is
+  the point: this mutation is a fully general, correctly derived, genuinely
+  future-proof carrier that has silently decided a standard is a number.
+
+  A SECOND MUTATION FOR THE FOURTH ARM. MUTATION: state a fixed sentence for any
+  non-threshold standard rather than its declared wording. Under it the first two arms
+  stay green and the changed-wording arm goes RED. It is the cheapest way to pass an
+  arrival assertion and it tells the specialist nothing it did not already know.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. Both
+  mutations above are written to be turned directly into test descriptors.
