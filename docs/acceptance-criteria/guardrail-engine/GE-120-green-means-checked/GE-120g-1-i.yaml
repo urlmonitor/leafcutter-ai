@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -64,8 +64,10 @@ origin_agent: business-analyst
 created: 2026-09-07
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_ge_120g_1_i.py"
+implemented_by:
+  - "templates/scripts/commit_guardian/run_hook.py"
 change_target: code
 risk_surface: contract_boundary
 notes: |
