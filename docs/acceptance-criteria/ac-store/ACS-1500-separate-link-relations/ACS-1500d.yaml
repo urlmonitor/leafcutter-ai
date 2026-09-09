@@ -1,0 +1,82 @@
+id: ACS-1500d
+components:
+  - ac_store
+title: "The change lands in stages, and half-done is a safe place to stand"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  At no point during the change does the store answer differently.
+
+  The move happens in steps, and at every step — including a store where some
+  records have moved and some have not — the same questions get the same answers
+  as before it started. A record that never moves keeps working indefinitely, and
+  the whole change can be stood down in one step if it goes wrong.
+depends_on:
+  - ACS-1500
+  - ACS-1500a
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: related
+    status: exists
+    relevance: "THE INVARIANT THIS L1 PROTECTS AT EVERY INTERMEDIATE STATE, not just at the end. `_has_resolvable_child` is documented to handle legacy records that hold test paths where child ids would go — it is ALREADY a back-compatibility shim for the very ambiguity this tree removes. That existing behaviour is what must keep working for a record that never migrates, which means the shim cannot simply be deleted when the migration 'completes'."
+  - path: docs/roadmap.json
+    relationship: related
+    status: exists
+    relevance: "THE REPOSITORY'S WORKED PRECEDENT FOR STAGING A WHOLE-STORE SCHEMA CHANGE — phase_acbuild_1_foundation. Read its exit criteria before designing the transition: additive-optional schema fields first, universal dual-read before any write-side change, all new gates advisory behind a two-stage flag, and a documented one-commit kill-switch. That is the shape this L1 should adopt rather than invent, and it is already written down in this repo for this exact class of change."
+  - path: docs/acceptance-criteria/ac-store/ACS-800-stable-ac-identity/ACS-800.yaml
+    relationship: related
+    status: exists
+    relevance: "ACS-800d OWNS THE EQUIVALENT POSTURE FOR THE ID MIGRATION — back-compat from position-encoded ids with zero dangling references, flagged as touching the whole store at once and the highest-risk item in that tree. Check whether its transition machinery can be shared before building a second one; two independent staged migrations over the same 3,925 records, each with its own flag and its own kill-switch, is a worse state than either alone."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+notes: |
+  THIS IS THE L1 THAT MAKES THE TREE SHIPPABLE, AND THE ONE MOST LIKELY TO BE
+  CUT AS OVERHEAD. Cutting it turns the tree into a flag day, and a flag day is
+  not available here. Several readers are pre-commit hooks and REQUIRED CI
+  gates; a single commit that changes all of them at once is a commit that
+  cannot be landed safely and, more importantly, cannot be reverted safely
+  either — a revert mid-migration leaves converted records being read by
+  unconverted readers.
+
+  THE MIXED STATE IS THE NORMAL STATE, NOT THE EXCEPTION. Given the size of the
+  store and the number of readers, there will be days or weeks where some
+  records carry the new form and some do not. Every reader must give the same
+  answer for both shapes throughout. The BA should write at least one L2 whose
+  Given is explicitly a HALF-MIGRATED store — that is the state the tree will
+  actually live in, and it is the one nobody tests.
+
+  BACK-COMPATIBILITY IS PERMANENT, NOT TRANSITIONAL. Some records will never
+  move: records under parked trees, superseded records nobody will reopen, and
+  whatever ACS-1500c abstains on. 'The old form stops being read once migration
+  completes' is a plan with no completion date. Specify the posture for a record
+  that is never converted as a permanent supported state.
+
+  THE KILL-SWITCH IS PART OF THE DELIVERABLE. One commit, documented, tested by
+  actually throwing it — not a config key nobody has ever set. phase_acbuild_1's
+  exit criteria already require exactly this for its own staged rollout; borrow
+  the shape.
+
+  VERIFY IN THE DEPLOYED LAYOUT, NOT THE SOURCE TREE. Every stage boundary here
+  is a moment where a hook could start importing something the build does not
+  deploy, and the resulting ModuleNotFoundError fires at hook runtime with the
+  unit tests all green. Once these gates are required that blocks every merge.
+  CLAUDE.md documents the precedent; this L1 is where it will bite.

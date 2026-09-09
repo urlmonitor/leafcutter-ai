@@ -1,0 +1,91 @@
+id: ACS-1500b
+components:
+  - ac_store
+title: "Every tool asks for the relation it actually means"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Each tool asks the question it means to ask, and gets that question answered.
+
+  Every tool that consults these links is changed to ask for the one relation it
+  cares about, and each still reaches the same conclusion it reaches today about
+  every record whose meaning has not changed.
+depends_on:
+  - ACS-1500
+  - ACS-1500a
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: related
+    status: exists
+    relevance: "THE READER THAT MATTERS MOST AND THE REGRESSION ORACLE FOR THIS WHOLE L1. `_has_resolvable_child` infers the relation from whether entries resolve; this L1 makes the inference unnecessary but its VERDICT must not move for any record. Compute the real function's composite-versus-leaf answer for every record before and after, and assert equality — per ACS-1300a-3, a re-implementation of its rule inside a test will pass while production uses a different rule."
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: related
+    status: exists
+    relevance: "THE SECOND VERDICT TO PIN, AND A TRAP IN HOW IT IS INVOKED. It requires a parent to name each of its children. It reads the git index or HOOK_TEST_FILES and NEVER argv, so passing a path on the command line does not make it check that path — any verification must first confirm the hook actually saw the file. An exit 0 from a hook handed nothing is not a pass. It also has three separate silences (unstaged parent, parent-not-in-child's-depends_on, parent-absent-fails-open) documented in ACS-1400's notes."
+  - path: scripts/ac_store/ac_coverage_resolver.py
+    relationship: related
+    status: exists
+    relevance: "A READER THE ac-schema.md TABLE OMITS. `_CHECKED_FIELDS` includes covered_by and the record check fails the field on EMPTINESS alone — it reads the field as 'is there any evidence at all', which is neither of the two relations. Under a split it must be told which emptiness it cares about, or it starts reporting every test-covered leaf as missing its parts."
+  - path: templates/scripts/commit_guardian/_ac_schema_validators.py
+    relationship: related
+    status: exists
+    relevance: "THE SUBTLEST UNLISTED READER — leafness is decided by `bool(assigned_agent) and not covered_by` around line 481, i.e. by the field being EMPTY. Splitting the field changes what emptiness means here silently, with no test failing. This record is named specifically so the enumeration starts from a reader that no table anywhere lists, which is the evidence that the enumeration must be derived from the repo rather than copied."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "ITS TABLE OF FIVE TOOLS IS THE STARTING POINT, NOT THE ANSWER. Named there: check_ac_parent_covered_by, scan_ac_orphans, done_proof `_resolve_all_child_ids`, approve_acs, check_ac_limits. Measured 2026-09-08, roughly forty files under scripts/ and templates/ mention the field. A table is a claim about readers; re-derive the list and state how many you found against how many you examined."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+documentation_triggers:
+  - component-diagram
+notes: |
+  THE FIRST L2 MUST BE THE ENUMERATION, AND IT MUST BE DERIVED FROM THE REPO.
+  Every subsequent behaviour in this L1 is scoped by a list, and a list copied
+  from ac-schema.md's table of five is wrong by roughly an order of magnitude.
+  One unconverted reader is a permanent silent wrong answer, and the two most
+  dangerous ones found so far (ac_coverage_resolver.py, _ac_schema_validators.py)
+  appear in no table. State the population examined and the population found —
+  ACS-1100, inherited.
+
+  THE DANGEROUS READERS ARE THE ONES THAT CONSULT EMPTINESS. A reader that
+  iterates the entries is obvious and will be found by grep. A reader that
+  branches on `not covered_by` is treating the field as a single yes/no about
+  evidence-in-general, and after the split there are two independent emptinesses
+  it could have meant. Grep for the field name finds both; only reading each one
+  tells them apart.
+
+  BIND THE OUTCOME TO REAL VERDICTS, NOT TO FIELD PRESENCE. The falsifiable
+  claim is that done_proof reaches the SAME composite-versus-leaf verdict for
+  every record before and after, and that the back-link check reaches the same
+  verdict too. Computed against the real functions on the real store. This is
+  exactly how ACS-1300a-3 binds its equivalent claim and the shape should be
+  copied rather than reinvented.
+
+  THE DEPLOY-MANIFEST TRAP IS LIVE FOR THIS L1 SPECIFICALLY. Several readers here
+  are pre-commit hooks that run from the DEPLOYED layout, not the source tree. A
+  hook importing a module that is not in the build deploy list raises
+  ModuleNotFoundError at hook runtime while every unit test passes — and once
+  those gates are required, that blocks every merge. Verify by running the
+  deployed hook after build.py, never by unit tests alone. CLAUDE.md documents
+  the precedent (done_proof.py itself, omitted from build_ac_store's deploy_map).
+
+  COLLISION WATCH: ACS-800e already commits to updating every tool that derives
+  structure from the id string and names check_ac_parent_covered_by.py among
+  them. Same file, same era, different reason. Sequence or combine deliberately.

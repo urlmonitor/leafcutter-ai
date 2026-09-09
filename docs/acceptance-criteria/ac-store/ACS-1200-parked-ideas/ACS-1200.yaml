@@ -10,6 +10,7 @@ req_status: draft
 work_status: todo
 readiness: approved
 priority: high
+roadmap_phase: phase_store_record_health
 criteria: |
   Park an idea in seconds — with nothing switched off to allow it.
 
@@ -97,10 +98,24 @@ notes: |
   criterion here, it belongs there instead — but note that KM-200c is itself
   parked, so this tree must not take a dependency on it.
 
-  ROADMAP: no roadmap_phase claimed, on purpose. Phase 1's exit criteria are
-  about clean installs and build idempotency; this is store-convention health
-  and does not advance them. The user should either claim a phase for it at the
-  final gate or accept it as unphased backlog. No roadmap or vision file was
-  modified while authoring this tree.
+  ROADMAP — RESOLVED 2026-09-08 BY BrainCandy. This tree now claims
+  phase_store_record_health, a phase added for exactly this subject. The
+  paragraph below is kept verbatim because it is the reasoning that earned the
+  phase: it identified the right problem (phase_1 does not fit) and offered
+  the wrong two options, and it took a fourth tree arriving in the same limbo
+  before "neither" became visible as an answer.
+
+  ORIGINAL, AS AUTHORED: no roadmap_phase claimed, on purpose. Phase 1's exit
+  criteria are about clean installs and build idempotency; this is
+  store-convention health and does not advance them. The user should either
+  claim a phase for it at the final gate or accept it as unphased backlog. No
+  roadmap or vision file was modified while authoring this tree.
+
+  SEQUENCING THE NEW PHASE MAKES EXPLICIT, and it points at this tree: ACS-1200a
+  must precede ACS-1400a. Strengthening the back-link rule before the parked
+  exemption exists makes the wrong verdict fire harder against parked trees —
+  and measurement on 2026-09-08 showed all six KM-200 children are blocked by
+  that guard TODAY, so this is a live wrong answer being made more reliable,
+  not a hypothetical one.
 
   Authored at the PO stage of /plan-feature; L0/L1 only. BA decomposes to L2/L3.

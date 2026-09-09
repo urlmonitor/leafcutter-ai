@@ -1,0 +1,74 @@
+id: ACS-1500a
+components:
+  - ac_store
+title: "Each of the two answers has a place of its own to be written down"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  What a requirement is made of, and what proves it, are written down separately.
+
+  Whoever records a link states which of the two it is, so the relation is
+  something the store was told rather than something a tool has to work out
+  afterwards from what the entry happens to look like.
+depends_on:
+  - ACS-1500
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "THE NORMATIVE HOME OF THE FIELD DEFINITION. The new slot is defined here and in config/ac_store_schema.json, and additionalProperties is FALSE and enforced by jsonschema in both scripts/ac_store/validate_ac_schema.py and the commit hook — so the slot must exist in the schema BEFORE any record can carry it, or every such record is rejected at commit. That ordering makes this L1 a hard prerequisite for all five siblings."
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "WHY THE RELATION MUST BE DECLARED RATHER THAN INFERRED, in the words of the record that had to live without it. Its it_requirements forbid inventing a discriminator precisely because none of the available proxies is sound: 'there is no reliable discriminator between a child-id list and a test-path list, and inventing one writes false evidence.' This L1 does not invent a discriminator — it removes the need for one by making the author state it."
+  - path: docs/acceptance-criteria/ac-store/ACS-800-stable-ac-identity/ACS-800.yaml
+    relationship: related
+    status: exists
+    relevance: "SEQUENCING, AND A LIKELY COLLISION IN THE SAME SCHEMA FILE. ACS-800a relaxes the id regex in config/ac_store_schema.json and ACS-800b adds hierarchy-in-metadata fields to the same file. Two schema changes to one file, both whole-store, must be sequenced deliberately. Check whether ACS-800b's parent pointer already carries part of what this L1 needs before adding a second way to express the same relation."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - schema
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  THE CHEAP L1, AND THE ONE MOST LIKELY TO BE MISTAKEN FOR THE WHOLE JOB. Adding
+  a place to put the second answer is a schema edit. Everything expensive in this
+  tree is in b, c and d. Do not let the L2 budget concentrate here.
+
+  WHAT SHAPE THE SEPARATION TAKES IS AN L2 DECISION, NOT AN L1 ONE. A second
+  field, a structured entry, or a discriminated list are all live options and
+  this record deliberately does not choose. The BA should choose against the
+  readers rather than against elegance — and specifically against the two
+  readers that consult the field's EMPTINESS rather than its contents
+  (ac_coverage_resolver.py `_CHECKED_FIELDS`, and _ac_schema_validators.py's
+  `bool(assigned_agent) and not covered_by` leafness proxy), because under any
+  shape that leaves one of the two relations able to be empty, 'no parts' and
+  'no proof' become distinguishable states for the first time and those readers
+  must be told which they meant.
+
+  ADDITIVE FIRST. The new slot must be OPTIONAL when it lands, or the whole
+  store fails validation on the commit that introduces it. That is not a
+  nicety — additionalProperties:false is enforced today by jsonschema in both
+  the standalone validator and the commit hook, so the schema change and the
+  first record carrying the field cannot be reordered.
+
+  ONE MEASUREMENT THIS L1 MUST BE DESIGNED AGAINST (2026-09-08, whole store,
+  3,925 records): 76 records already hold BOTH relations in one list. Any shape
+  that assumes a record expresses one relation at a time is wrong on first
+  contact with the store. See ACS-1500c.
