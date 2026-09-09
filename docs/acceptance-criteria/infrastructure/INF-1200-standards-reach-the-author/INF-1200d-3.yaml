@@ -1,0 +1,353 @@
+id: INF-1200d-3
+title: "Whether a standard's check currently runs does not decide whether its audience hears about it"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two standards declared for two kinds of file that each have an assigned
+    owner, where the project currently reaches a check for the first standard and
+    does not reach one for the second,
+  When each owner begins work,
+  Then each has the standard governing its own kind of file stated in its
+    material, and the two standards are carried alike,
+  And given the check for the second standard subsequently begins to be reached,
+    with its declaration unchanged,
+  When its owner begins work again,
+  Then what is stated in its material about that standard is unchanged,
+  And given the check for the first standard is subsequently no longer reached,
+    with its declaration unchanged,
+  When its owner begins work again,
+  Then what is stated in its material about that standard is likewise unchanged,
+  And at no point does the set of standards carried outward depend on which
+    checks the project reaches.
+depends_on:
+  - INF-1200d
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE FENCE THIS RECORD SITS DIRECTLY ON, AND IT CUTS BOTH WAYS. BP-1600a-2 owns
+      whether a check is REGISTERED and reached — the census of standards on disk wired
+      to nothing — and it is approved and high-priority. Nothing here may be discharged
+      by registering anything: no clause mentions a manifest, an entry, or a count of
+      scripts, and none may be added. Equally, nothing here may be made to WAIT on that
+      work: the whole content of this record is that the telling is independent of it.
+      An implementation that satisfies this record by causing the unreached checks to
+      run has answered someone else's approved record and left this one untested.
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME INDEPENDENCE FROM THE TIMING AXIS — CONSISTENT, NOT DUPLICATE. a-2 fixes
+      that what a specialist is told does not depend on anything HAVING HAPPENED,
+      including a breach, and takes an unreached check as one such given. This fixes
+      that the SET OF STANDARDS CARRIED does not depend on which checks are reachable at
+      all, and adds the two transitions — a check starting to run, a check ceasing to.
+      Neither subsumes the other and both must hold.
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200f-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE APPARENT TENSION, RESOLVED HERE SO IT IS NOT RE-ARGUED AT ENRICHMENT. f-1
+      requires the figure in the brief and the figure applied to the work to be one
+      figure. It does NOT require that a figure be applied at all. Telling a specialist
+      a standard whose check is unreached is not two figures for one standard; it is one
+      figure and no measurement. The two records are consistent and neither may be
+      weakened to accommodate the other.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      HOLDS THE FIXTURE FOR BOTH SIDES OF THE FIRST ARM AS IT STANDS TODAY: one standard
+      whose check is reached on every commit, and three fully configured standards with
+      thresholds of their own whose checks are reached by nothing. No synthetic
+      configuration is needed to exercise this record.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". Both transition arms are
+      before-and-after pairs across a change to reachability, observed from a real
+      dispatch — not an inspection of whether a carrier function consults a manifest.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. WHERE REACHABILITY IS DECIDED, AND THEREFORE THE EXACT INPUT THE CARRIER
+      MAY NOT CONSULT. hooks_manifest.hooks is the list that decides which checks the
+      project reaches; build_precommit_config emits the hook chain from it, and an
+      entry can also be present-but-disabled via `enabled: false`. Both of those are
+      reachability facts and both are off-limits to the standards carrier. The
+      transition arms are staged by editing exactly this container.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The carrier's home. The prohibition is stated over its inputs: the compile
+      that produces a brief must read the declaration and the ownership record, and
+      must not read the hook manifest, the emitted hook chain, or anything derived from
+      either.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED, AND THE MEASUREMENT MATTERS TWICE HERE. This
+    record adds no hooks_manifest.hooks id and no new top-level key on commit_guardian.json. Note
+    the shape of its own fixtures: the transition arms EDIT hooks_manifest.hooks — adding an id to
+    stage "the check begins to be reached", removing or disabling one to stage "no longer reached"
+    — but those edits are made in a controlled copy for the duration of a paired run and reverted,
+    never landed in the tracked declaration. A LANDED hooks_manifest addition WOULD be a watched
+    list_ids entry; if any implementation here ends up adding one permanently, it has also
+    answered BP-1600a-2's approved record and must be re-declared package_surface: true. It should
+    not; registering a check is fenced out of this tree in both directions.
+  - >-
+    THE PROHIBITION, STATED OVER THE CARRIER'S INPUTS. The set of standards carried outward must
+    be computed from the declaration and the ownership record alone. hooks_manifest.hooks, the
+    emitted .pre-commit-config.yaml, any per-entry `enabled` flag, any exemption registry, and any
+    census of which scripts are wired must not be inputs to it, directly or transitively. This is
+    the single most likely coupling a competent implementer introduces in good faith: faced with a
+    declaration containing standards, the obvious question is "which of these are real" and the
+    obvious answer is "the ones with a check wired up". That filter is one condition long, it is
+    defensible in review, and it silently reduces the audience of the whole capability to the
+    standards that already had a gate — which is one cell of the grid, which is where the project
+    started.
+  - >-
+    IT IS ALSO THE COUPLING THAT REBUILDS THE FAILURE THE TREE EXISTS TO FIX. If you are only told
+    about standards whose gate runs, then the set of things you know is the set of things that can
+    stop you, and "you find out when you are stopped" has been rebuilt one layer up with better
+    manners. State this as the reason for the prohibition in the implementation notes so a later
+    reader does not remove the constraint as redundant.
+  - >-
+    THE TRANSITION ARMS MUST BE CONTROLLED CHANGES, NOT OBSERVATIONS OF TODAY'S ACCIDENT — AND THE
+    ACCIDENT IS MEASURED AND TEMPORARY. Measured in this worktree: hooks_manifest.hooks holds
+    sixty-two ids, among which check-file-size appears and check_complexity, check_sql_complexity
+    and check_folder_density do not — so one of the four standards with configured thresholds has a
+    reached check and three have none. That asymmetry gives the first arm teeth today, and
+    BP-1600a-2 is approved and will remove it. Build both transition arms as controlled edits to
+    reachability made by the test, so the record stays able to fail after that lands.
+  - >-
+    WHAT IS STATED ABOUT A STANDARD MUST BE UNCHANGED ACROSS BOTH TRANSITIONS, ASSERTED AS CONTENT
+    EQUALITY. Not "still present" — equal. A carrier that states the standard either way but adds
+    "(enforced at commit time)" when the check is reached has made the telling depend on
+    reachability in exactly the way this record forbids, and it passes a presence check.
+  - >-
+    FENCED IN BOTH DIRECTIONS, AND THE SECOND DIRECTION IS THE ONE THAT GETS FORGOTTEN. Nothing
+    here may be discharged by registering anything: BP-1600a-2 owns whether a check is reached and
+    it is approved and high-priority. Equally, nothing here may be made to WAIT on that work — the
+    whole content of this record is that the telling is independent of it. An implementation that
+    satisfies this record by causing the unreached checks to run has answered someone else's
+    approved record and left this one untested.
+  - >-
+    CONSISTENT WITH INF-1200f-1 AND WITH INF-1200a-2, AND NEITHER MAY BE WEAKENED TO ACCOMMODATE
+    IT. f-1 requires the figure in the brief and the figure applied to be one figure; it does not
+    require that a figure be applied at all, so telling a specialist a standard whose check is
+    unreached is one figure and no measurement, not two figures. a-2 fixes that what a specialist
+    is told does not depend on anything HAVING HAPPENED and takes an unreached check as one such
+    given; this fixes that the SET of standards carried does not depend on which checks are
+    reachable, and adds the two transitions. One purity property in the carrier must satisfy both
+    records rather than two conditions written in two places.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    declaration and registry reads; log at WARNING or higher or re-raise; no bare or blind excepts.
+    A manifest that cannot be read is irrelevant here by construction — if reading it can affect
+    this code path at all, the prohibition above has already been violated.
+test_spec:
+  - name: test_inf_1200d_3_a_standard_with_a_reached_check_and_one_without_are_carried_alike
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      With two standards declared for two kinds of file that each have an assigned owner, where the
+      project reaches a check for the first and reaches none for the second, build into a temporary
+      target and read both owners' compiled briefs. Each has the standard governing its own kind of
+      file stated, and the two are carried alike — same shape of statement, no qualifier attached to
+      one and not the other. The unreached state is set up by the test rather than read off today's
+      configuration.
+  - name: test_inf_1200d_3_a_check_beginning_to_be_reached_does_not_change_what_its_owner_is_told
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Capture the owner's brief with the second standard's check unreached; make that check reached
+      by a controlled edit to hooks_manifest.hooks in the copied package, leaving its declaration
+      unchanged; rebuild and capture again. What the brief states about that standard is UNCHANGED
+      — asserted as content equality, not as still-present, so a carrier that appends "(enforced at
+      commit time)" fails here rather than passing.
+  - name: test_inf_1200d_3_a_check_ceasing_to_be_reached_does_not_change_what_its_owner_is_told
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      The symmetric transition. Make the first standard's check no longer reached — by removing its
+      manifest entry or disabling it, both of which are real reachability mechanisms in this project
+      — with its declaration unchanged, rebuild, and assert content equality against the earlier
+      brief. Two transitions in opposite directions are what make the independence observable once
+      today's declared-but-unreachable fixture disappears.
+  - name: test_inf_1200d_3_the_reachability_filter_injection_reds_all_three_arms_and_leaves_every_arm_of_d_1_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE FOUR-WAY EXPERIMENT. MUTATION:
+      carry outward only those standards whose check the project currently reaches. Under that
+      injection: the first arm must go RED, because the standard whose check is unreached does not
+      reach its owner while the other does; the begins-to-be-reached arm must go RED, because what
+      the owner is told CHANGES when the check starts running; the no-longer-reached arm must go
+      RED, because what the owner is told changes again when it stops; and every arm of INF-1200d-1
+      must STAY GREEN, provided the newly declared standard used there has a reachable check. All
+      four outcomes must be observed together and all must revert. THE GREEN OUTCOME MATTERS: this
+      mutation produces a delivery that is fully general over standards, walks the declaration
+      properly, and is still wrong — which is precisely why the coupling cannot be left to be
+      noticed. An injection run that also reddens d-1 is a FAILURE of this descriptor.
+  - name: test_inf_1200d_3_the_three_unreached_standards_reach_their_owners_against_the_real_configuration
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      AGAINST THE PROJECT AS IT STANDS, WHILE THE FIXTURE LASTS. Three standards with configured
+      thresholds have no entry among the sixty-two ids in hooks_manifest.hooks and are therefore
+      reached by nothing; one, the size limit, is reached on every commit. After a real build, the
+      three unreached ones are stated to the owners of the kinds of file they govern exactly as the
+      reached one is. This descriptor is expected to lose its fixture when BP-1600a-2 lands and must
+      then be retired in favour of the two transition arms — record that expiry in the test's own
+      docstring rather than letting it silently become a tautology.
+test_rationale: |
+  A single run cannot distinguish "carries all declared standards" from "carries the reachable ones"
+  unless a declared-but-unreachable standard happens to be present. Three are today — the
+  cyclomatic-complexity score, the database-code score and the folder-crowding count all have
+  configured thresholds and no entry among the sixty-two hooks_manifest ids — so the first arm has
+  teeth immediately. But BP-1600a-2 is approved and will make them run, at which point that fixture
+  evaporates and only the transition arms remain able to fail. Both transitions are therefore built
+  as controlled edits to reachability made by the test, and the descriptor that uses today's
+  configuration carries its own expiry note.
+
+  The transition arms assert CONTENT EQUALITY rather than continued presence. That is the difference
+  between this record and "the standard is carried either way": a carrier that states the standard
+  in both states but appends an enforcement qualifier when the check is reached has made the telling
+  depend on reachability, and it passes every presence check.
+
+  The BA's mutation is carried verbatim and its stay-green half — every arm of d-1 — is asserted
+  explicitly. That green is the reason this is a separate record rather than a line in d-1: the
+  injected delivery is fully general over standards, walks the declaration properly, and is still
+  wrong. An injection run that reddens d-1 too means the fixture is not isolating the coupling and
+  is a failure of the descriptor.
+
+  No descriptor inspects whether a carrier function consults a manifest. Per CLAUDE.md "Gate /
+  Workflow ACs — Verify Behaviorally, Not by Grep", a source read stays green on a carrier that
+  reaches the same fact transitively, and the transitive route is the one a good-faith implementer
+  actually takes.
+delivers_to: null
+expects_from:
+  ac_id: INF-1200d-1
+  contract: >-
+    The declaration walk and the set of standards it carries. This record constrains that set's
+    INPUTS: it must be computed from the declaration and the ownership record alone, with
+    hooks_manifest.hooks, the emitted hook chain, any per-entry enabled flag and any exemption
+    registry excluded as inputs directly and transitively, and with what is stated about a standard
+    unchanged across a check becoming reached and ceasing to be reached.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED WITH A NUANCE WORTH STATING: the two
+    transition arms EDIT hooks_manifest.hooks to stage reachability, but those edits are made in a
+    copied package for the duration of a paired run and reverted — a LANDED manifest addition would
+    be a watched list_ids entry and would also have answered BP-1600a-2, which is fenced out of this
+    tree in both directions. No new top-level key, no fictional fragment. COMPLEXITY S: the substance
+    is a prohibition on the carrier''s inputs plus paired-run proofs, not new machinery. THE
+    PROHIBITION IS STATED OVER INPUTS AND TRANSITIVELY: hooks_manifest.hooks, the emitted
+    .pre-commit-config.yaml, per-entry enabled flags and the exemption registries are all off-limits,
+    because the good-faith route to this coupling is transitive rather than a direct manifest read.
+    THE TRANSITION ARMS ASSERT CONTENT EQUALITY, not continued presence, so an appended "(enforced at
+    commit time)" qualifier fails rather than passes. MEASURED FIXTURE AND ITS EXPIRY: sixty-two ids
+    in hooks_manifest.hooks include check-file-size and exclude check_complexity, check_sql_complexity
+    and check_folder_density, so three of four threshold standards are unreached today; that gives the
+    first arm teeth now and disappears when BP-1600a-2 lands, so the real-configuration descriptor
+    carries an explicit expiry note and the transition arms are built as controlled edits. THE BA''s
+    MUTATION IS CARRIED VERBATIM WITH ITS STAY-GREEN HALF ASSERTED — every arm of d-1 green under the
+    reachability filter, because that injection is fully general, walks the declaration properly and
+    is still wrong. CONSISTENCY WITH a-2 AND f-1 IS RECORDED: one purity property must satisfy both
+    a-2 and this record rather than two conditions in two places, and f-1 requires one figure not
+    that a figure be applied. declares_side_effect true. test_spec: five executing descriptors.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE RECORD RATHER THAN A LINE IN d-1. It is the single most likely
+  coupling to be introduced by a competent implementer acting in good faith. Faced with
+  a declaration containing standards, the obvious question is "which of these are real",
+  and the obvious answer is "the ones with a check wired up". That filter is one
+  condition long, it is defensible in review, and it silently reduces the audience of
+  this entire capability to the standards that already had a gate — which is to say, one
+  cell of the grid, which is where the project started.
+
+  IT IS ALSO THE COUPLING THAT REINTRODUCES THE FAILURE THE WHOLE TREE EXISTS TO FIX. If
+  you are only told about standards whose gate runs, then the set of things you know is
+  the set of things that can stop you, and "you find out when you are stopped" has been
+  rebuilt one layer up with better manners.
+
+  THE TWO TRANSITION ARMS ARE WHY THIS IS OBSERVABLE AT ALL. A single run cannot
+  distinguish "carries all declared standards" from "carries the reachable ones" unless
+  a declared-but-unreachable standard happens to be present. Today three are, so the
+  first arm has teeth immediately — but that will not last, because BP-1600a-2 is
+  approved and will make them run. Once it lands, the first arm's fixture evaporates and
+  only the transition arms remain able to fail. They must be built as controlled changes
+  to reachability, not as observations of today's accident.
+
+  WHAT THIS RECORD DOES NOT CLAIM, STATED SO IT IS NOT INFERRED. It takes no position on
+  whether the three unreached checks should run — they should, and that is BP-1600a-2's
+  work. It takes no position on whether a brief should promise that a standard will be
+  enforced; a brief that told a specialist it would be refused by a check that does not
+  run would be a fidelity defect, and GE-127d and INF-1200f-1 own the surfaces where
+  that would be caught.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: carry outward only those standards whose check the project currently
+  reaches. Under that injection:
+    - the first arm must go RED, because the standard whose check is unreached does not
+      reach its owner while the other does;
+    - the begins-to-be-reached arm must go RED, because what the owner is told CHANGES
+      when the check starts running;
+    - the no-longer-reached arm must go RED, because what the owner is told changes
+      again when it stops;
+    - every arm of INF-1200d-1 must STAY GREEN, provided the newly declared standard
+      used there has a reachable check.
+  All four outcomes must be observed together and all must revert. The green outcome
+  matters: this mutation produces a delivery that is fully general over standards, walks
+  the declaration properly, and is still wrong — which is precisely why the coupling
+  cannot be left to be noticed.
+
+  MEASURED, 2026-09-09, IN THIS WORKTREE. Three standards with configured thresholds —
+  code tangledness, a separate one for database code, and folder crowding — have no
+  entry in the project's hook manifest and are therefore reached by nothing. One
+  standard, the size limit, is reached on every commit. That asymmetry is the fixture
+  for the first arm and it is temporary by design.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. The
+  mutation above, including which arm must stay green, is written to be turned directly
+  into test descriptors.

@@ -1,0 +1,386 @@
+id: INF-1200d-1
+title: "A standard the delivery has never carried before arrives without the delivery being touched"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a standard of a sort the project has never carried outward to anyone,
+    governing a kind of file the ownership record assigns to a specialist,
+  When that standard is stated in the one place the project declares standards,
+    and nothing that carries standards outward is added or altered,
+  Then that specialist begins work with the new standard stated in its material,
+  And nowhere in what carried it does any step, case, entry or mapping specific
+    to that standard exist,
+  And given a second standard, of a different sort again, governing a different
+    kind of file with a different owner, declared the same way,
+  When both specialists begin work,
+  Then each has the standard governing its own kind of file stated in its
+    material, and the number of declared standards reaching an audience has risen
+    by exactly the number newly declared,
+  And given one of those two declarations is then withdrawn,
+  When its owner begins work,
+  Then the withdrawn standard is no longer stated in its material, while the
+    other remains — so what travels is the declaration as it stands rather than
+    the declaration as it once was.
+depends_on:
+  - INF-1200d
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE MOST LIKELY MIS-SCOPING IN THIS TREE — INHERITED FROM THE L1.
+      Several standards this record would carry are also not registered to run. Making
+      them RUN is BP-1600a-2's approved, high-priority work. Every clause here is
+      discharged by the telling and none by the registering; no clause mentions a
+      manifest, a registry or a census, and none may be added. INF-1200d-3 owns the
+      positive statement that the two are independent.
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE CONSTRUCTION REUSED, NOT REINVENTED. It settles that a guard's output must be
+      read from the input it claims to derive from by running before and after changing
+      that input, "because a hard-coded selector passes every single-run assertion".
+      The declare-then-withdraw arm here is that construction applied to the standards
+      axis: an enumeration compiled at build time passes every assertion about the
+      standards it already knows.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Carries several standards beyond the one currently carried outward, each with a
+      threshold of its own and none reaching any audience. They are the concrete,
+      already-present instance of the "later standard" this record is about, and they
+      make the first arm testable against a real declaration rather than a fixture.
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      HOLDS THE IMPLEMENTATION THIS RECORD EXISTS TO EXCLUDE. Carrying a declared value
+      outward is a hand-written step per value, and two such steps sit side by side for
+      two unrelated values. That shape satisfies every assertion about the values it
+      already names, which is why the arms here are about a standard it does not.
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The path from a newly declared standard to the specialists it binds crosses
+      several parties before any work begins, and this document is where that path is
+      described. The L1's documentation trigger calls for that sequence; this record is
+      the behaviour the sequence would depict.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A test that asserts a
+      generic carrier function exists, or that iterates a declaration in isolation,
+      stays green on a delivery whose output never reaches a dispatched specialist.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. THE DECLARATION'S OWN COMPONENT DOC, AND THE SHAPE THE WALK MUST COPE
+      WITH. commit_guardian.json is a per-check document: each check has its own
+      top-level section with its own field names, and there is no uniform "standards"
+      container to iterate. That is the concrete reason a generic walk is real work
+      rather than a loop, and the reason a hand-written step per value was the path of
+      least resistance in the first place.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The carrier's home. Every arm here is observed by running the compile and
+      reading the produced brief, because "the delivery was not touched" is only
+      meaningful if the delivery is the thing that ran.
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED, WITH THE TRIGGER NAMED. Declaring a further
+    standard of an EXISTING sort is a nested addition inside an already-present top-level
+    section of commit_guardian.json (file_size, complexity, sql_complexity, folder_density are
+    four of its thirty-six top-level keys, all read in this worktree), and the mapping_keys
+    container is bound to dotted path "" only — so nested additions are unwatched and
+    package_surface is FALSE. THE TRIGGER: a standard of a genuinely new SORT may have no
+    existing section to live in, and creating one IS a watched top-level mapping key. If the
+    implementation needs that, check-package-surface-declaration will refuse the commit and this
+    record must be re-declared package_surface: true with a real config_schema_fragment first.
+    Raise it; do not add the key quietly. No fictional fragment is minted here for a key that
+    may never exist.
+  - >-
+    THE WALK IS OVER THE DECLARATION AS IT STANDS, AND NOTHING MAY ENUMERATE STANDARDS. No list
+    of known standards, no per-standard branch, no per-standard config key, no mapping from
+    standard name to extraction function, and no cache of standards seen on a previous run. The
+    incumbent shape this replaces is exact and measurable: scripts/build.py:255-285
+    `_inject_file_size_limits` reads file_size.line_limits['.py'] and sets one config key, with
+    `_inject_changelogs_dir` beside it doing the same for an unrelated value. Every additional
+    value costs another such step today. A generalisation that still has one step per standard
+    has not satisfied this record however many steps it has.
+  - >-
+    THE DECLARATION MUST SAY WHICH KIND OF FILE EACH STANDARD GOVERNS, AND TODAY IT DOES NOT FOR
+    THREE OF THE FOUR. Measured: file_size declares its scope explicitly
+    (checked_extensions ['.py', '.sql'], line_limits {'.py': 400, '.sql': 600}); complexity
+    (max_score 15), sql_complexity (max_score 75) and folder_density (max_files_per_folder 15)
+    declare thresholds with NO statement of which kinds of file they govern — that fact lives
+    only in the check script's name. A walk cannot derive an audience from a section that does
+    not say what it applies to. So this record's work includes adding a per-section declaration
+    of applicability, NESTED inside each existing section, and the addition must be data the
+    walk reads rather than a branch the walk contains.
+  - >-
+    THE COUNTING ARM IS A COUNT AND MUST BE COMPUTED FROM THE JOIN, NOT AUTHORED BY THE TEST.
+    "The number of declared standards reaching an audience has risen by exactly the number newly
+    declared" fails on an implementation that carries one of two, AND on one that carries the new
+    standards to everybody — a list of expected recipients authored by the test would pass both.
+    Define the counted unit precisely and once: a (standard, specialist) pairing in which the
+    specialist owns a kind of file that standard governs and the specialist's compiled brief
+    states it. Derive the expected number from the records, never from a literal.
+  - >-
+    THE WITHDRAWAL ARM FORBIDS ACCUMULATION, AND NO OTHER RECORD IN THIS TREE CAN SEE IT. An
+    implementation that adds each newly seen standard to a growing store and never removes one
+    passes the arrival arms indefinitely and quietly holds standards the project has retired.
+    INF-1200f-1 compares two surfaces for a standard that still exists and INF-1200e counts
+    specialists told too little, never too much. State it as a property: what travels is the
+    declaration as it stands, computed fresh, with no persisted or cached standards store.
+  - >-
+    FENCED — DISCHARGED BY THE TELLING, NEVER BY THE REGISTERING. Several standards this record
+    carries are also not registered to run; making them run is BP-1600a-2's approved,
+    high-priority work. No implementation here may inspect hooks_manifest, count scripts, add an
+    entry, or be deferred until that record lands. INF-1200d-3 owns the positive statement that
+    the two are independent and its descriptors are the ones that would catch a coupling
+    introduced here.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    declaration read and every brief write; log at WARNING or higher or re-raise; no bare or
+    blind excepts. A section the walk cannot interpret must fail loudly rather than being
+    skipped — a silently skipped section is a declared standard that reaches nobody while the
+    run reports success, which is precisely INF-1200d-1-i's subject arriving through the back
+    door.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT. Edit templates/scripts/commit_guardian/commit_guardian.json
+    only; scripts/commit_guardian/ and .claude/ are untracked build outputs overwritten by
+    build.py, and templates/commit-guardian/commit_guardian.json is a decoy with no file_size
+    section. Re-run `python scripts/build.py --target-dir .` as part of the change (ADR-001).
+test_spec:
+  - name: test_inf_1200d_1_a_standard_the_carrier_has_never_seen_reaches_its_owner_with_the_carrier_untouched
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Declare a standard of a sort the project has never carried outward, governing a kind of
+      file the ownership record assigns to a specialist; alter nothing that carries standards
+      outward; build into a temporary target and read that specialist's compiled brief. The new
+      standard is stated. Additionally assert the negative that carries the record: nowhere in
+      the carrier does any step, case, entry or mapping specific to that standard exist —
+      measured as the tracked diff containing no change to scripts/build.py,
+      scripts/build_phases.py or any carrier module, not by reading their source for a string.
+  - name: test_inf_1200d_1_two_new_standards_of_different_sorts_raise_the_reached_count_by_exactly_two
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Declare a second standard of a different sort again, governing a different kind of file
+      with a different owner. Both specialists have the standard governing their own kind of
+      file stated. The number of (standard, specialist) pairings in which the specialist owns a
+      kind of file the standard governs AND its brief states it has risen by EXACTLY the number
+      newly declared — the expected number derived from the records, never authored as a
+      literal. A carrier that reaches one of the two fails; so does a broadcast, whose count
+      rises by standards times specialists.
+  - name: test_inf_1200d_1_withdrawing_a_declaration_removes_it_from_its_owners_brief_and_leaves_the_other
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Withdraw one of the two declarations and rebuild. The withdrawn standard is no longer
+      stated in its owner's brief, while the other remains stated in its own owner's. What
+      travels is the declaration as it stands, not as it once was. This is the only arm in the
+      tree that can fail on an accumulating carrier: f-1 compares surfaces for a standard that
+      still exists, and e counts specialists told too little, never too much.
+  - name: test_inf_1200d_1_the_fixed_standards_enumeration_injection_reds_all_three_arms_and_leaves_every_arm_of_c_1_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE FOUR-WAY EXPERIMENT.
+      MUTATION: carry outward only the standards named in a fixed enumeration compiled when the
+      delivery was built — one entry per known standard, which is the shape the project already
+      has, one entry larger. Under that injection: the first arm must go RED, because a newly
+      declared standard is not in the enumeration and does not arrive; the two-new-standards
+      counting arm must go RED, because the count does not rise; the withdrawal arm must go RED,
+      because a withdrawn standard named in the enumeration keeps arriving; and every arm of
+      INF-1200c-1 must STAY GREEN, because the audience for the standards the enumeration does
+      know is still derived from the ownership record. All four outcomes must be observed
+      together and all must revert. THE GREEN OUTCOME IS THE WHOLE REASON c AND d ARE SEPARATE
+      L1s: this mutation is the current state of the project one value larger, it satisfies the
+      specialist axis completely, and only this record can fail on it. An injection run that
+      reddens c-1's arms too is a FAILURE of this descriptor.
+  - name: test_inf_1200d_1_the_three_configured_but_uncarried_standards_reach_their_owners_after_a_real_build
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      AGAINST THE REAL DECLARATION, NOT A FIXTURE. Three standards besides the size one are
+      already fully configured with thresholds in
+      templates/scripts/commit_guardian/commit_guardian.json — a cyclomatic-complexity score, a
+      separate one for database code, and a folder-crowding count — and no specialist anywhere
+      is told any of their figures today. After a real build, each reaches the specialists the
+      ownership record assigns the kinds of file it governs. This is the arm that proves the walk
+      works on the declaration's actual per-check shape rather than on a uniform container a
+      fixture invented, per CLAUDE.md's real-artifact rule. Note the fence: whether those checks
+      RUN is BP-1600a-2's work and is asserted nowhere here.
+test_rationale: |
+  "The standards that exist today all reach their audiences" is a snapshot, satisfied once, by
+  hand, permanently. So every arm is stated over a standard the implementation has never seen, and
+  every descriptor declares that standard at test time and then runs the real build. The first
+  arm's negative half — that no step, case, entry or mapping specific to that standard exists in
+  the carrier — is measured as the tracked diff rather than by reading carrier source for a
+  string, because a source read is the grep shape CLAUDE.md forbids and would pass on a carrier
+  that hard-codes the standard under a different name.
+
+  The counting arm is a count and not a list, and the expected number is derived from the records
+  rather than authored. That is what makes it fail on both of the two opposite wrong
+  implementations at once: a carrier that reaches one of two new standards, and a broadcast whose
+  count rises by standards times specialists. A test-authored list of expected recipients would
+  pass both, which is the specific trap the BA's notes name.
+
+  The BA's mutation is carried verbatim, and its stay-green half — every arm of c-1 — is asserted
+  explicitly. That green is the entire justification for c and d being separate L1s: the injected
+  world is today's project one value larger, it satisfies the specialist axis completely, and only
+  this record can fail on it. An injection run that reddens c-1's arms means the fixture is not
+  isolating the standards axis and is a failure of the descriptor.
+
+  One descriptor runs against the REAL declaration rather than a fixture, because commit_guardian
+  .json has no uniform standards container — each check is its own top-level section with its own
+  field names. A fixture with a tidy uniform shape reproduces exactly the assumption a naive walk
+  would make, which is the documented shape of this project's worst phantom-done incident.
+delivers_to:
+  - agent: python-coder
+    ac_id: INF-1200d-2
+    contract: >-
+      The declaration walk itself — the per-section traversal that yields, for each declared
+      standard, the kinds of file it governs and the content to be carried. d-2 constrains what
+      that content may BE: a rule, a prohibition or an exclusion declared without any figure must
+      travel in the terms it was declared in, so the walk may not narrow the carried content to a
+      numeric value.
+  - agent: python-coder
+    ac_id: INF-1200d-1-i
+    contract: >-
+      The run outcome of the declaration walk, into which d-1-i inserts the empty-audience state
+      as a named result distinct from delivered — naming the standard and the kind of file it
+      governs, and preventing a run in which every standard had an empty audience from reading as
+      a successful delivery.
+expects_from:
+  ac_id: INF-1200b-1
+  contract: >-
+    The build-time join, read from the standards axis: for each declared standard, the set of
+    specialists the ownership record assigns the kind of file it governs. Produced by walking the
+    declaration as it stands at compile time, so a standard the carrier has never seen appears in
+    it with no step of its own.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED WITH ITS TRIGGER NAMED: a further
+    standard of an EXISTING sort is a nested addition inside an already-present top-level section
+    (file_size, complexity, sql_complexity and folder_density are four of commit_guardian.json''s
+    thirty-six top-level keys), and mapping_keys on that file is bound to dotted path "" only — so
+    nested additions are unwatched. A standard of a genuinely NEW sort may need a new top-level
+    section, which IS watched; that is recorded as a raise-it-first trigger rather than left for
+    check-package-surface-declaration to discover, and no fictional fragment is minted for a key
+    that may never exist. COMPLEXITY L. A MEASURED GAP IS PROMOTED INTO SCOPE: only file_size
+    declares which kinds of file it governs (checked_extensions, line_limits); complexity 15,
+    sql_complexity 75 and folder_density 15 declare thresholds with no statement of applicability
+    at all — that fact lives only in each check script''s name — so a walk cannot derive their
+    audience today, and adding a nested per-section applicability declaration is part of this
+    record''s work. THE COUNTED UNIT IS DEFINED ONCE as a (standard, specialist) pairing derived
+    from the records, never a test-authored list, because that is what makes the arm fail on BOTH
+    a partial carrier and a broadcast. THE BA''s MUTATION IS CARRIED VERBATIM WITH ITS STAY-GREEN
+    HALF ASSERTED — every arm of c-1 green under the fixed-standards enumeration, which is the
+    whole reason c and d are separate L1s; an injection reddening c-1 is recorded as a FAILURE.
+    ONE DESCRIPTOR RUNS AGAINST THE REAL DECLARATION because commit_guardian.json has no uniform
+    standards container and a tidy fixture would reproduce a naive walk''s own assumption.
+    declares_side_effect true. test_spec: five executing descriptors.'
+superseded_by: null
+covered_by:
+  - INF-1200d-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE SECOND AXIS OF THE GRID AND IT IS THE ONE THAT MAKES THE CAPABILITY WORTH
+  BUILDING RATHER THAN PATCHING. INF-1200c generalises across specialists by walking the
+  ownership record; this generalises across standards and across time by walking the
+  standards declaration. The user asked for their example to work. The value is that the
+  standard AFTER their example works too, without them asking.
+
+  THE ACCEPTANCE SHAPE WITH TEETH, RESTATED AS THE ARMS ACTUALLY WRITTEN. "The standards
+  that exist today all reach their audiences" is a snapshot and is satisfied once, by
+  hand, permanently. What discharges this record is a standard that did not exist when
+  the delivery was built reaching its audience with the delivery untouched. Every arm is
+  therefore stated over a standard the implementation has never seen.
+
+  THE WITHDRAWAL ARM IS NOT SYMMETRY FOR ITS OWN SAKE. An implementation that
+  accumulates — that adds each newly seen standard to a growing store and never removes
+  one — passes the arrival arms indefinitely and quietly holds standards the project has
+  retired. A specialist held to a rule the project no longer declares is being misled by
+  the very mechanism built to inform it, and no other record in this tree can see it:
+  INF-1200f compares two surfaces for a standard that still exists, and INF-1200e counts
+  specialists that were told too little, never too much.
+
+  THE COUNTING ARM IS DELIBERATELY A COUNT AND NOT A LIST. "Rose by exactly the number
+  newly declared" fails on an implementation that carries one of the two, and it fails on
+  one that carries the new standards to everybody. A list of expected recipients authored
+  by the test would pass both.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: carry outward only the standards named in a fixed enumeration compiled when
+  the delivery was built — one entry per known standard, which is the shape the project
+  already has, one entry larger. Under that injection:
+    - the first arm must go RED, because a newly declared standard is not in the
+      enumeration and does not arrive;
+    - the two-new-standards counting arm must go RED, because the count does not rise;
+    - the withdrawal arm must go RED, because a withdrawn standard named in the
+      enumeration keeps arriving;
+    - every arm of INF-1200c-1 must STAY GREEN, because the audience for the standards
+      the enumeration does know is still derived from the ownership record.
+  All four outcomes must be observed together and all must revert. The green outcome is
+  the whole reason c and d are separate L1s: this mutation is the current state of the
+  project one value larger, it satisfies the specialist axis completely, and only this
+  record can fail on it.
+
+  MEASURED, 2026-09-09, IN THIS WORKTREE. Three standards besides the size one are
+  already fully configured with thresholds of their own — one for how tangled code may
+  get, a separate one for database code, and one for how crowded a folder may become. No
+  specialist anywhere is told any of their figures. They are simultaneously the concrete
+  "guardrails we add later" case and INF-1200e's silent-gap case, which is why the two
+  records cite the same evidence from different sides. Note the fence: making them RUN is
+  BP-1600a-2's, and they matter here only as an audience that has never been addressed.
+
+  DELIBERATELY NOT NAMED IN THE CRITERIA: any kind of file, any specialist, any standard
+  by name, and any figure.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. The mutation
+  above, including which arms must stay green, is written to be turned directly into test
+  descriptors.

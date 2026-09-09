@@ -1,0 +1,307 @@
+id: INF-1200a-2
+title: "The telling does not wait for something to go wrong, and is not changed by something having gone wrong"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a kind of file carries a standard, and a specialist the ownership record
+    assigns that kind of file,
+  When that specialist begins work in a project state in which no work of that
+    kind has been produced, nothing has been submitted for checking, and that
+    standard has never been breached by anyone,
+  Then the standards for the kinds of file that specialist owns are already
+    stated in the material it begins from,
+  And given the same specialist begins work again in a project state that
+    follows a breach of that same standard,
+  When the material it begins from is compared with the material it began from
+    before,
+  Then what it is told about that standard is the same — neither introduced by
+    the earlier breach, nor reworded by it, nor added to because of it,
+  And given the check that would apply that standard is not currently reached at
+    all, so that no breach of it can occur,
+  When the specialist begins work,
+  Then the standard is stated in its material exactly as before, so what the
+    specialist is told is a function of what the project declares and of what the
+    specialist owns, and of nothing that has or has not happened.
+depends_on:
+  - INF-1200a
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE FENCE THIS RECORD EXISTS TO MAKE EXECUTABLE. GE-127 owns refusal. This
+      record is the arm that proves the value delivered here is not a refusal wearing
+      different clothes: it is claimed in a project state where nothing was ever
+      refused and could not be. A criterion that improves a refusal, or that delivers
+      knowledge in response to one, fails this record rather than satisfying it.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE THIRD ARM SITS DIRECTLY ON THE FENCE. Whether a standard's check
+      is reached at all is BP-1600a-2's approved work. This record takes the
+      unreached state as a GIVEN and requires the telling to be indifferent to it. It
+      registers nothing, counts no scripts, and inspects no manifest; an L2 here that
+      did any of those has answered a different, already-approved record.
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Distinguishes channels populated at spawn from anything produced during or after
+      execution. The whole claim of this record is that the standards travel on the
+      former and never on the latter.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Holds three standards with configured thresholds whose checks are not currently
+      reached at all. They are the concrete, already-present fixture for the third
+      arm — a standard that CANNOT have been breached, whose audience must be told
+      anyway.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". Every arm here is a
+      comparison between two real dispatches in two different project states; an
+      assertion that a delivery function is called unconditionally stays green on a
+      delivery whose output never reaches a specialist.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The carrier's component doc. It records that briefs are compiled at BUILD
+      time, from templates and config, into .claude/agents/ — a moment that precedes
+      every dispatch and knows nothing about commits, findings or breaches. That
+      timing is what makes this record's invariance cheap to hold and expensive to
+      lose: any design that consults a run history has had to reach past the build to
+      get it.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The other side of the fence, cited so the coupling this record forbids is
+      recognisable. Findings, breaches and refusals are produced here, at commit time,
+      after work exists. Nothing in this record's implementation may read a
+      commit-guardian outcome, a findings log, or a hook exit status.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. This record registers nothing: no
+    hooks_manifest.hooks id, no new top-level key in commit_guardian.json, no agent entry,
+    no skill entry, no paths.json surface. It is a pure invariance constraint on the carrier
+    INF-1200b-1 and INF-1200d-1 build. Plain-list spec form; no config_schema_fragment
+    invented for a key that will never exist.
+  - >-
+    THE INVARIANT, STATED AS THE PROHIBITION IT IS. What a specialist is told must be a pure
+    function of (the declaration as it stands) and (what the ownership record assigns that
+    specialist), and of nothing else. Specifically, no input to the standards a brief
+    carries may be: a findings log, a hook exit status, a commit history, a count of past
+    violations, a per-agent offence record, a run timestamp, a cache of previous outputs, or
+    the contents of hooks_manifest. State it as a purity property of the carrier rather than
+    as something the tests happen to observe — the same construction GE-127e-2 uses for its
+    description function.
+  - >-
+    THE SECOND ARM IS NOT "DELIVERY IS UNCONDITIONAL", AND THE DIFFERENCE IS THE WHOLE
+    RECORD. A delivery that fires every time but says MORE after a breach — an added
+    warning, a stronger wording, a note that this specialist has offended before — has
+    smuggled feedback back into the brief. The comparison is between the two compiled
+    briefs and they must be byte-identical in the region that states the standard, not
+    merely both non-empty. Assert equality of content, never non-emptiness of both.
+  - >-
+    THE THIRD ARM'S FIXTURE IS REAL AND IS TEMPORARY BY DESIGN — MEASURED IN THIS WORKTREE.
+    commit_guardian.json declares four standards with thresholds: file_size (line_limits
+    {'.py': 400, '.sql': 600}, default 400), complexity (max_score 15), sql_complexity
+    (max_score 75) and folder_density (max_files_per_folder 15). Of the sixty-two ids in
+    hooks_manifest.hooks, none is check_complexity, check_sql_complexity or
+    check_folder_density — those three checks are reached by nothing, so their standards
+    CANNOT have been breached. That asymmetry is the fixture. BP-1600a-2 is approved and
+    will remove it, so the descriptor must construct the unreached state under its own
+    control rather than depending on today's accident.
+  - >-
+    FENCED — THIS RECORD REGISTERS NOTHING AND MUST NOT BE MADE TO WAIT ON REGISTRATION.
+    Whether the three unreached checks should run is BP-1600a-2's approved, high-priority
+    work. This record takes the unreached state as a GIVEN and requires the telling to be
+    indifferent to it. No implementation here may inspect a manifest, count scripts, or add
+    an entry; and no implementation here may be deferred until BP-1600a-2 lands. Satisfying
+    this record by causing the unreached checks to run has answered someone else's record
+    and left this one untested.
+  - >-
+    SEE INF-1200d-3, WHICH OWNS THE SYMMETRIC OBLIGATION FROM THE STANDARDS AXIS. This
+    record fixes that what a specialist is told does not depend on anything HAVING HAPPENED;
+    d-3 fixes that the SET of standards carried does not depend on which checks are
+    reachable, and adds the two transitions. They are consistent, neither subsumes the
+    other, and the implementation must satisfy both with ONE purity property rather than two
+    conditions written in two places.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    config and registry reads; log at WARNING or higher or re-raise; no bare or blind
+    excepts. A read failure must not degrade to "carry only what we know about", which would
+    make the brief's contents depend on transient conditions and fail this record silently.
+test_spec:
+  - name: test_inf_1200a_2_the_standard_is_in_the_brief_before_any_work_of_that_kind_has_ever_been_produced
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Build into a temporary target whose project state contains no work of the covered
+      kind, nothing submitted for checking, and no recorded breach of the standard, and read
+      the produced .claude/agents/<owner>.md. The standards for the kinds of file that
+      specialist owns are already stated. This is the arm that keeps the whole tree out of
+      GE-127: the value is claimed in a state where nothing was ever refused and nothing
+      could be.
+  - name: test_inf_1200a_2_the_brief_is_identical_before_and_after_a_breach_of_the_same_standard
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Build once in a never-breached state, capture the brief; produce a real breach of that
+      same standard in the target project; build again and capture the brief. What the brief
+      says about that standard must be the SAME — not merely present in both, but equal in
+      content: neither introduced by the breach, nor reworded by it, nor added to because of
+      it. Equality is asserted on the region stating the standard, so an appended "you have
+      offended before" note fails here rather than passing a both-non-empty check.
+  - name: test_inf_1200a_2_a_standard_whose_check_is_reached_by_nothing_is_stated_exactly_as_the_others_are
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      With the check that would apply a standard reachable by nothing — so no breach of it
+      can occur — the standard is stated in its owner's brief exactly as it is when the
+      check is reached. The unreached state is constructed under the test's own control
+      rather than read off today's accident, because BP-1600a-2 is approved and will make
+      the three currently-unreached checks run; a descriptor that depends on that accident
+      loses its fixture the day that record lands.
+  - name: test_inf_1200a_2_the_fire_first_injection_reds_all_three_arms_together
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE EXPERIMENT. MUTATION:
+      make a standard's presence in a specialist's brief conditional on that standard having
+      produced a finding — carry outward only the standards that have fired, or add the
+      standard to the brief at the point it is first breached. Under that injection: the
+      never-breached arm must go RED, because a specialist that has not yet offended is told
+      nothing; the after-a-breach comparison must go RED, because the two materials differ;
+      and the unreached-check arm must go RED, because a check that cannot fire can never
+      produce the finding the delivery waits on. All three must revert. THIS MUTATION HAS NO
+      STAY-GREEN HALF BY DESIGN AND THAT IS ITSELF THE ASSERTION: an injection run in which
+      any arm stays green means that arm was not carrying the timing claim and must be
+      rewritten before this record is believed.
+test_rationale: |
+  This is the record that keeps the whole tree out of GE-127, and it is the only one that
+  does it by observation rather than by assertion. Every other criterion here can be read as
+  "the specialist ends up knowing the standard", and a design that tells a specialist the
+  limit the first time it is refused satisfies that reading completely — while being cheap,
+  well-targeted, and productive of excellent before-and-after numbers. So no descriptor here
+  may be satisfiable by a single dispatch in a single project state. Each arm is a build run
+  in a controlled project state, and the second arm is a comparison of two such runs.
+
+  The second arm asserts EQUALITY of the region stating the standard rather than presence in
+  both. That is the difference between this record and "delivery is unconditional": a
+  delivery that fires every time but says more after a breach passes a presence check and
+  fails this one, and the smuggled feedback is exactly what the L1 forbids.
+
+  The third arm's fixture is constructed rather than observed. Three of the four standards
+  configured in commit_guardian.json have no hooks_manifest entry today, which makes an
+  unreachable check free to obtain — but BP-1600a-2 is approved and will remove that
+  asymmetry, and a descriptor built on it would then pass for the wrong reason. Constructing
+  the unreached state under the test's own control keeps the arm able to fail after that
+  record lands.
+
+  The BA's mutation is carried verbatim and reddens all three arms with no stay-green half.
+  That is deliberate and is recorded as an assertion in its own right: unlike the mixed-outcome
+  mutations elsewhere in this tree, here a surviving green arm is evidence of a defective arm
+  rather than of independent arms.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: no hooks_manifest.hooks id,
+    no new top-level key on commit_guardian.json, no agents/skills/paths entry — the four
+    documents WATCHED_REGISTRIES binds were read in this worktree and this record touches
+    none of their watched containers. COMPLEXITY S: no new code path; the substance is a
+    purity property on the carrier plus paired-run proofs. THE BA''s MUTATION IS CARRIED
+    VERBATIM and reddens all three arms — this is one of only two records in the tree whose
+    named mutation has NO stay-green half, and that absence is itself asserted: a surviving
+    green arm is recorded as a defective arm, not as independence. MEASURED FIXTURE: four
+    standards carry thresholds in commit_guardian.json (file_size .py 400 / .sql 600,
+    complexity 15, sql_complexity 75, folder_density 15) and three of them appear nowhere
+    among the sixty-two hooks_manifest ids, so an unbreachable standard is free today — but
+    BP-1600a-2 will remove that, so the third descriptor constructs the unreached state under
+    its own control. FENCE RECORDED BOTH WAYS: this record may not register anything and may
+    not be made to wait on BP-1600a-2. declares_side_effect true: the arms compare the content
+    of files the build writes to .claude/agents/. test_spec: four executing descriptors, one
+    carrying the BA''s mutation verbatim as a single three-way observation.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE RECORD THAT KEEPS THE WHOLE TREE OUT OF GE-127, AND IT IS THE ONLY ONE
+  THAT DOES IT BY OBSERVATION RATHER THAN BY ASSERTION. Every other criterion here can
+  be read as "the specialist ends up knowing the standard", and a design that tells a
+  specialist the limit the first time it is refused satisfies that reading completely.
+  It is also a genuinely attractive design — it is cheap, it targets the people who
+  demonstrably need it, and it produces excellent-looking before-and-after numbers. It
+  is precisely what the L1 forbids, because the value claimed is worth something in the
+  runs where nothing would ever have been refused.
+
+  THE SECOND ARM IS WHY THIS IS NOT SIMPLY "DELIVERY IS UNCONDITIONAL". A delivery that
+  happens every time but says MORE after a breach — an added warning, a stronger
+  wording, a note that this specialist has offended before — has smuggled feedback back
+  into the brief. The comparison is between the two materials, and they must be the
+  same, not merely both non-empty.
+
+  THE THIRD ARM IS THE ONE THAT WILL BE ARGUED WITH, SO IT IS STATED PLAINLY. Three
+  standards are configured on disk today whose checks are not reached, and the natural
+  instinct is that telling someone about an unenforced standard is misleading. It is
+  not this record's job to settle whether those checks should run — that is
+  BP-1600a-2's, it is approved, and it is fenced above. It IS this record's job to
+  ensure the telling is not silently coupled to the running, because that coupling is
+  the single cheapest way to reintroduce "you find out when you are stopped". See
+  INF-1200d-3, which owns the same coupling from the standards axis and states the
+  symmetric obligation; the two are consistent and neither may be closed as the other.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: make a standard's presence in a specialist's brief conditional on that
+  standard having produced a finding — carry outward only the standards that have
+  fired, or add the standard to the brief at the point it is first breached. Under that
+  injection:
+    - the never-breached arm must go RED, because a specialist that has not yet
+      offended is told nothing;
+    - the after-a-breach comparison must go RED, because the two materials differ;
+    - the unreached-check arm must go RED, because a check that cannot fire can never
+      produce the finding the delivery waits on.
+  All three must revert. An injection run in which any arm stays green means the arm
+  was not carrying the timing claim and must be rewritten before this record is
+  believed.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. The
+  mutation above is written to be turned directly into a test descriptor.

@@ -1,0 +1,380 @@
+id: INF-1200c-1
+title: "The audience is read off the ownership record, and what a specialist is told moves when ownership moves"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the project's ownership record assigns a kind of file that carries a
+    standard to one specialist and does not assign it to a second specialist,
+  When each of the two begins work,
+  Then the first begins with that kind of file's standards stated in its
+    material and the second does not,
+  And given that kind of file is then reassigned in the ownership record from
+    the first specialist to the second, and nothing else in the project is
+    altered,
+  When each of the two begins work again,
+  Then that kind of file's standards have MOVED — they are stated in the second
+    specialist's material, and they are no longer stated in the first's,
+  And given a specialist the ownership record assigns no kind of file that
+    carries a standard,
+  When it begins work,
+  Then no kind of file's standards are stated in its material,
+  And at no point is a specialist's audience membership decided by its name, by
+    what it was called before, by which team or category it belongs to, or by any
+    list of specialists held anywhere other than the ownership record.
+depends_on:
+  - INF-1200c
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200c.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/agent-registry/AR-100-technology-ownership/AR-100.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE INPUT, NOT THE SUBJECT — INHERITED FROM THE L1 AND NOT RESTATED. AR-100 owns
+      that ownership of a kind of file is real and complete. Every clause here consumes
+      that answer. If ownership is wrong, this record faithfully informs the wrong
+      specialist, and that failure is AR-100's. No clause here re-decides ownership and
+      none may propose a second place to record it.
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE CONSTRUCTION REUSED HERE, NOT REINVENTED — AN EXISTING RECORD IN THIS STORE
+      THAT SETTLES THE IDENTICAL EPISTEMIC PROBLEM ON A DIFFERENT SUBJECT. It pins that
+      a guard's output must be read from the input it claims to be derived from, by
+      running BEFORE and AFTER changing that input and requiring the value to MOVE,
+      "because a hard-coded selector passes every single-run assertion". That is exactly
+      why the second arm here is a movement rather than an assertion about one
+      dispatch. Different component, different subject, not a duplicate.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      ADJACENT AND INDEPENDENT — THE SHARPEST FENCE ON THIS RECORD. GE-127c owns which
+      kinds of file the ENFORCEMENT covers. This record takes whatever that set is as a
+      given and owns only whether the specialists who own those kinds were told. A
+      clause here that argues about which kinds of file deserve a standard belongs in
+      GE-127c and must be withdrawn.
+  - path: config/agent_registry.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Carries, per specialist, the kinds of file it owns — the record the movement arm
+      edits. It already contains a specialist owning more than one kind of file, so the
+      fixtures for this record and for INF-1200c-2 can be real rather than synthetic.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      The other half of the join. Both halves are machine-readable and nothing reads
+      them together; producing that join is what makes the movement arm possible at all.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A test that reads the
+      audience-selection function's source, or that asserts three named specialists
+      appear in some list, stays green on a fixed audience compiled once. Only a pair
+      of dispatches across an ownership change separates derivation from a list.
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The ownership record's own component doc, and the reason the movement arm
+      is cheap to stage. owns_file_extensions is a plain list on an agent entry, so
+      reassigning a kind of file from one specialist to another is a two-line edit to
+      config/agent_registry.json with nothing else moving — exactly the controlled
+      single-variable change BP-900c-4-i's construction requires.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Records that briefs are compiled from templates and config at build time
+      into .claude/agents/, which is where both halves of the movement arm are read
+      from. "The standards moved" means the compiled file of one specialist gained them
+      and the compiled file of the other lost them, across two real builds differing in
+      one registry edit.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. The four watched documents were read in this
+    worktree. This record READS config/agent_registry.json rather than registering in it, and
+    its movement arm edits owns_file_extensions on two EXISTING agent entries — a field inside
+    an entry, not a new id in the watched `agents` list_ids container. No hooks_manifest id,
+    no new top-level key on commit_guardian.json, no skill entry, no paths.json surface. Plain
+    -list spec form; no config_schema_fragment invented for a key that will never exist.
+  - >-
+    THE AUDIENCE IS RESOLVED AT THE MOMENT THE BRIEF IS COMPILED, FROM THE RECORDS AS THEY
+    STAND. No enumeration of specialists may exist anywhere in the carrier — not a list, not a
+    tuple, not a dict literal, not a set of "the coder agents", not a category or tier filter,
+    and not a cached audience computed by an earlier run. The audience for a kind of file's
+    standards is exactly the set of agents whose owns_file_extensions contains that kind of
+    file, read fresh. This is the same construction BP-900c-4-i settles for a different
+    subject and it is reused, not reinvented.
+  - >-
+    THE MOVEMENT ARM HAS TWO HALVES AND THE SECOND IS THE ANTI-BROADCAST HALF. After
+    reassignment the standards must have ARRIVED at the new owner AND LEFT the old one. Assert
+    the departure as a separate, separately-named assertion rather than folding it into "the
+    standards moved" — an audience that only ever grows is a broadcast, not a derivation, and
+    the arrival half alone cannot tell them apart. This single assertion is the strongest
+    anti-broadcast observation in the tree.
+  - >-
+    THE LAST ARM NAMES THE CHEAP SUBSTITUTES AND THE FIXTURE MUST DEFEAT THEM. Selecting the
+    audience by matching a specialist's NAME against a technology, by a category field, or by
+    "the coder agents" produces an audience that varies plausibly and is not read from
+    ownership at all — and it passes the movement arm in the narrow case where the
+    reassignment happens to align with the naming. Stage the reassignment between two
+    specialists whose names do NOT signal the kind of file in question, so a name-matching
+    substitute is exposed. Measured: the registry's three extension-owning agents are
+    python-coder, sql-coder and frontend-coder, every one of which is named after the
+    technology it owns — so a name-matching substitute passes any reassignment among those
+    three that keeps the obvious pairing. The fixture must therefore move a kind of file to a
+    specialist whose name does not suggest it; fifty-seven agents qualify.
+  - >-
+    THE EXCLUSION ARM IS WHAT MAKES "REACH" MEAN ANYTHING, AND IT IS SHARED WITH FOUR OTHER
+    RECORDS. Every positive clause here, and in INF-1200a-1 and INF-1200d-1, is satisfied by
+    giving every specialist every standard. That implementation is trivial, defensible in
+    review ("more information cannot hurt"), and silently empties INF-1200e's report of all
+    content because nobody is ever uninformed. Assert the exclusion as an absence over the
+    WHOLE compiled brief, not within a standards section, so an appended "standards you may
+    care about" block fails rather than passes.
+  - >-
+    FENCED — THIS RECORD CONSUMES OWNERSHIP AND NEVER RE-DECIDES IT. AR-100 owns that
+    ownership of a kind of file is real and complete. If ownership is wrong, this record
+    faithfully informs the wrong specialist, and that failure is AR-100's. No implementation
+    here may add a second place to record ownership, infer ownership, or extend
+    config/agent_registry.json with a catch-all owner. Equally fenced the other way: GE-127c
+    owns WHICH kinds of file the enforcement covers; this takes whatever that set is as a
+    given.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    registry read; log at WARNING or higher or re-raise; no bare or blind excepts. A registry
+    that cannot be read must not degrade to an empty audience — an empty audience produces
+    briefs with no standards in them, which is indistinguishable from a project where nobody
+    owns anything, and is exactly the silent-input failure INF-1200e-2 exists to make
+    impossible.
+test_spec:
+  - name: test_inf_1200c_1_the_owner_is_told_and_a_non_owner_of_the_same_kind_is_not
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      With the ownership record assigning a covered kind of file to one specialist and not to
+      a second, build into a temporary target and read both compiled briefs. The first states
+      that kind of file's standards; the second does not. Both halves are asserted from the
+      same build run, because the second half is what a broadcast fails.
+  - name: test_inf_1200c_1_reassigning_a_kind_of_file_moves_its_standards_to_the_new_owner_and_away_from_the_old
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE MOVEMENT ARM, AND THE ONLY OBSERVATION THAT SEPARATES DERIVATION FROM A LIST. Build,
+      capture both briefs; reassign the covered kind of file in config/agent_registry.json
+      from the first specialist to the second with nothing else altered; build again. The
+      standards must have ARRIVED in the second specialist's brief AND LEFT the first's, each
+      asserted separately and by name — an audience that only ever grows is a broadcast, not a
+      derivation. The reassignment is staged between specialists whose names do NOT signal the
+      kind of file in question, so an audience selected by name-matching is exposed rather than
+      accidentally satisfied. Construction reused from BP-900c-4-i, not reinvented.
+  - name: test_inf_1200c_1_a_specialist_owning_no_covered_kind_has_no_kind_of_files_standards_in_its_brief
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE EXCLUSION ARM. For a specialist the ownership record assigns no kind of file that
+      carries a standard, the compiled brief states no kind of file's standards at all,
+      asserted as an absence over the whole file rather than within a standards section.
+      Fifty-seven of the registry's sixty agents qualify, so the fixture is drawn from reality.
+  - name: test_inf_1200c_1_the_fixed_enumeration_injection_reds_both_halves_of_the_movement_arm_and_leaves_the_first_and_exclusion_arms_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE THREE-WAY EXPERIMENT.
+      MUTATION: select the audience for each standard from a fixed enumeration of specialists
+      compiled when the delivery was built, rather than from the ownership record as it stands
+      at the moment of dispatch. Under that injection: the first arm must STAY GREEN, because a
+      list compiled today is correct today; the movement arm must go RED in BOTH of its halves
+      — the standards do not arrive at the new owner, and they do not leave the old one; and
+      the exclusion arm must STAY GREEN, because a specialist absent from the fixed list is
+      still told nothing. All three outcomes must be observed together and all must revert. THE
+      TWO GREEN OUTCOMES ARE LOAD-BEARING AND ARE ASSERTED, NOT ASSUMED: a mutation that
+      reddened everything would mean the arms are not independent, and it is the movement arm
+      alone that carries this record. An injection run that reddens all three is a FAILURE of
+      this descriptor even though it looks like a stronger result.
+  - name: test_inf_1200c_1_the_broadcast_injection_reds_the_exclusion_arm_and_the_movement_departure_half_across_five_records
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      IT-PO-ADDED INJECTION, PLACED HERE BECAUSE THIS RECORD'S NOTES NAME THE STUCK ANSWER.
+      MUTATION: give every specialist every declared standard, regardless of what the ownership
+      record assigns it. Under that injection the following must ALL go RED together and all
+      must revert: this record's exclusion arm; this record's movement-arm DEPARTURE half (the
+      standards never leave the old owner because everyone always has them); INF-1200a-1's
+      exclusion arm; INF-1200c-2's third arm (a covered specialist told about the wrong one of
+      its kinds); INF-1200d-1's counting arm (the number of pairings reached rises by standards
+      times specialists, not by the number newly declared); and INF-1200e-1's negative arm
+      (nobody is ever uninformed, so the census empties). This record's FIRST arm's positive
+      half must STAY GREEN — every owner really is told. A descriptor set in which this
+      injection reddens nothing has not tested this tree: "tell everyone everything" is a stuck
+      answer that satisfies a-1, c-1, d-1 and d-2 simultaneously and is defensible in review.
+test_rationale: |
+  "Every specialist that owns a covered kind of file is told" is satisfied on any single run by
+  a hand-written list of today's three extension-owning specialists. Such a list is correct on
+  the day it is written, survives review, and rots silently. The before-and-after pair across an
+  ownership change is the only observation that can fail on it, so the movement arm is the
+  record's centre of gravity and every descriptor is built around a real build run rather than
+  an inspection of the audience-selection function.
+
+  The movement arm's DEPARTURE half is asserted separately and by name. Folded into "the
+  standards moved" it disappears, and with it the only assertion in this tree that a broadcast
+  cannot satisfy. The reassignment is also staged between specialists whose names do not signal
+  the kind of file involved: all three of today's extension-owning agents are named after their
+  technology, so a name-matching substitute passes any reassignment that keeps the obvious
+  pairing, and the fixture would silently stop discriminating.
+
+  The BA's mutation is carried verbatim, and both of its stay-green halves are asserted as
+  required observations with the failure condition stated: an injection run that reddens all
+  three arms means the arms are not independent and is a failure of the descriptor rather than a
+  stronger pass. The second injection is added by the IT PO and is the tree-wide one — the stuck
+  answer "give everyone everything" satisfies a-1, c-1, d-1 and d-2 at once, and the only way to
+  know a descriptor set actually exercises the exclusions is to inject the broadcast and require
+  six named arms across five records to redden together.
+
+  No descriptor reads the audience-selection function's source or asserts that three named
+  specialists appear in a list. Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by
+  Grep" and this record's own doc_link, both stay green on a fixed audience compiled once.
+delivers_to:
+  - agent: python-coder
+    ac_id: INF-1200c-2
+    contract: >-
+      The audience derivation itself — for a given kind of file, the set of specialists the
+      ownership record assigns it, read fresh at compile time. c-2 constrains the SHAPE of
+      that derivation: it must be a many-to-many join in both directions rather than a lookup,
+      so neither the number of kinds a specialist owns nor the number of specialists a kind of
+      file has may change what anyone else is told.
+  - agent: python-coder
+    ac_id: INF-1200c-1-i
+    contract: >-
+      The same derivation, into which c-1-i inserts the unassigned-kind-of-file branch as a
+      named third outcome — distinct from told and from correctly-not-told — with no owner
+      inferred and the run completing for every other pairing.
+expects_from:
+  ac_id: INF-1200b-1
+  contract: >-
+    The build-time join from config/agent_registry.json's owns_file_extensions to the per-kind
+    standards declared in templates/scripts/commit_guardian/commit_guardian.json, computed at
+    the moment the brief is compiled with no per-specialist enumeration anywhere in the
+    carrier.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: this record READS
+    config/agent_registry.json rather than registering in it, and the movement arm edits
+    owns_file_extensions on two EXISTING entries — a field inside an entry, not a new id in the
+    watched `agents` list_ids container. No hooks_manifest id, no new top-level key on
+    commit_guardian.json, no fictional fragment. COMPLEXITY M. THE MOVEMENT ARM''s DEPARTURE
+    HALF IS PROMOTED TO A SEPARATELY-NAMED ASSERTION: it is the strongest anti-broadcast
+    observation in the tree and it disappears if folded into "the standards moved". THE FIXTURE
+    IS CONSTRAINED TO DEFEAT NAME-MATCHING: all three extension-owning agents (python-coder
+    owning .py and .js, sql-coder owning .sql, frontend-coder owning .tsx .jsx .vue .svelte
+    .html .css .scss) are named after their technology, so the reassignment must move a kind of
+    file to a specialist whose name does not signal it — otherwise a name-matching substitute
+    passes the movement arm. THE BA''s MUTATION IS CARRIED VERBATIM WITH BOTH STAY-GREEN HALVES
+    ASSERTED, and an injection reddening all three arms is recorded as a FAILURE. A SECOND,
+    IT-PO-ADDED BROADCAST INJECTION is placed here because this record''s notes name the stuck
+    answer: it must redden six named arms across five records (this record''s exclusion and
+    departure halves, a-1''s exclusion, c-2''s third arm, d-1''s counting arm and e-1''s
+    negative arm) while this record''s first-arm positive half stays green — that is how the
+    "tell everyone everything" answer is made to fail rather than assumed to. declares_side_effect
+    true. test_spec: five executing descriptors, one carrying the BA''s mutation and one the
+    tree-wide broadcast injection.'
+superseded_by: null
+covered_by:
+  - INF-1200c-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS ONE OF THE TWO AXES OF THE GRID AND IT IS ANSWERED BY WALKING THE OWNERSHIP
+  RECORD. INF-1200d is the other axis and is answered by walking the standards
+  declaration. Merged, an implementer satisfies whichever is cheaper — which is exactly
+  how the project arrived at a grid with one cell filled.
+
+  THE MOVEMENT ARM IS THE ONLY ONE WITH TEETH AND IT IS NOT NEGOTIABLE. "Every
+  specialist that owns a covered kind of file is told" is satisfied on any single run
+  by a list of today's three specialists written by hand. Such a list is correct on the
+  day it is written, survives review, and rots silently. The before-and-after pair is
+  the only observation that can fail on it, and the pass condition is that the standard
+  LEFT the previous owner as well as arriving at the new one — an audience that only
+  ever grows is a broadcast, not a derivation.
+
+  THE EXCLUSION ARM IS WHAT MAKES "REACH" MEAN ANYTHING. Every positive clause in this
+  record, and in INF-1200a-1 and INF-1200d-1, is satisfied by giving every specialist
+  every standard. That implementation is trivial, it is defensible in a review ("more
+  information cannot hurt"), and it silently empties INF-1200e's report of all content
+  because nobody is ever uninformed. Stating the exclusion here rather than only in e
+  means the delivery is wrong at source rather than merely unreportable.
+
+  THE LAST ARM NAMES THE CHEAP SUBSTITUTES EXPLICITLY BECAUSE THEY ARE THE ONES THAT
+  LOOK LIKE DERIVATION. Selecting the audience by matching a specialist's name against
+  a technology, or by a category field, or by "the coder agents", produces an audience
+  that varies plausibly and is not read from ownership at all — and it passes the
+  movement arm in the narrow case where the reassignment happens to align with the
+  naming. Reassign between two specialists whose names do not signal the kind of file
+  in question, and the substitute is exposed.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: select the audience for each standard from a fixed enumeration of
+  specialists compiled when the delivery was built, rather than from the ownership
+  record as it stands at the moment of dispatch. Under that injection:
+    - the first arm must STAY GREEN, because a list compiled today is correct today;
+    - the movement arm must go RED in BOTH of its halves — the standards do not arrive
+      at the new owner, and they do not leave the old one;
+    - the exclusion arm must STAY GREEN, because a specialist absent from the fixed
+      list is still told nothing.
+  All three outcomes must be observed together and all must revert. The two green
+  outcomes are load-bearing: a mutation that reddened everything would mean the arms
+  are not independent, and it is the movement arm alone that carries this record.
+
+  MEASURED BY GREP OVER EVERY SPECIALIST TEMPLATE, 2026-09-09. Exactly one specialist
+  mentions a standard anywhere in its instructions. The ownership record assigns kinds
+  of file to two further specialists — one covering database work, one covering
+  interface work — and neither is told any standard at all, including for a kind of
+  file that already carries a distinct configured limit. The user's own example falls
+  to the interface specialist, which is the one told nothing. Those pairings are the
+  positive control INF-1200e-1 also relies on.
+
+  DELIBERATELY NOT NAMED IN THE CRITERIA: any specialist and any kind of file.
+  Following GE-127c's precedent, this record survives a specialist being added, renamed
+  or split. A test that enumerates today's three specialists has re-created the
+  fixed-list implementation inside the test suite and will pass after the mutation is
+  applied.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. The
+  mutation above, including which arms must stay green, is written to be turned
+  directly into test descriptors.

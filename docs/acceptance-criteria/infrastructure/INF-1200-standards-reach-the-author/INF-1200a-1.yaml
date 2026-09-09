@@ -1,0 +1,366 @@
+id: INF-1200a-1
+title: "The standard is stated in the material the specialist begins from, not pointed at from it"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a kind of file carries a standard the project holds work to, and the
+    project's own ownership record assigns that kind of file to a specialist,
+  When that specialist begins work holding only the material it was given at
+    dispatch, having taken no action of its own,
+  Then that material already states the standards for every kind of file the
+    ownership record assigns to that specialist, each stated against the kind of
+    file it governs,
+  And each standard is stated in full there — the terms a reader would have to
+    know in order to comply are present in that material, so the specialist can
+    say what the standard is without opening, invoking, resolving, fetching or
+    asking for anything further,
+  And the value or rule so stated is the one the project declares for that kind
+    of file, so it can be compared against the declaration by a reader who has
+    seen only the brief,
+  And given instead a specialist the ownership record assigns no kind of file
+    that carries a standard,
+  When it begins work,
+  Then no standard for any kind of file is stated in its material, so what is
+    present is an obligation on its own work rather than a recital of the
+    project's rules.
+depends_on:
+  - INF-1200a
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE TIMING THIS RECORD ASSERTS IS THIS DOCUMENT'S SUBJECT. It enumerates the
+      channels that populate a specialist's context BEFORE its first action, and
+      distinguishes them from anything the specialist itself goes and gets. "Stated
+      in the material it begins from" means one of the channels populated at spawn;
+      "pointed at from it" means the specialist doing work to find out. The document
+      already draws that line and this record uses it rather than redrawing it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, INHERITED FROM THE L1 AND NOT RESTATED. GE-127 owns being refused.
+      Nothing in this record may be discharged by changing what a refusal says, when
+      it fires, or which kinds of file it covers. Every clause here is an assertion
+      about material in hand before any work product exists.
+  - path: config/agent_registry.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Holds the per-specialist record of which kinds of file each owns. Consumed here
+      as the given that decides WHICH standards must be present in a brief; whether
+      that record is right is AR-100's.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Holds the standards themselves. It is readable by anyone today, which is exactly
+      why "the standard is discoverable" is not the criterion — that has always been
+      true and this record exists because it is not enough.
+  - path: templates/agents/python-coder.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The one brief in which this property already holds, and therefore the shape to
+      generalise rather than the exception to preserve. It states a limit for one kind
+      of file directly, not as a pointer to where the limit may be found.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" binds here in its
+      natural form: a test that asserts a template contains a placeholder token, or
+      that an injection function returns a value, stays green on a build whose output
+      never reaches a dispatched specialist.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. THE CARRIER'S OWN COMPONENT DOC, AND THE REASON "THE MATERIAL IT BEGINS
+      FROM" IS A BUILD OUTPUT RATHER THAN A TEMPLATE. It records that
+      templates/agents/ is compiled by build.py into .claude/agents/, which is what a
+      dispatched specialist is actually given. Every descriptor on this record reads
+      the COMPILED brief, never the template — asserting on templates/agents/*.md is
+      the grep shape CLAUDE.md forbids and it stays green on a build that emits
+      nothing.
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The ownership record's own component doc. owns_file_extensions is the
+      field that decides WHICH standards must be present in a brief; measured in this
+      worktree, exactly three of sixty agents declare it (python-coder ['.py','.js'],
+      sql-coder ['.sql'], frontend-coder ['.tsx','.jsx','.vue','.svelte','.html',
+      '.css','.scss']), which makes the fifty-seven that declare none a real and
+      abundant fixture for the exclusion arm rather than a synthetic one.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. WATCHED_REGISTRIES binds four documents;
+    on commit_guardian.json it binds exactly two containers, hooks_manifest.hooks (by id)
+    and the document's own top level (by mapping key). This record adds neither: it adds no
+    hook, no manifest id, no new top-level section, no agent entry, no skill entry and no
+    paths.json surface. It constrains the CONTENT AND SHAPE of what the carrier places in a
+    compiled brief. Plain-list spec form, and no config_schema_fragment invented for a key
+    that will never exist — the BP-100k-4 / BP-100k-4-i fictional-fragment precedent is
+    deliberately not repeated.
+  - >-
+    THE MATERIAL A SPECIALIST BEGINS FROM IS THE COMPILED BRIEF, AND THAT FIXES WHAT MAY BE
+    ASSERTED. build_agents() in scripts/build_phases.py compiles every templates/agents/*.md
+    through compile_agent_template() into <target>/.claude/agents/ (and, for active
+    platforms, <target>/gemini/agents/). That written file is Channel 6 of
+    agent_knowledge_plane.md and is what a dispatched specialist holds before its first
+    action. Every arm of this record must be observed by running the build and reading that
+    output. A test that reads templates/agents/*.md, or that calls an injection helper and
+    inspects its return value, proves nothing about what an agent is told.
+  - >-
+    ONE SHARED HARNESS FOR THE WHOLE TREE — BUILD IT HERE, CONSUME IT EVERYWHERE. Fourteen
+    sibling records need the same thing: a controlled copy of the package tree in which
+    templates/scripts/commit_guardian/commit_guardian.json and config/agent_registry.json
+    can be varied, `python <pkg>/scripts/build.py --target-dir <target>` run as a real
+    subprocess, and the produced <target>/.claude/agents/*.md read back. Build that harness
+    once, under unit_tests/prompt_assembly/, and consume it from every sibling. Do not let
+    each record grow its own fixture — divergent harnesses are how one arm quietly stops
+    exercising the thing it names.
+  - >-
+    "STATED IN FULL" IS A CLOSURE PROPERTY, NOT A WORD COUNT. The terms a reader would have
+    to know in order to comply must be present in the brief: the kind of file the standard
+    governs, and the value or rule itself, in a form a reader who has seen only the brief
+    can compare against the declaration. Concretely, the brief must contain no instruction
+    to open, invoke, resolve, fetch or ask for anything in order to learn what the standard
+    is. A sentence naming where standards are declared is the specific prohibited shape and
+    is the BA's named mutation.
+  - >-
+    ATTRIBUTION IS PART OF THE POSITIVE ARM AND IS WHAT DEFEATS A BROADCAST. Each standard
+    must be stated AGAINST THE KIND OF FILE IT GOVERNS. A brief that states a figure with no
+    kind of file attached, or that states every declared standard undifferentiated, fails
+    this even though the figure is present — because the specialist cannot tell which of its
+    kinds of file the figure applies to. Measured: sql-coder owns only '.sql' (limit 600) and
+    python-coder owns '.py' (limit 400) and '.js'; a brief that states 400 to sql-coder, or
+    states both limits to either without attribution, is a failure of this record and not a
+    generosity.
+  - >-
+    THE EXCLUSION ARM IS LOAD-BEARING FOR FOUR OTHER RECORDS AND MUST BE ASSERTED AS AN
+    ABSENCE OVER THE WHOLE BRIEF. "Give every specialist every standard" satisfies every
+    positive clause here, and also c-1's first arm, d-1's arrival arms and d-2's arrival
+    arms, and it silently empties INF-1200e's census because nobody is ever uninformed. The
+    absence must be checked across the entire compiled file, not within a standards section
+    — a broadcast that adds a "standards you may care about" appendix passes a
+    section-scoped assertion. Fifty-seven of sixty registry agents declare no
+    owns_file_extensions, so the fixture is real. THE INJECTION THAT PROVES THIS ARM IS NOT
+    VACUOUS LIVES ONCE, ON INF-1200c-1, AND IS DELIBERATELY NOT DUPLICATED HERE: that
+    descriptor applies the broadcast — every declared standard in every brief — and requires
+    THIS record's exclusion arm to redden alongside c-1's exclusion arm and movement-departure
+    half, c-2's third arm, d-1's counting arm and e-1's negative arm, while c-1's first-arm
+    positive half stays green. One tree-wide injection with six named cross-record outcomes is
+    maintainable; four near-identical copies are not. If this arm is ever changed, re-run that
+    descriptor.
+  - >-
+    THE CARRIER MUST NOT INTRODUCE A FIGURE NO SPECIALIST DECLARES. INF-600a-4 is approved
+    and requires every figure a brief refers to to be declared by that specialist. Whatever
+    supplies standards from outside must keep that true. The disposition recorded on
+    INF-1200b-2 applies here unchanged: the specialist declares the derived standards
+    CHANNEL once, not a key per standard. If satisfying this record cannot be done without
+    either leaving a per-standard key declared or introducing undeclared figures, that is a
+    contradiction between two approved records and must be raised, never resolved silently.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    config and registry reads and around every file write; log at WARNING or higher or
+    re-raise; no bare or blind excepts. Note the interaction with INF-1200e-2: a swallowed
+    read failure that yields an empty standards set produces a brief with no standards in
+    it, which is indistinguishable from a specialist that owns nothing — the exact silence
+    that record exists to forbid. A failed read must never become an empty audience.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT. templates/agents/ and
+    templates/scripts/commit_guardian/ are canonical and tracked; .claude/agents/ and
+    scripts/commit_guardian/ are untracked build outputs overwritten by build.py. Edit the
+    canonical side only and re-run `python scripts/build.py --target-dir .` as part of the
+    change (ADR-001). A change written only into a template leaves every deployed brief on
+    the old content with no error.
+test_spec:
+  - name: test_inf_1200a_1_an_owners_compiled_brief_states_every_owned_kinds_standards_in_full
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Run the real build against a temporary target and read the produced
+      <target>/.claude/agents/<owner>.md for a specialist the ownership record assigns a
+      kind of file that carries a standard. The brief must state, for EVERY kind of file
+      that record assigns it, that kind's standards attributed to that kind, with the value
+      or rule itself present in the text and comparable against
+      templates/scripts/commit_guardian/commit_guardian.json by a reader who has seen only
+      the brief. The brief must contain no instruction to open, invoke, resolve, fetch or
+      ask for anything in order to learn the standard. Read from the compiled output only —
+      never from templates/agents/*.md.
+  - name: test_inf_1200a_1_a_specialist_owning_no_covered_kind_has_no_standard_stated_anywhere_in_its_brief
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE EXCLUSION ARM, AND IT IS THE ONE THAT MAKES "REACH" MEAN ANYTHING. For a
+      specialist the ownership record assigns no kind of file that carries a standard — of
+      which the registry holds fifty-seven today, so the fixture is real rather than
+      authored — the compiled brief states no standard for any kind of file. Asserted as an
+      absence over the WHOLE compiled file, not within a standards section, so a "standards
+      you may care about" appendix fails rather than passes. What may remain is an
+      obligation on that specialist's own work; what may not is a recital of the project's
+      rules.
+  - name: test_inf_1200a_1_the_pointer_injection_reds_the_stated_in_full_arm_and_leaves_the_exclusion_arm_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS A PAIR. MUTATION: replace
+      the stated standards in the brief with a sentence naming where the project declares
+      its standards and instructing the specialist to consult that declaration before
+      starting work. Under that injection the "stated in full there" arm must go RED,
+      because the specialist cannot say what the standard is from the brief alone; and the
+      final exclusion arm must STAY GREEN, because a pointer is equally absent from a
+      non-owner's brief. Both outcomes must be observed and both must revert. The green half
+      is load-bearing: an injection run that reddens both means the arms are not independent
+      and the exclusion arm is not carrying what this record needs it to. The mutation is not
+      a strawman — a pointer is strictly more informative than today's silence, it is the
+      first thing anyone reaches for, and it satisfies every loose reading of "the standard
+      reaches the specialist".
+  - name: test_inf_1200a_1_the_compiled_brief_a_dispatched_specialist_receives_is_the_one_the_build_wrote
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/build.py --target-dir <temporary target root>"
+    description: >-
+      PRODUCTION ENTRY POINT, ESTABLISHED ONCE HERE FOR THE WHOLE TREE. Run build.py as a
+      real subprocess against a temporary target and assert that the file at
+      <target>/.claude/agents/<owner>.md — the path the harness resolves an agent from at
+      spawn, per Channel 6 of agent_knowledge_plane.md — is what carries the standards, and
+      that it is regenerated by that run rather than pre-existing. A standards block
+      computed by a function no build phase calls, or written somewhere no dispatch reads,
+      is an inert value; that is the defect the whole tree exists to close, and it is
+      invisible to every descriptor that inspects a template or a return value.
+test_rationale: |
+  The cheapest reading of this record's L1 — "the standard arrives" meaning "the standard is
+  reachable" — has been satisfied since the day commit_guardian.json was written, because
+  anyone can open it. So no descriptor here may be satisfiable by the standard existing
+  somewhere. Every descriptor runs the real build into a temporary target and reads the
+  COMPILED brief at .claude/agents/, which is the material a dispatched specialist actually
+  holds. Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" and this
+  record's own doc_link, a test that asserts templates/agents/python-coder.md contains
+  `{{config.file_size_limit_py}}` stays green on a build whose output never reaches anyone —
+  and unit_tests/prompt_assembly/test_python_coder_template.py is exactly that shape today,
+  which is why the new descriptors live beside it rather than elsewhere.
+
+  The BA's pointer mutation is carried verbatim, with its stay-green half preserved as an
+  explicit required observation: a pointer is absent from a non-owner's brief too, so the
+  exclusion arm must survive it, and an injection run that reddens both arms is a failure of
+  the descriptor rather than a stronger result.
+
+  A SECOND injection is needed here and deliberately does not live here. The BA's mutation
+  does not reach the stuck answer this tree is most exposed to — "give every specialist every
+  standard" passes the pointer test, passes every positive clause in this record, and is the
+  shape that would let a-1, c-1, d-1 and d-2 all be reported satisfied while INF-1200e's
+  report is emptied of content. That broadcast injection is authored once, on INF-1200c-1
+  whose notes name the stuck answer, and its required outcome includes this record's exclusion
+  arm reddening. Duplicating it onto four records would produce four fixtures that drift apart;
+  one descriptor with six named cross-record outcomes will not.
+
+  The exclusion arm is asserted as an absence over the whole compiled file rather than
+  within a standards section, because the broadcast implementation most reviewers would
+  accept adds an appendix rather than editing a section. Its fixture is drawn from reality:
+  fifty-seven of the registry's sixty agents declare no owns_file_extensions at all.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: WATCHED_REGISTRIES binds
+    hooks_manifest.hooks (list_ids) and the document''s own top level (mapping_keys) on
+    commit_guardian.json, plus agents/skills/paths on the other three watched documents;
+    this record adds none of them — it constrains the content and shape of a compiled brief
+    and registers nothing. No config_schema_fragment invented. COMPLEXITY M: the substance is
+    the content shape of the injected material (stated in full, attributed per kind of file,
+    absent for non-owners) on top of the carrier b-1 and d-1 build. ASSIGNED python-coder:
+    the surface is scripts/build.py + scripts/build_phases.py (build_agents /
+    compile_agent_template) and the JSON declaration, all Python-and-JSON round-tripped by
+    the build; the templates/agents/*.md marker edits are constrained mechanically here and
+    the llm-expert hand-off condition is recorded on INF-1200b-2. THE BA''s MUTATION IS
+    CARRIED VERBATIM WITH ITS STAY-GREEN HALF INTACT — pointer injection reds "stated in full",
+    the exclusion arm must stay green, and an injection reddening both is recorded as a
+    FAILURE of the descriptor. THE "TELL EVERYONE EVERYTHING" STUCK ANSWER, which the BA''s
+    mutation cannot reach, is handled by an IT-PO-added broadcast injection authored ONCE on
+    INF-1200c-1 rather than duplicated here: its required outcome includes this record''s
+    exclusion arm reddening, alongside five other named cross-record arms. declares_side_effect
+    true: the Then clauses assert the content of a file the build writes to .claude/agents/, a
+    durable user-facing surface, which is precisely the "built but not wired into anything" risk
+    this tree carries. test_spec: four executing descriptors, all running build.py as a real
+    subprocess and reading the compiled brief; one establishes the production entry point for
+    the whole tree.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHAT THIS RECORD IS FOR. The L1 promises the standard arrives before the work.
+  The cheapest reading of "arrives" is "is reachable", and that reading is satisfied
+  today and always has been — the standards sit in a configuration file any reader
+  can open. This record fixes "arrives" to mean the standard is IN the brief, stated
+  in full, with nothing left for the specialist to go and do.
+
+  THE LAST ARM IS NOT DECORATION. Without it, every positive clause here is satisfied
+  by pasting the whole standards declaration into every specialist's brief. That
+  passes, costs nothing, and destroys the meaning of "the standards for what you are
+  about to touch". It also makes INF-1200e's report vacuous, since nobody is ever
+  uninformed. The exclusion belongs here rather than in c because it is what makes
+  "the standard is in your brief" a statement about YOUR work.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can
+  lift it verbatim into a test descriptor.
+
+  MUTATION: replace the stated standards in the brief with a sentence naming where
+  the project declares its standards and instructing the specialist to consult that
+  declaration before starting work. Under that injection:
+    - the "stated in full there" arm must go RED, because the specialist cannot say
+      what the standard is from the brief alone;
+    - the final exclusion arm must STAY GREEN, because a pointer is equally absent
+      from a non-owner's brief.
+  Both outcomes must be observed and both must revert. The mutation is not a
+  strawman: a pointer is strictly more informative than today's silence, it is the
+  first thing anyone reaches for, and it satisfies every loose reading of "the
+  standard reaches the specialist".
+
+  MEASURED, 2026-09-09, IN THIS WORKTREE. Exactly one specialist template refers to a
+  size standard at all. The ownership record assigns kinds of file to two further
+  specialists that refer to none. The user's own example — the kind of file they named
+  in the request — falls to one of the two that are told nothing, and carries no
+  declared standard either; making that statable is INF-1200b's subject, and it is
+  named here only so the reader knows why this tree exists.
+
+  DELIBERATELY NOT NAMED IN THE CRITERIA: any kind of file, any specialist, and any
+  figure. Following GE-127c's precedent and the L0's altitude test, this record
+  survives a specialist being added, renamed or split and a standard being retuned.
+  The user's example lives in these notes and in the config edit that will express it.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. The
+  mutation above is written to be turned directly into a test descriptor.
