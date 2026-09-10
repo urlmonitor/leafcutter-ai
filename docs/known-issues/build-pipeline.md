@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-08
+last_updated: 2026-09-10
 components:
   - build_pipeline
 related_docs:
@@ -4416,6 +4416,42 @@ Identical AST shape to a sibling-module load, so the scanner demanded a deployed
 - The "New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest" convention in `CLAUDE.md` — this scanner is the mechanical enforcement of that rule; both entries are about it over-reaching.
 
 **Pattern:** a static analyser inferring optionality from lexical position, where the property it is actually trying to detect (does this code tolerate the module's absence?) is a runtime one.
+
+### KI-BP-20260910-1240 — build.py writes CRLF on Windows and then cannot see that it did, so every deployed script silently diverges from its template and a plain re-run never repairs it
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1 (found 2026-09-10 while landing EPIC-TruthfulProjectRecord)
+- **First seen:** 2026-09-10 · **Last seen:** 2026-09-10
+- **Where:** `scripts/build_phases.py` `_write()` · every `check-hook-parity` / `check-output-drift` consumer
+
+**Symptom.** On Windows, `check-hook-parity` blocks the commit reporting that every script under `.leafcutter/scripts/commit_guardian/` and `scripts/commit_guardian/` diverges from its canonical template in `templates/scripts/commit_guardian/`. Running `python scripts/build.py` — the remedy the hook names — reports `580 files unchanged` and repairs nothing. The commit stays blocked, and no number of re-runs moves it.
+
+**Why the build cannot see it.** `_write()` writes with `Path.write_text(content, encoding="utf-8")`. That opens in text mode with `newline=None`, so Python translates every `\n` to `os.linesep` — `\r\n` on Windows. The canonical templates are LF-only, so every deployed file lands byte-different from its source. The build's own compare-before-write guard then reads the deployed file back with `read_text()`, which applies universal-newline translation on the way in and hands back LF. The comparison is LF-vs-LF, matches, and the file is skipped as up to date. The corruption and the blindness to it are the same line:
+
+```python
+>>> p.write_text("a\nb\n", encoding="utf-8"); p.read_bytes()
+b'a\r\nb\r\n'
+>>> p.read_text(encoding="utf-8")
+'a\nb\n'          # the CRLF is invisible from here
+```
+
+**Why it is worse than a cosmetic diff.** Three consequences compound. (1) The repair the hook advertises is a no-op, so the contributor is told to run a command that cannot work. (2) `--force` DOES repair it, because it skips the comparison entirely — so the working fix is undocumented and the documented fix is broken. (3) `.build_manifest.json` records the hash of what the build believes it wrote; when the build skips a file it never refreshes that entry, so `check-output-drift` later reports the file as hand-edited. A contributor following the error messages is walked toward editing hashes inside a build-integrity manifest to make a drift check pass — which is exactly the action that should never be taken, arrived at by following the tool's own advice.
+
+**Detection.**
+
+```bash
+python -c "import pathlib,tempfile; p=pathlib.Path(tempfile.mkdtemp())/'t'; p.write_text('a\nb\n',encoding='utf-8'); print(p.read_bytes())"
+# b'a\r\nb\r\n' on Windows, b'a\nb\n' on Linux
+python scripts/build.py --target-dir .        # reports "unchanged", repairs nothing
+python scripts/build.py --target-dir . --force # actually repairs
+```
+
+Any `check-hook-parity` failure that survives a plain `build.py` re-run on Windows is this.
+
+**Fix direction.** Give `_write()` an explicit `newline=""` (or write bytes) so the build emits exactly the bytes it was handed on every platform, and make the compare-before-write guard compare BYTES rather than decoded text — the guard exists to answer "is what is on disk what I would write", and a comparison that normalises the one difference the writer introduces cannot answer it. Landing the writer fix alone will rewrite every deployed artifact once, which is expected and should be done deliberately rather than folded into an unrelated change. Until then, `--force` is the working repair and the error messages that name a plain re-run are wrong.
+
+**Pattern:** the writer and the change-detector disagree about what a file's content IS, so the component's self-check validates a normalised view of its own output rather than the output. **Related:** `GE-120` (green means it was checked — here the build reports "unchanged" about a file it corrupted), and `docs/reference/false-green-mechanisms.md`.
 
 ---
 

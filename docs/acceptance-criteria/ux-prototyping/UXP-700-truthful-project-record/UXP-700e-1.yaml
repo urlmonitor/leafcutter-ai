@@ -45,9 +45,10 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by:
-  - UXP-700e-1-i
-  - UXP-700e-1-ii
-implemented_by: []
+- UXP-700e-1-i
+- UXP-700e-1-ii
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700e-1.md
 change_target:
   - code
   - schema
@@ -83,3 +84,4 @@ notes: |
   maxLength, steps has no maxItems, tags has no pattern, component is free text. This AC
   introduces the measurement; the transition rules that stop it breaking the store on day one
   are UXP-700e-1-i and UXP-700e-1-ii and must land in the same piece of work.
+target_epic: EPIC-TruthfulProjectRecord

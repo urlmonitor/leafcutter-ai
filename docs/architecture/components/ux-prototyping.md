@@ -11,6 +11,8 @@ components:
   - ux_prototyping
   - ac_store
   - build_pipeline
+related_docs:
+  - docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md
 ---
 
 # UX Prototyping — The Product-Truth Store

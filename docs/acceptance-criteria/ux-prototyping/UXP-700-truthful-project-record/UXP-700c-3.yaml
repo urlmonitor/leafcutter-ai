@@ -44,9 +44,10 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by:
-  - UXP-700c-3-i
-  - UXP-700c-3-ii
-implemented_by: []
+- UXP-700c-3-i
+- UXP-700c-3-ii
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700c-3.md
 change_target:
   - code
   - pipeline
@@ -94,3 +95,4 @@ notes: |
   SECOND-ORDER RISK for the IT PO: the second clause ("the verdict IS the gate's verdict") is
   what stops the checker being wired in as an advisory that prints and always succeeds. That is
   the most likely way this lands green while changing nothing.
+target_epic: EPIC-TruthfulProjectRecord

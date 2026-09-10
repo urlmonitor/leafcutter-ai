@@ -40,7 +40,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700e-3-i.md
 change_target:
   - code
   - schema
@@ -87,3 +88,4 @@ notes: |
   regeneration after this lands WILL rewrite the three affected journeys, so that run is not a
   no-op. The idempotency test must be read as "no change after the shape has settled", and
   whoever builds this should expect one deliberate churn commit.
+target_epic: EPIC-TruthfulProjectRecord

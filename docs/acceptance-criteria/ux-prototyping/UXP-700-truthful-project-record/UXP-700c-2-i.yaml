@@ -39,7 +39,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700c-2-i.md
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -68,3 +69,4 @@ notes: |
   clean store having compared nothing, which is exactly the UXP-700b failure. If it defaults to
   behind, the first run reports 14 findings and is ignored. The reason it is a third value is
   that neither default is honest.
+target_epic: EPIC-TruthfulProjectRecord

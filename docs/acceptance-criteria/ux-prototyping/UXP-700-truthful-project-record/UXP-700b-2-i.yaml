@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -37,8 +37,12 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/product_truth/test_uxp_700b_2_i.py
+implemented_by:
+- docs/product-truth/scripts/validate_product_truth.py
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700b-2-i.md
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -64,3 +68,4 @@ notes: |
   Named mutation: drop the not-executed entry from the report. UXP-700b-2's counts still add up
   and its tests stay green; only this record turns red. That asymmetry is why it is a record of
   its own.
+target_epic: EPIC-TruthfulProjectRecord

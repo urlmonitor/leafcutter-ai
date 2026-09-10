@@ -42,7 +42,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700c-2-ii.md
 change_target:
   - code
   - schema
@@ -80,3 +81,4 @@ notes: |
   the journey's content in the Atlas is frontend work and is deliberately NOT folded in here -
   one agent per AC. The delivers_to contract is the seam; if the rendering half is wanted as a
   tracked behaviour it needs its own AC under UXP-591.
+target_epic: EPIC-TruthfulProjectRecord

@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 criteria: |
@@ -45,8 +45,12 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by:
-  - UXP-700c-1-i
-implemented_by: []
+- UXP-700c-1-i
+- unit_tests/product_truth/test_uxp_700c_1.py
+implemented_by:
+- docs/product-truth/scripts/validate_product_truth.py
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700c-1.md
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -81,3 +85,4 @@ notes: |
   the floor asks only "does the target exist", needs no external tooling, and is always on;
   UXP-700c-2 is the content tier that asks whether the target still says what the record claims.
   The floor must not be made to depend on the content tier, or a tooling gap disables both.
+target_epic: EPIC-TruthfulProjectRecord

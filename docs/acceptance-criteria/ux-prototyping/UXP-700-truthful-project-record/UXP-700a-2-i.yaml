@@ -38,8 +38,10 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/product_truth/test_uxp_700a_2_i.py
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700a-2-i.md
 change_target: code
 risk_surface: internal
 test_required: true
@@ -57,3 +59,4 @@ test_spec:
 notes: |
   The four lookups are index.json by_component, by_entity, by_flow and by_ac. Named here rather
   than in criteria so the criterion survives a rename of the index fields.
+target_epic: EPIC-TruthfulProjectRecord

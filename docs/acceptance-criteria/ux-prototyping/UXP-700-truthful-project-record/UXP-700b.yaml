@@ -41,10 +41,10 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by:
-  - UXP-700b-1
-  - UXP-700b-2
-  - UXP-700b-3
-  - UXP-700b-4
+- UXP-700b-1
+- UXP-700b-2
+- UXP-700b-3
+- UXP-700b-4
 implemented_by: []
 change_target:
   - code

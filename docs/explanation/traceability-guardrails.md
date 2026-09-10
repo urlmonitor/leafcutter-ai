@@ -4,7 +4,7 @@ description: "Which mechanical guardrails currently enforce the links between ac
 type: explanation
 status: active
 created: 2026-08-24
-last_updated: 2026-08-24
+last_updated: 2026-09-09
 components:
   - commit_guardian
   - precommit_hooks
@@ -212,7 +212,19 @@ orphans.
 fail-open: an unexpected exception exits 0 with a stderr note. Several read their
 file set from the git index and validate *nothing* when the index is clean —
 which is exactly why the `AC store valid` CI job has to `git reset --soft` to the
-base ref before invoking them. A green hook run is not proof a check ran.
+base ref before invoking them. A green hook run is not proof a check ran. One
+validator has since narrowed this specific gap: `validate_product_truth.py`
+(`UXP-700b-1-i`) now names each unreadable journey file, states how many
+journeys it did examine, and prints a `degraded` outcome that is distinct from
+both `nothing-examined` and `checked-and-sound` — one journey it cannot read no
+longer crashes the run, and no longer looks like a clean pass either. That is a
+single validator honouring the
+[GE-120](../acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml)
+convention ("green means it was checked, never that it could not run") ahead of
+GE-120 itself, which still owns the shared root/prereq resolver and the
+out-of-process parity harness across *every* manifest hook — UXP-700b-1-i
+reconciles with that convention for one script; it does not repeal it and does
+not close GE-120's own hole 7.
 
 **8. AC `work_status` is not a reliable read of what is live.** BO-2200a/b/c/d all
 sit at `todo` while every one of their children is `done`; `guardrail_gates.yaml`
@@ -232,7 +244,7 @@ above.
 | **GE-111** *Traceability stays honest* | Hole 1. Commit-time AC ↔ code drift detection with a file-path floor and a `#symbol` anchor tier, scoped to links whose source the commit staged; block by default, warn-only as explicit opt-in; two reconciliation routes (update the link / confirm the code still satisfies it) + how-to + sequence diagram | 0 of ~20 done |
 | **GE-117** *Code declares what it serves* | Hole 2. Module docstring names a registered component; public symbol docstring cites a resolvable AC; each new decision-history entry carries an AC ref; guided autofix and a per-item, reasoned opt-out | 0 done |
 | **GE-104** *Enforced page docs* | Hole 5 (frontend slice). Two-layer: a commit hook blocking a new page without its reference doc, plus a planning-time trigger flipping `documentation-expert` to needed | 0 done |
-| **GE-120** *Green means checked* | Hole 7. A check that cannot inspect reports *degraded*, never a clean pass; every check declares its cannot-run disposition; one shared root/prereq resolver; an out-of-process parity harness proving every manifest hook reaches the same verdict from a worktree; correct authored-diff attribution on merges and reverts | 0 done |
+| **GE-120** *Green means checked* | Hole 7. A check that cannot inspect reports *degraded*, never a clean pass; every check declares its cannot-run disposition; one shared root/prereq resolver; an out-of-process parity harness proving every manifest hook reaches the same verdict from a worktree; correct authored-diff attribution on merges and reverts | 0 done (see Hole 7 note above — `UXP-700b-1-i` landed the same convention for `validate_product_truth.py` alone, outside this family) |
 | **TQ-100** *Suite only blocks for failures that matter* | Hole 3. Formalises the `pytest_ac_enforcement` behaviour already live: untagged tests enforced by default, tagged-and-not-done informational, done-AC tests un-downgradable, an expiring allowlist, and a three-stage enforcement rollout | plugin live, ACs todo |
 | **BO-600** *Change-driven guardrails* | Routes the guardrail set from `change_target` × `risk_surface`, with inheritance for new agent types and targets | enums + `guardrail_gates.yaml` live; BO-610-4 (both fields mandatory in ticket frontmatter) and the BO-620 mappings todo |
 | **GE-122** *Numbers mean one thing* | Id uniqueness across all four namespaces, enforced at three stages, with remediation routes | 1 done |
@@ -269,3 +281,4 @@ The cheapest high-value moves, in order:
 - [docs/explanation/tdd-workflow.md](tdd-workflow.md) — the test-first layer
 - [docs/reference/ac-schema.md](../reference/ac-schema.md) — AC field contract
 - [docs/product-truth/README.md](../product-truth/README.md) — flow store
+- [docs/how-to/product-truth-schema-reference.md](../how-to/product-truth-schema-reference.md#validator-run-outcome--validate_product_truthpy-not-the-classifier-outcome-above) — the `validate_product_truth.py` run-outcome contract (`UXP-700b-1-i`)
