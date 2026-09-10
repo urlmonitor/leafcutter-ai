@@ -1,0 +1,373 @@
+id: INF-1200f-1
+title: "The figure in the brief and the figure applied to the work are one figure, and they move together"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a kind of file carries a standard expressed as a figure, and a specialist
+    the ownership record assigns that kind of file,
+  When the figure stated in that specialist's material is compared with the
+    figure the project applies to work of that kind,
+  Then they are the same figure,
+  And given the declared figure is then changed, with nothing else in the project
+    altered,
+  When the same comparison is made again,
+  Then the two are again the same figure as each other, and both are the changed
+    one — neither surface holds the superseded figure,
+  And given the declared figure is changed a second time,
+  When the comparison is made a third time,
+  Then the two are again the same, so agreement is a property of the arrangement
+    rather than of the moment it was last inspected,
+  And at no point does any material a specialist begins work from state a figure
+    for that kind of file other than the one that will be applied to it.
+depends_on:
+  - INF-1200f
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200f.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE HARDEST BOUNDARY IN THIS TREE — CONSUMED, NOT RESTATED. GE-127d owns one
+      gate's self-description: that its published account of itself matches what it does
+      and that a figure it quotes is reproducible. This record owns a different pair of
+      surfaces — the figure in a specialist's own working material versus the figure
+      applied to the result. They come apart in both directions and neither may be
+      closed as a duplicate of the other. Crucially, "the figure the project applies" is
+      taken here as a GIVEN: no clause states how it is measured, which lines count, or
+      what happens when it is exceeded. A clause that did has crossed into GE-127d or
+      GE-127a and must be withdrawn.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. Nothing here may be discharged by changing what a refusal does or says.
+      Every arm is an equality between two figures, observed without any work having
+      been refused.
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600a-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME SEAM FROM THE OTHER SIDE, AND AN OBLIGATION TO SATISFY RATHER THAN
+      RESTATE. INF-600a-4 requires every figure a specialist's material refers to to be
+      declared by that specialist. Whatever carries figures outward must keep that true
+      rather than route around it. If satisfying this record introduces figures no
+      specialist declares, raise the contradiction rather than resolving it silently.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      The declaration both surfaces must resolve from. The second mutation below is
+      about what happens when they resolve from two copies of it that agree today.
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Holds the one arrangement in which this property already holds, resolving a
+      figure out of the declaration at build time. It is correct and must be preserved
+      rather than replaced; INF-1200f-2 owns the preservation obligation in detail.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", and the
+      "Function Signature Extension — Call-Site Audit Required" convention by analogy: a
+      value read correctly in one place and stale in another is the same class of defect
+      as a caller left on an old signature, and it is invisible to any test that
+      exercises one side alone.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. THE SECOND SURFACE, AND THE SPECIFIC RESOLUTION HAZARD. The figure applied
+      to the work is resolved by the gate from the config sitting BESIDE THE DEPLOYED
+      SCRIPT, not from the tracked template — config.py sets its path relative to its
+      own deployed location. So the two surfaces already resolve through different
+      paths to what is meant to be one declaration, and a change built into the
+      template but never deployed makes them disagree with no error. That is the second
+      mutation's shape occurring by accident, and it is why one descriptor here must run
+      after a real build.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The first surface. The brief's figure is resolved at compile time, so
+      "they move together" has a rebuild in the middle of it by construction — which is
+      exactly the design question the BA's notes say must be stated rather than left
+      unstated, and it is disposed of in it_requirements below.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. This record changes no registry: no
+    hooks_manifest.hooks id, no new top-level key on commit_guardian.json, no agent entry, no skill
+    entry, no paths.json surface. Its arms change the VALUE of an existing nested key
+    (file_size.line_limits) twice, which is not a watched addition — the mapping_keys container is
+    bound to dotted path "" only, and a value change adds no key at any level. Plain-list spec form;
+    no fictional config_schema_fragment.
+  - >-
+    ONE DECLARATION, ONE RESOLUTION PATH, NO SECOND COPY. Both surfaces — the figure stated in the
+    brief and the figure applied to the work — must resolve from the same declaration. No mirrored
+    copy, no derived cache, no build-time snapshot persisted anywhere, and no default that stands in
+    for the declared value when it is present. Two copies that agree today is the exact shape the
+    BA's second mutation forbids and it is invisible to any single comparison, which is why the
+    criterion is written as a sequence rather than as an equality.
+  - >-
+    THE REBUILD WINDOW MUST BE STATED, NOT LEFT UNSTATED — THE BA'S NOTES REQUIRE THIS EXPLICITLY.
+    The disposition: a rebuild between the declaration edit and the next dispatch IS a legitimate
+    design, because both surfaces are build outputs in this project — the brief is compiled into
+    .claude/agents/ and the gate reads the config deployed beside it. What must therefore be true is
+    that the SAME build carries both, so no build can leave one updated and the other stale. Do not
+    resolve the brief's figure at build time while leaving the gate's config to be deployed by a
+    different phase or a different invocation; a partial build is then a live divergence. What a
+    specialist is told in the window before a rebuild is: the previous figure, on both surfaces,
+    consistently — which satisfies this record, and is the reason the two must not be split across
+    phases.
+  - >-
+    TWO CHANGES, NOT ONE, AND THE REASON IS RECORDED SO IT IS NOT SIMPLIFIED AWAY. A single change
+    can be survived by an arrangement that re-resolves whenever the declaration is edited but not
+    whenever the specialist is dispatched — one that happens to have been rebuilt between the edit
+    and the observation. Two changes in a row, with the comparison made after each, is the smallest
+    sequence in which "they agree" reads as a property rather than as a coincidence of ordering.
+  - >-
+    THE FIGURE MUST BE READ FROM BOTH SIDES AT RUN TIME, NOT COMPARED AGAINST A LITERAL. The
+    descriptor reads the figure the brief states and the figure the gate applies, and compares them
+    to each other. Comparing each against an expected number the test authored passes on a world
+    where both are wrong in the same way, and it also silently pins the user's approval-time
+    decision about what the figure should be — which this record explicitly takes no position on.
+  - >-
+    FENCED FROM GE-127d AND GE-127a. "The figure the project applies" is taken here as a GIVEN. No
+    part of this record specifies how the length is measured, which lines count, what happens when
+    it is exceeded, or whether the measurement is reproducible — those are GE-127d's and GE-127a's,
+    and specifying them in two places produces two rules. Equally, nothing here requires that a
+    figure be APPLIED at all, which is what keeps this record consistent with INF-1200a-3.
+  - >-
+    SATISFY INF-600a-4 RATHER THAN ROUTING AROUND IT. Every figure a brief refers to must be
+    declared by that specialist. Whatever carries figures outward must keep that true; the
+    disposition recorded on INF-1200b-2 — one declaration of the derived standards channel rather
+    than a key per standard — is the route. If satisfying this record introduces figures no
+    specialist declares, raise the contradiction rather than resolving it silently.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the declaration
+    read on both surfaces; log at WARNING or higher or re-raise; no bare or blind excepts. THE
+    SPECIFIC HAZARD, MEASURED: scripts/build.py's incumbent `_inject_file_size_limits` swallows
+    OSError, JSONDecodeError, TypeError and ValueError and falls back to the literal 400. That
+    fallback is a SECOND FIGURE by another name — on a malformed declaration the brief would state
+    400 while the gate stated something else — and it is a live instance of what this record
+    forbids. A generalisation must not reproduce it: a declaration that cannot be read must fail the
+    build, not substitute a number nobody declared.
+test_spec:
+  - name: test_inf_1200f_1_the_figure_in_the_brief_and_the_figure_the_gate_applies_are_the_same_figure
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Build into a temporary target, read the figure stated in the owner's compiled brief and the
+      figure the project applies to work of that kind, and compare THEM TO EACH OTHER — never
+      against a literal the test authored, which would pass on a world where both are wrong in the
+      same way and would also pin a figure this record takes no position on.
+  - name: test_inf_1200f_1_after_two_successive_declaration_changes_the_two_surfaces_still_agree_and_hold_the_current_figure
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Change the declared figure with nothing else altered, rebuild, compare; change it a second
+      time, rebuild, compare again. After each change the two are the same figure as each other AND
+      both are the changed one — neither surface holds the superseded figure. Two changes rather
+      than one, because a single change is survived by an arrangement that re-resolves on edit but
+      not on dispatch and happened to be rebuilt in between; two in a row is the smallest sequence in
+      which agreement reads as a property rather than as a coincidence of ordering.
+  - name: test_inf_1200f_1_no_material_the_specialist_begins_from_states_any_other_figure_for_that_kind_of_file
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Across the WHOLE compiled brief — not just the standards region — no figure for that kind of
+      file appears other than the one that will be applied to it. This is the arm that catches a
+      stale literal left behind elsewhere in the material, which is the same class of defect as a
+      caller left on an old signature and is invisible to any test that reads one location.
+  - name: test_inf_1200f_1_the_snapshot_injection_leaves_the_first_comparison_green_and_reds_both_later_ones
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's FIRST NAMED MUTATION, CARRIED VERBATIM. MUTATION: hold the figure stated in the
+      specialist's material at the value it had when the delivery was last carried out — a snapshot
+      taken once and reused. Under that injection the first comparison must STAY GREEN, because a
+      snapshot is correct on the day it is taken, and both later comparisons must go RED. Both
+      outcomes must be observed and both must revert. THE GREEN OUTCOME IS THE ENTIRE ARGUMENT OF
+      THIS RECORD: first-day correctness is what every hand-built arrangement already has, and a
+      criterion satisfied by correcting today's figures is satisfied again the next time they
+      diverge — which is to say, not satisfied.
+  - name: test_inf_1200f_1_the_two_copies_injection_leaves_the_first_comparison_green_and_reds_the_later_ones_as_soon_as_one_copy_is_edited
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's SECOND NAMED MUTATION, CARRIED VERBATIM. MUTATION: resolve the figure stated in the
+      material from one copy of the declaration and leave the figure applied to the work resolving
+      from another copy, the two being identical at the moment of the split. Under that injection the
+      first comparison must STAY GREEN and the later comparisons must go RED as soon as one copy is
+      edited. Both outcomes must be observed and both must revert. Two copies that agree today is the
+      exact shape this record forbids and it is invisible to any single comparison, which is why the
+      criterion is a sequence and not an equality.
+  - name: test_inf_1200f_1_the_deployed_gate_and_the_deployed_brief_agree_after_a_real_build
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, in a cold process, the figure in the DEPLOYED brief under .claude/agents/ and
+      the figure the DEPLOYED gate applies — resolved from the config sitting beside the deployed
+      script, not from the tracked template — are the same figure. This is not redundant with the
+      arms above: the two surfaces already resolve through different paths in this project, and a
+      declaration change built into the template but never deployed makes them disagree with no
+      error at all. That is the second mutation's shape occurring by accident, and only a
+      post-build cold-process descriptor can see it.
+test_rationale: |
+  Any hand-built arrangement is faithful on the day it is built, so no descriptor here may be a
+  single comparison. What this record is about is the second day: the standard changes and one of
+  the two surfaces does not. Every arm is therefore a sequence of builds across successive
+  declaration edits, and the pass condition after each is that the two surfaces hold the SAME
+  figure and that it is the CURRENT one.
+
+  The figures are read from both sides and compared to each other, never against a literal. A
+  literal would pass on a world where both surfaces are wrong in the same way, and it would silently
+  pin the user's approval-time decision about what the figure should be — which this record
+  explicitly takes no position on.
+
+  Both of the BA's mutations are carried verbatim and both are mixed-outcome in the same direction:
+  the first comparison stays GREEN and the later ones redden. That stay-green half is not incidental,
+  it is the record's whole argument — first-day correctness is what every hand-built arrangement
+  already has, and an injection that reddened the first comparison too would be exercising something
+  other than drift.
+
+  The deployed descriptor is not redundant with the arms above. The two surfaces already resolve
+  through different paths in this project: the brief is compiled into .claude/agents/, and the gate
+  reads its config from beside the deployed script rather than from the tracked template. A
+  declaration change written into the template and never deployed therefore produces exactly the
+  two-copies divergence the second mutation installs deliberately — by accident, silently, and
+  invisibly to every source-tree test.
+
+  One measured hazard is worth naming here because it is a live instance of what this record forbids:
+  the incumbent injection step in scripts/build.py swallows read and parse errors and falls back to
+  the literal 400. On a malformed declaration the brief would state a figure nobody declared while
+  the gate stated another. The it_requirements forbid reproducing that in the generalisation.
+delivers_to:
+  - agent: python-coder
+    ac_id: INF-1200f-2
+    contract: >-
+      The single-resolution guarantee: one declaration, one resolution path, both surfaces moving
+      together across successive changes. f-2 consumes it and adds the preservation obligation —
+      that the one pairing where this already holds keeps it at every point in its brief that
+      states the figure today, including the stop-and-ask trigger, and not merely at one place.
+expects_from:
+  ac_id: INF-1200b-1
+  contract: >-
+    The build-time join and the carrier that places declared standards into compiled briefs. This
+    record constrains the FIDELITY of what it places: the figure stated must be resolved from the
+    same declaration the gate applies, with no mirrored copy, no persisted snapshot and no default
+    substituted for a declared value.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: the arms change the VALUE of an
+    existing nested key (file_size.line_limits) twice, which adds no key at any level and is not a
+    watched addition — mapping_keys on commit_guardian.json is bound to dotted path "" only. No
+    hooks_manifest id, no fictional fragment. COMPLEXITY M. THE REBUILD-WINDOW QUESTION THE BA''s
+    NOTES REQUIRE TO BE STATED IS DISPOSED OF EXPLICITLY: a rebuild between the edit and the next
+    dispatch is a legitimate design because BOTH surfaces are build outputs here, and what must
+    therefore hold is that the SAME build carries both — splitting them across phases or invocations
+    makes a partial build a live divergence, and in the window before a rebuild both surfaces hold the
+    previous figure consistently, which satisfies this record. A LIVE INSTANCE OF THE DEFECT IS
+    MEASURED AND FORBIDDEN FROM BEING REPRODUCED: scripts/build.py''s incumbent _inject_file_size_limits
+    swallows OSError/JSONDecodeError/TypeError/ValueError and falls back to the literal 400, so on a
+    malformed declaration the brief would state a figure nobody declared while the gate stated another
+    — a second figure by another name. FIGURES ARE COMPARED TO EACH OTHER, never to a test-authored
+    literal, which would pass when both are wrong alike and would pin a figure this record takes no
+    position on. BOTH BA MUTATIONS CARRIED VERBATIM WITH THEIR STAY-GREEN HALVES INTACT — the first
+    comparison green under both the snapshot and the two-copies injection, which is the record''s whole
+    argument. A DEPLOYED COLD-PROCESS DESCRIPTOR IS ADDED because the two surfaces already resolve
+    through different paths (the gate reads the config beside the deployed script per config.py), so an
+    unbuilt change reproduces the two-copies divergence by accident. declares_side_effect true.
+    test_spec: six executing descriptors.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE DRIFT IS THE POINT, NOT THE FIRST-DAY CORRECTNESS. Any hand-built arrangement is
+  faithful on the day it is built. What this record is actually about is the second day:
+  the standard changes and one of the two surfaces does not. This project has already
+  lived that exact failure on an adjacent surface, where a published description of a
+  gate outlived a change to the gate's behaviour by long enough for people to plan around
+  the wrong rule. A criterion satisfied by correcting today's figures is satisfied again
+  the next time they diverge — which is to say, not satisfied.
+
+  WHY THERE ARE TWO CHANGES AND NOT ONE. A single change can be survived by an
+  arrangement that re-resolves the figure whenever the declaration is edited but not
+  whenever the specialist is dispatched — one that happens to have been rebuilt between
+  the edit and the observation. Two changes in a row, with the comparison made after
+  each, is the smallest sequence in which "they agree" reads as a property rather than
+  as a coincidence of ordering. If an implementation needs a rebuild between the two,
+  that is a legitimate design and should be stated as such at enrichment; what may not
+  be left unstated is what a specialist is told in the window before it happens.
+
+  WHY THIS IS NOT PART OF INF-1200b, SINCE THE MERGE IS TEMPTING AND WAS REFUSED. b
+  promises one edit in one place; this promises no divergence between what was said and
+  what is applied. The negative case is today's design generalised: if each specialist's
+  material continued to name the figure it wants while the values were filled in from
+  the declaration, this record would hold and b would fail, because covering a new kind
+  of file would still mean editing a specialist. Both are needed and the PO recorded the
+  refusal explicitly.
+
+  WHAT THIS DOES NOT CLAIM, STATED SO IT IS NOT INFERRED. It takes no position on
+  whether a given standard or a given way of measuring is the right one — only that one
+  figure is in play rather than two. Which figure is correct is the user's decision at
+  approval; whether the measurement is reproducible is GE-127d's subject; whether a
+  figure is applied at all is not required here, which is what keeps this record
+  consistent with INF-1200a-3.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO can
+  lift them verbatim into test descriptors.
+
+  (1) MUTATION: hold the figure stated in the specialist's material at the value it had
+      when the delivery was last carried out — a snapshot taken once and reused. Under
+      that injection the first comparison must STAY GREEN, because a snapshot is correct
+      on the day it is taken, and both later comparisons must go RED. Both outcomes must
+      be observed and both must revert. The green outcome is the entire argument of this
+      record: first-day correctness is what every hand-built arrangement already has.
+
+  (2) MUTATION: resolve the figure stated in the material from one copy of the
+      declaration and leave the figure applied to the work resolving from another copy,
+      the two being identical at the moment of the split. Under that injection the first
+      comparison must STAY GREEN and the later comparisons must go RED as soon as one
+      copy is edited. Both outcomes must be observed and both must revert. Two copies
+      that agree today is the exact shape this record forbids and it is invisible to any
+      single comparison — which is why the criterion is written as a sequence and not as
+      an equality.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. Both
+  mutations above, including which arm must stay green, are written to be turned
+  directly into test descriptors.

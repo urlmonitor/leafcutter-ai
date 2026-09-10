@@ -1,0 +1,96 @@
+id: INF-1200d
+title: "A standard you add later reaches its audience the day you add it"
+component: infrastructure
+components:
+  - infrastructure
+  - commit_guardian
+  - injection_builder
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  New standards travel on their own — nothing has to be rewired to carry them.
+
+  When your project starts holding work to a standard it did not hold it to
+  before, everyone that standard applies to learns it as part of adding it.
+  There is no separate step in which someone has to remember to pass it on, and
+  no way for a standard to be in force while its audience has never heard of
+  it.
+depends_on:
+  - INF-1200
+doc_links:
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Carries several standards beyond the one that is currently carried
+      outward, each with a threshold of its own. They are the concrete
+      already-present instance of the "later standard" this criterion is
+      about — no audience for any of them has ever been addressed.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE MOST LIKELY MIS-SCOPING IN THIS TREE. Several of the
+      standards this criterion would carry are also not registered to run.
+      Making them RUN is BP-1600a-2's approved, high-priority work. This
+      criterion is discharged by the telling, never by the registering — an L2
+      here that registers a check has answered the wrong record.
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The delivery path from a newly declared standard to the specialists it
+      binds crosses several parties before any work begins. This document is
+      where that path is described, and is the natural home for the sequence
+      this criterion's documentation trigger calls for.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - sequence-diagram
+origin_agent: product-owner-v3
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-1200d-1
+  - INF-1200d-2
+implemented_by: []
+change_target:
+  - config
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  User-authored intent: BrainCandy. Framed by product-owner-v3, 2026-09-09.
+
+  THIS IS THE SECOND AXIS OF THE GRID, AND THE ONE THAT MAKES THE CAPABILITY
+  WORTH BUILDING RATHER THAN PATCHING. INF-1200c generalises across
+  specialists; this generalises across standards and across time. The user
+  asked for their example to work, but the value is that the standard AFTER
+  their example works too, without them asking.
+
+  THE FUTURE CASE IS NOT HYPOTHETICAL — MEASURED 2026-09-09. Three standards
+  besides the size one are already fully configured with thresholds: one for
+  how tangled code may get, a separate one for database code, and one for how
+  crowded a folder may become. No specialist anywhere is told any of their
+  figures. These are simultaneously the concrete "guardrails we add later" case
+  and INF-1200e's silent-gap case, which is why the two records cite the same
+  evidence from different sides.
+
+  THE HAZARD THAT WILL BE MISSED: A STANDARD IS NOT ALWAYS A NUMBER. The
+  existing standards are thresholds, and a decomposition shaped around
+  thresholds will deliver a mechanism that cannot carry a standard expressed as
+  a rule, a prohibition or an exclusion. State the obligation over standards
+  generally; if enrichment decides to constrain the shape of what can travel,
+  that must be an explicit, recorded decision rather than an artefact of the
+  first three examples.
+
+  THE ACCEPTANCE SHAPE WITH TEETH. "The standards that exist today all reach
+  their audiences" is a snapshot and is satisfied once by hand. What discharges
+  this is that a standard which did not exist before reaches its audience
+  without anyone having touched the delivery. The falsifying case to keep in
+  view is a standard declared and in force whose audience is empty.

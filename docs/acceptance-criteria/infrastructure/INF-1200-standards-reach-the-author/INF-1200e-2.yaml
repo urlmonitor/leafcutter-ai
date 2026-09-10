@@ -1,0 +1,339 @@
+id: INF-1200e-2
+title: "An examination that could not look says so, and a run that examined nothing never reads as a clean one"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the declaration of standards cannot be read, or the ownership record
+    cannot be read, or either can be read and yields nothing to compare,
+  When the condition is examined,
+  Then the outcome states that the examination could not be carried out, and
+    which of its two inputs was unavailable or empty,
+  And the outcome does not state that no gaps were found,
+  And given an examination that could be carried out,
+  When its outcome is read,
+  Then it states how many pairings of a specialist and a kind of file it
+    examined, and that number is greater than zero,
+  And given two runs, one that examined every pairing and found no gaps and one
+    that examined none at all,
+  When their outcomes are placed side by side,
+  Then they are not the same, and which of the two occurred can be told from the
+    outcome alone without going and looking at the inputs.
+depends_on:
+  - INF-1200e
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200e-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      e-1 owns what the examination finds and who it names. This owns what it says when
+      it could not look, and what it says about its own coverage when it could. Neither
+      implies the other: an examination with a perfect positive and negative arm can
+      still report a clean result from a run in which both its inputs failed to load.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      SAME FAMILY, FENCED. BP-1600 owns a check working out its own subject matter from
+      what is really there rather than from a list. The coverage number this record
+      requires is the same idea applied to this examination's own denominator. Cite it;
+      do not restate it and do not build a second census.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE DIRECT EVIDENTIAL BASIS FOR THIS RECORD, NOT MERELY A CONVENTION IT OBEYS. The
+      project's own root instructions record three separate documented defences that
+      each reported clean while examining nothing — a configuration path that reported a
+      present file as missing on every worktree, a validator invocation that exited zero
+      having checked zero files for eight days, and a merge audit that compared against
+      a stale reference and agreed with itself. It draws the general conclusion in as
+      many words: a check that examined nothing must not look like a check that found
+      nothing. This record is that conclusion applied to this tree's own examination.
+  - path: config/agent_registry.json
+    relationship: related
+    status: exists
+    relevance: >-
+      One of the two inputs whose unavailability the first arm is about, and the source
+      of the denominator in the coverage arm.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      The other input. Either being unreadable, renamed, restructured or empty is a
+      realistic future state, and each must produce a stated inability rather than a
+      quiet zero.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The surface the outcome is emitted on, per the surface decision recorded on
+      INF-1200e-1: the examination reports as part of the build run's own outcome rather
+      than as a pre-commit gate. That decision is what makes the side-by-side arm
+      testable — there is exactly one outcome stream to compare two runs on, and the
+      second mutation is about splitting it.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. This record adds no hooks_manifest.hooks id, no
+    new top-level key on commit_guardian.json, no agent entry, no skill entry and no paths.json
+    surface. It constrains what INF-1200e-1's examination says about its own coverage and its own
+    inability. Plain-list spec form; no fictional config_schema_fragment. THE SAME TRIGGER
+    RECORDED ON e-1 APPLIES: if the examination is later made to block, it becomes a
+    commit-guardian hook with a watched manifest id and both records must be re-declared.
+  - >-
+    THE INABILITY IS PER-INPUT AND MUST NAME WHICH INPUT. Three conditions produce it: the
+    declaration cannot be read, the ownership record cannot be read, or either can be read and
+    yields nothing to compare. The outcome must state that the examination could not be carried
+    out AND which of its inputs was unavailable or empty. A single "examination failed" flag
+    satisfies neither half usefully — the whole value of the statement is that a reader knows
+    what to go and fix.
+  - >-
+    "COULD NOT BE READ" AND "READ AND EMPTY" ARE BOTH INABILITIES, AND CONFLATING THEM IS THE
+    COMMON ERROR. An ownership record that parses to zero agents, or a declaration that parses to
+    zero standards, is not a project with nothing to check — it is a shape change that has
+    silently emptied the denominator. Treat both as the inability condition. This is the same
+    distinction CLAUDE.md's AC-store-hygiene section records for a validator invocation that
+    exited zero having checked zero files for eight days.
+  - >-
+    THE OUTCOME MUST NEVER STATE THAT NO GAPS WERE FOUND WHEN IT COULD NOT LOOK. State this as a
+    prohibition on the outcome's construction, not as a message-ordering convention: the
+    no-gaps-found claim must be unreachable in the degraded path rather than merely absent from
+    it. An implementation in which the clean result is computed first and the inability appended
+    afterwards is the shape the second mutation installs.
+  - >-
+    THE COVERAGE NUMBER IS THE CHEAP HALF AND THE VALUABLE HALF AT ONCE, AND IT IS A COUNT OF
+    PAIRINGS. On a run that could be carried out, the outcome states how many (specialist, kind of
+    file) pairings it examined, and that number is greater than zero. It costs nothing to emit and
+    it converts every future silent-input failure from invisible into obvious. The
+    greater-than-zero clause is what stops it degenerating into an ornament — a reader who sees
+    zero pairings examined knows immediately what happened, and a reader who sees the expected
+    number knows the clean result means something.
+  - >-
+    INDISTINGUISHABILITY IS THE ACTUAL DEFECT AND IT IS ONLY TESTABLE AS TWO OUTCOMES SIDE BY
+    SIDE. The run that examined every pairing and found no gaps and the run that examined none at
+    all must produce outcomes that differ, and which occurred must be readable FROM THE OUTCOME
+    ALONE without going and looking at the inputs. That last clause rules out the split-stream
+    implementation: an inability on one stream and a clean result on another means whichever is
+    read first wins, and a downstream consumer reading the finding sees a clean result.
+  - >-
+    THIS RECORD TAKES NO POSITION ON WHETHER AN INABILITY SHOULD STOP ANYTHING, PER THE L1 — BUT
+    THE SURFACE DECISION IS ALREADY RECORDED ON INF-1200e-1 AND APPLIES: the examination reports
+    rather than blocks, for the two measured reasons given there, the decisive one being that this
+    project's hook framework has no warn tier at all. What is not open is that the inability is
+    stated and is distinguishable.
+  - >-
+    FENCED FROM BP-1600. That record owns a check working out its own subject matter from what is
+    really there rather than from a list; the coverage number here is the same idea applied to this
+    examination's own denominator. Cite it, reuse its shape, and do not build a second census.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around each of the
+    three reads, each classified to its own input so the outcome can name it; log at WARNING or
+    higher or re-raise; no bare or blind excepts. The specific prohibition here is broader than the
+    policy: returning an empty collection on a failed read is the most common defensive idiom
+    there is, it satisfies every linter, and it is precisely how each of the three incidents
+    CLAUDE.md records came about.
+test_spec:
+  - name: test_inf_1200e_2_an_unreadable_input_produces_a_stated_inability_naming_that_input
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Run the examination with the declaration unreadable, then with the ownership record
+      unreadable, then with each readable but yielding nothing to compare. In every case the outcome
+      states that the examination could not be carried out AND names which of its two inputs was
+      unavailable or empty. Parametrised over all four conditions, because "read and empty" is the
+      one an implementer classifies as success.
+  - name: test_inf_1200e_2_a_degraded_run_never_states_that_no_gaps_were_found
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      In each of those degraded conditions, the outcome does NOT state that no gaps were found — not
+      merely that it also states something else. Asserted as the absence of the clean claim in the
+      whole outcome, so an implementation that computes the clean result first and appends the
+      inability afterwards fails here rather than passing.
+  - name: test_inf_1200e_2_a_healthy_run_states_how_many_pairings_it_examined_and_the_number_exceeds_zero
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      On a run that could be carried out, the outcome states the number of (specialist, kind of
+      file) pairings examined and that number is greater than zero. Additionally check it against
+      the denominator derived from the records rather than a literal, so a coverage number that is
+      emitted but disconnected from what was actually walked is caught.
+  - name: test_inf_1200e_2_a_run_that_examined_everything_and_one_that_examined_nothing_produce_different_outcomes
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Place the two outcomes side by side — one run that examined every pairing and found no gaps,
+      one that examined none at all — and assert they are not the same, and that which of the two
+      occurred can be told FROM THE OUTCOME ALONE without going and looking at the inputs.
+      Indistinguishability is the actual defect and this is the only form in which it is testable.
+  - name: test_inf_1200e_2_the_empty_collection_injection_reds_three_arms_and_leaves_the_healthy_coverage_arm_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's FIRST NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE FOUR-WAY EXPERIMENT.
+      MUTATION: when either input cannot be read or yields nothing, return an empty set of pairings
+      and continue. Under that injection: the inability arm must go RED, because nothing states that
+      the examination could not be carried out; the does-not-state-clean arm must go RED, because an
+      empty set of gaps is indistinguishable from no gaps; the side-by-side arm must go RED; and the
+      coverage arm on a HEALTHY run must STAY GREEN, so the mutation is shown to affect only the
+      degraded path. All four outcomes must be observed together and all must revert. This is not a
+      hypothetical shape and it is not a careless one — returning an empty collection on a failed
+      read is the most common defensive idiom there is, and it is precisely how each of the three
+      documented incidents came about.
+  - name: test_inf_1200e_2_the_split_stream_injection_reds_the_side_by_side_arm_while_the_inability_arm_may_stay_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's SECOND NAMED MUTATION, CARRIED VERBATIM. MUTATION: emit the inability on a different
+      stream from the finding, so that a consumer reading the finding sees a clean result and the
+      inability appears elsewhere. Under it the first arm may stay green while the side-by-side arm
+      goes RED. Both outcomes must be observed and both must revert. A stated inability that the
+      reader of the result never sees is the same silence with a paper trail, and the surviving
+      green is exactly what makes it defensible in review.
+test_rationale: |
+  This project's root instructions record three separate documented defences that each reported
+  clean while examining nothing: a configuration path that reported a present file as missing on
+  every worktree, a validator invocation that exited zero having checked zero files for eight days,
+  and a merge audit that compared against a stale reference and agreed with itself. The general
+  conclusion is drawn there in as many words — a check that examined nothing must not look like a
+  check that found nothing — and this record is that conclusion applied to this tree's own
+  examination. So no descriptor here asserts that the examination finds gaps; each asserts what its
+  outcome says about its own ability to look.
+
+  The inability descriptor is parametrised over all four degraded conditions, including the two
+  "read and empty" cases, because those are the ones an implementer classifies as success. A record
+  that parses to zero agents is not a project where nobody owns anything; it is a shape change that
+  has silently emptied the denominator, and it is the exact shape of the eight-day validator
+  incident.
+
+  The does-not-state-clean arm asserts the ABSENCE of the clean claim across the whole outcome
+  rather than the presence of an inability beside it. Those differ on the implementation that
+  computes the clean result first and appends the inability afterwards, which is what the second
+  mutation installs and what the side-by-side arm is built to catch.
+
+  Both of the BA's mutations are carried verbatim and both are mixed-outcome. The first keeps the
+  healthy-run coverage arm GREEN, which is what shows the injection affects only the degraded path
+  and that the arms are not simply all measuring one thing; the second leaves the inability arm free
+  to stay green while the side-by-side arm reddens, which is what makes "a paper trail nobody reads"
+  visible as a distinct defect from "no paper trail".
+delivers_to: null
+expects_from:
+  ac_id: INF-1200e-1
+  contract: >-
+    The examination's outcome object: the set of named pairings, the count of pairings examined, and
+    the per-input read status for each of its three inputs. This record constrains that object's
+    degraded and self-describing behaviour — an inability stated and attributed to an input, no
+    no-gaps-found claim reachable in the degraded path, a coverage count greater than zero on a
+    healthy run, and two outcomes that a reader can tell apart from the outcome alone.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: nothing is registered — no
+    hooks_manifest.hooks id, no new top-level key on commit_guardian.json, no agents/skills/paths
+    entry. The same re-declaration trigger recorded on e-1 applies if the examination is later made
+    to block. No fictional fragment. COMPLEXITY M. THE SURFACE DECISION IS INHERITED FROM e-1 AND IS
+    LOAD-BEARING HERE: because the examination reports on the build''s single outcome stream rather
+    than as a hook, there is exactly one stream to compare two runs on, which is what makes the
+    side-by-side arm testable and what the split-stream mutation attacks. "COULD NOT BE READ" AND
+    "READ AND EMPTY" ARE BOTH CLASSIFIED AS INABILITIES and the descriptor is parametrised over all
+    four conditions, because the empty-parse cases are the ones an implementer classifies as success
+    — the same shape as the eight-day validator incident CLAUDE.md records. THE DOES-NOT-STATE-CLEAN
+    ARM IS AN ABSENCE ASSERTION over the whole outcome, and the prohibition is stated on the
+    outcome''s CONSTRUCTION (the clean claim must be unreachable in the degraded path) rather than as
+    message ordering. THE COVERAGE NUMBER IS CHECKED AGAINST A DENOMINATOR DERIVED FROM THE RECORDS,
+    not a literal, so a count that is emitted but disconnected from what was walked is caught. BOTH
+    BA MUTATIONS CARRIED VERBATIM WITH THEIR STAY-GREEN HALVES INTACT — the healthy coverage arm green
+    under the empty-collection injection, the inability arm free to stay green under the split-stream
+    injection. declares_side_effect FALSE: every Then clause is about what an outcome states.
+    test_spec: six executing descriptors, two carrying the BA''s mutations.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  INHERITED AND NOT REPEALED. This project's standing convention that a check which
+  could not do its job must say so, rather than reporting success, applies here in its
+  natural form. That rule was written about checks; this is its equivalent on the
+  telling side, and it is being applied, not re-litigated.
+
+  THE CAUTION IN THE L1's NOTES IS NOT A GENERAL WORRY, IT IS THIS PROJECT's OWN RECORD.
+  Three defences documented in the root instructions each reported clean for days or
+  weeks while examining nothing, and each time the clean result was believed. The
+  sharpest of the three is instructive because the command was never wrong — only the
+  reference it compared against was stale, so the broken tree and the stale reference
+  agreed. An examination that reports a number it examined cannot fail that way silently;
+  one that reports only "no gaps" can, indefinitely.
+
+  THE COVERAGE NUMBER IS THE CHEAP HALF AND THE VALUABLE HALF AT ONCE. It costs nothing
+  to emit and it converts every future silent-input failure from invisible into obvious
+  — a reader who sees zero pairings examined knows immediately what happened, and a
+  reader who sees the expected number knows the clean result means something. The
+  greater-than-zero clause is what stops it degenerating into an ornament.
+
+  WHY THE FOURTH ARM IS STATED AS TWO RUNS SIDE BY SIDE. "The outcome is different" is
+  the only form in which indistinguishability is testable, and indistinguishability is
+  the actual defect. An implementation can satisfy the first three arms and still emit
+  two outcomes that a reader, or a downstream consumer, cannot tell apart — for
+  instance by putting the inability on one stream and the clean result on another, so
+  that whichever is read first wins.
+
+  THIS RECORD TAKES NO POSITION ON WHETHER AN INABILITY SHOULD STOP ANYTHING. Per the
+  L1, that decision is explicitly left to enrichment, per surface, with the reasoning
+  recorded. What is not open is that the inability is stated and is distinguishable.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: when either input cannot be read or yields nothing, return an empty set of
+  pairings and continue. Under that injection:
+    - the inability arm must go RED, because nothing states that the examination could
+      not be carried out;
+    - the does-not-state-clean arm must go RED, because an empty set of gaps is
+      indistinguishable from no gaps;
+    - the side-by-side arm must go RED;
+    - the coverage arm on a HEALTHY run must STAY GREEN, so the mutation is shown to
+      affect only the degraded path.
+  All four outcomes must be observed together and all must revert. This is not a
+  hypothetical shape and it is not a careless one — returning an empty collection on a
+  failed read is the most common defensive idiom there is, and it is precisely how each
+  of the three documented incidents above came about.
+
+  A SECOND MUTATION WORTH RUNNING. MUTATION: emit the inability on a different stream
+  from the finding, so that a consumer reading the finding sees a clean result and the
+  inability appears elsewhere. Under it the first arm may stay green while the
+  side-by-side arm goes RED. A stated inability that the reader of the result never sees
+  is the same silence with a paper trail.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. Both
+  mutations above are written to be turned directly into test descriptors.

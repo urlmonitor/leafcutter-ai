@@ -50,8 +50,10 @@ superseded_by: null
 covered_by:
 - UXP-700d-2-i
 - UXP-700d-2-ii
+- unit_tests/ac_store/test_uxp700d2_reachability.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260909-UXP-700d-2.md
+- scripts/ac_store/scan_ac_store.py
+- templates/scripts/commit_guardian/check_done_proof.py
 change_target:
   - code
   - docs

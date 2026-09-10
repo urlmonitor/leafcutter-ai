@@ -187,3 +187,10 @@ ENTROPY_HIGH:docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behin
 # the very scanner it suppresses (same lesson as the template-marker entry above).
 # Glob, not per-line: the file's docstring and class layout can still shift.
 ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700d_1.py:*
+
+# unit_tests/ac_store/test_uxp700d2_reachability.py's TestCase class name is a long
+# CamelCase identifier -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/ac_store/test_uxp700d2_reachability.py:*

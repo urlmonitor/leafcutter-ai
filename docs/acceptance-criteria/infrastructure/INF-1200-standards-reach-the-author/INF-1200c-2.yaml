@@ -1,0 +1,339 @@
+id: INF-1200c-2
+title: "A specialist that owns two kinds of file is told both, and a kind of file with two owners reaches both"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the ownership record assigns one specialist two kinds of file that carry
+    different standards,
+  When that specialist begins work,
+  Then its material states both kinds' standards, each attributed to the kind of
+    file it governs, and neither is displaced by, merged into, or overwritten by
+    the other,
+  And given the ownership record assigns one kind of file to more than one
+    specialist,
+  When each of those specialists begins work,
+  Then every one of them has that kind of file's standards stated in its
+    material,
+  And given a specialist that owns two kinds of file of which only one carries a
+    standard,
+  When it begins work,
+  Then its material states the standard for the covered kind of file and makes no
+    statement of a standard for the uncovered one,
+  And given a further kind of file is added to a specialist's ownership so that
+    it now owns three, one of which shares a standard with a kind of file another
+    specialist owns,
+  When both specialists begin work,
+  Then each is told the standards for every kind of file it owns and for no other,
+    so neither the number of kinds a specialist owns nor the number of specialists
+    a kind of file has changes what anyone is told about the rest.
+depends_on:
+  - INF-1200c
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200c.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200c-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      Establishes that the audience is derived from the ownership record and moves with
+      it. This record constrains the SHAPE of that derivation: it must be a
+      many-to-many join in both directions, not a lookup. Neither implies the other —
+      a first-match lookup moves correctly when ownership moves and still drops half
+      the pairings.
+  - path: docs/acceptance-criteria/agent-registry/AR-100-technology-ownership/AR-100.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      Supplies the ownership relation this record insists is read as many-to-many.
+      Whether a given kind of file SHOULD have two owners is AR-100's question; that
+      the delivery must cope when it does is this record's.
+  - path: config/agent_registry.json
+    relationship: related
+    status: exists
+    relevance: >-
+      ALREADY CONTAINS THE HARD CASE, WHICH IS WHY NO SYNTHETIC FIXTURE IS ACCEPTABLE
+      FOR THE FIRST ARM. At least one specialist here is assigned more than one kind of
+      file, and the two kinds do not carry the same standard. A test built only from
+      one-kind-per-specialist fixtures reproduces the bias of the implementation it is
+      testing.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Declares distinct standards for distinct kinds of file, so "two kinds with
+      different standards" is a real configuration today rather than an invented one.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", and the "Real-artifact
+      behavioral spot-check before declaring done" section. Both bind hard here: the
+      documented worst phantom-done incident in this project was a parser that passed
+      on hand-authored fixtures sharing the implementation's own bias, and a
+      one-kind-per-specialist fixture is that same bias in a different subject.
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. THE HARD CASE IS ALREADY ON DISK AND THIS DOCUMENT IS WHERE IT IS
+      DESCRIBED. Measured in this worktree: python-coder declares
+      owns_file_extensions ['.py', '.js'] — two kinds of file with different standards,
+      only one of which carries a declared limit — and the same entry carries an
+      owns_file_extensions_rationale recording that the '.js' assignment is an
+      expedient rather than a judgement. frontend-coder declares seven extensions.
+      Whether those assignments are right is AR-100's question and is fenced; that they
+      exist is why the first arm has a real fixture and must use it.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Records that all agent templates are compiled in one pass, which is what
+      makes the fourth arm's cross-contamination observable: a join implemented by
+      mutating a shared accumulator across that pass leaks between briefs, and only a
+      configuration with three kinds on one specialist and two specialists on one kind
+      exposes it.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. This record adds no hooks_manifest id, no new
+    top-level key on commit_guardian.json, no agent entry, no skill entry and no paths.json
+    surface. Its fixtures vary owns_file_extensions on EXISTING agent entries (a field inside
+    an entry, not a new id in the watched `agents` list_ids container) and add nested keys under
+    the existing `file_size` top-level section. Plain-list spec form; no fictional fragment.
+  - >-
+    THE JOIN IS MANY-TO-MANY IN BOTH DIRECTIONS AND MUST BE BUILT AS ONE. A specialist may own
+    several kinds of file with different standards; a kind of file may have several owners. The
+    implementation this record exists to exclude is the one the language hands you for free: a
+    dictionary keyed by kind of file, or by specialist, giving first-match semantics with no
+    code written and no warning issued. It is correct on any fixture in which each key appears
+    once, and it is the same failure in both directions. State the requirement as a cardinality
+    property of the join, not as two lookups.
+  - >-
+    ATTRIBUTION IS PER KIND OF FILE, NEVER PER SPECIALIST. Each standard in a brief is stated
+    against the kind of file it governs. A carrier that models "the standards for this
+    specialist" as one value, or that concatenates without attribution, passes both
+    single-standard arms and fails the third. Measured: python-coder owns '.py' (limit 400) and
+    '.js' (no declared limit); sql-coder owns '.sql' (limit 600). A brief stating "400" to
+    python-coder without saying which of its two kinds that governs is a failure of this record,
+    not a formatting preference.
+  - >-
+    THE THIRD ARM IS A NEGATIVE AND IT IS NOT c-1's EXCLUSION. c-1 excludes a specialist that
+    owns nothing covered. This excludes a COVERED specialist being told about the wrong one of
+    the kinds it owns — a within-specialist precision claim that c-1 cannot see, because from
+    c-1's vantage that specialist was correctly in the audience. The fixture is real today:
+    python-coder owns '.js', which carries no declared standard, so its brief must state '.py'
+    standards and make no statement of a standard for '.js'.
+  - >-
+    THE FOURTH ARM IS AN INDEPENDENCE CLAIM FOR A SPECIFIC BUG SHAPE, AND THE NUMBERS ARE THE
+    SMALLEST THAT EXPOSE IT. A join implemented by mutating a shared accumulator across the
+    single compile pass, or by attributing standards to specialists rather than to kinds of
+    file, produces cross-contamination that appears only once one standard has two audiences and
+    one specialist has three kinds. Three and two are the smallest numbers at which that is
+    observable; do not reduce the fixture.
+  - >-
+    NO SYNTHETIC-ONLY FIXTURES FOR THE FIRST ARM. config/agent_registry.json already assigns one
+    specialist more than one kind of file with different standards. A test built only from
+    one-kind-per-specialist fixtures reproduces the bias of the implementation it is testing,
+    which is the documented shape of this project's worst phantom-done incident (CLAUDE.md,
+    "Real-artifact behavioral spot-check before declaring done"). Use the real registry entry for
+    the first arm; synthetic variation is admissible only for the fourth arm's three-kinds
+    configuration, which does not exist on disk.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the registry
+    and declaration reads; log at WARNING or higher or re-raise; no bare or blind excepts. A
+    duplicate or conflicting ownership entry must not be silently de-duplicated into a first
+    match — silently dropping one side of a many-to-many relation is exactly the defect this
+    record exists to catch, and doing it inside an exception handler makes it invisible.
+test_spec:
+  - name: test_inf_1200c_2_a_specialist_owning_two_kinds_of_file_is_told_both_each_attributed_to_its_own_kind
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      Using the REAL registry entry that already assigns one specialist two kinds of file with
+      different standards — not a one-kind-per-specialist fixture, which reproduces the bias of
+      the implementation under test — build into a temporary target and read that specialist's
+      compiled brief. Both kinds' standards are stated, each attributed to the kind of file it
+      governs, and neither is displaced by, merged into, or overwritten by the other.
+  - name: test_inf_1200c_2_a_kind_of_file_with_two_owners_reaches_both_of_them
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Assign one covered kind of file to a second specialist as well as the first, build, and
+      read both compiled briefs. Every one of them has that kind of file's standards stated. A
+      first-match lookup keyed by kind of file tells only the first and is invisible to every
+      arm of c-1.
+  - name: test_inf_1200c_2_an_owned_kind_of_file_that_carries_no_standard_produces_no_statement_of_one
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      For a specialist owning two kinds of file of which only one carries a standard — real
+      today: python-coder owns '.py' with a declared limit and '.js' with none — the brief states
+      the covered kind's standard and makes NO statement of a standard for the uncovered one. A
+      within-specialist precision claim c-1 cannot see, because from c-1's vantage that
+      specialist was correctly in the audience.
+  - name: test_inf_1200c_2_adding_a_third_owned_kind_and_a_second_owner_changes_nothing_about_the_rest
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE INDEPENDENCE ARM. Extend a specialist's ownership to three kinds of file, one of which
+      shares a standard with a kind another specialist owns, and build. Each specialist is told
+      the standards for every kind of file it owns and for no other, and what each is told about
+      the kinds it already owned is unchanged from the previous build. Three and two are the
+      smallest numbers at which a shared-accumulator join or a
+      standards-attributed-to-specialists join leaks; the assertion is content equality against
+      the prior briefs, so a reordering or a dilution is caught rather than tolerated.
+  - name: test_inf_1200c_2_the_first_match_injection_reds_all_three_join_arms_and_leaves_c_1s_movement_arm_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE FOUR-WAY EXPERIMENT.
+      MUTATION: key the delivery on a single association in each direction — one owner per kind
+      of file and one kind of file per specialist — taking the first match encountered and
+      discarding the rest. Under that injection: the two-kinds-one-specialist arm must go RED,
+      because only one of the two standards is stated; the two-specialists-one-kind arm must go
+      RED, because only the first specialist is told; the independence arm must go RED; and
+      INF-1200c-1's movement arm must STAY GREEN, because a first-match lookup rebuilt from the
+      ownership record still moves when ownership moves. All four outcomes must be observed
+      together and all must revert. THE GREEN OUTCOME IS THE EVIDENCE THAT THIS RECORD IS
+      CARRYING SOMETHING c-1 CANNOT: an implementation that passes every arm of c-1 can still
+      drop half the audience. An injection run that also reddens c-1's movement arm is a FAILURE
+      of this descriptor, not a stronger result.
+test_rationale: |
+  The PO named this as the arm most likely to be dropped, and the drop is silent: a specialist
+  told one of its two standards looks exactly like a specialist told everything. So the
+  descriptors are built around cardinality rather than presence, and the first arm is required to
+  use the REAL registry entry that already assigns one specialist two kinds of file with
+  different standards. A one-kind-per-specialist fixture reproduces the bias of the
+  implementation under test, which CLAUDE.md records as the shape of this project's worst
+  phantom-done incident — a parser that passed on hand-authored fixtures sharing the
+  implementation's own indentation bias.
+
+  The independence arm asserts CONTENT EQUALITY of the previously-owned kinds' statements across
+  a build in which ownership grew, rather than merely asserting the new kind arrived. A
+  shared-accumulator join does not drop content; it reorders, dilutes or duplicates it, and only
+  an equality assertion sees that.
+
+  The BA's mutation is carried verbatim and its stay-green half — c-1's movement arm — is
+  asserted explicitly. That green is the entire justification for c-2 existing separately from
+  c-1: a first-match lookup rebuilt from the ownership record moves correctly when ownership
+  moves and still drops half the pairings, so an implementation can pass every arm of c-1 while
+  failing the user's request. An injection run that reddens c-1's movement arm too would mean the
+  fixture is not exercising a derivation at all, and is a failure of the descriptor.
+delivers_to: null
+expects_from:
+  ac_id: INF-1200c-1
+  contract: >-
+    The audience derivation read fresh from config/agent_registry.json's owns_file_extensions at
+    compile time. This record constrains its SHAPE: a many-to-many join in both directions rather
+    than a lookup in either, with each standard attributed to the kind of file it governs, so
+    neither the number of kinds a specialist owns nor the number of specialists a kind of file
+    has changes what anyone is told about the rest.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: fixtures vary
+    owns_file_extensions on EXISTING agent entries (a field inside an entry, not a new id in the
+    watched `agents` list_ids container) and add nested keys under the existing top-level
+    `file_size` section; no hooks_manifest id, no new top-level key, no fictional fragment.
+    COMPLEXITY M. THE REAL FIXTURE IS PINNED AND ITS USE IS MANDATORY: python-coder already
+    declares owns_file_extensions [''.py'', ''.js''] — two kinds, different standards, only one
+    with a declared limit — and the same entry carries an owns_file_extensions_rationale calling
+    the ''.js'' assignment an expedient; frontend-coder declares seven extensions. A
+    one-kind-per-specialist fixture reproduces the implementation''s own bias, which CLAUDE.md
+    records as the shape of the worst phantom-done incident in this project, so the first arm must
+    use the real entry. THE THIRD ARM IS DISTINGUISHED FROM c-1''s EXCLUSION IN WRITING —
+    within-specialist precision, invisible from c-1''s vantage — and has a real fixture in
+    ''.js'', which is owned and carries no declared standard. THE INDEPENDENCE ARM ASSERTS CONTENT
+    EQUALITY against the prior briefs, because a shared-accumulator join reorders and dilutes
+    rather than drops. THE BA''s MUTATION IS CARRIED VERBATIM WITH ITS STAY-GREEN HALF ASSERTED:
+    c-1''s movement arm must stay green under first-match, which is the whole evidence that c-2
+    carries something c-1 cannot; an injection reddening it too is recorded as a FAILURE.
+    declares_side_effect true. test_spec: five executing descriptors, one carrying the BA''s
+    mutation as a single four-way observation.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE PO NAMED THIS AS THE ARM MOST LIKELY TO BE DROPPED, AND IT IS RIGHT TO WORRY.
+  "The owner" is not reliably singular in either direction. A specialist may own several
+  kinds of file with different standards; a kind of file may have more than one
+  legitimate audience. A decomposition that assumes one specialist per kind of file, or
+  one kind of file per specialist, under-delivers on whichever pairing it drops, and
+  the drop is silent — the specialist that was told one of its two standards looks
+  exactly like a specialist that was told everything.
+
+  THE IMPLEMENTATION THIS RECORD EXISTS TO EXCLUDE IS THE ONE THE LANGUAGE HANDS YOU
+  FOR FREE. A dictionary keyed by kind of file, or by specialist, gives first-match
+  semantics with no code written and no warning issued. It is correct on any fixture in
+  which each key appears once. It is the same failure in both directions and one
+  mutation exposes both.
+
+  THE THIRD ARM IS NOT THE SAME AS INF-1200c-1's EXCLUSION ARM. c-1 excludes a
+  specialist that owns nothing covered. This excludes a covered specialist being told
+  about the wrong ONE of the kinds of file it owns — a within-specialist precision
+  claim that c-1 cannot see, because from c-1's vantage that specialist was correctly
+  in the audience.
+
+  THE FOURTH ARM IS AN INDEPENDENCE CLAIM AND IT IS THERE FOR A SPECIFIC BUG SHAPE. A
+  join implemented by mutating a shared accumulator, or by attributing standards to
+  specialists rather than to kinds of file, produces cross-contamination that only
+  appears once one standard has two audiences and one specialist has three kinds. Three
+  and two are the smallest numbers at which that is observable.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: key the delivery on a single association in each direction — one owner per
+  kind of file and one kind of file per specialist — taking the first match encountered
+  and discarding the rest. Under that injection:
+    - the two-kinds-one-specialist arm must go RED, because only one of the two
+      standards is stated;
+    - the two-specialists-one-kind arm must go RED, because only the first specialist
+      is told;
+    - the independence arm must go RED;
+    - INF-1200c-1's movement arm must STAY GREEN, because a first-match lookup rebuilt
+      from the ownership record still moves when ownership moves.
+  All four outcomes must be observed together and all must revert. The green outcome is
+  the evidence that this record is carrying something c-1 cannot: an implementation that
+  passes every arm of c-1 can still drop half the audience.
+
+  MEASURED, 2026-09-09, IN THIS WORKTREE. The ownership record already assigns one
+  specialist more than one kind of file, and records in the same entry a written
+  rationale acknowledging that one of those assignments is an expedient rather than a
+  judgement. Whether that assignment is right is AR-100's question and is fenced. That
+  it exists means the first arm has a real fixture and must use it.
+
+  DELIBERATELY NOT NAMED IN THE CRITERIA: any specialist and any kind of file, per the
+  L0's altitude test and GE-127c's precedent.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. The
+  mutation above, including which arm must stay green, is written to be turned directly
+  into test descriptors.
