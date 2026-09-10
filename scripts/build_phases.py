@@ -3168,6 +3168,13 @@ from build_phases_knowledge import (  # noqa: E402, F401  # re-exported for call
     build_knowledge_sink_declaration,
 )
 
+# Re-export build_product_truth so build.py and every other caller keep
+# importing it from build_phases. Moved to build_phases_product_truth.py
+# 2026-09-10 to relieve the GE-127b-1 file-size ratchet.
+from build_phases_product_truth import (  # noqa: E402, F401  # re-exported for callers
+    build_product_truth,
+)
+
 
 # ---------------------------------------------------------------------------
 # Agent-support script deploy spec (AC BP-900g-5)
@@ -3585,96 +3592,19 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     return written
 
 
-def build_product_truth(target_root: Path, config: dict[str, Any],
-                        dry_run: bool, force: bool) -> int:
-    """Deploy product-truth tooling to ``<target_root>/docs/product-truth/``.
 
-    Copies the package-owned product-truth generator/validator scripts
-    (``docs/product-truth/scripts/*.py``) and their JSON schemas
-    (``docs/product-truth/schemas/*.json``) into the consumer project's
-    ``docs/product-truth/`` tree so they exist at runtime. The ``/plan-feature``
-    workflow's product-truth phase (see EPIC wiring) invokes these scripts via
-    ``python docs/product-truth/scripts/generate_product_truth.py`` relative to
-    the project root; without this phase they are absent in a consumer or fresh
-    worktree and the phase can only no-op.
 
-    Both subdirectories are copied with a shallow ``*.py`` / ``*.json`` glob so
-    that additional generator/validator scripts or schemas added later are
-    deployed automatically without editing this phase. Only the package-owned
-    ``scripts/`` and ``schemas/`` subdirectories are deployed — the
-    project-authored product-truth DATA (flows, mock-data, mockups,
-    ``index.json``) is never touched by this phase.
 
-    Files are copied verbatim (no template compilation). The compare-before-write
-    guard prevents mtime churn on unchanged files.
 
-    Args:
-        target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary (accepted for interface parity; not consumed).
-        dry_run: When True, logs intent but writes nothing.
-        force: When True, overwrites existing files.
 
-    Returns:
-        Count of files written (or that would be written in dry-run mode).
-    """
-    product_truth_src = PACKAGE_ROOT / "docs" / "product-truth"
 
-    # (source_subdir, glob, dest_subdir) triples. The glob is intentionally
-    # broad so new .py / .json files are picked up without editing this phase.
-    deploy_groups = [
-        (product_truth_src / "scripts", "*.py", "scripts"),
-        (product_truth_src / "schemas", "*.json", "schemas"),
-    ]
 
-    output_base = target_root / "docs" / "product-truth"
-    written = 0
 
-    for src_dir, pattern, dest_subdir in deploy_groups:
-        if not src_dir.is_dir():
-            # BP-900g-9 (n_location_rule: all). The glob (pattern) applies
-            # only WITHIN this declared subdir, so the subdir itself is a
-            # declared entry, not a bare directory scan — a missing one is
-            # the same dropped promise as a missing declared file. Was
-            # warn-and-continue. Record and keep going so one run reports
-            # the whole remediation set; build.py raises once at the end.
-            record_deploy_failure("build_product_truth", dest_subdir, src_dir)
-            continue
 
-        output_dir = output_base / dest_subdir
 
-        for src_file in sorted(src_dir.glob(pattern)):
-            if not src_file.is_file():
-                continue
 
-            output_path = output_dir / src_file.name
 
-            if not _should_overwrite(output_path, force):
-                continue
 
-            if _files_content_identical(src_file, output_path):
-                global _uptodate_count  # noqa: PLW0603
-                _uptodate_count += 1
-                continue
-
-            if dry_run:
-                print(f"  [DRY-RUN] would copy docs/product-truth/{dest_subdir}/{src_file.name}")
-                written += 1
-            else:
-                try:
-                    output_path.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(src_file, output_path)
-                except OSError as exc:
-                    _log.warning(
-                        "build_product_truth: failed to copy %s → %s: %s",
-                        src_file,
-                        output_path,
-                        exc,
-                    )
-                    raise
-                print(f"  docs/product-truth/{dest_subdir}/{src_file.name}")
-                written += 1
-
-    return written
 
 
 # ---------------------------------------------------------------------------
@@ -3973,4 +3903,17 @@ def clean_stale_artifacts(
 #   build.py's existing `from build_phases import build_knowledge_scripts,
 #   build_knowledge_sink_declaration` keeps working unchanged.
 #   (#INF-400c-4-iii, #INF-400c-4-i)
+# - 2026-09-09 [python-coder/04_TICKET-20260909-UXP-700a-1-ii]: Added
+#   _scaffold_product_truth_record(), called from build_product_truth(), to
+#   write flows/mock-data/mockups/index.json write-if-absent on a fresh
+#   install (UXP-700a-1-ii's overwrite guard needs this to exist first).
+#   Left INLINE (not extracted to a sibling module) even though it grows
+#   this oversized file under GE-127b-1: test_bp_100k_2.py's
+#   _derive_extra_package_dirs() regex-scans THIS file's literal
+#   `PACKAGE_ROOT / "docs" / "product-truth"` chain to know which extra dir
+#   its synthetic-package fixture must copy; moving build_product_truth out
+#   (tried, reverted here) emptied that derivation and broke
+#   test_bp_900g_8.py / test_bp_900g_8_i.py / test_bp_900g_9.py. The
+#   resulting ratchet failure is a blocker for commit / a follow-up ticket.
+#   (#EPIC-TruthfulProjectRecord/04)
 # ====================================================================

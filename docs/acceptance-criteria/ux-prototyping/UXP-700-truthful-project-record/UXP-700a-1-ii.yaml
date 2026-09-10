@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -39,7 +39,10 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/product_truth/test_uxp_700a_1_ii.py
+implemented_by:
+- scripts/build_phases.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260909-UXP-700a-1-ii.md
 change_target:

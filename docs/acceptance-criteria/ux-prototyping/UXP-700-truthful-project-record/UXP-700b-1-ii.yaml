@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -15,7 +15,8 @@ criteria: |
   When the record's checker runs,
   Then it names example data and screens as the types for which it read zero records,
   And it does not name journeys,
-  And the outcome it reports is not the outcome for a record that was checked and found sound.
+  And the outcome it reports is the outcome for a record that was checked and found sound,
+  because everything the record does hold was checked and was sound.
 depends_on:
   - UXP-700b-1
 created_by: "docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-1.yaml"
@@ -36,7 +37,10 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/product_truth/test_uxp_700b_1_ii.py
+implemented_by:
+- docs/product-truth/scripts/validate_product_truth.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260909-UXP-700b-1-ii.md
 change_target: code
@@ -65,4 +69,17 @@ notes: |
   to the example product, so the project's own screen population is zero. See UXP-700d-4, which
   owns the reporting of a type whose entire population is example content; this record owns the
   simpler case of a type whose population is zero.
+
+  AMENDED 2026-09-10 (user decision, KI-ACD-20260909-2130). The final clause
+  previously read "And the outcome it reports is NOT the outcome for a record
+  that was checked and found sound." That contradicted sibling UXP-700b-1-i,
+  whose test asserts the same store state IS checked-and-sound; the two
+  fixtures are identical in every observable respect, so no implementation
+  could satisfy both. Resolved in UXP-700b-1-i's favour: a record holding
+  journeys but no screens or example data yet is young, not defective, and
+  withholding the clean pass from it would report a defect that is not there.
+  What this AC uniquely contributes is unchanged and still enforced: the
+  report NAMES exactly which artifact types read zero records, in
+  `empty_types`, and never names a populated one. Emptiness is reported; it
+  just does not change the verdict.
 target_epic: EPIC-TruthfulProjectRecord

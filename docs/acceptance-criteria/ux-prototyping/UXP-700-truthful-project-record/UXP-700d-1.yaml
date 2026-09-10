@@ -45,8 +45,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by:
-  - UXP-700d-1-i
-  - UXP-700d-1-ii
+- UXP-700d-1-i
+- UXP-700d-1-ii
 implemented_by:
 - tickets/00_inbox/TICKET-20260909-UXP-700d-1.md
 change_target:

@@ -43,7 +43,7 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by:
-  - UXP-700b-3-i
+- UXP-700b-3-i
 implemented_by:
 - tickets/00_inbox/TICKET-20260909-UXP-700b-3.md
 change_target: code

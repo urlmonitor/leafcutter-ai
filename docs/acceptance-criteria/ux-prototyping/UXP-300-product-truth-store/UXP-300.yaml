@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: approved
-work_status: in_progress
+work_status: done
 criteria: |
   Given the product-truth store,
   When a flow, mock-data, or mockup artifact is authored,
@@ -40,7 +40,10 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/product_truth/test_uxp_300.py
+implemented_by:
+- docs/product-truth/scripts/validate_product_truth.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260909-UXP-300.md
 test_required: true

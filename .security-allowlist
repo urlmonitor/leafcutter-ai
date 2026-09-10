@@ -171,3 +171,19 @@ ENTROPY_HIGH:docs/reference/false-green-mechanisms.md:*
 # Duplicated to the workspace root per the dual-update rule.
 ENTROPY_HIGH:docs/reference/proof-claims-and-completeness.md:*
 ENTROPY_HIGH:changelogs/2026-09-01-0915-a-claimed-kind-of-proof-is-a-declaration-not-evidence-now-legible-on-three-surfaces.md:*
+
+# ADR-042 and ADR-043 (EPIC-TruthfulProjectRecord) cite AC-store and doc paths in their
+# related_docs frontmatter lists, e.g. long hyphenated
+# docs/acceptance-criteria/.../UXP-*.yaml paths. Ordinary cross-reference prose, not
+# credentials -- same pattern as the other ADR/doc-path entries above. Glob, not
+# per-line: both ADRs' related_docs/related_code lists grow as the epic proceeds.
+ENTROPY_HIGH:docs/architecture/adrs/ADR-042-product-truth-checker-outcome-vocabulary.md:*
+ENTROPY_HIGH:docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md:*
+
+# unit_tests/product_truth/test_uxp_700d_1.py repeats a long CamelCase test class name
+# in both its module docstring and its class definition -- same "CamelCase class
+# names" false-positive pattern as the other test files globbed above. The name
+# itself is deliberately NOT reproduced here: quoting it makes this allowlist trip
+# the very scanner it suppresses (same lesson as the template-marker entry above).
+# Glob, not per-line: the file's docstring and class layout can still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700d_1.py:*

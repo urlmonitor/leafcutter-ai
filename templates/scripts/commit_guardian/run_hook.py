@@ -23,6 +23,26 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    import check_outcome  # type: ignore[import]
+except ImportError:
+    # check_outcome.py is deployed alongside this file in every real layout
+    # (build.py copies the whole templates/scripts/commit_guardian/ tree),
+    # so this fallback exists only for a working copy that exposes this
+    # script in isolation -- the same import-with-fallback pattern
+    # check_ac_parent_covered_by.py already uses for the same module. The
+    # values here MUST stay in sync with check_outcome.py.
+    class check_outcome:  # noqa: N801 -- mirrors the module's own name
+        """Fallback stand-in for check_outcome when it is not deployed."""
+
+        NOT_RUN_REASON_DISABLED = "disabled"
+        NOT_RUN_REASON_COULD_NOT_START = "could_not_start"
+
+        @staticmethod
+        def emit_not_run(checker: str, reason: str) -> None:
+            """Fallback not-run report emitter used when check_outcome is absent."""
+            print(f"RESULT: not_run checker={checker} reason={reason}", file=sys.stdout)
+
 _TRANSFORM_TIER = "transform"
 
 
@@ -142,34 +162,95 @@ def _hook_env() -> dict[str, str]:
     return env
 
 
+def _load_manifest_hooks() -> list[dict]:
+    """Read the raw ``hooks_manifest.hooks`` list from ``commit_guardian.json``.
+
+    Reads the manifest beside this file (deployed alongside ``run_hook.py``
+    in every install), shared by ``_load_manifest_tiers()`` and
+    ``_is_target_disabled()`` so both read the same on-disk artifact once.
+
+    Returns:
+        list[dict]: The raw hook entries. Empty when no manifest is found
+        beside this file or it cannot be parsed.
+    """
+    manifest_path = Path(__file__).resolve().parent / "commit_guardian.json"
+    if not manifest_path.exists():
+        return []
+    try:
+        raw = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"run_hook: could not read commit_guardian.json: {exc}", file=sys.stderr)
+        return []
+    return raw.get("hooks_manifest", {}).get("hooks", [])
+
+
 def _load_manifest_tiers() -> dict[str, str]:
     """Map each registered hook's script basename to its declared tier.
 
-    Reads ``commit_guardian.json`` beside this file (the manifest is
-    deployed alongside ``run_hook.py`` in every install) and indexes
-    ``hooks_manifest.hooks[].tier`` by the basename of the script named in
-    each hook's ``entry`` command — the authoritative source for role.
+    Indexes ``hooks_manifest.hooks[].tier`` by the basename of the script
+    named in each hook's ``entry`` command — the authoritative source for
+    role.
 
     Returns:
         dict[str, str]: ``{script_basename: tier}``. Empty when no manifest
         is found beside this file or it cannot be parsed.
     """
-    manifest_path = Path(__file__).resolve().parent / "commit_guardian.json"
-    if not manifest_path.exists():
-        return {}
-    try:
-        raw = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        print(f"run_hook: could not read commit_guardian.json: {exc}", file=sys.stderr)
-        return {}
-
     tiers: dict[str, str] = {}
-    for hook in raw.get("hooks_manifest", {}).get("hooks", []):
+    for hook in _load_manifest_hooks():
         tier = hook.get("tier")
         tokens = hook.get("entry", "").split()
         if tier and tokens:
             tiers[Path(tokens[-1]).name] = tier
     return tiers
+
+
+def _manifest_checker_basename(entry: str) -> str | None:
+    """Extract the delegated checker's basename from a hook's ``entry`` command.
+
+    Mirrors ``_target_script_name()``'s own basename convention: the
+    checker is named by the token immediately after the one ending in
+    ``run_hook.py`` -- the same dispatch wrapper this whole module is --
+    regardless of how many further CLI flags (e.g. ``--quiet``) follow it
+    in the manifest's own ``entry`` string. This is unlike
+    ``_load_manifest_tiers()``'s ``tokens[-1]`` convention, which only
+    holds for an ``entry`` with no trailing flags after the checker path.
+
+    Args:
+        entry: A hook's raw ``entry`` command string, e.g.
+            ``"python run_hook.py docs/.../validate_product_truth.py --quiet"``.
+
+    Returns:
+        str | None: The checker's basename, or ``None`` if ``entry`` does
+        not delegate through a ``run_hook.py``.
+    """
+    tokens = entry.split()
+    for i, tok in enumerate(tokens):
+        if tok.endswith("run_hook.py") and i + 1 < len(tokens):
+            return Path(tokens[i + 1]).name
+    return None
+
+
+def _is_target_disabled(target: str) -> bool:
+    """Decide whether the manifest explicitly disables the delegated target.
+
+    Mirrors ``check_hook_trigger_reachability.py``'s
+    ``entry.get("enabled") is False`` convention (UXP-700c-3-ii): a target
+    absent from the manifest, or present without an explicit ``enabled``
+    field, defaults to enabled — a disabled check is an intentional
+    operator decision that must be reported, not merely assumed.
+
+    Args:
+        target: Basename of the delegated script/module.
+
+    Returns:
+        bool: True only when a manifest entry naming this target
+        explicitly sets ``enabled: false``.
+    """
+    for hook in _load_manifest_hooks():
+        checker = _manifest_checker_basename(hook.get("entry", ""))
+        if checker == target and hook.get("enabled") is False:
+            return True
+    return False
 
 
 def _target_script_name(args: list[str]) -> str:
@@ -306,7 +387,10 @@ def _run_delegated_check(
         launch_label: Human-readable label for the launch-failure message.
 
     Returns:
-        int: The delegated check's own exit code (1 if unlaunchable).
+        int: The delegated check's own exit code (1 if unlaunchable, which
+        also emits the UXP-700c-3-ii not-run report naming ``target`` and
+        the "could_not_start" reason -- an unlaunchable check is a genuine
+        defect, not an operator choice, so the exit code stays non-zero).
     """
     fixing = _is_fixing_role(target, _load_manifest_tiers())
 
@@ -315,6 +399,7 @@ def _run_delegated_check(
         result = subprocess.run(cmd, env=env)
     except OSError as exc:
         print(f"run_hook: failed to launch '{launch_label}': {exc}", file=sys.stderr)
+        check_outcome.emit_not_run(target, check_outcome.NOT_RUN_REASON_COULD_NOT_START)
         return 1
     after = _status_snapshot()
 
@@ -328,6 +413,39 @@ def _run_delegated_check(
     return result.returncode
 
 
+def _not_run_if_undispatchable(args: list[str], target: str) -> int | None:
+    """Detect the two not-run conditions observable before any launch.
+
+    UXP-700c-3-ii: "disabled" and the file-missing member of
+    "could_not_start" are both properties of the dispatch WRAPPER and the
+    config it reads, observable BEFORE the delegated check's own process
+    is ever spawned. Checked here, ahead of the worktree/poetry
+    resolution in ``main()``, so a disabled or unstartable target never
+    reaches ``_run_delegated_check()`` at all.
+
+    Args:
+        args: The forwarded arguments (``sys.argv[1:]``).
+        target: Basename of the delegated script/module (see
+            ``_target_script_name()``).
+
+    Returns:
+        int | None: An exit code to return immediately -- ``0`` for
+        "disabled" (an intentional operator decision must not itself fail
+        the commit) or ``1`` for "could_not_start" (a genuine defect, not
+        an operator choice) -- or ``None`` when the delegated check should
+        be launched normally.
+    """
+    if _is_target_disabled(target):
+        check_outcome.emit_not_run(target, check_outcome.NOT_RUN_REASON_DISABLED)
+        return 0
+
+    if args[0] != "-m" and not Path(args[0]).exists():
+        check_outcome.emit_not_run(target, check_outcome.NOT_RUN_REASON_COULD_NOT_START)
+        return 1
+
+    return None
+
+
 def main() -> int:
     """Resolve the correct Python and delegate to the actual hook script.
 
@@ -336,7 +454,10 @@ def main() -> int:
     worktree, falls back to ``poetry run python``. All arguments after
     ``run_hook.py`` are forwarded verbatim. Every delegated check's
     role-scoped leave-it-as-you-found-it contract is enforced by
-    ``_run_delegated_check`` (GE-120g-1 / GE-120g-1-i).
+    ``_run_delegated_check`` (GE-120g-1 / GE-120g-1-i). A target the
+    manifest disables, or that cannot even be started, is reported via
+    ``_not_run_if_undispatchable`` (UXP-700c-3-ii) before any delegated
+    process is ever spawned.
 
     Returns:
         int: Exit code from the delegated command.
@@ -348,6 +469,10 @@ def main() -> int:
         return 1
 
     target = _target_script_name(args)
+
+    not_run_exit = _not_run_if_undispatchable(args, target)
+    if not_run_exit is not None:
+        return not_run_exit
 
     if _is_worktree():
         main_python = _find_main_venv_python()
@@ -376,6 +501,33 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-09 [python-coder/UXP-700c-3-ii]: A gate that did not run must be
+  reported, and must never count as a gate that passed. Before this
+  change, `run_hook.py` ignored the manifest's `enabled` field entirely
+  and simply ran a disabled check anyway; and a target script that could
+  not even be opened (CPython's own "can't open file" exit) produced no
+  RESULT: line at all -- indistinguishable, to a caller reading only
+  stdout, from a check that ran and found nothing wrong. Added
+  `_not_run_if_undispatchable()`, called from `main()` before the
+  worktree/poetry resolution and before `_run_delegated_check()` ever
+  spawns the delegated process: a manifest entry naming this target with
+  `enabled: false` now short-circuits to `check_outcome.emit_not_run(target,
+  "disabled")` and exit 0 (an intentional operator decision must not itself
+  fail the commit); a plain-script target missing from disk now
+  short-circuits the same way with reason "could_not_start" and exit 1 (a
+  genuine defect, not an operator choice). `_run_delegated_check()`'s own
+  OSError branch (interpreter itself unlaunchable) now also emits the
+  "could_not_start" report, since that failure mode can arise at either
+  layer per architect-review's design note on this ticket. New helpers
+  `_load_manifest_hooks()` (shared manifest read, factored out of
+  `_load_manifest_tiers()`), `_manifest_checker_basename()` (extracts the
+  checker path by position after `run_hook.py` in a hook's `entry`, unlike
+  `_load_manifest_tiers()`'s `tokens[-1]` convention, which only holds when
+  no CLI flags trail the checker path), and `_is_target_disabled()`. Reuses
+  GE-120a-1's shared `check_outcome` vocabulary module (new
+  `OUTCOME_NOT_RUN` / `emit_not_run()`) per this AC's own note ("Reuse
+  GE-120's vocabulary here; do not mint a second one") rather than minting
+  a parallel one.
 - 2026-05-02 13:30 [AI]: Created to fix pre-commit failures in git worktrees.
   Poetry's `virtualenvs.in-project = true` creates an empty .venv per worktree
   directory, causing ModuleNotFoundError for docstring-parser, psycopg2, etc.
