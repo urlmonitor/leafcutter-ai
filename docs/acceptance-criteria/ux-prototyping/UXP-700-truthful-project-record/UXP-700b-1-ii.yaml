@@ -36,6 +36,17 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-09-07'
+- action: amended
+  agent: human user
+  date: '2026-09-10'
+  reason: "AC-3's final clause inverted: a partially empty store now DOES report the
+    checked-and-sound outcome. As written it contradicted sibling UXP-700b-1-i, whose
+    test asserts the same store state IS checked-and-sound over a fixture identical in
+    every observable respect, so no implementation could satisfy both. Resolved by the
+    repo owner in UXP-700b-1-i's favour: a record holding journeys but no screens or
+    example data yet is young, not defective. What this AC uniquely pins is unchanged
+    and still enforced -- the report NAMES exactly which artifact types read zero
+    records, and never names a populated one. Filed as KI-ACD-20260909-2130."
 superseded_by: null
 covered_by:
 - unit_tests/product_truth/test_uxp_700b_1_ii.py

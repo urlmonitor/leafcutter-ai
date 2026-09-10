@@ -23,6 +23,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Import nothing before this. A commit guardian runs INSIDE the commit it is
+# guarding, and pre-commit fails any hook whose run leaves the working tree
+# different from how it found it. Importing a sibling module writes
+# __pycache__/<mod>.cpython-*.pyc, and in a deployed consumer project that
+# .pyc is a tracked file -- so the import alone was enough to make every
+# dispatched hook report "files were modified by this hook" and fail a commit
+# it had otherwise passed. This dispatcher is short-lived and imports one
+# small module, so the cached bytecode buys nothing worth that.
+sys.dont_write_bytecode = True
+
 try:
     import check_outcome  # type: ignore[import]
 except ImportError:

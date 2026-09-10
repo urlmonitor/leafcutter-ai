@@ -63,7 +63,7 @@ the number.
 |---|---|---|
 | `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 67 |
 | `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 51 |
-| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 48 |
+| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 49 |
 | `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 27 |
 | `ac_store` | [ac-store.md](ac-store.md) | 23 |
 | `testing_quality` | [testing-quality.md](testing-quality.md) | 21 |
@@ -74,7 +74,7 @@ the number.
 | `feedback_collector` | [feedback-collector.md](feedback-collector.md) | 3 |
 | `changelog` | [changelog.md](changelog.md) | 2 |
 | `security_scanner` | [security-scanner.md](security-scanner.md) | 1 |
-| | **total** | **268** |
+| | **total** | **269** |
 
 Two id conventions are in use — `KI-CG-035` and `KI-CG-20260826-1612`. A count that
 matches only the first undercounts; the date form is the newer of the two and is the
