@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-07
+last_updated: 2026-09-14
 components:
   - testing_quality
 related_docs:
@@ -1536,3 +1536,35 @@ AC_ENFORCE_STRICT=1 python -m pytest unit_tests/workflows/test_bp_600d_5.py -v
 **Related.** `BP-600d-5` (the AC whose tests were masked here) · `KI-TQ-011` above (the same plugin's masking disagreeing with CI's global opt-out — a different angle on the same mechanism) · `KI-BP-20260907-bootstrap-swallows-build-failure` and `KI-BO-20260907-resume-replays-cached-resolver` (same 2026-09-07/08 window, same shape: a loud-looking failure path that a nearby mechanism silently absorbs).
 
 **Pattern:** a check that examined the wrong parse path, and a check that could not distinguish "not built yet" from "silently broken," stacked on the same change — two green surfaces, neither of which was evidence of what the reader assumed it proved.
+
+---
+
+### KI-TQ-20260914-1050 — the fast lane's green gate reports a pytest timeout as a list of failing test nodeids, so a budget overrun is indistinguishable from broken code — and the distinguishing machinery that exists for exactly this is discarded one layer below
+
+- **Severity:** high — it sent a full investigation down the wrong path for hours, and its output actively argues for the wrong conclusion
+- **Status:** open
+- **Occurrences:** 1 (BP-1500g-1 family, 2026-09-14)
+- **Where:** `scripts/build_orchestration/fast_lane.py` — `verify_green_and_coverage`, which reads only the `eligible` and `failing_tests` keys of each `verify_done_eligible` verdict · `scripts/ac_store/done_proof.py` — `_PYTEST_TIMEOUT_SENTINEL`, `_pytest_timeout_reason`, `_resolve_pytest_timeout_seconds`
+
+**Symptom.** Running the fast lane's own gate over the BP-1500g-1 build set returned:
+
+```json
+{"green": false, "coverage_ok": true, "uncovered_ac_ids": [],
+ "failing_tests": ["...test_bp_1500g_1.py::test_..._byte_identical", ... 5 total]}
+```
+
+Named nodeids, no timeout indication anywhere. The only available reading is "these five tests fail." **All of them pass.** Running the gate's own pytest command verbatim against the same linked files gives `8 passed in 806.84s`.
+
+**Cause.** `done_proof._run_pytest_and_parse` computes its subprocess budget as a 30s collection floor plus 300s per linked test file — 630s for this AC's two files. The real run needs more than that, so the subprocess is killed, the function returns the `_PYTEST_TIMEOUT_SENTINEL` dict, and every linked test is then unmatched and classified non-passing. Proven behaviourally in both directions: at the default budget the gate reports failures; with `LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS=3600` the same AC returns `eligible: true`, `failing_tests: []`, all 8 tests passing.
+
+**The defence exists and does not reach the operator.** The sentinel and `_pytest_timeout_reason` were built for precisely this, under `KI-TQ-20260901-1310` bullet 2, so that "a genuine pytest timeout must not read like a missing test." That reason string is composed inside `verify_done_eligible` — and `verify_green_and_coverage` reads only `eligible` and `failing_tests` from the verdict and drops it. The mitigation is one layer below the surface anyone actually looks at, so at the gate a timeout and a real failure are byte-identical. **This is the same defect the earlier KI records, reappearing one level up in the call stack.**
+
+**Why it is worse than a wrong number.** The output does not merely omit the cause — it asserts a specific false one, naming tests as failing. A reader who trusts it investigates the named tests, the implementation behind them, and (as happened here) test-ordering interference between suites, because the report rules out the real cause by construction. The budget being tight is a tuning problem; the gate lying about why is the defect.
+
+**Second, smaller finding: the per-file allowance is too low for subprocess-heavy build ACs.** `_PYTEST_PER_FILE_BUDGET_SECONDS = 300.0` was set in PR #706 (by me) from a ~142s measurement on BP-900g-8-ii, described in its own comment as "roughly a 2x margin." BP-1500g-1's tests each invoke `build.py --target-dir` as a real subprocess against scratch adopter trees and need materially more. The margin was real; the baseline AC was simply lighter than this class of work. Note the rot this produces: `BP-1500g-1`'s own `test_rationale` states the contract sits "comfortably inside the done-proof pytest budget as fixed by PR #706" — an authored prediction, now falsified, sitting in an approved record.
+
+**Fix direction.** Surface the timeout at the gate: have `verify_green_and_coverage` carry the timeout verdict through instead of flattening it into `failing_tests` — a `timed_out` field, or at minimum a distinct reason, so the caller can tell "did not finish" from "does not pass." Both `verify_done_eligible` and `_verify_composite_eligible` already compute it. Separately, reconsider the per-file allowance for ACs whose tests spawn real builds, or scale it from a measured per-file cost rather than one constant shared by every AC in the store. Whichever is chosen, **the gate must never again render a non-answer as a specific accusation** — that is the general rule this register keeps rediscovering.
+
+**Related.** `KI-TQ-20260901-1310` (the originating budget/masking entry, and the source of the sentinel this one shows is unreachable) · `KI-TQ-011` (same plugin family, masking vs. CI opt-out) · `docs/reference/false-green-mechanisms.md` — this is that catalogue inverted: a false RED, which is rarer and, because it is trusted as a finding rather than as an absence, more expensive.
+
+**Pattern:** a mitigation implemented at the layer that computes the fact, and discarded by the layer that reports it — so the system knows the right answer and tells the operator a confidently wrong one.
