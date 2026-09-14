@@ -9,15 +9,21 @@ BUSINESS CONTEXT: A check that exits 0 cannot tell a caller whether it examined
     rules a consumer depends on are read in one file rather than reconstructed
     from a 900-line checker. Split out of validate_product_truth.py, which was
     over its GE-127a-1 limit, when UXP-700c-1-i added a third input condition.
-ARCHITECTURE: Pure functions and constants; nothing here reads the store.
-    validate_product_truth imports and re-exports every name, so existing
-    callers are unchanged.
+ARCHITECTURE: Constants, pure functions, and the two helpers that log the
+    run's verdict lines under the checker's own logger name. Nothing here reads
+    the store. validate_product_truth imports and re-exports every name, so
+    existing callers are unchanged.
 """
 from __future__ import annotations
 
 import json
+import logging
 
 from product_truth_checks import _ARTIFACT_TYPES
+
+# The checker's own logger name, kept so its verdict lines read exactly as they
+# did before these helpers moved here.
+logger = logging.getLogger("validate_product_truth")
 
 # The closed outcome vocabulary printed on the checker's final stdout line
 # (ADR-042 §1). Consumers compare against exactly these four values.
@@ -194,7 +200,7 @@ def _top_level_outcome(
 def _print_outcome_contract(
     outcome: str, examined: int, unreadable: list[str], empty_types: list[str],
     resolved_pointers: int = 0, unresolvable_pointers: int = 0,
-    examined_by_check: dict[str, int] | None = None,
+    examined_by_check: dict[str, int] | None = None, resolved_labels: int = 0,
 ) -> None:
     """Print the LAST stdout line: the machine-readable outcome contract.
 
@@ -213,8 +219,73 @@ def _print_outcome_contract(
         "resolved_pointers": resolved_pointers,
         "unresolvable_pointers": unresolvable_pointers,
         "examined_by_check": examined_by_check or {},
+        "resolved_labels": resolved_labels,
     }))
 
+
+
+def _log_skipped_entries(checks: list[dict], unreadable_flows: list[str], examined_flows: int) -> None:
+    """Log every not-executed check and every unreadable journey, each with a reason.
+
+    Neither category is ever silently omitted (GE-120): a not-executed check
+    carries its own stated reason; an unreadable journey is named alongside
+    how many of the rest were still examined (UXP-700b-1-i).
+    """
+    for entry in checks:
+        if not entry.get("executed", True):
+            logger.warning("SKIPPED: check '%s' did not execute — %s", entry["name"], entry.get("reason"))
+    for journey in unreadable_flows:
+        logger.warning(
+            "SKIPPED: journey '%s' is unreadable (invalid JSON) — examined the other %d",
+            journey,
+            examined_flows,
+        )
+
+
+def _log_run_verdict(top_outcome: str, examined_flows: int, unreadable_flows: list[str], report: dict) -> None:
+    """Log the single verdict line matching *top_outcome* (assumes no errors).
+
+    Precedence mirrors `_top_level_outcome`: an unreadable journey always logs
+    DEGRADED first (even if `report["outcome"]` — the separate, internal
+    run_checks()-bookkeeping sentinel for UXP-700b-2-i — happens to be sound),
+    then a truly empty store logs NOTHING EXAMINED, then a not-fully-executed
+    but readable run logs the pre-existing DEGRADED-by-unexecuted-check
+    message, and only a fully sound, fully executed run logs OK.
+    """
+    counts, warnings = report["counts"], report["warnings"]
+    if unreadable_flows:
+        logger.warning(
+            "DEGRADED: %d journeys examined, %d unreadable (%s) — the run still completed "
+            "(fail-open, GE-120 / GE-116a-1-iii)",
+            examined_flows,
+            len(unreadable_flows),
+            ", ".join(unreadable_flows),
+        )
+    elif top_outcome == _TOP_OUTCOME_NOTHING:
+        logger.warning(
+            "NOTHING EXAMINED: the record holds no journeys yet — not the same as a "
+            "checked-and-sound run"
+        )
+    elif report["outcome"] != _OUTCOME_SOUND:
+        logger.warning(
+            "DEGRADED: %d flows, %d mock-data, %d mockups valid, but not every check "
+            "executed (%d warnings) — see SKIPPED lines above",
+            counts["flows"],
+            counts["mocks"],
+            counts["mockups"],
+            len(warnings),
+        )
+    elif top_outcome == _TOP_OUTCOME_DEGRADED:
+        logger.warning("DEGRADED: %d pointer(s) could not be classified -- see [pointer-unresolvable] above",
+                       len(report["unresolvable_pointers"]))
+    else:
+        logger.info(
+            "OK: %d flows, %d mock-data, %d mockups, eval + index + derived data valid (%d warnings)",
+            counts["flows"],
+            counts["mocks"],
+            counts["mockups"],
+            len(warnings),
+        )
 
 """
 ====================================================================
@@ -233,5 +304,9 @@ DECISION HISTORY
   CHECK_READS maps every unconditional check to the populations it reads so each
   can state how many records it read; the figures go on the JSON line as
   examined_by_check. (#EPIC-TruthfulProjectRecord/14)
+- 2026-09-14 [python-coder]: UXP-700e-3 -- _log_skipped_entries and
+  _log_run_verdict moved here beside the outcome rules they mirror, keeping the
+  validator inside its ratchet; the contract line gains resolved_labels.
+  (#EPIC-TruthfulProjectRecord/43)
 ====================================================================
 """

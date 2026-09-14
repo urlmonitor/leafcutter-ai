@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 criteria: |
@@ -47,8 +47,11 @@ amended_by:
 superseded_by: null
 covered_by:
 - UXP-700e-3-i
+- unit_tests/product_truth/test_uxp_700e_3.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260909-UXP-700e-3.md
+- docs/product-truth/scripts/product_truth_label_checks.py
+- docs/product-truth/scripts/validate_product_truth.py
+- docs/product-truth/scripts/product_truth_outcome.py
 change_target:
   - code
   - schema
