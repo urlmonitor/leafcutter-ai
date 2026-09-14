@@ -144,6 +144,31 @@ def extract_exempt_ground(combined_output: str, key: str) -> str | None:
     return match.group(1).strip() if match else None
 
 
+def _restore_module(name: str, previous) -> None:
+    """Put ``sys.modules[name]`` back exactly as it was before a fresh import.
+
+    Forcing a fresh import means evicting whatever was already in
+    ``sys.modules`` under that name. Dropping the fresh copy on the way out is
+    NOT enough, and leaving it in place is worse: either way the next test to
+    import that name gets a different module object than the one it, or the
+    code under test, already holds — module-level state silently forks.
+
+    That is not hypothetical. Leaving ``build_phases`` evicted broke four tests
+    in unit_tests/test_workflow_variant_transform.py, but only when they ran in
+    the same process as this file. Each file passed alone, so the damage was
+    invisible to any per-file run and surfaced only in the full CI suite.
+
+    Args:
+        name: Module name that was evicted.
+        previous: The object removed from ``sys.modules``, or None if the name
+            was absent before.
+    """
+    if previous is not None:
+        sys.modules[name] = previous
+    else:
+        sys.modules.pop(name, None)
+
+
 @contextmanager
 def real_drift_exemptions_module():
     """Yield the real, deployed _drift_exemptions module, freshly imported.
@@ -152,13 +177,14 @@ def real_drift_exemptions_module():
     synthetic copy some other test may have imported under the same module
     name), and guarantees ``HOOK_TEST_CONFIG`` is unset for the duration so
     ``load_exemption_registry`` reads the real, colocated commit_guardian.json.
-    Restores ``sys.path``, ``sys.modules``, and the environment on exit.
+    Restores ``sys.path``, ``sys.modules``, and the environment on exit —
+    see ``_restore_module`` for why restoring, not merely popping, matters.
     """
     old_hook_test_config = os.environ.pop("HOOK_TEST_CONFIG", None)
     inserted = str(CG_TEMPLATES_SRC) not in sys.path
     if inserted:
         sys.path.insert(0, str(CG_TEMPLATES_SRC))
-    sys.modules.pop("_drift_exemptions", None)
+    previous = sys.modules.pop("_drift_exemptions", None)
     try:
         import _drift_exemptions as module  # noqa: PLC0415
 
@@ -168,16 +194,20 @@ def real_drift_exemptions_module():
             os.environ["HOOK_TEST_CONFIG"] = old_hook_test_config
         if inserted and str(CG_TEMPLATES_SRC) in sys.path:
             sys.path.remove(str(CG_TEMPLATES_SRC))
-        sys.modules.pop("_drift_exemptions", None)
+        _restore_module("_drift_exemptions", previous)
 
 
 @contextmanager
 def real_build_phases_module():
-    """Yield the real scripts/build_phases module, freshly imported."""
+    """Yield the real scripts/build_phases module, freshly imported.
+
+    Restores ``sys.modules['build_phases']`` to whatever was there before —
+    see ``_restore_module``.
+    """
     inserted = str(SCRIPTS_DIR) not in sys.path
     if inserted:
         sys.path.insert(0, str(SCRIPTS_DIR))
-    sys.modules.pop("build_phases", None)
+    previous = sys.modules.pop("build_phases", None)
     try:
         import build_phases  # noqa: PLC0415
 
@@ -185,3 +215,4 @@ def real_build_phases_module():
     finally:
         if inserted and str(SCRIPTS_DIR) in sys.path:
             sys.path.remove(str(SCRIPTS_DIR))
+        _restore_module("build_phases", previous)
