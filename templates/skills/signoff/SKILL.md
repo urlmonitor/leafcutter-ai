@@ -914,7 +914,13 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
 
 **Yes path**:
 1. Ask: "Describe the learning in one to three sentences."
-2. Emit one `knowledge_captured` telemetry event to `agent_telemetry.jsonl`.
+2. Emit one `knowledge_captured` telemetry event. Obtain the sink by running
+   `python3 .leafcutter/scripts/knowledge/harvest_learnings.py --print-sink`
+   from the project root — it prints the absolute path this install declared
+   for knowledge emissions, the same path regardless of your current working
+   directory. Append the event there (create the file if it does not exist
+   yet; skip gracefully if the declaration is missing or the file is not
+   writable).
    Per ADR-034 (Knowledge Write Ownership), this single append is the agent's
    entire obligation: the agent does not classify the learning, does not pick
    a destination knowledge surface, and does not write to one — the harvester
@@ -1009,19 +1015,25 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
    identifier and is not one.
 
    **Scope of "normative": the record's SHAPE, not its destination.** Which
-   file these events are written to is a separate, still-unreconciled
-   question — producers append to `debugging/logs/agent_telemetry.jsonl`
-   while `harvest_learnings.py` reads `debugging/logs/knowledge_emissions.jsonl`,
-   which has never existed. `INF-400c-4` owns that. This step defines what a
-   record looks like; it does not settle where it goes, and a reader should
-   not infer agreement on the sink from agreement on the fields.
+   file these events are written to was a separate question from the
+   record's shape, and `INF-400c-4` has since settled it: this install's
+   build-time declaration at `config/knowledge_sink.json`, obtained via
+   `harvest_learnings.py --print-sink` (see step 2 above), is now the single
+   knowledge-emission sink every producer resolves against — the earlier
+   mismatch, where producers appended to
+   `debugging/logs/agent_telemetry.jsonl` while `harvest_learnings.py` read
+   `debugging/logs/knowledge_emissions.jsonl` (a file that never existed),
+   no longer applies. This step still defines only what a record looks
+   like; the destination is now defined by that declaration, not by this
+   step.
 
 This step is **mandatory** — skipping it outright is a protocol violation.
 `route-learning` and `capture-learning` are retired and this step no longer
 asks an agent to load either, so their absence is not a condition that can
 occur here anymore. The one recognised escape hatch is a write failure on the
-append itself (e.g. the `debugging/logs/` directory is not writable): log a
-warning and proceed — do not block sign-off. (What the proceed-anyway branch
+append itself (e.g. the resolved sink's directory is not writable, or the
+build-time declaration is missing): log a warning and proceed — do not block
+sign-off. (What the proceed-anyway branch
 must leave behind as a countable artefact is `INF-700b-1-ii`'s obligation,
 not re-specified here.)
 

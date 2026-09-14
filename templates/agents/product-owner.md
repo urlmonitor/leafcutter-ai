@@ -467,9 +467,13 @@ best-effort handling (log a warning and proceed if any step fails):
    obligation — it does not classify the learning or write to any knowledge
    surface itself. Do NOT load `route-learning` or `capture-learning`;
    ADR-034 §2 item 3 retired both names and neither has ever existed under
-   `templates/skills/` or `.claude/skills/`. Append to
-   `debugging/logs/agent_telemetry.jsonl` (create the file if absent; skip
-   gracefully if the directory is not writable):
+   `templates/skills/` or `.claude/skills/`. Obtain the sink by running
+   `python3 .leafcutter/scripts/knowledge/harvest_learnings.py --print-sink`
+   from the project root — it prints the absolute path this install declared
+   for knowledge emissions, the same path regardless of your current working
+   directory. Append the event there (create the file if it does not exist
+   yet; skip gracefully if the declaration is missing or the file is not
+   writable):
    ```json
    {"event": "knowledge_captured", "timestamp": "<ISO-8601>", "agent": "product-owner", "component": "<component-id>", "destination": "(unrouted)", "entry_kind": "unclassified", "text": "<the learning body, exactly as you wrote it>"}
    ```
