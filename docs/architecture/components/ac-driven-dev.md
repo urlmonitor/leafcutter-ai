@@ -5,9 +5,11 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-07-10
-last_updated: 2026-08-31
+last_updated: 2026-09-14
 components:
   - ac_driven_dev
+related_docs:
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
 ---
 
 # AC-Driven Development
@@ -86,3 +88,10 @@ land in the template and be verified in the deployed layout after a rebuild, sin
 gate reads the deployed copy. See also
 [Phantom-Done Prevention](phantom-done-prevention.md) for the broader class of defect this
 closes: a gate reporting a pass it never earned.
+
+## Architecture Diagrams
+
+- [Plan-Feature Decision Gates — Where the Route Stops to Ask, and What Each Answer Costs](../diagrams/c3-008-plan-feature-decision-gate-sequence.md)
+  — L3 sequence diagram of the five points at which `/plan-feature` stops and asks the
+  person running it for a decision, and the three exits every one of those points has
+  (person answers, no person reachable, answer not attributable to the person).

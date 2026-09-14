@@ -25,7 +25,7 @@ criteria: |
     that channel.
 depends_on: [ACD-2100c]
 doc_links:
-  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+  - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
     relationship: describes
     status: planned
     relevance: "The sequence diagram authored by ACD-2100e-1 -- the five decision points and the channel each is put on are what it depicts."

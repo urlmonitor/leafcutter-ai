@@ -24,7 +24,7 @@ criteria: |
   And the drafted work is still present on disk unchanged.
 depends_on: [ACD-2100c, ACD-2100a-4]
 doc_links:
-  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+  - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
     relationship: describes
     status: planned
     relevance: "The sequence diagram authored by ACD-2100e-1 -- the unattended branch that ends in a pause is one of the paths it depicts."

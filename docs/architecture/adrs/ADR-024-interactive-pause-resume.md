@@ -4,7 +4,7 @@ description: "Records the decision to replace the cancel-on-headless behaviour o
 type: "adr"
 status: "active"
 created: "2026-07-20"
-last_updated: "2026-07-20"
+last_updated: "2026-09-14"
 deciders:
   - BrainCandy
 components:
@@ -235,6 +235,7 @@ deterministic replay guarantee that makes `resumeFromRunId` correct.
 
 ## References
 
+- [Plan-Feature Decision Gates — Where the Route Stops to Ask, and What Each Answer Costs](../diagrams/c3-008-plan-feature-decision-gate-sequence.md) — L3 sequence diagram of the five points at which `/plan-feature` stops and asks for a human decision; Exit 2 of each is the pause-and-persist substrate this ADR defines.
 - [ADR-030 — Dual-Engine Workflow Support](ADR-030-dual-engine-workflow-support.md) — establishes the E2 top-level-body form that this ADR extends with the pause substrate.
 - [ADR-001 — Self-Hosting Boundary](ADR-001-self-hosting-boundary.md) — the `build.py` round-trip parity constraint that the shared substrate module must satisfy.
 - [docs/reference/workflow-constraints.md](../../reference/workflow-constraints.md) — E2 body constraints (no `Date.now()`, no blocking, no side-channel I/O) that the substrate must obey.

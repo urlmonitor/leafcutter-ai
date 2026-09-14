@@ -25,7 +25,7 @@ criteria: |
     is accepted and carried out.
 depends_on: [ACD-2100c, ACD-2100c-1]
 doc_links:
-  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+  - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
     relationship: describes
     status: planned
     relevance: "The sequence diagram authored by ACD-2100e-1 -- the refused-answer branch is one of the paths it depicts."
