@@ -75,7 +75,12 @@ _CHECK_FILE_SIZE = _COMMIT_GUARDIAN_DIR / "check_file_size.py"
 _RUN_HOOK = _COMMIT_GUARDIAN_DIR / "run_hook.py"
 _BUILD_PY = _REPO_ROOT / "scripts" / "build.py"
 _CONFIG_PATH = _COMMIT_GUARDIAN_DIR / "commit_guardian.json"
-_REAL_OVERSIZED_FILE = _REPO_ROOT / "scripts" / "build_phases.py"
+# Was scripts/build_phases.py (2671 counted lines when this fixture was
+# written). That file was split across eleven sibling modules and is now 342
+# counted lines -- UNDER the 400 limit -- so it no longer satisfies this
+# fixture's premise of "a real, tracked, genuinely over-limit source file".
+# scripts/build.py is ~1915 counted lines and still is one.
+_REAL_OVERSIZED_FILE = _REPO_ROOT / "scripts" / "build.py"
 
 _PYTHON = sys.executable
 _SUBPROCESS_TIMEOUT_SECONDS = 60

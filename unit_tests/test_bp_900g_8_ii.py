@@ -133,9 +133,7 @@ import sys
 import textwrap
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Path setup -- make scripts/ importable regardless of working directory.
-# ---------------------------------------------------------------------------
+# ---- Path setup -- make scripts/ importable regardless of working directory. ----
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 
@@ -145,11 +143,9 @@ if str(_SCRIPTS_DIR) not in sys.path:
 import build as _build  # noqa: E402 -- after sys.path setup
 import build_referential_integrity as _bri  # noqa: E402 -- after sys.path setup
 
-# ---------------------------------------------------------------------------
-# Shared helpers -- temp-copy + subprocess-build plumbing used by every
+# ---- Shared helpers -- temp-copy + subprocess-build plumbing used by every
 # reachability/failure/boundary test in this file (see TEMP-COPY DISCIPLINE
-# above the module docstring's ARCHITECTURE section).
-# ---------------------------------------------------------------------------
+# above the module docstring's ARCHITECTURE section). ----
 
 _COPY_IGNORE = shutil.ignore_patterns(
     ".git", "__pycache__", ".pytest_cache", ".ruff_cache", "node_modules", ".next"
@@ -166,9 +162,9 @@ _CORE_CONFIG_TUPLE_ANCHOR = '        "phase_deferral.yaml",\n    ):'
 # each of the THREE core-config tuples this AC's fix added it to: TWO in
 # scripts/build.py (_get_source_deployable_scripts' Set-B manifest and
 # _get_source_paths_for_guard's tracked-source set) and ONE in
-# scripts/build_phases.py (build_ac_store's own deploy tuple, the one that
-# actually WRITES the file). Used by test 2 Half 1's withhold-then-restore
-# round trip.
+# scripts/build_phases_ac_store.py (build_ac_store's own deploy tuple, the
+# one that actually WRITES the file -- moved out of build_phases.py by the
+# size-limit split). Used by test 2 Half 1's withhold-then-restore round trip.
 _DIAGRAM_TYPES_TUPLE_LINE = '        "diagram_types.json",\n'
 
 
@@ -177,13 +173,14 @@ def _withhold_diagram_types_from_deploy_declaration(copy_root: Path) -> None:
 
     Withholds it from BOTH of build.py's Set-B declarations
     (``_get_source_deployable_scripts`` and ``_get_source_paths_for_guard``)
-    AND from build_phases.py's ``build_ac_store`` deploy tuple in the SAME
-    call, so the three stay mutually consistent -- keeping
+    AND from build_phases_ac_store.py's ``build_ac_store`` deploy tuple in
+    the SAME call, so the three stay mutually consistent -- keeping
     ``test_guard_source_paths_match_deployable_set``'s cardinality parity
     check from firing for the wrong reason (see TEMP-COPY DISCIPLINE above).
-    Withholding from build_phases.py also means the file is genuinely never
-    WRITTEN to the deployed target, not merely un-declared -- needed for the
-    "restore" half's deployed-file assertion to be a meaningful contrast.
+    Withholding from build_phases_ac_store.py also means the file is
+    genuinely never WRITTEN to the deployed target, not merely un-declared --
+    needed for the "restore" half's deployed-file assertion to be a
+    meaningful contrast.
     """
     build_py = copy_root / "scripts" / "build.py"
     original_build = build_py.read_text(encoding="utf-8")
@@ -199,15 +196,16 @@ def _withhold_diagram_types_from_deploy_declaration(copy_root: Path) -> None:
         original_build.replace(_DIAGRAM_TYPES_TUPLE_LINE, ""), encoding="utf-8"
     )
 
-    build_phases_py = copy_root / "scripts" / "build_phases.py"
+    # AC_STORE_DEPLOY_MAP (and this tuple) now lives in build_phases_ac_store.py post-split; build_phases.py only re-exports it.
+    build_phases_py = copy_root / "scripts" / "build_phases_ac_store.py"
     original_phases = build_phases_py.read_text(encoding="utf-8")
     phases_count = original_phases.count(_DIAGRAM_TYPES_TUPLE_LINE)
     assert phases_count == 1, (
         "Fixture assumption broken: expected exactly 1 occurrence of "
-        f"{_DIAGRAM_TYPES_TUPLE_LINE!r} in scripts/build_phases.py's "
+        f"{_DIAGRAM_TYPES_TUPLE_LINE!r} in scripts/build_phases_ac_store.py's "
         f"build_ac_store deploy tuple; found {phases_count}. "
-        "build_phases.py's core-config declaration shape may have changed -- "
-        "update this helper's anchor."
+        "build_phases_ac_store.py's core-config declaration shape may have "
+        "changed -- update this helper's anchor."
     )
     build_phases_py.write_text(
         original_phases.replace(_DIAGRAM_TYPES_TUPLE_LINE, ""), encoding="utf-8"
@@ -278,12 +276,10 @@ def _inject_marker_read_into_injection_builders(copy_root: Path, marker_name: st
     (copy_root / "config" / marker_name).write_text("{}\n", encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# Test 1 -- angle: criterion. UNCHANGED from the prior pass. Three REAL
+# ---- Test 1 -- angle: criterion. UNCHANGED from the prior pass. Three REAL
 # deployed guardrails, three REAL non-code files, against the SAME two
 # functions BP-900g-8 introduced. Reads real files only; never mutates
-# anything, so it needs no temp copy.
-# ---------------------------------------------------------------------------
+# anything, so it needs no temp copy. ----
 
 
 def test_bp_900g_8_ii_derived_closure_for_a_deployed_guardrail_contains_the_non_code_files_it_reads():
@@ -669,7 +665,8 @@ def test_bp_900g_8_ii_build_subprocess_blocks_when_a_non_code_read_is_withheld_f
     # ---- State 3: one module dependency withheld (BP-900g-8's own case) ---
     copy_module = tmp_path / "state3_module_withheld"
     _copy_package_tree(copy_module)
-    build_phases_py = copy_module / "scripts" / "build_phases.py"
+    # AC_STORE_DEPLOY_MAP now lives in build_phases_ac_store.py post-split; build_phases.py only re-exports it.
+    build_phases_py = copy_module / "scripts" / "build_phases_ac_store.py"
     withhold_re = re.compile(
         r"^[ \t]*\([^\n]*_component_migration_map\.py[^\n]*\),?[ \t]*$",
         re.MULTILINE,
@@ -678,7 +675,7 @@ def test_bp_900g_8_ii_build_subprocess_blocks_when_a_non_code_read_is_withheld_f
     assert withhold_re.search(original_phases), (
         "Fixture assumption broken: could not find the "
         "_component_migration_map.py deploy_map entry in "
-        "scripts/build_phases.py to withhold."
+        "scripts/build_phases_ac_store.py to withhold."
     )
     build_phases_py.write_text(withhold_re.sub("", original_phases), encoding="utf-8")
 
