@@ -326,20 +326,16 @@ def _classify_file(
     return "pass", lines, None
 
 
-def main() -> int:
-    """
-    Main entry point for the pre-commit hook.
+def _ensure_utf8_stdout() -> None:
+    """Reconfigure stdout to UTF-8 if it is not already, for Windows compatibility.
+
+    Header output uses emoji characters, which require a UTF-8 stream to
+    render. Older Python runtimes without `reconfigure()` are left as-is
+    (best-effort only -- see GE-127a-1's Windows compatibility note).
 
     Returns:
-        Exit code: 0 (all files within limits, or already-oversized files
-        that shrank/stayed the same, or the previous-length history is
-        empty), 1 (a file exceeds its limit or grew while already
-        oversized), or 2 (INDETERMINATE — the previous-length source could
-        not be reached at all, a resolvable HEAD blob could not be
-        interpreted, or a staged file's CURRENT content could not be opened
-        or decoded).
+        None.
     """
-    # Ensure header output (emojis) works on Windows
     if sys.stdout.encoding.lower() != "utf-8":
         try:
             sys.stdout.reconfigure(encoding="utf-8")
@@ -347,21 +343,39 @@ def main() -> int:
             # Python < 3.7 doesn't support reconfigure, but we're likely on modern Python
             pass
 
+
+def _load_staged_files() -> tuple[dict[str, bool] | None, int | None]:
+    """Load the staged files, or resolve the INDETERMINATE exit for an unreachable source.
+
+    Returns:
+        A (staged_files, exit_code) pair. On success, exit_code is None and
+        staged_files is the resolved mapping (possibly empty). On an
+        unresolvable source, staged_files is None and exit_code is 2 --
+        the caller must print nothing else and return that exit code.
+    """
     try:
-        staged_files = get_staged_files()
+        return get_staged_files(), None
     except PreviousLengthSourceError as exc:
         print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return 2
+        return None, 2
 
-    if not staged_files:
-        return 0
 
-    covered_files = {fp: is_new for fp, is_new in staged_files.items() if should_check_file(fp)}
+def _classify_covered_files(
+    covered_files: dict[str, bool], previous_lengths: dict[str, int]
+) -> tuple[list[tuple[str, int, int]], list[tuple[str, int, int]], list[tuple[str, int, bool]], int | None]:
+    """Classify every covered file, or resolve the INDETERMINATE exit.
 
-    previous_lengths, indeterminate_exit = _resolve_ratchet_or_indeterminate(list(covered_files))
-    if indeterminate_exit is not None:
-        return indeterminate_exit
+    Args:
+        covered_files: Mapping of staged, checked-extension path to is_new.
+        previous_lengths: Mapping of path to its length at HEAD, for files
+            that had one.
 
+    Returns:
+        A (grown_files, failed_files, passed_files, exit_code) tuple. On
+        success, exit_code is None. On an unmeasurable current length, all
+        three lists are empty and exit_code is 2 -- the caller must print
+        nothing else and return that exit code.
+    """
     grown_files: list[tuple[str, int, int]] = []
     failed_files: list[tuple[str, int, int]] = []
     passed_files: list[tuple[str, int, bool]] = []  # (path, lines, is_new)
@@ -377,9 +391,32 @@ def main() -> int:
                 passed_files.append((filepath, lines, is_new))
     except CurrentLengthUnmeasurableError as exc:
         print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return 2
+        return [], [], [], 2
 
-    # Print results
+    return grown_files, failed_files, passed_files, None
+
+
+def _print_results(
+    previous_lengths: dict[str, int],
+    grown_files: list[tuple[str, int, int]],
+    failed_files: list[tuple[str, int, int]],
+    passed_files: list[tuple[str, int, bool]],
+) -> int:
+    """Print the run's verdict blocks and resolve the final exit code.
+
+    Args:
+        previous_lengths: Mapping of path to its length at HEAD, for files
+            that had one. Only its count is used, for the summary line.
+        grown_files: (path, previous_length, current_length) triples for
+            already-oversized files that grew.
+        failed_files: (path, lines, limit) triples for files over their
+            absolute limit.
+        passed_files: (path, lines, is_new) triples for files that passed.
+
+    Returns:
+        1 if any file grew while already oversized or is over its absolute
+        limit, otherwise 0.
+    """
     print("\n📏 File Size Check\n")
     print(f"📊 Compared {len(previous_lengths)} file(s) against their previous length.\n")
 
@@ -401,6 +438,43 @@ def main() -> int:
     return 0
 
 
+def main() -> int:
+    """
+    Main entry point for the pre-commit hook.
+
+    Returns:
+        Exit code: 0 (all files within limits, or already-oversized files
+        that shrank/stayed the same, or the previous-length history is
+        empty), 1 (a file exceeds its limit or grew while already
+        oversized), or 2 (INDETERMINATE — the previous-length source could
+        not be reached at all, a resolvable HEAD blob could not be
+        interpreted, or a staged file's CURRENT content could not be opened
+        or decoded).
+    """
+    _ensure_utf8_stdout()
+
+    staged_files, load_exit = _load_staged_files()
+    if load_exit is not None:
+        return load_exit
+
+    if not staged_files:
+        return 0
+
+    covered_files = {fp: is_new for fp, is_new in staged_files.items() if should_check_file(fp)}
+
+    previous_lengths, indeterminate_exit = _resolve_ratchet_or_indeterminate(list(covered_files))
+    if indeterminate_exit is not None:
+        return indeterminate_exit
+
+    grown_files, failed_files, passed_files, classify_exit = _classify_covered_files(
+        covered_files, previous_lengths
+    )
+    if classify_exit is not None:
+        return classify_exit
+
+    return _print_results(previous_lengths, grown_files, failed_files, passed_files)
+
+
 if __name__ == "__main__":
     sys.exit(main())
 
@@ -408,6 +482,22 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-14 [python-coder/BP-100n-4]: Pure complexity refactor, no
+  behaviour change. main() was measured at complexity 17-18 (over the
+  check-complexity gate's threshold of 15 as that gate prepares to
+  register as a live pre-commit hook on this branch) because it inlined
+  the UTF-8 stdout setup, the staged-files load-and-INDETERMINATE branch,
+  the per-file classify-loop-and-INDETERMINATE branch, and the print
+  -results-and-verdict block, all in one function body. Extracted four
+  cohesive helpers -- _ensure_utf8_stdout(), _load_staged_files(),
+  _classify_covered_files(), and _print_results() -- following the same
+  (value, exit_code) resolution pattern _resolve_ratchet_or_indeterminate()
+  already established, so main() now only sequences them and checks each
+  exit_code sentinel. main() drops to complexity 5. Every print call,
+  message string, exit code, and branching decision is unchanged; only
+  the DECISION HISTORY and docstrings were added to. This lets
+  check-complexity register as a live gate without check_file_size.py
+  itself being the file that blocks it.
 - 2026-09-08 [python-coder/KI-CG-20260908-file-size-ratchet-refuses-merge-commits]:
   Made the ratchet merge-aware. _resolve_ratchet_or_indeterminate() now
   resolves every parent revision of the commit in progress (via
