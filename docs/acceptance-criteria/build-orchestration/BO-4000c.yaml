@@ -1,0 +1,153 @@
+id: BO-4000c
+title: "A run started inside an unrelated worktree, or aimed at an occupied location, still never nests a worktree and never picks a second location"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given /build-feature EPIC-OtherEpic is started from inside the linked worktree
+    `C:\Users\Hendrik\Code\leafcutter\worktrees\uxp-700-tranche-2`
+  And the run's target resolution reports no worktree for EPIC-OtherEpic
+  When the worktree step names the location for the new worktree
+  Then the location is `C:\Users\Hendrik\Code\leafcutter\worktrees\EPIC-OtherEpic`, a
+    direct child of the repository's worktree base
+  And it is the same location the run names when started from the main checkout
+    `C:\Users\Hendrik\Code\leafcutter\leafcutter-ai`
+  And it is not under `C:\Users\Hendrik\Code\leafcutter\worktrees\uxp-700-tranche-2`,
+    whether as `uxp-700-tranche-2\worktrees\EPIC-OtherEpic`, as the epic's folder inside
+    that worktree, or anywhere else below it.
+
+  Given the named location `C:\Users\Hendrik\Code\leafcutter\worktrees\EPIC-OtherEpic`
+    already exists
+  And it is the top-level directory of a linked worktree of this repository, checked out
+    on the target's branch
+  When the worktree step runs
+  Then that worktree is reused as the target's worktree, as in BO-4000's first scenario.
+
+  Given the named location already exists
+  And it is a plain directory, a checkout of a different repository, or a linked worktree
+    of this repository on a different branch
+  When the worktree step runs
+  Then no worktree is opened, neither there nor at any alternative location
+  And no phase agent is dispatched
+  And the run stops with a refusal naming the location and what occupies it
+  And nothing inside the occupied location is changed.
+depends_on:
+  - BO-4000
+doc_links:
+  - path: docs/architecture/adrs/ADR-039-fast-lane-occupied-workspace-refusal.md
+    relationship: related
+    status: exists
+    relevance: "The fast lane's decision to refuse on an occupied workspace rather than choose worktrees/<slug>-2. This record applies the same rule to build-feature."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Section 9: the worktree base is derived from the repository, not from the current directory."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Harness for driving the location decision from a run started inside a worktree."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+    relevance: "Worktree lifecycle component and provisioning entry point that reports what occupies the named location."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The location named from a run started inside any linked worktree is byte-identical to the one named from the main checkout, because the base is derived from git's shared common directory and never from the start directory's own top-level."
+  - "What occupies the location is established from facts about what is on disk, returned by BO-4000's deterministic repository-facts helper in a structured result: absent, a linked worktree of this repository together with its checked-out branch, a checkout of another repository, or any other directory. It is never inferred from the directory name."
+  - "An existing linked worktree at the location is reused only when it belongs to this repository (same shared common directory) and is checked out on the target's branch under BO-4000's single branch-name rule. Every other occupant is refused."
+  - "A refusal never computes or tries an alternative location (the ADR-039 no-suffix rule, applied to build-feature)."
+  - "A refusal is read-only for the occupied location. Nothing inside it is created, changed or removed, no worktree is registered or pruned, and no branch is created for the target."
+  - "The refusal names the location and carries a stable, machine-readable discriminator for the occupant kind."
+  - "The real-artifact test builds each occupant kind on disk inside a temporary repository, starts from a real linked worktree, and asserts the occupied location's contents are unchanged after the run."
+delivers_to: null
+expects_from:
+  ac_id: BO-4000
+  contract: "BO-4000's named-location rule (<worktree base>/<target identity>, base from the main checkout) and its repository-facts object { path, exists, is_git_toplevel, is_linked_worktree, is_main_checkout, same_repository, branch }, used here from a linked-worktree start and against an occupied location."
+test_required: true
+test_spec:
+  - name: test_run_started_in_an_unrelated_worktree_names_the_same_location_as_from_main
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Started inside uxp-700-tranche-2 for EPIC-OtherEpic, the named location equals the one named from the main checkout and is not under uxp-700-tranche-2."
+  - name: test_existing_worktree_for_the_target_at_the_location_is_reused
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A linked worktree on the target's branch already at the location is reused and no worktree-opening agent is dispatched."
+  - name: test_occupied_location_refuses_without_choosing_an_alternative
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A plain directory, a foreign checkout, and a worktree on another branch at the location each stop the run, name the occupant, and dispatch no worktree-opening or phase agent."
+  - name: test_location_decisions_on_a_real_repository_started_from_a_linked_worktree
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "With a temporary real repository, a real linked worktree as the start directory, and each occupant kind really on disk, the decisions match the scenarios."
+  - name: test_worktree_start_and_occupancy_are_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "The scenarios are driven through _workflow_engine_harness.py running build-feature.js's own top-level body."
+test_rationale: |
+  BO-4000's named-location tests start from the main checkout, where the current
+  directory's checkout and the repository's main checkout are the same thing. A location
+  derived from the current directory's top-level passes all of them. It still nests
+  worktrees inside worktrees the first time a run starts from one, which is how the
+  incident run was started. The occupied-location cases are separate because the natural
+  way around an occupied path is a suffix. That would make the location no longer derived
+  only from base and target, and BO-4000's determinism test would not notice, since it
+  never occupies the location.
+covered_by: []
+implemented_by: []
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by:
+- reason: it-po-technical-enrichment
+  date: 2026-09-14
+  by: it-po
+  changes: 'Set package_surface: false. Added it_requirements and a doc_link, raised
+    estimated_complexity from S to M (three occupant kinds classified from repository
+    facts, plus a real-repository test from a linked-worktree start), tightened expects_from,
+    and set readiness to reviewed. criteria, test_spec, test_rationale and notes are
+    unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+notes: |
+  NAMED MUTATIONS (each turns only this record's tests red):
+    M1 — derive the worktree base from the current directory's checkout top-level instead
+         of the repository's main checkout. From a linked worktree this yields
+         uxp-700-tranche-2\..\worktrees or uxp-700-tranche-2\worktrees. Caught by
+         test_run_started_in_an_unrelated_worktree_names_the_same_location_as_from_main.
+    M2 — on an occupied location, choose worktrees\EPIC-OtherEpic-2 or a timestamped
+         path. Caught by test_occupied_location_refuses_without_choosing_an_alternative.
+    M3 — treat any existing directory at the location as the target's worktree. Caught by
+         the plain-directory and other-branch occupants in the same test.
+    M4 — clear an occupied location to make room. Caught by the "nothing inside is
+         changed" assertion in the real-repository test.
+
+  ASSUMPTION, logged. "The target's branch" is whatever branch naming BO-4000's
+  implementation settles on for the target (the incident used epic/truthful-project-record).
+  This record does not fix the naming. It only requires that a worktree on a different
+  branch is not mistaken for the target's.

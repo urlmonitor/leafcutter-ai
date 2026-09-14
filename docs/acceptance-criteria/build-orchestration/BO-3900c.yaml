@@ -1,0 +1,140 @@
+id: BO-3900c
+title: "A path whose form is neither recognisably absolute nor recognisably relative is refused by name, never joined onto the worktree"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given the resolved worktree `C:\Users\Hendrik\Code\leafcutter\worktrees\uxp-700-tranche-2`
+  And a batch of three tickets, one of which is named by one of:
+    `C:tickets\07_TICKET-x.md` (drive-relative),
+    `\tickets\07_TICKET-x.md` (rooted, with no drive),
+    an empty or blank string,
+    or an already-joined value carrying a second drive root, such as
+    `C:\Users\Hendrik\Code\leafcutter\worktrees\uxp-700-tranche-2\tickets/C:\Users\x\07_TICKET-x.md`
+  When the workflow resolves the batch's paths for dispatch
+  Then no phase agent is dispatched for that ticket
+  And the ticket is reported blocked with a reason that reproduces its path value
+    verbatim and states that the value is not a recognised absolute or relative path
+  And that value is not joined onto the worktree, not trimmed into some other path, and
+    not guessed at
+  And the other two tickets, whose paths are well-formed, are dispatched as usual.
+
+  Given one ticket blocked for an unrecognised path form and another blocked because its
+    well-formed path names a file that does not exist
+  When the run reports its blocked tickets
+  Then the two reasons can be told apart — the first says the path's form was not
+    recognised, the second says the file it names was not found.
+depends_on:
+  - BO-3900
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: implements
+    status: exists
+    relevance: "The fallback branch that joined any unrecognised value onto the worktree."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Harness for driving the refusal through the workflow body."
+  - path: docs/architecture/adrs/ADR-039-fast-lane-occupied-workspace-refusal.md
+    relationship: related
+    status: exists
+    relevance: "Precedent: a refusal is a discriminated result that cannot be mistaken for success or for a different refusal."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Component overview for the build workflows' batch dispatch, where the per-ticket refusal happens."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The path form is classified in the workflow body before any agent is dispatched for that ticket, so a refused form costs no agent call."
+  - "The refusal applies to one ticket only. Well-formed siblings in the same batch are still dispatched, and the run is not halted because of it."
+  - "The blocked result carries a stable, machine-readable reason discriminator that separates 'unrecognised path form' from 'file not found' and from every other blocked reason, so the two can be told apart without parsing message wording. It also carries the path value verbatim: an empty string stays empty and whitespace is preserved."
+  - "Nothing is repaired. The value is not trimmed, no text after its last drive root is extracted, and it is not resolved against the worktree's drive or any current directory (user decision Q3, 2026-09-14)."
+  - "An already-joined value is recognised by its structure (a drive root, UNC root or leading root after the first segment), not by matching the resolved worktree string, so a corrupted value from any worktree is refused."
+  - "'Blank' means empty or whitespace-only."
+  - "How dependants of a blocked ticket are sequenced stays unchanged."
+delivers_to: null
+expects_from:
+  ac_id: BO-3900
+  contract: "BO-3900's per-script classification, whose 'unrecognised' outcome (drive-relative, rooted-without-drive, empty or blank, or second root after the first segment) carries the input value verbatim and is never resolved onto a root."
+test_required: true
+test_spec:
+  - name: test_unrecognised_path_forms_block_only_their_ticket_and_quote_the_value
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Each of the four unrecognised forms blocks only its own ticket, with a reason quoting the value verbatim, while the two well-formed siblings are dispatched."
+  - name: test_already_joined_double_root_path_is_not_rejoined_or_trimmed
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The incident's corrupted value, if it arrives as input, is refused rather than joined a second time or cut down to its trailing absolute part."
+  - name: test_unrecognised_form_and_missing_file_are_reported_distinguishably
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A form refusal and a not-found refusal carry different stated reasons."
+  - name: test_path_form_refusal_is_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "The refusal is observed in a run of build-feature.js's own body through _workflow_engine_harness.py."
+test_rationale: |
+  The incident's root shape was a fallback: whatever was not recognised got joined. A fix
+  that recognises Windows absolute paths but keeps that fallback still joins the next
+  unforeseen spelling. So the fallback itself needs a test that feeds it spellings no
+  recognition rule covers. Refusing per ticket, not per run, is asserted with well-formed
+  siblings in the same batch. Otherwise halting the whole run would pass as refusing the
+  bad ticket.
+covered_by: []
+implemented_by: []
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by:
+- reason: it-po-technical-enrichment
+  date: 2026-09-14
+  by: it-po
+  changes: 'Set package_surface: false, added it_requirements and architecture doc_links,
+    tightened expects_from, and set readiness to reviewed. criteria, test_spec, test_rationale
+    and notes are unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+notes: |
+  NAMED MUTATIONS:
+    M1 — keep the "otherwise join" fallback for anything unrecognised. Caught by
+         test_unrecognised_path_forms_block_only_their_ticket_and_quote_the_value. BO-3900's
+         cases stay green, because every one of its inputs is recognisable.
+    M2 — "repair" a double-root value by keeping the text after its last drive root. Caught
+         by test_already_joined_double_root_path_is_not_rejoined_or_trimmed. A repair like
+         that hides the upstream defect that produced the value.
+    M3 — halt the whole run on the first unrecognised path. Caught by the sibling-dispatch
+         assertion.
+    M4 — report every blocked path as "not found". Caught by
+         test_unrecognised_form_and_missing_file_are_reported_distinguishably.
+
+  DECIDED 2026-09-14 (user, Q3): drive-relative `C:foo` and rooted-without-drive `\foo` are refused, not resolved against the worktree's drive.
+
+  Background to that decision. Drive-relative (`C:foo`) and rooted-without-drive
+  (`\foo`) spellings are refused, not resolved against the worktree's drive. Both are legal
+  Windows spellings, but each depends on a per-process current drive or directory that a
+  workflow cannot observe.
+
+  A ticket blocked here is still a ticket other tickets may depend on. How dependants of a
+  blocked ticket are sequenced is existing behaviour, not changed by this record.

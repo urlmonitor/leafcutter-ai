@@ -1,0 +1,170 @@
+id: BO-3900d
+title: "A POSIX-only absolute-path test added to any workflow script is caught automatically, over a set of scripts that is derived rather than listed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: internal
+package_surface: false
+criteria: |
+  Given the workflow script directory holds 8 scripts at authoring time — build-epic,
+    build-feature, build-ticket, create-ticket, fast-lane-ship, finalize-feature,
+    plan-feature and quick-fix
+  When the automated check runs
+  Then it examines every script in that directory and states how many it examined
+  And a ninth script added to that directory raises the stated count to 9 with no
+    change to the check.
+
+  Given a workflow script that treats a leading `/` as a sign that a path is absolute,
+    in any of these shapes: `startsWith("/")`, `startsWith('/')`, `[0] === "/"`,
+    `charAt(0) === '/'`, or a regular expression anchored on a leading slash
+  And that test is neither the shared cross-platform path classification nor marked
+    with a recorded reason stating the value is not a file-system path
+  When the check runs
+  Then the check fails
+  And its failure names the script, the line, and the expression it found.
+
+  Given a script whose only leading-`/` test sits inside the shared cross-platform path
+    classification, which also recognises drive-letter and UNC forms
+  And another script whose leading-`/` test carries a recorded reason such as
+    "URL route, not a file-system path"
+  When the check runs
+  Then neither script is reported
+  And a recorded marker that carries no reason text is reported as if it were absent.
+
+  Given BO-3900 has landed
+  When the check runs over the repository as it then stands
+  Then it passes.
+
+  Given this check passes
+  When BO-3900's coverage is judged
+  Then the check counts for nothing toward it: it guards against the POSIX-only form
+    coming back, and it says nothing about which paths a workflow actually hands to agents.
+depends_on:
+  - BO-3900
+doc_links:
+  - path: templates/workflows-js/
+    relationship: specifies
+    status: exists
+    relevance: "The directory whose scripts the check derives and examines (canonical source; the deployed mirror is held equal by BP-1000e parity, not by scanning it twice)."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/
+    relationship: related
+    status: exists
+    relevance: "BP-1000e keeps the templates/workflows-js to scripts/workflows mirror byte-identical."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "M1: source-text assertions standing in for behaviour. This is why the check counts for nothing toward BO-3900's coverage."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle taxonomy (criterion, failure, boundary, real_artifact) this record's test_spec entries declare."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "User decision Q4 (2026-09-14): the check is a unit test only. Its scanning logic is test-support code under unit_tests/ and only unit tests invoke it. It is not registered as a pre-commit hook, a commit_guardian hooks_manifest entry, or a CI step."
+  - "The examined set is derived at run time from the directory listing of templates/workflows-js/ (every .js file in it). No script list or count is hard-coded, and the stated examined count comes from that listing."
+  - "Only the canonical source directory templates/workflows-js/ is scanned. The deployed .claude/workflows/ copy is not scanned a second time, because its equality is BP-1000e's concern."
+  - "The permitted-home exemption is derived from a property of the code: the leading-'/' test sits inside a classification that also recognises drive-letter and UNC forms. It is never derived from a function-name allowlist, so renaming the classification neither breaks nor widens the exemption."
+  - "The non-path marker has one documented spelling carrying non-empty reason text, placed on the flagged line or the line directly above it. A marker with empty or whitespace-only reason text is treated as absent."
+  - "A failing run reports every finding, each with the script's file name, its 1-based line number and the matched expression text, not just the first finding."
+  - "The scanner accepts a target directory, so the seeded-shape and count-derivation tests run against fixture copies and never write to templates/workflows-js/."
+  - "The check's tests carry no coverage tag for BO-3900 or for any BO-3900 child other than this record."
+  - "A run over the real templates/workflows-js/ directory completes in under 5 seconds."
+delivers_to: null
+expects_from:
+  ac_id: BO-3900
+  contract: "After BO-3900 lands, every leading-'/' absoluteness test left in templates/workflows-js/*.js either sits inside a classification that also recognises drive-lettered and UNC forms, or carries a reasoned non-path marker."
+test_required: true
+test_spec:
+  - name: test_every_workflow_script_is_examined_and_the_count_is_derived
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The stated examined count equals the number of scripts in the directory, and adding a temporary script in a fixture copy raises it by one."
+  - name: test_each_leading_slash_absoluteness_shape_is_reported_with_script_line_and_expression
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A seeded fixture script carrying each of the five shapes fails the check once per shape, naming script, line and expression."
+  - name: test_shared_classification_and_reasoned_marker_are_not_reported
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Paired acceptable inputs: the shared classification and a reasoned non-path marker pass, and a marker with no reason is reported."
+  - name: test_check_passes_on_the_real_workflow_scripts
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Run over the real templates/workflows-js directory after BO-3900, the check passes and states an examined count equal to the directory's script count."
+test_rationale: |
+  A guard against reintroduction has two ways to be worthless. It can examine a
+  hand-written list of files, so the next new script is never looked at. Or it can refuse
+  everything, which is discharged by broadening an exemption until it means nothing. The
+  derived count with a varying population closes the first. The paired acceptable inputs,
+  plus the rule that a reasonless marker does not exempt, close the second. The check is
+  text-based on purpose. That is why it is kept out of BO-3900's coverage: this repo has
+  repeatedly let source-text assertions stand in for behaviour (KI-BO-028, M1 in
+  docs/reference/false-green-mechanisms.md).
+covered_by: []
+implemented_by: []
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by:
+- reason: it-po-technical-enrichment
+  date: 2026-09-14
+  by: it-po
+  changes: 'Reassigned assigned_agent from test-writer to python-coder without a split.
+    The pipeline dispatches test-writer from test_spec to author the failing tests;
+    with test-writer also owning the scanner, those tests would pass the moment they
+    were written, so no red baseline could exist. python-coder owns the scanner as
+    test-support code under unit_tests/, which keeps the check a unit test only per
+    user decision Q4. Also set package_surface: false, added it_requirements and doc_links,
+    tightened expects_from, and set readiness to reviewed. criteria, test_spec, test_rationale
+    and notes are unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+notes: |
+  WHY A GUARD AT ALL. The user asked whether a guard should flag new POSIX-only absolute
+  checks. It is warranted. The incident's defect is one expression that looks correct to
+  a Linux-hosted reviewer, and the user said the same assumption may already exist in
+  sibling workflow scripts. BO-3900's harness proof covers build-feature. Without a breadth
+  guard, a sibling or a new script can reintroduce the form with nothing turning red.
+
+  NAMED MUTATIONS:
+    M1 — examine a hard-coded list of the 8 scripts. Caught by
+         test_every_workflow_script_is_examined_and_the_count_is_derived.
+    M2 — match only the double-quoted `startsWith("/")`. Caught by the single-quote,
+         index and charAt shapes in the seeded fixture.
+    M3 — treat any marker as an exemption, reason or not. Caught by
+         test_shared_classification_and_reasoned_marker_are_not_reported.
+    M4 — report every leading-slash test, including the shared classification. Caught by
+         the same test's acceptable input, and by test_check_passes_on_the_real_workflow_scripts.
+
+  DECIDED 2026-09-14 (user, Q4): a unit test only, as written. No pre-commit hook record is
+  to be authored.
+
+  ALREADY-EXISTING OFFENDERS, found by the Q5 grep (see BO-3900 notes). build-feature.js
+  line 1483 has startsWith("/"). plan-feature.js has regular expressions anchored on a
+  leading slash at 588, 1391 and 1427. This check fails on the repository as it stands
+  today. It passes only once BO-3900's fixes land, or once a site that is not a
+  file-system path carries a reasoned marker, which is the fourth scenario's "Given
+  BO-3900 has landed".
+
+  Assigned to test-writer because the deliverable is a test. If the IT PO prefers a small
+  scanning helper that the test calls, that helper is python-coder's, split out at
+  enrichment.

@@ -1,0 +1,189 @@
+id: BO-4000b
+title: "A local branch that is behind origin/main is never silently checked out into a new worktree"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given the workflow is about to open a new worktree for EPIC-TruthfulProjectRecord on the
+    branch `epic/truthful-project-record`
+  And that branch already exists locally
+  And it is 47 commits behind `origin/main` as fetched at that moment
+  And it carries no commit that `origin/main` lacks
+  When the worktree step runs
+  Then the new worktree starts from the current tip of `origin/main`, not from the stale
+    tip of that branch
+  And the run's report states that the branch was 47 commits behind and that the new
+    worktree started from `origin/main`.
+
+  Given the same branch is 47 commits behind `origin/main`
+  And it carries 3 commits that `origin/main` lacks
+  When the worktree step runs
+  Then no worktree is opened
+  And no phase agent is dispatched
+  And the run stops with a refusal naming the branch, its 3 commits ahead and its 47
+    commits behind `origin/main`, and the choices open to the user: bring the branch up to
+    date themselves, remove the branch, or aim the run at a different branch
+  And the branch's commits are left exactly as they were.
+
+  Given the branch exists locally and is 0 commits behind `origin/main`
+  When the worktree step runs
+  Then the worktree is opened on that branch as it stands, with no report of staleness.
+
+  Given the branch exists locally
+  And `origin/main` cannot be fetched at that moment
+  When the worktree step runs
+  Then no worktree is opened on that existing branch
+  And the run stops with a refusal stating that the branch's standing against
+    `origin/main` could not be checked.
+
+  Given the run reuses the worktree resolved for the target (BO-4000, first scenario)
+  When the worktree step runs
+  Then none of the above applies — the reused worktree's branch is not compared, moved,
+    or refused here.
+depends_on:
+  - BO-4000
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f.yaml
+    relationship: related
+    status: exists
+    relevance: "BO-1800f governs currency at delivery. This record governs currency at worktree creation. Its notes explain why an unreachable remote means unverifiable, not zero divergence, for a gate."
+  - path: docs/acceptance-criteria/build-orchestration/BO-900-mid-epic-sync/
+    relationship: related
+    status: exists
+    relevance: "BO-900a-1 measures commits ahead of origin/main, which does not detect being behind. This record must measure behind explicitly."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Harness for stubbing the branch-state report and observing the run's decision."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+    relevance: "Worktree lifecycle component and provisioning entry point where the branch standing is measured before a worktree is opened."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Template source versus deployed copy for the provisioning script the measurement lives beside."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Standing is measured against origin/main as freshly fetched in the same worktree step. Both commits behind and commits ahead are computed and reported: BO-900a-1's ahead-only measure is not sufficient, and comparing against the local main is a defect."
+  - "If origin/main cannot be fetched, or either count cannot be computed, the standing is 'unverifiable'. It is never treated as 0 behind (BO-1800f)."
+  - "Resolution of the point the BA left open: each target keeps one branch name. When the existing local branch is behind and carries no commits origin/main lacks, its ref is advanced to the fetched origin/main tip (lossless, because it has no unique commits) and the worktree is opened on it. No second branch is cut for the same target, so BO-4000c's 'target's branch' stays deterministic and the next run does not find the stale ref again."
+  - "No step rewrites, rebases, resets or deletes a branch that carries commits origin/main lacks. After the refusal, that branch's ref points at the same commit it did before the run."
+  - "A branch ref is never force-moved while it is checked out in any worktree."
+  - "The behind count, ahead count and fetch outcome come from a deterministic helper that queries the repository and returns a structured result, so the real-repository test measures them without an LLM."
+  - "The staleness report and the refusal carry the branch name, the behind count and the ahead count as structured fields as well as prose. Each refusal kind (unique commits versus unverifiable standing) has its own stable, machine-readable reason discriminator."
+  - "When the run reuses the worktree resolved for the target (BO-4000, first scenario), no fetch-driven comparison, ref move or refusal is performed on that worktree's branch."
+  - "The real-repository test uses a local bare repository as origin and needs no network access."
+delivers_to: null
+expects_from:
+  ac_id: BO-4000
+  contract: "The point in BO-4000's worktree step, reached only when no worktree is reused, at which a branch is chosen for the new worktree at the named location, and the target's single branch name used there."
+test_required: true
+test_spec:
+  - name: test_behind_branch_with_no_unique_commits_starts_the_worktree_from_origin_main
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The incident's 47-behind, 0-ahead branch yields a worktree started from origin/main, and the report states the 47."
+  - name: test_behind_branch_with_unique_commits_stops_and_names_both_counts
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A 47-behind, 3-ahead branch opens no worktree, dispatches no phase agent, and the refusal names the branch, 3 ahead, 47 behind and three choices."
+  - name: test_up_to_date_branch_is_used_without_a_staleness_report
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A 0-behind branch is used as it stands and the report carries no staleness statement."
+  - name: test_unfetchable_origin_main_refuses_an_existing_branch
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "When origin/main cannot be fetched, an existing local branch is not used and the refusal says its standing could not be checked."
+  - name: test_behind_and_ahead_are_measured_on_a_real_repository
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "On a temporary real repository with a bare origin, a branch really 2 behind and 1 ahead is reported as 2 behind and 1 ahead, not as 1 ahead only."
+  - name: test_branch_staleness_decision_is_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "The criterion, failure and boundary cases are driven through _workflow_engine_harness.py running build-feature.js's own top-level body."
+test_rationale: |
+  The store already holds a divergence measurement that cannot see this condition.
+  BO-900a-1 counts commits ahead of origin/main, and a branch 47 behind with 0 ahead reads
+  0 on that measure. So the real-artifact entry has to build a branch that is really both
+  behind and ahead, and assert both numbers. Every other entry goes through the workflow
+  body, because the defect was a decision the run made (check the branch out as it stood),
+  not a wrong number returned by some helper.
+covered_by: []
+implemented_by: []
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by:
+- reason: it-po-technical-enrichment
+  date: 2026-09-14
+  by: it-po
+  changes: 'Resolved the point the notes left to IT PO enrichment: advance the existing
+    no-unique-commit branch ref to origin/main rather than cut a fresh branch, keeping
+    one branch name per target. Also set package_surface: false, added it_requirements
+    and doc_links, tightened expects_from, and set readiness to reviewed. The stale-branch
+    policy decided on 2026-09-14 (Q2) is unchanged. criteria, test_spec, test_rationale
+    and notes are unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+notes: |
+  NAMED MUTATIONS:
+    M1 — reuse an existing local branch without comparing it to origin/main (the incident).
+         Caught by test_behind_branch_with_no_unique_commits_starts_the_worktree_from_origin_main.
+    M2 — measure only commits ahead, the BO-900a-1 shape. Caught by
+         test_behind_and_ahead_are_measured_on_a_real_repository and by the 47-behind cases.
+    M3 — compare against the local main rather than origin/main. A stale local main
+         hides the gap. Caught by the real-repository test, whose local main is left
+         behind its origin.
+    M4 — move a branch with unique commits onto origin/main, discarding them. Caught by
+         test_behind_branch_with_unique_commits_stops_and_names_both_counts, which
+         asserts the branch's commits are unchanged.
+    M5 — treat an unfetchable origin as 0 behind. Caught by
+         test_unfetchable_origin_main_refuses_an_existing_branch.
+
+  DECIDED 2026-09-14 (user, Q2): keep the policy below. A behind branch with no commits of
+  its own starts from origin/main, and the run reports how far behind it was. A branch with
+  commits of its own stops the run. A failed origin/main fetch also stops the run.
+
+  Background to that decision. The user's requirement is "not silently reused when
+  behind main". The policy above is one reading. It starts a no-unique-commit branch from
+  origin/main and reports it, and it refuses a branch with unique commits. Alternatives
+  are to always refuse any behind branch (strictest; costs a manual step when nothing
+  could be lost), or to rebase a branch with unique commits automatically (rejected: a
+  rebase with conflicts in an unattended run is the silent-corruption shape BO-1800f's
+  notes warn about). The unfetchable-origin refusal also blocks offline runs that target
+  an existing branch. The user accepted that trade-off on 2026-09-14.
+
+  The first scenario moves where the new worktree starts. It does not say whether the
+  local branch ref itself is moved to origin/main or a fresh branch is cut. That is left
+  to IT PO enrichment. Both satisfy the criterion, and neither loses a commit, because the
+  scenario is limited to branches with no unique commits.

@@ -1,0 +1,148 @@
+id: BO-3900a
+title: "Whether a path is absolute is decided by how it is spelled, not by the host it runs on, and the proof fails on a Linux runner against POSIX-only code"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given the path spellings
+    `C:\Users\Hendrik\x.md`, `c:/Users/Hendrik/x.md`, `C:\Users/Hendrik\x.md` (mixed),
+    `\\fileserver\share\x.md` (UNC), and `/home/henzeh/x.md`
+  And the relative spellings `tickets\00_inbox\x.md` and `tickets/00_inbox/x.md`
+  When the build workflows' path handling classifies each one on a POSIX host
+  And again on a Windows host
+  Then the five absolute spellings are classified absolute on both hosts
+  And the two relative spellings are classified relative on both hosts
+  And resolving each of the seven against the worktree `C:/wt/epic` gives the same
+    result on both hosts.
+
+  Given the automated test that proves BO-3900 and this record
+  When it runs on a Linux CI runner
+  Then it runs, rather than being skipped or conditioned on the host operating system
+  And before exercising anything it confirms that its Windows-shaped inputs, as held on
+    that runner, contain a drive letter followed by `:` and at least one literal `\`, so
+    a fixture assembled from the host's own separator stops the test rather than letting
+    it pass
+  And run against path handling that recognises an absolute path only by a leading `/`,
+    it fails on that Linux runner, not only on a Windows machine.
+depends_on:
+  - BO-3900
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: related
+    status: exists
+    relevance: "KI-BP-20260907-0812 fix direction: a separator regression test must assert on string content, or it passes vacuously on the platform that cannot reproduce the bug."
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Precedent test_rationale: build inputs from explicit separators so the test fails on a POSIX runner when the code is wrong."
+  - path: unit_tests/portability/
+    relationship: related
+    status: exists
+    relevance: "Home of the repo's existing host-independence tests."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "No module loader in the E2 engine, so classification cannot delegate to a host path module and has to be decided from the string itself."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Proof-of-done angles (criterion, seam, failure, reachability) that this record's test_spec entries declare."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Absoluteness is decided from the string's form alone. No host platform value, host path module or environment variable takes part in classification or resolution, so the both-hosts outcome holds by construction rather than by a per-host branch."
+  - "Absolute: drive-lettered forms (either letter case, backslash, forward slash or mixed), UNC forms, and leading '/'. Relative: forms with no root and no drive. Drive-relative ('C:foo') and rooted-without-drive ('\\foo') forms are in neither class; they belong to BO-3900c's refused set."
+  - "The Windows-shaped cases run unconditionally on the Linux CI runner. No skip, expectedFailure or platform condition may guard them, and a non-zero skip count in this test module is a review failure."
+  - "Fixture strings are written as literals and shape-checked (a drive letter, then ':', then at least one literal backslash) before they are used. A fixture that fails the shape check fails the test; it does not skip it."
+  - "Resolving the seven spellings against 'C:/wt/epic' must return byte-identical strings whichever host platform value the test presents."
+delivers_to: null
+expects_from:
+  ac_id: BO-3900
+  contract: "BO-3900's per-script classification (absolute / relative / unrecognised) and resolve-onto-root rule, decided from the string's form with no host signal. This record pins its host independence on the Linux runner."
+test_required: true
+test_spec:
+  - name: test_windows_shaped_paths_classify_absolute_on_a_posix_host
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Drive-letter, lowercase drive-letter, mixed-separator and UNC spellings classify absolute, and both relative spellings classify relative, when the test runs on Linux."
+  - name: test_resolution_result_is_identical_under_both_simulated_hosts
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Resolving all seven spellings against C:/wt/epic with the host forced to POSIX and to Windows yields identical strings."
+  - name: test_windows_fixtures_hold_literal_drive_letters_and_backslashes_on_this_host
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Anti-vacuity guard: the fixture strings contain a drive letter with a colon and a literal backslash on the running host, so fixtures built from the host separator fail loudly."
+  - name: test_host_independent_classification_is_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "The incident's Windows ticket path, driven through _workflow_engine_harness.py on the Linux runner, reaches the phase agent prompts unjoined."
+test_rationale: |
+  The only CI runner is Linux, and the defect only shows on Windows. That is why it went
+  unseen. A test that proves Windows handling only on a Windows host proves nothing in CI.
+  A test whose fixtures are built with the host's path functions holds no backslash on
+  Linux and passes whatever the code does. So the inputs have to be literal strings,
+  checked for their own shape before use, and classification has to be asserted on the
+  runner CI actually has. The reachability entry repeats the incident replay on that same
+  runner, because a helper can classify correctly in isolation while the workflow body
+  never calls it.
+covered_by: []
+implemented_by: []
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by:
+- reason: it-po-technical-enrichment
+  date: 2026-09-14
+  by: it-po
+  changes: 'Set package_surface: false, added it_requirements and architecture doc_links,
+    tightened expects_from, and set readiness to reviewed. criteria, test_spec, test_rationale
+    and notes are unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+notes: |
+  WHY THIS IS ITS OWN RECORD. BO-3900 can be satisfied on a Windows developer machine
+  by path handling that asks the host whether a path is absolute. That handling is correct
+  on Windows and wrong on Linux for a Windows-shaped string. The drives that hand agents
+  these paths can run on either. This record's mutations turn only its own tests red:
+  BO-3900's harness tests, run on Windows, stay green under them.
+
+  NAMED MUTATIONS:
+    M1 — delegate absoluteness to the host platform's own rules (the host path module's
+         isAbsolute, with no Windows-rules variant). Green on a Windows host, red on the
+         Linux runner via test_windows_shaped_paths_classify_absolute_on_a_posix_host.
+    M2 — replace the Windows-absolute recognition with startsWith("/"). Red on Linux, the
+         clause the user asked for by name.
+    M3 (a mutation of the test, not the code) — build fixtures with the host separator or
+         a host path-join. Caught by
+         test_windows_fixtures_hold_literal_drive_letters_and_backslashes_on_this_host.
+    M4 (a mutation of the test) — decorate the Windows cases with a skip-unless-Windows
+         condition. The criterion forbids it. A reviewer or a skip-count check on the Linux
+         run catches it. No test can catch its own skip decorator.
+
+  ASSUMPTION, logged. A drive-lettered or UNC spelling is treated as absolute on every host.
+  On a POSIX file system `C:\x.md` is technically a legal relative file name. No build
+  orchestration path is spelled that way on purpose, and treating it as relative is exactly
+  the incident. Risk if wrong: a POSIX project with a directory literally named `C:` would
+  have its paths misclassified. Accepted as negligible.
