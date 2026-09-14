@@ -1374,7 +1374,30 @@
       "canonical": "templates/scripts/commit_guardian/commit_guardian.json",
       "legacy": "templates/commit-guardian/commit_guardian.json"
     },
-    "excluded_scripts": [],
+    "excluded_scripts": [
+      "check_outcome.py",
+      "check_v2_ac_store_alignment.py"
+    ],
+  "_excluded_scripts_comment": [
+    "KI-TQ-007. Files matching hook_script_patterns that are NOT hooks, and so",
+    "must not be counted as unregistered gates by check_hook_parity.py or by",
+    "unit_tests/commit_guardian/test_hook_registration_inventory.py.",
+    "",
+    "check_outcome.py — has no main() and no __main__ block. It is the GE-120",
+    "machine-readable outcome vocabulary (OUTCOME_OK / OUTCOME_COULD_NOT_CHECK /",
+    "OUTCOME_NOTHING_TO_INSPECT / OUTCOME_NOT_RUN), imported by run_hook.py — the",
+    "dispatcher every registered hook runs through — and by check_contract_shrinking,",
+    "check_doc_frontmatter and check_ac_parent_covered_by. It is the most-executed",
+    "file in this directory and matched the orphan scan only via its check_ prefix.",
+    "",
+    "check_v2_ac_store_alignment.py — a real script with a real caller, but not a",
+    "pre-commit gate: templates/agents/ac-validator.md step 2c runs it with",
+    "--ticket <path> and treats a non-zero exit as a blocker finding. Listed here",
+    "rather than registered, because the pre-commit stage is not its entry point.",
+    "Note its inline `implements AC-XX-NNN` input form is nearly retired (4 tickets,",
+    "all finished June 2026 work); if that form is formally dropped, remove step 2c",
+    "from ac-validator.md FIRST, then delete the script and this entry."
+  ],
     "hook_script_patterns": [
       "check_*.py",
       "run_hook.py",
