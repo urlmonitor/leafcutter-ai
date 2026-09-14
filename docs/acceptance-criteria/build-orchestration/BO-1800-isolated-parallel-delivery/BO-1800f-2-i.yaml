@@ -1,0 +1,181 @@
+id: BO-1800f-2-i
+components:
+  - build_orchestration
+readiness: approved
+priority: medium
+title: "A declared removal is delivered; an undeclared removal alongside it is not"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f.yaml"
+criteria: |
+  Given a copy that has declared it intends to remove file A,
+    and a delivery, already brought up to date with the shared branch's current
+    state, that removes all 200 lines of A and also removes 12 lines of file B,
+    where B is on the shared branch and no removal of B has been declared,
+  When the workflow examines what the delivery would take away from the shared branch,
+  Then no part of the delivery leaves the copy,
+  And the refusal names B,
+  And the refusal does not name A,
+  And given a second delivery from the same copy that removes A and nothing else,
+    that delivery leaves the copy and A is gone from the result.
+depends_on: [BO-1800f-2]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Adjudication is PER PATH against the declared set, never a single boolean over the
+     whole delivery. Any implementation that computes one 'were removals declared?'
+     answer and applies it to every path is the third row of this record's own four-way
+     table and fails its fixture. The declared set is the union of `Removes:` commit
+     trailers across the delivery set, as established in BO-1800f-2."
+  - "Path comparison must be normalized before matching — repo-relative, forward slashes,
+     no `./` prefix, no trailing whitespace — and must be exact after normalization.
+     Matching by substring or basename would let `Removes: config.py` authorize the
+     removal of `scripts/vendor/config.py`."
+  - "A declared path must be excluded from the refusal entirely, not listed and marked
+     allowed. A refusal that names A alongside B invites the reader to restore A, which
+     is the error CLAUDE.md already records: a branch's real, intended removal read as a
+     dropped hunk and nearly reinstated."
+  - "Case sensitivity must follow the repository's own path semantics rather than the
+     host filesystem's, so that a declaration behaves identically on a case-insensitive
+     checkout."
+  - "A delivery in which every removal is declared must proceed all the way through the
+     outward-facing action; it must not be downgraded to a warning, a prompt, or a
+     dry-run. Deliberate removal staying fully possible is the value this record
+     protects, and a gate that merely nags on the declared path has re-introduced the
+     manual-diligence step the L1 exists to remove."
+  - "Declaring a path authorizes removing the whole file as well as any subset of its
+     lines; the declared case in this record's fixture is a 200-line whole-file deletion
+     and the undeclared case is a 12-line partial removal, and both must be handled by
+     the same rule rather than by a whole-file branch and a partial branch."
+test_spec:
+  - name: test_mixed_declared_and_undeclared_removal_is_refused
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The mixed fixture — A declared and fully removed, B undeclared and
+      12 lines shorter — is refused and nothing reaches the remote."
+  - name: test_refusal_names_the_undeclared_file
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "B appears in the refusal. Fails any behaviour that allows every
+      removal, and any that allows all removals once one has been declared."
+  - name: test_refusal_does_not_name_the_declared_file
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A is absent from the refusal — not present-and-marked-allowed. Fails
+      any behaviour that refuses every removal."
+  - name: test_a_delivery_removing_only_the_declared_file_is_delivered
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The second delivery from the same copy removes A and nothing else; it
+      proceeds and A is absent from the delivered result. Fails any behaviour that
+      refuses every removal."
+  - name: test_declaring_one_path_does_not_authorize_another
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "With only `Removes: A` declared, B's removal is still refused. The
+      explicit guard against allow-all-once-anything-is-declared, named so it cannot be
+      lost in a refactor."
+  - name: test_a_removal_declared_by_a_later_empty_commit_is_honoured
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "The `Removes:` trailer sits on an empty commit added after the commit
+      that performed the removal; the declaration is honoured. Pins the union-across-the
+      -delivery-set rule and the retro-declaration path."
+  - name: test_a_declared_path_matching_no_removal_is_reported_as_a_declaration_error
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A trailer naming a path the delivery does not remove (the mistyped-path
+      case) is surfaced as a declaration error rather than silently ignored."
+test_rationale: |
+  The single mixed fixture is mandatory and must not be split into a declared-only test
+  and an undeclared-only test. Its purpose is to separate four behaviours that one-sided
+  fixtures cannot tell apart, and each of the first four descriptors above is the
+  assertion that kills one row:
+
+    - refuse every removal .................. fails test_refusal_does_not_name_the_declared_file
+                                              and test_a_delivery_removing_only_the_declared_file_is_delivered
+    - allow every removal ................... fails test_refusal_names_the_undeclared_file
+    - allow all removals once any one ....... fails test_refusal_names_the_undeclared_file
+      has been declared
+    - adjudicate each removal against ....... passes all four
+      what was declared
+
+  test_declaring_one_path_does_not_authorize_another duplicates part of that coverage on
+  purpose. The third row is the one a plausible implementation actually lands on — a
+  single "declared?" boolean is the shortest correct-looking code — and a test named for
+  the anti-behaviour survives a refactor that a test named for the fixture does not.
+
+  test_a_removal_declared_by_a_later_empty_commit_is_honoured and
+  test_a_declared_path_matching_no_removal_is_reported_as_a_declaration_error cover the
+  two costs the chosen declaration mechanism carries (recorded in BO-1800f-2's notes):
+  retro-declaration, and the silent failure of a mistyped path. Without the second, a
+  typo produces a refusal indistinguishable from a true positive and the author learns to
+  distrust the gate.
+
+  Every descriptor needs a real git repository in a tmpdir with a remote that advances
+  between cut and delivery, and the deliver-side assertions must read the remote's refs
+  and the delivered tree — asserting A is "gone from the result" means reading the result,
+  not the workflow's report.
+delivers_to: null
+expects_from:
+  ac_id: BO-1800f-2
+  contract: "The removal finding set BO-1800f-2 produces — per path, {path,
+    removed_line_count, declared, attribution} — together with the declared-path union
+    parsed from the delivery set's `Removes:` commit trailers. This record specifies how
+    those two are adjudicated against each other."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  This record is the carve-out that keeps BO-1800f honest. A rule that refused every
+  removal would read as strictly safer and would be wrong in a way this repo has
+  already paid for: CLAUDE.md records an occasion where a branch's real, intended
+  removal was read as something dropped by accident and was nearly put back, which
+  would have silently reversed the change the branch existed to make. Taking things
+  away on purpose has to remain possible, or the guarantee is routed around.
+
+  Falsifiability. The single mixed fixture is what makes this record impossible to
+  satisfy by accident, because it separates four behaviours that a one-sided fixture
+  cannot tell apart:
+
+    - refuse every removal            -- fails, because it names A and blocks the
+                                         second delivery
+    - allow every removal             -- fails, because it does not name B
+    - allow all removals once any one -- fails, because it does not name B
+      has been declared
+    - adjudicate each removal against -- the only behaviour that passes
+      what was declared
+
+  The assertions are on which paths the refusal names and on whether A is absent
+  from the delivered result, both observable by running the behaviour over the
+  fixture.
