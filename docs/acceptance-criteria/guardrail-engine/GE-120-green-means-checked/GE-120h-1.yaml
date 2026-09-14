@@ -1,0 +1,336 @@
+id: GE-120h-1
+title: "A check the package presents as protecting you is reconciled against the one list that causes it to run, and one that is advertised while nothing runs it is named and refused"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the places a reader consults to learn that a check protects their work — the
+    published index that lists checks and how serious each one is, the settings a
+    check's behaviour is read from, the configuration entry that tunes it, and the
+    routing that says what is done automatically when it objects,
+  And the one list whose entries are what actually cause a check to run when work is
+    committed,
+  When the reconciliation runs,
+  Then the advertisements it examines are obtained by reading each of those places at
+    run time, so neither the places consulted nor the checks found advertised on them
+    is a set written into the reconciliation itself,
+  And every check advertised in at least one of those places that no entry on the
+    executing list names is reported by name, together with each place that advertises
+    it and the statement that nothing runs it,
+  And the run fails,
+  And a check that an entry on the executing list names is not reported at all,
+  And the run states how many advertisements it reconciled,
+
+  And given one further advertisement is added — one check named in one of those
+    places and on no entry of the executing list — and nothing else in the repository
+    changes,
+  When the reconciliation runs again,
+  Then that check is among those reported, and the number of advertisements the run
+    states it reconciled is exactly one greater than the number it stated before,
+  And the same holds whichever of those places the advertisement is added to, so a
+    place that is consulted for one kind of claim and passed over for another cannot
+    carry a claim nobody reconciled.
+
+  Coverage note: cover this by executing the reconciliation as a process against a real
+  repository and asserting over the set it reports and the counts it states — never
+  against a literal list of the names that disagree today, which passes forever and
+  catches nothing on the day the next check is advertised (CLAUDE.md, "Gate / Workflow
+  ACs — Verify Behaviorally, Not by Grep"). The added-advertisement arm is the decisive
+  one: no implementation holding a written-in list of advertising places or of
+  advertised names, however that list is spelled, can pass it.
+depends_on:
+  - GE-120h
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE ONLY PLACE THAT DECIDES ANYTHING, AND ALSO ONE OF THE PLACES THAT MISLEADS.
+      This single file carries BOTH sides of the disagreement: hooks_manifest.hooks is
+      the executing list, and the document's own top-level keys are per-check settings
+      sections. Verified in this worktree 2026-09-14 — sql_complexity (line 54),
+      folder_density (line 162) and debug_scripts (line 182) each hold a populated
+      settings section, complete with an explanatory comment naming the script, while
+      no entry in hooks_manifest.hooks names any of the three. A reconciliation that
+      reads only one container of this file misses the disagreement inside it.
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SEVERITY-RATING SURFACE. Rows 32, 38 and 41 list check_debug_scripts.py,
+      check_sql_complexity.py and check_folder_density.py with a hook id, the word
+      "Blocking", and the settings keys that tune them. To any adopter that reads as a
+      statement of live protection. It is not one. Note also the standing caution
+      GE-120f-5 records about this page: it has already been wrong about one check's
+      enforcement level while that check was genuinely registered.
+  - path: templates/scripts/commit_guardian/config.py
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SETTINGS-BLOCK SURFACE. Verified 2026-09-14: dedicated, commented blocks for
+      check_sql_complexity (lines 106-109), check_folder_density (134-139) and
+      check_debug_scripts (142-148) resolve real values through _get. Code that reads
+      settings for a check is the strongest of the four reassurances, because it is
+      executable and it is true — it simply says nothing about whether anything calls
+      the check.
+  - path: templates/scripts/precommit-autofix.json
+    relationship: related
+    status: exists
+    relevance: >-
+      THE AUTOMATIC-REPAIR ROUTING SURFACE, AND THE ONE THAT SHOWS THE FOUR DO NOT MOVE
+      TOGETHER. Verified 2026-09-14: it routes hook_id check-sql-complexity (line 150)
+      and names none of the other four unregistered-but-ready checks. Wiring a repair
+      path for the failures of a check nothing runs is the clearest single instance of
+      the defect, and the fact that only one of the five appears here is why the
+      population must be read from every surface rather than assumed to be one set.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ADJACENT CENSUS THAT OWNS THE OTHER DIRECTION — READ BEFORE BUILDING ANYTHING
+      HERE, AND DO NOT FORK IT. BP-1600a-2 (approved, high) owns disk to registry: every
+      gate script PRESENT IN THE GUARD DIRECTORY that no entry line names. This record
+      owns advertisement to registry: every check some reader-facing or
+      settings-carrying surface CLAIMS, that no entry line names. The two populations
+      overlap and are not the same — a script can be present without being advertised
+      (nothing claims it protects you, so nothing misleads), and a surface can advertise
+      a check that is not present at all (BP-1600a-2's population cannot see that). The
+      substantive link is already in BP-1600a-2's own it_requirements: it records that
+      ten unreferenced scripts carry a dedicated settings section and calls that
+      "evidence of intent", but no criterion of its own asserts anything about that
+      evidence. That unasserted observation is this record's subject. DELIBERATELY NOT A
+      depends_on EDGE: either may land first, and the constraint is that the second
+      EXTENDS the first's population and verdict vocabulary rather than standing up a
+      second census beside it — two censuses that disagree about how many checks exist
+      is the failure BP-1600a-2 already warns about, and the store has already produced
+      one fork of it (GE-120c-6).
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-6.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE EXISTING FORK OF THE DISK CENSUS, INSIDE THIS SAME L0 — NAMED SO IT IS NOT
+      FORKED A THIRD TIME. GE-120c-6 specifies the same disk-to-registry sweep
+      BP-1600a-2 owns, run from a built working copy against the deployed registry, and
+      was subordinated to BP-1600a-2 by user decision on 2026-09-07. This record is not
+      a third statement of that sweep: its population is what the surfaces CLAIM, not
+      what the directory HOLDS. If the implementer finds themselves listing the guard
+      directory to build this record's population, they are building GE-120c-6 again.
+  - path: unit_tests/commit_guardian/test_hook_registration_inventory.py
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRIOR ART AND THE RED BASELINE. It already asks the disk-to-registry question
+      as a standing assertion and holds a shrink-only record of the scripts that fail
+      it. Read its per-entry comments rather than its count — they are the measured
+      record of WHY each entry is still unregistered, and several name a settings
+      section or a README row as the reason the script was believed live. What it does
+      NOT do is look at any advertising surface, which is exactly the gap here: a check
+      advertised in the README and in config.py that has no script on disk at all would
+      pass it silently.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-CG-021 is the named instance — a whole-collection uniqueness pass registered in
+      no hook config and no CI workflow, which has never run.
+  - path: docs/known-issues/testing-quality.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-TQ-007 is why the reconciliation must be mechanical rather than a review step:
+      six rounds of review verified a check without once asking what invokes it, because
+      everything a reviewer naturally consults said live.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding here
+      specifically. A test that reads the four surfaces as text and compares them stays
+      green on a reconciliation that nothing at commit time invokes — which would make
+      this record's own implementation the next instance of the defect it describes.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "THE FOUR ADVERTISING PLACES ALL EXIST AND WERE READ ON 2026-09-14 — DO NOT WRITE THEIR NAMES INTO THE CODE. templates/scripts/commit_guardian/README.md (the severity-rated hook index), templates/scripts/commit_guardian/config.py (per-check settings blocks resolved through _get), templates/scripts/commit_guardian/commit_guardian.json (top-level per-check settings sections — 38 top-level keys, of which folder_density, sql_complexity and debug_scripts are populated for checks no entry runs), and templates/scripts/precommit-autofix.json (autofix routing, which names hook_id check-sql-complexity and none of the other four). The criterion requires the set of places AND the set of advertised names to be obtained at run time; the enumeration here is the measured starting state, not a list to hard-code."
+  - "THE EXECUTING LIST IS hooks_manifest.hooks IN templates/scripts/commit_guardian/commit_guardian.json — 62 members measured 2026-09-14, and the ONLY container whose membership causes a check to run. A settings section elsewhere in that same file does not. A reconciliation that reads only one container of that document misses the disagreement inside it."
+  - "DO NOT ADD A THIRD DISK CENSUS, AND KNOW WHICH TWO ALREADY EXIST. BP-1600a-2 owns disk-to-registry (every gate script present in the guardian directory that no entry names) and GE-120c-6 already forked it once inside this same L0, and was subordinated to BP-1600a-2 by user decision on 2026-09-07. This record's population is what the SURFACES CLAIM, not what the directory HOLDS. Concrete tripwire: if the implementation lists templates/scripts/commit_guardian/*.py to build its population, it is building GE-120c-6 again — the population must come from parsing the four advertising places."
+  - "DO NOT ADD A THIRD MANIFEST READER EITHER. check_hook_parity.py and _hook_trigger_reachability_helpers.py already read hooks_manifest.hooks. Reuse one callable; two readers will disagree and the disagreement will be settled by whichever is quieter."
+  - "THE COUNT MUST BE DERIVED, NEVER PINNED. No count of today's disagreements may appear in the code, in a test, in a docstring or in a default. The disk baseline moved 18 -> 16 -> 14 in a single day and the advertised population has never been measured at all. A pinned number fails for the wrong reason and gets edited to match rather than investigated."
+  - "READING A SURFACE MUST NOT EXECUTE IT. config.py is Python and carries the settings blocks; extract its claims by static means (AST or an equivalent text pass), never by importing or running it. An import-based reader makes the reconciliation's result depend on config.py's import side-effects and turns an unreadable surface into a crash rather than the reported outcome GE-120h-1-i requires."
+  - "LATENCY BUDGET. This runs at commit time, on every commit. A full reconciliation across the four places plus the manifest must complete in under 300 ms and must not spawn a subprocess per advertisement."
+  - "THE REFUSAL NAMES THE CHECK, EVERY PLACE THAT ADVERTISES IT, AND THAT NOTHING RUNS IT — not a count and not a bare 'disagreement detected'. Per-place attribution is not cosmetic: GE-120h-1-i requires an unread place to be nameable in the output, which is impossible if the implementation discards which place a claim came from."
+  - "MUST BE INVOKED AT COMMIT TIME, NOT ONLY IN THE TEST SUITE. CLAUDE.md's 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep' is binding: a reconciliation that only a pytest run invokes leaves the author unrefused, and the implementation becomes the next instance of the very defect it describes. See the package-surface caveat in the notes before attempting that commit."
+  - "ADR-001 TEMPLATE/DEPLOYED PARITY. The canonical source is templates/scripts/commit_guardian/; build_commit_guardian() walks it with rglob and deploys to scripts/commit_guardian/ and config/commit_guardian/. Edit the template, run build.py, and verify from the deployed copy. This worktree currently holds no deployed copies at all, so any verification done before build.py proves nothing about the deployed path."
+test_spec:
+  - name: test_ge120h1_advertising_places_are_discovered_at_run_time
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Run against a fixture repository, the set of places consulted and the set of advertised names both come from reading those artifacts — no written-in list of places or names."
+  - name: test_ge120h1_advertised_check_no_entry_names_is_reported_with_its_places_and_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A check advertised in at least one place and named by no manifest entry is reported by name, with each advertising place and the statement that nothing runs it, and the run fails."
+  - name: test_ge120h1_registered_check_is_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A check a manifest entry names is absent from the report entirely."
+  - name: test_ge120h1_run_states_how_many_advertisements_it_reconciled
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The run states a reconciled-advertisement count derived from what it read."
+  - name: test_ge120h1_one_added_advertisement_raises_the_stated_count_by_exactly_one
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the reconciliation, executed as a process against a fixture repository"
+    description: "Adding one advertisement and nothing else puts that check in the report and raises the stated count by exactly one — the anti-list arm no written-in implementation can pass."
+  - name: test_ge120h1_added_advertisement_arm_holds_for_each_of_the_four_places
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The added-advertisement arm holds whichever of the four places the advertisement is added to — no place is consulted for one kind of claim and passed over for another."
+  - name: test_ge120h1_config_py_claims_are_extracted_without_importing_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "A fixture config.py whose import would raise still has its claims reconciled — the settings surface is read statically, not executed."
+test_rationale: >-
+  Every case drives the reconciliation as a process against a fixture repository,
+  because the one assertion that matters cannot be made against today's tree: a test
+  over the real repository asserts the disagreements that exist today, which is true
+  the day it is written and can never fail on the day the next check is advertised —
+  the day this AC exists for. The added-advertisement arm is the decisive one and is
+  repeated per place, because the cheap implementation holds a written-in list of
+  surfaces, and such a list passes a single-place test while silently skipping the
+  other three. The config.py case is separated out because that surface is executable
+  code and the tempting reader is an import, which both changes the result under
+  import side-effects and converts GE-120h-1-i's unreadable-place outcome into a
+  crash.
+declares_side_effect: true
+delivers_to:
+  agent: python-coder
+  contract: >-
+    Per run, the reconciled population as a structured result: for each advertised
+    check, its name, every advertising place that claims it (one of the four, named),
+    and whether any hooks_manifest.hooks entry runs it — plus the count of
+    advertisements actually reconciled and, per GE-120h-1-i, the set of places that
+    could not be read and are therefore excluded from that count. Per-place
+    attribution must survive into the result: GE-120h-1-i cannot name an unread place
+    and GE-120h-2 cannot ratchet a population it cannot enumerate if the result is
+    flattened to a bare list of names. Consumed by GE-120h-2 (the ratchet), GE-120h-1-i
+    (the unread-place reporting) and GE-120h-4 (the page whose per-check statements
+    must agree with it).
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120h-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE DURABLE HALF OF THE PARENT, AND THE PARENT FORBIDS ITS OMISSION. GE-120h's
+  notes state it directly: "do not decompose this as 'register the missing checks'".
+  Draining today's backlog is GE-120h-3; this record is the rule that stops the next
+  orphan appearing with the same four reassurances. Neither closes the other, and a run
+  that produced only GE-120h-3 would have failed the parent.
+
+  THE UNIT IS THE ADVERTISEMENT, NOT THE SCRIPT. Every clause here is written over what
+  a surface CLAIMS, because that is what misleads a reader. This matters for two
+  populations the disk census cannot see: a check advertised on a surface whose script
+  was deleted (the claim survives the code), and a check whose settings section is the
+  only thing that ever existed. It also matters for the reverse, which is deliberately
+  OUT OF SCOPE: a check that runs and that no surface documents is a discoverability
+  gap, not a false reassurance, and no clause here touches it.
+
+  WHY THE COUNT CLAUSE AND THE ADDED-ADVERTISEMENT ARM ARE IN criteria RATHER THAN LEFT
+  TO THE IT PO. Without them this record is satisfiable by a reconciliation holding a
+  written-in list of the four surfaces and of today's disagreeing names — which is the
+  same shape as the defect one level up, and is precisely how the incumbent reachability
+  guard fails (it walks the registry, so it cannot see what the registry omits). The
+  arm requires a number the run states to move when reality moves. Take the model from
+  BP-1600a-2's added-script descriptor; it is the same anti-list device applied to a
+  different population.
+
+  NO COUNT OF TODAY'S DISAGREEMENTS MAY BE WRITTEN INTO THIS RECORD OR INTO ANY TEST OF
+  IT. The measured figures move: the disk baseline was 18, then 16, then 14 in a single
+  day, and the advertised population has never been measured at all. The three surfaces
+  quantified in the doc_links are named individually, with the date and the file, so
+  those statements stay checkable as the population moves. A test asserting "there are N
+  advertised-but-unrun checks" passes forever and catches nothing.
+
+  BLOCKING-VERSUS-ANNOUNCING, DECIDED EXPLICITLY BECAUSE THE COMPONENT'S STANDING RULE
+  REQUIRES IT TO BE. GE-120's standing line is that the unit of the rule is visibility
+  and that block-versus-announce is a per-check decision with no blanket default. The
+  decision here is that a reconciled disagreement REFUSES the change, for one reason:
+  the disagreement is introduced by an author's own edit to one of these surfaces, in
+  the same change, and is repaired in that change at a cost of one line. It is not a
+  pre-existing condition being discovered — the pre-existing set is GE-120h-2's subject
+  and is explicitly excluded from refusing anything. The separate question of what
+  happens when a surface cannot be READ is GE-120h-1-i's and is decided there.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, declares_side_effect and package_surface. Those are the IT
+  PO's fields.
+
+  ---- IT PO ENRICHMENT, 2026-09-14 ----
+
+  package_surface IS DELIBERATELY LEFT UNSET, AND THAT IS A DECISION WITH A DEADLINE —
+  NOT AN OVERSIGHT. The criteria do not settle whether this reconciliation lands as a
+  registered commit-time hook or as a run of some other kind, and the two answers give
+  opposite truths:
+    - As a REGISTERED HOOK it adds a new member to hooks_manifest.hooks, which
+      _package_surface_registry.WATCHED_REGISTRIES watches via ("hooks_manifest.hooks",
+      "list_ids"). If it also gains a per-check settings section, that is a SECOND
+      surface: the same file is watched via ("", "mapping_keys"), so a new top-level key
+      is itself a new entry. In that case this record must carry package_surface: true
+      with the five-field structured it_requirements BEFORE the commit is attempted, or
+      check-package-surface-declaration refuses it.
+    - As anything that adds no registry entry, package_surface: true would be a
+      fictional declaration in the opposite direction — precisely
+      KI-CG-20260831-fictional-config-schema-fragment, which records two approved ACs
+      declaring a commit_guardian.json key that was never created, passed by a validator
+      that checks shape and never opens the file.
+  Declaring a surface this record's criteria do not yet require would repeat that
+  defect to save an amendment, so it is left unset and raised as a caveat instead.
+  Meanwhile CLAUDE.md's binding note on this record effectively forces the hook answer,
+  so the likely outcome is that the amendment is needed — make it deliberately, with a
+  fragment read off disk, rather than under commit-time pressure with a plausible one.
+
+  HOW THE it_requirements WERE VERIFIED. All four advertising places were opened in
+  this worktree on 2026-09-14 and confirmed present: README.md, config.py,
+  commit_guardian.json and templates/scripts/precommit-autofix.json. The manifest was
+  parsed (38 top-level keys; hooks_manifest.hooks holds 62 members) and the three
+  populated settings sections for unregistered checks — folder_density, sql_complexity,
+  debug_scripts — were read directly. The two existing manifest readers named in the
+  no-third-reader requirement (check_hook_parity.py,
+  _hook_trigger_reachability_helpers.py) were found by grepping for hooks_manifest
+  across the guardian directory. No name in the requirements was taken from a sibling
+  record.

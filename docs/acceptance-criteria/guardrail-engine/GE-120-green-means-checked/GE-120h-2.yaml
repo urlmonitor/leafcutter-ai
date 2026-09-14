@@ -1,0 +1,282 @@
+id: GE-120h-2
+title: "The advertised checks already left unrun are carried as a quantity that can only fall, so the change that adds one is refused and the change that fixes one is required to say so"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a repository in which some checks are advertised as protecting the reader while
+    nothing runs them, and a record naming each of those checks as a state already
+    accepted,
+  When an ordinary commit is made that neither advertises a further such check nor makes
+    a recorded one run,
+  Then the commit completes, and no check named in that record refuses it — the debt
+    already standing does not stop unrelated work,
+
+  And given a change that advertises one further check, in any of the places a reader
+    consults, without adding the entry that would cause it to run,
+  When that commit is attempted,
+  Then it is refused, the newly advertised check is named, and the refusal states that
+    the check must be made to run or the advertisement withdrawn,
+  And the record is not offered as a place the newly advertised check may be added, so
+    the way past the refusal is never to widen the record,
+
+  And given a change that makes one recorded check run, by adding the entry that invokes
+    it, while leaving the record as it was,
+  When that commit is attempted,
+  Then it is refused, the check that is no longer in disagreement is named, and the
+    refusal states that the record must be reduced by that check,
+
+  And given a change that both makes a recorded check run and removes that check from the
+    record,
+  When that commit is attempted,
+  Then it completes, and the quantity the record carries is smaller than it was — so the
+    only direction the record can move is downward, and resolving today's backlog and
+    preventing tomorrow's orphan are one mechanism rather than two.
+
+  Coverage note: exercise all four arms as attempted commits against a real repository,
+  asserting on the outcome and the text the author is shown. The two refusal arms are the
+  load-bearing ones and neither has a red baseline today: with no such rule in force, both
+  changes are accepted silently.
+depends_on:
+  - GE-120h
+  - GE-120h-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h.yaml"
+    relationship: parent
+    status: exists
+  - path: unit_tests/commit_guardian/test_hook_registration_inventory.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE RECORD THAT ALREADY EXISTS, AND THE ONE THIS AC MUST EXTEND RATHER THAN
+      DUPLICATE. It holds a shrink-only record over the DISK population (scripts present
+      with no entry naming them) and already enforces two of the four arms above: it
+      fails on any entry not in the record, and it fails when the record has gone stale
+      because an entry was registered or deleted. Its own comment states the rule in
+      exactly the terms this criterion generalises — "THIS LIST MAY ONLY SHRINK ... Adding
+      to it would make this test the rubber stamp it exists to prevent". What it does NOT
+      cover is the advertised population, the refusal being delivered to the author at
+      commit time rather than only in a test run, and the per-entry ground. A SECOND,
+      COMPETING RECORD OVER AN OVERLAPPING POPULATION IS FORBIDDEN: if this AC produces
+      one, the two will disagree about how much debt exists and each will be cited as
+      evidence that the other is stale.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE VERDICT THIS RECORD MAKES SURVIVABLE. GE-120h-1 refuses a change on a
+      reconciled disagreement. Applied to a repository that already holds a backlog of
+      disagreements, that rule refuses every commit, and a rule that refuses every commit
+      is removed within a day. This record is the reason GE-120h-1 can be switched on at
+      all, which is why it is a depends_on edge and not a doc_link: the quantity being
+      ratcheted is the population GE-120h-1 reports.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SHARED RATCHET THE STORE ALREADY HAS, AND THE REUSE CANDIDATE. GE-127b
+      specifies the same shape for file size — a file already over the line may be
+      changed, but a change leaving it further over is refused — and the store's own
+      guidance on GE-128a recommends reusing that helper rather than growing a second
+      implementation of the idea. Read it before writing a third ratchet.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE OPPOSITE DISPOSITION OF THE SAME BACKLOG, AND A REAL TENSION TO RESOLVE
+      DELIBERATELY. BP-1600a-2 requires day-one triage of its ENTIRE unreferenced set in
+      the change that lands its census — register, delete, or record a grounded non-gate
+      declaration — and says explicitly that a ground meaning "deferred" is suppression
+      under another name. This record permits a standing backlog that may only shrink.
+      The two are compatible only because the populations differ and because the ratchet
+      here carries a per-entry ground rather than a bare list; whoever builds the second
+      of the two must say which disposition governs the overlap instead of discovering it
+      at merge. Note also BP-1600a-2-i, its declared-non-gate register, which is the
+      nearest existing mechanism for a grounded entry and should be examined before a new
+      one is invented.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      Where the per-entry grounds already live in prose for several of these checks, and
+      the register a reader consults when asking why a given check is still unrun.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". Each arm here is an
+      attempted commit and its outcome, not a property of a file read as text. A test
+      asserting the record's contents matches some expected list is green on a rule
+      nothing enforces.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "EXTEND THE EXISTING RECORD IN unit_tests/commit_guardian/test_hook_registration_inventory.py — DO NOT STAND UP A COMPETING BASELINE. It already holds UNREGISTERED_BASELINE (a frozenset of script filenames) and already enforces two of the four arms: test_no_unregistered_hook_scripts_beyond_baseline asserts set-difference in BOTH directions, so it fails on a new orphan AND fails when the baseline goes stale because an entry was registered or deleted. Its own comment states the rule this criterion generalises — 'THIS LIST MAY ONLY SHRINK'. A second record over an overlapping population is forbidden: the two would disagree about how much debt exists and each would be cited as evidence the other is stale."
+  - "THE POPULATION CHANGES AND THAT IS THE REAL WORK. The incumbent record is keyed by SCRIPT FILENAME over the DISK population (scripts present that no entry names, gathered from GUARDIAN_DIR and GUARDIAN_DIR/hooks via hook_parity.hook_script_patterns). This AC's population is the ADVERTISED one from GE-120h-1 — what a surface claims — which is a different set: a surface can advertise a check whose script was deleted, and a script can be present while nothing advertises it. Extending means one record carrying a per-entry ground over the union-aware population, not the old frozenset with new strings in it. Reconcile the two keyings explicitly; do not assume filename and advertised name are the same token."
+  - "READ GE-127b'S SHARED RATCHET BEFORE WRITING A THIRD ONE. The store's own guidance on GE-128a recommends reusing it. The concrete candidates on disk are templates/scripts/commit_guardian/_file_size_ratchet.py (get_previous_length, resolve_previous_lengths, resolve_parent_revisions, and a PreviousLengthSourceError/CurrentLengthUnmeasurableError pair) and _doc_length_ratchet.py alongside it. Note honestly what they do and do not give you: they resolve a per-file PREVIOUS MEASUREMENT from git parents, which is the reusable half; they do not carry a per-entry grounded register, which is the new half. State which half is reused and which is new rather than declaring reuse and duplicating."
+  - "EXAMINE BP-1600a-2-i's DECLARED-NON-GATE REGISTER BEFORE INVENTING A REGISTER OF YOUR OWN. It is the nearest existing mechanism for a grounded entry. Whoever builds the second of the two must state which disposition governs the overlap — BP-1600a-2 requires day-one triage of its whole set and calls a 'deferred' ground suppression under another name, while this record permits a standing backlog that may only shrink. They are compatible only because the populations differ. Resolve that at authoring time, not at merge."
+  - "THE FIRST ARM IS THE ONE AN IMPLEMENTATION VIOLATES BY ACCIDENT: refuse on the DELTA, never on the whole population. A rule that refuses on standing debt refuses every commit and is removed within a day — which is the entire reason GE-120h-1 can be switched on at all."
+  - "THE RECORD MUST NOT BE OFFERED AS THE WAY PAST THE REFUSAL. The second arm's message must say the check is to be made to run or the advertisement withdrawn, and must NOT suggest adding it to the record. The incumbent already gets this right — 'Do NOT add it to UNREGISTERED_BASELINE' — and losing that line in the extension would make the ratchet the rubber stamp it exists to prevent."
+  - "NO COUNT ANYWHERE. Not in the code, not in a test, not in a message, not in a docstring. The disk record moved 18 -> 16 -> 14 in a single day and the advertised population has never been measured. Every arm is written over relative movement, and a test asserting a total passes forever."
+  - "REFUSAL MUST REACH THE AUTHOR AT COMMIT TIME, NOT ONLY IN A TEST RUN. That is the gap the incumbent does not cover and a stated part of this record's scope. Same consequence as GE-120h-1: if this lands as a new registered entry it adds a package surface and this record must then carry package_surface: true with a structured spec read off disk — see the caveat in the notes. If instead the rule is added to an ALREADY-REGISTERED hook, no new surface is created and no declaration is needed; decide which, deliberately."
+  - "ADR-001 PARITY. Any hook-side change is authored in templates/scripts/commit_guardian/ and verified from the deployed copy after build.py. The test file itself lives at unit_tests/commit_guardian/test_hook_registration_inventory.py and reads the TEMPLATE manifest directly (MANIFEST_PATH = templates/scripts/commit_guardian/commit_guardian.json), so it is not evidence about the deployed path on its own."
+  - "COORDINATE WITH GE-120h-3 RATHER THAN RACING IT. Registering those five cannot be done without reducing the incumbent record by five — the staleness assertion forces it. If the baseline is being restructured here at the same time, the five must come out of whichever structure is current, once."
+test_spec:
+  - name: test_ge120h2_standing_debt_does_not_refuse_an_unrelated_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "git commit against a fixture repository"
+    description: "With recorded advertised-but-unrun checks present, a commit that neither advertises another nor resolves one completes and no recorded check refuses it."
+  - name: test_ge120h2_advertising_one_more_check_without_registering_it_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A commit adding one advertisement, in any of the four places, with no entry that runs it, is refused, the check is named, and the message says to make it run or withdraw the advertisement."
+  - name: test_ge120h2_refusal_does_not_offer_the_record_as_the_remedy
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The refusal text never proposes adding the newly advertised check to the record — the way past is never to widen it."
+  - name: test_ge120h2_registering_a_recorded_check_without_reducing_the_record_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A commit that makes a recorded check run while leaving the record unchanged is refused, names the check, and says the record must be reduced by it."
+  - name: test_ge120h2_registering_and_reducing_together_completes_and_shrinks_the_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A commit that both registers a recorded check and removes it from the record completes, and the recorded quantity is smaller than before."
+  - name: test_ge120h2_result_is_independent_of_how_many_entries_the_record_holds
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Fixtures whose records hold different numbers of entries produce correct verdicts — no count is pinned anywhere."
+  - name: test_ge120h2_existing_inventory_assertions_still_hold_after_the_extension
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "test_no_unregistered_hook_scripts_beyond_baseline and test_every_registered_script_resolves_on_disk still pass and still fail on a new orphan and on a stale record — the extension did not weaken the incumbent."
+test_rationale: >-
+  The two refusal arms are the load-bearing ones and neither has a red baseline today:
+  with no such rule in force both changes are accepted silently, so each must be
+  exercised as an attempted commit whose outcome and author-facing text are asserted.
+  Reading the record as text and comparing it to an expected list is green on a rule
+  nothing enforces, which is the specific failure this record exists to prevent one
+  level up. The last case is a regression guard rather than a criterion clause and is
+  the one most likely to be skipped: the incumbent test already enforces two of these
+  four arms over the disk population, and the cheapest way to "extend" it is to relax
+  it — an extension that leaves the old assertions passing only because they no longer
+  assert anything would satisfy every other case here.
+declares_side_effect: true
+delivers_to:
+  agent: documentation-expert
+  contract: >-
+    The single grounded record of advertised-but-unrun checks and the refusal wording
+    an author is shown, which GE-120h-4's page must describe as a rule in force and in
+    the same terms. One record only — GE-120h-4's final clause fails if the page and
+    the enforced rule diverge, and it cannot be satisfied at all against two records
+    that disagree.
+expects_from:
+  - ac_id: GE-120h-1
+    contract: >-
+      The reconciled set of advertised-but-unrun checks, per run, as the population this
+      record ratchets. Without it there is no quantity to hold downward, and the record
+      would have to recompute a second population of its own.
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE RECORD AND NOT A CLAUSE OF GE-120h-1. They are two different
+  behaviours with two different failure modes. GE-120h-1 can be wrong by looking at the
+  wrong population; this one can be wrong by letting the population grow. Splitting them
+  also makes the dishonest implementation visible: the cheapest way to satisfy
+  GE-120h-1 across a repository holding a backlog is to widen the record until the
+  reconciliation is silent, and that is precisely what the second and fourth arms here
+  forbid.
+
+  THE STALE-RECORD ARM IS THE ONE MOST LIKELY TO BE DROPPED, AND IT IS THE ONE THAT MAKES
+  THE RATCHET EXACT. A record that is merely a floor decays: entries resolved years ago
+  sit in it, the number stops describing anything, and the next reader cannot tell debt
+  from residue. Requiring the change that resolves an entry to remove it is what keeps
+  the quantity a measurement. The existing inventory test already enforces exactly this
+  and its comment gives the reason in one line — "the ratchet only holds while it is
+  exact". That is also the mechanical link to GE-120h-3: registering those five cannot
+  be done without reducing the record by five, so the immediate cleanup is observable in
+  the durable mechanism rather than being a parallel, untracked act.
+
+  NO NUMBER IN THIS RECORD OR IN ANY TEST OF IT. The disk record moved 18 -> 16 -> 14 in
+  a single day and the advertised population has never been measured. Every arm above is
+  written over relative movement — one greater, smaller than it was, named by name —
+  because those survive the population moving and a literal does not.
+
+  THE FIRST ARM IS NOT PADDING. It states that standing debt does not refuse unrelated
+  work, and it is the clause that distinguishes this from "register everything now". It
+  is also the clause an implementation is most likely to violate accidentally, by making
+  the reconciliation refuse on its whole population instead of on the delta.
+
+  DECIDED EXPLICITLY UNDER THE COMPONENT'S STANDING RULE: the second and third arms
+  REFUSE rather than announce. Ground: both are a delta introduced by the author's own
+  change, both are repaired in the same change at trivial cost, and an announcement on
+  the passing path is discarded unread in this repository (a recorded defect of its own).
+  The first arm announces nothing and refuses nothing.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, declares_side_effect and package_surface. Those are the IT
+  PO's fields.
+
+  ---- IT PO ENRICHMENT, 2026-09-14 ----
+
+  HOW THE REUSE CANDIDATES WERE VERIFIED, AND WHY THE REQUIREMENT IS HEDGED. The record
+  says GE-127b's shared ratchet helper is the reuse candidate. Rather than repeating
+  that, the guardian directory was grepped for ratchet modules on 2026-09-14 and two
+  were found and opened: _file_size_ratchet.py and _doc_length_ratchet.py. Its public
+  surface is a previous-measurement resolver — count_content_lines,
+  measure_current_length, get_previous_length, resolve_previous_lengths,
+  resolve_head_covered_paths, resolve_parent_revisions, plus
+  PreviousLengthSourceError and CurrentLengthUnmeasurableError. That is genuinely
+  reusable for "what was this before", and it is genuinely NOT a grounded per-entry
+  register. Saying "reuse GE-127b's helper" without that split would produce either a
+  forced fit or a quiet third ratchet, so the requirement names both halves.
+
+  THE INCUMBENT RECORD WAS READ, NOT ASSUMED. test_hook_registration_inventory.py was
+  opened in full: UNREGISTERED_BASELINE is a frozenset of 14 script FILENAMES with a
+  per-entry comment giving what each is waiting on; _hook_scripts_on_disk scans both
+  GUARDIAN_DIR and GUARDIAN_DIR/hooks filtered by hook_parity.hook_script_patterns and
+  excluded_scripts; _registered_script_names takes the union of each entry's `script`
+  field and every .py filename in its `entry` string. Both directions of the set
+  difference are asserted, which is the staleness half. The keying is by filename, and
+  this record's population is keyed by advertised name — that mismatch is real and is
+  called out in it_requirements rather than glossed as "extend the list".
+
+  package_surface LEFT UNSET FOR THE SAME REASON AS GE-120h-1, AND THE ANSWER MAY
+  DIFFER. Whether this adds a NEW hooks_manifest entry or adds a rule to an existing
+  one is genuinely open here, and only the first is a package surface. Declaring one
+  before that is settled is the fiction
+  KI-CG-20260831-fictional-config-schema-fragment records; leaving it unset after it is
+  settled is the omission ACS-100i-8 exists to catch. Decide it when the surface is
+  chosen, then amend. Raised as a caveat.

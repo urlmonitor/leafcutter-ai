@@ -1,0 +1,455 @@
+id: GE-120h-3
+title: "Five checks the package has always presented as protecting you begin to run on an ordinary commit, and none of them refuses work the same repository accepted the day before"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given five checks that are present in the installed package, described to the reader as
+    protecting their work, and named by no entry on the list that causes checks to run,
+    so that no commit has ever run any of them,
+  And a change whose staged content is content the same repository accepted before those
+    five were made to run,
+  When an ordinary commit is performed — no extra command, no extra flag, nothing invoked
+    by hand,
+  Then each of the five is run, at the point in the commit its own subject belongs to,
+  And the commit completes, so no one of the five refuses work that was acceptable the
+    day before they were switched on,
+
+  And given the state the repository already stands in at the moment they first run —
+    including the directories that already hold more files than the density limit permits,
+  When an ordinary commit is performed that does not make that state worse,
+  Then the state that already existed is reported as it stands and does not by itself
+    refuse the commit, and only what this change makes worse is objected to,
+
+  And given a check among the five whose subject this repository holds no instance of, so
+    that it has nothing to examine here,
+  When it runs,
+  Then it says that it had nothing to examine, rather than reporting that it examined
+    something and found it clean,
+
+  And given, for each of the five, an input that check exists to refuse, under the
+    settings that arm it,
+  When that input is put through the commit path the check is now registered on,
+  Then the check refuses it and names what it objected to — so what has been switched on
+    is a check that can still say no, and not five entries that are certain never to
+    object,
+
+  And after this change the record of advertised checks that nothing runs is smaller by
+    exactly these five, and names none of them.
+
+  Coverage note: the first two arms are covered by attempting real commits and asserting
+  the outcome; the fourth is covered by putting the refusable input through the registered
+  commit path rather than by invoking the check by hand, because a check that refuses when
+  called directly and is never called is the defect this whole record exists to end.
+depends_on:
+  - GE-120h
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h.yaml"
+    relationship: parent
+    status: exists
+  - path: unit_tests/commit_guardian/test_hook_registration_inventory.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE SOURCE OF THE FIVE AND THE ARBITER OF THE LAST CLAUSE — READ THE PER-ENTRY
+      COMMENTS, NOT THE COUNT. Its record names each unregistered script together with
+      what that script is waiting on, and marks exactly five READY TO REGISTER, needing no
+      code work: check_folder_density.py (the shrink-only ratchet is built in, so the
+      directories already over the limit report as warnings — verified against a real
+      staged set), check_test_fixture_bloat.py (inert once registered: its settings key
+      does not exist, so enabled resolves False and every violation path returns 0),
+      check_sql_complexity.py (vacuous here with zero tracked SQL, and portable for
+      consumers the README has been promising it to), check_debug_scripts.py (fully
+      settings-driven, vacuous here because debugging/ is untracked) and
+      hooks/check_ac_done_on_merge.py (post-merge stage; returns 0 unconditionally and its
+      entry point swallows OSError and ValueError into exit 0). The comments also record
+      the single thing blocking all five — see the package-surface note below. THE LAST
+      CLAUSE IS ENFORCED BY THIS FILE ALREADY: its staleness assertion fails if the five
+      are registered and the record is not reduced, so it is not an aspiration.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      WHERE THE FIVE ENTRIES ARE ADDED, AND WHERE THREE OF THEM ARE ALREADY CONFIGURED.
+      Verified 2026-09-14: sql_complexity, folder_density and debug_scripts each hold a
+      populated settings section here while no entry in hooks_manifest.hooks names them.
+      PACKAGE SURFACE, AND THIS IS THE WHOLE REASON THE FIVE ARE STILL UNREGISTERED:
+      _package_surface_registry.WATCHED_REGISTRIES watches this file by hooks_manifest id
+      AND by top-level key, so adding these entries trips check-package-surface-declaration
+      unless a cited acceptance criterion carries package_surface: true. The inventory
+      test's own comment states that the criterion "does not exist yet, so the
+      registration is queued behind it rather than forced through". THIS RECORD IS THAT
+      CRITERION, and the field must be set on it during technical enrichment.
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE CLAIM THAT BECOMES TRUE. Rows 32, 38 and 41 already describe three of the five
+      as Blocking hooks with settings keys. After this record those rows stop being false;
+      before it they are the parent's first false signal.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE OVERLAP, AND THE RULE FOR WHICHEVER LANDS SECOND. BP-1600a-2's day-one triage
+      covers its ENTIRE unreferenced set — these five among them, plus nine that each need
+      real work first (a ratchet over 79 over-limit functions, a crash fix, an argv fix).
+      That is why it has not landed: it is all-or-nothing over a set whose hardest member
+      is quarantined behind GE-127b. These five are the subset that needs no code work and
+      can land alone. WHICHEVER IS SCHEDULED FIRST ADDS THE FIVE ENTRIES; the other must
+      find them present and assert them rather than add them a second time — the same
+      disposition BP-1600a-2 already records for its overlap with TQ-500b-1. Landing this
+      record shrinks BP-1600a-2's day-one set by five and neither closes the other.
+      DELIBERATELY NOT A depends_on EDGE: an edge in either direction would stall the half
+      that is ready behind the half that is not, which is the situation this record exists
+      to break.
+  - path: templates/scripts/commit_guardian/check_folder_density.py
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ONE OF THE FIVE THAT COULD PLAUSIBLY BLOCK, AND THE REASON IT DOES NOT. Its
+      classification raises a violation only where a folder crosses the limit IN THIS
+      COMMIT, so the directories already over report as warnings. That built-in ratchet is
+      what makes the second arm of this criterion satisfiable today; it is also the clause
+      an implementer is most likely to break by "tidying" the classification.
+  - path: templates/scripts/commit_guardian/check_test_fixture_bloat.py
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ONE THAT IS INERT ON ARRIVAL, AND THE REASON THE FOURTH CLAUSE SAYS "under the
+      settings that arm it". Its settings key is absent, so enabled defaults False and it
+      returns 0 on every path. Registering it is deliberate and arming it is a separate
+      deliberate step — but an unarmed check that no input can ever make refuse is exactly
+      the shape the fourth clause exists to detect, so the refusal must be demonstrated
+      under settings that switch it on, and the fact that it ships unarmed must be stated
+      where the reader learns it exists rather than left to be discovered.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE RULE THE FOURTH CLAUSE INVOKES AND MUST NOT RESTATE. GE-120f owns "a guard that
+      has never said no is not counted as protection", including the declared known-bad
+      input, where that declaration is read from, and the reporting of a check never asked
+      to refuse. These five become members of that population on the day they are
+      registered. This record requires the demonstration for these five; how a declaration
+      is shaped, stored and enforced is GE-120f's and is not respecified here.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SOURCE OF THE THIRD CLAUSE'S VOCABULARY. Two of the five have nothing to examine
+      in this repository, which is the precise state GE-120a distinguishes from a clean
+      result. Use its had-nothing-to-examine outcome rather than inventing a second name
+      for it, and note that the distinction is not cosmetic here: for a consumer project
+      that does hold SQL, the same check is doing real work.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding here in its
+      strongest form. Every clause is about a check RUNNING during a commit. A test that
+      asserts five entries appear in the registry file is green on a registration that is
+      unreachable, misstaged, or filtered to nothing — which is the whole subject of
+      GE-120h-3-i.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    _declares: >-
+      NOT A NEW TOP-LEVEL CONFIGURATION KEY — read this before writing any code.
+      This AC registers FIVE ENTRIES in the EXISTING hooks_manifest.hooks array of
+      templates/scripts/commit_guardian/commit_guardian.json. It introduces no new
+      settings section and no new configuration key of any kind. The fragment below
+      is the schema of ONE MEMBER of that array, derived by measuring the 62 members
+      it already holds (2026-09-14), narrowed to the shape these five require. Every
+      property named below is already carried by existing members: id/tier/name/
+      entry/language/stages/pass_filenames/change_set_source appear on 62 of 62, and
+      always_run on 9 of 62. Nothing here is aspirational.
+      DELIBERATE OMISSION, DO NOT "COMPLETE" IT: four of the five have a populated
+      top-level settings section in this same file already (folder_density,
+      sql_complexity, debug_scripts — verified present; ac_done_on_merge needs none),
+      and the fifth, test_fixture_bloat, has NO such section. That absence is
+      load-bearing and intended: check_test_fixture_bloat.py reads
+      load_config().get("test_fixture_bloat", {}) and then enabled = config.get(
+      "enabled", False), so the missing key resolves to {} and the check is inert on
+      arrival, which is what makes registering it zero-risk. Creating that key would
+      ARM a check nobody has decided to arm. It is therefore not declared here and
+      must not be added by this AC.
+      ALSO NOTE: a top-level key added later IS itself a package surface —
+      _package_surface_registry.WATCHED_REGISTRIES watches this file through BOTH
+      ("hooks_manifest.hooks", "list_ids") AND ("", "mapping_keys"). Arming
+      test_fixture_bloat is a separate change that needs its own package_surface
+      declaration.
+    type: object
+    required:
+      - id
+      - tier
+      - name
+      - entry
+      - language
+      - stages
+      - pass_filenames
+      - change_set_source
+      - always_run
+    properties:
+      id:
+        type: string
+        enum:
+          - check-folder-density
+          - check-test-fixture-bloat
+          - check-sql-complexity
+          - check-debug-scripts
+          - check-ac-done-on-merge
+      tier:
+        type: string
+        const: judgment
+      name:
+        type: string
+        minLength: 1
+      entry:
+        type: string
+        description: >-
+          Invoked through the deployed run_hook.py wrapper, as 58 of the 62 existing
+          entries are. For check-ac-done-on-merge the script path carries the hooks/
+          segment, because the script lives at
+          templates/scripts/commit_guardian/hooks/check_ac_done_on_merge.py;
+          build_commit_guardian() walks the guardian directory with rglob, so the
+          subdirectory is deployed.
+      language:
+        type: string
+        const: system
+      stages:
+        type: array
+        description: >-
+          ["pre-commit"] for check-folder-density, check-test-fixture-bloat,
+          check-sql-complexity and check-debug-scripts. ["post-merge"] for
+          check-ac-done-on-merge, whose subject is a merge that already happened.
+        items:
+          type: string
+          enum:
+            - pre-commit
+            - post-merge
+      pass_filenames:
+        const: false
+      always_run:
+        const: true
+      change_set_source:
+        type: string
+        const: handed_by_commit_path
+        description: >-
+          SEE THE change_set_source it_requirement BELOW — this value is NOT the
+          intuitive one and self_derived is a verified claim these five cannot make
+          as they stand.
+    not:
+      required:
+        - files
+  reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
+  n_location_rule: >-
+    5 — one new member appended to the single hooks_manifest.hooks array, one per
+    registered check. No other location in the file is modified: no top-level key is
+    added, renamed or removed, and the three existing settings sections
+    (folder_density, sql_complexity, debug_scripts) are left exactly as they are.
+    Partial registration is a defect: four of five leaves the inventory ratchet's
+    staleness assertion red and the README still false about the fifth.
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python3 scripts/build.py"
+    - "python3 scripts/commit_guardian/install_pre_commit_shims.py"
+    - "python3 -m pytest unit_tests/commit_guardian/test_hook_registration_inventory.py"
+  constraints:
+    - "THE REGISTRATION IS NOT THE DELIVERABLE — THE EXECUTION IS. Five lines in a file is not evidence that anything runs. Every clause must be evidenced by driving the deployed commit path (run_hook.py against a real staged set, or a real `git commit`), never by reading the manifest as text. CLAUDE.md 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep' is binding on this AC in its strongest form."
+    - "change_set_source MUST BE handed_by_commit_path FOR ALL FIVE, NOT self_derived, AND THIS CONTRADICTS THE INTUITIVE READING. The value is not a free label: change_set_source._classify_hook() credits self_derived ONLY when the entry's own script text contains `get_authored_change` or `_authored_change` (_SHARED_SOURCE_MARKERS); an entry claiming self_derived whose script does not is placed in DeterminationResult.failures. Verified 2026-09-14: none of the five scripts references either marker, so the only two self_derived entries in the manifest today remain check-doc-frontmatter and check-contract-shrinking. Declaring self_derived without first migrating the scripts onto the shared source would be a false declaration that the live suite does not catch — test_ge_120e_2.py's real-manifest assertion only checks membership in the allowed value set. This is the same declaration-checked-for-shape-not-for-truth defect as KI-CG-20260831-fictional-config-schema-fragment. See GE-120h-3-i, which owns this field and states the condition under which self_derived becomes truthful."
+    - "NO `files` KEY ON ANY OF THE FIVE, AND THE OMISSION IS NOT TIDINESS. Each entry is always_run: true with pass_filenames: false and no files regex — the shape check-file-size, check-build-drift, check-identifier-uniqueness and check-hook-trigger-reachability already use. check_hook_trigger_reachability.py reports an always_run entry that ALSO carries a files filter as a self-contradiction and fails the run; for check-debug-scripts a location-anchored `^debugging/scripts/` regex would additionally classify UNREACHABLE (not the softer NOTHING-TO-MATCH) because this checkout tracks no file under debugging/. The reachability gate is itself registered and runs on the same commit, so a wrong shape is refused immediately. Constrained in full by GE-120h-3-i."
+    - "DO NOT CREATE THE test_fixture_bloat CONFIG KEY. Its absence is what keeps check-test-fixture-bloat inert, and inert is the agreed condition of registering it. Arming it is a separate, deliberate decision and a separate package surface."
+    - "DO NOT 'TIDY' check_folder_density.py's CLASSIFICATION. Its built-in ratchet raises a violation only where a folder crosses the limit IN THIS COMMIT, so the 113 directories already over max_files_per_folder report as warnings. That behaviour is the entire reason the second criterion arm is satisfiable today; a refactor that reports pre-existing state as a violation walls off large parts of the repository on the first commit after this lands."
+    - "REDUCE THE INVENTORY BASELINE BY EXACTLY THESE FIVE, IN THE SAME CHANGE. unit_tests/commit_guardian/test_hook_registration_inventory.py's UNREGISTERED_BASELINE names all five; its staleness assertion fails if they are registered and the baseline is not reduced. Remove those five lines and their comments. Do not add anything to that frozenset, and do not re-derive the remaining nine — read the baseline rather than this AC for the set, since it has moved three times in one day."
+    - "ADR-001 TEMPLATE/DEPLOYED PARITY. templates/scripts/commit_guardian/commit_guardian.json is the canonical source; build_commit_guardian() deploys it to scripts/commit_guardian/ and config/commit_guardian/, and build_precommit regenerates .pre-commit-config.yaml from it. Edit the template only, then run build.py and confirm all deployed copies and the generated config carry the five entries. NOTE: this worktree currently has no deployed copies at all — build.py has not been run here — so any verification performed before build.py proves nothing about the deployed path."
+    - "check-ac-done-on-merge ONLY RUNS IF THE post-merge HOOK TYPE IS INSTALLED, AND NO ENTRY USES THAT STAGE TODAY. Measured 2026-09-14, the manifest's stages are pre-commit (60), commit-msg (1), manual (1) — post-merge would be the first. build_precommit emits the stage into .pre-commit-config.yaml but installs nothing; install_pre_commit_shims.py reads the declared stages from that file and writes the missing shim, and setup_ticket_worktree.py calls it for new worktrees. An existing checkout needs it re-run. Registering a post-merge entry without the shim reproduces exactly the defect this L0 is named after: a check listed as live that nothing invokes. Evidence for this check must be a real merge in a checkout where the shim is installed."
+    - "check-ac-done-on-merge READS `git diff HEAD~1 HEAD`, NOT THE STAGED SET AND NOT argv. Do not describe or test it as a staged-set consumer. It also returns 0 unconditionally and its __main__ guard swallows OSError/ValueError into exit 0, so it cannot block; the fourth criterion arm's refusal demonstration must account for that rather than be quietly dropped."
+    - "THE FOURTH ARM IS THE ANTI-THEATRE CLAUSE — DO NOT SATISFY IT BY OBSERVING FIVE GREEN RESULTS. For each of the five, drive an input that check exists to refuse through the registered commit path, under settings that arm it, and show the refusal naming what it objected to. Three of the five have nothing to bite on in this repository and one is unarmed by default, so this needs deliberate fixtures. How a known-bad input is declared, stored and enforced is GE-120f's; do not respecify it here."
+    - "IF BP-1600a-2 LANDS FIRST, FIND THE FIVE PRESENT AND ASSERT THEM — DO NOT ADD THEM TWICE. Deliberately not a depends_on edge in either direction; whichever is scheduled second adapts."
+test_spec:
+  - name: test_ge120h3_all_five_run_on_an_ordinary_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    surface_invoked: "git commit (deployed .pre-commit-config.yaml via run_hook.py)"
+    description: "A real commit in a built checkout invokes each of the five at the stage its subject belongs to, evidenced from the hook run rather than from the manifest text."
+  - name: test_ge120h3_previously_acceptable_content_still_commits
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A commit whose staged content the repository accepted before registration still completes — none of the five refuses work that was acceptable the day before."
+  - name: test_ge120h3_preexisting_over_density_directories_do_not_refuse
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "With directories already over max_files_per_folder, a commit that does not worsen them completes and the pre-existing state is reported, not raised as a violation."
+  - name: test_ge120h3_check_with_no_instance_says_it_examined_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A registered check whose subject this repository holds no instance of reports having nothing to examine, in GE-120a's vocabulary, rather than reporting a clean examination."
+  - name: test_ge120h3_each_of_the_five_can_still_refuse_through_the_registered_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "For each of the five, an input it exists to refuse, put through the registered commit path under settings that arm it, is refused and the objection is named."
+  - name: test_ge120h3_inventory_baseline_is_smaller_by_exactly_these_five
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "UNREGISTERED_BASELINE no longer names any of the five and the existing staleness assertion passes — the record moved with the registration rather than beside it."
+  - name: test_ge120h3_registration_leaves_precommit_generation_and_hook_parity_intact
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "After the five entries are added, build_precommit produces a valid .pre-commit-config.yaml and check_manifest_parity reports zero violations."
+test_rationale: >-
+  Every arm is about a check RUNNING during a commit, so every test drives the
+  deployed commit path. A test that asserts five entries appear in
+  hooks_manifest.hooks is green on a registration that is unreachable, misstaged,
+  filtered to nothing, or pointing at a script the deployed tree does not carry —
+  and this repository has shipped all four of those. The refusal test is the one
+  that cannot be faked: three of the five are vacuous here and one is unarmed by
+  default, so five green results would satisfy a naive reading while changing
+  nothing about whether the package's promise is true. The parity test is a
+  regression guard, not a criterion clause — hooks_manifest.hooks feeds
+  build_precommit and check_hook_parity, and a corrupted .pre-commit-config.yaml
+  would disable the entire hook family while these five looked registered.
+declares_side_effect: true
+delivers_to:
+  agent: python-coder
+  contract: >-
+    The five new members of hooks_manifest.hooks in
+    templates/scripts/commit_guardian/commit_guardian.json — ids check-folder-density,
+    check-test-fixture-bloat, check-sql-complexity, check-debug-scripts,
+    check-ac-done-on-merge — each with tier: judgment, language: system,
+    always_run: true, pass_filenames: false, change_set_source:
+    handed_by_commit_path and NO files key; stages ["pre-commit"] for the first four
+    and ["post-merge"] for check-ac-done-on-merge. Consumed by GE-120h-3-i, which
+    judges their shape, and by GE-120h-4, whose per-check statements must match them.
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120h-3-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE IMMEDIATE HALF, AND IT IS DELIBERATELY NOT THE WHOLE DECOMPOSITION. The
+  parent forbids "register the missing checks" as the answer; GE-120h-1 and GE-120h-2 are
+  the durable rule and this record is the cleanup that rule makes observable. It is
+  written as a behaviour rather than as a task because a task is done when five lines are
+  added to a file, and five lines added to a file is not evidence that anything runs.
+
+  WHY EXACTLY THESE FIVE, AND WHY NOT THE OTHER NINE. The inventory record on main marks
+  precisely these five as needing no code work, each with a measured reason. The other
+  nine each need real work first — a shrink-only ratchet over existing violations, an
+  unhandled parse error, an argv fix that would otherwise make the check read zero files
+  and always pass. Registering those nine as they stand would either wall off large parts
+  of the repository or install gates that cannot fail, and a gate that cannot fail is the
+  defect this L0 is named after. Do not widen this record to them: the set is defined by
+  the ready-to-register ground, not by the number five, and if the inventory's grounds
+  have changed by the time this is built, take the set from the record rather than from
+  this sentence.
+
+  THE FOURTH CLAUSE IS WHAT STOPS THIS BEING THEATRE, AND IT IS UNCOMFORTABLE ON PURPOSE.
+  Three of the five have nothing to bite on in this repository and one is unarmed by
+  default. Registering all five and observing five green results would satisfy a naive
+  reading of "they now run" while changing nothing about whether the package's promise is
+  true. The demonstration must therefore be a refusal delivered through the registered
+  commit path, under settings that arm the check, for each of the five.
+
+  package_surface: true MUST BE SET ON THIS RECORD DURING TECHNICAL ENRICHMENT. It is not
+  a formality and it is not deferrable: adding these five entries to the registry trips
+  check-package-surface-declaration, which refuses the commit unless a cited criterion
+  declares it, and the absence of such a criterion is the recorded reason the five are
+  still unregistered today. The field is the IT PO's to set (as are the structured
+  implementation fields the schema then requires), which is why it is flagged here rather
+  than written here.
+
+  A NEWLY REGISTERED ENTRY IS JUDGED BY THE EXISTING REACHABILITY RULE ON THE SAME COMMIT.
+  That is the subject of GE-120h-3-i and the reason this record has a child: the
+  registration shape is not free, and the natural-looking shape is the wrong one.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's fields.
+
+  ---- IT PO ENRICHMENT, 2026-09-14 ----
+
+  HOW EVERY NAME IN THE PACKAGE-SURFACE SPEC WAS VERIFIED, AND WHY THAT PARAGRAPH
+  EXISTS. KI-CG-20260831-fictional-config-schema-fragment records two approved ACs
+  that declared a structured config_schema_fragment naming a commit_guardian.json
+  top-level key that was never created, and notes that the validator checks only that
+  the declaration is well-SHAPED — it never opens the file to see whether the key is
+  real. Nothing below was copied from a sibling record; each was read off disk in this
+  worktree on 2026-09-14:
+    - reference_file_path templates/scripts/commit_guardian/commit_guardian.json —
+      opened and parsed. 38 top-level keys, hooks_manifest.hooks holds 62 members.
+    - The nine entry properties in the fragment — obtained by tallying the key
+      frequency across all 62 existing members: id/tier/name/entry/language/stages/
+      pass_filenames/change_set_source present on 62 of 62, always_run on 9 of 62.
+      No property was invented.
+    - tier: judgment — the manifest's tier vocabulary is judgment (56) and transform
+      (6); all five are validators.
+    - language: system — 62 of 62.
+    - always_run: true + pass_filenames: false + no files key — the shape already used
+      by check-file-size, check-build-drift, check-identifier-uniqueness and
+      check-hook-trigger-reachability, each read in full from the manifest.
+    - change_set_source: handed_by_commit_path — NOT taken on trust from the field's
+      apparent meaning. change_set_source.py was read: _SHARED_SOURCE_MARKERS is
+      ("get_authored_change", "_authored_change") and _classify_hook credits
+      self_derived only when the entry's script text contains one of them, otherwise
+      the entry goes to .failures. All five scripts were grepped for both markers:
+      zero hits. The only two self_derived entries in the manifest are
+      check-doc-frontmatter and check-contract-shrinking, and both do import the
+      shared source. So handed_by_commit_path is the only value these five can
+      truthfully carry today. Recorded as a caveat on GE-120h-3-i, whose criteria ask
+      for the derived declaration.
+    - The five scripts — all five stat'd on disk, four in
+      templates/scripts/commit_guardian/ and check_ac_done_on_merge.py in that
+      directory's hooks/ subdirectory, which build_commit_guardian() deploys because
+      it walks the guardian directory with rglob.
+    - test_fixture_bloat DECLARED ABSENT, AND CHECKED RATHER THAN ASSUMED. It is not
+      among the 38 top-level keys. check_test_fixture_bloat.py reads
+      load_config().get("test_fixture_bloat", {}) and then config.get("enabled",
+      False), so the missing key makes it inert. It is therefore NOT declared in the
+      fragment, and the fragment says so explicitly so the next author does not
+      "complete" the spec by creating it.
+    - The post-merge stage — the manifest's stages today are pre-commit (60),
+      commit-msg (1), manual (1). post-merge would be the first, which is why the
+      shim-installation constraint is recorded rather than assumed.
+
+  WHY THE FRAGMENT DESCRIBES AN ARRAY MEMBER AND NOT A CONFIG KEY. The schema's
+  if/then makes the five structured fields mandatory once package_surface: true is
+  set, and the field is named config_schema_fragment — which invites exactly the
+  fiction the KI describes, because the honest answer here is that this change
+  registers no configuration key at all. The fragment therefore describes the thing
+  this change genuinely brings into existence: five members of hooks_manifest.hooks.
+  That container is watched by _package_surface_registry.WATCHED_REGISTRIES through
+  ("hooks_manifest.hooks", "list_ids"), so it is a package surface by the gate's own
+  definition and the declaration is true.
