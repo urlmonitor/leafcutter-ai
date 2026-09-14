@@ -80,6 +80,16 @@ PYTHON = sys.executable
 _SUBPROCESS_TIMEOUT_SECONDS = 30
 _BUILD_TIMEOUT_SECONDS = 180
 
+# A commit here runs the real pre-commit hook chain, whose runtime this test
+# does not control and cannot bound -- in the deployed descriptor it is the
+# built copy of the gate, cold-started. At the original 30s this descriptor was
+# FLAKY, not failing: observed passing at 28.5s and timing out at ~30s on the
+# same commit, with and without concurrent load. A test that fails half the time
+# in CI is worse than no test, and the failure mode is a TimeoutExpired that
+# reads like a real refusal. Hook-running commits therefore get the build-class
+# bound; plain git plumbing keeps the short one.
+_HOOK_COMMIT_TIMEOUT_SECONDS = 180
+
 # Toggle for the one-off ablation proof described in this ticket's own
 # "Verify before reporting" step: flip to False, rerun the crossing-refusal
 # descriptor, confirm it goes RED, then flip back. Left True for every
@@ -88,21 +98,30 @@ _BUILD_TIMEOUT_SECONDS = 180
 INCLUDE_CHECK_FILE_SIZE_HOOK = True
 
 
-def run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess:
-    """Run *cmd* for real in *cwd*, capturing text output, never raising."""
+def run(cmd: list[str], cwd: Path, timeout: int = _SUBPROCESS_TIMEOUT_SECONDS) -> subprocess.CompletedProcess:
+    """Run *cmd* for real in *cwd*, capturing text output, never raising.
+
+    Args:
+        cmd: Argument vector to execute.
+        cwd: Directory to run it in.
+        timeout: Seconds to allow. Defaults to the short bound, which suits
+            plain git plumbing. Callers whose command triggers the pre-commit
+            hook chain must pass ``_HOOK_COMMIT_TIMEOUT_SECONDS`` -- see the
+            note on that constant.
+    """
     return subprocess.run(
         cmd,
         cwd=str(cwd),
         capture_output=True,
         text=True,
-        timeout=_SUBPROCESS_TIMEOUT_SECONDS,
+        timeout=timeout,
         check=False,
     )
 
 
-def git(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
-    """Run a real git command in *cwd*."""
-    return run(["git", *args], cwd)
+def git(args: list[str], cwd: Path, timeout: int = _SUBPROCESS_TIMEOUT_SECONDS) -> subprocess.CompletedProcess:
+    """Run a real git command in *cwd*, with an optional longer timeout."""
+    return run(["git", *args], cwd, timeout=timeout)
 
 
 def init_repo(root: Path) -> None:
@@ -221,7 +240,7 @@ def commit(root: Path, message: str) -> subprocess.CompletedProcess:
     every descriptor in this record must exercise. No extra flag beyond
     `-m` is passed; nothing about the gate is invoked by hand.
     """
-    return git(["commit", "-m", message], root)
+    return git(["commit", "-m", message], root, timeout=_HOOK_COMMIT_TIMEOUT_SECONDS)
 
 
 def check_file_size_path(root: Path) -> Path:
