@@ -433,37 +433,85 @@ def _check_shape_version_bounds(flows: dict, errors: list[str], warnings: list[s
             )
 
 
-def _check_pointers(flows: dict, ac_ids: set[str], mockups: dict, errors: list[str]) -> int:
-    """Resolve every AC `implements` pointer across all flow steps and branches.
+#: The one pointer-target kind the checker knows how to resolve: an acceptance-
+#: criterion id. Checked against every id in the AC store (4016 at the time of
+#: writing, including multi-segment prefixes such as KM-ADM-001) so that no real
+#: AC id is ever misread as unrecognised -- which would silently turn a genuinely
+#: broken pointer into a non-blocking unresolvable one (ADR-042 Amendment 1).
+_RECOGNISED_AC_ID = re.compile(r"^[A-Z]{2,6}(?:-[A-Z]{2,6})*-\d+[a-z0-9]*(?:-[a-z0-9]+)*$")
+
+
+def is_resolvable_pointer_target(target: object) -> bool:
+    """Return True when *target* is a kind of pointer target the checker can resolve.
+
+    The single classification predicate ADR-042 §A4 requires. It decides by the
+    target's KIND, before any lookup: a well-formed AC id that is absent from the
+    store is still a recognised kind (so it is broken, not unresolvable), and
+    only a target that is not an AC id at all -- a screen reference, a path, a
+    URL, free text -- is unresolvable.
+
+    Args:
+        target: One entry of a node's ``implements`` list.
+
+    Returns:
+        True iff *target* is shaped like an acceptance-criterion id.
+    """
+    return isinstance(target, str) and bool(_RECOGNISED_AC_ID.match(target))
+
+
+def _check_pointers(
+    flows: dict, ac_ids: set[str], mockups: dict, errors: list[str],
+    unresolvable: list[str] | None = None,
+) -> int:
+    """Classify every `implements` pointer as resolved, broken or unresolvable.
 
     This is the TIER-1 FLOOR of the citations sub-surface (UXP-700c-1): it asks
-    only "does the target exist", against the project as it stands right now —
-    no content comparison (that is UXP-700c-2). It mutates the SAME `errors`
-    list every other `_check_*` helper already uses, so a broken pointer makes
-    the run exit non-zero exactly like every other error class.
+    only "does the target exist", against the project as it stands right now --
+    no content comparison (that is UXP-700c-2).
 
-    Returns the number of pointers that resolved (their target AC id is a
-    member of ``ac_ids``). Every pointer whose target is NOT in ``ac_ids`` is
-    appended to ``errors`` as one message naming, in the message text:
-      1. the artifact holding the pointer  -> flow['id']
-      2. the position within that artifact  -> the step/branch id
-      3. the target that did not resolve    -> the AC id
-    An intact pointer produces NO entry in `errors` -- only a broken one is
-    reported. `mockups` is accepted (and currently unused) so this helper's
-    signature can grow to cover screen/mockup pointers without a breaking
-    change to its callers.
+    Each pointer gets exactly one of three verdicts (ADR-042 Amendment 1):
+
+    * resolved -- its target is an AC id present in ``ac_ids``; counted in the
+      return value.
+    * broken -- its target is an AC id absent from ``ac_ids``; appended to
+      ``errors``, which makes the run exit non-zero like every other error.
+    * unresolvable -- its target is not a kind the checker can resolve at all
+      (see :func:`is_resolvable_pointer_target`); appended to ``unresolvable``
+      when the caller supplies it, and NEVER counted as resolved nor reported as
+      broken (UXP-700c-1-i). The caller decides what it does to the outcome.
+
+    Every report names the artifact holding the pointer, its position (step or
+    branch id) and the target; an unresolvable one also names why it could not
+    be classified, under a prefix distinct from a broken pointer's.
+
+    Args:
+        flows: ``{flow_id -> flow}``.
+        ac_ids: Every AC id present in the store.
+        mockups: Accepted so the signature can grow to screen pointers.
+        errors: Shared error list; broken pointers are appended.
+        unresolvable: Optional out-list; unresolvable pointer reports are appended.
+
+    Returns:
+        The number of pointers that resolved.
     """
     resolved = 0
     for flow in flows.values():
         for node, kind in iter_nodes(flow):
             node_id = node["id"]
-            for ac_id in node.get("implements", []):
-                if ac_id in ac_ids:
+            for target in node.get("implements", []):
+                if not is_resolvable_pointer_target(target):
+                    if unresolvable is not None:
+                        unresolvable.append(
+                            f"[pointer-unresolvable] {flow['id']} {kind} '{node_id}': target "
+                            f"{target!r} is not an acceptance-criterion id (PREFIX-NUMBER...), the "
+                            f"only pointer kind this checker can resolve, so it could not be classified"
+                        )
+                elif target in ac_ids:
                     resolved += 1
                 else:
                     errors.append(
                         f"[pointer] {flow['id']} {kind} '{node_id}': "
-                        f"AC pointer '{ac_id}' does not resolve in the AC store"
+                        f"AC pointer '{target}' does not resolve in the AC store"
                     )
     return resolved
 
