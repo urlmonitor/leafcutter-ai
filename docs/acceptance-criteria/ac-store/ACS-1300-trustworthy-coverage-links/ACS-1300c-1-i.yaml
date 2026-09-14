@@ -33,7 +33,7 @@ doc_links:
   - path: docs/acceptance-criteria/ac-driven-dev/ACD-800c.yaml
     relationship: relates-to
     status: exists
-    relevance: "The criterion that tool's apply path implements — 'implemented_by receives the ticket path, work_status becomes done' — stated as a requirement. It is correct for its own tree and incompatible with this one, which is why ACD-800 was rejected as a parent. Reusing the code inherits the criterion."
+    relevance: "The criterion that tool's apply path implements — 'implemented_by receives the ticket path, work_status becomes done' — RETIRED 2026-09-09 (status deprecated, no successor), while the code that implements it was NOT. UPDATED 2026-09-09, AND THE UPDATE STRENGTHENS THIS AC RATHER THAN WEAKENING IT. Until now the shipped violation in _apply_backfill was at least backed by a reviewed requirement that was correct for its own tree and merely incompatible with this one; an implementer reusing the code inherited a criterion. That is no longer the position. The user retired ACD-800c and its whole tree on the grounds that writing the finished-state field from a similarity score is the phantom-done mechanism specified as a feature — so the behaviour is now backed by NOTHING, and reusing the code inherits an orphaned violation rather than another tree's legitimate requirement. The fixture this AC is built on is therefore still real, still in this repository, and no longer defensible on any reading. Do not treat the retirement as having fixed it: nothing about scripts/ac_store/cross_reference_audit.py changed."
   - path: scripts/ac_store/backfill_components.py
     relationship: relates-to
     status: exists
