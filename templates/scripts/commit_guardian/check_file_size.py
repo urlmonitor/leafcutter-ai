@@ -29,11 +29,24 @@ ARCHITECTURE: Delegates previous-length resolution and the shared line
     legitimate, COMPLETING result named "EMPTY HISTORY" in the run's
     output, never folded into INDETERMINATE.
 
+    SCOPE DECLARATION (GE-127c-1): the set of kinds a run measured, and the
+    set of staged kinds it did not, are both derived once from
+    CHECKED_EXTENSIONS -- config.py's runtime read of commit_guardian.json's
+    file_size.checked_extensions -- via _classify_staged_extensions() and
+    printed by _print_scope_declaration(), never restated as a literal list.
+    A staged kind outside that scope is named by extension only, never by
+    filename, so it can never be mistaken for a file that was measured and
+    found within its limit.
+
 Pre-commit hook to block files exceeding line limits.
 
-Line Limits:
+Line Limits (see commit_guardian.json's file_size section for the
+authoritative, runtime-configurable scope and limits):
 - Python (.py): 400 lines max
 - SQL (.sql): 600 lines max
+- JavaScript (.js) / ES module (.mjs): 1000 lines max
+- TypeScript (.ts) / TSX (.tsx): 400 lines max
+- Shell (.sh): 400 lines max
 
 Exit Codes:
     0 - All files within limits (or shrunk/unchanged while still over, or
@@ -228,13 +241,53 @@ def _print_too_large_file(filepath: str, lines: int, limit: int) -> None:
     print("   Please refactor and split this file before committing.")
     print("   DO NOT simply delete blank lines, comments, or docstrings to bypass this.")
     print("   You MUST split the file to make it easier and less token consuming for agents.")
-    if filepath.endswith(".md"):
-        print("   Use the `@documentation-expert` agent to intelligently split this markdown file.")
-    elif filepath.endswith(".py"):
+    if filepath.endswith(".py"):
         print("   Use the `/code-refactoring-specialist` slash command to intelligently split this Python file.")
     else:
         print("   Use the `/code-refactoring-specialist` slash command or relevant skill to intelligently split the file.")
     print("   (We enforce this check to force refactoring of older files over time).\n")
+
+
+def _classify_staged_extensions(staged_files: dict[str, bool]) -> tuple[list[str], list[str]]:
+    """Partition the staged files' extensions into measured and not-measured.
+
+    An extension is "measured" on this run if it is a member of
+    CHECKED_EXTENSIONS -- the same scope-in-force value should_check_file()
+    itself consults to decide what to check -- read once here and reused,
+    never a second set written into this function (GE-127c-1's anti-grep
+    requirement: the declared kinds must move when the configured scope
+    moves, because they are read from it rather than restated).
+
+    Args:
+        staged_files: Mapping of staged filepath to is_new_file boolean.
+
+    Returns:
+        A (measured_kinds, unmeasured_kinds) pair: two sorted lists of the
+        distinct file extensions (e.g. ".py") found among the staged files,
+        split by membership in CHECKED_EXTENSIONS.
+    """
+    staged_extensions = {Path(fp).suffix.lower() for fp in staged_files if Path(fp).suffix}
+    measured = sorted(ext for ext in staged_extensions if ext in CHECKED_EXTENSIONS)
+    unmeasured = sorted(ext for ext in staged_extensions if ext not in CHECKED_EXTENSIONS)
+    return measured, unmeasured
+
+
+def _print_scope_declaration(measured_kinds: list[str], unmeasured_kinds: list[str]) -> None:
+    """Print which staged kinds this run measured, and which it did not.
+
+    A staged kind absent from CHECKED_EXTENSIONS is stated here by
+    extension only -- never by filename -- so it is never mistaken for a
+    file that was looked at and found within its permitted length (GE-127c-1's
+    absence clause).
+
+    Args:
+        measured_kinds: Distinct staged extensions that ARE in scope.
+        unmeasured_kinds: Distinct staged extensions that are NOT in scope.
+    """
+    measured_text = ", ".join(measured_kinds) if measured_kinds else "(none staged)"
+    print(f"📐 Measured kinds this run: {measured_text}")
+    unmeasured_text = ", ".join(unmeasured_kinds) if unmeasured_kinds else "(none)"
+    print(f"🚫 Not measured this run (kind not in scope): {unmeasured_text}")
 
 
 def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[str, int] | None, int | None]:
@@ -357,6 +410,7 @@ def main() -> int:
         return 0
 
     covered_files = {fp: is_new for fp, is_new in staged_files.items() if should_check_file(fp)}
+    measured_kinds, unmeasured_kinds = _classify_staged_extensions(staged_files)
 
     previous_lengths, indeterminate_exit = _resolve_ratchet_or_indeterminate(list(covered_files))
     if indeterminate_exit is not None:
@@ -381,6 +435,7 @@ def main() -> int:
 
     # Print results
     print("\n📏 File Size Check\n")
+    _print_scope_declaration(measured_kinds, unmeasured_kinds)
     print(f"📊 Compared {len(previous_lengths)} file(s) against their previous length.\n")
 
     for filepath, previous, lines in grown_files:
@@ -408,6 +463,30 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-14 [python-coder/GE-127c-1]: Widened commit_guardian.json's
+  file_size.checked_extensions (pinned by GE-127c-1's it_requirements) from
+  [".py", ".sql"] to [".py", ".sql", ".js", ".mjs", ".ts", ".tsx", ".sh"],
+  each with its own explicit line_limits entry so none silently inherits
+  DEFAULT_LINE_LIMIT. Added _classify_staged_extensions() /
+  _print_scope_declaration(): every run now states, derived once from
+  CHECKED_EXTENSIONS, which staged kinds it measured and which staged kinds
+  it did not (by extension only, never by filename, so an unmeasured kind
+  can never read as "found within its limit"). Deleted the ".md" branch of
+  _print_too_large_file()'s dividing advice: ".md" is deliberately excluded
+  from checked_extensions (already governed by check-doc-length), so that
+  branch could never execute from any real refusal -- an unreachable
+  coverage claim GE-127c-1's fourth clause forbids.
+  KNOWN TEST CONFLICT (flagged, not resolved by editing the test): the
+  test-writer-authored test_ge_127c_1_changing_the_scope_in_force_moves_the_
+  stated_set_of_measured_kinds probes the anti-grep clause using ".sh" as
+  its "currently outside scope" extension and asserts the UNMODIFIED,
+  real commit_guardian.json must NOT yet contain ".sh" -- but this AC's own
+  it_requirements pin ".sh" INTO real checked_extensions (limit 400, NEW),
+  and the sibling deployed-config test in this same file asserts ".sh" MUST
+  be present in that exact file. No production change can satisfy both
+  simultaneously. Per the "no test file edits" delegation rule this was
+  left for test-writer/ticket-supervisor to resolve (e.g. re-probe with a
+  permanently out-of-scope extension such as ".css" instead of ".sh").
 - 2026-09-08 [python-coder/KI-CG-20260908-file-size-ratchet-refuses-merge-commits]:
   Made the ratchet merge-aware. _resolve_ratchet_or_indeterminate() now
   resolves every parent revision of the commit in progress (via
