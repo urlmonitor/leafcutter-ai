@@ -117,6 +117,14 @@ ENTROPY_HIGH:memory/feedback_po_ba_itpo_bo3100_3200_delegation_boundary.md:*
 # changes, and pinned line numbers would silently void themselves on the first
 # re-capture.
 ENTROPY_HIGH:tests/fixtures/harvest_learnings/unroutable_corpus_28.json:*
+# INF-400c-4-iii fixture: 33 synthetic telemetry lines (mix of phase-probe lines
+# and knowledge_captured records) used to assert that phase-telemetry and
+# knowledge-emission streams are drained separately. Same shape as the
+# unroutable_corpus_28.json entry above (timestamp + agent + component +
+# destination + entry_kind) which trips the same entropy heuristic; no
+# credential material. Glob rather than per-line for the same reason: the
+# fixture is regenerated when the corpus legitimately changes.
+ENTROPY_HIGH:tests/fixtures/harvest_learnings/agent_telemetry_33_lines.jsonl:*
 
 # GE-120c-1's out-of-process harness declares the build system's own output-root
 # substitution marker as a module constant (_OUTPUT_ROOT_TOKEN) so it can detect an
