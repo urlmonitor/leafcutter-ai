@@ -62,9 +62,9 @@ Fixed issues move to [`feedback-collector/resolved/`](feedback-collector/resolve
 
 | Severity | Issue | File |
 |---|---|---|
-| `low` | The sink is resolved from `__file__` while callers pass a CWD-relative override, so one drive splits its feedback across two corpora | [open-low-ki-fc-001.md](feedback-collector/open-low-ki-fc-001.md) |
-| `low` | The sidecar id-recovery fallback is keyed on whole seconds and shares one stderr file, so parallel agents can read each other's feedback id | [open-low-ki-fc-002.md](feedback-collector/open-low-ki-fc-002.md) |
-| `low` | `ac-validator` is in no category's `allowed_writers`, so it has never submitted a single feedback record | [open-low-ki-fc-003.md](feedback-collector/open-low-ki-fc-003.md) |
+| `low` | KI-FC-001 — The sink is resolved from `__file__` while callers pass a CWD-relative override, so one drive splits its feedback across two corpora | [open-low-ki-fc-001.md](feedback-collector/open-low-ki-fc-001.md) |
+| `low` | KI-FC-002 — The sidecar id-recovery fallback is keyed on whole seconds and shares one stderr file, so parallel agents can read each other's feedback id | [open-low-ki-fc-002.md](feedback-collector/open-low-ki-fc-002.md) |
+| `low` | KI-FC-003 — `ac-validator` is in no category's `allowed_writers`, so it has never submitted a single feedback record | [open-low-ki-fc-003.md](feedback-collector/open-low-ki-fc-003.md) |
 
 ## Resolved
 

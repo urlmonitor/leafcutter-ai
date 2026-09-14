@@ -31,6 +31,11 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from build_placeholder_table_context import (
+    is_table_row,
+    marker_is_quoted_in_table_cell,
+)
+
 _INLINE_CODE_SPAN = re.compile(r"`[^`]*`")
 
 
@@ -236,6 +241,10 @@ def _is_marker_in_reportable_context(line: str, start: int) -> bool:
     heading = _MARKDOWN_HEADING.match(line)
     if heading is not None:
         return start == heading.end()
+    # Same rule, second container: a generated index quotes titles in table
+    # cells exactly as a heading quotes one. See build_placeholder_table_context.
+    if is_table_row(line):
+        return not marker_is_quoted_in_table_cell(line, start)
     return True
 
 

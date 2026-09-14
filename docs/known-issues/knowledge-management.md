@@ -62,20 +62,20 @@ Fixed issues move to [`knowledge-management/resolved/`](knowledge-management/res
 
 | Severity | Issue | File |
 |---|---|---|
-| `high` | SourceFile → AC does not exist, so nothing can answer "which ACs govern this file?" | [open-high-ki-km-001.md](knowledge-management/open-high-ki-km-001.md) |
-| `high` | 244 of 607 done ACs have no covering test; the ratchet holds the floor, TQ-400d owns the drawdown | [open-high-ki-km-002.md](knowledge-management/open-high-ki-km-002.md) |
-| `high` | Compound-prefix AC ids are invisible to the store's own parent/child tooling | [open-high-ki-km-007.md](knowledge-management/open-high-ki-km-007.md) |
-| `high` | 241 ACs are marked `todo` while a covering test already exists, so the store also lies in the direction that hides finished work | [open-high-ki-km-008.md](knowledge-management/open-high-ki-km-008.md) |
-| `high` | ADR-034 says the knowledge loop "has never closed"; nine files on disk say otherwise, and work was specified against the wrong premise | [open-high-ki-km-009.md](knowledge-management/open-high-ki-km-009.md) |
-| `high` | The emission event is a receipt with no payload, and `_event_hash` keys on a field that is empty in every real record | [open-high-ki-km-010.md](knowledge-management/open-high-ki-km-010.md) |
-| `low` | The map understates `ticket-touches`: config flipped to strict, the rating and both notes did not | [open-low-ki-km-003.md](knowledge-management/open-low-ki-km-003.md) |
-| `low` | `check_ac_coverage.py` exists on disk but is registered nowhere, so `covered_by` test entries are never read | [open-low-ki-km-004.md](knowledge-management/open-low-ki-km-004.md) |
-| `low` | The artifact graph is a hand-authored type-level schema; no AC covers making it dynamic | [open-low-ki-km-006.md](knowledge-management/open-low-ki-km-006.md) |
-| `low` | two registers adopted different replacement id forms, eleven still teach the one known not to work | [open-low-ki-km-20260826-id-convention-diverged-across-registers.md](knowledge-management/open-low-ki-km-20260826-id-convention-diverged-across-registers.md) |
+| `high` | KI-KM-001 — SourceFile → AC does not exist, so nothing can answer "which ACs govern this file?" | [open-high-ki-km-001.md](knowledge-management/open-high-ki-km-001.md) |
+| `high` | KI-KM-002 — 244 of 607 done ACs have no covering test; the ratchet holds the floor, TQ-400d owns the drawdown | [open-high-ki-km-002.md](knowledge-management/open-high-ki-km-002.md) |
+| `high` | KI-KM-007 — Compound-prefix AC ids are invisible to the store's own parent/child tooling | [open-high-ki-km-007.md](knowledge-management/open-high-ki-km-007.md) |
+| `high` | KI-KM-008 — 241 ACs are marked `todo` while a covering test already exists, so the store also lies in the direction that hides finished work | [open-high-ki-km-008.md](knowledge-management/open-high-ki-km-008.md) |
+| `high` | KI-KM-009 — ADR-034 says the knowledge loop "has never closed"; nine files on disk say otherwise, and work was specified against the wrong premise | [open-high-ki-km-009.md](knowledge-management/open-high-ki-km-009.md) |
+| `high` | KI-KM-010 — The emission event is a receipt with no payload, and `_event_hash` keys on a field that is empty in every real record | [open-high-ki-km-010.md](knowledge-management/open-high-ki-km-010.md) |
+| `low` | KI-KM-003 — The map understates `ticket-touches`: config flipped to strict, the rating and both notes did not | [open-low-ki-km-003.md](knowledge-management/open-low-ki-km-003.md) |
+| `low` | KI-KM-004 — `check_ac_coverage.py` exists on disk but is registered nowhere, so `covered_by` test entries are never read | [open-low-ki-km-004.md](knowledge-management/open-low-ki-km-004.md) |
+| `low` | KI-KM-006 — The artifact graph is a hand-authored type-level schema; no AC covers making it dynamic | [open-low-ki-km-006.md](knowledge-management/open-low-ki-km-006.md) |
+| `low` | KI-KM-20260826-id-convention-diverged-across-registers — two registers adopted different replacement id forms, eleven still teach the one known not to work | [open-low-ki-km-20260826-id-convention-diverged-across-registers.md](knowledge-management/open-low-ki-km-20260826-id-convention-diverged-across-registers.md) |
 
 ## Resolved
 
 | Severity | Issue | File |
 |---|---|---|
-| `low` | Six reviewed `KM-ADM-*` ACs sit as orphan L2s with no L0/L1 parent | [resolved-low-ki-km-005.md](knowledge-management/resolved/resolved-low-ki-km-005.md) |
-| `low` | A valid-JSON non-object line crashes the harvester with an unhandled `AttributeError`, and the sink already contains junk lines the repo's own checklist puts there | [resolved-low-ki-km-011.md](knowledge-management/resolved/resolved-low-ki-km-011.md) |
+| `low` | KI-KM-005 — Six reviewed `KM-ADM-*` ACs sit as orphan L2s with no L0/L1 parent | [resolved-low-ki-km-005.md](knowledge-management/resolved/resolved-low-ki-km-005.md) |
+| `low` | KI-KM-011 — A valid-JSON non-object line crashes the harvester with an unhandled `AttributeError`, and the sink already contains junk lines the repo's own checklist puts there | [resolved-low-ki-km-011.md](knowledge-management/resolved/resolved-low-ki-km-011.md) |

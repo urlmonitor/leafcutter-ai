@@ -97,8 +97,8 @@ Fixed issues move to [`security-scanner/resolved/`](security-scanner/resolved/) 
 
 | Severity | Issue | File |
 |---|---|---|
-| `high` | Prose exemption disables entropy detection for WHOLE FILES, including executable Python under `templates/skills/` | [open-high-ki-sec-001.md](security-scanner/open-high-ki-sec-001.md) |
-| `low` | ENTROPY_HIGH reads a long CamelCase test class name carrying an AC id as a secret, and the only remedy it offers is an allowlist edit that an automated reviewer rightly refuses | [open-low-ki-sec-20260914-entropy-flags-test-class-names.md](security-scanner/open-low-ki-sec-20260914-entropy-flags-test-class-names.md) |
+| `high` | KI-SEC-001 — Prose exemption disables entropy detection for WHOLE FILES, including executable Python under `templates/skills/` | [open-high-ki-sec-001.md](security-scanner/open-high-ki-sec-001.md) |
+| `low` | KI-SEC-20260914-entropy-flags-test-class-names — ENTROPY_HIGH reads a long CamelCase test class name carrying an AC id as a secret, and the only remedy it offers is an allowlist edit that an automated reviewer rightly refuses | [open-low-ki-sec-20260914-entropy-flags-test-class-names.md](security-scanner/open-low-ki-sec-20260914-entropy-flags-test-class-names.md) |
 
 ## Resolved
 

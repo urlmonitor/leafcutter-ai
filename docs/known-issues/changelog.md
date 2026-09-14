@@ -62,8 +62,8 @@ Fixed issues move to [`changelog/resolved/`](changelog/resolved/) and are no lon
 
 | Severity | Issue | File |
 |---|---|---|
-| `high` | No build drive can produce a changelog entry: `changelog-agent` is in neither the phase order nor any generated agents map, so every code-touching drive lands a PR that cannot merge | [open-high-ki-cl-002.md](changelog/open-high-ki-cl-002.md) |
-| `low` | Nothing validates the shape of a changelog entry: CI checks only that a file exists, no pre-commit hook looks at one, and the emitter's own output is an empty body | [open-low-ki-cl-001.md](changelog/open-low-ki-cl-001.md) |
+| `high` | KI-CL-002 — No build drive can produce a changelog entry: `changelog-agent` is in neither the phase order nor any generated agents map, so every code-touching drive lands a PR that cannot merge | [open-high-ki-cl-002.md](changelog/open-high-ki-cl-002.md) |
+| `low` | KI-CL-001 — Nothing validates the shape of a changelog entry: CI checks only that a file exists, no pre-commit hook looks at one, and the emitter's own output is an empty body | [open-low-ki-cl-001.md](changelog/open-low-ki-cl-001.md) |
 
 ## Resolved
 

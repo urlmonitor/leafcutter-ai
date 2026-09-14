@@ -65,7 +65,7 @@ Fixed issues move to [`ac-driven-dev-2026-09/resolved/`](ac-driven-dev-2026-09/r
 
 | Severity | Issue | File |
 |---|---|---|
-| `low` | the generator has a flag whose whole purpose is to name the ticket's final location, and the one field that stores a durable path ignores it | [open-low-ki-acd-20260914-generated-implemented-by-records-the-staging-path.md](ac-driven-dev-2026-09/open-low-ki-acd-20260914-generated-implemented-by-records-the-staging-path.md) |
+| `low` | KI-ACD-20260914-generated-implemented-by-records-the-staging-path — the generator has a flag whose whole purpose is to name the ticket's final location, and the one field that stores a durable path ignores it | [open-low-ki-acd-20260914-generated-implemented-by-records-the-staging-path.md](ac-driven-dev-2026-09/open-low-ki-acd-20260914-generated-implemented-by-records-the-staging-path.md) |
 
 ## Resolved
 

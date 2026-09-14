@@ -61,10 +61,10 @@ Fixed issues move to [`documentation-system/resolved/`](documentation-system/res
 
 | Severity | Issue | File |
 |---|---|---|
-| `high` | Four of the five Diataxis authoring conventions have never existed | [open-high-ki-ds-001.md](documentation-system/open-high-ki-ds-001.md) |
-| `high` | The doc conventions the specialists require are repo documentation, not templates, so none of them is deployed to an adopter | [open-high-ki-ds-002.md](documentation-system/open-high-ki-ds-002.md) |
-| `high` | Nothing resolves the paths in `pre_flight_reads`, so an agent can require a file that has never existed | [open-high-ki-ds-003.md](documentation-system/open-high-ki-ds-003.md) |
-| `low` | the documented ADR-index command regenerates `docs/architecture/adrs/README.md` with frontmatter that fails a required gate, so following the instruction breaks the commit | [open-low-ki-ds-20260908-1535.md](documentation-system/open-low-ki-ds-20260908-1535.md) |
+| `high` | KI-DS-001 — Four of the five Diataxis authoring conventions have never existed | [open-high-ki-ds-001.md](documentation-system/open-high-ki-ds-001.md) |
+| `high` | KI-DS-002 — The doc conventions the specialists require are repo documentation, not templates, so none of them is deployed to an adopter | [open-high-ki-ds-002.md](documentation-system/open-high-ki-ds-002.md) |
+| `high` | KI-DS-003 — Nothing resolves the paths in `pre_flight_reads`, so an agent can require a file that has never existed | [open-high-ki-ds-003.md](documentation-system/open-high-ki-ds-003.md) |
+| `low` | KI-DS-20260908-1535 — the documented ADR-index command regenerates `docs/architecture/adrs/README.md` with frontmatter that fails a required gate, so following the instruction breaks the commit | [open-low-ki-ds-20260908-1535.md](documentation-system/open-low-ki-ds-20260908-1535.md) |
 
 ## Resolved
 

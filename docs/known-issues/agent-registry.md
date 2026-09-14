@@ -61,9 +61,9 @@ Fixed issues move to [`agent-registry/resolved/`](agent-registry/resolved/) and 
 
 | Severity | Issue | File |
 |---|---|---|
-| `low` | `agent_registry.schema.json` is inert: nothing validates the registry against it | [open-low-ki-ar-001.md](agent-registry/open-low-ki-ar-001.md) |
-| `low` | `_EXTERNAL_CALLERS` is a hardcoded two-item set, so documenting a real spawn relationship fails the build | [open-low-ki-ar-002.md](agent-registry/open-low-ki-ar-002.md) |
-| `low` | `skills_invoked` still declares `signoff` for two agents whose sign-off obligation was removed, and the resulting mismatch is advisory only | [open-low-ki-ar-003.md](agent-registry/open-low-ki-ar-003.md) |
+| `low` | KI-AR-001 — `agent_registry.schema.json` is inert: nothing validates the registry against it | [open-low-ki-ar-001.md](agent-registry/open-low-ki-ar-001.md) |
+| `low` | KI-AR-002 — `_EXTERNAL_CALLERS` is a hardcoded two-item set, so documenting a real spawn relationship fails the build | [open-low-ki-ar-002.md](agent-registry/open-low-ki-ar-002.md) |
+| `low` | KI-AR-003 — `skills_invoked` still declares `signoff` for two agents whose sign-off obligation was removed, and the resulting mismatch is advisory only | [open-low-ki-ar-003.md](agent-registry/open-low-ki-ar-003.md) |
 
 ## Resolved
 

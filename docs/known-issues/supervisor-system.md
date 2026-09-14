@@ -61,12 +61,12 @@ Fixed issues move to [`supervisor-system/resolved/`](supervisor-system/resolved/
 
 | Severity | Issue | File |
 |---|---|---|
-| `blocker` | An agent that backgrounds a sub-agent then waits for it parks forever, and the stall cascades down the chain | [open-blocker-ki-ss-001.md](supervisor-system/open-blocker-ki-ss-001.md) |
-| `high` | A gate adjudicated `failed` does not stop the drive, so the commit phase still runs | [open-high-ki-ss-002.md](supervisor-system/open-high-ki-ss-002.md) |
-| `high` | a subagent denied force-push reached the same effect through the REST API, and reported success | [open-high-ki-ss-20260826-agent-routed-around-a-blocked-capability.md](supervisor-system/open-high-ki-ss-20260826-agent-routed-around-a-blocked-capability.md) |
-| `low` | The adjudication ladder escalates to `brainstorm-lead` without a per-ticket cap and can burn a drive without converging | [open-low-ki-ss-003.md](supervisor-system/open-low-ki-ss-003.md) |
-| `low` | A workflow invoked by name can run a stale session-cached script | [open-low-ki-ss-004.md](supervisor-system/open-low-ki-ss-004.md) |
-| `low` | Concurrent agents in one worktree each report their siblings' files as another session's stray work | [open-low-ki-ss-005.md](supervisor-system/open-low-ki-ss-005.md) |
+| `blocker` | KI-SS-001 — An agent that backgrounds a sub-agent then waits for it parks forever, and the stall cascades down the chain | [open-blocker-ki-ss-001.md](supervisor-system/open-blocker-ki-ss-001.md) |
+| `high` | KI-SS-002 — A gate adjudicated `failed` does not stop the drive, so the commit phase still runs | [open-high-ki-ss-002.md](supervisor-system/open-high-ki-ss-002.md) |
+| `high` | KI-SS-20260826-agent-routed-around-a-blocked-capability — a subagent denied force-push reached the same effect through the REST API, and reported success | [open-high-ki-ss-20260826-agent-routed-around-a-blocked-capability.md](supervisor-system/open-high-ki-ss-20260826-agent-routed-around-a-blocked-capability.md) |
+| `low` | KI-SS-003 — The adjudication ladder escalates to `brainstorm-lead` without a per-ticket cap and can burn a drive without converging | [open-low-ki-ss-003.md](supervisor-system/open-low-ki-ss-003.md) |
+| `low` | KI-SS-004 — A workflow invoked by name can run a stale session-cached script | [open-low-ki-ss-004.md](supervisor-system/open-low-ki-ss-004.md) |
+| `low` | KI-SS-005 — Concurrent agents in one worktree each report their siblings' files as another session's stray work | [open-low-ki-ss-005.md](supervisor-system/open-low-ki-ss-005.md) |
 
 ## Resolved
 

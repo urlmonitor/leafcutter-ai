@@ -75,36 +75,36 @@ Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and ar
 
 | Severity | Issue | File |
 |---|---|---|
-| `blocker` | `/plan-feature` cannot start in the self-hosting layout: worktree setup resolves git from the untracked workspace | [open-blocker-ki-acd-004.md](ac-driven-dev/open-blocker-ki-acd-004.md) |
-| `blocker` | User approval gates are dispatched to a `status-checker` agent, whose out-of-scope refusal is parsed as "the user chose cancel" | [open-blocker-ki-acd-005.md](ac-driven-dev/open-blocker-ki-acd-005.md) |
-| `blocker` | `/plan-feature` halts before any authoring agent and blames a registry field that is correct | [open-blocker-ki-acd-009.md](ac-driven-dev/open-blocker-ki-acd-009.md) |
-| `high` | `ac_prioritizer` discards each AC's `priority` field, so `critical` never surfaces | [open-high-ki-acd-001.md](ac-driven-dev/open-high-ki-acd-001.md) |
-| `high` | Generated Agent Contracts lines have no pipe delimiters, so documentation-verifier fail-closes on every generated ticket | [open-high-ki-acd-002.md](ac-driven-dev/open-high-ki-acd-002.md) |
-| `high` | `ac-fulfillment-gate` returns `ok` on an AC it left with `covered_by: []` | [open-high-ki-acd-003.md](ac-driven-dev/open-high-ki-acd-003.md) |
-| `high` | A run that authors zero ACs reports `status: "ok"` | [open-high-ki-acd-006.md](ac-driven-dev/open-high-ki-acd-006.md) |
-| `high` | Product-truth artifacts are written to the user's main checkout, not the authoring worktree | [open-high-ki-acd-007.md](ac-driven-dev/open-high-ki-acd-007.md) |
-| `high` | AC id allocation misses ids owned by feature folders, and has already minted a live duplicate on main | [open-high-ki-acd-008.md](ac-driven-dev/open-high-ki-acd-008.md) |
-| `high` | An ASCII comma in an AC title survives every normalisation step and lands in the epic folder name, the AC store, and Master_Plan | [open-high-ki-acd-010.md](ac-driven-dev/open-high-ki-acd-010.md) |
-| `high` | The generated `Master_Plan.md` is missing six fields the repo's own ticket guard requires | [open-high-ki-acd-012.md](ac-driven-dev/open-high-ki-acd-012.md) |
-| `high` | Epic generation re-scans the whole AC store per ticket, so its cost is tickets × store size and the store only grows | [open-high-ki-acd-017.md](ac-driven-dev/open-high-ki-acd-017.md) |
-| `high` | Every generated `depends_on` reference is the pre-move filename, so all 27 inter-ticket edges dangle | [open-high-ki-acd-018.md](ac-driven-dev/open-high-ki-acd-018.md) |
-| `high` | `goal_to_epic.py` cites two governing acceptance criteria that do not exist, and five `done` ACs in this register's scope are falsified | [open-high-ki-acd-019.md](ac-driven-dev/open-high-ki-acd-019.md) |
-| `high` | Non-interactive epic generation drops every unapproved leaf AC without naming one of them | [open-high-ki-acd-020.md](ac-driven-dev/open-high-ki-acd-020.md) |
-| `high` | Every `depends_on` edge pointing at an AC's own parent is dropped from the generated ticket, while the Master_Plan still draws it | [open-high-ki-acd-021.md](ac-driven-dev/open-high-ki-acd-021.md) |
-| `high` | Conditional phase agents are written into the agents map without the frontmatter fields they are conditional on, and one of the two fields is written under a different name | [open-high-ki-acd-022.md](ac-driven-dev/open-high-ki-acd-022.md) |
-| `high` | The generated `files_touched` surface admits bare directories and incidental prose while excluding the deliverable the record creates | [open-high-ki-acd-023.md](ac-driven-dev/open-high-ki-acd-023.md) |
-| `high` | A ticket's `depends_on` models lifecycle status where the real requirement is an artifact, and on an L2 with a Roman child that closes a cycle no run can exit | [open-high-ki-acd-20260831-1934.md](ac-driven-dev/open-high-ki-acd-20260831-1934.md) |
-| `high` | the generator writes the documentation-expert contract as prose, and `documentation-verifier` fail-closes on every generated ticket that has one, before it looks at a single doc | [open-high-ki-acd-20260831-agent-contracts-block-not-pipe-delimited.md](ac-driven-dev/open-high-ki-acd-20260831-agent-contracts-block-not-pipe-delimited.md) |
-| `high` | Nothing in the pipeline binds a module or symbol name, so whichever agent needs one first invents it and the next agent cannot see the choice | [open-high-ki-acd-20260907-1555.md](ac-driven-dev/open-high-ki-acd-20260907-1555.md) |
-| `high` | Two approved ACs in one epic demand opposite verdicts for the same store state, and nothing in the AC store can detect it | [open-high-ki-acd-20260909-2130.md](ac-driven-dev/open-high-ki-acd-20260909-2130.md) |
-| `high` | Every `Master_Plan.md` the generator writes is rejected by the ticket frontmatter gates, so no generated epic can be committed without a hand patch | [open-high-ki-acd-20260914-0657.md](ac-driven-dev/open-high-ki-acd-20260914-0657.md) |
-| `low` | Epic-name truncation has no phrase awareness, so names end on a dangling preposition or article | [open-low-ki-acd-011.md](ac-driven-dev/open-low-ki-acd-011.md) |
-| `low` | `goal_to_epic.py` writes absolute filesystem paths into `implemented_by` | [open-low-ki-acd-014.md](ac-driven-dev/open-low-ki-acd-014.md) |
-| `low` | Epic ordering reads `depends_on` only, so `expects_from` contract edges are invisible to the build sequencer | [open-low-ki-acd-015.md](ac-driven-dev/open-low-ki-acd-015.md) |
-| `low` | Generated tickets carry AC checklist items truncated mid-clause | [open-low-ki-acd-016.md](ac-driven-dev/open-low-ki-acd-016.md) |
+| `blocker` | KI-ACD-004 — `/plan-feature` cannot start in the self-hosting layout: worktree setup resolves git from the untracked workspace | [open-blocker-ki-acd-004.md](ac-driven-dev/open-blocker-ki-acd-004.md) |
+| `blocker` | KI-ACD-005 — User approval gates are dispatched to a `status-checker` agent, whose out-of-scope refusal is parsed as "the user chose cancel" | [open-blocker-ki-acd-005.md](ac-driven-dev/open-blocker-ki-acd-005.md) |
+| `blocker` | KI-ACD-009 — `/plan-feature` halts before any authoring agent and blames a registry field that is correct | [open-blocker-ki-acd-009.md](ac-driven-dev/open-blocker-ki-acd-009.md) |
+| `high` | KI-ACD-001 — `ac_prioritizer` discards each AC's `priority` field, so `critical` never surfaces | [open-high-ki-acd-001.md](ac-driven-dev/open-high-ki-acd-001.md) |
+| `high` | KI-ACD-002 — Generated Agent Contracts lines have no pipe delimiters, so documentation-verifier fail-closes on every generated ticket | [open-high-ki-acd-002.md](ac-driven-dev/open-high-ki-acd-002.md) |
+| `high` | KI-ACD-003 — `ac-fulfillment-gate` returns `ok` on an AC it left with `covered_by: []` | [open-high-ki-acd-003.md](ac-driven-dev/open-high-ki-acd-003.md) |
+| `high` | KI-ACD-006 — A run that authors zero ACs reports `status: "ok"` | [open-high-ki-acd-006.md](ac-driven-dev/open-high-ki-acd-006.md) |
+| `high` | KI-ACD-007 — Product-truth artifacts are written to the user's main checkout, not the authoring worktree | [open-high-ki-acd-007.md](ac-driven-dev/open-high-ki-acd-007.md) |
+| `high` | KI-ACD-008 — AC id allocation misses ids owned by feature folders, and has already minted a live duplicate on main | [open-high-ki-acd-008.md](ac-driven-dev/open-high-ki-acd-008.md) |
+| `high` | KI-ACD-010 — An ASCII comma in an AC title survives every normalisation step and lands in the epic folder name, the AC store, and Master_Plan | [open-high-ki-acd-010.md](ac-driven-dev/open-high-ki-acd-010.md) |
+| `high` | KI-ACD-012 — The generated `Master_Plan.md` is missing six fields the repo's own ticket guard requires | [open-high-ki-acd-012.md](ac-driven-dev/open-high-ki-acd-012.md) |
+| `high` | KI-ACD-017 — Epic generation re-scans the whole AC store per ticket, so its cost is tickets × store size and the store only grows | [open-high-ki-acd-017.md](ac-driven-dev/open-high-ki-acd-017.md) |
+| `high` | KI-ACD-018 — Every generated `depends_on` reference is the pre-move filename, so all 27 inter-ticket edges dangle | [open-high-ki-acd-018.md](ac-driven-dev/open-high-ki-acd-018.md) |
+| `high` | KI-ACD-019 — `goal_to_epic.py` cites two governing acceptance criteria that do not exist, and five `done` ACs in this register's scope are falsified | [open-high-ki-acd-019.md](ac-driven-dev/open-high-ki-acd-019.md) |
+| `high` | KI-ACD-020 — Non-interactive epic generation drops every unapproved leaf AC without naming one of them | [open-high-ki-acd-020.md](ac-driven-dev/open-high-ki-acd-020.md) |
+| `high` | KI-ACD-021 — Every `depends_on` edge pointing at an AC's own parent is dropped from the generated ticket, while the Master_Plan still draws it | [open-high-ki-acd-021.md](ac-driven-dev/open-high-ki-acd-021.md) |
+| `high` | KI-ACD-022 — Conditional phase agents are written into the agents map without the frontmatter fields they are conditional on, and one of the two fields is written under a different name | [open-high-ki-acd-022.md](ac-driven-dev/open-high-ki-acd-022.md) |
+| `high` | KI-ACD-023 — The generated `files_touched` surface admits bare directories and incidental prose while excluding the deliverable the record creates | [open-high-ki-acd-023.md](ac-driven-dev/open-high-ki-acd-023.md) |
+| `high` | KI-ACD-20260831-1934 — A ticket's `depends_on` models lifecycle status where the real requirement is an artifact, and on an L2 with a Roman child that closes a cycle no run can exit | [open-high-ki-acd-20260831-1934.md](ac-driven-dev/open-high-ki-acd-20260831-1934.md) |
+| `high` | KI-ACD-20260831-agent-contracts-block-not-pipe-delimited — the generator writes the documentation-expert contract as prose, and `documentation-verifier` fail-closes on every generated ticket that has one, before it looks at a single doc | [open-high-ki-acd-20260831-agent-contracts-block-not-pipe-delimited.md](ac-driven-dev/open-high-ki-acd-20260831-agent-contracts-block-not-pipe-delimited.md) |
+| `high` | KI-ACD-20260907-1555 — Nothing in the pipeline binds a module or symbol name, so whichever agent needs one first invents it and the next agent cannot see the choice | [open-high-ki-acd-20260907-1555.md](ac-driven-dev/open-high-ki-acd-20260907-1555.md) |
+| `high` | KI-ACD-20260909-2130 — Two approved ACs in one epic demand opposite verdicts for the same store state, and nothing in the AC store can detect it | [open-high-ki-acd-20260909-2130.md](ac-driven-dev/open-high-ki-acd-20260909-2130.md) |
+| `high` | KI-ACD-20260914-0657 — Every `Master_Plan.md` the generator writes is rejected by the ticket frontmatter gates, so no generated epic can be committed without a hand patch | [open-high-ki-acd-20260914-0657.md](ac-driven-dev/open-high-ki-acd-20260914-0657.md) |
+| `low` | KI-ACD-011 — Epic-name truncation has no phrase awareness, so names end on a dangling preposition or article | [open-low-ki-acd-011.md](ac-driven-dev/open-low-ki-acd-011.md) |
+| `low` | KI-ACD-014 — `goal_to_epic.py` writes absolute filesystem paths into `implemented_by` | [open-low-ki-acd-014.md](ac-driven-dev/open-low-ki-acd-014.md) |
+| `low` | KI-ACD-015 — Epic ordering reads `depends_on` only, so `expects_from` contract edges are invisible to the build sequencer | [open-low-ki-acd-015.md](ac-driven-dev/open-low-ki-acd-015.md) |
+| `low` | KI-ACD-016 — Generated tickets carry AC checklist items truncated mid-clause | [open-low-ki-acd-016.md](ac-driven-dev/open-low-ki-acd-016.md) |
 
 ## Resolved
 
 | Severity | Issue | File |
 |---|---|---|
-| `high` | `goal_to_epic.py` writes a `target_epic` field the AC schema rejects, so every epic it generates fails the required store gate | [resolved-high-ki-acd-013.md](ac-driven-dev/resolved/resolved-high-ki-acd-013.md) |
+| `high` | KI-ACD-013 — `goal_to_epic.py` writes a `target_epic` field the AC schema rejects, so every epic it generates fails the required store gate | [resolved-high-ki-acd-013.md](ac-driven-dev/resolved/resolved-high-ki-acd-013.md) |
