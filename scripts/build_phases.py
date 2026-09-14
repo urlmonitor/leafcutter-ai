@@ -2248,21 +2248,11 @@ def build_commit_guardian(target_root: Path, config: dict[str, Any],
                 if not dry_run:
                     print("  config/commit_guardian/commit_guardian.json")
 
-    # AC BP-900h-4: doc_types.json, diagram_types.json and agent_registry.json
-    # are declaring files doc_type_validators.py, diagram_type_validators.py
-    # and _signoff_parity_checks.py each read via a __file__-anchored
-    # ancestor walk (mirrors config/ac_store_schema.json's own deployment
-    # immediately above, and build_ac_store's config/phase_deferral.yaml
-    # block) -- confirmed absent from a genuine consumer install on
-    # 2026-08-18 and reproduced again on 2026-08-25, because every prior
-    # build test installs into leafcutter's own self-hosted workspace, where
-    # the package source tree sits beside the deployed output root and each
-    # of these three resolves anyway by accident. Deploying them here is the
-    # NECESSARY (but, per the AC's own text, not SUFFICIENT) half of the
-    # fix -- scripts/ci/check_declaring_files.py is the sufficient half: it
-    # proves empirically, from the deployed tree's own source, that these
-    # (and any future declaring file sharing the same resolver shape)
-    # actually arrived.
+    # AC BP-900h-4: declaring files read via a __file__-anchored ancestor walk, confirmed
+    # absent from a genuine consumer install (2026-08-18, reproduced 2026-08-25) because
+    # self-hosted builds accidentally resolve them with source beside output. Deploying here
+    # is necessary; check_declaring_files.py proves sufficiency. roadmap.schema.json joined
+    # 2026-09-14, same accident, once KI-CG-010 fixed its SCHEMA_RELATIVE path (see below).
     written += _deploy_commit_guardian_config_files(target_root, dry_run, force)
 
     return written
@@ -2274,9 +2264,9 @@ def _deploy_commit_guardian_config_files(
     """Deploy the commit-guardian declaring files BP-900h-4 confirmed absent.
 
     Mirrors ``config/ac_store_schema.json``'s deployment block in
-    ``build_ac_store`` for each of ``doc_types.json``, ``diagram_types.json``
-    and ``agent_registry.json`` — write-if-absent-or-changed to
-    ``<target_root>/config/<name>``.
+    ``build_ac_store`` for each of ``doc_types.json``, ``diagram_types.json``,
+    ``agent_registry.json``, and ``roadmap.schema.json`` — write-if-absent-or-changed
+    to ``<target_root>/config/<name>``.
 
     Args:
         target_root: Absolute path to the target project root directory.
@@ -2287,7 +2277,12 @@ def _deploy_commit_guardian_config_files(
         Count of files written (or that would be written in dry-run mode).
     """
     written = 0
-    for filename in ("doc_types.json", "diagram_types.json", "agent_registry.json"):
+    for filename in (
+        "doc_types.json",
+        "diagram_types.json",
+        "agent_registry.json",
+        "roadmap.schema.json",
+    ):
         src = PACKAGE_ROOT / "config" / filename
         if not src.is_file():
             continue
@@ -3602,7 +3597,7 @@ _MANAGED_ARTIFACT_DIRS = {
     "agents": "agents",
     "skills": "skills",
     "hooks": "hooks",
-    "workflows": ".claude/workflows",
+    "workflows": "workflows",
 }
 
 
@@ -3921,4 +3916,6 @@ def clean_stale_artifacts(
 #   raise UnicodeDecodeError. Landing this rewrites every previously-CRLF-
 #   deployed artifact once, on the next build, which is expected.
 #   (#BP-1000a-7)
+# - 2026-09-14 [python-coder/KI-BP-010]: Fixed _MANAGED_ARTIFACT_DIRS["workflows"] (".claude/workflows" -> "workflows", joined onto claude_dir which is already target_dir/".claude"; the old value built a never-existent ".claude/.claude/workflows" so exists() skipped the sweep every clean run -- orphan survived pre-fix, removed=1 after; path-join only, promoting the sweep onto the default build path stays BP-1500b-1's scope).
+#   Also added roadmap.schema.json to the commit-guardian config deploy, required once KI-CG-010 fixed its resolvable path for the BP-900g-8 closure guard. (#KI-BP-010, covered_by: BP-1500b-1)
 # ====================================================================

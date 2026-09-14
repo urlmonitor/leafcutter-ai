@@ -676,16 +676,12 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         | _manifest_sync_platforms_scripts(package_root)
     )
 
-    # goal_to_epic.py and build_ac_mode_detection.py are sourced from the package
-    # ``scripts/`` directory but build_ac_store deploys them INTO ``scripts/ac_store/``
-    # (see the deploy_map in build_phases.build_ac_store). The manifest must record
-    # the DEPLOY path, because that is the namespace template references resolve in.
-    #
-    # This previously registered ``scripts/<name>`` and only when the file was found
-    # under ``templates/scripts/`` — where neither script has ever lived — so the
-    # block was a silent no-op and both scripts were absent from the deployable set.
-    # Nothing noticed, because the guard could not see the ``{{config.output_root}}/``
-    # form these are referenced in either (BP-900g-4).
+    # goal_to_epic.py / build_ac_mode_detection.py are sourced from package
+    # ``scripts/`` but build_ac_store deploys them INTO ``scripts/ac_store/`` (see
+    # its deploy_map) -- record the DEPLOY path, since that's the namespace
+    # templates resolve in. Previously this matched only under ``templates/
+    # scripts/``, where neither script ever lived -- a silent no-op invisible
+    # because the guard couldn't see the ``{{config.output_root}}/`` form (BP-900g-4).
     scripts_src = package_root / "scripts"
     for fname in ("goal_to_epic.py", "build_ac_mode_detection.py"):
         if (scripts_src / fname).is_file():
@@ -760,6 +756,8 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         # resolving _reachability_inventory.py's import of this file
         # (BO-2900d-1/-2 fast-lane build, 2026-09-07).
         "reachability_exemptions.yaml",
+        # Read by check_roadmap_schema.py; undeclared until KI-CG-010 fixed its path.
+        "roadmap.schema.json",
         # Deployed by build_ac_store's own block (added with TKT-600b), but
         # never DECLARED here -- so Set B did not contain it and the widened
         # closure correctly aborted the build once ac_coverage_resolver.py and
@@ -976,6 +974,7 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
         # _get_source_deployable_scripts just above -- see that block's
         # DECISION note.
         "reachability_exemptions.yaml",
+        "roadmap.schema.json",
         # Deployed by build_ac_store's own block (added with TKT-600b), but
         # never DECLARED here -- so Set B did not contain it and the widened
         # closure correctly aborted the build once ac_coverage_resolver.py and
@@ -1282,6 +1281,7 @@ _CONFIG_FILE_PHASE_BY_NAME: dict[str, str] = {
     "feedback_categories.yaml": "build_feedback",
     "knowledge_sink.json": "build_knowledge_sink_declaration",
     "reachability_exemptions.yaml": "build_config_scaffolds",
+    "roadmap.schema.json": "build_commit_guardian",
 }
 _DOCS_FILE_PHASE_BY_NAME: dict[str, str] = {
     "components.json": "build_components_registry",
