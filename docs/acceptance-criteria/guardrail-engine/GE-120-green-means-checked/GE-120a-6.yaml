@@ -1,0 +1,277 @@
+id: GE-120a-6
+title: "A check that could not be started at all names what could not be started, in the reader's own words, and the commit does not complete"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a registered check whose declared way of being started names a program that
+    cannot be started at all — the named program is absent from the location it is
+    named at, or it is present and the working environment will not run it,
+  And a change is staged that every registered check would otherwise accept,
+  When the author performs an ordinary commit — no extra command, no extra flag, and
+    nothing invoked by hand,
+  Then the commit does not complete,
+  And what the attempt reports names the check that could not be started and names
+    the program that could not be started,
+  And it reports that in the reader's own terms: a reader who sees only what the
+    attempt printed can tell that this check never ran, and what could not be started,
+    without being handed the machinery's own unhandled crash report and without having
+    to read a call stack to find either fact,
+  And nothing in what the attempt reports presents the staged change as having been
+    found acceptable by the check that never started,
+  And given the same unstartable condition arranged for a different registered check
+    instead,
+  When the author performs an ordinary commit,
+  Then the same outcome is produced and it names that other check — the guarantee is a
+    property of the way checks are started, not of any one check,
+  And given instead the identical staged change with every registered check's declared
+    way of being started able to start,
+  When the author performs an ordinary commit,
+  Then the commit completes, and nothing about a failure to start is reported at all —
+    no warning, no note, and no line naming any check.
+depends_on:
+  - GE-120a
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a.yaml
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/run_hook.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE SURFACE, AND THE ONE PLACE THE PROPERTY IS DECIDED FOR THE WHOLE FAMILY. Every
+      registered check is dispatched through this one shared launcher, so a property of
+      it is a property of them all — which is why this record's criteria are written over
+      "a registered check" without naming one. The behaviour already ships here: PR #728
+      wrapped the launcher's dispatch sites so an unstartable launch target is reported as
+      a named reason rather than escaping as an unhandled error. NOTE FOR WHOEVER APPLIES
+      THE MUTATION IN notes: this template is canonical; the copy that actually runs at
+      commit time is the installed one, and an injection applied to the template alone
+      does not land and fails GREEN.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: configures
+    status: exists
+    relevance: >-
+      WHERE EACH CHECK'S DECLARED WAY OF BEING STARTED LIVES, AND THE FIXTURE'S LEVER.
+      Each registered entry names the program its check is started with and routes it
+      through the shared launcher. That naming is what the mutation in notes points at a
+      non-existent path, and then at a present-but-non-executable file, to make the
+      condition genuine rather than simulated. NO COUNT of registered entries, and no
+      count of how many of them could fail to start, appears in this record or may appear
+      in a test of it — see notes.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      NEAREST SIBLING AND THE BOUNDARY MOST EASILY BLURRED — READ THIS BEFORE DECIDING
+      THIS RECORD IS A DUPLICATE. GE-120a-1's population is a check that RAN and could not
+      reach a prerequisite, and its whole deliverable is a result value the check itself
+      emits. Here no check process exists to emit anything, so the guarantee can only be
+      delivered by whatever tried to start it. An implementation of GE-120a-1 that is
+      perfect leaves this hole entirely open. Neither record closes the other.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE INTERACTION THAT MUST NOT BE RESOLVED SILENTLY. GE-120a-2 requires each check to
+      record, for itself, whether a cannot-run condition blocks or only announces, with no
+      value inferred on its behalf. This record makes the block decision for the
+      cannot-be-started condition once, for all checks, and states the reason in notes. If
+      GE-120a-2's disposition is later read on this path, the two must be reconciled
+      deliberately: reading a disposition for a check that never started is a decision, not
+      a detail. Do not let an implementation of GE-120a-2 quietly turn this refusal into an
+      announcement.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      WHERE THIS RULE GETS WRITTEN DOWN — THE PARENT'S reference-doc TRIGGER IS ALREADY
+      DISCHARGED THERE AND IS NOT DISCHARGED TWICE. GE-120a-5 corrects the reference the
+      next check author reads. The cannot-be-started state belongs in that same correction
+      as the outer boundary of the no-silent-pass rule; this record does not author a
+      second document and does not add a documentation AC. See notes.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120g.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      THE RECORD THAT FENCED THIS BEHAVIOUR OUT, DELIBERATELY AND ON THE RECORD. GE-120g
+      owns two other arms of the same shipped change — inspection side-effects, and refusal
+      provenance. Its notes state that this third arm "has no relationship to inspection
+      side-effects or to refusal provenance ... it is GE-120a's subject verbatim", and
+      declined to absorb it. This record is that disposition being honoured rather than
+      reversed. Nothing here may be discharged by changing what GE-120g constrains.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a-1.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      THE MIS-CITATION THIS RECORD PARTLY REPAIRS, AND THE REPAIR IS NOT IN SCOPE HERE.
+      GE-127a-1's implemented_by names the shared launcher while no criterion of GE-127a-1
+      constrains it and no descriptor exercises it — the phantom-done shape. Once this
+      record and GE-120g's are built and covered, that citation belongs under the two
+      subtrees that actually constrain the launcher. Performing the correction is NOT this
+      record's work and must not be attempted as part of it.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      READ-ONLY CONTEXT, OWNED ELSEWHERE. The failure this record prevents is neither a
+      false green nor quite a false red: the commit was correctly refused, and the author
+      was told in a form that does not identify what went wrong. A catalogue entry for
+      "refused, correctly, and unreadably" is recommended; this record is neither satisfied
+      by writing one nor blocked by its absence.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Describes the commit-time invocation shape every clause here is written
+      against.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding on this record
+      specifically, and in its sharpest form: the behaviour already ships, so a test that
+      reads the launcher's source and finds the error-handling arm present is green today,
+      green on the shipped code, and green on any refactor that deletes the reported reason
+      while keeping the arm. Every clause here is an outcome of attempting a real commit.
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  GREEN ON ARRIVAL — SAY IT PLAINLY, BECAUSE THE FIRST RED-BASELINE RUN WILL LIE.
+    This behaviour already ships. PR #728 wrapped the shared launcher's dispatch sites so
+    that a launch target which cannot be started at all produces a named reason and a
+    refusal instead of an unhandled error escaping the commit. That landed with NO
+    acceptance criterion of its own, and it was claimed as implementation of GE-127a-1,
+    where no criterion constrains it. This record is the missing specification, written
+    after the fact and saying so.
+    NO TEST ANYWHERE ASSERTS THE PROPERTY. An ordinary red-baseline run against these
+    criteria will therefore come up GREEN and prove nothing whatsoever. Treat a passing
+    first run as the instruction to go build the mutation below, not as a completed AC.
+    implemented_by is deliberately EMPTY even though satisfying code is on the branch:
+    nothing has been verified to implement this, and asserting otherwise is exactly the
+    phantom-done shape that produced the GE-127a-1 mis-citation.
+
+  THE NAMED MUTATION THAT MANUFACTURES A REAL RED BASELINE — EXECUTE IT, DO NOT DESCRIBE
+  IT. It has two halves and BOTH are required: an injection into the launcher, and a
+  genuinely unstartable launch target. Either half alone is inert.
+
+    INJECTION. Revert ONE of the shared launcher's error-handling arms around the point
+    where the delegated check process is started — the state before the shipped fix — so
+    that a failure to start escapes as an unhandled error rather than being converted into
+    a reported reason. Apply it to the INSTALLED copy that commit-time actually runs, not
+    to the canonical template; an injection into the template alone does not land and
+    fails GREEN, which is the same trap GE-120g-1 records.
+
+    THE UNSTARTABLE CONDITION — MAKE IT REAL, IN BOTH OF ITS TWO SHAPES. In the fixture
+    repository, edit the installed registration so one check's declared launch program is:
+      (a) a path that does not exist on disk at all; and, in a second run,
+      (b) a path that DOES exist and is a real file, with its execute permission removed.
+    Both must be exercised. They fail at the same moment for different underlying reasons,
+    and an implementation that only handles the missing-file shape passes (a) and leaves
+    (b) crashing — which is the specific way a partial fix looks complete here.
+
+    THE PROOF. Under the injection, in the fixture, an ordinary `git commit` must fail
+    WITHOUT naming the check and WITHOUT naming the unstartable program, handing the author
+    a raw crash report instead. On revert, the same commit must still fail, and must now
+    name both. RED is "refused unreadably"; GREEN is "refused, and told what happened". The
+    commit outcome is the same on both sides of the mutation — so a descriptor that asserts
+    only that the commit was refused CANNOT go red under this injection and does not cover
+    this record. Assert on what the attempt reported.
+
+    NEVER SATISFIED BY SOURCE INSPECTION. A test that greps the launcher for the presence
+    of an error-handling arm is green on the shipped code today, green under a refactor
+    that keeps the arm and drops the reported reason, and green on dead code. It does not
+    cover any clause here. Neither does a test that simulates the failure in-process by
+    substituting the launch machinery: the condition this record names is that the program
+    genuinely will not start, and a simulated failure exercises a different path.
+
+  THE DESCRIPTORS MUST EXERCISE A REAL `git commit`. This is a correction of a shape
+    already flagged twice on this surface. GE-127a-1's descriptors reach the gate by
+    running the pre-commit tooling against a named hook directly; both the PO and a prior
+    BA judged that insufficient here, and they are right: this record's whole subject is
+    what an author is handed when a check cannot be started during an ordinary commit, and
+    invoking the check by hand bypasses the very dispatch path under test. Every clause
+    here is an outcome of a real commit attempt in a real temporary repository with the
+    checks installed.
+
+  THE BLOCK-VERSUS-ANNOUNCE DECISION, MADE EXPLICITLY, AS THE L1 REQUIRES.
+    GE-120's L0 and GE-120a both instruct that whether a cannot-run condition BLOCKS or
+    merely ANNOUNCES is a per-check decision to be made explicitly at L2, with no blanket
+    default. For this condition the decision is BLOCK, and the reason is that this
+    condition is the only one in the family where the unverified scope is unbounded and
+    unknowable: a check that ran and hit a bad input knows what it skipped, and a check
+    that fell back to a weaker instrument knows what it examined, but a check that never
+    started examined nothing and can report nothing about the staged change. Announcing and
+    proceeding would leave the author with a warning whose scope nobody can state.
+    This is a decision about ONE condition, not a repeal of the fail-open convention:
+    GE-116a-1-iii (approved) is untouched, and GE-120a-1-i remains the contradiction guard.
+
+  BOUNDARY WITH GE-120a-1, LOAD-BEARING AND THE MOST LIKELY MERGE MISTAKE.
+    GE-120a-1's population is a check that RAN and could not reach a prerequisite; its
+    deliverable is a result value the check itself emits, and its two Roman constraints
+    (-i ordinary pass on one bad input, -ii degraded-but-ran) are both further values in
+    that same vocabulary. This record's population is a check that never became a process
+    at all. It cannot emit a vocabulary value, cannot consume GE-120a-1's delivers_to
+    contract, and is not observable from GE-120a-1's fixture. A fully correct
+    implementation of GE-120a-1 and both of its constraints leaves every clause here
+    unmet. Merged, an implementer satisfies whichever half is cheaper — which on this
+    surface means the one that is already shipped.
+
+  WHY THIS IS AN L2 AND NOT A ROMAN CONSTRAINT ON GE-120a-1 — the alternative was
+    considered first, specifically because it would have needed no waiver (an L2 parent
+    carries no hard child cap, so a third Roman under GE-120a-1 was free). It was rejected
+    on four counts, and the fourth is decisive:
+      1. Different reporter. Every clause of GE-120a-1 is about what the CHECK reports.
+      2. Different population. GE-120a-1 targets one check plus whichever inherit its
+         shared vocabulary; this is a property of the way every check is started.
+      3. Different surface and different fixture. Nothing in GE-120a's subtree touches the
+         shared launcher, and GE-120a-1's fixture is a second working copy without the
+         deployed layout — a fixture in which this condition never arises.
+      4. GE-120a-1 is work_status: done. Attaching an unbuilt constraint to it would reopen
+         a completed node and make a done composite false — the precise done-accounting
+         damage that GE-120's own notes cite as the reason GE-118a was rejected as a parent
+         for this family. Buying a free slot with a false done is a worse trade than an
+         audited waiver.
+    GE-120a-2 was also considered as a Roman host, on the ground that this is the case
+    where no recorded disposition can be consulted. Rejected: the disposition interaction
+    is a fence, not the subject. The subject is that the author is told what could not be
+    started, and that half would have been smuggled in under a parent about registration.
+
+  NO COUNT MAY BE STATED OR IMPLIED, BY THIS RECORD OR BY ANY TEST OF IT. How many
+    registered checks could fail to start, and under what conditions, has not been
+    measured by anyone. No criterion here states one, and a descriptor that pins a number
+    is out of contract. The one structural fact relied on — that all registered checks are
+    dispatched through a single shared launcher — is carried from GE-120g's measurement
+    without its figure, and should be re-measured rather than inherited.
+
+  THE PARENT'S DOCUMENTATION TRIGGER IS DISCHARGED, NOT IGNORED. GE-120a carries
+    documentation_triggers: [reference-doc], and GE-120a-5 already owns it: correcting, in
+    place, the reference that today records the fail-open convention without its limit. The
+    cannot-be-started state is the outer boundary of that same rule and belongs in that
+    same correction — as a fourth state alongside ordinary success, degraded-but-ran and
+    could-not-check. Authoring a second documentation AC here would produce a second
+    document stating a fourth rule, which is the exact failure GE-120a-5's own criteria
+    forbid. Recorded here so the omission reads as a decision: no documentation AC is
+    produced, and GE-120a-5's sweep should be widened to include this state when it runs.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+    test_rationale, package_surface and declares_side_effect. Those are the IT PO's. The
+    named mutation above, with both of its unstartable shapes and its installed-copy
+    caveat, is written to be turned directly into test descriptors; losing either shape
+    makes this record pass on a partial fix.

@@ -1,0 +1,91 @@
+id: ACS-1400c-3
+components:
+  - ac_store
+title: "The safety guarantees are proved in the same run as a repair that really happened"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing a deliberately parked tree carrying the author-set
+    parked signal, a parent whose coverage list resolves to no record at all, and
+    a parent that already names real children and omits one it has,
+  When the one-off adjudicated pass is run over that store with the repair applied,
+  Then the third parent gained the child it was missing,
+  And in that same run the parked tree's files and the second parent's file are
+    byte-for-byte identical to their content before the run,
+  And in that same run the composite-or-leaf classification that the done-proof
+    reader itself reaches is the same for every record in the store before the run
+    and after it,
+  And in that same run the parent back-link check's own verdict passes for the
+    repaired parent,
+  And the parked tree's records are reported as exemptions naming the reason their
+    author gave, rather than being absent from the report.
+depends_on:
+  - ACS-1400c
+  - ACS-1400c-1
+  - ACS-1200a
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "OWNS BYTE STABILITY AND THE TEST SHAPE THIS AC COPIES — raw-byte comparison before and after, plus an anti-no-op control in the SAME run. That pairing is the reason this whole criterion is one record rather than three. Byte stability means DO NOT WRITE, not write-the-same."
+  - path: scripts/ac_store/done_proof.py
+    relationship: related
+    status: exists
+    relevance: "THE REAL READER WHOSE REAL VERDICT THE THIRD Then BINDS TO. Compute `_has_resolvable_child` / `verify_done_eligible`'s actual routing before and after against the real post-run store — a re-implementation of the rule inside a test will pass while production uses a different rule, which is the specific trap ACS-1300a-3 calls out."
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: related
+    status: exists
+    relevance: "THE SECOND READER, AND A TRAP IN HOW IT IS INVOKED. A repair that rewrites a parent's coverage list is one edit away from tripping the back-link gate on records it was meant to help, so the fourth Then binds to this check's real verdict. It reads the git index or HOOK_TEST_FILES rather than argv, so passing a path on the command line does NOT make it check that path; verifying its verdict requires first confirming it actually saw the file. An exit 0 from a hook handed nothing is not a pass — this repo has produced false-green results that way three times."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+    relationship: related
+    status: exists
+    relevance: "States directly that the pre-existing gaps must not be swept up by the parked exemption. The last Then is the other half of that: exempt is not the same as invisible."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1400c-3-i
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  EVERY GUARANTEE IN THIS L1 IS SATISFIED BY A TOOL THAT DOES NOTHING. That is the
+  single most important design constraint here and it is why this is ONE record
+  with several Then clauses rather than three or four tidy separate ones. "Left
+  the parked records alone", "was byte-stable" and "changed no done-proof verdict"
+  are all trivially true of a no-op. Split across separate runs, or separate ACs
+  proved against separate fixtures, the safety half becomes vacuous and the tests
+  will be green on a tool that has been quietly disabled. The first Then — a
+  repair that genuinely happened — is what all the others are anchored to, and it
+  must be in the same invocation.
+
+  THE TWO "UNCHANGED VERDICT" CLAUSES ARE THE FALSIFIABLE PART AND ARE
+  DELIBERATELY BOUND TO TWO DIFFERENT EXISTING READERS. Binding to what the
+  done-proof reader actually concludes, and to what the back-link check actually
+  concludes, ties the outcome to how the coverage field is really consumed rather
+  than to a property of the file. This is the same construction ACS-1300a-3 uses
+  for its equivalent claim; it is inherited, not re-derived.
+
+  WHY THE DONE-PROOF CLAUSE IS THE ONE WITH TEETH. Re-verified 2026-09-08: ten
+  parents in the current population hold coverage lists whose every entry resolves
+  to nothing, and appending a child id to such a list flips the record from leaf to
+  composite. ACS-1400c-2 keeps the pass away from those records; this clause is
+  what catches it if some other repair reaches them by another route.
+
+  BYTE STABILITY IS NOT A COSMETIC PREFERENCE AT THIS STORE'S SIZE. The existing
+  repair tool's fallback branch rewrites a whole file through a load-and-dump round
+  trip, which preserves every value while reformatting quoting, key order and line
+  wrapping. Applied across the store that churns everything and makes the diff
+  unreadable, which is how a wrong write hides inside a right one.

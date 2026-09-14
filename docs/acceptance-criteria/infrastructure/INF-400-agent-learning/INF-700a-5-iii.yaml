@@ -1,0 +1,173 @@
+id: INF-700a-5-iii
+components:
+  - infrastructure
+  - knowledge_system
+  - build_orchestration
+  - worktree_manager
+title: "Two units of work finishing at the same time do not route the same learning twice, and do not lose it between them"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-5.yaml"
+criteria: |
+  Given one sink now serves a whole install rather than one working directory,
+    and more than one unit of work runs in that install at a time — isolated
+    working directories exist so that they can, and three at once is ordinary
+    practice here,
+  And each of them reaches its completion sequence independently, reads that
+    one sink, and publishes its writes on its own branch,
+  When two units of work reach their routing step close enough together that
+    both see the same record,
+  Then that record's learning is written to its destination file once and not
+    twice, and the run that did not write it says it did not,
+  And the record is not left unwritten by both of them: two routing steps
+    arbitrating over the same record must not each conclude the other has it,
+  And the bookkeeping that records a routing decision is not corrupted,
+    truncated or half-written by two units of work updating it at once — after
+    both have finished, it is readable and describes a state both runs agree
+    with, rather than one that describes neither,
+  And the two ways this fails are told apart, because they need different
+    answers: where both branches reach the merged tree, the failure is the SAME
+    LEARNING WRITTEN TWICE, which a reader sees as a duplicate; where one branch
+    does not, the failure is a LEARNING LOST WHILE MARKED AS ROUTED, which no
+    reader sees at all. The second is the one that must not happen, and a
+    solution that trades it for the first is a solution,
+  And no unit of work waits on another's knowledge step to finish its own work:
+    the outcome of the work, its failure count and the driver's exit status are
+    the same as they are when it is the only unit of work running, and two
+    units of work that both complete still both complete,
+  And whatever arbitrates this is exercised rather than assumed — a run in
+    which two routing steps genuinely overlap produces one write, and an
+    implementation in which the arbitration is present but never reached
+    produces two and is distinguishable from the first by that.
+depends_on:
+  - INF-700a-5
+  - INF-400c-4
+doc_links:
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: true
+it_requirements:
+  - "THE CONTENDED RESOURCE IS scripts/knowledge/harvest_learnings.py's STATE FILE, AND IT MUST BE INSTALL-SCOPED BEFORE THIS AC IS BUILDABLE. --state defaults to the bare relative name debugging/logs/harvest_state.json, so today each working directory has its own and the race this AC describes cannot occur. It becomes reachable the moment that file is declared install-wide, which INF-400c-4-iii raises and INF-400c-4 must settle. Two consequences: this AC is unbuildable and untestable until that declaration exists, and — more dangerously — an implementation that leaves the state file per-working-directory passes every descriptor here by never producing an overlap. Establishing that the fixture's two runs share ONE state file is a precondition of the suite meaning anything, not a fixture detail."
+  - "WHATEVER ARBITRATES MUST HAVE AN OFF SWITCH REACHABLE FROM THE TEST HARNESS. The reachability descriptor requires a run with the arbitration disabled to produce two writes; without a supported way to disable it, that descriptor cannot be written and the other five become unfalsifiable — a concurrency suite that passes because the runs never overlapped is indistinguishable from one that passes because the mechanism worked. Treat the off switch as part of the deliverable and not as test scaffolding bolted on afterwards, and make it explicit enough that it cannot be reached by accident in production."
+  - "BOUND THE CRITICAL SECTION TO THE STATE UPDATE. Nothing held for arbitration may be held across an agent dispatch, a commit, a network call or a publication — those are unbounded, and a lock spanning one makes the second unit of work wait on the first's commit phase, which fails this record's own no-delay clause while satisfying its write-once clause. The precedent in this repository is building-epics section 5.1's .epic-commit-lock, and it is a partial precedent only: it is scoped to a worktree root, whereas the thing being contended here spans every working directory of the install. Its stale-PID recovery rule is worth carrying over; its scope is not."
+  - "FAIL TOWARD THE DUPLICATE, EXPLICITLY AND IN EVERY DEGRADED PATH. The criteria fix the asymmetry — a visible duplicate is survivable, a learning lost while marked routed is not — so every branch where arbitration cannot be obtained (contention timeout, unreadable state, a filesystem that does not support the chosen primitive) must proceed with the write rather than skip it, and must not record the routed mark on another run's behalf. State this per branch: a default that skips on failure looks conservative, reads as safe in review, and produces exactly the outcome the criteria forbid."
+  - "THE MARK CANNOT HONESTLY BE WRITTEN AT ROUTING TIME, AND THIS IS THE SAME STATE AS INF-700a-5's BOOKKEEPING CLAUSE UNDER A SECOND PRESSURE — SOLVE THEM TOGETHER. A routed mark is only true once the write reaches the merged tree, and no completion path can observe that at the moment it routes: four of the five publish to a branch that may never merge. So an unconditional mark written at routing time is the rejected shape, and any mechanism chosen here needs a point at which a mark is confirmed or released against what actually merged. The mechanism itself is deliberately left open by the criteria; what is not open is that the concurrency arbitration and the publication-conditioned mark are one piece of state. Designing them separately is how they end up contradicting each other, and the contradiction surfaces as the loss mode rather than the duplicate mode."
+  - "A NON-DETERMINISTIC SUITE MUST NOT BE MADE GREEN BY WEAKENING THE OVERLAP. The bookkeeping descriptor loops deliberately because a torn write is probabilistic. If the suite proves flaky, the permitted responses are to make the overlap MORE reliable or to raise the iteration count; adding a sleep that serialises the pair, or retrying until green, converts the suite into one that cannot fail. Record the chosen synchronisation so a later reader can tell a real overlap from an accidental sequence."
+  - "Must handle errors gracefully per the project error handling policy."
+delivers_to:
+  agent: documentation-expert
+  contract: "The fact that one sink is shared by every unit of work in an install, that concurrent completions are arbitrated, and which of the two failure shapes the arbitration is chosen to prefer — which INF-700a-4's reference must state, because a reader who sees an occasional duplicated learning needs to know it is the designed outcome rather than a defect"
+expects_from:
+  - ac_id: INF-400c-4
+    contract: "One sink per install, and the guarantee that concurrent APPENDS to it neither lose nor interleave records — this AC covers the routing side of the same sharing, not the writing side"
+  - ac_id: INF-700a-5
+    contract: "The rule that a record counts as written only once its write is published, and that the bookkeeping does not outlive the publication it rode — the property two concurrent routing steps must not break between them"
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_two_overlapping_routing_steps_write_the_same_learning_once
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive two completion paths in two isolated working directories of one install so that their routing steps genuinely overlap — both must have read the sink before either has finished. Merge both branches. Assert the learning appears once in the merged tree, and that exactly one of the two reported results counts it as written while the other says it did not. Overlap has to be real: a test that starts the second run after the first has returned exercises nothing this AC is about."
+  - name: test_neither_run_concludes_the_other_has_it
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The other half of the same race, and the one an over-eager arbitration produces. With the same overlapping pair, assert the learning is present in the merged tree at all — not zero writes because each run deferred to the other. Assert also that the record is not left eligible after a successful write, which would produce the duplicate on the next run instead."
+  - name: test_the_routing_bookkeeping_survives_two_runs_updating_it_at_once
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Run several overlapping pairs in a loop against one install. After each pair, assert the bookkeeping is readable, parses, and reflects both runs rather than only the last writer. A half-written state file is the failure that turns every subsequent run into a no-op or a re-run of everything, and it appears only under repetition — one pair can pass by luck."
+  - name: test_a_lost_learning_is_the_failure_the_arbitration_must_not_produce
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The asymmetry, as a negative control. Run the overlapping pair, then discard one branch without merging it. Assert the learning is in the merged tree — either because the surviving run wrote it, or because the record stayed eligible and a later completed unit of work did. A run that marked the record routed on the strength of the discarded branch's write goes red here. This is INF-700a-5's bookkeeping clause under concurrency, which is the condition that makes it easy to get wrong."
+  - name: test_concurrent_units_of_work_do_not_delay_or_fail_each_other
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Assert each of two overlapping units of work reports the same outcome, failure count and exit status it reports when run alone, and that both complete. An arbitration that makes one wait indefinitely on the other, or fails the loser, satisfies the write-once clause and breaks the package's fail-open rule; equality against the solo run is what catches it."
+  - name: test_removing_the_arbitration_makes_the_write_once_test_fail
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the completion paths driven through the workflow engine harness with the arbitration disabled"
+    description: "The anti-fire-and-forget control. With whatever arbitration is chosen disabled, assert the overlapping pair produces two writes. If it does not, the first test was passing on timing rather than on the arbitration, and every other descriptor here is meaningless. This test is what proves the mechanism is reached."
+test_rationale: |
+  Every descriptor requires a genuine overlap, because the entire subject is a
+  race and a sequential fixture cannot fail any of them. The last descriptor is
+  the one that keeps the rest honest: a concurrency test that passes because
+  the two runs never actually overlapped is indistinguishable from one that
+  passes because the arbitration worked, and this repository has shipped that
+  confusion in another form — a gate that was defined, tested and never
+  executed. Disabling the arbitration and requiring the failure to appear is
+  the only way to show the fixture reaches it. The bookkeeping descriptor loops
+  rather than running once because a torn write is probabilistic; a single pair
+  passing proves nothing about it.
+notes: |
+  WHY THIS IS AN L3 UNDER INF-700a-5 AND NOT A NEW L2. INF-700a-5 owns the rule
+  that a learning counts as written only when its write is published, and owns
+  the bookkeeping that must not outlive the publication it rode. Two routing
+  steps racing is that same bookkeeping under a second stress, and both failure
+  shapes here are that rule breaking — a duplicate is the same learning
+  published twice, and the loss is a record marked routed against a publication
+  that never arrived. It is an edge case of an existing behaviour rather than a
+  new behaviour, which is what makes it L3. INF-700a remains at five children;
+  nothing here needs a split.
+
+  WHY IT IS SPECIFIED NOW RATHER THAN WHEN IT BITES. Until the sink was shared
+  this condition could not arise: each working directory had its own sink and
+  its own bookkeeping, so two drives never saw the same record. Making one sink
+  serve the whole install is what creates the race, and it is created on a
+  system where parallel working directories are routine — three at once has
+  been observed. The concurrency is a direct consequence of the sink decision
+  and arrives with it.
+
+  THE MECHANISM IS NOT CHOSEN HERE, DELIBERATELY. A lock, an atomic state
+  swap, a claim written before the write, per-branch bookkeeping reconciled at
+  merge, or something else — any of them can satisfy these criteria and the IT
+  PO owns the choice. What the criteria fix is the outcome and the asymmetry:
+  of the two ways this fails, the duplicate is visible and survivable and the
+  loss is neither, so a mechanism that converts losses into duplicates is an
+  improvement and a mechanism that does the reverse is not, however much
+  cleaner the duplicate-free case looks.
+
+  BOUNDARY. INF-400c-4 owns concurrent APPENDS to the shared sink — that no
+  record is lost, truncated or interleaved on the way in. That half is close to
+  free with append-only writing. This record owns the ROUTING side, where the
+  contended thing is the bookkeeping beside the sink rather than the sink, and
+  where the cost of getting it wrong is a learning nobody will look for again.
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary

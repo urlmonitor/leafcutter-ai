@@ -154,8 +154,22 @@ naming is only safe under serial dispatch, which is not how epics run.
 
 - **Severity:** medium — silent, and it invalidates the corpus rather than just losing one record
 - **Status:** open — code and config are on `main` and live
-- **Occurrences:** 1
-- **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Occurrences:** 2 (2026-08-19; 2026-09-07, where it also caught a **second** affected agent)
+- **First seen:** 2026-08-19 · **Last seen:** 2026-09-07 (re-verified against `e5bb41b6d`)
+
+> **Second occurrence, 2026-09-07 — and the gap is wider than one agent.** Hit again while
+> closing out GE-120's outstanding phases. Re-verified: `grep -c 'ac-validator'
+> config/feedback_categories.yaml` → **0**, against **19** for `pr-reviewer` /
+> `documentation-verifier`, so this is a per-agent omission rather than a broken file.
+>
+> **`ac-fulfillment-gate` is affected too** — it is likewise in no category's
+> `allowed_writers`, and recorded `(submit-failed)` on the same run. Both are *required*
+> phase agents in the sign-off chain, and both are the AC-coverage gates specifically: the
+> two phases whose feedback is most worth having is exactly the feedback the corpus has never
+> received. Any remediation should register both, and should check the rest of the phase
+> roster rather than fixing the two that happened to be observed — the same
+> "fix the instances you caught, miss the class" shape as
+> `KI-CG-20260831-hook-scripts-never-invoked`.
 - **Where:** `config/feedback_categories.yaml` — the nine `allowed_writers` lists (lines 30, 56,
   82, 91, 119, 147, 176, 185, 212); `scripts/feedback/submit_feedback.py`
 

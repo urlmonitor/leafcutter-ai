@@ -55,38 +55,58 @@ ARCHITECTURE: This hook itself inspects the WHOLE registry, never a staged
     path filter.
 
     Per-gate rule (an ``enabled: false`` entry is skipped — intentionally
-    off, not a reachability question). This is a THREE-WAY verdict —
-    reachable / declared-exempt-with-ground / unreachable — reusing the
-    exemption vocabulary BP-100k-3 established for the drift gates
-    (``_drift_exemptions.py``: ``EXEMPT <key> ground=<text>``, with a
+    off, not a reachability question). This is a FOUR-WAY verdict —
+    reachable / nothing-to-match / declared-exempt-with-ground /
+    unreachable (BP-100k-4-ii added the "nothing-to-match" outcome; BP-
+    100k-4 / BP-100k-4-i established reachable/exempt/unreachable, reusing
+    the exemption vocabulary BP-100k-3 established for the drift gates —
+    ``_drift_exemptions.py``: ``EXEMPT <key> ground=<text>``, with a
     groundless entry REJECTED and falling through to the un-exempted
-    verdict) rather than inventing a third one:
+    verdict):
       - ``always_run: true`` AND a ``files`` key present -> UNREACHABLE
         (whole-tree gate carrying a filter it never consults — this shape
         is never exemptable, it is always a real authoring mistake).
       - ``always_run: true``, no ``files`` -> reachable.
       - ``files`` present (``always_run`` not true): compiled as a regex
         and ``re.search`` against every ``git ls-files`` path. One or more
-        matches -> reachable. Zero matches -> check the
-        ``hook_trigger_reachability_exemption_registry`` (a top-level key
-        of the SAME loaded registry, entries shaped ``{"id": <gate-id>,
-        "ground": <text>}``) for this gate's id. A valid (non-blank
-        ``ground``) entry -> EXEMPT (reported, not counted as unreachable,
-        never blocks). No entry, or a groundless one (rejected with
-        ``REJECTED EXEMPTION ENTRY: <id> reason=no ground stated``) ->
-        UNREACHABLE.
+        matches -> reachable. Zero matches:
+          - BP-100k-4-ii: if the pattern selects by file KIND rather than
+            LOCATION (no regex start-of-string anchor ``^`` on any
+            alternative — see ``has_location_anchor`` in
+            _hook_trigger_reachability_helpers.py) -> NOTHING-TO-MATCH
+            (reported by name, never blocks, never needs a stated
+            exemption ground — a project that has not yet acquired a file
+            of that kind is a gate with no work to do, not a gate that
+            could never fire).
+          - Otherwise (a location-anchored condition, unaffected by this
+            AC): check the ``hook_trigger_reachability_exemption_registry``
+            (a top-level key of the SAME loaded registry, entries shaped
+            ``{"id": <gate-id>, "ground": <text>}``) for this gate's id. A
+            valid (non-blank ``ground``) entry -> EXEMPT (reported, not
+            counted as unreachable, never blocks). No entry, or a
+            groundless one (rejected with ``REJECTED EXEMPTION ENTRY: <id>
+            reason=no ground stated``) -> UNREACHABLE.
       - neither key present -> reachable (pre-commit's own default: an
         absent ``files`` filter matches everything).
 
     "Zero matches in the CURRENT repository" is not always "cannot ever
     match" — a correctly-authored trigger for a file family this specific
-    checkout happens not to have (e.g. ``check-infra-docs``' docker-compose
-    pattern in a repo with no Docker infrastructure) is context-dependent,
-    not structurally dead, and must not be forced into ``always_run`` or a
-    rewritten pattern merely to satisfy this check (that would silently
-    convert a conditional gate into an unconditional one for every consumer
-    install). The exemption registry is the correct instrument for that
-    case, exactly as BP-100k-3 established for the drift gates.
+    checkout happens not to have is context-dependent, not structurally
+    dead, and must not be forced into ``always_run`` or a rewritten pattern
+    merely to satisfy this check (that would silently convert a conditional
+    gate into an unconditional one for every consumer install). BP-100k-4-ii
+    split this "not structurally dead" case in two, on whether the trigger
+    selects by KIND or by LOCATION:
+      - KIND-based (e.g. ``check-infra-docs``' docker-compose pattern,
+        ``check-placeholder-defaults``' ``\\.py$``): the COULD-EVER/DOES-NOW
+        distinction is drawn automatically by ``has_location_anchor`` and
+        reported NOTHING-TO-MATCH — no exemption entry is needed or
+        consulted.
+      - LOCATION-based (e.g. ``check-mermaid-parent-link``'s
+        ``docs/architecture/*.md``, a doc family a fresh scaffold has not
+        created yet): the exemption registry remains the correct
+        instrument, exactly as BP-100k-3 established for the drift gates —
+        this AC does not touch that path.
 
     CONSUMER BLAST-RADIUS NOTE (BP-100k-4-i): this registry ships to every
     consumer install verbatim. A gate whose ``files`` target lives inside
@@ -324,7 +344,7 @@ def _resolve_tracked_paths_or_reason(cwd: Path) -> tuple[list[str] | None, str |
 
 def _evaluate_all_gates(
     hooks: list[dict], tracked_paths: list[str], exemptions: dict[str, str]
-) -> tuple[int, int, int] | None:
+) -> tuple[int, int, int, int] | None:
     """Evaluate every hooks_manifest entry, printing per-gate diagnostics.
 
     BP-100k-4 round-2 hardening (F5, duplicate ids): a hooks-manifest id
@@ -339,7 +359,8 @@ def _evaluate_all_gates(
         exemptions: Valid gate-id -> ground map.
 
     Returns:
-        ``(total, unreachable, exempt)`` on completion, or None if a regex
+        ``(total, unreachable, exempt, nothing_to_match)`` on completion
+        (BP-100k-4-ii added the fourth counter), or None if a regex
         evaluation exceeded its wall-clock bound — in which case this
         function has already printed the ``INDETERMINATE`` line itself.
     """
@@ -354,6 +375,7 @@ def _evaluate_all_gates(
     total = 0
     unreachable = 0
     exempt = 0
+    nothing_to_match = 0
     for entry in hooks:
         if not isinstance(entry, dict) or entry.get("enabled") is False:
             continue
@@ -384,8 +406,11 @@ def _evaluate_all_gates(
         elif verdict == "exempt":
             exempt += 1
             print(f"EXEMPT: {display_id} ground={detail}", file=sys.stderr)
+        elif verdict == "nothing_to_match":
+            nothing_to_match += 1
+            print(f"NOTHING-TO-MATCH: {display_id} reason={detail}", file=sys.stderr)
 
-    return total, unreachable, exempt
+    return total, unreachable, exempt, nothing_to_match
 
 
 def _apply_duplicate_id_override(
@@ -444,7 +469,8 @@ def main() -> int:
     """Entry point for the pre-commit hook.
 
     Returns:
-        0 when every non-skipped gate is reachable (determinate run); 1
+        0 when no gate is UNREACHABLE (determinate run — a gate reported
+        NOTHING-TO-MATCH per BP-100k-4-ii never counts against this); 1
         when one or more gates are unreachable; 2 when reachability could
         not be determined at all (registry unreadable, no evaluable gates,
         an unobtainable or empty tracked-path set, or a regex evaluation
@@ -473,10 +499,11 @@ def main() -> int:
     counts = _evaluate_all_gates(hooks, tracked_paths, exemptions)
     if counts is None:
         return 2
-    total, unreachable, exempt = counts
+    total, unreachable, exempt, nothing_to_match = counts
 
     print(
-        f"{_GATE_NAME}: RESULT total={total} unreachable={unreachable} exempt={exempt}",
+        f"{_GATE_NAME}: RESULT total={total} unreachable={unreachable} "
+        f"exempt={exempt} nothing_to_match={nothing_to_match}",
         file=sys.stderr,
     )
 
@@ -562,4 +589,31 @@ if __name__ == "__main__":
 #   `check_command_reachability`) is a DIFFERENT gate in
 #   scripts/build_phases.py, out of this module's scope — not addressed
 #   here. See /tmp/review_logic_round2.md and /tmp/review_code_round2.md.
+# - 2026-09-07 [python-coder/BP-100k-4-ii] (KI-CG-20260831-0713): the
+#   UNREACHABLE verdict was too strict in the opposite direction from
+#   BP-100k-4-i — a kind-based `files` condition (no location anchor, e.g.
+#   `\.py$`) matching zero of THIS checkout's tracked paths was reported
+#   UNREACHABLE exactly like a condition naming a location no checkout
+#   could ever produce, so a fresh adopter tracking no Python could not
+#   make a first commit at all (two registered Python-kind gates,
+#   check-placeholder-defaults / check-exception-handling, both tripped).
+#   Added a fourth verdict, NOTHING-TO-MATCH (own diagnostic line, own
+#   RESULT counter `nothing_to_match=<n>`, never blocking), drawn by
+#   `_hook_trigger_reachability_helpers.has_location_anchor` on the
+#   could-ever/does-now line: a condition with no regex start-of-string
+#   anchor selects by KIND and can always eventually match SOME checkout,
+#   so a zero-match today never makes it structurally unreachable — no
+#   exemption ground is required or consulted. A location-anchored
+#   condition is completely untouched: it still requires an exemption
+#   entry or is UNREACHABLE, exactly as before this AC. `check-infra-docs`'
+#   exemption entry in commit_guardian.json was removed as redundant under
+#   the new automatic classification; `check-mermaid-parent-link` (a
+#   location-anchored, `^docs/architecture/.*\.md$` pattern) keeps its
+#   entry unchanged. `HOOK_TRIGGER_DISABLE_KIND_DISTINCTION=1` is a
+#   test-only escape hatch restoring the pre-fix behavior (required by
+#   test_bp_100k_4_ii.py's mutation-proof test). Deliberately narrow in
+#   scope, per this AC's own constraints: does not widen which HOOKS this
+#   check inspects (BP-1600a-2 and siblings, "the check walks only
+#   registered hooks", remain a separate, unbuilt-as-of-this-AC defect).
+#   (#BP-100k-4-ii)
 # ====================================================================

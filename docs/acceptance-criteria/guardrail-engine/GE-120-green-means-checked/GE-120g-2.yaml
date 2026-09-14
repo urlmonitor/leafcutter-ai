@@ -1,0 +1,172 @@
+id: GE-120g-2
+title: "A commit is refused only because a check objected, and a set of verdicts that objects to nothing always lets it through"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a working copy that excludes nothing from version control, and in which the
+    byproducts an earlier run of the checks left beside them are already tracked
+    content,
+  And a change is staged that every registered check accepts,
+  When the author performs an ordinary commit — no extra command, no extra flag, and
+    nothing invoked by hand,
+  Then every check reports that it found nothing to object to,
+  And the commit completes, and no reason for refusing it is reported at all,
+  And given instead a change is staged that exactly one check objects to, every other
+    check accepting it,
+  When the author performs an ordinary commit,
+  Then the commit does not complete,
+  And the reason reported is that check's objection, naming the check and what it
+    objected to,
+  And whenever a commit does not complete, at least one check has reported an
+    objection — the running of a check is never itself the reason, however that run
+    went and whatever it left behind.
+depends_on:
+  - GE-120g
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120g.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120g-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ONLY KNOWN MECHANISM BY WHICH THIS RECORD IS VIOLATED TODAY, AND THE REASON THE
+      TWO ARE SEPARATE ANYWAY. GE-120g-1 requires an attempt to leave the working copy
+      untouched; that closes the one route to an objection-free refusal anyone has observed.
+      It does not close this record: an implementation that stops one source of tree
+      alteration satisfies GE-120g-1 completely and leaves the provenance of a refusal
+      unproven. Do not close either as a duplicate of the other, and do not satisfy this one
+      by citing that one's implementation.
+  - path: templates/scripts/commit_guardian/run_hook.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE SHARED RUNNER ALL 62 REGISTERED CHECKS ARE DISPATCHED THROUGH, so the provenance
+      of a refusal is decided in one place for the whole family. NOTE FOR THE MUTATION: this
+      template is canonical and the copy the checks run from is the installed one; a change
+      applied to the template alone does not land and fails GREEN.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: configures
+    status: exists
+    relevance: >-
+      The population this criterion is written over — every registered entry, all dispatched
+      through the one runner. Measured in this worktree 2026-09-07: 62 entries, all with a
+      declared role. GE-120e's "54" is stale and must not be cited.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SIBLING THIS IS MOST OFTEN MISTAKEN FOR. GE-120e is "a block is always about
+      something you actually did" — a real objection attributed to the wrong author, scoped
+      to a check assuming the staged change is the author's change. This record is the case
+      where NO check objected to anything and the commit was refused regardless. GE-120e is
+      at its five-child cap and its children are cut around the staged-change assumption,
+      which this defect does not involve.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      EXPLICITLY OUT OF SCOPE AND DELIBERATELY NOT ORPHANED. A check that cannot be started
+      at all reporting a reason instead of failing out of the run is GE-120a's subject
+      verbatim; it shipped alongside the behaviour this tree specifies and is recorded as a
+      known, uncovered, already-shipped behaviour rather than folded in here. GE-120a is at
+      its five-child cap. Raise it with the user rather than absorbing it into either clause
+      below.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      READ-ONLY CONTEXT. Every mechanism catalogued there is a false GREEN; a refusal nobody
+      asked for is a false RED, which is why this shape is missing from it. A companion entry
+      is recommended by the parent; this record is not discharged by writing one.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding here. Every clause
+      is an outcome of attempting a real commit; a descriptor that invokes one check by hand
+      cannot observe this property at all, because the refusal under test is produced by the
+      surrounding run and not by any check's own result.
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE FALSIFIABLE ARM AND IT MUST NOT BE COLLAPSED INTO GE-120g-1. The parent states
+  the two behaviours as one L1 because tree alteration is the only known mechanism by which
+  refusal provenance is violated today. They are not the same claim. An implementation that
+  merely stops one source of alteration satisfies GE-120g-1 in full and leaves this record
+  unproven, which is exactly why the parent requires it to carry its own coverage.
+
+  THE PAIR IS MANDATORY — EACH HALF ALONE IS DISCHARGED BY A DEGENERATE IMPLEMENTATION. A
+  criterion that only says "a clean set of verdicts lets the commit through" is satisfied by
+  a run that refuses nothing ever. A criterion that only says "an objection refuses the
+  commit" is satisfied by a run that refuses everything. Both directions are stated above and
+  a descriptor may not drop either.
+
+  ARRIVAL COLOURS, STATED SO A GREEN IS NOT MISTAKEN FOR PROGRESS. Both positive directions
+  are green today in this repository, and the absence-asserting final clause is green here
+  too — but only because this repository's own exclusion file makes the live condition latent
+  (verified 2026-09-07, .gitignore lines 41-42 pass over the compiled-module cache). The
+  observed incident is the counter-example: an ordinary commit of a compliant file was refused
+  while the gate itself reported a clean pass. A run in this repository that comes up green
+  has not exercised the property.
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE — EXECUTE IT, DO NOT DESCRIBE IT. The clause
+  is "whenever a commit does not complete, at least one check has reported an objection".
+
+    SEEDING (mandatory, order load-bearing, and identical to GE-120g-1's — build it once and
+    share it). A working copy in the fresh-install shape: the checks installed and NO
+    exclusion entry covering what a delegated check leaves beside them, in particular the
+    interpreter's compiled-module cache directory and its files. Then IN THIS ORDER: (1) run
+    one check once so those files come into existence; (2) `git add -A` so they become tracked
+    content; (3) commit that as the fixture baseline. Seeding before the run stages nothing
+    and the mutation then passes.
+
+    INJECTION: revert the runner's environment helper so the delegated check process is
+    launched bare, with no environment argument — the state before the shipped fix. Under that
+    injection, in the seeded fixture, an ordinary commit of a change every check accepts is
+    refused while every check reports that it found nothing to object to. This clause must go
+    RED, and the assertion that fails must be the PROVENANCE one: a refusal was reported and
+    no check reported an objection. Revert must restore it.
+
+    THE PAIRED CONTROL THAT MAKES THE MUTATION EVIDENCE. Under the same injection, the
+    objection direction must stay GREEN — a change one check objects to is still refused with
+    that check named. A mutation run in which both directions go red has broken the fixture,
+    not demonstrated the property.
+
+    IF THE MUTATION DOES NOT GO RED, THE FIXTURE IS WRONG — NOT THE RECORD. Treat a green
+    mutation run as a defective fixture. This repository cannot be the fixture as it stands,
+    and a proof run here and reported as passing is a false green about a false red.
+
+  WHAT THIS RECORD DOES NOT OWN. It does not own whether an objection is attributed to the
+  right author (GE-120e), whether a check that cannot be started says so (GE-120a, at its
+  cap, escalated), whether the working copy is altered (GE-120g-1), or whether a fresh install
+  carries an exclusion file (BP-900). A clause reaching for any of those has been
+  mis-decomposed.
+
+  NO COUNT OF INSTANCES IS STATED OR IMPLIED, DELIBERATELY. How many judging checks alter the
+  working copy by a route other than the compiled-module cache has not been measured and the
+  parent forbids assuming it. This criterion is written over the outcome of an attempt, not
+  over a population of mechanisms.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's.

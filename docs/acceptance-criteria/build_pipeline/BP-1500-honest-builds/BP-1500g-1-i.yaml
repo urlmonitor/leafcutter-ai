@@ -1,0 +1,161 @@
+id: BP-1500g-1-i
+title: "The opt-in mode whose purpose is removal still does not remove the adopter's work, wherever they put it"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given the same project and the same adopter-authored capability as BP-1500g-1,
+  When that project is rebuilt using the opt-in mode whose stated purpose is to
+    clear out what the package no longer produces,
+  Then the adopter's capability is present when the run ends, with its contents
+    unchanged byte for byte,
+  And the tool which runs capabilities in that project still discovers it by name
+    and runs it,
+  And this holds both when the adopter placed their capability among the content
+    the package generates and when they placed it apart from that content, so
+    there is no placement in which running the build in this mode forfeits their
+    work,
+  And an adopter can find out what this mode would remove from their project
+    without having to run it and observe the removal.
+depends_on:
+  - BP-1500g-1
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-009's first half is this case, and it is the half that WAS empirically confirmed first: an adopter capability placed inside the generated tree was removed by an opt-in clean run on 2026-08-25 and the run reported success. The same entry records that the mode has no way to show what it would do short of doing it, which is what the last Then clause addresses."
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+    relevance: "Holds the artifact-clearing step this mode invokes. Read it together with the link-install step -- the removal reaches the adopter's content by following the link into the generated tree, so the two locations are one location in practice."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500b-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "BOUNDARY. That AC already requires a pre-flight for the sweep it specifies. The last Then clause here is the same need reaching the mode that exists TODAY, which is destructive today and independent of whether that sweep is ever built. Do not satisfy this by pointing at that requirement, and do not restate its provenance rule."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE ENFORCEMENT POINT FOR THIS AC IS `clean_stale_artifacts` IN `scripts/build_phases.py`, DRIVEN BY `_MANAGED_ARTIFACT_DIRS`, AND IT IS A DIFFERENT POINT FROM BP-1500g-1's. Verified on origin/main 1cce5b48a: `--clean` is declared `action=store_true` and defaults to False, and the call is gated behind `if args.clean:` in `build.py`. So this path does NOT run on the reported no-flag reproduction, and BP-1500g-1's repair does not reach it: `clean_stale_artifacts` never consults `_PRE_CONSOLIDATION_PATHS` at all. Satisfying BP-1500g-1 and stopping here leaves KI-BP-009's originally-confirmed half live."
+  - "THE MECHANISM IS TRAVERSAL THROUGH THE LINK, AND THAT IS WHY THE THIRD Then CLAUSE IS A PINCER AND NOT TWO CASES. `clean_stale_artifacts` resolves its managed directory under the target's `.claude/` and iterates it; because that path is a symlink into the generated tree, `iterdir()` walks INTO the generated tree, and the removal branch `rmtree`s any entry that is a real directory absent from the recomputed manifest. So the inside-the-generated-tree placement and the at-the-discoverable-location placement are ONE location reached two ways. An implementation that guards one and not the other has not closed the pincer, it has moved it."
+  - "THE REMOVAL DECISION MUST OBTAIN THE SAME OWNERSHIP VERDICT BP-1500g-1 ESTABLISHES, not a second independently-maintained rule. Two rules that agree today are the same defect as two tables that agree today -- see BP-1500g-1's measured eight-of-eleven overlap. If this path cannot reach that verdict, that is a finding to raise, not a reason to re-derive it here."
+  - "PRE-FLIGHT IS AN OUTCOME, NOT A NAMED OPTION. The last Then clause requires an adopter to be able to learn what this mode would remove WITHOUT the removal occurring; the surface is the implementer's to choose. The measured obstacle: `clean_stale_artifacts` takes no dry-run parameter and the `--clean` dispatch has no dry-run branch, which is exactly why KI-BP-009's first half sat unconfirmed for six days while the reporter -- correctly -- refused to run it. Whatever is built must be safe to run on a production install by someone who does not trust it."
+  - "THE PRE-FLIGHT AND THE REAL RUN MUST AGREE EXACTLY. A preview that lists a different set from what the run removes is worse than no preview: it converts a known hazard into a trusted one. This is the same requirement BP-1500b-4 states for its own `--dry-run`; state it here for the mode that exists TODAY rather than pointing at that AC, whose sweep does not exist."
+  - "KI-BP-010 IS IN THE SAME FUNCTION AND MUST NOT BE FIXED SILENTLY BY THIS WORK. `_MANAGED_ARTIFACT_DIRS` mixes two path conventions -- three bare subdirectory names and `workflows` carrying a `.claude/` prefix -- so the workflows entry resolves to a doubled segment and has never run. Normalising the dict while implementing this AC would ACTIVATE a removal path over a directory that has never been swept, on a build whose safety over adopter-occupied trees is the very thing under repair. KI-BP-010's own entry says to sequence the two deliberately. Either leave it and cite KI-BP-010, or fix it and prove the activated path obeys this AC -- do not normalise it in passing."
+  - "Must be idempotent: running the opt-in mode twice leaves the adopter's content byte-identical after both runs and reports no second removal."
+  - "Must follow the project error handling policy on every filesystem operation; a swallowed OSError in a removal loop turns a partial deletion into an unreported one."
+test_spec:
+  - name: test_bp_1500g_1_i_clean_mode_does_not_delete_an_adopter_capability_placed_inside_the_generated_tree
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter> --clean"
+    description: "KI-BP-009's EMPIRICALLY CONFIRMED HALF, reproduced as a test and red against today's build. Place an adopter-authored capability inside the generated tree, run a real `--clean` build subprocess, assert it is present with identical bytes and does not appear in the output as a removed stale artifact. Confirmed destructive on 2026-08-25 on a scratch adopter."
+  - name: test_bp_1500g_1_i_clean_mode_does_not_delete_an_adopter_capability_placed_at_the_discoverable_location
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter> --clean"
+    description: "The other arm of the pincer, under the SAME mode. Adopter capability at the discoverable location as a real directory rather than inside the generated tree; a real `--clean` subprocess; survives byte-identical. Together with the entry above this is the third Then clause: neither placement forfeits the work. Two tests, one clause, and passing only one is the status quo."
+  - name: test_bp_1500g_1_i_the_surviving_capability_is_still_discovered_by_name_after_a_clean_run
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter> --clean"
+    description: "The second Then clause. After the `--clean` run the adopter's capability resolves by its own name through the consuming tool's discovery path -- survives USABLE, not merely on disk."
+  - name: test_bp_1500g_1_i_an_adopter_can_learn_what_clean_mode_would_remove_without_removing_anything
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The last Then clause, asserted as an outcome rather than against a named flag: over a tree holding a genuine orphan and adopter content, the pre-flight surface names the orphan, and every file in the tree -- orphan included -- is byte-identical afterwards. The test must locate the surface from the build's own advertised interface, not assume a flag name, since the AC deliberately leaves the surface open."
+  - name: test_bp_1500g_1_i_the_preflight_list_and_the_real_removal_list_are_identical
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Over one mixed tree: capture the pre-flight's set, then run the real mode on a pristine copy of the same tree and capture what it actually removed. The two sets are equal. A preview that under-reports is the failure that makes a pre-flight worse than none, and it is not reachable by testing either side alone."
+  - name: test_bp_1500g_1_i_clean_mode_still_removes_a_genuine_package_orphan
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "THE OVER-CORRECTION CONTROL, and the reason this contract is not satisfiable by disabling the mode. An artifact the package genuinely produced in an earlier version and no longer ships is still removed by the same run in which the adopter's content survived. Without this entry, `if args.clean: pass` passes every other entry here."
+  - name: test_bp_1500g_1_i_two_consecutive_clean_runs_leave_the_adopter_content_byte_stable
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Idempotency for the destructive mode specifically: the second run neither removes the adopter content nor reports a second removal."
+test_rationale: |
+  THE TWO PLACEMENT ENTRIES ARE THE CLAUSE, NOT A DUPLICATED CASE. The third
+  Then clause is a pincer -- there must be NO placement in which running this
+  mode forfeits the work -- and a pincer cannot be asserted by one test. The
+  status quo passes each arm separately depending on where the fixture puts the
+  file, which is precisely how the defect survived: the reporter found one arm
+  in August and the other in September, and each looked like a complete
+  finding on its own.
+
+  THE ORPHAN-STILL-REMOVED ENTRY IS LOAD-BEARING AND IS THE FIRST THING A
+  TRIMMED CONTRACT WOULD LOSE. Every other entry in this contract asserts that
+  something SURVIVED, and a mode that does nothing satisfies all of them. This
+  AC is about a destructive mode continuing to do its job safely, not about
+  neutering it, and only a positive entry can tell those apart.
+
+  THE PRE-FLIGHT PARITY ENTRY EXISTS BECAUSE HALF A PRE-FLIGHT IS A TRAP. A
+  preview the adopter trusts and that under-reports converts a hazard they
+  were correctly refusing to run into one they run confidently. Neither side
+  tested alone catches divergence; only the differential does.
+
+  ALL BEHAVIOURAL ENTRIES INVOKE A REAL BUILD SUBPROCESS. A direct unit test of
+  `clean_stale_artifacts` over a synthetic directory does not traverse a real
+  symlink into a real generated tree, and the traversal IS the mechanism -- a
+  mocked fixture reproduces the bias that let this ship.
+
+  RUNTIME. Seven entries, five real build subprocesses over small scratch trees.
+  Inside the done-proof pytest budget as fixed by PR #706 (30s collection floor,
+  300s per linked test file, overridable via
+  LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS). Not shaped by the retired 60s
+  ceiling and not to be trimmed toward it.
+delivers_to: null
+expects_from:
+  ac_id: BP-1500g-1
+  contract: "The recomputed ownership verdict owns(installed_path) -> {package_produced | adopter_owned | unattributable}, obtained per candidate BEFORE any removal, with anything other than package_produced acting as a veto. This AC must consume that verdict rather than derive a second rule for the opt-in path -- `clean_stale_artifacts` does not read `_PRE_CONSOLIDATION_PATHS`, so without an explicit consumption the two paths end up with independent notions of ownership, which is the two-disagreeing-tables defect reproduced one level down."
+origin_agent: BrainCandy
+created: 2026-09-08
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-08'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (M), it_requirements, test_spec, test_rationale and expects_from. Criteria, title, depends_on and doc_links UNCHANGED; readiness remains draft. FINDINGS ADDED, verified against origin/main 1cce5b48a. (1) This AC's enforcement point is `clean_stale_artifacts` / `_MANAGED_ARTIFACT_DIRS` in `scripts/build_phases.py`, and it is genuinely disjoint from BP-1500g-1's: `clean_stale_artifacts` never reads `_PRE_CONSOLIDATION_PATHS`, so BP-1500g-1's repair does not reach it -- confirmed by reading both functions, not inferred. `--clean` is `store_true`, default False, gated by `if args.clean:`. (2) The mechanism is `iterdir()` traversing THROUGH the shim symlink into the generated tree, which is why the AC's two placements are one location and the third Then clause is a pincer; the test contract carries one entry per arm for that reason. (3) SEQUENCING HAZARD RAISED, NOT RESOLVED: KI-BP-010 (the doubled `.claude/` segment on the `workflows` entry of `_MANAGED_ARTIFACT_DIRS`) sits in the same dict, and normalising it during this work would ACTIVATE a never-run removal path over a directory whose safety is the subject of this very AC. KI-BP-010's own entry asks for deliberate sequencing; an it_requirement now says do not fix it in passing. (4) An over-correction control was added to the contract because six of the seven entries assert survival and `if args.clean: pass` would satisfy all six."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  WHY THIS IS AN L3 UNDER BP-1500g-1 AND NOT A SIBLING L2. It is the same outcome
+  -- the adopter's work survives -- reached down a second route. Splitting it to
+  its own L2 would have implied two guarantees an implementer could deliver
+  separately, and the observed defect is precisely that they cannot be: closing
+  one route while leaving the other open leaves the adopter with no safe placement,
+  which is the status quo. The third Then clause states that pincer directly and
+  is the clause to check an implementation against.
+
+  THE LAST CLAUSE IS NOT A NICETY. A destructive mode whose only means of
+  observation is to perform the destruction cannot be verified by the people most
+  exposed to it, and it is why the first half of KI-BP-009 sat unconfirmed for six
+  days while the reporter -- rightly -- declined to run it. It is written as an
+  outcome ("can find out what would be removed") rather than as a named option, so
+  the implementer chooses the surface.

@@ -1700,12 +1700,14 @@ class TestBP600WorkflowMutationProof:
             f"test is not coupled to the fix. Labels dispatched: {labels}"
         )
 
-    def test_ac_bp600c3_fix_left_stashed_halts_with_recovery_instructions(self):
+    def test_ac_bp600c3_fix_left_reverted_halts_with_recovery_instructions(self):
         # covers: BP-600c-3
-        """When fix_restored is false (the mandatory stash-pop step did not
-        complete), the run must halt with a message telling the user the fix
-        is still stashed — losing the user's fix in a stash is the worst
-        outcome this workflow can produce, so the halt message must say so."""
+        """When fix_restored is false (the mandatory restore step did not
+        complete), the run must halt naming the file that holds the fix —
+        losing the user's fix is the worst outcome this workflow can produce.
+        Per BP-600c-3-ii that file is the /tmp backup, not a stash entry: an
+        unqualified pop takes whatever is on top of a stack shared with every
+        other session, and doing so destroyed one session's work."""
         result = run_workflow_under_e2(
             _JS_PATH,
             label_responses=_full_success_responses(
@@ -1723,12 +1725,12 @@ class TestBP600WorkflowMutationProof:
         assert result.result.get("status") == "blocked"
         assert result.result.get("halt_reason") == "mutation_proof_incomplete"
         message = result.result.get("message", "")
-        assert "stash" in message.lower(), (
-            "The halt message must tell the user the fix may still be stashed "
-            f"and how to recover it. Got: {message}"
+        assert "-fixed.bak" in message and "stash" not in message.lower(), (
+            "The halt message must name the /tmp backup copy holding the fix, "
+            f"and must not point at the stash stack (BP-600c-3-ii). Got: {message}"
         )
         assert "commit" not in _labels(result), (
-            "Commit must not be dispatched while the fix might still be stashed."
+            "Commit must not be dispatched while the fix might still be reverted."
         )
 
 

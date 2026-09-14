@@ -1,0 +1,80 @@
+id: UXP-514-4
+title: "D4: a step naming a screen with no registered mockup is named, and gates on approval"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a journey step naming a screen for which no screen artifact is registered,
+  When the record is checked,
+  Then the check reports that step, naming the journey, the step and the unregistered screen,
+  And that report is a warning while the journey is not approved,
+  And that report stops the work that triggered the check once the journey is approved,
+  And a step naming a registered screen is not reported.
+depends_on:
+  - UXP-514
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-514.yaml"
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-3.yaml
+    relationship: context
+    status: exists
+    relevance: "The general anti-vacuity rule these four checks are instances of."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-514
+  contract: "The umbrella drift check this record is one of the four named parts of."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/scripts/validate_product_truth.py
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  This check has two outcomes decided by the journey's approval state, so a single fixture
+  cannot prove it: the same unregistered screen must be shown to warn under one approval state
+  and to block under the other. Asserting only the blocking case would pass an implementation
+  that always blocks, which would stop work on every draft journey.
+test_spec:
+  - name: test_unregistered_screen_on_an_unapproved_journey_warns
+    target_dir: unit_tests/product_truth/
+    description: "A step naming an unregistered screen in a draft journey produces a warning and does not stop the caller."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_unregistered_screen_on_an_approved_journey_stops_the_caller
+    target_dir: unit_tests/product_truth/
+    description: "The same step in an approved journey produces a blocking finding naming the journey, the step and the screen."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_registered_screen_is_not_reported
+    target_dir: unit_tests/product_truth/
+    description: "A step naming a registered screen produces no D4 finding under either approval state."
+    type: integration
+    angle: criterion
+    framework: unittest
+notes: |
+  D4 of the four checks UXP-514 names.
+
+  INTERACTION WITH UXP-700d. Today the only registered screens are the 10 fern-and-fig example
+  mockups. Once example content is separated from a project's own record (UXP-700d-1), a step in
+  a project-owned journey must not resolve its screen against the example product's registry, or
+  D4 will pass by pointing at plant-shop screens. Whoever builds UXP-700d-1 must re-check this
+  record.

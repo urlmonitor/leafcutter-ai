@@ -1,0 +1,80 @@
+id: UXP-514-2
+title: "D2: a criterion whose back-reference disagrees with the inverted links is named"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given an acceptance criterion carrying a back-reference to a journey step that no longer names
+    it,
+  When the record is checked,
+  Then the check reports that criterion by identifier, stating the back-reference the criterion
+    holds and the back-reference produced by inverting the journey-to-criterion links,
+  And a criterion named by a journey step but carrying no back-reference is reported separately,
+    as a missing back-reference rather than as a disagreeing one,
+  And a criterion whose held back-reference equals the inverted one is not reported,
+  And the check states how many criteria it inverted.
+depends_on:
+  - UXP-514
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-514.yaml"
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-3.yaml
+    relationship: context
+    status: exists
+    relevance: "The general anti-vacuity rule these four checks are instances of."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-514
+  contract: "The umbrella drift check this record is one of the four named parts of."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/scripts/validate_product_truth.py
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  The two failure directions - a back-reference that should not be there, and one that should be
+  and is not - have different causes and different fixes, so an implementation that reports them
+  through one message is not actionable. They therefore need separate fixtures and separate
+  assertions. Testing against the live store is useless here for the same reason as D1: the
+  generator writes what the validator inverts.
+test_spec:
+  - name: test_stale_back_reference_is_reported_with_held_and_inverted_values
+    target_dir: unit_tests/product_truth/
+    description: "A criterion holding a back-reference to a step that no longer names it produces a finding stating both values."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_missing_back_reference_is_reported_separately_from_a_stale_one
+    target_dir: unit_tests/product_truth/
+    description: "A criterion named by a step but holding no back-reference produces a distinct missing-back-reference finding."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_agreeing_back_reference_is_not_reported
+    target_dir: unit_tests/product_truth/
+    description: "A criterion whose back-reference equals the inversion produces no D2 finding."
+    type: integration
+    angle: boundary
+    framework: unittest
+notes: |
+  D2 of the four checks UXP-514 names. The separate-reporting clause is new relative to UXP-514,
+  which folds "differs" and "carries one no flow references" into a single And; they are
+  different defects and the split is deliberate.

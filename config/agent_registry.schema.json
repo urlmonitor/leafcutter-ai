@@ -42,12 +42,29 @@
         },
         "tier": {
           "type": "string",
-          "enum": ["supervisor", "phase", "utility"],
-          "description": "supervisor = orchestration layer; phase = appears in ticket agents: maps; utility = helper spawned by other agents."
+          "enum": ["supervisor", "phase", "utility", "standalone"],
+          "description": "supervisor = orchestration layer; phase = appears in ticket agents: maps; utility = helper spawned by other agents; standalone = dispatched directly by the user outside both the ticket-phase flow and the supervisor hierarchy (e.g. code-review-architect, find-structural-smells, find-design-smells)."
         },
         "role": {
           "type": "string",
           "description": "Functional role — e.g. orchestration, coding, review, commit, documentation, analysis."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Longer-form human-readable summary of the agent, distinct from the template's own frontmatter description. Consumed generically by scripts/knowledge_query.py (and the knowledge-graph visualiser built on it) as the node label for this agent in the cross-surface knowledge graph. Optional — populate when the agent should be discoverable/described in that graph; as of 2026-08-31 populated on 13/60 agents (the AC-pipeline family), not yet backfilled elsewhere."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["implementation", "planning", "testing", "research", "supervisor"],
+          "description": "Functional-domain category, keyed against the top-level 'agent_categories' map (default_tools, signoff_capable, spawn_constraints per category). Distinct from and additive to 'tier' (tier = supervisor-hierarchy role; category = functional domain for capability inference). Read by scripts/registry_validator.py (_check_agent_categories) and scripts/propose_agent_self_description.py. Optional — absent on the two template-less inline sub-agents (architect-review-deep, conflict-resolver-deep) that have no template to derive it from."
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Component ids (from docs/architecture/components.json, the two-axis component-vocab SSOT) this agent belongs to. Read by scripts/check_component_vocab.py and scripts/backfill_registry_components.py. Populated on 60/60 agents as of 2026-08-31."
         },
         "portable": {
           "type": "boolean",
@@ -102,10 +119,116 @@
           "minItems": 0,
           "description": "Skills this agent loads at runtime. Used to generate agent-to-skill mapping diagrams and per-agent injection (ticket 29). Required field; use [] when the agent loads no skills."
         },
+        "skills_invoked": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Bare skill id — equivalent to {skill_id: <value>, mode: unspecified}. Used when no mode/descriptive_only detail is tracked."
+              },
+              {
+                "type": "object",
+                "required": ["skill_id"],
+                "properties": {
+                  "skill_id": {
+                    "type": "string"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": ["always", "conditional"],
+                    "description": "always = invoked unconditionally; conditional = invoked only under a runtime condition described in the agent template."
+                  },
+                  "descriptive_only": {
+                    "type": "boolean",
+                    "description": "True when the skill reference is prose-only in the template body (not a structural invocation) — read by build_phases.py's skills_invoked cross-reference check (BP-1300a-1 / INF-600d-1) to avoid false-positive drift warnings."
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "description": "Structured record of skills this agent invokes, superseding the flat skills_used list with per-skill mode/descriptive_only detail. Cross-referenced against each agent's template body by scripts/build_phases.py (check_skills_invoked_xref) — a mismatch is currently a [WARNING], not a build failure (see KI-AR-003). Optional — absent on the two template-less inline sub-agents (architect-review-deep, conflict-resolver-deep)."
+        },
+        "knowledge_channels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["channel", "source"],
+            "properties": {
+              "channel": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 11,
+                "description": "Which of the 11 Agent Knowledge Plane channels (docs/architecture/agent_knowledge_plane.md) this entry documents."
+              },
+              "source": {
+                "type": "string",
+                "description": "Human-readable name of the concrete source feeding this channel for this agent."
+              },
+              "injection_mode": {
+                "type": "string",
+                "description": "When this source is injected relative to agent execution (e.g. always, on-demand, spawn-scoped, ticket-scoped)."
+              },
+              "description": {
+                "type": "string",
+                "description": "One-line elaboration on what this channel/source provides."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Documents which of the 11 Agent Knowledge Plane channels this agent draws on and from where. Range-validated (channel 1-11) and resolvability-checked by scripts/build_phases.py's self-description build guard. Optional — absent on the two template-less inline sub-agents (architect-review-deep, conflict-resolver-deep)."
+        },
+        "doc_links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "label"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Repo-relative path to the referenced doc."
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable link text."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Documentation cross-links rendered into the agent's generated card ('## References' section) by scripts/generate_agent_cards.py, which also warns when a linked path does not exist on disk (INF-600b-1-i). Optional — populated on 1/60 agents (python-coder) as of 2026-08-31; not yet backfilled elsewhere."
+        },
+        "behavioral_patterns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["pattern_id", "trigger", "action", "decision_boundary"],
+            "properties": {
+              "pattern_id": {
+                "type": "string",
+                "description": "Short identifier for the conditional behavior, e.g. 'delegate-to-specialist'."
+              },
+              "trigger": {
+                "type": "string",
+                "description": "The condition under which this behavior fires."
+              },
+              "action": {
+                "type": "string",
+                "description": "What the agent does when the trigger fires."
+              },
+              "decision_boundary": {
+                "type": "string",
+                "description": "The explicit boundary distinguishing this behavior from its alternatives."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Conditional behaviors this agent exhibits, rendered as a table in its generated card's Contributor Notes section by scripts/generate_agent_cards.py (INF-600a-6, INF-600b). An agent with no conditional behaviors should carry an empty array rather than omitting the field, per INF-600a-6-i. Optional at the registry level — populated on 1/60 agents (documentation-expert) as of 2026-08-31; the richer per-template-frontmatter form is far more widely adopted."
+        },
         "priority": {
-          "type": "integer",
+          "type": "number",
           "minimum": 1,
-          "description": "Execution-order priority for ticket-phase agents. Lower numbers run first. ticket-supervisor uses this to determine canonical phase ordering. Non-ticket-phase agents may omit this field."
+          "description": "Execution-order priority for ticket-phase agents. Lower numbers run first. ticket-supervisor uses this to determine canonical phase ordering. Non-integer values (e.g. 11.5) are used deliberately to insert a new phase between two existing integer priorities without renumbering the rest of the sequence — see user-surface-smoker (11.5), live-surface-tester (11.8), documentation-verifier (11.9), ac-validator (11.5), ac-fulfillment-gate (11.7). Non-ticket-phase agents may omit this field."
         },
         "priority_rationale": {
           "type": "string",
@@ -116,9 +239,25 @@
           "type": "boolean",
           "description": "When true, every ticket that marks this agent 'needed' must include a '### <agent-id>' subheading under '## Implementation Tasks'. The parity guard (check_ticket_signoff_parity.py) enforces this at commit time. Agents that sign off on substantive artifacts (coders, test-writer, doc-authors) set this true; agents that only produce sign-off output (reviewer, commit, pull-request) set this false."
         },
+        "conditional": {
+          "type": "boolean",
+          "description": "When true, this agent is only added to a ticket's agents: map when the ticket-frontmatter field named by conditional_field (or conditional_field_legacy) is set. Mechanically checked for documentation-verifier by unit_tests/test_bo_2200b_1.py (AC BO-2200b-1); the analogous checks for user-surface-smoker and live-surface-tester are not yet asserted by a dedicated test. Populated on 3/60 agents (user-surface-smoker, live-surface-tester, documentation-verifier) as of 2026-09-07. NOTE: AC ACD-1800f-1-i (docs/acceptance-criteria/ac-driven-dev/ACD-1800-ac-as-unit-of-work/ACD-1800f-1-i.yaml, status: draft, work_status: todo) proposes retiring this ticket-frontmatter-based routing in favor of an AC-declared observation_kinds field — do not delete this field ahead of that migration landing; it still gates real dispatch decisions today."
+        },
+        "conditional_field": {
+          "type": "string",
+          "description": "The ticket-frontmatter field whose non-null/true value triggers inclusion of a conditional: true agent in the ticket's agents: map. See conditional for enforcement status and the pending ACD-1800f-1-i migration that will eventually repoint this at an AC declaration instead."
+        },
+        "conditional_field_legacy": {
+          "type": "string",
+          "description": "A superseded ticket-frontmatter field that also triggers inclusion of a conditional: true agent, kept as an opt-in fallback alongside the primary conditional_field trigger (see the 'legacy' trigger_conditions entry with the same routing). Currently populated only on user-surface-smoker (legacy field 'user_facing_surface', superseded by 'declares_side_effect' per BP-1100f-5)."
+        },
         "deprecated": {
           "type": "boolean",
           "description": "When true, this agent is deprecated and should not be assigned to new tickets. Existing references are retained for audit trail purposes. The agent will not be selected by business-analyst for new tickets."
+        },
+        "legacy_only": {
+          "type": "boolean",
+          "description": "When true, this agent is retained only for a deprecation-window compatibility path (ADR-006 flatten-supervisor-chain) and should not be relied on for new work. Directly asserted by unit_tests/test_agent_registry_legacy_flags.py (entry.get('legacy_only') is True for epic-supervisor and ticket-supervisor) — a genuine, mechanically-enforced field, distinct from the merely-descriptive keys this reconciliation removed."
         },
         "permits_shell": {
           "type": "boolean",
@@ -131,6 +270,15 @@
           },
           "default": [],
           "description": "File extensions (with leading dot) this agent is the primary implementer for. Consumed by commit-guardian hooks (e.g. check_complexity.py) to emit AUTOFIX_AGENT hints that route hook failures to the correct coder. Empty or absent means the agent does not own any file type by extension. Multiple agents may share an extension only if their scopes are mutually exclusive (e.g. tests vs production)."
+        },
+        "owns_file_extensions_rationale": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Free-text justification for a non-obvious owns_file_extensions entry — e.g. explaining why a scope choice is an acknowledged expedient rather than a considered ownership claim, and what the known limitations are. Not read by any script (owns_file_extensions itself is the mechanically-consumed field); this is a human-facing audit trail for a contestable decision. Populate only when the owns_file_extensions value needs justifying beyond its own name."
+        },
+        "requires_verification": {
+          "type": "boolean",
+          "description": "Mirrors the agent template's own 'requires_verification' frontmatter field (docs/reference/agent-template-frontmatter.md), which template_compiler.compile_agent_template() reads to decide whether to append the post-edit verification block, and which registry_validator.py's validate_verification_flags() enforces bidirectionally against the template's tools: list. IMPORTANT: this registry-level copy is not itself read by any script as agent.get('requires_verification') — it is an informational echo of the template-level fact, kept here for audit/consistency (confirmed to match its template on all 4 agents that currently set it: code-review-architect, find-structural-smells, find-design-smells, frontend-coder). The load-bearing enforcement lives entirely in the template frontmatter, not here."
         },
         "produces": {
           "oneOf": [
@@ -228,6 +376,14 @@
           "type": "string",
           "minLength": 1,
           "description": "For type=dsl: a grammar-v1 expression string (e.g. 'files_touched contains *.py' or 'files_touched contains sql_functions/ OR files_touched contains alembic/versions/'). For type=llm: a natural-language description of the condition."
+        },
+        "source": {
+          "type": "string",
+          "description": "Optional provenance tag for this specific trigger condition, e.g. the AC id that introduced it ('BP-1100f-5') or 'legacy' for a superseded opt-in path. Documents why more than one condition exists for the same agent rather than adding meaning the evaluator consumes."
+        },
+        "routing": {
+          "type": "string",
+          "description": "Optional one-line note on how this specific condition is wired into agents: map generation (e.g. 'automatic — generator includes X when Y' vs 'opt-in — ticket must manually set Z'). Documentation only; not consumed by selection_criteria_evaluator.py."
         }
       },
       "additionalProperties": false

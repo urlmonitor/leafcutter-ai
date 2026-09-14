@@ -194,6 +194,7 @@ flowchart TD
 - BO-3200b-4: A sequence diagram shows the failure path performing its cleanup and reading the outcome
 - BO-3200c-5: A sequence diagram shows the question reaching the person and the pause when it cannot
 - BO-3200d-3: A sequence diagram shows the result travelling out of band and the reply carrying no content
+- BO-400e-5: A sequence diagram shows every route to the finished state, and that exactly one of them passes the guard
 - BP-1000a-4: Component diagram of the source-to-shipped parity relationship at the merge gate
 - BP-1000b-4: Sequence diagram of the parity gate firing within the finalize-feature merge flow
 - BP-1100e-3: A sequence diagram shows where the declared-vs-actual reconciliation sits before done
@@ -253,3 +254,4 @@ flowchart TD
 - UXP-100d-4: Sequence diagram showing prototype-to-implementation handoff data flow
 - UXP-100d-5: Component diagram showing the handoff artifact structure and consumers
 - UXP-100e-4: Sequence diagram showing parallel dispatch of UX designer and BA agents
+- UXP-700c-5: A sequence diagram of how a change reaches a drift finding

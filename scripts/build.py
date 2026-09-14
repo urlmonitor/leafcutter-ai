@@ -57,6 +57,7 @@ from build_phases import (
     clean_stale_artifacts,
     build_workflow_tools,
     build_knowledge_scripts,
+    build_knowledge_sink_declaration,
     build_build_orchestration_scripts,
     build_agent_support_scripts,
     AGENT_SUPPORT_SCRIPT_DIRS,
@@ -96,7 +97,7 @@ from build_referential_integrity import (
     format_integrity_report,
     extract_script_path_refs_with_sources,
     ClosureAnalysisError,
-    compute_intra_package_closure,
+    compute_intra_package_closure_with_deploy_root_relative,
 )
 from build_config_scaffolds import build_config_scaffolds
 from build_ac_store_scaffold import build_ac_store_scaffold
@@ -393,6 +394,15 @@ def _manifest_commit_guardian_scripts(package_root: Path) -> set[str]:
         for f in src.rglob("*"):
             if f.is_file() and f.suffix == ".py":
                 result.add(f"scripts/commit_guardian/{f.relative_to(src).as_posix()}")
+        # AC BP-900g-8-ii: commit_guardian.json is deployed verbatim alongside
+        # the .py files (build_commit_guardian's rglob copies every file in
+        # this directory, .json included) and is read at runtime by several
+        # of them (e.g. check_hook_parity.py). The .py-only filter above never
+        # registered it, so the widened intra-package closure -- which now
+        # sees this read the same way it sees a module import -- reported it
+        # as an undeployed dependency even though the phase already ships it.
+        if (src / "commit_guardian.json").is_file():
+            result.add("scripts/commit_guardian/commit_guardian.json")
     return result
 
 
@@ -572,6 +582,13 @@ def _manifest_doc_compliance_scripts(package_root: Path) -> set[str]:
             if f.is_file():
                 rel = f.relative_to(dc_dir).as_posix()
                 result.add(f"scripts/doc_compliance/{rel}")
+        # AC BP-900g-8-ii: doc_compliance.json is deployed verbatim alongside
+        # the .py files (build_doc_compliance's rglob copies every file in
+        # this directory) and is read at runtime by config.py. The .py-only
+        # filter above never registered it -- same shape as the
+        # commit_guardian.json fix just above.
+        if (dc_dir / "doc_compliance.json").is_file():
+            result.add("scripts/doc_compliance/doc_compliance.json")
     return result
 
 
@@ -704,6 +721,77 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
     if (release_src / "check_changelog_presence.py").is_file():
         manifest.add("scripts/release/check_changelog_presence.py")
 
+    # AC BP-900g-8-ii: "core config" files several deployed scripts read at
+    # runtime (config/ac_store_schema.json, config/agent_registry.json,
+    # config/doc_types.json, config/diagram_types.json,
+    # config/guardrail_gates.yaml, config/paths.json -- all deployed by
+    # build_ac_store per its own DECISION note) and docs/components.json
+    # (deployed, write-if-absent, by build_components_registry). None of
+    # these are ``scripts/...`` paths, so they were entirely outside this
+    # manifest before the closure guard was taught to see non-code reads --
+    # adding them here is what lets the widened guard's containment check
+    # (Set B must contain closure(Set A)) actually pass for a clean build
+    # instead of aborting on every one of them as "undeployed".
+    #
+    # config/diagram_types.json specifically was the CENTRAL-CASE regression
+    # this AC exists for: it was genuinely undeployed (no other reader put it
+    # in the manifest "by luck" the way config/doc_types.json was via
+    # injection_builders.py), and its reader
+    # (diagram_type_validators.py::_find_diagram_types_json) degrades
+    # SILENTLY to a built-in constant on failure, so nothing ever crashed to
+    # reveal it. A clean `python scripts/build.py` exited 0 with this file
+    # missing until the closure guard's namespace-resolution defect
+    # (see _source_file_for_deploy_path / compute_intra_package_closure_
+    # with_deploy_root_relative) was fixed alongside this deploy addition.
+    #
+    # config/skill_registry.json was surfaced the same way once the fixed
+    # guard was run across the WHOLE package rather than confined to the two
+    # named ``*_types.json`` files: three deployed commit-guardian scripts
+    # read it and it was never deployed anywhere (see the matching DECISION
+    # note in build_phases.py::build_ac_store).
+    for core_config_name in (
+        "ac_store_schema.json",
+        "agent_registry.json",
+        "doc_types.json",
+        "diagram_types.json",
+        "skill_registry.json",
+        "guardrail_gates.yaml",
+        "paths.json",
+        # config/reachability_exemptions.yaml: read by both
+        # scripts/commit_guardian/_reachability_inventory.py (the shared
+        # BO-2900d seam) and scripts/commit_guardian/check_done_proof.py.
+        # Deployed write-if-absent by build_config_scaffolds (a generated
+        # scaffold, not a byte copy of this package's own self-hosted
+        # copy -- same relationship docs/roadmap.json has to build_roadmap
+        # just below), so this manifest never registered it and the widened
+        # closure guard correctly aborted the build once it started
+        # resolving _reachability_inventory.py's import of this file
+        # (BO-2900d-1/-2 fast-lane build, 2026-09-07).
+        "reachability_exemptions.yaml",
+        # Deployed by build_ac_store's own block (added with TKT-600b), but
+        # never DECLARED here -- so Set B did not contain it and the widened
+        # closure correctly aborted the build once ac_coverage_resolver.py and
+        # generate_ticket_from_ac.py were seen to read it. Shipping a file and
+        # declaring it are two different acts; this guard checks the second.
+        # KEEP THIS ENTRY LAST: unit_tests/test_bp_900g_8_ii.py's
+        # _CORE_CONFIG_TUPLE_ANCHOR text-matches this tuple's closing
+        # '"phase_deferral.yaml",\n    ):' shape in both copies below.
+        "phase_deferral.yaml",
+    ):
+        if (package_root / "config" / core_config_name).is_file():
+            manifest.add(f"config/{core_config_name}")
+    if (package_root / "docs" / "components.json").is_file():
+        manifest.add("docs/components.json")
+    # docs/roadmap.json: already deployed (write-if-absent, from a generic
+    # template -- NOT a byte copy of the package's own self-hosted roadmap)
+    # by build_roadmap. AC BP-900g-8-ii's fixed closure guard surfaced it as
+    # undeployed only because this manifest never registered it, exactly the
+    # same gap docs/components.json had before it was added just above --
+    # the file has genuinely been shipping the whole time, only the guard's
+    # model of Set B was incomplete.
+    if (package_root / "docs" / "roadmap.json").is_file():
+        manifest.add("docs/roadmap.json")
+
     return manifest
 
 
@@ -765,6 +853,11 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
                 source_paths.add(
                     f"templates/scripts/commit_guardian/{f.relative_to(src_cg).as_posix()}"
                 )
+        # AC BP-900g-8-ii: mirrors the commit_guardian.json addition in
+        # _manifest_commit_guardian_scripts() — must stay 1:1 or
+        # test_guard_source_paths_match_deployable_set fails on cardinality.
+        if (src_cg / "commit_guardian.json").is_file():
+            source_paths.add("templates/scripts/commit_guardian/commit_guardian.json")
 
     # feedback: source is under templates/scripts/feedback/.
     # _manifest_feedback_scripts raises RuntimeError when the dir is absent/empty
@@ -793,6 +886,11 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
                 source_paths.add(
                     f"templates/doc-compliance/{f.relative_to(src_dc).as_posix()}"
                 )
+        # AC BP-900g-8-ii: mirrors the doc_compliance.json addition in
+        # _manifest_doc_compliance_scripts() — must stay 1:1 or
+        # test_guard_source_paths_match_deployable_set fails on cardinality.
+        if (src_dc / "doc_compliance.json").is_file():
+            source_paths.add("templates/doc-compliance/doc_compliance.json")
 
     # sync_platforms: source is templates/scripts/sync_platforms/, deployed to
     # scripts/sync_platforms/. Paired with _manifest_sync_platforms_scripts.
@@ -869,6 +967,41 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
     # test_guard_source_paths_match_deployable_set fails on cardinality.
     if (package_root / "scripts" / "release" / "check_changelog_presence.py").is_file():
         source_paths.add("scripts/release/check_changelog_presence.py")
+
+    # AC BP-900g-8-ii: "core config" files (source namespace equals deploy
+    # namespace for these — see the matching block in
+    # _get_source_deployable_scripts) -- must be registered here too or
+    # test_guard_source_paths_match_deployable_set fails on cardinality.
+    for core_config_name in (
+        "ac_store_schema.json",
+        "agent_registry.json",
+        "doc_types.json",
+        "diagram_types.json",
+        "skill_registry.json",
+        "guardrail_gates.yaml",
+        "paths.json",
+        # config/reachability_exemptions.yaml: mirrors the matching block in
+        # _get_source_deployable_scripts just above -- see that block's
+        # DECISION note.
+        "reachability_exemptions.yaml",
+        # Deployed by build_ac_store's own block (added with TKT-600b), but
+        # never DECLARED here -- so Set B did not contain it and the widened
+        # closure correctly aborted the build once ac_coverage_resolver.py and
+        # generate_ticket_from_ac.py were seen to read it. Shipping a file and
+        # declaring it are two different acts; this guard checks the second.
+        # KEEP THIS ENTRY LAST: unit_tests/test_bp_900g_8_ii.py's
+        # _CORE_CONFIG_TUPLE_ANCHOR text-matches this tuple's closing
+        # '"phase_deferral.yaml",\n    ):' shape in both copies of it.
+        "phase_deferral.yaml",
+    ):
+        if (package_root / "config" / core_config_name).is_file():
+            source_paths.add(f"config/{core_config_name}")
+    if (package_root / "docs" / "components.json").is_file():
+        source_paths.add("docs/components.json")
+    # docs/roadmap.json: mirrors the docs/components.json entry just above --
+    # see the matching DECISION note in _get_source_deployable_scripts.
+    if (package_root / "docs" / "roadmap.json").is_file():
+        source_paths.add("docs/roadmap.json")
 
     return source_paths
 
@@ -1132,6 +1265,37 @@ _CLOSURE_GUARD_PHASE_BY_PREFIX: tuple[tuple[str, str], ...] = (
     ("scripts/build_orchestration/", "build_build_orchestration_scripts"),
 )
 
+# AC BP-900g-8-ii review finding: `config/` and `docs/` are NOT reliable
+# phase discriminators by prefix. `config/feedback_categories.yaml` is
+# deployed by build_feedback, not build_ac_store, and several phases write
+# files under `docs/` (not only build_components_registry). A prefix
+# heuristic over these two directories was correct only by coincidence --
+# every `config/` entry the guard could see on the day it was written
+# happened to be a build_ac_store "core config" file, and the only `docs/`
+# entry was docs/components.json. Mapping by the file's EXACT deploy-path
+# name (derived from the same core-config tuples _get_source_deployable_
+# scripts/_get_source_paths_for_guard already enumerate) keeps this hint
+# honest for a name it does not recognise, rather than confidently naming
+# the wrong phase. This only affects the human-readable remediation hint in
+# the abort message -- never the pass/fail verdict.
+_CONFIG_FILE_PHASE_BY_NAME: dict[str, str] = {
+    "ac_store_schema.json": "build_ac_store",
+    "agent_registry.json": "build_ac_store",
+    "doc_types.json": "build_ac_store",
+    "diagram_types.json": "build_ac_store",
+    "skill_registry.json": "build_ac_store",
+    "guardrail_gates.yaml": "build_ac_store",
+    "paths.json": "build_ac_store",
+    "phase_deferral.yaml": "build_ac_store",
+    "feedback_categories.yaml": "build_feedback",
+    "knowledge_sink.json": "build_knowledge_sink_declaration",
+    "reachability_exemptions.yaml": "build_config_scaffolds",
+}
+_DOCS_FILE_PHASE_BY_NAME: dict[str, str] = {
+    "components.json": "build_components_registry",
+    "roadmap.json": "build_roadmap",
+}
+
 
 def _phase_for_deploy_path(deploy_path: str) -> str:
     """Return the build_phases.py phase function name that owns *deploy_path*.
@@ -1154,6 +1318,21 @@ def _phase_for_deploy_path(deploy_path: str) -> str:
             return "build_agent_support_scripts"
     if deploy_path in {f"scripts/{f}" for f in AGENT_SUPPORT_SCRIPT_FILES}:
         return "build_agent_support_scripts"
+    # AC BP-900g-8-ii: non-code (config/docs) deploy paths, added once the
+    # closure guard was taught to see data-file reads. Matched by EXACT
+    # filename, not prefix -- see the DECISION comment above
+    # _CONFIG_FILE_PHASE_BY_NAME for why a `config/`/`docs/` prefix match is
+    # not a safe discriminator on its own.
+    if deploy_path.startswith("config/"):
+        name = deploy_path[len("config/"):]
+        return _CONFIG_FILE_PHASE_BY_NAME.get(
+            name, "an unmapped config/-writing phase (see build_phases.py)"
+        )
+    if deploy_path.startswith("docs/"):
+        name = deploy_path[len("docs/"):]
+        return _DOCS_FILE_PHASE_BY_NAME.get(
+            name, "an unmapped docs/-writing phase (see build_phases.py)"
+        )
     return "build_workflow_tools or build_template_standalone_scripts"
 
 
@@ -1211,6 +1390,46 @@ def _source_file_for_deploy_path(
     if templated.is_file():
         return templated, package_root / "templates", ""
 
+    # ACD-2100b-5 path-form mismatch (found alongside AC BP-900g-8-ii, worktree
+    # merge 2026-09-14): check_workspace_setup_permission.py has NO sibling-module
+    # import (its own build_phases.py deploy-declaration comment says so — stdlib
+    # only), so nothing here needs the package_root-relative module namespace the
+    # "direct" family fallback below gives every other standalone script. Its only
+    # intra-package reference is a runtime DATA read of the agent registry
+    # (REGISTRY_RELATIVE_PATH = Path(".leafcutter") / "config" /
+    # "agent_registry.json"), and it is deliberately written the way the DEPLOYED
+    # script sees it — relative to the deploy OUTPUT ROOT — because the script must
+    # discover the real repo root dynamically via git, never via a fixed
+    # __file__-anchored parent walk. Rooting the closure at package_root itself (the
+    # "direct" fallback) makes this candidate resolve with a spurious literal
+    # ".leafcutter/" segment baked into the reported dependency string whenever
+    # package_root already contains a built ``.leafcutter/`` directory (true for a
+    # self-hosted, previously-built tree, and ONLY reachable in that case: this
+    # candidate is resolved by the guard's `_eval_static_path` evaluator against
+    # the process's OWN cwd, and only exists on disk pre-build in the self-hosted
+    # case) — a path nothing in Set B declares, because Set B's
+    # "config/agent_registry.json" entry is itself already expressed relative to
+    # the deploy output root. Rooting THIS script's closure at
+    # ``package_root / ".leafcutter"`` instead makes the same candidate resolve to
+    # "config/agent_registry.json", the form already declared — so this is a
+    # declaration/wiring correction, not a change to the closure algorithm itself
+    # (build_referential_integrity.py is untouched). ".leafcutter" is hardcoded
+    # rather than read from config here because the guard runs pre-build, before
+    # any target-specific config is available to this preflight, and because the
+    # only context in which this candidate is even resolvable (see above) is the
+    # package's own self-hosted default-configured install.
+    #
+    # KNOWN LIMITATION: if this file ever gains a sibling-module import, that
+    # dependency's closure entry would be computed relative to
+    # ``package_root / ".leafcutter"`` too, and would fail to resolve (silently
+    # dropped, not reported) rather than being checked against Set B. Acceptable
+    # today because no such import exists; a future author adding one must revisit
+    # this special case.
+    if deploy_path == "scripts/worktree/check_workspace_setup_permission.py":
+        worktree_setup_source = package_root / deploy_path
+        if worktree_setup_source.is_file():
+            return worktree_setup_source, package_root / ".leafcutter", ""
+
     # Everything else (build_orchestration, knowledge, agent-support,
     # workflow-tool scripts): source and deploy namespaces coincide directly
     # under package_root.
@@ -1255,6 +1474,19 @@ def _check_intra_package_closure_guard(package_root: Path) -> int:
     findings: list[tuple[str, str, str]] = []
     unanalysable: list[tuple[str, str]] = []
     for deploy_path in sorted(deployable):
+        # AC BP-900g-8-ii: Set B now also carries non-code (config/docs) deploy
+        # paths a script READS -- e.g. "config/agent_registry.json" -- so that
+        # the CONTAINMENT check below (``namespaced - deployable``) can find
+        # them. Such an entry is a data file the guard's closure walk reports
+        # on, never itself a Python SCRIPT with a closure of its own to
+        # compute. Skipping non-``.py`` entries here is required for
+        # correctness, not just an optimisation: ``ast.parse()`` on a JSON
+        # file's content frequently SUCCEEDS (JSON object/array/string syntax
+        # overlaps valid Python expression syntax), so without this guard the
+        # loop would silently misinterpret a data file's own contents as
+        # source code and report nonsense findings against it.
+        if not deploy_path.endswith(".py"):
+            continue
         resolved = _source_file_for_deploy_path(package_root, deploy_path)
         if resolved is None:
             continue
@@ -1266,11 +1498,26 @@ def _check_intra_package_closure_guard(package_root: Path) -> int:
         # closure. Collect rather than re-raise so one bad file does not hide
         # the rest — an operator fixing a broken deploy wants the whole list.
         try:
-            closure = compute_intra_package_closure(source_file, root)
+            # AC BP-900g-8-ii: pass package_root as the DEPLOY root
+            # (data_root) alongside the family/module closure root. A
+            # template-sourced family's module root (e.g. "templates" for
+            # the entire commit-guardian family) is the wrong base for a
+            # repo-root-relative data read such as "config/doc_types.json" --
+            # relative to "templates" that never exists, so it was silently
+            # dropped (the central defect this AC exists to fix). The
+            # returned `deploy_root_relative` subset tells the namespacing
+            # step below which entries are ALREADY expressed relative to the
+            # deploy root and must NOT receive the family's deploy_prefix.
+            closure, deploy_root_relative = compute_intra_package_closure_with_deploy_root_relative(
+                source_file, root, package_root
+            )
         except ClosureAnalysisError as exc:
             unanalysable.append((deploy_path, exc.reason))
             continue
-        namespaced = {f"{deploy_prefix}{dep}" for dep in closure}
+        namespaced = {
+            dep if dep in deploy_root_relative else f"{deploy_prefix}{dep}"
+            for dep in closure
+        }
         for dep in sorted(namespaced - deployable):
             findings.append((deploy_path, dep, _phase_for_deploy_path(dep)))
 
@@ -1550,6 +1797,7 @@ def _run_phases(
         ("Sync platforms", build_sync_platforms),
         ("Workflow tools", build_workflow_tools),
         ("Knowledge scripts", build_knowledge_scripts),
+        ("Knowledge sink declaration", build_knowledge_sink_declaration),
         ("Build orchestration scripts", build_build_orchestration_scripts),
         ("Agent support scripts", build_agent_support_scripts),
         ("Template standalone scripts", build_template_standalone_scripts),
@@ -2097,12 +2345,27 @@ def main(argv: list[str] | None = None) -> int:
 
     print()
     _heading("Build manifest")
-    write_build_manifest(
+    manifest_error = write_build_manifest(
         package_root,
         dry_run=args.dry_run,
         target_root=target_root,
         config=config,
     )
+    # BP-1500d-3: the record of what this build put into target_root is the
+    # output_mappings section of .build_manifest.json. When it could not be
+    # produced, write_build_manifest() returns the non-empty error instead of
+    # only warning -- this is the load-bearing enforcement point: the exit
+    # status must be a function of whether the record was producible, not
+    # just the printed message (a build that only warns here leaves every
+    # automated caller believing the install is protected when it is not).
+    if manifest_error:
+        _error(
+            "Build manifest record (output_mappings) could not be produced "
+            f"for target project {target_root}: {manifest_error}. This "
+            "install has no verifiable output_mappings record, so the build "
+            "has failed rather than reporting success with a missing record."
+        )
+        return 1
 
     # Write .leafcutter.lock so the halt-guard knows the build baseline
     if not args.dry_run:
@@ -2361,4 +2624,10 @@ if __name__ == "__main__":
 #   divergence verdict itself is computed entirely in build_phases.py, which
 #   consumes ACD-2100d-2's own installer-derived mapping rather than a second,
 #   independent determination. (#EPIC-StartingNewWorkTheProperWayAlways/21)
+# - 2026-09-07 [python-coder]: Registered the new build_knowledge_sink_declaration
+#   internal phase (declares the build-time knowledge-emission sink absolute
+#   path -- see build_phases.py for the phase itself) right after "Knowledge
+#   scripts" in _run_phases, and added its config file name to
+#   _CONFIG_FILE_PHASE_BY_NAME for the existing diagnostic remediation-hint map.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
 # ====================================================================

@@ -1,14 +1,14 @@
 id: UXP-510
 components:
   - ux_prototyping
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Generator recomputes each flow step's impl_status from its ACs' work_status"
 component: ux-prototyping
 level: L2
 status: active
 req_status: approved
-work_status: done
+work_status: in_progress
 criteria: |
   Given the AC store and the product-truth flows,
   When generate_product_truth.py runs,
@@ -34,13 +34,58 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+- reason: '2026-09-07: demoted from work_status done to in_progress. BO-2500b requires a covers-tagged passing test before an AC may be done, and no test in the tree carries a covers tag for this id (3828 such tags exist elsewhere, so the convention is established, not absent). The record claimed done without proof. Coverage was audited: UXP-511 and UXP-513 each have exactly one real test proving one clause of a two-clause criterion, linked in covered_by as partial evidence and deliberately NOT tagged as covers, since a tag would make the gate green while half the criterion stays unproven. UXP-510, UXP-512 and UXP-514 have no test at all. The remaining work is carried in each record''s test_spec.'
+- reason: '2026-09-07 business-analyst: test_spec authored and coverage gap recorded.
+    No behavioural change to criteria.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by: []
 implemented_by:
   - docs/product-truth/scripts/generate_product_truth.py
 change_target: code
 risk_surface: internal
+test_required: true
+test_rationale: |
+  This AC is work_status done with covered_by empty. A 2026-09-07 audit found no test in the
+  suite that drives the impl_status recomputation or the rollup: it is done in name only. The
+  contract cannot be proved by the store's own agreement (the generator writes the value and the
+  validator recomputes it with the same code), so the tests must construct a store whose
+  criteria statuses are known and assert the derived values, including the two boundary
+  combinations that decide the three-valued mapping.
+test_spec:
+  - name: test_all_criteria_done_maps_the_step_to_done
+    target_dir: unit_tests/product_truth/
+    description: "A step naming only done criteria is recomputed to done."
+    type: unit
+    angle: criterion
+    framework: unittest
+  - name: test_no_criteria_started_maps_the_step_to_not_started
+    target_dir: unit_tests/product_truth/
+    description: "A step naming only not-started criteria is recomputed to not_started."
+    type: unit
+    angle: boundary
+    framework: unittest
+  - name: test_mixed_criteria_map_the_step_to_in_progress
+    target_dir: unit_tests/product_truth/
+    description: "A step naming one done and one not-started criterion is recomputed to in_progress."
+    type: unit
+    angle: boundary
+    framework: unittest
+  - name: test_flow_rollup_counts_match_the_recomputed_step_statuses
+    target_dir: unit_tests/product_truth/
+    description: "The flow's status rollup equals the tally of its recomputed step statuses, and changes when one step's criteria change."
+    type: integration
+    angle: seam
+    framework: unittest
+notes: |
+  COVERAGE STATUS as at 2026-09-07: NOT COVERED. work_status is done and covered_by is empty;
+  an audit of the suite found no test that drives this behaviour. The record is left at
+  work_status done because the implementation did land - the gap is verification, not code - and
+  the test_spec above is the work order for closing it. Do not add a covered_by entry until a
+  test that actually drives the recomputation exists.
 product_truth:
   - flow: leafcutter/generate-product-truth
     node: map

@@ -1,0 +1,146 @@
+id: INF-700a-5-i
+components:
+  - infrastructure
+  - knowledge_system
+  - build_orchestration
+  - git_vcs_operations
+  - worktree_manager
+title: "A learning that could not be published is said out loud before the place it was written is removed"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-5.yaml"
+criteria: |
+  Given the routing step wrote learning text into destination files inside the
+    working directory a unit of work ran in, and the publication that would
+    carry those files into the merged tree does not carry them — the commit is
+    refused by a gate, carrying the change conflicts with the merged tree, or
+    the path stops between the write and the publication,
+  When the driver reports the unit of work finished, and again when the step
+    that removes that working directory runs,
+  Then the reported result counts those records as unwritten, names each
+    destination that did not reach the merged tree, and states which of the
+    three reasons applied,
+  And the records stay eligible: once the cause is removed, a later completed
+    unit of work puts each learning in the merged tree, and puts it there once,
+  And the working directory is not removed quietly while a learning written
+    during that unit of work is absent from the merged tree — the removal step
+    names each such destination and the learning text it holds, announced at
+    the last moment anything can be done about it in this unit of work, and
+    says whether the record behind it is still eligible so a reader can tell a
+    write that will be made again from one that will not,
+  And the announcement does not stop the removal and does not stop the work:
+    the unit of work's own outcome, its failure count, and the driver's exit
+    status are identical to the run in which every publication succeeded,
+  And a routing write is never the reason a unit of work's own publication
+    fails: where the destination change cannot be carried, it is left out of
+    the publication and reported unwritten, and the work publishes without it.
+depends_on: [INF-700a-5]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "PUBLICATION MUST BE OBSERVED, NOT INFERRED FROM THE COMMIT PHASE'S REPORTED STATUS. This AC's whole subject is the case where the routing step succeeded and its writes were not carried, and the commit phase can report ok while a specific path was never staged — that is exactly what happens when the manifest INF-700a-5 requires is missing or incomplete. So the unwritten determination must come from asking the repository what the commit actually contains for each manifest path, after the commit, rather than from the commit agent's own return value. A run that trusts the reported status cannot detect its own failure mode and will report every record written, forever."
+  - "THE TEARDOWN ANNOUNCEMENT HAS EXACTLY ONE HOST TODAY, AND THE OTHER PATHS NEED THE OTHER HALF OF THE CRITERION. Only finalize-feature removes a working directory (its step 7 worktree-agent dispatch at line 2276, after the step 7 probe at line 2250); the fast lane, quick-fix and both ticket drives leave theirs in place. So the removal-step announcement binds on finalize-feature, and on the other four paths the criterion's earlier clause — the reported result at the moment the driver reports finished — is the whole of the obligation. Do not manufacture a teardown hook on a path that has no teardown, and do not read the absence of one as the announcement not being owed."
+  - "THE FAIL-OPEN HALF AND THE ANNOUNCEMENT HALF MUST BE IMPLEMENTED AS ONE THING, because each is a plausible way to break the other. An announcement that raises, retries, or gates the removal violates the never-block-the-work clause; a removal that proceeds without the announcement is the silence this record closes. In particular the announcement must not run inside anything that can abort the removal on its own failure — a report that cannot be produced must degrade to a shorter report, never to a halt."
+  - "STATING ELIGIBILITY IS A READ OF THE BOOKKEEPING, AND THAT READ MUST NOT MUTATE IT. The criterion requires the announcement to say whether the record behind an unpublished write is still eligible. Answering that question means consulting the same state INF-700a-5-iii arbitrates over, from inside a teardown sequence, possibly while another unit of work is completing. The read must be non-destructive and must not take or hold anything another run waits on."
+  - "Must handle errors gracefully per the project error handling policy."
+delivers_to:
+  agent: documentation-expert
+  contract: "The publication-failure outcome and its announcement at teardown, which INF-700a-4's reference must list beside INF-700a-1-ii's three routing outcomes as a distinct fourth thing that can go wrong"
+expects_from:
+  ac_id: INF-700a-5
+  contract: "The requirement that a learning is written only once it is published by the completion path's own commit, which is what makes an unpublished write a reportable condition rather than a success"
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+  - reason: "BA correction, 2026-09-07, following the approved repository-anchored sink decision. ONE CLAUSE REWORDED, nothing added or removed. The announcement clause called the teardown 'the moment it becomes a loss', which contradicted this record's own preceding clause — the records stay eligible and a later completed unit of work writes them — and the contradiction got worse under the sink decision, because the record behind an unpublished write now demonstrably survives the teardown in a sink shared by the whole repository. A publication failure is a retry unless its cause persists, and describing it as a loss invites an implementation that stops looking. The clause now sites the announcement at the last moment anything can be done in THIS unit of work, which is the true reason it sits at teardown, and additionally requires it to say whether the record behind the write is still eligible — which is the distinction a reader actually needs and which the old wording asserted the wrong answer to. The fail-open half, the never-block-the-work clause, the exit-status equality and every test descriptor are unchanged."
+    by: business-analyst
+    at: 2026-09-07
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_a_refused_publication_reports_the_records_unwritten_and_names_the_destinations
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive a completion path with two routable records and force the publication to be refused by a gate. Assert the reported result counts both records unwritten, names both destination paths, and states the refusal as the reason. Assert specifically that the count is not the written count — a run that writes into the working directory and reports two written is the exact defect."
+  - name: test_a_conflicting_destination_change_is_dropped_and_the_work_still_publishes
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Make the routing step's change to a destination conflict with the merged tree's version of the same file, then drive the path. Assert the unit of work's own output is published, that the conflicting destination change is not in it, and that the record is reported unwritten. A run in which the work fails to publish because of a knowledge write fails this test — fail-open means the knowledge step cannot block the work."
+  - name: test_the_teardown_step_names_every_learning_absent_from_the_merged_tree
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Reach the removal step with one learning published and one not. Assert the removal step's output names the unpublished destination and its learning text, does not name the published one, and that the working directory is removed in both cases. Assert also that the output states whether the record behind the unpublished write is still eligible, and that it says eligible in this fixture — the record is in a sink the whole install shares, so it outlives this removal. The announcement is the whole point and the removal proceeding is the fail-open half; a test that asserts only one of the two lets the other regress."
+  - name: test_exit_status_and_failure_count_are_equal_with_a_failed_and_a_successful_publication
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive the same unit of work twice, once with every publication succeeding and once with the routing publication refused; assert the driver's exit status and failure count are EQUAL between the runs. Equality between runs rather than equality to success, so the clause also holds for work that failed on its own merits."
+  - name: test_the_unpublished_record_is_written_by_a_later_run_exactly_once
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Fail the publication, remove the cause, drive a second unit of work over the same sink; assert the merged tree now holds the learning and holds it once. Asserts the retention INF-400c-2-ii already requires survives a publication failure as well as a write failure, without the driver re-implementing retention."
+test_rationale: |
+  The announcement clause is the one that cannot be checked any other way. A
+  publication failure inside a teardown sequence is silent by construction:
+  the work merged, the driver reported success, and the directory is gone, so
+  there is no artefact left to inspect and no exit status that differs. The
+  only observable is what the removal step said before it removed anything,
+  which is why the third descriptor asserts on the removal step's own output
+  and asserts both halves — that it names the unpublished learning AND that it
+  still removes the directory. Testing only the naming would permit an
+  implementation that blocks teardown on a knowledge step, which violates the
+  package's fail-open rule; testing only the removal would permit the silence
+  this AC closes. The equality descriptors are written as equality between two
+  runs rather than equality to zero for the reason INF-700a-1-ii gives.
+notes: |
+  BOUNDARY, three ways, because this is the third failure record in the family
+  and they are easy to confuse.
+
+  INF-700b-1-ii owns the receipt when an AGENT's capture attempt fails — the
+  emitting side, at sign-off time.
+
+  INF-700a-1-ii owns the receipt when the ROUTING STEP cannot finish — the sink
+  will not read, or a destination will not take a write. At that point nothing
+  has been written and the driver knows it.
+
+  This AC owns the case where the routing step SUCCEEDED and its writes were
+  never carried out of the working directory. It is the worst of the three,
+  because every figure the driver reports says the learning was written. Only
+  the merged tree disagrees, and by the time anyone looks, the directory that
+  held the evidence has been reclaimed.
+
+  WHY THE ANNOUNCEMENT SITS AT THE REMOVAL STEP RATHER THAN AT THE DRIVER'S
+  COMPLETION. On finalize-feature the two are four steps apart: the pull
+  request merges at step 4 and the working directory is removed at step 7. A
+  learning that is not in the merged tree at step 4 is recoverable at step 5;
+  after step 7 it is not. The last moment at which the loss is preventable is
+  the moment before removal, so that is where the criterion puts the sentence.
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary

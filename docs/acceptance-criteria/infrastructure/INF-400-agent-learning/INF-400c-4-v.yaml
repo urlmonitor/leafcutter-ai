@@ -1,0 +1,212 @@
+id: INF-400c-4-v
+components:
+  - infrastructure
+  - knowledge_system
+  - build_pipeline
+title: "The sink lands in the project the package was built into, in every install shape — and says so when that stops being where it is"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
+criteria: |
+  Given the sink is an absolute path fixed when the package is built into a
+    project, taken from the project root the build was pointed at and written
+    into the configuration that build deploys, and this package installs into
+    more than one shape of project: one where the package clone sits inside a
+    larger workspace and the build is pointed at that workspace, and one where
+    the package sits as a subdirectory of a consumer's own repository and is a
+    repository in its own right,
+  When an agent working in that project emits a record, and the routing step
+    later reads it,
+  Then in the consumer shape the sink is at the root of the CONSUMER's project
+    and not inside the package subdirectory, so a learning about the consumer's
+    project is reviewable, diffable and mergeable by the people who own that
+    project, through the same pull request flow as everything else they change,
+  And in the workspace shape the sink is at the root the build was pointed at,
+    which is the root the rest of that install's deployed content already sits
+    under, so the sink is beside the install it belongs to rather than beside
+    the package sources,
+  And that first outcome is established in a NESTED fixture, because it is only
+    falsifiable in one: where the package subdirectory carries its own
+    repository data, an implementation that finds the project by looking around
+    it instead of by reading what the build recorded can land on the package's
+    own root and file every consumer's learnings inside the package clone,
+    where the consumer's review never sees them and the next package update
+    collides with them. A single-project fixture cannot tell the two apart and
+    does not satisfy this criterion,
+  And because the path is fixed by the build rather than discovered, moving an
+    installed project by hand does not move its sink: a declared path whose
+    directory is no longer there is reported as a declaration that has gone
+    stale, naming the path it was given and saying a rebuild is what repairs
+    it, and this is said DISTINCTLY from a sink that has simply never been
+    written to. Nothing is written into nowhere, no directory is conjured to
+    have somewhere to write, and no new exit status is introduced for it,
+  And a build pointed at an isolated working directory of a project that is
+    already installed does not quietly give that working directory a sink of
+    its own: either the work done there reaches the same sink as the rest of
+    the project, or the build states that it is creating a second one and which
+    project it is dividing. A second sink produced in silence is the original
+    defect restored in full — records accumulating in a directory that is
+    removed after merge, with every check green — reached this time by an
+    ordinary rebuild rather than by a relative path,
+  And where the declared location differs from the location a project's records
+    are already accumulating in when the declaration is adopted, that
+    difference is stated once, naming both locations, and is reconciled
+    deliberately rather than discovered later. What is forbidden is the
+    location changing with nothing saying so, leaving a populated file nobody
+    reads and an empty file everybody does,
+  And in every one of these shapes the answer to "where is the sink" is
+    obtainable without emitting a record or running a harvest, so the location
+    can be established before anything depends on it.
+depends_on: [INF-400c-4]
+doc_links:
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - "THE REBUILD-INTO-A-WORKING-DIRECTORY CASE IS REACHED BY OMITTING A FLAG, NOT BY PASSING A WRONG ONE. scripts/build.py line 1899 resolves the target as the --target-dir argument if given and Path.cwd() otherwise. So a bare build invoked from inside an isolated working directory silently declares that directory's own root as the sink's home, with nothing typed and nothing printed. This repository's own pre-drive checklist discusses running the build in a fresh worktree, so the accidental path is the likely path. The criterion's forbidden third outcome — a second sink, no statement — is therefore the CURRENT default behaviour of an ordinary command, which makes this the clause most likely to be implemented as an afterthought and the one that must not be."
+  - "THE DECISION ABOUT WHICH ROOT TO USE MUST BE MADE FROM WHAT WAS RECORDED, NEVER FROM WHAT IS AROUND. The nested-fixture criterion is falsifiable only against an implementation that looks at its surroundings, and looking at surroundings is what a builder reaches for first — the nearest repository, the nearest marker file, the parent of the package directory. All three give a plausible-looking answer in a flat layout and the wrong answer in a consumer install. The prior anchor was dropped for precisely this, and the reasons are in the record so they are not rediscovered by shipping."
+  - "STALENESS IS A THIRD STATE AND MUST NOT BE DERIVED FROM THE ABSENCE OF THE FILE. A declared path whose directory is gone and a declared path whose file has simply never been written both present as 'no file there'. Distinguishing them means testing the DIRECTORY on the way to the declared path, not the path itself, and reporting the two conditions differently while — per the criterion — introducing no new exit status. Do not conjure the directory to make the distinction go away: creating it turns a broken install into a healthy-looking empty one, which is the worse of the two outcomes."
+  - "THE RELOCATION CLAUSE HAS A LIVE INSTANCE THAT CROSSES INTO INF-400c-4-iii AND CANNOT BE CLOSED FROM THIS RECORD. In the development workspace the build target is the workspace root, which has no records directory, while the operational stream's existing lines sit one level down under the package clone. Adopting a build-target declaration therefore points the operational stream's declared location away from the file holding its history, and INF-400c-4-iii requires every existing reader to return identical results before and after. Both cannot hold by doing nothing. This record's obligation is only that the difference is STATED once, naming both locations; the reconciliation itself belongs to whichever of the three options recorded in the notes is chosen, and that choice must be made before either AC lands rather than discovered by someone wondering where the history went."
+  - "THE WHERE-IS-THE-SINK QUERY MUST BE SIDE-EFFECT-FREE AND SHOULD BE THE SAME SURFACE INF-400c-4-iv's NO-WORK OUTCOME USES. Asking the question must not create the file, the directory holding it, or a record. Two independently correct answerers will drift, and the drift is invisible because each is right about the value it computes."
+  - "Must handle errors gracefully per the project error handling policy."
+delivers_to:
+  agent: documentation-expert
+  contract: "Where the sink lands in each install shape, that the location is fixed by the build rather than discovered, and that a hand-moved install needs a rebuild before its sink is right again — which the knowledge-system reference must state so an installer knows where to look before anything has been written"
+expects_from:
+  ac_id: INF-400c-4
+  contract: "The build-time absolute declaration both sides read, of which this AC states the outcome in each install shape and the conditions under which it goes stale"
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+  - reason: "BA rewrite, 2026-09-07, same day as authoring. This record was written against the repository-anchored resolution rule and is re-footed on its replacement: the sink is an absolute path fixed by the build from the project root it was pointed at. The layouts are still the discriminator and the nested fixture is still the only thing that can fail, but what it must establish changed — from 'resolves to the nearest repository' to 'resolves to the target the package was built into'. THREE CLAUSES ADDED that the new anchor makes necessary and the old one did not. (1) STALENESS: a build-fixed path does not follow an install that is moved by hand, so a declared path whose directory is gone must be reported as stale and distinguished from a sink never written to — INF-400c-4-iv's no-work outcome would otherwise swallow it, and a broken install would read as a healthy empty one. Stated without a new exit status, per that record's enumeration. (2) THE REBUILD-INTO-A-WORKING-DIRECTORY CASE, which is the sharpest edge of this anchor and is a live practice here rather than a hypothetical: this repository's own pre-drive checklist discusses running the build inside a fresh worktree, and a build pointed at an isolated working directory writes that directory's own root into its configuration. The result is records accumulating in a directory that is removed after merge, with every check green — the original defect restored in full, reached by an ordinary rebuild instead of by a relative path. Durability was automatic under the previous anchor and is contingent under this one, so it has to be a criterion. (3) RELOCATION: adopting the declaration must not silently orphan records already accumulating elsewhere. See the notes for the instance of this that exists today and needs an answer before the change lands."
+    by: business-analyst
+    at: 2026-09-07
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_a_nested_install_declares_the_sink_at_the_consumers_root_not_the_package_subdirectory
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "the build run against a temp target, then the reader's production entry point as a subprocess"
+    description: "Build the fixture the criterion names: a consumer repository containing a package subdirectory that is itself a repository with its own repository data. Build with the target at the consumer root, then read the declaration and assert the path is directly under the consumer root and NOT under the package subdirectory. The nested repository is the whole test — in a flat fixture every candidate implementation gives the same answer and the test cannot fail."
+  - name: test_the_declared_sink_sits_beside_the_rest_of_the_installs_deployed_content
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In a workspace-shaped fixture, build with the target at the workspace root and assert the declared sink is under that same root — the root the deployed configuration, agents and scripts were written to — and not under the package sources. Pins the sink to the install rather than to the clone."
+  - name: test_a_declaration_whose_directory_is_gone_is_reported_stale_and_not_as_an_empty_sink
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Build into a temp project, then move the project. Run the reader and assert three things: the output says the declared location is not there and names it, the output is distinguishable from the same reader's output over a project where the sink has simply never been written to, and the exit status is one of the existing enumerated statuses rather than a new one. Assert afterwards that neither the declared path nor any directory on the way to it was created."
+  - name: test_a_build_pointed_at_an_isolated_working_directory_does_not_silently_split_the_sink
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The clause that exists because durability is contingent under this anchor. Build a project, add an isolated working directory, then run the build again with the target at that working directory. Assert EITHER that emitting from inside it still reaches the project's one sink, OR that the second build stated it was creating a separate sink and named the project it divided. Assert that the silent third outcome — a second sink, no statement — fails. Then remove the working directory and assert no record emitted during the run was lost with it."
+  - name: test_adopting_the_declaration_does_not_silently_orphan_records_already_accumulating
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "In a fixture where a populated stream already sits at the location records were accumulating in before the change, adopt the declaration with a different location. Assert the run names both locations once. Assert it does not present the new empty location as the whole history, which is the outcome that makes a reader believe the corpus is gone."
+  - name: test_the_declared_location_is_obtainable_without_emitting_or_harvesting
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the resolver's production entry point"
+    description: "Ask for the location in a project where nothing has been emitted; assert an absolute path is reported, and assert afterwards that no sink file, no directory holding it, and no record were created by asking. Pairs with INF-400c-4-iv's no-side-effect rule for the reader and applies it to the question this AC adds."
+test_rationale: |
+  The first descriptor is a fixture-shape argument rather than an assertion
+  about a return value, because the anchor's remaining failure mode is that
+  every candidate implementation agrees in a flat layout and only a nested one
+  separates them. The fourth is the descriptor this AC would be incomplete
+  without: under the previous anchor, durability held no matter how a working
+  directory was provisioned; under this one it holds only if that working
+  directory uses the install whose configuration names the shared root, and a
+  rebuild inside it quietly breaks that. A test that never runs the build twice
+  cannot see it, and neither can anyone reading a green suite. The staleness
+  descriptor asserts distinguishability from the never-written-to case rather
+  than asserting a particular message, because the two conditions are
+  indistinguishable to a reader by construction — both present as no file — and
+  the whole point is that they stop being.
+notes: |
+  WHY THE CONSUMER'S ROOT IS THE RIGHT ANSWER, stated as a reason and not a
+  preference: the records are learnings about the consumer's project, they are
+  destined for surfaces the consumer's repository tracks, and the settled
+  decision routes learnings through the ordinary pull request flow so they are
+  reviewed before they land. All three break if the sink sits inside a package
+  subdirectory the consumer updates by replacing.
+
+  WHAT THE BUILD-TIME ANCHOR FIXED, kept so the next person does not re-open
+  it. The previous anchor resolved against the repository's common git
+  directory. It was dropped for two reasons, both of which this record used to
+  have to defend against and no longer does: "the repository" was ambiguous in
+  a nested consumer install, and the common directory is reported relative from
+  a main checkout and absolute from a working directory, so the obvious
+  implementation reproduced the original relative-path defect in exactly the
+  layout a developer tests in. The build receives the project root as an
+  argument and neither hazard survives that.
+
+  WHAT IT COST, AND IT IS NOT NOTHING. Durability used to be automatic — every
+  working directory of a repository resolved to the same place however it came
+  into being. It is now contingent on the working directory using the
+  configuration that names the shared root. A worktree that symlinks or copies
+  the main install inherits the right path; a worktree that has the build run
+  inside it gets its own. This repository's own pre-drive checklist discusses
+  running the build in a fresh worktree, so this is a live practice and not a
+  hypothesis. That is what the fourth criterion and the fourth test descriptor
+  are for.
+
+  AN INSTANCE OF THE RELOCATION CLAUSE EXISTS TODAY AND NEEDS AN ANSWER BEFORE
+  THIS LANDS — raised, not settled, because it crosses two records. In the
+  development workspace the build target is the workspace root, and that root
+  has no records directory at all; the operational stream's 33 lines sit one
+  level down, under the package clone. So adopting a build-target declaration
+  moves the operational stream's declared location away from the file that
+  actually holds the history. Nothing is deleted and nothing is touched — but
+  INF-400c-4-iii requires that every existing reader of the operational stream
+  return identical results before and after, and a reader pointed at the
+  declared location would find an empty file while the populated one sits
+  unread beside it. That clause and this anchor cannot both be satisfied by
+  doing nothing. Three answers are available and all are outside this record:
+  declare the operational stream at the location it already occupies, point the
+  development build at the clone, or accept the move and amend INF-400c-4-iii's
+  identical-results clause with the reconciliation stated. This criterion only
+  requires that whichever is chosen, the difference is named once rather than
+  discovered by someone wondering where the history went.
+
+  BOUNDARY, three ways. INF-400c-4 owns the declaration and the parity check.
+  INF-400c-4-iv owns a sink that has never been written to, which is a no-work
+  outcome in every shape and is not restated here — this record's staleness
+  clause exists precisely so that outcome does not absorb a broken install.
+  This record owns which project the sink belongs to and when that answer goes
+  wrong. Nothing here reopens INF-400c-4-ii: the relocation clause requires the
+  difference to be STATED, not the records to be carried anywhere, and the
+  retained corpus stays at rest under INF-700c-2 wherever it sits.
+change_target: code
+risk_surface: contract_boundary

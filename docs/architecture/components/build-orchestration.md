@@ -47,6 +47,21 @@ is the L2 container for this mechanism, and the two diagrams below document it:
 - [Interactive Pause/Resume — Pause, Ask, Answer, Resume Sequence](../diagrams/c3-002-interactive-pause-resume-sequence.md) — the message-level interaction between the workflow engine, the agent-mediated persist/read agent, the durable store, and the answerer, including the wrong-shape re-prompt loop and cross-process resume via `resumeFromRunId`.
 - [ADR-024 — Interactive Gates Pause and Persist Instead of Cancelling When Headless](../adrs/ADR-024-interactive-pause-resume.md) — the design of record.
 
+## Occupied Build Workspace — Refuse, Do Not Reuse
+
+When the fast lane resolves a build workspace that is already occupied — by its own earlier
+attempt or by anything else — the run ends in a **named refusal** carrying the criterion, the
+occupied location, and options whose destructiveness is stated separately, so that clearing
+empty residue and discarding unsaved work are never the same gesture. It does **not** silently
+reuse the workspace, and it does **not** bring one up to date first.
+
+Both of those apparent kindnesses break a promise: a reused workspace is cut from a stale
+mainline, so the run returns a green result built against code that has moved, and refreshing
+it breaks `BO-2400f-3`'s guarantee that the workspace comes from the latest mainline. The
+accepted cost is that a re-run against the same criterion needs an operator decision.
+
+- [ADR-039 — The Fast Lane Refuses an Occupied Workspace Rather Than Reusing It](../adrs/ADR-039-fast-lane-occupied-workspace-refusal.md) — the design of record, including the rejected alternatives and the conditions under which this should be revisited.
+
 ## Phantom-Done Prevention — Real-Effect / Real-Intent Verification
 
 The drive and verification-phase routing this component owns is where the BP-1100f

@@ -28,29 +28,35 @@ BUSINESS CONTEXT: Before this module, ``check_contract_shrinking.py`` and
     ``unit_tests/portability/test_ge_120e_4_i.py`` (ticket 36, GE-120e-4-i)
     pre-established for GE-120e-1's implementer to "honour or update" — see
     that file's module docstring, "CONTRACT THIS TEST FILE ESTABLISHES".
-    GE-120e-4 (ticket 35, still ``todo`` as of this rename) is expected to
-    extend ``get_authored_change()`` to also discover a commit's parent(s)
-    from the commit itself and to consult ``REVERT_HEAD`` / ``CHERRY_PICK_HEAD``
-    in addition to ``MERGE_HEAD`` — none of that semantics is implemented
-    here; this module still derives only from ``HEAD`` and, when present,
-    ``MERGE_HEAD``.
-ARCHITECTURE: A leaf module with no imports beyond the standard library, in
-    the same family as ``_resolve_root.py`` (one shared facility, many
-    importers) but solving a different problem: ``_resolve_root.py`` resolves
-    a PREREQUISITE (the project root); this module derives the CHANGE SET
-    itself. ``get_authored_change(cwd=None)`` returns a memoised
-    ``AuthoredChange`` (one per resolved cwd per process — the pre-commit
-    latency budget forbids one git invocation per consuming check) exposing
-    ``paths``, ``states``, ``diff_text``, ``name_status``, ``could_not_check``,
-    and ``error`` as plain data attributes (never callables — ticket 36's
-    contract shapes this as data, not lazily-invoked accessors), so both
-    known diff shapes (full text diff for the contract-shrinking scan,
-    name-status for the frontmatter scan) are served from the one derivation,
-    along with the provenance (``states``) a consumer needs to describe what
-    it inspected. Every git call runs with an explicit ``cwd=`` argument
-    rather than assuming ``<root>/.git`` exists as a directory, so this
-    remains correct inside a linked git worktree, where there is no such
-    directory.
+
+    GE-120e-4 (ticket 35) extends the derivation's operation-record probe
+    from ``MERGE_HEAD`` alone to ``MERGE_HEAD`` / ``REVERT_HEAD`` /
+    ``CHERRY_PICK_HEAD`` (probe logic in the sibling module
+    ``_operation_record.py``) — a revert or a cherry-pick, like a merge,
+    leaves exactly one state to compare a naive diff against, so a bare
+    ``git revert``/``git cherry-pick`` of a large recorded changeset used to
+    be attributed to the person replaying it. The three refs share one
+    scoping predicate, checked by ONE general "which record is present"
+    probe, never a merge-specific branch — the AC's fourth clause forbids
+    deciding the answer by asking "is a merge in particular under way". See
+    ``.states``' docstring below for the consequence this has for consumers.
+ARCHITECTURE: A shared facility in the same family as ``_resolve_root.py``
+    (one derivation, many importers) but solving a different problem:
+    ``_resolve_root.py`` resolves a PREREQUISITE (the project root); this
+    module derives the CHANGE SET itself. Its only sibling import is
+    ``_operation_record.py`` (git-directory resolution, via plumbing —
+    ``git rev-parse --git-dir``, never a hard-coded ``<root>/.git`` — plus
+    the three-way probe; split out to keep this module under the project's
+    400-line file-size limit). ``get_authored_change(cwd=None)`` returns a
+    memoised ``AuthoredChange`` (one per resolved cwd per process — the
+    pre-commit latency budget forbids one git invocation per consuming
+    check) exposing ``paths``, ``states``, ``diff_text``, ``name_status``,
+    ``could_not_check``, and ``error`` as plain data attributes (never
+    callables — ticket 36's contract shapes this as data, not lazily-invoked
+    accessors), so both known diff shapes (full text diff for the
+    contract-shrinking scan, name-status for the frontmatter scan) are
+    served from the one derivation, along with the provenance (``states``)
+    a consumer needs to describe what it inspected.
 
     SEMANTIC CHOICE FORCED BY THE ATTRIBUTE (NOT METHOD) SHAPE: the prior
     revision of this module exposed ``.text_diff()`` / ``.name_status()`` as
@@ -74,6 +80,15 @@ DOC_LINKS:
   - docs/architecture/components/commit-guardian.md
 
 DECISION HISTORY:
+  - 2026-09-07 [python-coder/GE-120e-4]: Extended the operation-record probe
+    from ``MERGE_HEAD``-only to a general "which of MERGE_HEAD / REVERT_HEAD
+    / CHERRY_PICK_HEAD is present" predicate (moved into the new sibling
+    module ``_operation_record.py``, both to keep this file under the
+    400-line limit and to isolate the plumbing-based git-dir resolution).
+    Zero additional subprocess invocations versus the prior single-ref
+    probe; ``check_contract_shrinking.py`` / ``check_doc_frontmatter.py``
+    required no change, since both already read only ``len(states) > 1``.
+    (#EPIC-TrustThatAGreenCheckActuallyChecked/35)
   - 2026-08-31 [python-coder/GE-120e-1, pr-reviewer remediation]: Renamed
     from ``_resolve_change_set.py`` (``get_change_set()`` / ``ChangeSet``,
     with ``base_ref``/``head_ref`` provenance and ``.text_diff()``/
@@ -104,6 +119,8 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from _operation_record import detect_operation_record, resolve_git_dir, scope_ref
+
 logger = logging.getLogger(__name__)
 
 _GIT_TIMEOUT = 30
@@ -133,22 +150,25 @@ class AuthoredChange:
         name_status: ``(path, status)`` pairs from ``git diff --cached
             --name-status``, same scoping as ``diff_text``. Empty list when
             ``could_not_check`` is True or the change set is empty.
-        paths: Repo-relative paths in scope. During a merge (``states``
-            includes ``"MERGE_HEAD"``) these are the paths differing from
-            ``MERGE_HEAD`` (the incoming branch) — i.e. NOT content carried
-            in verbatim from the other line of development, whether that
-            content is a genuine conflict resolution (differs from both
-            parents) or the author's own earlier work on this branch
-            (matches ``HEAD`` exactly but was never recorded on the incoming
-            branch). Excluding only by ``MERGE_HEAD`` — rather than requiring
-            a difference from BOTH parents — is what keeps AC GE-120e-1's
-            "verdict on the author's own content is unchanged" clause true
-            even when that content was committed before the merge began.
-            Outside a merge, every staged path.
+        paths: Repo-relative paths in scope. While an operation record is
+            present (``states`` has more than one entry — ``MERGE_HEAD``,
+            ``REVERT_HEAD``, or ``CHERRY_PICK_HEAD``, whichever git reports)
+            these are the paths differing from that record's own ref, i.e.
+            NOT content carried in verbatim from the recorded change (a
+            genuine conflict resolution, or the author's own earlier work on
+            this branch that was never recorded on the incoming side) — this
+            is what keeps AC GE-120e-1's "verdict on the author's own
+            content is unchanged" clause true. Outside any such operation,
+            every staged path.
         states: The commit-ish(es) this change set was derived against, for
-            provenance in a consumer's objection text — ``["HEAD"]`` on the
-            ordinary (single-state) path, ``["HEAD", "MERGE_HEAD"]`` during a
-            merge.
+            provenance in a consumer's objection text — ``["HEAD"]``
+            ordinarily, or ``["HEAD", <ref>]`` while an operation
+            (``MERGE_HEAD`` / ``REVERT_HEAD`` / ``CHERRY_PICK_HEAD``) is
+            under way. OPAQUE PROVENANCE, NOT A MODE SELECTOR: consumers
+            must read only ``len(states)``, never pattern-match the ref
+            name — doing so would reintroduce, one layer up, the
+            "decided by whether a merge in particular is under way" failure
+            this module's own derivation is built to avoid.
         could_not_check: ``True`` when the derivation itself failed (a git
             call errored, timed out, or exited non-zero) — never license to
             widen the scope to the whole staged tree.
@@ -299,38 +319,54 @@ def _build_authored_change(
 def _derive_authored_change(cwd: Path) -> AuthoredChange:
     """Compute the ``AuthoredChange`` for *cwd*.
 
+    Combines two signals — the states this commit is built on, and whichever
+    operation record (if any) is in progress — into one derivation, per this
+    module's own no-marker-switch rule: the operation-record probe below
+    never asks "is a merge in particular under way", only "which of these
+    three records, if any, is present".
+
     Args:
         cwd: Working directory to derive the change set for.
 
     Returns:
-        An ``AuthoredChange`` (scoped when a merge is in progress, otherwise
-        covering every staged path), or a could-not-check result when the
-        derivation could not be computed at all — the caller must treat this
-        as a could-not-check outcome, never as license to use an unscoped
-        diff.
+        An ``AuthoredChange`` (scoped when an operation is in progress,
+        otherwise covering every staged path), or a could-not-check result
+        when the derivation could not be computed at all — the caller must
+        treat this as a could-not-check outcome, never as license to use an
+        unscoped diff.
     """
-    merge_probe = _run_git(["rev-parse", "-q", "--verify", "MERGE_HEAD"], cwd)
-    if merge_probe is None:
-        return _could_not_check(cwd, "git rev-parse --verify MERGE_HEAD failed or timed out")
+    git_dir = resolve_git_dir(cwd)
+    if git_dir is None:
+        return _could_not_check(cwd, "git rev-parse --git-dir failed or timed out")
 
-    if merge_probe.returncode != 0:
+    operation_record = detect_operation_record(git_dir)
+
+    if operation_record is None:
         paths = _name_only([], cwd)
         if paths is None:
             return _could_not_check(cwd, "git diff --cached --name-only failed")
         return _build_authored_change(paths, ["HEAD"], [], cwd)
 
-    # Paths differing from MERGE_HEAD (the incoming branch) are NOT carried
-    # in verbatim from that other line of development -- whether they are a
-    # genuine conflict resolution or the author's own earlier work on this
-    # branch. Deliberately NOT intersected with "differs from HEAD" too: that
-    # stricter form would also exclude the author's own already-committed
-    # content (it matches HEAD exactly), which is precisely the carried-in-
-    # work-only exclusion AC GE-120e-1 forbids over-applying to the author's
-    # own work ("its verdict on the same commit's own content is unchanged").
-    scoped_paths = _name_only(["MERGE_HEAD"], cwd)
+    # Paths differing from the operation record's OWN INCOMING STATE (see
+    # scope_ref: the record itself for MERGE_HEAD/CHERRY_PICK_HEAD, but the
+    # record's PARENT for REVERT_HEAD, since git gives that ref a different
+    # reference frame) are NOT carried in verbatim from the recorded change
+    # -- whether they are a genuine conflict resolution or the author's own
+    # earlier work on this branch. Deliberately NOT intersected with
+    # "differs from HEAD" too: that stricter form would also exclude the
+    # author's own already-committed content (it matches HEAD exactly),
+    # which is precisely the carried-in-work-only exclusion AC GE-120e-1
+    # forbids over-applying to the author's own work ("its verdict on the
+    # same commit's own content is unchanged").
+    ref_expr = scope_ref(operation_record)
+    scoped_paths = _name_only([ref_expr], cwd)
     if scoped_paths is None:
-        return _could_not_check(cwd, "git diff --cached --name-only MERGE_HEAD failed")
-    return _build_authored_change(scoped_paths, ["HEAD", "MERGE_HEAD"], ["MERGE_HEAD"], cwd)
+        return _could_not_check(
+            cwd, f"git diff --cached --name-only {ref_expr} failed",
+        )
+    return _build_authored_change(
+        scoped_paths, ["HEAD", operation_record], [ref_expr], cwd,
+    )
 
 
 def get_authored_change(cwd: Path | None = None) -> AuthoredChange:

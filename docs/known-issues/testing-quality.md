@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-31
+last_updated: 2026-09-07
 components:
   - testing_quality
 related_docs:
@@ -361,6 +361,37 @@ answered, with a grep and not from memory:
 appears in the deployed `.pre-commit-config.yaml` and that its script resolves. That is a
 three-line test which would have failed on day one of the epic and saved six rounds.
 
+**Partially addressed, 2026-09-14 — and the remedy above needed correcting twice.**
+`unit_tests/commit_guardian/test_hook_registration_inventory.py` now makes the unasked question
+a standing assertion. Two corrections to the fix direction as originally written:
+
+1. **Do not assert against `.pre-commit-config.yaml`.** It is **gitignored build output** emitted
+   by `build.py` (`git status --ignored` → `!!`; no git history; absent in a fresh clone).
+   Asserting against it verifies the generator's last local run, not the committed registry —
+   the same class of mistake as the entry it is meant to prevent. The source of truth is
+   `hooks_manifest.hooks` in `templates/scripts/commit_guardian/commit_guardian.json`. A first
+   pass of this work did measure against the deployed file and reported 5 phantom "unregistered"
+   ids that were only local build staleness.
+2. **Per-AC is the wrong unit.** A registration test attached to each hook AC has to be
+   remembered by the author of hook nineteen, and not remembering is the defect class. The test
+   is an inventory over the whole guardian directory instead, scoped by the repo's own
+   `hook_parity.hook_script_patterns` so it cannot drift from `check_hook_parity.py`.
+
+**What it measured on `main` at `2524993b9`: 18 hook scripts on disk that no `hooks_manifest`
+entry invokes.** Nine of those (`check_complexity`, `check_docstrings`, `check_documentation`,
+`check_doc_coverage`, `check_doc_links`, `check_folder_density`, `check_root_files`,
+`check_sql_complexity`, `check_debug_scripts`) carry a settings block in **both** `config.py`
+and `commit_guardian.json` while being invoked by nothing — `KI-CG-021`'s shape exactly, and
+worse for a reader, because the presence of configuration reads as evidence of registration.
+They are held in a shrink-only ratchet baseline; the test is green today and red on the
+nineteenth. Triaging the 18 is **not** done and is the remaining work on this entry.
+
+Neither existing gate covered this, which is why the orphans survived: `check_hook_trigger_reachability.py`
+iterates the *registry* asking whether any tracked path can fire each gate, so a script absent
+from the registry is invisible to it; `check_hook_parity.py` compares scripts across
+*directories* and ids across *manifests*, and never asks whether a script on disk is named by
+any entry. The unasked question was disk → manifest.
+
 **The general form:** *"does the code work"* and *"is the code reachable"* are different
 questions, and a test suite answers only the first. Nothing in 3,772 passing tests could
 distinguish this gate from a gate that had never been wired up, because nothing in it looked
@@ -588,10 +619,25 @@ cannot see, where the absence of the check is documented as correct.
 
 ### KI-TQ-012 — A fixture that sandboxes with `git worktree add` sets its identity in the *real* repository's config, and every worktree and every session inherits it
 
+> **DUPLICATE ID.** A second, independently-filed `KI-TQ-012` exists further down this
+> file ("A test fixture reassigns the real repository's commit identity…"). Same defect,
+> same two files, filed twice on different days without either author seeing the other.
+> Both are closed by the same fix. Neither is renumbered: both are cited by id elsewhere,
+> and this register already carries an unrepaired `KI-CG-012` collision for the same reason.
+> That two people could file the same high-severity defect a week apart is itself the
+> finding — the register is long enough that filing is cheaper than searching.
+
 - **Severity:** high
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Status:** **RESOLVED 2026-09-07.** The identity now comes from `GIT_AUTHOR_*` /
+  `GIT_COMMITTER_*` in `_GIT_ENV_OVERRIDES`, and every `git config user.*` call is gone
+  from both fixtures. Environment variables live and die with the subprocess, so no
+  configuration file is written and nothing can outlive the run.
+  **Proven, not asserted:** the repository identity was set to a known value, both suites
+  were run (10 passed), and the identity was re-read afterwards — unchanged. Before the fix
+  the same run guaranteed a poisoned config.
+- **Occurrences:** **10** misattributed commits in a single session on 2026-09-07, several
+  on open pull requests, across worktrees these tests have never heard of
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07 · **Closed:** 2026-09-07
 - **Where:** `unit_tests/portability/test_ge_120e_1_i.py` — the merge fixture's `build()`
   (`git worktree add` at ~L264, `git config user.*` at L270-271) and its `tearDownClass`
   (`git worktree remove --force`, ~L338)
@@ -839,10 +885,32 @@ does not load — where the failure mode is silence, and silence is the result t
 
 ### KI-TQ-012 — A test fixture reassigns the real repository's commit identity, and every commit made afterwards is authored by the fixture
 
+> **DUPLICATE ID** — see the note on the other `KI-TQ-012` earlier in this file. Same
+> defect, filed twice a week apart; both closed by the same fix; neither renumbered,
+> because both are cited by id.
+
 - **Severity:** high
-- **Status:** open — recurs on every run of the suite; a config repair does not hold
-- **Occurrences:** 3 observed the same day, from three different worktrees — and the offending code is **two** files with **six** call sites, not four in one: a third commit landed authored `GE-120e-1-i fixture`, which is a *different* fixture, so `unit_tests/portability/test_ge_120e_1_i.py` carries the identical defect at 2 further sites
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Status:** **RESOLVED 2026-09-07** — identity now supplied via `GIT_AUTHOR_*` /
+  `GIT_COMMITTER_*` in `_GIT_ENV_OVERRIDES`; every `git config user.*` call removed from
+  both fixtures. Verified by setting the repository identity to a known value, running both
+  suites (10 passed), and re-reading it: **unchanged**.
+- **Occurrences:** **10** misattributed commits in one session (2026-09-07), several on open
+  pull requests. **The count in this line was wrong twice before it was measured** — filed as
+  "four sites in one file", corrected to "two files, six sites", and the real figure is
+  **two files, TEN sites** (8 in `test_ge_120e_1.py`, 2 in `test_ge_120e_1_i.py`). Both
+  earlier counts came from reading the commits that happened to be misattributed rather than
+  from grepping the fixtures.
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07 · **Closed:** 2026-09-07
+- **Scope check, so nobody re-audits it:** a repo-wide sweep found ~40 test files setting
+  `git config user.*`. Only these two leak. The rest set identity inside a throwaway
+  `git init` repository, which has its own config and cannot escape. The discriminator is
+  `git worktree add` against the *real* repository root, not the presence of a `git config`
+  call. One file, `test_check_doc_frontmatter_worktree_pathbase.py`, looks leaky to a naive
+  grep and is not — it worktrees a temp repo it created itself.
+- **Why not `git config --worktree`:** it scopes correctly but requires
+  `extensions.worktreeConfig`, which lives in untracked `.git/config`. This repository has it
+  enabled locally; a fresh CI clone does not, so that fix would pass here and fail in CI. The
+  environment works everywhere and writes nothing.
 - **Where:** `unit_tests/portability/test_ge_120e_1.py` — lines 234, 300, 344, 543 — **and
   `unit_tests/portability/test_ge_120e_1_i.py`**, 2 more sites (found by grepping
   `fixture@example.com` across the branch after a third misattributed commit; the entry
@@ -952,10 +1020,42 @@ is convincing and the invisible half leaks permanently.
 
 ### KI-TQ-20260901-1310 — The red-baseline gate's 60-second pytest budget silently negotiates the AC's required test shape down to whatever fits
 
-- **Severity:** high
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Severity:** was high.
+- **Status:** **RESOLVED 2026-09-07, on CI evidence rather than on the fix landing.**
+
+  > Fixed by **PR #706** (`fde1e75b`). This entry was deliberately held open after that
+  > merge: its claim was that a subprocess-level AC could now clear the gate, and a merged
+  > fix is not that claim's evidence — a green CI run is. Both arrived:
+  >
+  > | PR | `Proof-of-done coverage check (BO-2500b)` |
+  > |---|---|
+  > | #708 | **pass, 2m03s** |
+  > | #694 | **pass, 2m51s** |
+  >
+  > Neither could have completed under the old 60-second ceiling; #694 is the very PR whose
+  > `pytest timed out after 60 s` produced this entry.
+  >
+  > **The budget is composed, not raised** — a 30 s collection floor charged ONCE, plus
+  > 300 s per linked test file. A single larger constant would still ignore the AC's own
+  > size and reproduce this defect one notch up, which is what the fix direction above
+  > warned against; a test pins that ten files get strictly more than one. A timeout is
+  > now also distinguishable from an absent test: a non-nodeid-shaped sentinel is threaded
+  > through `verify_done_eligible` and `_verify_composite_eligible` so the reason names the
+  > budget and the command instead of reading as "these tests do not exist".
+  >
+  > The per-file figure is deliberately ~2x the measured worst case. The ~142 s that
+  > exposed this was measured on a workstation, and a hosted runner is materially slower
+  > for subprocess-heavy work — a value chosen to just clear the local number would have
+  > reproduced this defect in CI while looking fixed locally.
+  >
+  > **A second occurrence, recorded before the fix landed and worth keeping.** Building
+  > BP-900h-4 the same budget forced its author to optimise the declaring-file inspector
+  > from ~7.1 s to ~1.7 s per invocation to fit. That is a genuine improvement, but the
+  > prompt was a gate budget rather than a profiler — the first time this pressure produced
+  > an optimisation instead of deleted coverage. Two ACs in one day had their test design
+  > bent by this number.
+- **Occurrences:** 2
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-07
 - **Where:** `scripts/ac_store/done_proof.py:896-908` (`_run_pytest_and_parse`, `timeout=60`),
   consumed by `scripts/build_orchestration/fast_lane.py:1482` (`verify_red_baseline`)
 
@@ -1213,3 +1313,257 @@ repository) is the same *file family* mishandling git state, though a different 
 
 **Pattern:** a fixture that treats a subprocess as finished when it returns, while the tool it
 invoked has deliberately left work running behind it.
+
+---
+
+### KI-TQ-20260907-0940 — A reachability fixture symlinks the package into its scratch workspace where the real consumer layout is a directory
+
+- **Severity:** low — recorded so it is not rediagnosed, **not** worth a fix of its own. See
+  "Do not action this on its own" below.
+- **Status:** open — no AC, and none wanted
+- **Occurrences:** 1
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `unit_tests/portability/test_bp_900h6ii.py:581`
+
+**What it is.** `TestBp900h6iiReachability` builds a scratch workspace and places the package
+into it as a **symlink** rather than a copy:
+
+```python
+(workspace_dir / "leafcutter-ai").symlink_to(_WORKTREE_ROOT)
+```
+
+The real layout is a real directory, on both authorities. `CLAUDE.md:66` — *"this repo is
+cloned into a subdirectory (e.g. `my-project/leafcutter-ai/`)"*. And `.github/workflows/ci.yml`
+`:443-445`, the very command this test extracts and runs:
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    path: leafcutter-ai
+```
+
+`actions/checkout` writes a directory. So the fixture's workspace differs from the layout it
+exists to simulate, in a test whose declared angle is `reachability`. All line numbers and
+quotations verified 2026-09-07 at `origin/main` (`e2b1eb7ea`).
+
+The motive is legitimate: a `copytree` of the package is expensive. (Measured in this worktree
+2026-09-07: 67 MB excluding `.git`; a build tree with `__pycache__` and deploy outputs runs
+higher, ~76 MB observed.) The symlink is a reasonable thing to have reached for.
+
+**Do not action this on its own.** It accounts for **1 of the 18** regressed outcomes in
+`KI-BO-20260831-1520`'s second occurrence — the other 17 have nothing to do with it. And
+re-anchoring the harness under `BP-1500d-1`, which is already the plan, **subsumes it**: that
+work builds a real out-of-package scratch project with a real package directory at
+`<scratch>/leafcutter-ai/`, which is this fixture's fix by construction. Doing both means
+writing the same fix twice. The entry exists so the next person to hit this recognises it in
+one minute instead of re-deriving it; that is the whole of its value.
+
+> **The misdirection, which is the actually useful part of this entry.** The instinct on
+> seeing a symlink-vs-directory discrepancy is to make the code resolve symlinks. **It already
+> does, and resolving harder cannot fix this.** Verified 2026-09-07:
+>
+> ```text
+> build.py:1618   package_root = Path(__file__).resolve().parent.parent
+> build.py:1899   target_root  = Path(args.target_dir).resolve() if args.target_dir else Path.cwd()
+> ```
+>
+> Both ends of the comparison are `.resolve()`d — which is *why* the symlink case behaves
+> differently: resolution collapses `<scratch>/leafcutter-ai` back onto the real worktree path,
+> so the package and the target no longer sit in the relationship the layout implies. More
+> resolution moves it further from the real layout, not closer. **The fixture has to hold a
+> real directory; there is no path-normalisation fix.** This cost one investigation cycle on
+> 2026-09-07.
+
+**Fix direction (only as part of the `BP-1500d-1` harness work).** Materialise a real
+directory. If copy cost is the objection, the harness does not need the whole package — a
+`copytree` with an ignore predicate dropping `.git/`, `__pycache__/`, `leafcutter-web/` and
+`changelogs/` is small, and closer to a consumer's install than a full mirror is.
+
+**Related.** `KI-BO-20260831-1520` (second occurrence — the regression this was 1 of 18 of).
+`KI-ACS-014` and `KI-TQ-004` are the same family from other angles: a symlinked build output
+standing in for a source tree, and a test consequently measuring something other than what it
+names.
+
+**Pattern:** a fixture whose shortcut is invisible in its own result — the test passes, and
+nothing in its output says the workspace it built is not the workspace it is named after.
+
+---
+
+### KI-TQ-20260907-agent-eval-gate-has-never-evaluated-an-agent — it fast-passes when nothing is affected and dies on a missing API key when something is
+
+**Severity:** high — a required-looking green badge that has never once run the thing it names.
+**Found:** 2026-09-07, on `fix/product-truth-resync` (PR #738).
+**Component:** testing-quality / CI (`Agent Evals` workflow, `scripts/evals/eval_selector.py`,
+`scripts/evals/run_agent_eval.py`, `check_eval_staleness` pre-commit hook).
+
+The `Agent evals (affected)` check has two branches and **neither one evaluates an agent.**
+
+**Branch 1 — nothing affected, fast pass.** The selector diffs changed files against each
+agent's declared `triggers` closure. When none match it prints, verbatim:
+
+```
+AFFECTED   (will run): <none>
+UNAFFECTED (skipped as unaffected): flow-author mock-data-author pt-classifier
+No affected agents — nothing to eval. Fast pass.
+```
+
+Every one of the twelve most recent `Agent Evals` runs before PR #738 took this branch. The
+check was green on all of them. Zero evals ran on any of them.
+
+**Branch 2 — something affected, infrastructure failure.** PR #738 touched
+`docs/product-truth/index.json` and `docs/product-truth/flows/**`, which sit in the trigger
+closures of `flow-author`, `mock-data-author` and `pt-classifier`. So the evals actually ran,
+for what appears to be the first time. Every single row failed:
+
+```
+WARNING run_agent_eval: Row clf-017: model invocation/parse failed: claude CLI exited 1:
+ERROR   run_agent_eval: claude CLI exited 1
+subprocess.CalledProcessError: Command '['claude', '-p', ... ]' returned non-zero exit status 1
+```
+
+The job's environment dump shows `ANTHROPIC_API_KEY:` — empty. The CLI cannot authenticate, so
+no row gets a model response.
+
+**The score is the dangerous part, and it is worth understanding exactly.** Every failed
+invocation yields `got=none`. The gate then reported:
+
+```
+GATE: FAIL — score 22.22% < threshold 70.00%
+```
+
+22.22% is 4 of 18. Those four are **not** partial successes. They are the rows whose *expected*
+outcome happens to be `none`, matching the failure default by coincidence. A reader who sees
+"22%" will reason about a degraded agent and go looking for a prompt regression. There is no
+agent behaviour in that number at all. **A gate that cannot invoke its subject must score 0 or
+error out — never a plausible-looking percentage**, because a plausible percentage sends the
+next person to debug the wrong layer.
+
+**Why nobody noticed.** The two branches conceal each other. Ordinary work does not touch
+`docs/product-truth/**` or an agent template, so the check is green essentially always, and
+that green is read as "the evals pass". The one branch that does trigger it reads as "this
+branch broke the evals" rather than "the evals have never run". Both readings are locally
+reasonable and both are wrong.
+
+**A second-order effect worth its own attention.**
+`docs/product-truth/scripts/generate_product_truth.py` is itself inside those trigger closures,
+and its entire job is to rewrite the files the closures watch. Meanwhile
+`check-product-truth-validate` fails the store whenever its derived data is stale and tells you
+to run exactly that script. So one gate demands regeneration and the other charges three Opus
+artifact evals (900s per-row timeout) for performing it. Keeping the store valid is expensive
+by construction — which is a plausible reason the store sat drifted for seven weeks before
+PR #738. The closures likely want to distinguish **derived** fields (`impl_status`,
+`impl_asof`, `impl_summary` — written by the generator) from **authored** ones (steps, screens,
+scenarios — written by `flow-author`). Only the latter can change an eval's verdict.
+
+**Trap.** Do not "fix" this by relaxing the trigger closures alone. The closures are defensible:
+`flow-author`'s eval declares `sandbox_copy: ["docs/product-truth"]`, so the whole store
+genuinely is its input environment. The missing credential is the primary defect; the
+over-broad closure is the secondary one. Fixing only the second would make the gate quieter
+while leaving it just as incapable of evaluating anything.
+
+**Fix direction.**
+1. Provision the eval job's credential, and make a missing one a hard, named error at job
+   start — never a per-row warning that degrades into a score.
+2. Make an unrunnable eval distinguishable from a failing one in the gate's own output. "0 of
+   18 rows invoked" and "4 of 18 rows passed" must not print the same shape.
+3. Consider asserting the negative: a periodic run that proves the harness can invoke a model
+   at all, so branch 1's green is backed by something.
+4. Separately, split derived from authored paths in the trigger closures.
+
+**Related.** `KI-TQ-010` (nothing asks whether a passing test is *able* to fail — this is that
+question asked of a whole CI gate). The `CLAUDE.md` "Pre-Drive Checklist" already records three
+instances of the same shape: the `feedback_categories.yaml` path that reported missing on every
+worktree, the AC-store validator's bare-directory glob that exited 0 having checked zero files,
+and the stale `origin/main` ref that made a merge audit agree with itself. This is the fourth
+and the most complete: the other three examined the wrong thing, whereas this one has never
+examined anything.
+
+**Pattern:** a check that examined nothing must not look like a check that found nothing — and
+when it cannot examine anything, it must not emit a number that looks like a measurement.
+
+---
+
+### KI-TQ-20260908-0900 — The agent-eval harness reports "the CLI could not be launched" as a 22% quality score, and the pre-commit gate built on it cannot be satisfied in any fresh worktree
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1 (surfaced on 2026-09-08; the CI half has been failing all of 2026-09-07)
+- **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `scripts/evals/run_agent_eval.py` (scoring path) · `scripts/commit_guardian/check_eval_staleness.py` and its `hooks_manifest` entry `check-eval-staleness` · `scripts/evals/results/.gitignore`
+
+**Symptom.** A full local eval run reports a score and fails a quality threshold:
+
+```text
+rows=18 passed=4 accuracy=22.22%
+axis needs_flow       precision=0.00 recall=0.00 f1=0.00 (tp=0 fp=0 fn=4  tn=14)
+axis needs_mock_data  precision=0.00 recall=0.00 f1=0.00 (tp=0 fp=0 fn=13 tn=5)
+axis needs_mockup     precision=0.00 recall=0.00 f1=0.00 (tp=0 fp=0 fn=10 tn=8)
+GATE: FAIL — score 22.22% < threshold 70.00%
+```
+
+The agent was never invoked. Every one of the 18 rows carries:
+
+```json
+"predicted": {},
+"parse_error": "claude CLI could not be launched"
+```
+
+**Why the aggregate is the defect, not the rows.** The per-row record is honest — it names the launch failure in `parse_error`. The aggregate then discards that distinction: an unlaunched agent contributes `predicted: {}`, every axis reads False, and the run is scored as though the agent had answered "no" to everything. `tp=0` **and** `fp=0` on all three axes is the signature — a model that genuinely answered would produce some false positives. A reader of the summary line concludes the classifier is poor. The truth is that nothing ran.
+
+**The same failure in CI, wearing a different mask.** The `Agent evals (affected)` job fails with `agent CLI exited 1` and empty stderr, on every run. Same root: the harness invokes the `claude` CLI in headless mode (`claude -p … --output-format json`), which has no usable auth in that environment. Locally the CLI is present but still fails to launch from the subprocess. One defect, two surfaces, neither reported as an infrastructure problem.
+
+**The gate built on it cannot be satisfied.** `check-eval-staleness` blocks a commit when an affected agent's eval result is missing or stale — deliberately, per its own `_comment`; its fail-open path covers only git and selector errors. But `scripts/evals/results/*.json` is gitignored, so results exist only on the machine that last ran them and are **missing by definition in every fresh worktree**. Since the trigger closure includes `^docs/product-truth/`, this blocks every fast-lane build that touches the product-truth store. The sanctioned escape (`SKIP=check-eval-staleness`) requires the user's own words in the committing agent's conversation, and a sub-agent's conversation is with its parent — so the escape is structurally unreachable for exactly the mechanism the fast lane runs on.
+
+**Detection.**
+
+```bash
+python scripts/evals/run_agent_eval.py --agent pt-classifier --limit 1
+python -c "import json;d=json.load(open('scripts/evals/results/pt-classifier.json'));print({r['id']:r.get('parse_error') for r in d['rows']})"
+```
+
+Any `parse_error` present alongside a reported accuracy means the score is fabricated from non-answers. `tp=0 and fp=0 across every axis` is the cheap tell.
+
+**Fix direction.** Separate "the agent answered badly" from "the agent never answered". A row whose `parse_error` is set must not be scored as a prediction: either abort the run with an infrastructure error naming the launch failure, or report `rows_scored` and `rows_unlaunched` as distinct counts so a threshold can never be computed over rows that produced no output. A gate that cannot tell those apart will keep converting outages into quality verdicts. Separately, either commit eval results so the freshness gate has a shareable satisfying state, or make the gate fail-open when the results directory is absent entirely (as opposed to stale) — an unsatisfiable gate trains contributors to reach for the bypass, which is the outcome it exists to prevent.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse form. The register's usual case is a check that cannot fail; this is a check that cannot pass, and reports its own outage as the subject's fault. **Related:** `GE-120` (trust that a green check actually checked something) is the same principle read forwards.
+
+### KI-TQ-20260908-node-check-and-xfail-masking-agree-on-a-broken-script — `node --check` cannot prove the engine can load a workflow script, and a bare `pytest` on a not-done AC cannot distinguish pass from masked failure — together they nearly verified a script the engine could not run at all
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1 (caught only by an unrelated gate, during BP-600d-5)
+- **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `unit_tests/_workflow_engine_harness.py` (`run_e1_import_check`, `run_workflow_under_e2`)
+  · `scripts/ac_store/pytest_ac_enforcement.py` (`pytest_runtest_makereport`) · `templates/skills/quick-fix/SKILL.md` §"Phase 3.5 — Scope Expansion Warning (BP-600e-1)" · `templates/workflows-js/quick-fix.js`
+
+**Symptom.** During work on `BP-600d-5`, a change to `templates/workflows-js/quick-fix.js` introduced three pairs of unescaped backticks nested inside a template literal, corrupting an `agent(...)` call. Two independent verification surfaces both reported success on this file, and neither of them could have detected the break:
+
+- **Blind spot 1 — `node --check` parses a file the real engine cannot load.** Workflow scripts use top-level `return`, which is only legal inside a function. `node --check <file>` runs in CommonJS script mode, and Node's module wrapper silently supplies that enclosing function scope — so the corrupted file parses as valid script-mode JS and `node --check` exits 0. The real engine has no such wrapper: it loads scripts by wrapping the body in an async IIFE and executing it via `vm.runInContext()` (see `_JS_SHIM_TEMPLATE` and `_build_shim()` in `unit_tests/_workflow_engine_harness.py`, lines 721–815 and 974–1055), and under that path the same file throws `SyntaxError: missing ) after argument list`. `run_e1_import_check()` (same file, lines 1241–1316) exists specifically to close this gap for the sibling ES-module engine, via `node --check --input-type=module`, which does reject top-level `return` — but nothing routes a CommonJS-mode `node --check` result through it, so a plain syntax check on a `workflows-js/*.js` file still proves nothing about loadability under the engine that actually runs it.
+- **Blind spot 2 — a brand-new AC's tests cannot report red under plain `pytest`.** All four tests in `unit_tests/workflows/test_bp_600d_5.py` (confirmed present and covering `BP-600d-5`) were failing on `assert result.result is not None` — the harness could not get a terminal payload back from the corrupted script at all. A bare `pytest` run reported `4 xfailed`, exit 0. `pytest_ac_enforcement.py`'s `pytest_runtest_makereport` hookwrapper (lines 172–260) downgrades any failing `call`-phase test whose `# covers: <AC-ID>` tag resolves to a `work_status` other than `done` to an `xfailed` outcome — and a brand-new AC is, by definition, not yet `done`. The module's own docstring calls this masking "opt-out": `AC_ENFORCE_STRICT=1` was required to see the four failures as real.
+
+**Why the compounding is the finding, not either blind spot alone.** Each mechanism is individually documented and individually defensible — `node --check` was never meant to validate the E2 engine's load path, and xfail-downgrading a not-done AC's red baseline is deliberate TDD-convenience behaviour (see the related `KI-TQ-011` above, which covers a different failure mode of the same plugin). But stacked on the same change, they produced two independently "green" verification surfaces for a script that could not be loaded by the engine at all: a syntax check that could not see the real parse path, and a test result that could not tell "red because the feature is unfinished" from "red because the harness never got a result back." Neither surface, on its own, claims to prove what the other's absence would have exposed.
+
+**Why it did not ship.** `/quick-fix`'s Phase 3.5 scope-expansion gate (`templates/skills/quick-fix/SKILL.md`, confirmed at that heading; mirrored in `quick-fix.js` around lines 702–714 as the `BP-600e-1` check inside the Phase 3 — Fix block) halted the run before the green phase could execute, because the change also touched `templates/skills/quick-fix/SKILL.md` — a second file, which that gate exists to flag. The gate has nothing to do with syntax validity or test masking; it caught this by coincidence. Had the fix been confined to `quick-fix.js` alone, the green phase would have run, reported `4 xfailed`, and read as success.
+
+**The generalisable rule.** A check that passes is not evidence unless you know what it examined. Concretely for this repo: `node --check` on a `workflows-js/*.js` file does not prove the E2 engine can load it — only running it through the engine harness does. And a bare `pytest` result on a test covering a not-yet-`done` AC cannot distinguish "the feature isn't built yet" from "the harness is silently returning nothing" — only `AC_ENFORCE_STRICT=1` surfaces which one occurred.
+
+**Detection that actually works.**
+
+```bash
+# Prove the engine can load the script and get a result back — not just that it parses:
+python -c "
+from pathlib import Path
+from unit_tests._workflow_engine_harness import run_workflow_under_e2
+result = run_workflow_under_e2(Path('templates/workflows-js/quick-fix.js'))
+assert result.result is not None, result.stderr
+"
+
+# Always use the strict flag for a new AC's own tests, never a bare run:
+AC_ENFORCE_STRICT=1 python -m pytest unit_tests/workflows/test_bp_600d_5.py -v
+```
+
+**Fix direction.** Route workflow-script syntax checks through the E1/E2 harness path (`run_e1_import_check` / `run_workflow_under_e2`) rather than a bare `node --check`, wherever a syntax gate exists for `templates/workflows-js/*.js`. For the masking half, `AC_ENFORCE_STRICT=1` should be the default (not opt-in) for any test run scoped to a single not-yet-`done` AC's own new test file — the convenience masking exists for the ambient full-suite run, not for the developer actively driving that AC's red-to-green cycle.
+
+**Related.** `BP-600d-5` (the AC whose tests were masked here) · `KI-TQ-011` above (the same plugin's masking disagreeing with CI's global opt-out — a different angle on the same mechanism) · `KI-BP-20260907-bootstrap-swallows-build-failure` and `KI-BO-20260907-resume-replays-cached-resolver` (same 2026-09-07/08 window, same shape: a loud-looking failure path that a nearby mechanism silently absorbs).
+
+**Pattern:** a check that examined the wrong parse path, and a check that could not distinguish "not built yet" from "silently broken," stacked on the same change — two green surfaces, neither of which was evidence of what the reader assumed it proved.

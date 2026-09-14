@@ -33,6 +33,14 @@ function asArray(v: unknown): string[] {
   return [String(v)];
 }
 
+/**
+ * The child flow a node drills into. `expands_to` is being reshaped from one id to a
+ * list (UXP-700e-3-i), so both shapes are read; the explorer drills into the first.
+ */
+function firstExpansion(v: unknown): string | null {
+  return asArray(v)[0] ?? null;
+}
+
 /** Normalize a raw work/impl-status string to the canonical enum. */
 function normWork(v: unknown): WorkStatus {
   const s = String(v ?? "").toLowerCase().replace(/[\s-]+/g, "_");
@@ -124,7 +132,7 @@ function parseStep(raw: Record<string, unknown>): FlowStep {
     implStatus: rollupStatus(acs, fallbackStatus),
     fallbackStatus,
     acs,
-    expandsTo: raw.expands_to ? String(raw.expands_to) : null,
+    expandsTo: firstExpansion(raw.expands_to),
   };
 }
 
@@ -148,7 +156,7 @@ function parseBranch(raw: Record<string, unknown>): FlowBranch {
     implStatus: rollupStatus(acs, fallbackStatus),
     fallbackStatus,
     acs,
-    expandsTo: raw.expands_to ? String(raw.expands_to) : null,
+    expandsTo: firstExpansion(raw.expands_to),
   };
 }
 

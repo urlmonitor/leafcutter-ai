@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: reviewed
 priority: high
 roadmap_phase: phase_1
@@ -267,7 +267,10 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: [BO-2400f-13-i, BO-2400f-13-ii, BO-2400f-13-iii, BO-2400f-13-iv]
-implemented_by: []
+implemented_by:
+  - "scripts/setup_ticket_worktree.py"
+  - "templates/scripts/setup_ticket_worktree.py"
+  - "templates/workflows-js/fast-lane-ship.js"
 change_target: pipeline
 risk_surface: internal
 notes: |

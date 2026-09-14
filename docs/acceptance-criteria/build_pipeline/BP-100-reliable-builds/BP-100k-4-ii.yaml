@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -31,11 +31,17 @@ criteria: |
     fails the run — the distinction narrows what counts as unreachable without
     weakening the verdict for anything that genuinely is,
   And given a project that holds no file of any kind that any registered
-    condition selects,
+    KIND-BASED condition selects, and in which every condition that would
+    otherwise block is kind-based,
   When a first commit is attempted in that project,
-  Then the commit completes, because no registered gate is reported unreachable
-    on the ground that the project has not yet acquired the kind of file it
-    watches for,
+  Then no kind-based condition contributes to blocking it, because none is
+    reported unreachable on the ground that the project has not yet acquired
+    the kind of file it watches for, and the commit completes unless something
+    outside this record's scope blocks it independently,
+  And a location-based condition that no checkout could produce is exactly such
+    an independent cause: it is out of scope here, still blocks, and is tracked
+    separately — this clause is a statement about the kind-based population, not
+    a promise that an adopter's first commit succeeds,
   And given the same registry evaluated in a project that does hold files of
     that kind,
   When the check runs,
@@ -122,11 +128,38 @@ expects_from:
   contract: "The registry-wide reachability verdict and its exit-status contract, whose definition of unreachable this edge case narrows from 'matches nothing now' to 'no checkout could ever match', while leaving the blocking behaviour for genuine unreachability intact."
 origin_agent: BrainCandy
 created: 2026-09-07
-amended_by: []
+amended_by:
+  - by: BrainCandy
+    at: 2026-09-07
+    note: >-
+      AC-6/AC-7 narrowed to the kind-based population, and the reason matters
+      more than the edit. As written the clause promised "the commit completes"
+      without qualification. That is FALSE against the real registry: of the 46
+      conditions carrying a files pattern only 3 are kind-shaped, 43 are
+      location-shaped, and 35 of those carry no exemption — so a genuinely fresh
+      adopter still exits 1 with roughly 28 unreachable. The clause also
+      contradicted its own record, whose title, every other Given, and entire
+      constraints section are explicitly kind-scoped. The narrowing removes an
+      internal contradiction; it does not weaken a guarantee.
+      Recorded at length because narrowing a criterion so the work passes is
+      normally the anti-pattern, and the difference has to be auditable rather
+      than asserted. What makes it legitimate here is that the uncovered
+      population is not being defined out of existence: it is tracked in
+      KI-CG-20260831-0713, corrected from a false CLOSED back to open the same
+      day, and in BP-100k-4's own amended_by.
+      Caught by ac-validator, which held AC-6/AC-7 after observing that the
+      passing test builds a fully synthetic all-kind-based registry that
+      STRUCTURALLY CANNOT exhibit the blocking population — the green was real
+      but proved a narrower claim than the words made. The decision to narrow
+      was put to the user rather than taken silently.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/commit_guardian/test_bp_100k_4_ii.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260907-BP-100k-4-ii.md
+- templates/scripts/commit_guardian/_hook_trigger_reachability_helpers.py
+- templates/scripts/commit_guardian/check_hook_trigger_reachability.py
+- templates/scripts/commit_guardian/commit_guardian.json
 change_target: pipeline
 risk_surface: contract_boundary
-notes: "Filed from KI-CG-20260831-0713, severity blocker, reproduced twice against synthetic consumer repositories: a fresh TypeScript consumer gives exit 1 with RESULT total=52 unreachable=27 exempt=9, and a fully-onboarded consumer fares no better. Confirmed live on origin/main on 2026-09-07: the gate's manifest entry is always_run true, pass_filenames false, files null, so it runs on every commit in every adopter and its verdict is part of the commit outcome. Two registered conditions select Python files, so an adopter tracking no Python cannot commit at all. This contradicts the phase_1 outcome in the roadmap — 'installs into any project' — directly. The pairing matters: BP-100n-4 widens what the same check looks at, and narrowing this verdict without that widening would make the gate quieter while leaving it blind. Both directions are being built together for that reason."
+notes: "Filed from KI-CG-20260831-0713, severity blocker, reproduced twice against synthetic consumer repositories: a fresh TypeScript consumer gives exit 1 with RESULT total=52 unreachable=27 exempt=9, and a fully-onboarded consumer fares no better. Confirmed live on origin/main on 2026-09-07: the gate's manifest entry is always_run true, pass_filenames false, files null, so it runs on every commit in every adopter and its verdict is part of the commit outcome. Two registered conditions select Python files, so an adopter tracking no Python cannot commit at all. This contradicts the phase_1 outcome in the roadmap — 'installs into any project' — directly. The pairing matters: BP-1600a-2 widens what the same check looks at, and narrowing this verdict without that widening would make the gate quieter while leaving it blind. Both directions are being built together for that reason."

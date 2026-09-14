@@ -89,7 +89,12 @@ origin_agent: product-owner
 created: 2026-09-01
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-400e-1
+  - BO-400e-2
+  - BO-400e-3
+  - BO-400e-4
+  - BO-400e-5
 implemented_by: []
 documentation_triggers:
   - sequence-diagram

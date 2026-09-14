@@ -1,0 +1,220 @@
+id: TQ-100a-2-i
+components:
+  - testing_quality
+title: "The host repository's commit identity is byte-identical across a session, and a fixture that changed it fails the run by name"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a snapshot of the host repository's shared-configuration commit identity
+      is taken before the first test of a session runs, recording for each
+      identity key either its exact value or the fact that the key is ABSENT,
+      where absent is a distinct recorded state from present-with-an-empty-value,
+  When the session ends — whether every test passed, a test failed, or the run
+      stopped at the first failure,
+  Then the same keys are read again and compared with the snapshot byte for byte,
+    And a session in which every key holds the value it held before, and no key
+      appeared or disappeared, reports nothing and does not affect the run's
+      outcome,
+    And a session in which any key's value differs fails the run and reports, in
+      one message: the test whose sandbox made the change, the key that changed,
+      the value held before, and the value held after,
+    And a key recorded as absent before and found present after is reported as a
+      change and the message names the value that appeared,
+    And a key recorded as present before and found absent after is likewise
+      reported as a change,
+    And a session in which the keys were absent before and are absent after
+      reports nothing, and this outcome is distinguishable in the run's own
+      record from a session in which the comparison established that two present
+      values matched — because only the second of those two has exercised the
+      comparison,
+    And run today, before any fixture is changed, this reading FAILS on this
+      repository's own suite: the linked-worktree fixtures replace the
+      developer's recorded identity with their own, the condition under which 81
+      commits of local history are already misattributed.
+depends_on:
+  - TQ-100a-2
+doc_links:
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Both KI-TQ-012 occurrences (~L589, ~L840) close by asking for exactly this
+      guard, and the first states the trap it must avoid: a guard that asserts
+      only "the fixture set an identity" passes against the defect. The assertion
+      has to be about the HOST repository's configuration — the thing the fixture
+      never meant to touch.
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      CROSS-LINK, NOT DUPLICATION. This guard is green-on-arrival in CI and so
+      needs the substitute proof — break the guarded behaviour on purpose, show
+      the guard objects, put it back. That shape and its recording obligations
+      are owned by the TQ-500 family and must not be re-specified here.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: relates-to
+    status: exists
+  - path: tests/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THIS GUARD'S OWN FALSE GREEN, STATED FIRST BECAUSE IT IS THE LIKELY OUTCOME.
+    On a fresh CI checkout the identity keys are ABSENT before the session and
+    stay absent after it. The guard therefore passes having compared nothing and
+    exercised no transition. A green required job is NOT evidence that this guard
+    works — it is evidence only that the run did not pollute a repository that
+    had nothing to pollute. Anyone citing CI green as proof of this AC has cited
+    the wrong thing.
+  - >-
+    CONSEQUENCE — THE MUTATION PROOF MUST BE RUN LOCALLY, ON A REPOSITORY THAT
+    HAS AN IDENTITY. Revert one real site — unit_tests/portability/
+    test_ge_120e_1.py:234 — to its `git config user.email` form, run the session,
+    and confirm the guard goes RED and names that fixture, the key, the before
+    value and the after value. Then revert the revert and confirm green. Record
+    both outcomes as this AC's substitute evidence per TQ-500a; do not invent a
+    second mechanism for recording it.
+  - >-
+    ABSENT MUST BE A DISTINCT VALUE FROM EMPTY, OR THE GUARD IS INERT IN CI. If
+    the snapshot represents a missing key as an empty string, then the CI
+    sequence absent-then-set-by-a-fixture compares empty against a value and may
+    be normalised away by whatever comparison treats falsy values as equal — and
+    the one environment where the keys start missing is the one where the guard
+    then never fires. Represent absence as its own state and compare states, not
+    strings.
+  - >-
+    THE READING IS SESSION-SCOPED, NOT PER-TEST, AND MUST SURVIVE AN EARLY EXIT.
+    Take the snapshot before the first test and compare at session end, including
+    when the run stopped at the first failure — the run that stops early is
+    exactly the run whose teardown did not happen, which is how the pollution
+    became permanent in the first place. A signal that kills the process outright
+    cannot be caught; state that limit rather than implying coverage of it.
+  - >-
+    READ THE REPOSITORY, NOT A FIXTURE. Both the before and the after read must
+    come from the host repository's actual shared configuration as git resolves
+    it. A guard that compares two values a test handed it asserts nothing about
+    the repository and is the "asserts only that the fixture set an identity"
+    trap the register names.
+  - >-
+    NAME ALL FOUR ELEMENTS IN ONE MESSAGE. Fixture, key, before, after. A message
+    reading "git config changed during the test session" sends the reader back to
+    a bisect over a suite of thousands, which is the cost that kept this defect
+    alive for eleven days.
+  - >-
+    SINGLE-COPY TARGET. The two fixture files have no counterpart under
+    templates/ and build.py deploys no conftest.py, so the mutation above is
+    applied where the code actually runs; there is no build-output copy to
+    silently regenerate the reverted line.
+delivers_to: null
+expects_from:
+  ac_id: TQ-100a-2
+  contract: >-
+    Fixtures that supply identity through the inherited process environment and
+    write nothing to the host's shared configuration. This AC asserts the guard
+    that holds them to it, and is red against the current fixtures by design.
+test_spec:
+  - name: test_tq100a_2_i_a_changed_value_fails_and_names_fixture_key_before_and_after
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Given a before-state holding a recorded identity and an after-state holding
+      a different one, the comparison produces exactly one failure whose message
+      contains all four elements — the fixture, the key, the before value and the
+      after value. A message naming fewer than four fails this test.
+  - name: test_tq100a_2_i_an_unchanged_identity_reports_nothing
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      The false-alarm control. Identical before and after states produce no
+      finding and do not fail the run. NAMED MUTATION (this descriptor asserts an
+      absence) - make the comparison sensitive to the order in which keys were
+      read; under that injection an unchanged pair is reported and THIS TEST MUST
+      GO RED. Revert and it returns to green.
+  - name: test_tq100a_2_i_absent_is_a_distinct_state_from_empty_in_both_directions
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Four pairs - absent then present is a change naming the value that
+      appeared; present then absent is a change; absent then absent is not a
+      change; empty-string then absent is a change. The third and fourth together
+      are what stop the CI case from being normalised into silence.
+  - name: test_tq100a_2_i_a_polluting_fixture_fails_a_real_session_in_a_real_repository
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: >-
+      python -m pytest unit_tests/portability/ -q, run as a subprocess against a
+      throwaway host repository that has a recorded identity and a deliberately
+      polluting fixture
+    description: >-
+      The end-to-end reading. A session containing a fixture that writes an
+      identity from inside a linked worktree exits non-zero and its output names
+      that fixture and the changed key. Assert against a real repository with a
+      real recorded identity - a session run where the keys are absent throughout
+      passes while proving nothing, which is precisely the CI condition described
+      in the implementation notes.
+  - name: test_tq100a_2_i_a_session_that_stopped_at_the_first_failure_still_compares
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      Run the session so that it halts at the first failing test with a polluting
+      fixture already having run. The comparison still happens and still reports.
+      The run that ends early is the run whose teardown did not, which is the
+      shape that made this pollution permanent.
+test_rationale: |
+  Five descriptors, and the load-bearing one is the fourth. The first three can
+  all be satisfied by a comparison function fed two dictionaries, which asserts
+  nothing whatever about the repository — the exact trap the known-issue register
+  warns about in its own words. The fourth runs a real session against a real
+  repository that has a real recorded identity, and is the only descriptor that
+  can distinguish a working guard from one that reads the wrong thing. The fifth
+  covers the early-exit path because that is the path on which this defect became
+  permanent.
+
+  THIS AC IS RED ON ARRIVAL AND THAT IS ITS VALUE. Unlike most of this family it
+  needs no manufactured demonstration to show it can fail: run it today against
+  this repository's own suite and it fails, with 81 misattributed commits as the
+  standing evidence. What it DOES need is the demonstration that it can fail for
+  the right reason once the fixtures are fixed, which is the local mutation
+  described in the implementation notes — CI cannot supply it, because in CI the
+  keys are absent at both ends.
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHY SESSION-SCOPED AND NOT PER-TEST. A per-test check is more precise about
+  blame and far more expensive, and it misses nothing this one catches: any
+  fixture that writes the shared configuration leaves it written at session end.
+  The blame precision is recovered by naming the fixture in the message.
+
+  WHAT THIS AC DELIBERATELY DOES NOT OWN. The machinery for proving a
+  green-on-arrival check could have failed lives in the TQ-500 family — 27
+  records under TQ-500-checks-that-can-fail. This AC requires that proof and
+  points at TQ-500a for its shape. It must not grow its own version.
+
+  THE 81 COMMITS ARE THE BASELINE, NOT AN ANECDOTE. They are what makes this
+  clause falsifiable today, and they are also why the fix has to be in the
+  fixtures rather than in a one-time repair of the configuration: the value
+  returns on the next run of the suite, from whichever worktree happens to run it.

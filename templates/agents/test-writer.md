@@ -527,7 +527,12 @@ work:
 - Commit 2: the test-only assertion fix.
 
 Emit `(status: handoff)` in `## Comments` listing the required split, and
-stop. Do not bundle a production behavior change into a test-repair commit.
+return `handoff_target: "python-coder"` (or `"sql-coder"`, matching the layer
+that needs the production fix) in your JSON result. The comment lists WHAT
+must change; the `handoff_target` field is how the driver (build-feature.js /
+build-ticket.js) learns WHO to re-dispatch — it routes on that field, not on
+the comment prose. Do not bundle a production behavior change into a
+test-repair commit.
 
 ### Rule 5 — Prefer expanding the test over shrinking production.
 

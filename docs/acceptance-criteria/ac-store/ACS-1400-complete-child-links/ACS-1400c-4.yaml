@@ -1,0 +1,83 @@
+id: ACS-1400c-4
+components:
+  - ac_store
+title: "Whether a retired parent lists its retired children is decided by a person and written down before anything is repaired"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a retired parent that omits a child it has, and an active parent that
+    omits two children which are themselves retired and whose replacements the
+    parent already lists,
+  When the one-off adjudicated pass is run before the convention for retired
+    records has been written into the store's reference,
+  Then neither record is repaired,
+  And each is reported as an abstention stating that the convention for retired
+    records is unsettled,
+  And once the convention has been written into the reference, a further run
+    dispositions both records according to what the reference says, and reports
+    the disposition it applied together with the convention it applied it under.
+depends_on:
+  - ACS-1400c
+  - ACS-1400c-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "THE HOME FOR THE DECISION, AND IT IS SILENT TODAY. Its status lifecycle section covers how a record is retired and what must be set, but says nothing about whether a retired parent should list its retired children or whether an active parent should keep listing children its successors replaced. That silence is why this is a decision rather than an implementation detail."
+  - path: docs/acceptance-criteria/ac-store/ACS-1400-complete-child-links/ACS-1400c.yaml
+    relationship: related
+    status: exists
+    relevance: "The parent L1 states the constraint directly: settle it, write it into the status lifecycle, then implement it — in that order, and by a person before any code is written."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+notes: |
+  A DECISION GATE EXPRESSED AS A BEHAVIOUR, WHICH IS THE ONLY WAY IT SURVIVES
+  INTO A BUILD. "Somebody should decide this first" in a note is not enforceable.
+  Requiring the pass to abstain while the reference is silent, and to name the
+  convention it applied once the reference speaks, makes the ordering a property
+  of the tool.
+
+  THE MEASURED POPULATION, RE-VERIFIED 2026-09-08, AND IT IS TWO DISTINCT SHAPES
+  THAT THE L0 GROUPS TOGETHER. Shape one: a retired parent with active children —
+  BO-100d-1 and BO-100d-2 are retired (superseded, oddly, by their own children)
+  and carry three active children between them, and BP-100b is retired and carries
+  eleven. Shape two: an active parent with retired children — TKT-100 is active
+  and omits TKT-100a and TKT-100f, both retired, while listing the seven
+  successors that replaced them. The two shapes may well warrant opposite answers,
+  and a convention written for only one of them will be applied to both.
+
+  TKT-100 IS THE CASE THAT SHOULD DECIDE THE ARGUMENT, AND IT ARGUES AGAINST
+  REPAIR. Its omission reads as deliberate and arguably correct: "repairing" it
+  would add two retired records back into an active parent's child list, which
+  makes the parent's own finished-state harder to reason about rather than easier.
+  A pass that treats every gap as drift gets this exactly backwards. That is the
+  concrete reason this record exists rather than being folded into ACS-1400c-1.
+
+  BP-100b SITS IN TWO POPULATIONS AT ONCE and is the reason the dispositions must
+  be evaluated in a defined order rather than independently. It is retired AND its
+  coverage list resolves to nothing, so both this AC and ACS-1400c-2 have a claim
+  on its eleven children. Whichever abstention is reported, the record must appear
+  exactly once with exactly one stated disposition — ACS-1400c-1 requires that,
+  and this pairing is the case that will test it.
+
+  THE DECISION ITSELF IS NOT TAKEN HERE. This AC is deliberately silent on what
+  the convention should be; that is BrainCandy's call, and pre-empting it in a
+  criterion would be the BA making a product decision in passing.

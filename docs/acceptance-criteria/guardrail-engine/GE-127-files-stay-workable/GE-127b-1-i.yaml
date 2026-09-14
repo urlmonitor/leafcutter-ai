@@ -53,7 +53,7 @@ doc_links:
   - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b-1.yaml
     relationship: parent
     status: exists
-  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-ii.yaml
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2-ii.yaml
     relationship: related
     status: exists
     relevance: >-
@@ -144,7 +144,7 @@ it_requirements:
     a compared-count of zero. Implement the count as an unconditional statement in the outcome
     — always printed, whatever its value — and the refusal as a consequence of the SOURCE being
     unresolvable, meaning unreachable or uninterpretable: never of the count being zero, and
-    never of the history being empty. This is the positive-count form BP-100n-4-ii requires:
+    never of the history being empty. This is the positive-count form BP-1600a-2-ii requires:
     make the empty state unrepresentable in the output, then derive the refusal from the source
     resolution rather than from the number.
   - >-
@@ -152,12 +152,12 @@ it_requirements:
     top-level mapping key to commit_guardian.json, the only two containers
     _package_surface_registry.WATCHED_REGISTRIES binds on that file. It changes the outcome's
     summary line and adds the source-resolution floor. Do NOT mint a config_schema_fragment
-    key to clear the structured-spec validator: BP-100n-4-ii records that BP-100k-4 and
+    key to clear the structured-spec validator: BP-1600a-2-ii records that BP-100k-4 and
     BP-100k-4-i each declared a key that was never created, and commit_guardian.json's 36
     top-level keys still contain neither. A second imaginary key would make the machine-checked
     spec less trustworthy than no spec at all.
   - >-
-    REUSE BP-100n-4-ii's VERDICT VOCABULARY AND EXIT-STATUS CONTRACT UNCHANGED, AND THE SAME
+    REUSE BP-1600a-2-ii's VERDICT VOCABULARY AND EXIT-STATUS CONTRACT UNCHANGED, AND THE SAME
     ONE GE-127a-1-i PINS. "INDETERMINATE: reason=<text>" naming which situation occurred, with
     exit 2; exit 0 for a clean run; exit 1 for a reported finding, which keeps GE-127b-1's
     grew-and-refused case distinguishable from an unresolvable one. Do not mint a third verdict
@@ -172,7 +172,7 @@ it_requirements:
     many files it compared belongs in the single outcome the author already reads from this
     gate. A second summary printed elsewhere lets one line report a determinate run while the
     other reports an empty one, and the reader has no way to know which is authoritative. This
-    is BP-100n-4-ii's one-summary rule applied here.
+    is BP-1600a-2-ii's one-summary rule applied here.
   - >-
     THE TWO REFUSING SITUATIONS ARE DISTINGUISHED BY NAME, NOT MERELY BOTH REFUSED — AND THE
     EMPTY HISTORY IS NAMED APART FROM BOTH. The two that refuse are "the previous lengths could
@@ -362,7 +362,7 @@ test_rationale: |
 
   The compared-count descriptor asserts by variation rather than against a literal because a
   hard-coded number satisfies a stated-count requirement while proving nothing about what was
-  examined. BP-100n-4-ii requires the same construction for the same reason.
+  examined. BP-1600a-2-ii requires the same construction for the same reason.
 
   Two descriptors carry the load of keeping this record consistent with its parent, and after
   the 2026-09-01 criteria correction the criteria now name both cases positively rather than
@@ -412,8 +412,8 @@ amended_by:
   note: 'criteria untouched. PACKAGE SURFACE FALSE, MEASURED: no hooks_manifest.hooks id and
     no new top-level mapping key — the only two containers WATCHED_REGISTRIES binds on
     commit_guardian.json. No config_schema_fragment minted; the BP-100k-4 / BP-100k-4-i
-    fictional-key precedent BP-100n-4-ii records is explicitly not repeated. VERDICT
-    VOCABULARY: reuse BP-100n-4-ii''s "INDETERMINATE: reason=<text>" with the 0/1/2 exit
+    fictional-key precedent BP-1600a-2-ii records is explicitly not repeated. VERDICT
+    VOCABULARY: reuse BP-1600a-2-ii''s "INDETERMINATE: reason=<text>" with the 0/1/2 exit
     contract, the same one pinned on GE-127a-1-i, so all three unresolvable conditions here
     report through one line and GE-127b-1''s grew-and-refused case stays distinguishable at
     exit 1. AMBIGUITY RESOLVED RATHER THAN LEFT FOR THE CODER — AND FLAGGED TO THE USER: the
@@ -423,7 +423,7 @@ amended_by:
     GE-127b-1''s fourth arm requires to COMPLETE. The reading pinned in it_requirements takes
     the population to be the resolution of the previous-length source (git available, HEAD
     resolves, HEAD tree holds covered files) rather than the per-commit lookup results, which
-    reconciles the two records and matches BP-100n-4-ii, whose populations are likewise
+    reconciles the two records and matches BP-1600a-2-ii, whose populations are likewise
     repository-wide. A dedicated seam descriptor makes that reading executable and requires it
     to be green simultaneously with GE-127b-1''s newly-added-file descriptor. This is
     recommended to the user as a BA clarification to clause 2 rather than left as an
@@ -451,7 +451,7 @@ amended_by:
     is out of scope for the ratchet rather than a blocked commit. THE FIX: the two
     populations are now named separately. Clauses 1 and 2 are about the SOURCE being
     unreachable, uninterpretable, or holding no covered file at all — all three
-    repository-wide, matching BP-100n-4-ii, whose populations are likewise
+    repository-wide, matching BP-1600a-2-ii, whose populations are likewise
     repository-wide rather than per-invocation. A NEW third arm states the
     legitimate case positively and executably: source established and populated,
     commit stages only newly added covered files, commit completes. The count clause
@@ -462,7 +462,7 @@ amended_by:
     unambiguous IN THE CRITERIA, which is what the seam descriptor
     test_ge_127b_1_i_a_commit_adding_only_new_covered_files_against_a_populated_history_completes
     asserts and what lets it be green simultaneously with GE-127b-1''s
-    newly-added-file descriptor. UNCHANGED AND DELIBERATELY SO: BP-100n-4-ii''s
+    newly-added-file descriptor. UNCHANGED AND DELIBERATELY SO: BP-1600a-2-ii''s
     "INDETERMINATE: reason=<text>" vocabulary and the 0/1/2 exit-status contract; the
     requirement that the situations be distinguished BY NAME; the absence-asserting
     clause and its named mutation. GE-127b-1 was NOT touched — its four arms are
@@ -498,7 +498,7 @@ amended_by:
     record required exit 2 for — HEAD holding only a README, one new under-limit
     covered file staged — and both tests construct that fixture identically, so no
     implementation could satisfy both. The clause''s origin was importing
-    BP-100n-4-ii''s "a successfully-empty result is the same epistemic state as a
+    BP-1600a-2-ii''s "a successfully-empty result is the same epistemic state as a
     failed lookup", which is sound for a CENSUS of things that must already exist and
     wrong for a RATCHET that compares against whatever history happens to hold. THE
     FIX: the empty-history case is removed from the refusing set and now COMPLETES,
@@ -506,7 +506,7 @@ amended_by:
     history holds nothing of a covered kind" apart from "the lookup broke". UNCHANGED
     AND DELIBERATELY SO: the two genuine unavailability situations — source
     unreachable, and source reached but uninterpretable — still refuse and are still
-    distinguished BY NAME rather than merely both failing; BP-100n-4-ii''s
+    distinguished BY NAME rather than merely both failing; BP-1600a-2-ii''s
     "INDETERMINATE: reason=<text>" vocabulary and the 0/1/2 exit-status contract, with
     no third verdict set minted and no exit codes in criteria; the unconditional
     stated count including when it is none, and that a count of none does not by
@@ -553,7 +553,7 @@ amended_by:
     it_requirements[5] named the wrong pair as the two distinguished situations
     (could-not-be-read versus read-and-none, rather than unreachable versus uninterpretable);
     it_requirements[6] required that "an empty population must never become a completed
-    commit", which the correction inverts; the BP-100n-4-ii doc_link relevance instructed
+    commit", which the correction inverts; the BP-1600a-2-ii doc_link relevance instructed
     reuse of "a successfully-empty result carrying the same epistemic weight as a failed
     lookup" as part of the contract to import, directly contradicting the corrected notes;
     and expects_from''s contract said this record converts the source''s "unavailability or
@@ -631,7 +631,7 @@ notes: |
   stops refusing; it does not become silent.
 
   THE BOUNDARY WITH THE CENSUS PATTERN THIS BORROWED FROM, STATED SO IT IS NOT
-  RE-CROSSED. BP-100n-4-ii's rule that a successfully-empty result carries the same
+  RE-CROSSED. BP-1600a-2-ii's rule that a successfully-empty result carries the same
   epistemic weight as a failed lookup is correct THERE and wrong HERE, and the
   difference is what an empty population is evidence of. A CENSUS enumerates things
   that must already exist — gate scripts on disk, registry entries — so a count of

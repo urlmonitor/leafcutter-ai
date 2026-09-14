@@ -34,7 +34,7 @@ sys.modules["_emission_shape"] = _emission_shape
 _spec.loader.exec_module(_emission_shape)
 
 extract_emission_object = _emission_shape.extract_emission_object
-required_keys = _emission_shape.required_keys
+consumer_required_keys = _emission_shape.consumer_required_keys
 NORMATIVE_SKILL_RELPATH = _emission_shape.NORMATIVE_SKILL_RELPATH
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -47,7 +47,14 @@ class TestThe28ShippedRecordsConformToTheDocumentedShape(unittest.TestCase):
         # angle: real_artifact
         skill_path = _REPO_ROOT / NORMATIVE_SKILL_RELPATH
         documented_object = extract_emission_object(skill_path)
-        documented_shape = required_keys(documented_object)
+        # Consumer view (excludes `ticket` AND `text`): this check proves the
+        # 28 real, already-written records conform to the documented shape a
+        # CONSUMER must tolerate, not what a producer must declare. INF-700b-1
+        # makes `text` required of every producer but optional to a consumer
+        # record written before that AC landed (a missing `text` there is a
+        # classification, per INF-700c-1, never a parse error) — see
+        # unit_tests/agents/_emission_shape.py's "TWO VIEWS, NOT ONE".
+        documented_shape = consumer_required_keys(documented_object)
 
         records = load_fixture("harvest_learnings/unroutable_corpus_28")
         self.assertEqual(28, len(records), "corpus fixture must be the full 28-record capture")

@@ -1,0 +1,184 @@
+id: BP-1500b-1
+title: "An installed artifact the package can no longer produce is removed, named in the report, and no longer reachable"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given a project has the package installed, and an earlier install placed the
+    workflow named "fast-lane-build" into that project's installed tree,
+  And the package no longer carries any source for "fast-lane-build" -- its
+    template was deleted on 2026-09-01 and eight workflow templates remain,
+  When the install is rebuilt,
+  Then the installed copy of "fast-lane-build" is gone from that project's
+    installed tree,
+  And the build's report for that rebuild names "fast-lane-build" as something
+    it removed, rather than reporting only a count of removals,
+  And asking the installed project for the workflow "fast-lane-build" by name
+    afterwards yields nothing, so the retired capability is no longer offered,
+    run, or answered to by name,
+  And the eight workflows the package still carries are all still present in the
+    installed tree afterwards, byte-for-byte unchanged by the sweep.
+depends_on:
+  - BP-1500b
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-005 is the defect class. KI-BP-010 is the narrow already-reopened instance in the workflows directory; read it for the mechanism, not as coverage."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "Holds the stale-file cleanup step whose clean result is the observed symptom. Its current notion of stale is a fixed list of historical paths, unrelated to orphans."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100b-3.yaml"
+    relationship: describes
+    status: exists
+    relevance: "PRIOR ART, NOT COVERAGE. Same removal shape scoped to the workflows output directory only, and silent about the report. Reopened as KI-BP-010 after being found never to have executed against that directory. Reuse its mechanism; a fix for it does not satisfy this AC."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The build_pipeline component's detail_ref in docs/components.json. The architecture-level description of the phase sequence the sweep has to join, and the doc that must not go on describing a build that silently keeps residue."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the package-versus-target boundary. Needed here because the sweep now runs on the default path, so 'which tree' stops being an edge case; BP-1500b-1-i carries the constraint."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The sweep must run on the DEFAULT build path -- the run an adopter gets from `python scripts/build.py --target-dir <root>` with no flags. A sweep reachable only behind an opt-in flag does not close this AC, because the observed defect was produced by default-path runs. See the ENFORCEMENT POINTS section in the parent BP-1500b notes: the load-bearing change is the `if args.clean:` gate at scripts/build.py:2288, not any list."
+  - "Reuse the derivation that already exists rather than authoring a second one. `_build_source_manifests` (scripts/build.py:1784) already recomputes the producible set from templates/ on every call, including templates/workflows-js/*.js, and `clean_stale_artifacts` (scripts/build_phases.py:3756) already removes installed artifacts absent from it. Two competing notions of 'producible' in one build is a defect, not redundancy."
+  - "Do NOT add any path or name to `_PRE_CONSOLIDATION_PATHS` (scripts/build.py:1769) and do not route the sweep through `_cleanup_stale_paths` (:1844) or `_run_migration_report` (:1968). That list is the layout-migration surface, it is destructive (KI-BP-009), and growing it is the hardcoded-list shortcut BP-1500b-2 exists to make fail."
+  - "Every removal must be reported with the artifact's installed path and the reason it was classified as residue. A count alone does not satisfy the report clause and must not be the only output."
+  - "The sweep must be idempotent: a second rebuild against the same tree removes nothing further, exits the same way, and reports the same scope."
+  - "`--dry-run` must list exactly what a real run would remove and remove nothing. This is the only way an adopter can inspect the blast radius of a newly-default destructive step before it happens."
+  - "Reachability is the outcome, not file absence. After the sweep, resolving the retired capability by name in the installed project must fail to resolve. A stale registry, index, config or manifest entry still pointing at the removed path leaves the capability selectable and does not satisfy the third Then clause."
+  - "Removal must not be satisfied by rewriting a directory. Per-file decisions only -- the constraint is owned in full by BP-1500b-4 and is restated here only because this AC is the one that turns the destructive path on."
+  - "Budget: the sweep walks the installed artifact locations once per build, not once per artifact type per location. It must add no more than a small constant to build wall time on a tree of a few hundred artifacts."
+test_spec:
+  - name: test_bp_1500b_1_a_default_no_flag_build_subprocess_removes_the_retired_workflow
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python scripts/build.py --target-dir <root>  (no flags)"
+    description: "Copy the REAL package tree (templates/workflows-js/ as committed, eight scripts, no fast-lane-build.js), seed a target install whose workflows directory carries a ninth file named fast-lane-build.js, run build.py as a subprocess with no flags, and assert the ninth file is gone. Red today: the source-derived step is behind --clean."
+  - name: test_bp_1500b_1_the_removal_report_names_the_artifact_and_not_only_a_count
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The build output for that same run contains the removed artifact's installed path and a stated reason; a report consisting only of a numeric total fails the assertion."
+  - name: test_bp_1500b_1_the_eight_current_workflows_survive_byte_for_byte
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Negative control on the same run: hash the eight still-carried workflow outputs before and after; the sweep changes none of them."
+  - name: test_bp_1500b_1_the_retired_workflow_no_longer_resolves_by_name_after_the_sweep
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "by-name workflow resolution in the installed project after the rebuild"
+    description: "Resolving 'fast-lane-build' by name in the rebuilt install yields nothing -- no file, and no registry/index/config entry still pointing at the removed path. Fails if the file is deleted but a name-to-path record survives."
+  - name: test_bp_1500b_1_a_second_rebuild_removes_nothing_further_and_reports_the_same_scope
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Idempotency: run the same no-flag build twice; the second run reports zero removals and an identical examined-scope, and the tree is byte-stable across it."
+  - name: test_bp_1500b_1_dry_run_lists_the_same_removal_and_deletes_nothing
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "--dry-run names fast-lane-build.js as a would-remove and leaves it on disk; the subsequent real run removes exactly that set and nothing else."
+test_rationale: |
+  A DIRECT-IMPORT UNIT TEST OF THE CLASSIFIER IS INSUFFICIENT HERE, and the
+  reason is specific rather than stylistic. The classifier this AC needs
+  already exists and, called directly, already returns the right answer:
+  `_build_source_manifests` genuinely recomputes from templates/workflows-js/
+  and `clean_stale_artifacts` genuinely removes what is absent from it. A unit
+  test that imports either and asserts "fast-lane-build.js is classified
+  stale" is GREEN TODAY, against a build that has left the orphan in place
+  through every one of six days of runs. The entire defect lives in the call
+  site -- an `if args.clean:` gate at build.py:2288 that the default path never
+  enters -- and a direct-import test cannot see a gate it bypasses by
+  construction. Only a real `build.py` SUBPROCESS invoked the way an adopter
+  invokes it can distinguish "the code is correct" from "the code runs".
+
+  THE FIXTURE IS THE REAL PACKAGE, NOT A SYNTHETIC ONE. The templates/
+  directory is copied as committed rather than hand-built, and the seeded
+  orphan is the actual retired artifact. A synthetic template set is authored
+  by the same person who authors the sweep and inherits their assumptions
+  about what an artifact looks like; this project has been bitten by exactly
+  that bias before (indented-fixture parser regex, EPIC-PhantomDoneFilesTouched).
+
+  RUNTIME BUDGET. Six subprocess builds is well inside the done-proof pytest
+  budget as fixed by PR #706 (30s collection floor plus 300s per linked test
+  file). Do not compress this contract toward a cheaper shape on runtime
+  grounds -- the subprocess IS the coverage.
+delivers_to:
+  agent: python-coder
+  contract: "An orphan sweep invoked unconditionally on the default build path (moved out of the `if args.clean:` branch at scripts/build.py:2288), exposing per-artifact removal records of the shape {installed_path: str (absolute), artifact_type: str (one of agents|skills|hooks|workflows), reason: str}, plus a dry_run mode that yields the identical record list while performing no filesystem mutation. BP-1500b-2 constrains how `reason` is derived, BP-1500b-3 reports over the same walk, BP-1500b-4 vetoes records whose provenance is unattributable."
+expects_from:
+  ac_id: BP-1500b
+  contract: "The L1's ENFORCEMENT POINTS section, which fixes the site: extend EP3 (build.py:2288 -> _build_source_manifests + clean_stale_artifacts), leave EP1 (_cleanup_stale_paths / _PRE_CONSOLIDATION_PATHS) and EP2 (_run_migration_report) untouched."
+origin_agent: BrainCandy
+created: 2026-09-07
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-07'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (M), it_requirements, test_spec, test_rationale, delivers_to, expects_from, and two architecture doc_links. Criteria, title and depends_on unchanged. The load-bearing enrichment is naming the enforcement point: the source-derived removal this AC describes already exists in clean_stale_artifacts + _build_source_manifests and is gated behind a store_true --clean flag that defaults False, so the change is the promotion of that call onto the default path -- NOT an extension of _PRE_CONSOLIDATION_PATHS, which is a destructive migration list (KI-BP-009). The test contract is subprocess-based for the same reason: a direct-import unit test of the classifier is green today against a build that leaves the orphan in place."
+superseded_by: null
+covered_by:
+  - BP-1500b-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY A NAMED REAL INSTANCE RATHER THAN A FIXTURE. The parent L1 requires this to
+  go red on a real orphan, and "fast-lane-build" is one, reproducible on the
+  reporting machine at the time of authoring. A criterion demonstrated only
+  against a synthetic fixture is the weaker claim, because the fixture is built
+  by the same person who builds the check and inherits their assumptions.
+
+  THE EVIDENCE ON DISK, 2026-09-07, re-verified during decomposition rather than
+  taken from the brief:
+    - leafcutter-ai/templates/workflows-js/ holds EIGHT scripts. No
+      fast-lane-build.js.
+    - TWO genuinely distinct installed trees each hold NINE, the extra being
+      fast-lane-build.js:
+        /home/henzeh/projects/leafcutter/.leafcutter/workflows/
+          (surfaced as .claude/workflows via a build-created link)
+        /home/henzeh/projects/leafcutter/leafcutter-ai/.claude/workflows/
+    - The second tree's OTHER workflows carry mtimes of 2026-09-07 16:30, so
+      builds have demonstrably run against it since the template was deleted on
+      2026-09-01, and left the orphan in place each time. This is stronger than
+      "six days passed": it is builds that ran, examined, and reported clean.
+
+  THE "BY NAME" CLAUSE IS NOT DECORATION. The parent's amendment is explicit
+  that the harm is the dead capability remaining SELECTABLE, not merely a file
+  sitting on disk, and warns against collapsing the outcome back into "the file
+  is removed". The third Then clause is that outcome stated as an observation.
+
+  A REACHABILITY RESIDUE THIS AC DOES NOT CLOSE -- FLAGGED, NOT TAKEN. Found
+  during decomposition: templates/commands/fast-lane-build.md STILL EXISTS in
+  source, and the installed command copy is therefore legitimately deployed and
+  is NOT an orphan by any deployed-versus-source comparison. So after this sweep
+  removes the workflow script, the project still offers a "/fast-lane-build"
+  command by name whose runner is gone. That is a shipped command needing an
+  absent artifact -- the DECLARED-BUT-ABSENT direction, which is BP-900g-8-ii's
+  subject, not this one. It is recorded here so the boundary is not mistaken for
+  an omission: removing the orphan is necessary for the parent's reachability
+  clause and, for this particular capability, not on its own sufficient. See the
+  report accompanying this decomposition.

@@ -90,7 +90,7 @@ Two reusable findings:
 
 ## Decomposition strategy that worked
 
-BP-100n-4 is the house style to copy for anti-grep criteria: state the measured
+BP-1600a-2 is the house style to copy for anti-grep criteria: state the measured
 populations in the `Given`, and close with a **varying-population** clause ("add one, the
 stated count must be one greater"). That single clause is the only form no
 literal-carrying implementation can satisfy — a stated count alone is satisfiable by a

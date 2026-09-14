@@ -1,0 +1,165 @@
+id: BP-1500g-1-ii
+title: "A build that cannot proceed without taking the adopter's content stops instead, and no run that took it is a successful one"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given a build has reached a step it cannot complete without removing, emptying
+    or overwriting content the adopter owns,
+  When that build runs,
+  Then the adopter's content is present and unchanged when the run ends,
+  And the run does not end in a success state, and the step carries no success
+    marker,
+  And the run names the specific content it could not proceed past and the step
+    that could not proceed, so the adopter can act on it rather than search for
+    what changed,
+  And an outcome in which the content was removed and the removal was reported
+    accurately does not satisfy this criterion, because the requirement is that
+    the content is still there -- an accurate account of a loss is still a loss.
+depends_on:
+  - BP-1500g-1
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-009 is the observed instance of the exact inversion this AC forbids: the removal of an adopter-owned directory is reported with a success marker and the run ends successfully. Nothing in the output tells the owner they lost anything."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500.yaml"
+    relationship: describes
+    status: exists
+    relevance: "The parent goal, and the reason the last Then clause is worded as it is. This goal is about the build's account of its work being complete and true; this record is placed under it on the strength of the L0 criteria text, but the harm here is the destruction and not the report. A build that announced the loss in red and did it anyway would satisfy the honesty reading and leave the adopter exactly as badly off."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500b-3.yaml"
+    relationship: describes
+    status: exists
+    relevance: "SAME FAMILY, DIFFERENT QUESTION -- cite, do not merge. That AC makes a sweep's CLEAN result checkable by stating the scope it examined. This one governs the run's outcome when the build has damaged something it does not own. A build can state its sweep scope perfectly and still finish green over a destroyed directory."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE ORDER OF OBLIGATIONS IS FIXED BY THE CRITERIA AND MUST NOT BE INVERTED IN IMPLEMENTATION. Clause one -- the content is still there -- is the requirement. Clauses two and three, about the run's outcome and its message, are what must ALSO be true once clause one holds. An implementer who delivers an accurate warning and a non-zero exit while the directory still goes has satisfied the observable half and failed the AC; the fourth Then clause exists specifically to close that reading, and a reviewer should check clause one first and stop there if it fails."
+  - "NO SUCCESS MARKER MAY BE EMITTED FOR A STEP THAT DID NOT DO WHAT IT REPORTS. The observed inversion, reproduced on 2026-09-08, is a green check on `removed stale: .claude/skills` for a removal of adopter-owned content followed by a zero exit. The success marker and the run's exit status are two separate assertions and both are in scope: a run can print no green check and still exit 0, which leaves an automated caller believing the build succeeded."
+  - "THE PROJECT ALREADY HAS TWO ADJACENT PRECEDENTS FOR THIS CLASS OF FAILURE AND THE IMPLEMENTATION SHOULD BE CONSISTENT WITH THEM RATHER THAN INVENTING A THIRD SHAPE: `docs/reference/false-green-mechanisms.md` M5 (a step that checks less than it claims and reports success) and M2 in its ownership form, both cited by KI-BP-009 itself. Read them before choosing how the blocked step reports."
+  - "THE MESSAGE MUST NAME THE SPECIFIC PATH AND THE SPECIFIC STEP, not a category. `could not clean up some paths` is not actionable; the adopter's alternative to being told exactly what blocked is diffing their tree against a backup, which the parent L1 names as the outcome that already counts as a loss."
+  - "THE SCOPE OF THE STOP IS THE STEP AND THE RUN'S OUTCOME, NOT THE BUILD'S OVERALL CONTROL FLOW. Whether the remaining phases proceed around the blocked step or the whole run halts is an implementation judgement with real trade-offs in a partially-installed project, and the AC deliberately leaves it open. Whichever is chosen, a partially-completed build must not report itself complete -- a half-installed project that exits 0 is the same false-green one level up."
+  - "THIS IS A BACKSTOP AND MUST NOT BECOME THE PRIMARY MECHANISM. If this AC's condition is reached routinely on ordinary adopter trees, BP-1500g-1 has not been implemented and the build has merely become loud instead of destructive. Treat a high hit rate on this path as a defect signal, not as the feature working."
+  - "Must be observable in automation as well as to a human reader: the outcome has to be distinguishable from success by a caller that reads only the exit status, since builds run in CI and in agent pipelines where nobody reads the transcript."
+  - "Must follow the project error handling policy: the blocked-step path must log at WARNING or higher and must not swallow the underlying filesystem error."
+test_spec:
+  - name: test_bp_1500g_1_ii_a_run_that_cannot_proceed_without_taking_adopter_content_leaves_it_present_and_unchanged
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter>"
+    description: "THE FIRST CLAUSE, ASSERTED FIRST AND INDEPENDENTLY OF ANY MESSAGE OR EXIT CODE. Construct a tree in which the build reaches a step it cannot complete without removing adopter-owned content, run a real build subprocess, and assert the content is present with identical bytes. This entry must be able to fail while every reporting entry below passes -- that separation is the AC's whole point."
+  - name: test_bp_1500g_1_ii_that_run_does_not_exit_zero_and_the_blocked_step_carries_no_success_marker
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The second clause, as TWO assertions rather than one: the process exit status is not the success status, AND the blocked step's own line in the output carries no success marker. Either alone is satisfiable while the other is wrong -- the reproduced defect printed a green check AND exited 0, and a fix that addresses only the marker leaves every automated caller believing the build succeeded."
+  - name: test_bp_1500g_1_ii_the_run_names_the_specific_content_and_the_specific_step_that_could_not_proceed
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The third clause. The output contains the exact path of the content that blocked the step and identifies the step. Assert on the specific planted path, never on a generic phrase, so a categorical message like `some paths could not be cleaned` fails."
+  - name: test_bp_1500g_1_ii_a_run_that_removed_the_content_and_reported_it_accurately_still_fails
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "THE FOURTH CLAUSE AS AN EXECUTABLE COUNTER-EXAMPLE, and the entry that keeps this AC from decaying into a logging ticket. Run the honest-but-destructive alternative -- content removed, removal reported accurately, run exits non-zero with a precise message -- against this AC's own assertions and require it to be RED. Encodes the rejected reading in the suite rather than only in the notes, in the same shape BP-1500b-4 uses for its rejected-rule differential."
+  - name: test_bp_1500g_1_ii_an_ordinary_build_over_a_tree_with_no_conflict_still_succeeds_cleanly
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "THE OVER-TRIGGER CONTROL. A tree holding adopter content that presents NO conflict builds to a clean success with no blocked-step report. Without this, an implementation that refuses every build passes all four entries above, and the backstop becomes the primary mechanism -- which the it_requirements name as a defect signal, not the feature working."
+  - name: test_bp_1500g_1_ii_the_non_success_outcome_is_visible_to_a_caller_that_reads_only_the_exit_status
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter>   (exit status read by the caller, transcript discarded)"
+    description: "Reachability for the automation consumer specifically: with all output discarded, the exit status alone distinguishes the blocked run from a clean one. Builds run in CI and in agent pipelines where nobody reads the transcript, and a message-only fix is invisible there."
+test_rationale: |
+  THE CONTRACT IS DELIBERATELY STRUCTURED SO THAT THE SURVIVAL ENTRY CAN FAIL
+  WHILE EVERY REPORTING ENTRY PASSES. That is not an accident of ordering; it
+  is the AC's thesis rendered as tests. The notes say an implementer who
+  reaches for a warning message first has misread it, and a contract that
+  bundled presence and reporting into one entry would let exactly that
+  implementer go green on a partial fix.
+
+  THE HONEST-DESTRUCTION DIFFERENTIAL IS THE ENTRY THAT EARNS ITS PLACE. An
+  accurate removal report is the most plausible wrong answer here -- it is
+  what a reasonable engineer builds when told the build lies about deleting
+  things, and it is what the parent L0's honesty framing actively invites.
+  Running that alternative against this AC's assertions and requiring it to be
+  red keeps the counter-example alive in the suite, where a future simplifier
+  will meet it, rather than only in this file's prose, where they will not.
+
+  THE OVER-TRIGGER CONTROL IS THE OTHER HALF OF THE SAME PROBLEM. Five of the
+  six entries here describe what must happen when the build CANNOT proceed, and
+  a build that always refuses satisfies every one of them. This AC is a
+  backstop for a path that should be rare; a contract with no entry asserting
+  the ordinary path still succeeds cannot tell a working backstop from a broken
+  build.
+
+  THE EXIT-STATUS ENTRY IS SEPARATE FROM THE MESSAGE ENTRY BECAUSE THE OBSERVED
+  DEFECT GOT BOTH WRONG INDEPENDENTLY. The reproduced run printed a green check
+  AND exited 0. Fixing the marker while leaving the status is a real and likely
+  partial fix, and it is invisible to every automated caller.
+
+  RUNTIME. Six entries, all real build subprocesses over small scratch trees.
+  Inside the done-proof pytest budget as fixed by PR #706 (30s collection floor,
+  300s per linked test file, overridable via
+  LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS). Not shaped by the retired 60s
+  ceiling.
+delivers_to: null
+expects_from:
+  ac_id: BP-1500g-1
+  contract: "The recomputed ownership verdict owns(installed_path) -> {package_produced | adopter_owned | unattributable}, plus the identity of the step that requested the removal. This AC's condition is definitionally the case where a step requests removal of a path the verdict returns as adopter_owned or unattributable; without that verdict there is no way to recognise the condition, and without the requesting step's identity the third Then clause -- name the step, not just the path -- cannot be satisfied."
+origin_agent: BrainCandy
+created: 2026-09-08
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-08'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (M), it_requirements, test_spec, test_rationale and expects_from. Criteria, title, depends_on and doc_links UNCHANGED; readiness remains draft. WHAT THE ENRICHMENT ADDS BEYOND THE OBVIOUS. (1) The test contract is deliberately ordered and separated so the SURVIVAL entry can fail while every reporting entry passes -- the AC's notes warn that an implementer will reach for a warning message first, and a bundled entry would let that partial fix go green. (2) An honest-but-destructive DIFFERENTIAL was added: the rejected reading (content removed, removal reported accurately, non-zero exit) is run against this AC's assertions and required to be RED, in the shape BP-1500b-4 uses for its rejected-rule test, so the counter-example lives in the suite rather than only in prose. (3) An OVER-TRIGGER control was added because five of six entries describe the cannot-proceed path and a build that refuses everything would satisfy all five; the it_requirements additionally state that a high hit rate on this path is a signal BP-1500g-1 was not implemented, not that the feature works. (4) The exit status and the success marker are specified as TWO assertions, because the reproduced defect got both wrong independently -- it printed a green check AND exited 0 -- and a marker-only fix is invisible to every automated caller, which a dedicated reachability entry now covers."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  THIS IS A BACKSTOP, NOT AN ALTERNATIVE ROUTE TO THE OUTCOME. The parent L1 says
+  it plainly: being told after the fact would not be enough, because an adopter
+  who has to restore from backup has already lost however clear the message was.
+  So this AC is deliberately written to be UNSATISFIABLE by reporting alone -- the
+  first Then clause requires the content to still be there, and the last clause
+  closes the reading in which an accurate removal report counts as compliance.
+  An implementer who reaches for a warning message first has misread it.
+
+  WHY IT IS AN L3 RATHER THAN A FIFTH L2. BP-1500g has five L2 slots against the
+  hard cap and two are owed to the L1's documentation_triggers. Given that
+  constraint this clause is better placed as a failure-mode specification under
+  BP-1500g-1 than dropped: it is the "what could go wrong" face of the same
+  behaviour -- what the build must do on the path where it cannot deliver the
+  guarantee -- rather than a separate capability. Flagged here so a later reader
+  can see the placement was a judgement under a cap and not an accident. If
+  BP-1500g ever gains a sixth slot this is the first candidate for promotion.
+
+  THE STOP IS DELIBERATELY NOT SPECIFIED AS A REFUSAL TO BUILD AT ALL. The
+  criterion constrains the step and the run's outcome, not the build's overall
+  control flow: whether the rest of the build proceeds around the blocked step or
+  the whole run halts is an implementation judgement with real trade-offs in a
+  partially-installed project. What may not happen is the two things observed
+  today -- the content going away, and the run calling that a success.

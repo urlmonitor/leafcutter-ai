@@ -31,6 +31,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from product_truth_shapes import normalise_flow_shapes
+
 logger = logging.getLogger("apply_flow_backlinks")
 
 STORE = Path(__file__).resolve().parent.parent
@@ -188,7 +190,7 @@ def reconcile(
     the edges were already present (idempotent path).
     """
     flow_path = resolve_flow_path(flow, store=store)
-    flow_data = _load_json(flow_path)
+    flow_data = normalise_flow_shapes(_load_json(flow_path))
 
     changed, unknown = apply_backlinks(flow_data, backlinks)
     for step_id in unknown:

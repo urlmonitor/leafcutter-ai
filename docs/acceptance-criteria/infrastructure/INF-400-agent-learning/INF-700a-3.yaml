@@ -1,0 +1,85 @@
+id: INF-700a-3
+components:
+  - infrastructure
+  - knowledge_system
+  - documentation_system
+title: "A how-to gets a person from a finished piece of work to the learning on its page"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a.yaml"
+criteria: |
+  Given a person has finished a piece of work during which an agent captured a
+    learning, and wants to confirm it reached its surface — or wants to route
+    learnings that a failed routing step left unwritten,
+  When they open the how-to guide for the knowledge loop,
+  Then it states at which point the routing step runs on its own, and lists
+    which ways of completing work carry it and which do not,
+  And it gives the steps to confirm, from the completed work's own reported
+    result and then from the destination file, that a specific learning was
+    written,
+  And it gives the steps to run the routing step by hand against the declared
+    sink, for the ways of completing work that do not carry it and for
+    recovering from a routing step that failed,
+  And it gives the steps to establish whether the routing step has ever
+    completed in the tree the reader is standing in,
+  And every path, command and file it names resolves in both a package
+    checkout and a consumer install at the time of writing,
+  And it describes no way of completing work as carrying the routing step
+    unless that way carries it, and it says plainly that routing is by hand
+    for as long as no way of completing work carries it.
+depends_on:
+  - INF-700a
+  - INF-700a-1
+  - INF-700a-2
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "SATISFIES the how-to entry in INF-700a's documentation_triggers. Dispatch how-to-author for the body. The reference-doc entry is INF-700a-4's; keep the two apart — this document is task-shaped (do these steps, see this outcome), the reference is definition-shaped."
+  - "THE COMMAND MUST BE RUNNABLE AS WRITTEN IN BOTH LAYOUTS. The routing step lives at scripts/knowledge/harvest_learnings.py in a package checkout and is deployed elsewhere in a consumer install; a how-to that gives one invocation and does not say which layout it assumes will be wrong for half its readers. This repository has already shipped a pre-drive check whose documented path was one directory too high and reported a missing file on every correctly-provisioned worktree for months."
+  - "DO NOT GIVE A DEFAULT INVOCATION THAT POINTS AT A FILE THAT IS NOT THERE. Until INF-400c-4 lands, the routing step's default sink is debugging/logs/knowledge_emissions.jsonl, which has never existed, while records are in debugging/logs/agent_telemetry.jsonl. Name the sink explicitly in every example. INF-700c-3 carries the same warning for the reference; this is the same trap on the task surface."
+  - "THE CONFIRMATION STEPS MUST END AT AN ARTEFACT, not at an exit code. 'Open the destination file and find the learning text' is the check that distinguishes a routing step that ran from a routing step that worked, and it is the check that would have caught the placeholder substitution INF-700c-1 removed."
+  - "THE LAST CLAUSE IS CONDITIONAL AND MUST BE WRITTEN TO EXPIRE. While INF-700a-1 is unbuilt, ADR-034's standing rule applies — capture is not automatic and any document implying otherwise is wrong. Write that statement so the change that wires the first completion path also removes it, rather than leaving a document that describes a manual process the package no longer has."
+  - "THE WIRED AND EXCLUDED LISTS ARE DERIVED, NOT RETYPED. INF-700a-1-i puts the single list in a top-level section of config/guardrail_gates.yaml, enforced by a build-time guard. This how-to must point at that section as the authority and name the paths only as illustration, saying so explicitly. A second typed copy of a five-item list in prose is how the two go out of step, and the guard cannot see a doc."
+  - "THE ROUTING-STATUS STEPS MUST NAME A COMMAND, NOT A FUNCTION. INF-700a-2's answer is required to be reachable from a production entry point precisely so this document can give a runnable step. If at writing time the only way to obtain the answer is an import, that is a gap in INF-700a-2 to report back, not a step to write down."
+  - "THE EXIT STATUSES THIS DOCUMENT CITES CHANGE UNDER INF-400c-4-iv. After that AC lands, an absent sink returns the no-work status rather than the sink-unreadable status, and exit 1 narrows to a sink that exists and cannot be read. Do not describe a recovery step that treats a missing sink as an error to fix — on a fresh clone it is the normal state."
+test_required: false
+test_rationale: |
+  A how-to produces no executable behaviour, so there is nothing for
+  test-writer to make fail. Its two mechanically checkable clauses are covered
+  elsewhere or not covered by any gate that reaches it: the commands it gives
+  are the ones INF-700a-1's and INF-700a-2's behavioural tests already exercise,
+  and the "every path resolves in both layouts" clause is a review obligation
+  because no existing gate parses prose-named paths in docs/ — the same gap
+  INF-700b-5 records for the reference document. Asserting either by grep would
+  pass on a guide that names the right command and describes the wrong outcome.
+  test_required is set explicitly so test-writer skips with an accurate reason
+  rather than the omission reading as an unauthored contract.
+delivers_to: null
+expects_from:
+  - ac_id: INF-700a-1
+    contract: "The settled trigger point, the set of completion paths that carry the routing step, and the routing figures in a reported result — the facts the steps are written against"
+  - ac_id: INF-700a-2
+    contract: "The routing-side status answer, which supplies the 'has it ever run here' steps"
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

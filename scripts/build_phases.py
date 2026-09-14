@@ -67,6 +67,7 @@ from template_compiler import (
     parse_frontmatter,
 )
 from build_helpers import _canonicalize_output_path
+from build_phases_self_description import _self_desc_field_hint
 
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = PACKAGE_ROOT / "templates"
@@ -874,10 +875,16 @@ def _write(target: Path, content: str, dry_run: bool, force: bool) -> bool:
 
     Adds a compare-before-write guard: when the target already exists and the
     encoded content is byte-identical to what is already on disk, the write is
-    skipped and False is returned.  This eliminates mtime churn and spurious
-    ``git status`` entries for unchanged files.  Binary or unreadable files
-    fall through to an unconditional write (UnicodeDecodeError / OSError are
-    caught and silently ignored).
+    skipped and False is returned.  Both the guard's comparison and the actual
+    write operate on the same value -- ``content.encode("utf-8")`` -- with no
+    newline translation applied in either direction.  The file on disk is
+    therefore byte-identical to ``content`` on every platform, Windows
+    included: a line-feed in ``content`` is never widened to a carriage-return
+    + line-feed pair, and an existing file's on-disk bytes (CRLF or otherwise)
+    are compared exactly as they are, never normalised back to LF first.  This
+    eliminates mtime churn and spurious ``git status`` entries for unchanged
+    files.  Unreadable files fall through to an unconditional write (OSError
+    is caught and silently ignored).
 
     When the target exists and IS about to be overwritten (content differs,
     or its on-disk content could not be read for comparison), calls
@@ -899,20 +906,20 @@ def _write(target: Path, content: str, dry_run: bool, force: bool) -> bool:
     if dry_run:
         print(f"  [DRY-RUN] would write {target}")
         return True
+    data = content.encode("utf-8")
     # Compare-before-write: skip if the on-disk content is byte-identical.
     # Runs only for real writes; dry-run always returns True (intent) above.
     if target.exists():
         try:
-            existing = target.read_text(encoding="utf-8")
-            if existing == content:
+            if target.read_bytes() == data:
                 global _uptodate_count  # noqa: PLW0603
                 _uptodate_count += 1
                 return False
-        except (UnicodeDecodeError, OSError):
-            pass  # Binary or unreadable file — fall through to write.
+        except OSError:
+            pass  # Unreadable file -- fall through to write.
         announce_if_local_change_replaced(target)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
+    target.write_bytes(data)
     return True
 
 
@@ -1594,6 +1601,12 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/ac_triage.py",                 "ac_triage.py"),
     ("scripts/ac_store/create_ac_workflow.py",        "create_ac_workflow.py"),
     ("scripts/ac_store/cross_reference_audit.py",     "cross_reference_audit.py"),
+    # cross_reference_audit.py's own sibling modules (BP-900a-1-style gap: MUST deploy or it crashes with ModuleNotFoundError).
+    ("scripts/ac_store/_xref_ac_store.py",            "_xref_ac_store.py"),
+    ("scripts/ac_store/_xref_tickets.py",             "_xref_tickets.py"),
+    ("scripts/ac_store/_xref_matching.py",            "_xref_matching.py"),
+    ("scripts/ac_store/_xref_report.py",              "_xref_report.py"),
+    ("scripts/ac_store/_xref_apply.py",               "_xref_apply.py"),
     ("scripts/ac_store/backfill_readiness.py",        "backfill_readiness.py"),
     ("scripts/ac_store/fix_ac_orphans.py",            "fix_ac_orphans.py"),
     ("scripts/ac_store/__init__.py",                  "__init__.py"),
@@ -1644,6 +1657,16 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
       → ``<output_root>/scripts/ac_store/create_ac_workflow.py``
     - ``scripts/ac_store/cross_reference_audit.py``
       → ``<output_root>/scripts/ac_store/cross_reference_audit.py``
+    - ``scripts/ac_store/_xref_ac_store.py``
+      → ``<output_root>/scripts/ac_store/_xref_ac_store.py``
+    - ``scripts/ac_store/_xref_tickets.py``
+      → ``<output_root>/scripts/ac_store/_xref_tickets.py``
+    - ``scripts/ac_store/_xref_matching.py``
+      → ``<output_root>/scripts/ac_store/_xref_matching.py``
+    - ``scripts/ac_store/_xref_report.py``
+      → ``<output_root>/scripts/ac_store/_xref_report.py``
+    - ``scripts/ac_store/_xref_apply.py``
+      → ``<output_root>/scripts/ac_store/_xref_apply.py``
     - ``scripts/ac_store/backfill_readiness.py``
       → ``<output_root>/scripts/ac_store/backfill_readiness.py``
     - ``scripts/ac_store/fix_ac_orphans.py``
@@ -1779,13 +1802,66 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     # Without this the loader fail-softs to an empty permitted set and every
     # correctly-tagged test is reported as declaring an unrecognised kind.
     # Mirrors build_feedback's config/feedback_categories.yaml deployment.
-    schema_src = PACKAGE_ROOT / "config" / "ac_store_schema.json"
-    if schema_src.is_file():
-        schema_output = target_root / "config" / "ac_store_schema.json"
-        if _write(schema_output, schema_src.read_text(encoding="utf-8"), dry_run, force):
+    #
+    # AC BP-900g-8-ii widened this to every "core config" file a deployed
+    # ac_store script reads at runtime, once the intra-package dependency
+    # closure was taught to see non-code (data/config) reads on the same
+    # terms as module imports: ``generate_ticket_from_ac.py`` (deployed here)
+    # reads ``config/agent_registry.json`` and ``config/guardrail_gates.yaml``
+    # via its own ``_DEFAULT_AGENT_REGISTRY`` / ``_DEFAULT_GUARDRAIL_GATES``
+    # module-level fallbacks; ``injection_builders.py`` (deployed by
+    # ``build_agent_support_scripts``) reads ``config/agent_registry.json``
+    # and ``config/paths.json``; the commit-guardian doc-type guardrail
+    # (deployed by ``build_commit_guardian``) reads ``config/doc_types.json``
+    # via an ancestor-directory walk that finds it here. None of the four new
+    # entries were deployed anywhere before this AC -- confirmed absent from
+    # a deployed output root on 2026-08-18 (this AC's own regression date) --
+    # so turning the widened closure guard on without also shipping them
+    # would abort every clean build.
+    #
+    # config/diagram_types.json is a LATER addition to this same tuple
+    # (AC BP-900g-8-ii TDD rework): its reader, the commit-guardian
+    # diagram_type_validators.py::_find_diagram_types_json ancestor walk, is
+    # the IDENTICAL shape to doc_type_validators.py's doc_types.json walk,
+    # but degrades SILENTLY to a built-in constant on failure rather than
+    # raising -- so nothing ever crashed to reveal it was undeployed, and it
+    # was genuinely absent (no second, unrelated reader put it in the
+    # manifest "by luck" the way doc_types.json's was). Deployed through this
+    # SAME core-config mechanism rather than a bespoke path, per this AC's
+    # own doc_links relevance note: "extend that derivation rather than
+    # adding a second, parallel one".
+    #
+    # config/skill_registry.json is a SECOND later addition, surfaced by
+    # turning the corrected (BP-900g-8-ii) closure guard on across the whole
+    # package rather than confined to the two named `*_types.json` files:
+    # three deployed commit-guardian scripts (_package_surface_registry.py,
+    # check_package_surface_declaration.py, check_surface_components_e3.py)
+    # read it via a fallback dict literal keyed the same way
+    # config/agent_registry.json and docs/roadmap.json are, and it was never
+    # deployed anywhere -- confirmed absent from every deploy phase before
+    # this fix (AC BP-900g-8-ii's own "enumerate, do not skip" constraint).
+    for core_config_name in (
+        "ac_store_schema.json",
+        "agent_registry.json",
+        "doc_types.json",
+        "diagram_types.json",
+        "skill_registry.json",
+        "guardrail_gates.yaml",
+        "paths.json",
+    ):
+        core_config_src = PACKAGE_ROOT / "config" / core_config_name
+        if not core_config_src.is_file():
+            continue
+        core_config_output = target_root / "config" / core_config_name
+        if _write(
+            core_config_output,
+            core_config_src.read_text(encoding="utf-8"),
+            dry_run,
+            force,
+        ):
             written += 1
             if not dry_run:
-                print("  config/ac_store_schema.json")
+                print(f"  config/{core_config_name}")
 
     # TKT-600b-1: generate_ticket_from_ac.py's _build_agents_map reads
     # config/phase_deferral.yaml the same way it already reads
@@ -3189,45 +3265,6 @@ def validate_agent_self_description(
         return (0, len(problems))
 
 
-def _self_desc_field_hint(field: str) -> str:
-    """Return a one-line fix hint for a missing self-description frontmatter field.
-
-    Args:
-        field: The missing frontmatter field name.
-
-    Returns:
-        A short string describing what the field should contain.
-    """
-    _HINTS = {
-        "behavioral_patterns": (
-            "Add a behavioral_patterns array listing conditional behaviors, "
-            "gates, and delegation rules. Example: "
-            "behavioral_patterns: [{name: 'Stop-and-Ask', trigger: '...', "
-            "behavior: '...', related_agent: null}]"
-        ),
-        "pre_flight_reads": (
-            "Add a pre_flight_reads list of documents the agent reads before "
-            "starting work. Example: pre_flight_reads: ['ticket body', "
-            "'cited ADRs']"
-        ),
-        "inputs": (
-            "Add an inputs list describing what the agent receives. Example: "
-            "inputs: [{name: ticket_path, type: path, description: 'Path to ticket'}]"
-        ),
-        "outputs": (
-            "Add an outputs list describing what the agent produces. Example: "
-            "outputs: [{name: 'Sign-off comment', type: comment, "
-            "description: 'status: ok | blocker'}]"
-        ),
-        "mutates": (
-            "Add a mutates list describing what the agent modifies. Example: "
-            "mutates: [{name: 'Ticket frontmatter', type: file, "
-            "description: 'agents.<name>: signed_off'}]"
-        ),
-    }
-    return _HINTS.get(field, f"Populate the '{field}' field in the agent template frontmatter.")
-
-
 def build_agent_cards(target_root: Path, config: dict[str, Any],
                       dry_run: bool, force: bool) -> int:
     """Generate .card.md files for all agent templates.
@@ -3363,75 +3400,21 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     return written
 
 
-def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
-                             dry_run: bool, force: bool) -> int:
-    """Deploy knowledge scripts to ``<target_root>/scripts/knowledge/``.
+# Re-export build_knowledge_scripts / build_knowledge_sink_declaration so
+# callers (build.py, tests) can import them from either module. Extracted to
+# build_phases_knowledge.py 2026-09-09 to relieve the GE-127b-1 file-size
+# ratchet (see this module's own DECISION HISTORY, bottom of file, for why).
+from build_phases_knowledge import (  # noqa: E402, F401  # re-exported for callers
+    build_knowledge_scripts,
+    build_knowledge_sink_declaration,
+)
 
-    Copies ``scripts/knowledge/harvest_learnings.py`` from the package source
-    to the consumer project. This script is referenced by the knowledge-harvester
-    agent but was not previously deployed by any build phase (Class B gap,
-    EPIC-BuildGuardFalsePositive/03).
-
-    Files are copied verbatim (no template compilation). The compare-before-write
-    guard prevents mtime churn on unchanged files.
-
-    Args:
-        target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary (accepted for interface parity; not consumed).
-        dry_run: When True, logs intent but writes nothing.
-        force: When True, overwrites existing files.
-
-    Returns:
-        Count of files written (or that would be written in dry-run mode).
-
-    # DECISION HISTORY
-    # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]:
-    #   Added build_knowledge_scripts() phase. Deploys harvest_learnings.py from
-    #   package source scripts/knowledge/ to consumer scripts/knowledge/. Closes
-    #   the Class B deploy gap for knowledge-harvester agent.
-    #   (#EPIC-BuildGuardFalsePositive/03)
-    """
-    knowledge_src = PACKAGE_ROOT / "scripts" / "knowledge"
-    deploy_scripts = ["harvest_learnings.py"]
-    output_dir = target_root / "scripts" / "knowledge"
-    written = 0
-
-    for script_name in deploy_scripts:
-        src_file = knowledge_src / script_name
-        if not src_file.is_file():
-            # BP-900g-9 (n_location_rule: all).
-            record_deploy_failure("build_knowledge_scripts", script_name, src_file)
-            continue
-
-        output_path = output_dir / script_name
-
-        if not _should_overwrite(output_path, force):
-            continue
-
-        if _files_content_identical(src_file, output_path):
-            global _uptodate_count  # noqa: PLW0603
-            _uptodate_count += 1
-            continue
-
-        if dry_run:
-            print(f"  [DRY-RUN] would copy scripts/knowledge/{script_name}")
-            written += 1
-        else:
-            try:
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src_file, output_path)
-            except OSError as exc:
-                _log.warning(
-                    "build_knowledge_scripts: failed to copy %s → %s: %s",
-                    src_file,
-                    output_path,
-                    exc,
-                )
-                raise
-            print(f"  scripts/knowledge/{script_name}")
-            written += 1
-
-    return written
+# Re-export build_product_truth so build.py and every other caller keep
+# importing it from build_phases. Moved to build_phases_product_truth.py
+# 2026-09-10 to relieve the GE-127b-1 file-size ratchet.
+from build_phases_product_truth import (  # noqa: E402, F401  # re-exported for callers
+    build_product_truth,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -3862,96 +3845,19 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     return written
 
 
-def build_product_truth(target_root: Path, config: dict[str, Any],
-                        dry_run: bool, force: bool) -> int:
-    """Deploy product-truth tooling to ``<target_root>/docs/product-truth/``.
 
-    Copies the package-owned product-truth generator/validator scripts
-    (``docs/product-truth/scripts/*.py``) and their JSON schemas
-    (``docs/product-truth/schemas/*.json``) into the consumer project's
-    ``docs/product-truth/`` tree so they exist at runtime. The ``/plan-feature``
-    workflow's product-truth phase (see EPIC wiring) invokes these scripts via
-    ``python docs/product-truth/scripts/generate_product_truth.py`` relative to
-    the project root; without this phase they are absent in a consumer or fresh
-    worktree and the phase can only no-op.
 
-    Both subdirectories are copied with a shallow ``*.py`` / ``*.json`` glob so
-    that additional generator/validator scripts or schemas added later are
-    deployed automatically without editing this phase. Only the package-owned
-    ``scripts/`` and ``schemas/`` subdirectories are deployed — the
-    project-authored product-truth DATA (flows, mock-data, mockups,
-    ``index.json``) is never touched by this phase.
 
-    Files are copied verbatim (no template compilation). The compare-before-write
-    guard prevents mtime churn on unchanged files.
 
-    Args:
-        target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary (accepted for interface parity; not consumed).
-        dry_run: When True, logs intent but writes nothing.
-        force: When True, overwrites existing files.
 
-    Returns:
-        Count of files written (or that would be written in dry-run mode).
-    """
-    product_truth_src = PACKAGE_ROOT / "docs" / "product-truth"
 
-    # (source_subdir, glob, dest_subdir) triples. The glob is intentionally
-    # broad so new .py / .json files are picked up without editing this phase.
-    deploy_groups = [
-        (product_truth_src / "scripts", "*.py", "scripts"),
-        (product_truth_src / "schemas", "*.json", "schemas"),
-    ]
 
-    output_base = target_root / "docs" / "product-truth"
-    written = 0
 
-    for src_dir, pattern, dest_subdir in deploy_groups:
-        if not src_dir.is_dir():
-            # BP-900g-9 (n_location_rule: all). The glob (pattern) applies
-            # only WITHIN this declared subdir, so the subdir itself is a
-            # declared entry, not a bare directory scan — a missing one is
-            # the same dropped promise as a missing declared file. Was
-            # warn-and-continue. Record and keep going so one run reports
-            # the whole remediation set; build.py raises once at the end.
-            record_deploy_failure("build_product_truth", dest_subdir, src_dir)
-            continue
 
-        output_dir = output_base / dest_subdir
 
-        for src_file in sorted(src_dir.glob(pattern)):
-            if not src_file.is_file():
-                continue
 
-            output_path = output_dir / src_file.name
 
-            if not _should_overwrite(output_path, force):
-                continue
 
-            if _files_content_identical(src_file, output_path):
-                global _uptodate_count  # noqa: PLW0603
-                _uptodate_count += 1
-                continue
-
-            if dry_run:
-                print(f"  [DRY-RUN] would copy docs/product-truth/{dest_subdir}/{src_file.name}")
-                written += 1
-            else:
-                try:
-                    output_path.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(src_file, output_path)
-                except OSError as exc:
-                    _log.warning(
-                        "build_product_truth: failed to copy %s → %s: %s",
-                        src_file,
-                        output_path,
-                        exc,
-                    )
-                    raise
-                print(f"  docs/product-truth/{dest_subdir}/{src_file.name}")
-                written += 1
-
-    return written
 
 
 # ---------------------------------------------------------------------------
@@ -4246,4 +4152,69 @@ def clean_stale_artifacts(
 #   skill invokes this new pre-flight script by its deployed path before the
 #   workflow starts (ACD-2100b-5); no phase shipped scripts/worktree/ at all
 #   before this. (#EPIC-StartingNewWorkTheProperWayAlways/12)
+# - 2026-09-07 [python-coder]: Added build_knowledge_sink_declaration(), a new
+#   internal-phase writing config/knowledge_sink.json under the consolidated
+#   output root: an absolute, build-time-fixed declaration of this install's
+#   knowledge-emission sink at <project_root>/debugging/logs/
+#   knowledge_emissions.jsonl (project_root == the internal-phase's own
+#   target_root parameter, .parent — one level above the consolidated output
+#   root per _run_phases's calling convention). Derived entirely from the
+#   already-resolved --target-dir argument, never from filesystem discovery,
+#   so a nested consumer install's sink lands at the consumer's own root and
+#   a workspace install's sink lands beside the rest of that install's
+#   deployed content rather than beside the package sources. Deliberately
+#   NOT placed under build_feedback's own <output_root>/debugging/logs/
+#   (which that phase creates eagerly on every build) so the sink's own
+#   parent directory does not spring into existence merely because a build
+#   ran. Always prints a NOTE naming the declared sink, since a build cannot
+#   tell whether its target is an already-installed project's own root or a
+#   separate working directory of a different install with a sink
+#   elsewhere. (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
+# - 2026-09-09 [python-coder/bp-extract]: Extracted build_knowledge_scripts()
+#   and build_knowledge_sink_declaration() to a new sibling module,
+#   build_phases_knowledge.py, with NO behaviour change. This module measured
+#   2753 content lines (the check-file-size hook's own counter) against the
+#   400-line limit; the GE-127b-1 ratchet refuses any change that leaves an
+#   already-oversized file longer than it was, which was blocking
+#   INF-400c-4-iii (adds a build phase) and INF-400c-4-i (needs a
+#   deploy-manifest entry in this same file) from committing. Both names are
+#   re-exported here via `from build_phases_knowledge import (...)`, the same
+#   pattern already used for build_precommit_config / build_precommit.py, so
+#   build.py's existing `from build_phases import build_knowledge_scripts,
+#   build_knowledge_sink_declaration` keeps working unchanged.
+#   (#INF-400c-4-iii, #INF-400c-4-i)
+# - 2026-09-09 [python-coder/04_TICKET-20260909-UXP-700a-1-ii]: Added
+#   _scaffold_product_truth_record(), called from build_product_truth(), to
+#   write flows/mock-data/mockups/index.json write-if-absent on a fresh
+#   install (UXP-700a-1-ii's overwrite guard needs this to exist first).
+#   Left INLINE (not extracted to a sibling module) even though it grows
+#   this oversized file under GE-127b-1: test_bp_100k_2.py's
+#   _derive_extra_package_dirs() regex-scans THIS file's literal
+#   `PACKAGE_ROOT / "docs" / "product-truth"` chain to know which extra dir
+#   its synthetic-package fixture must copy; moving build_product_truth out
+#   (tried, reverted here) emptied that derivation and broke
+#   test_bp_900g_8.py / test_bp_900g_8_i.py / test_bp_900g_9.py. The
+#   resulting ratchet failure is a blocker for commit / a follow-up ticket.
+#   (#EPIC-TruthfulProjectRecord/04)
+# - 2026-09-13 [python-coder/BP-1000a-7]: Fixed _write()'s compare-before-write
+#   guard and the write itself to operate on raw UTF-8 bytes instead of text
+#   mode. Previously target.write_text(content, encoding="utf-8") let Python's
+#   text-mode newline translation widen every LF in content to os.linesep, so
+#   on Windows every deployed text artifact landed CRLF while its source
+#   template stayed LF, producing check-hook-parity / check-output-drift
+#   divergence. Worse, the guard's own target.read_text(encoding="utf-8")
+#   applies universal-newline translation on read on every platform,
+#   normalising the on-disk CRLF back to LF before the comparison -- so a
+#   CRLF file compared equal to LF content and was skipped as "unchanged,"
+#   meaning neither a plain re-run (write-if-absent, never reaches the guard)
+#   nor a forced re-run (reaches the guard, compares equal, skips) could ever
+#   repair it. The docstring already promised a
+#   byte-identical comparison; the implementation did not deliver it. Fix:
+#   encode content once, compare target.read_bytes() against those bytes,
+#   and write with target.write_bytes() so the guard and the writer act on
+#   the literal same value with no newline translation anywhere. Narrowed
+#   the guard's except clause to OSError only, since a bytes read cannot
+#   raise UnicodeDecodeError. Landing this rewrites every previously-CRLF-
+#   deployed artifact once, on the next build, which is expected.
+#   (#BP-1000a-7)
 # ====================================================================

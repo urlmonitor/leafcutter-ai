@@ -1,0 +1,80 @@
+id: UXP-514-3
+title: "D3: a derived index lookup that differs from a fresh rebuild is named"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: approved
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a store index whose derived lookups by component, by entity, by journey and by
+    acceptance criterion have been edited away from what the artifacts on disk imply,
+  When the record is checked,
+  Then the check reports each derived lookup that differs, naming the lookup and the entries
+    that differ rather than only that the lookup differs,
+  And a lookup that matches a fresh computation is not reported,
+  And the check states how many entries it compared.
+depends_on:
+  - UXP-514
+created_by: "docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-514.yaml"
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-3.yaml
+    relationship: context
+    status: exists
+    relevance: "The general anti-vacuity rule these four checks are instances of."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-514
+  contract: "The umbrella drift check this record is one of the four named parts of."
+origin_agent: business-analyst
+created: 2026-09-07
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/scripts/validate_product_truth.py
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  The current implementation of this check is observed to report only that a lookup "does not
+  match a fresh rebuild", with no indication of which entries differ - which on this repository
+  produced a fourteen-way mismatch nobody could triage without writing a script. The naming
+  clause is therefore the point of the record and has to be asserted on the message content,
+  not on the outcome.
+test_spec:
+  - name: test_differing_derived_lookup_names_the_entries_that_differ
+    target_dir: unit_tests/product_truth/
+    description: "An index with one edited entry in a derived lookup produces a finding naming the lookup and that entry."
+    type: integration
+    angle: failure
+    framework: unittest
+  - name: test_matching_derived_lookup_is_not_reported
+    target_dir: unit_tests/product_truth/
+    description: "An index equal to a fresh rebuild produces no D3 finding."
+    type: integration
+    angle: boundary
+    framework: unittest
+  - name: test_compared_entry_count_rises_with_the_size_of_the_index
+    target_dir: unit_tests/product_truth/
+    description: "Adding one artifact raises the D3 compared-entry count."
+    type: integration
+    angle: seam
+    framework: unittest
+notes: |
+  D3 of the four checks UXP-514 names. Its scope is the DERIVED LOOKUP MAPS only. The scalar
+  fields the index copies onto each artifact entry are outside it, are unguarded today, and are
+  covered by UXP-514-6.
+
+  A separator-only difference between platforms is NOT a D3 finding; see UXP-700c-3-i.

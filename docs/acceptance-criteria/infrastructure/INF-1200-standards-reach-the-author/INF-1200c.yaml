@@ -1,0 +1,95 @@
+id: INF-1200c
+title: "Whoever works on a kind of file knows that kind of file's standards"
+component: infrastructure
+components:
+  - infrastructure
+  - agent_registry
+  - injection_builder
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Every specialist that works on a kind of file is told the standards for it.
+
+  Your project already records which specialist looks after which kinds of
+  file. Every one of them starts work knowing the standards that apply to what
+  it is about to touch — not only the one specialist that happened to be wired
+  up first.
+depends_on:
+  - INF-1200
+doc_links:
+  - path: docs/acceptance-criteria/agent-registry/AR-100-technology-ownership/AR-100.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE INPUT, NOT THE SUBJECT. AR-100 owns that ownership of a kind of file
+      is real and complete. This criterion consumes that answer and asks
+      whether the owner was informed. If ownership is wrong or missing, this
+      criterion faithfully informs the wrong party or nobody — and that is
+      AR-100's defect to fix, not this one's. Do not re-decide ownership here,
+      and do not propose a second place to record it.
+  - path: config/agent_registry.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Carries, per specialist, the kinds of file it owns. This is the record
+      that makes the promise checkable rather than aspirational — the audience
+      for any given standard is already derivable from it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      ADJACENT AND INDEPENDENT — READ BEFORE DECOMPOSING. GE-127c owns which
+      kinds of file the ENFORCEMENT covers. This owns whether the specialists
+      who own the covered kinds were TOLD. A criterion here that argues about
+      which kinds of file deserve a standard belongs in GE-127c and must be
+      rewritten.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner-v3
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-1200c-1
+  - INF-1200c-2
+implemented_by: []
+change_target:
+  - prompt
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  User-authored intent: BrainCandy. Framed by product-owner-v3, 2026-09-09.
+
+  THIS IS ONE OF THE TWO AXES OF THE GRID. Deliberately separate from
+  INF-1200d, which is the other. This one is answered by walking the record of
+  who owns what; d is answered by walking the standards themselves. Merged into
+  a single L1, an implementer satisfies whichever axis is cheaper — which is
+  exactly how the store arrived at a grid with one cell filled.
+
+  MEASURED BY GREP OVER EVERY SPECIALIST TEMPLATE, 2026-09-09. Exactly one
+  specialist mentions the size standard anywhere in its instructions. The
+  project's own ownership record assigns kinds of file to two further
+  specialists — one covering database work, one covering interface work — and
+  neither is told any standard at all, including for kinds of file that already
+  carry a distinct configured limit. The user's own example falls to the
+  interface specialist, which is the one told nothing.
+
+  DELIBERATELY NOT NAMED IN THE CRITERIA: any specialist, and any kind of file.
+  Following the precedent set by GE-127c, this record states the obligation in
+  terms that survive a specialist being added, renamed or split. A criterion
+  beneath this one that enumerates today's three specialists is at the wrong
+  altitude and must be rewritten rather than approved.
+
+  THE ARM MOST LIKELY TO BE DROPPED — SHARED OWNERSHIP. A kind of file may have
+  more than one legitimate audience, and at least one specialist today owns two
+  kinds of file with different standards. "The owner" is not reliably singular
+  in either direction, and a decomposition that assumes one specialist per kind
+  of file, or one kind of file per specialist, will quietly under-deliver on
+  whichever pairing it drops.

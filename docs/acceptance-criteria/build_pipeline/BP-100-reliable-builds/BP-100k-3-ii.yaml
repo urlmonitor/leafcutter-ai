@@ -1,0 +1,194 @@
+id: BP-100k-3-ii
+components:
+  - build_pipeline
+title: "The action a drift gate prescribes is one that, carried out, clears the report -- and where the build cannot produce the artifact, the gate does not send the reader to the build"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  Given a file that sits inside a directory a drift gate inspects but that no run of
+    the build can ever produce -- a file the tooling itself writes while running, a
+    file holding one machine's own local settings, or a file the project supplies as
+    its own configuration -- and given that file is neither recorded by the build nor
+    declared exempt,
+  When the gate inspects it and reports it as an artifact it could not compare,
+  Then the remedy the gate names for that file is one that, carried out exactly as
+    named and nothing else, makes the gate stop reporting it,
+  And because no build run can produce that file, the remedy the gate names for it is
+    not to run the build: the gate says instead that the file is not something the
+    build produces, and names what does resolve it -- declaring it exempt on a stated
+    ground, or removing it -- so a reader who does what the gate tells them arrives at
+    a gate that passes rather than at the same message a second time,
+  And this is proved by carrying the named remedy out and running the gate again as a
+    separate run, and observing that its report for that file has changed and its
+    outcome with it, never by reading the gate's message for the presence of a
+    better-worded suggestion,
+  And the gate is shown, on the same tree and in the same session, to still name
+    running the build as the remedy for a file the build genuinely does produce and
+    has merely not recorded -- and that remedy is carried out and shown to clear that
+    file -- so the behaviour is not satisfied by a gate that has stopped prescribing
+    the build at all, and each verdict is attributable to the kind of file it was
+    given rather than to a gate that says one thing to everybody,
+  And each of those runs reports which files it could not compare, and the set is not
+    empty in the runs that precede a remedy, so a gate that inspected nothing cannot
+    be received as a gate that found nothing to advise on,
+  And every verdict is taken from running the gate as the project runs it, over real
+    files present on disk in the tree it is pointed at, and from the report it
+    actually emits.
+depends_on:
+  - BP-100k-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3.yaml"
+    relationship: parent
+    status: exists
+    relevance: "The L2 this refines, and the refinement is of five words in it. The parent requires the gate to report a gap 'naming the artifact AND THE ACTION THAT WOULD REGISTER IT'. That phrase presumes such an action exists and says nothing about whether the one named is it. This AC makes the presumption an obligation. Read the parent's first clause too, and note what it settles and what it does not: a build-unmanaged artifact SHOULD come out as a declared exemption naming its ground -- so for the three files that prompted this, the classification half is the parent's and the remedy is a declaration, not a new record. What the parent leaves open, and what is authored here, is what the gate says while no such declaration exists."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3-i.yaml"
+    relationship: related
+    status: exists
+    relevance: "The sibling L3, cited because it looks like it already covers this and does not, in a way worth being precise about. It requires a freshly built tree to yield no uncomparable artifacts at all -- which, if it held for real working trees, would mean this AC's subject never arose. Its Given is 'a checkout in which the build has just run and NO FILE HAS BEEN MODIFIED SINCE', and that is exactly the state in which none of the files this AC is about exists yet: a lockfile the tooling writes while running, a machine-local settings file and a project's own configuration all come into being through use, after the build and outside it. So -i is green on the one tree where the defect cannot appear, which is the same shape as building only into the package's own workspace. The two ACs do not conflict: -i governs the pristine tree, this one governs what the gate says on a tree somebody has worked in."
+  - path: templates/scripts/commit_guardian/check_output_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "The gate whose report this AC constrains, and the primary edit surface. Read for context only -- no verdict here may be taken from reading it. Two things in it bear on the shape of the fix and are worth knowing before starting: the set of directories it scans is derived from the build's own record plus a floor of canonical tool directories, so a runtime file dropped into one of those directories is inspected by construction and cannot be avoided by narrowing the scan; and there is already a declared-exemption mechanism carrying a stated ground, which is the existing vocabulary this AC's alternative remedy should point at rather than a new one."
+  - path: templates/scripts/commit_guardian/check_build_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "The sibling gate, in this AC's call-site audit set for the same reason the parent puts it in its own: the two gates must speak one vocabulary, and a remedy corrected in one while the other still prescribes the build reintroduces the ambiguity from the other side. Name what each gate now advises, per kind of file, in sign-off."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "Read KI-BP-20260907-0852 first -- it is this defect's other occurrence and its title states the shape outright: the gate 'blocks the commit and prescribes the one action that cannot clear it'. Its Status line reads 'open -- no AC', which is what this record answers. Its diagnosis is worth reading in full because the first version of it was WRONG and was corrected in place: the file there is a write-if-absent scaffold released from registration when its deployed copy diverges from the template, so running the build cannot re-register it and deleting-and-rebuilding does not either. Different cause from the runtime and machine-local files that prompted this AC, identical failure at the reader: an instruction that cannot work. KI-BP-20260831-1333 is a third instance, on a gitignored cache file."
+  - path: docs/pre-commit-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The reader-facing description of what these gates report and what a developer is expected to do about each verdict. If the gate's advice changes, this is where the change has to be reflected, and it is the document a blocked developer is most likely to reach for."
+  - path: docs/build-drift-hook.md
+    relationship: describes
+    status: exists
+    relevance: "The gate's own reference, including the exemption declaration and the ground it requires. Relevant because this AC's alternative remedy has to name a mechanism that exists and is documented, or the advice is merely differently unhelpful."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "For the vacuity clause. A gate that inspects nothing and advises nobody is green under every clause here except the one that requires the set of uncomparable files to be non-empty before a remedy. This repo has already shipped a defence that examined zero files and reported clean for eight days; the clause exists so that cannot happen to this one."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary. reachability is the floor: the advice has to be observed from the gate as the project actually runs it, because the deployed copy is what fires at commit time and a source-tree run can differ from it. failure carries the paired kinds -- the build-produced file whose remedy IS the build, against the file no build produces -- which is what makes each verdict attributable."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: BP-100k-3
+    contract: "The four-verdict vocabulary and the declared-exemption mechanism with its stated ground. This AC adds no verdict and no mechanism: it constrains the remedy text attached to the existing gap verdict, and points its alternative remedy at the exemption mechanism the parent already established. If the parent's exemption vocabulary changes, the advice this AC requires changes with it."
+origin_agent: business-analyst
+created: 2026-09-07
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHAT WAS ASSESSED BEFORE AUTHORING, AND WHAT WAS FOUND ALREADY COVERED. The
+  finding that prompted this record has two halves, and only one of them is new.
+
+    THE CLASSIFICATION HALF IS ALREADY COVERED, AND NO RECORD IS OWED FOR IT.
+    BP-100k-3's first clause reads: given an artifact inside a directory the
+    gates inspect "that the build deliberately does not manage -- a hand-
+    maintained file with no build-produced counterpart", the gate reports it as
+    a declared exemption naming its ground. A lockfile the tooling writes, a
+    machine-local settings file and a project's own configuration file are
+    exactly that description. The parent already says what should happen to
+    them, and the reason it is not happening is that nobody has declared them --
+    which the parent's second clause then correctly treats as a gap. So the
+    remedy for the classification half is three entries in the exemption
+    registry with their grounds stated, not a new acceptance criterion. Authoring
+    one would restate a clause that already exists and would leave the actual
+    defect untouched.
+
+    THE ADVICE HALF IS GENUINELY UNCOVERED, and it is what this record is for.
+    The parent requires the gap report to name "the action that would register
+    it". Nothing anywhere requires the action named to be one that can register
+    it. For a file no build phase produces, the action named is running the
+    build, and running the build changes nothing -- so the reader is handed an
+    instruction, follows it, and arrives back at the identical message. That is
+    not a cosmetic complaint: it is a gate that blocks work and then misdirects
+    the person it blocked, and the natural next move for someone who has run the
+    prescribed remedy twice is to conclude the gate is broken and skip it. This
+    repo has a known-issues entry recording precisely that outcome for a
+    different cause.
+
+  IT HAS HAPPENED AT LEAST THREE TIMES, WHICH IS WHY IT IS WORTH A RECORD RATHER
+  THAN A FIX. Measured 2026-09-07 on branch fix/carried-followups, built from
+  origin/main at 004bf9e87. Three files confirmed present on disk in this
+  worktree and reported by the gate as unregistered build outputs with the
+  build prescribed as the remedy: a scheduled-task lockfile, a local settings
+  file and the project's own skills configuration, all under the tool directory
+  the gate treats as a floor of its scan. Denominator: these are three of the
+  files present in that directory on this date in this worktree, not a survey of
+  the whole tree, and not a count of everything the gate reported -- a fuller
+  sweep was not run and the figure should not be treated as the extent of it.
+  The kinds are what generalise, not the three names, and the names will change:
+  a file that exists on one developer's machine today may not exist on another's
+  tomorrow, and a fresh clone has none of them, which is exactly why the sibling
+  BP-100k-3-i can be green while this stands. Independently, two known-issues
+  entries record the same misdirected-advice shape from unrelated causes -- one
+  on a write-if-absent scaffold released from registration when its template
+  changed, one on a gitignored cache file -- and the first of those is filed
+  "open -- no AC".
+
+  ONE OF THESE BLOCKED A COMMIT ON THE DAY THIS WAS AUTHORED, and the advice it
+  gave would have been wrong. That is the whole argument for the AC in one
+  sentence: the cost is not the false report, it is the false instruction
+  attached to it, because the report at least invites a look and the instruction
+  ends one.
+
+  THE PAIRED CASE IS THE LOAD-BEARING CLAUSE, NOT A COURTESY. Every clause here
+  except that one is satisfiable by a gate that has simply stopped recommending
+  the build -- delete the suggestion, and no reader is ever misdirected again,
+  and every remaining clause passes. That would be strictly worse than today,
+  because the advice is correct and useful for the case it was written for: a
+  file the build really does produce and really has not recorded. So the
+  criterion requires both verdicts in one session on one tree, each remedy
+  carried out and each shown to clear its own file. A gate that says one thing to
+  everybody fails, whichever thing it says.
+
+  WHY THE REMEDY MUST BE CARRIED OUT RATHER THAN READ. A test that inspects the
+  gate's message for a better-worded suggestion is a test of the string, and a
+  string can be improved while remaining unactionable -- indeed the most likely
+  partial fix here is a softer, longer message that still points at the build.
+  The only reading that distinguishes advice that works from advice that reads
+  well is to do what it says and run the gate again. That also settles a
+  question the implementer will otherwise have to guess at: whether the exemption
+  route the gate recommends is one a reader can actually complete, which is only
+  answerable by completing it.
+
+  SCOPE BOUND. This AC governs what the gate SAYS to a reader it has stopped, and
+  whether that is actionable. It does not govern which files the gate inspects
+  (the scan set is derived from the build's own record plus a floor, and
+  narrowing it is how a previous defect in this family went silent -- do not
+  close this AC by making the gate look at less). It does not govern the verdict
+  vocabulary itself, which is BP-100k-3's. It does not govern whether these
+  particular files ought to be exempt, which is the parent's first clause and a
+  declaration rather than code. And it does not govern the twin-copy
+  desynchronisation behind the scaffold case in the known issues -- that is a
+  real and separate defect whose symptom merely arrives through this gate.
+
+  FOR THE IT PO. Two open choices. (1) How the gate decides a file is not
+  build-producible. Deriving it from the build's own declared output families is
+  the honest form and keeps the gate and the build unable to disagree; a
+  hardcoded list of names will drift from the build exactly as a hardcoded scan
+  list already did in this family, and would also fail the moment a file appears
+  under a name nobody anticipated. Whatever is chosen, the criterion is
+  behavioural and does not prescribe it. (2) Whether the alternative remedy
+  should offer both declaring-exempt and removing, or only the first. The
+  criterion names both because either can be right depending on the file -- a
+  machine-local settings file should be exempt, a stale artifact should go -- but
+  a gate that cannot tell them apart should say so rather than pick.

@@ -6,8 +6,8 @@ priority: medium
 title: "Every audit run produces a persistent JSON report for human review"
 component: ac-driven-dev
 level: L1
-status: active
-req_status: active
+status: deprecated
+req_status: superseded
 work_status: todo
 criteria: |
   Given the cross-reference audit has completed (in any mode: read-only or --apply),
@@ -31,9 +31,39 @@ expects_from:
   contract: "Match results from exact-criteria and keyword matching passes"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "RETIRED 2026-09-09 with the whole ACD-800 tree, on BrainCandy's decision ('retire as it will not work properly'). Assessed separately for survival as the tree's most method-independent child; see notes."
+    by: product-owner
 superseded_by: null
 covered_by: [ACD-800d-1]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+notes: |
+  RETIRED 2026-09-09 with the whole ACD-800 tree. Decision, mechanism and the
+  live-code hazard are recorded once, in ACD-800's notes — read those.
+
+  ASSESSED SEPARATELY FOR SURVIVAL, AND WHY IT STILL GOES. This was the
+  strongest keep-candidate in the tree. "Every run produces a persistent,
+  reviewable report" is a good standing property, it is the arm that keeps a
+  human in the loop, and at first reading it looks independent of the retired
+  matching method.
+  It is not independent. Its report schema is the matcher's output shape and
+  nothing else: `matches[]` of {ac_id, ticket_path, confidence, reason}, with
+  `confidence` constrained to "high" or "medium" — the exact two-tier vocabulary
+  produced by ACD-800a and ACD-800b, and the join key `ticket_path` is the
+  done-ticket evidence that retirement reason 2 says an adopting project does
+  not have. Strip the retired method and every field of the schema goes with
+  it; what remains is the untethered sentiment "write a report", which is not a
+  requirement.
+  THE PROPERTY IT WAS REACHING FOR IS CARRIED FORWARD, in a stronger form, by
+  ACD-2300d. That record requires not merely that results be written down but
+  that ABSTENTIONS be reported — a test whose subject cannot be established is
+  reported as unlinked rather than silently skipped, on the stated ground that
+  "a skipped record is invisible, and invisibility is the same defect one level
+  down". A report of what the tool did NOT do is the version of this idea worth
+  keeping, and this record did not ask for it.
+
+  BUILT, DESPITE THE FIELDS. Implemented as `_write_report` in
+  scripts/ac_store/cross_reference_audit.py, which still writes
+  debugging/logs/ac_cross_reference_audit_YYYYMMDD.json on every run.

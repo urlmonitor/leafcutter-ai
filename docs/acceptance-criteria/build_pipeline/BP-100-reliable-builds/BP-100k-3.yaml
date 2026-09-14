@@ -114,9 +114,35 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Added test_spec (6 behavioral descriptors, one per Then-clause plus the both-gates and no-ground constraints) and test_rationale; every descriptor executes the gate as a process and asserts on the run summary and exit status rather than on gate source text. Added three it_requirements constraints: (a) REGISTRATION SURFACE CORRECTION — the exemption-registry key belongs in templates/scripts/commit_guardian/commit_guardian.json, NOT the non-existent config/commit_guardian.json; (b) SERIALIZATION with BP-1100b-5, which edits the same guardian config; (c) the registry must be data-driven, never a hard-coded filename in the gate. Added two edit-surface doc_links (check_output_drift.py, commit_guardian.json) so files_touched covers the real surface. criteria, assigned_agent (python-coder), estimated_complexity (M), reference_file_path, delivers_to, expects_from, readiness and work_status left unchanged."
     by: it-po
+  - reason: record-correction
+    by: business-analyst
+    at: 2026-09-07
+    entry: >-
+      covered_by ONLY -- BP-100k-3-ii added. criteria, it_requirements,
+      test_spec, test_rationale, readiness, work_status, delivers_to,
+      expects_from and notes are untouched.
+
+      WHY A NEW CHILD RATHER THAN A CLAUSE HERE. This AC's second clause requires
+      a gap report to name "the action that would register it". Nothing requires
+      the action named to be one that CAN register it, and for a file no build
+      phase produces -- a lockfile the tooling writes while running, a
+      machine-local settings file, a project's own configuration -- the action
+      named is running the build, which changes nothing. The reader follows the
+      instruction and gets the identical message back. BP-100k-3-ii makes the
+      presumption in those five words an obligation, without touching this
+      record's verdict vocabulary.
+
+      DELIBERATELY NOT AUTHORED, because this record already covers it: the
+      classification half. This AC's FIRST clause already says a build-unmanaged
+      artifact must come out as a declared exemption naming its ground, and the
+      three files that prompted the new child fit that description exactly. They
+      are reported as gaps because nobody has declared them, which this AC's
+      second clause correctly treats as a gap. The remedy is three entries in the
+      exemption registry with stated grounds -- a declaration, not a record.
 superseded_by: null
 covered_by:
   - BP-100k-3-i
+  - BP-100k-3-ii
   - unit_tests/commit_guardian/test_bp_100k_3.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/08_bp100k3_drift_gates_report_gaps_not_passes.md

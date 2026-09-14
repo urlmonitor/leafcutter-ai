@@ -146,6 +146,26 @@ amended_by:
       not happen and would obscure where the real gap is. The unfinished work
       lives in the new child, which is where the could-ever versus does-now
       distinction belongs.
+  - by: BrainCandy
+    at: 2026-09-07
+    note: >-
+      Build of the child BP-100k-4-ii revealed that the blocker it was filed
+      against has TWO independent causes, and the child addresses one. The
+      kind-based population is three conditions; the location-based population
+      is 43, of which 35 carry no exemption. Counted from this file's own
+      hooks_manifest, and consistent with a runtime probe of a real deployed
+      consumer that still exits 1 at RESULT total=56 unreachable=28 exempt=6
+      nothing_to_match=7. So an adopter's first commit still fails after the
+      child lands, for a reason the child correctly declares out of scope.
+      KI-CG-20260831-0713 has been corrected from CLOSED back to open and now
+      records both halves with their measurements. Recorded here because this
+      record is the one whose "no path THIS REPOSITORY is able to stage"
+      framing produced both causes, and a reader arriving at the child alone
+      would reasonably conclude the adopter symptom was solved. It is not.
+      Whether a condition naming a path a consumer install never creates is
+      "unreachable" at all, or whether reachability must be evaluated against
+      the layout the gate is running in, is a question about this record's
+      frame of reference and wants its own AC rather than a patch.
 superseded_by: null
 covered_by:
   - BP-100k-4-i

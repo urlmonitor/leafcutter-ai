@@ -14,7 +14,7 @@ GOAL: RED test-first stubs for the fail-closed floor under GE-127b-1's
     situations the 2026-09-01 criteria correction requires to COMPLETE
     (exit 0). python-coder must narrow the refusing set to exactly two --
     source unreachable, source uninterpretable -- per GE-127b-1-i's
-    it_requirements, reusing BP-100n-4-ii's verdict vocabulary
+    it_requirements, reusing BP-1600a-2-ii's verdict vocabulary
     ("INDETERMINATE: reason=<text>" with a 0/1/2 exit-status contract)
     unchanged.
 

@@ -1,0 +1,189 @@
+id: INF-700a-1
+components:
+  - infrastructure
+  - knowledge_system
+  - build_orchestration
+title: "Work that finishes leaves its learnings on their surfaces, with nobody having run anything"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a.yaml"
+criteria: |
+  Given a unit of work has run to completion — every phase it dispatched has
+    finished and the thing driving it is about to report the result,
+  And three agents during that work each emitted a knowledge record carrying
+    learning text, naming three different destination files,
+  When the driver reaches its completion sequence — after the phases that
+    perform the work have returned, and before the phase that publishes the
+    unit of work's own output runs,
+  Then by the time the driver reports the unit of work finished, those three
+    destination files each contain the learning text of the record that named
+    them — each record's text is written into the file that record named,
+    during this unit of work and by the routing step rather than by the
+    emitting agent,
+  And the routing step ran early enough in that sequence for its writes to be
+    carried by the publication the unit of work already makes: a completion
+    path that routes after its own output has been published has no publication
+    left to carry the writes, and satisfies nothing here however green its
+    figures look,
+  And a record emitted after the routing step has read the sink — the phases
+    that publish the work emit too — is not lost by that ordering. It stays in
+    the sink, is not counted here as written or as nothing to do, and reaches
+    its surface on a later completed unit of work. What this run must say about
+    it is INF-700a-5-ii's; this clause exists so the ordering above cannot be
+    read as licence to discard the tail,
+  And no person invoked the routing step: the same result is reached by a run
+    in which the only human action was starting the work,
+  And the result the driver reports states how many knowledge records the
+    routing step read, how many it wrote to a surface, and how many it left
+    unwritten,
+  And running the same unit of work a second time over the same records adds
+    nothing further to those three files,
+  And a driver that reports the unit of work finished while those three
+    destination files are unchanged, or while its reported result carries no
+    routing figures, fails this criterion — regardless of which files name the
+    routing step or in what order,
+  And those three files still hold that learning text after the working
+    directory the unit of work ran in has been removed: a completion path that
+    changes them only inside a directory that is later reclaimed has not
+    satisfied this criterion, and the figure it reported as written was wrong.
+    The durability outcome and where the write is published are INF-700a-5's;
+    this clause exists so no reading of the criterion above can be satisfied by
+    a file that is about to be deleted.
+depends_on:
+  - INF-700a
+  - INF-400c-4
+  - INF-400c-4-iv
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - "AGENT REASSIGNED FROM workflow-architect TO python-coder — IT PO correction, not a preference. config/agent_registry.json gives workflow-architect is_ticket_phase false, selection_criteria null and spawned_by [user]: it cannot be dispatched as a ticket phase, so a ticket generated from this AC would name an implementer the supervisor never runs. python-coder is the correct owner and the registry says so explicitly: it claims .js ownership with the rationale that Leafcutter's orchestration layer is the workflow JS under templates/workflows-js/ and its covering tests are pytest driving unit_tests/_workflow_engine_harness.py, so the executable contract really is Python. The same correction applies to INF-700a-1-i and INF-700a-1-ii."
+  - "THE SURFACE IS templates/workflows-js/, NOT scripts/. The five completion paths are build-epic.js, build-ticket.js, fast-lane-ship.js, quick-fix.js and finalize-feature.js. Changes made only to the deployed .claude/workflows/ copies are overwritten by the next build.py run — a failure mode this repository has hit before. Edit the templates and rebuild."
+  - "THE FIVE PATHS DO NOT SIT ON FIVE SURFACES — IT PO correction, and it decides whether INF-700a-1-i can pass. build-epic.js does not call build-ticket.js: its batch loop dispatches the ticket-supervisor AGENT (build-epic.js line 388), which drives phases from templates/skills/building-epics/SKILL.md, whose Canonical Phase Ordering Table (section 2.1.1) is a SECOND, independent copy of the ordering that build-ticket.js keeps in code. So a wiring added only to build-ticket.js covers single-ticket drives and leaves EPIC drives unwired while every test over the single-ticket path stays green. That is the partial-wiring outcome INF-700a-1-i exists to catch, occurring inside the change meant to prevent it. Coverage must be demonstrated for both drive shapes, whichever surface is edited."
+  - "TRIGGER POINT — the BA decision the L1 left open, AS REFINED ON 2026-09-07. The routing step runs ONCE PER COMPLETED UNIT OF WORK, in the driver's completion sequence, after the phases that perform the work have returned and BEFORE the phase that publishes the unit of work's own output. Not per phase agent (the emitters are the phase agents, and ADR-011 chose deferred harvest precisely so the write is batched away from them). Not on a schedule (this package ships no scheduler, and a cron a user must install is the manual invocation the L1 rejects, wearing a hat). Not at feature finalization ALONE, because single tickets, the fast lane and quick-fix never finalize — finalization is one completion path among several, covered by INF-700a-1-i. THE REFINEMENT, AND WHAT IT REPLACES: this bullet previously read 'after the LAST PHASE AGENT has returned and before the driver reports its result'. Commit and pull-request ARE phase agents, so that wording placed the routing step after the only publication the path makes, which is irreconcilable with INF-700a-5's requirement that the writes ride a commit the path already makes and that the routing step add no commit of its own. Moving the invocation ahead of the publishing phases reconciles the two. It costs a tail — the publishing phases emit as well, and their records are emitted after the sink has been read — and that tail is a one-run deferral rather than a loss, because the sink now outlives the working directory (INF-400c-4, as rewritten). INF-700a-5-ii owns what the run says about the tail."
+  - "THE RESULT MUST BE CONSUMED, NOT MERELY PRODUCED. The routing figures must reach the driver's reported result, which means the driver reads the run's output and branches or renders on it. A fire-and-forget invocation whose output goes nowhere satisfies the words 'the routing step ran' and satisfies nothing this AC is for. This repository has shipped that exact shape twice — fast-lane-build.js invoking gates whose results were never read, and fast_lane.py's select_batch call that was a silent no-op — and both passed their structural tests."
+  - "NOT COVERABLE BY GREP. Per this repository's 'Gate / Workflow ACs — verify behaviorally, not by grep' rule, the test must run a completion path and assert on the destination file's contents afterwards, or — where the unit layer cannot run the driver — assert that the routing result is consumed in guarded control flow. A test that asserts a call string is present in a workflow file passes on dead code and does not cover this AC."
+  - "IDEMPOTENCE IS INHERITED, NOT REBUILT. INF-400c-3 already requires the routing step not to duplicate a written learning. The 'second run adds nothing further' clause here asserts that property survives being invoked automatically on every completed unit of work — which is the first time it will be exercised repeatedly against the same sink. Do not add a second dedupe mechanism in the driver."
+  - "ORDERING AGAINST THE SINK. Wiring this before INF-400c-4 lands gives a caller that reads a file no producer writes to, forever, and reports a confident zero. Wiring it before INF-400c-4-iv lands gives a caller that reports a failure on every tree where nothing has been emitted yet, which is every fresh clone. Both edges are in depends_on for that reason and neither is decorative."
+  - "Must handle errors gracefully per the project error handling policy. The failure behaviour itself is INF-700a-1-ii's and must not be re-specified here."
+  - "WHICH TREE THE DESTINATION FILES ARE IN — CLOSED 2026-09-07, AND THIS BULLET NO LONGER INSTRUCTS ANYONE TO ESCALATE. It formerly raised, as an open gap, that four of the five completion paths run inside an isolated working directory and that nothing committed the routing step's writes before that directory was reclaimed. The answer is INF-700a-5 (the writes ride the completion path's own existing commit) plus this record's own ordering refinement (the routing step runs before the publishing phases). The escalation is discharged; do not raise it again. WHAT STILL BINDS, unchanged: do NOT resolve anything here by inventing a commit inside the routing step, and treat a build that harvests into a working directory whose contents are never published as not satisfying this AC. THE PER-PATH DISPATCH POINTS LIVE ON INF-700a-5's it_requirements and are named there once; do not re-derive them per path from this bullet."
+delivers_to:
+  - agent: documentation-expert
+    contract: "The settled trigger point and the shape of the routing figures in a driver's reported result, which INF-700a-3's how-to and INF-700a-4's reference describe"
+  - agent: python-coder
+    contract: "A per-completion invocation of the routing step whose read/written/unwritten figures are consumed by the caller, making the routing side observable per drive rather than only via a store-wide count"
+expects_from:
+  - ac_id: INF-400c-4
+    contract: "The single declared knowledge-emission sink, so the caller reads the file the emitters actually write to"
+  - ac_id: INF-400c-4-iv
+    contract: "The no-work outcome for an absent sink, so a completion path that harvests does not report a failure on a tree nothing has emitted into yet"
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by:
+  - reason: "BA amendment, 2026-09-07, closing the criteria-level hole the IT PO raised in this record's own it_requirements (the WHICH TREE THE DESTINATION FILES ARE IN entry). One clause added to criteria: the three destination files must still hold the learning text after the working directory the unit of work ran in has been removed. Nothing else in this AC changed and the trigger point is untouched. WHY: as written, 'those three destination files each contain the learning text' was satisfied by a routing step writing into an isolated working directory that finalize-feature removes at step 7, so the criterion held for a few seconds in a directory nobody would read again, the tests passed, and production lost every learning. The IT PO was right to refuse to settle it in an it_requirements line — a durability obligation that lives only in implementation notes is not a criterion and nothing fails when it is missed. The outcome, the publication site, and the rejected alternatives are stated by the new INF-700a-5; this clause only makes the vacuous reading of the clause above unavailable. OPEN, AND DELIBERATELY NOT DECIDED HERE: whether satisfying the new clause is possible AT the driver's completion step as this AC words it, or requires the invocation to sit earlier in the path so its writes ride the path's own commit. That is an ordering question for the IT PO, and if the answer is 'earlier', it is a refinement of the trigger point and must come back to the BA and PO rather than being absorbed as an implementation detail."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA amendment, 2026-09-07, resolving the trigger contradiction this record's own previous amendment left open, on the strength of BrainCandy's approved decision that the sink resolves against the repository and therefore outlives an isolated working directory. THE CONTRADICTION: the trigger bullet said the routing step runs 'after the last phase agent has returned'. Commit and pull-request are phase agents, so that put the routing step after the only publication the path makes — while INF-700a-5 requires the writes to ride a commit the path already makes and adds no commit of its own. Both could not hold. WHAT CHANGED: the When clause and the trigger bullet now place the invocation in the driver's completion sequence BEFORE the phase that publishes the unit of work's own output; a clause was added making a route-after-publication wiring an explicit failure; and a clause was added stating that records emitted after the sink is read are deferred rather than lost. IT CLOSES because the only cost of routing early — that the publishing phases emit after the sink has been read — is now a one-run delay instead of a discard: those records sit in a sink that no longer dies with the working directory, and a later completed unit of work in the same repository routes them. Before the sink change this was the real-loss window that made the option unattractive; the sink change removes it. WHAT IS UNCHANGED: once per completed unit of work, on every path that completes work, with the figures consumed by the driver — and the rejections of per-phase-agent, scheduled and finalization-only triggers all stand on their original reasons. ALSO NOW CLOSED: the IT PO's 'WHICH TREE THE DESTINATION FILES ARE IN' escalation in the it_requirements below. Its answer is INF-700a-5 plus this ordering refinement; its instruction to escalate before implementing has been discharged and no second escalation is owed. Its warning against inventing an unattended commit inside the routing step is NOT discharged and still binds."
+    by: business-analyst
+    at: 2026-09-07
+superseded_by: null
+covered_by:
+  - INF-700a-1-i
+  - INF-700a-1-ii
+implemented_by: []
+test_spec:
+  - name: test_completion_step_writes_all_three_learnings_to_their_named_destinations
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive a completion path to its completion step under the workflow engine harness in a temp tree whose declared sink holds three records, each carrying learning text and naming a different destination. Assert afterwards that all three destination files contain their record's learning text. The assertion is on file contents, not on the routing step's return value."
+  - name: test_reported_result_carries_nonzero_read_written_and_unwritten_figures
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the completion path dispatched through the workflow engine harness, not the routing step called directly"
+    description: "Assert the driver's returned result carries the three routing figures and that their values match the run just performed (three read, three written, zero unwritten) rather than zeros or absent keys. A result whose figures are absent fails, per the AC's final clause."
+  - name: test_the_routing_result_is_consumed_in_the_driver_control_flow
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Run the same completion path twice against routing outcomes that differ (one succeeding, one reporting records left unwritten) and assert the driver's reported result DIFFERS between the two. This is the anti-fire-and-forget test: an invocation whose output goes nowhere produces identical reports and goes red."
+  - name: test_a_second_run_over_the_same_records_adds_nothing_to_the_destination_files
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Byte-compare each of the three destination files after the first completed unit of work and after a second one over the same sink; assert the digests are equal. Asserts INF-400c-3's inherited idempotence survives automatic per-completion invocation, without a second dedupe mechanism in the driver."
+  - name: test_the_routing_writes_are_inside_the_publication_the_path_makes_for_its_own_output
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The ordering clause. Drive a completion path with three routable records and assert the three destination changes are part of the publication the path makes for its own output — that is, the published set contains them — rather than sitting unpublished beside it. Then re-wire the same path so the routing step runs after the publishing phase and assert this test goes RED. Ordering is only checkable against the publication boundary; asserting the file contents alone passes on both orderings."
+  - name: test_a_record_emitted_by_a_publishing_phase_is_not_counted_and_is_routed_by_the_next_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "The tail clause. Drive a completion path whose publishing phase emits one record after the routing step has read the sink; assert this run's figures count it neither as written nor as nothing-to-do, then drive a second unit of work in the same repository and assert the learning reaches its destination exactly once. Proves the tail is a deferral and not a discard, which only holds because the sink outlives the working directory."
+  - name: test_the_three_destinations_still_hold_the_learnings_after_the_working_directory_is_removed
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    covers:
+      - INF-700a-1
+      - INF-700a-5
+    description: "The added durability clause. Repeat the first descriptor's run, then remove the working directory the unit of work ran in and read the three destinations IN THE MERGED TREE. Assert all three hold their learning text there. The assertion is made after the removal and against a different directory from the one the routing step wrote in — read before teardown, this test passes on the exact defect the clause was added to forbid. INF-700a-5 carries the full durability contract and its own descriptors; this one exists so this AC's own criteria are not left with an unasserted clause."
+test_rationale: |
+  Every descriptor drives a real completion path through the engine harness
+  and asserts on an artefact or on a difference in the driver's output. None
+  of them can pass on dead code: delete the routing invocation and the first
+  and fourth go red on file contents, the second goes red on missing figures,
+  and the third goes red because the two runs become identical. That third
+  test is the one this repository's history demands — fast-lane-build.js
+  passed its structural tests while never executing its gates, and fast_lane.py's
+  select_batch call was a silent no-op, because both were covered by tests
+  that asserted a call string was present rather than that its result changed
+  anything. Asserting the presence of a harvest call in a workflow file would
+  cover none of these four.
+notes: |
+  This is link 3 of the four that must all work: ADR-034 recorded "Nothing
+  invokes the harvester — knowledge-harvester appears nowhere outside its own
+  template and the agent registry", and at 2026-09-07 that is still true. A
+  store-wide search finds references only in the agent template, the registry,
+  the build deploy manifest, tests, changelogs and acceptance criteria — no
+  workflow, command or skill calls it.
+
+  Why "unit of work" rather than "drive". The package has more than one thing
+  that finishes: an epic drive, a single-ticket drive, the fast lane, quick-fix
+  and feature finalization all end work and report a result. Naming one of them
+  in the criteria would wire one and leave the rest silently unwired, which is
+  the shape of the original defect. The criteria are written against whatever
+  drives a unit of work to completion; INF-700a-1-i is what stops that being
+  read as "any one of them will do".
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary

@@ -1,0 +1,102 @@
+id: INF-700a-4
+components:
+  - infrastructure
+  - knowledge_system
+  - documentation_system
+title: "Reference documentation states when the routing step runs and what its report means"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a.yaml"
+criteria: |
+  Given the reference documentation for the agent knowledge system is where a
+    reader establishes what the system does rather than what it was meant to
+    do,
+  When a reader opens it,
+  Then it states at which point the routing step runs, and names each way of
+    completing work that carries it and each that does not, with the reason for
+    each omission,
+  And it states what each figure in the routing step's report means, and what
+    each of its outcome statuses means to whatever called it,
+  And it states the three outcomes a completed piece of work can report for
+    its routing step — completed, could not complete, did not run — and that
+    none of the three changes the outcome of the work itself,
+  And it states what the routing-run recency answer reports and how that
+    differs from the count of records waiting and from the capture-health
+    figures, so a reader knows which of the three answers their question,
+  And for as long as no way of completing work carries the routing step, it
+    states that a captured learning does not reach its surface without a manual
+    run — and the change that wires the first one removes that statement,
+  And it points to, rather than restates, the rule for what may be written and
+    the definition of the waiting count,
+  And every claim it makes about when something runs is one a reader can check
+    by running the way of completing work that it names.
+depends_on:
+  - INF-700a
+  - INF-700a-1
+  - INF-700a-2
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "SATISFIES the reference-doc entry in INF-700a's documentation_triggers. Dispatch reference-author for the body."
+  - "TARGET SURFACE COLLISION — FOUR ACs NOW AMEND docs/architecture/agent_knowledge_system.md: INF-700b-4 adds a sequence diagram, INF-700b-5 rewrites the capture-step reference, INF-700c-3 owns the eligibility rule and the waiting count's definition, and this AC owns the trigger point and the run report. Agree the section boundaries before the first of the four writes. The 'points to rather than restates' clause is this AC's half of that agreement and is what keeps two documents from carrying two versions of the same rule."
+  - "DO NOT RESTATE THE ELIGIBILITY RULE OR THE WAITING COUNT. INF-700c-3's it_requirements set both out precisely and warn that a second statement of them invites a second exclusion list. Reference them by section."
+  - "NO PRESENT-TENSE AUTOMATIC PHRASING FOR A STEP WITH NO CALLER, the standing rule from ADR-034 ('Until the harvester has a caller, capture is not automatic and any documentation implying otherwise is wrong'). The current document describes the Option A pipeline ADR-034 rejected and does exactly this. INF-700b-5 carries the same obligation for the capture half; this AC carries it for the routing half, and the two must not contradict each other on the same page."
+  - "THE EXIT STATUSES ARE ALREADY ENUMERATED by INF-700c-3 (0 clean, 1 sink unreadable, 2 state file corrupt, 3 unroutable records remain, 4 write or state-persist failure, outranking 3). This AC adds what each means TO A CALLER — which of them a completion path treats as no-work and which as a routing failure — and must consume that enumeration rather than restating it with different numbers."
+  - "THE LIST OF WAYS OF COMPLETING WORK MUST MATCH INF-700a-1-i's wired/excluded list exactly. Two lists of the same set is how one goes stale; derive from theirs and say so."
+  - "EVERY PATH NAMED MUST RESOLVE AT THE TIME OF WRITING. The standing trap: the routing step's default sink debugging/logs/knowledge_emissions.jsonl has never existed. Until INF-400c-4 lands, describe the discrepancy rather than picking a side; after it lands, name only the declared sink."
+  - "THE EXIT-STATUS ENUMERATION IS ABOUT TO SHIFT AND THIS AC OWNS THE READER-FACING HALF OF THE SHIFT. INF-400c-4-iv splits the ABSENT case out of exit 1 and onto the no-work status, narrowing exit 1 to a sink that exists and cannot be read; 0, 2, 3 and 4 keep their numbers and meanings and no new code is added. The what-it-means-to-a-caller mapping this AC owes must therefore say that a completion path treats the no-work status as no work — including for a sink that has never been written to, which is every fresh clone — and treats 1, 2 and 4 as a routing failure it reports without failing the work. Coordinate with INF-700c-3, whose it_requirements still enumerate exit 1 as sink unreadable."
+  - "THE THREE OUTCOMES ARE A DATA PARTITION, NOT THREE SENTENCES. INF-700a-1-ii requires completed / could-not-complete / did-not-run to be decided by an enumerated field, and requires did-not-run never to be rendered as completed with zeros. State the partition as such and name the field, so a reader can check the claim against a real reported result rather than against the prose."
+  - "THE SOURCE OF THE WIRED AND EXCLUDED LISTS IS THE CONFIG SECTION INF-700a-1-i CREATES, in config/guardrail_gates.yaml, guarded at build time. Point at it and say the guard exists; do not retype the five paths as an authoritative list here. That is the derive-from-theirs-and-say-so obligation, made concrete."
+test_required: false
+test_rationale: |
+  A reference document produces no executable behaviour. Its checkable clauses
+  are checkable by a reader rather than by a test: "every claim about when
+  something runs can be checked by running the path named" is verified by
+  running the path, which is what INF-700a-1's and INF-700a-1-i's behavioural
+  tests already do at the layer that can actually fail. The clauses about what
+  the document must not say — no automatic phrasing while no caller exists, no
+  restatement of the eligibility rule — are prose properties that no gate
+  reaching docs/ parses, as INF-700b-5 and INF-700c-3 both record for the same
+  file; asserting them by grep would pass on a document that names a rule and
+  describes it backwards. test_required is set explicitly so test-writer skips
+  with an accurate reason.
+delivers_to: null
+expects_from:
+  - ac_id: INF-700a-1
+    contract: "The settled trigger point, the wired and excluded completion paths, and the routing figures a reported result carries"
+  - ac_id: INF-700a-2
+    contract: "The routing-run recency answer and its relationship to the waiting count and the capture-health figures"
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The last clause of the criteria is the one the whole L1 turns on. ADR-034
+  recorded that until the harvester has a caller, capture is not automatic and
+  any documentation implying otherwise is wrong — and the document this AC
+  amends currently implies exactly that. The obligation is symmetric and easy to
+  half-honour: the same document must stop calling it manual on the day the
+  first completion path carries it, or the next reader will run by hand a step
+  that has already run and read the duplicate as a defect.
+change_target: docs
+risk_surface: internal

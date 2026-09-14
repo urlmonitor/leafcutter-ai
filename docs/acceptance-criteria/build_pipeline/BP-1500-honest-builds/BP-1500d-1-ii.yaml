@@ -1,0 +1,226 @@
+id: BP-1500d-1-ii
+components:
+  - build_pipeline
+title: "No entry in the record points outside the project the record describes -- an account is untruthful whether it could not be written or was written wrong"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  Given a real build aimed at a project outside the producing package's own parent
+    folder -- the venue every child of this feature is proved in -- and given that
+    build is configured to place one of the files it manages at a destination that
+    is written as a position inside that project but that steps back out of it
+    before arriving, so the file lands outside the project while its position still
+    begins inside it,
+  When the build runs to completion and the record it left on disk in that project
+    is read where it sits,
+  Then the build has not recorded that file as though it sat inside the project:
+    either the build reported failure and produced no account of an install it
+    cannot describe truthfully, or the record it produced carries no entry for that
+    file at all,
+  And, whichever of those two the build does, no entry anywhere in that record names
+    a position which -- followed from the project's own root, with every step
+    including a step back out of it taken as written -- arrives anywhere other than
+    inside that same project,
+  And that verdict is reached by following each position to the place it actually
+    arrives at and asking whether THAT place lies inside the project, never by
+    asking only whether something exists at the end of it: a position that steps out
+    of the project and lands on a real file elsewhere on the machine is exactly the
+    entry this behaviour exists to reject, and a reading that accepts it because
+    something is there has distinguished nothing,
+  And the reading is demonstrated to FAIL, before it may be accepted as passing, on a
+    record deliberately given one entry whose position steps back out of the project
+    -- which must be reported as an entry that leaves the project it belongs to,
+    naming that entry and that project, rather than being accepted, silently
+    dropped, or reported as an absence,
+  And the same reading returns a clean result on the same project immediately before
+    and immediately after that deliberate breakage, so the red is attributable to the
+    breakage and not to a record that was already wrong,
+  And in each of those clean runs the reading reports the set of entries it actually
+    examined, and that set is not empty, so a reading that examined nothing cannot be
+    received as a reading that found nothing,
+  And a build asked to place every file it manages inside the project it is aimed at
+    still reports success and still writes a record naming those files, so this
+    behaviour is not satisfied by a build that refuses destinations it merely
+    dislikes,
+  And every verdict is taken from a real build run through the command line a consumer
+    runs, into a real project on disk, and from the bytes of the record that build
+    left there, never from reading the build's own source for the presence of a
+    check on where a position leads.
+depends_on:
+  - BP-1500d-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-1.yaml"
+    relationship: parent
+    status: exists
+    relevance: "The L2 this refines. Its clause 'the record's entries name the artifacts that are actually present in that project, so the record is an account of THAT install and of no other' is the sentence this behaviour makes reachable. Read the parent's it_requirements #5 first: it pins that clause's gloss to the entry set being NON-EMPTY, which is a test of quantity and not of location, and it is why the parent is fully satisfiable while an entry points elsewhere. Read the parent's notes second, for the three fields carrying the sibling-versus-self-host layout ambiguity -- the harness this AC needs is the parent's, and a fixture stood up in the self-host layout proves nothing here either."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-3.yaml"
+    relationship: related
+    status: exists
+    relevance: "THE SIBLING THAT SCOPES THIS OUT, EXPLICITLY, AND IS THEREFORE THE REASON THIS RECORD EXISTS RATHER THAN AN OVERLAP WITH IT. Its it_requirements carry an entry headed 'OUT OF SCOPE AND NOT A SUBSTITUTE -- THE RELATIVE FORM OF THE SAME ESCAPE', and its notes carry 'A SECOND FAIL-OPEN FOUND WHILE PROBING, NOT COVERED BY THIS AC, FILE IT SEPARATELY'. -3 owns the destination that cannot be expressed as a position inside the project at all: the build cannot produce the record and must fail. This AC owns the destination that CAN be so expressed and is still a lie. The two are complements, not degrees: -3's verdict is about a record that does not exist, this one's is about a record that does and should not be believed. Read -3's it_requirement 'DO NOT REMOVE THE TRIGGER INSTEAD OF THE FAIL-OPEN' before implementing either -- it forbids giving the record's output positions a not-inside-the-project fallback, which is the wrong way to close this AC."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-2.yaml"
+    relationship: related
+    status: exists
+    relevance: "THE NEAREST NON-COVERING SIBLING, cited so the boundary is not re-litigated. -2 owns whether the record still reads after the project is MOVED: its subject is a record whose entries were true where they were written and stop being true somewhere else. This AC's subject is an entry that is untrue in the project it was written into, at the moment it was written, and stays exactly as untrue after any move -- so -2's relocate-and-read verdict never fires on it. -2's own negative control is a record 'keyed to the location the record was written in', which is the opposite defect: too much context, not an escape."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-1-i.yaml"
+    relationship: related
+    status: exists
+    relevance: "The sibling L3 under the same parent, and the boundary that keeps the two from overlapping. -1-i owns what the record says about the PRODUCING end -- where the package stood and which of its own files the deployment came from -- and its own criteria close with the statement that it concerns only that. This AC owns the RECEIVING end: the positions of the files the build put into the project. The producing-end position is legitimately allowed to leave the project (that is what a sibling package layout means); a receiving-end position is not. Do not generalise either one over the other."
+  - path: scripts/build_helpers.py
+    relationship: describes
+    status: exists
+    relevance: "Context only, and this AC is not provable from it. The reason the escape is silent rather than loud lives here: the receiving-end positions are produced by a purely lexical relativization, and the path library does not normalise a step back out of a directory. A destination written with such a step therefore relativizes SUCCESSFULLY -- there is no error to catch, no warning to print, and nothing for the build's exit path to consume. That is the whole difference from BP-1500d-3, whose trigger raises."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "The produced-and-untruthful variant, which is a step worse than the absent-check variant this family started from. An absent record makes a check report nothing; a record with an entry pointing elsewhere makes the check report on a file that is not part of the install, and report it as a pass. Read alongside this repo's standing rule that a check which examined nothing must not look like a check that found nothing -- the same rule, one level in: a check that examined the wrong thing must not look like one that examined the right thing."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why the producing package's own workspace is the one venue in which this whole family looks correct, and therefore why the fixture must sit outside it. Bears on this AC with a specific edge: in the self-host layout the project and the package's parent are the same directory, so a position that steps out of the project lands somewhere the reader is likely to find a real file -- which is precisely the shape that makes an existence-only reading pass."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary. The load-bearing pair here is reachability -- the verdict has to come from the real command line, because the escape is introduced through the build's configuration and not through any argument an imported helper takes -- and real_artifact, because the entry must be read from the bytes the build serialized rather than from a hand-authored record, which is where the lexical form of the position survives."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+delivers_to: null
+expects_from:
+  - ac_id: BP-1500d-1
+    contract: "The out-of-package consumer-simulation harness and a real build that produces a record into the receiving project. This AC drives that harness into a state where one managed file's destination steps back out of the project, and reads the record the build leaves. It builds no second harness. NOTE THE PLACEMENT RULE PRECISELY, because the parent states it loosely in three fields (see the parent's notes): the forbidden layout is target EQUAL TO the producing package's parent directory. Being a DESCENDANT of that parent is not forbidden and must not be asserted against -- the correct sibling layout places the receiving project and the package copy side by side under one scratch root, so the target is a descendant of the package copy's parent in every correct run. A precondition written as not-a-descendant rejects the only layout that proves anything here."
+  - ac_id: BP-1500d-3
+    contract: "The build's failure verdict for a destination that cannot be expressed as a position inside the project at all. This AC's first Then clause offers the implementer that verdict as one of two acceptable outcomes, so the two ACs must not disagree about it: whichever way this behaviour is closed, -3's paired-success run must still pass unchanged. A closure that turns more destinations into refusals is the wholesale-refusal regression -3's it_requirements forbid, arriving under a different name."
+origin_agent: business-analyst
+created: 2026-09-07
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE RECORD AND NOT A CLAUSE ON AN EXISTING ONE. Three
+  candidates were assessed against one question: can that candidate go fully
+  green while this defect stands? All three can, and each for a different and
+  structural reason rather than for want of a stricter test.
+
+    BP-1500d-3, the unproducible-record floor. It scopes this out in writing,
+    twice -- once in it_requirements ("OUT OF SCOPE AND NOT A SUBSTITUTE -- THE
+    RELATIVE FORM OF THE SAME ESCAPE") and once in notes ("A SECOND FAIL-OPEN
+    FOUND WHILE PROBING, NOT COVERED BY THIS AC, FILE IT SEPARATELY"). That is
+    not an oversight to be corrected by folding this in: -3's whole subject is
+    the build's VERDICT when no truthful account exists, and here an account
+    does exist -- it is simply false. Its trigger raises and this one does not,
+    so -3's fixture cannot be made red by this defect at all.
+
+    BP-1500d-1-i, the producing-end truthfulness sibling. Its criteria close by
+    saying, in terms, that it concerns only what the record says about the
+    producing end. The positions of the files the build PUT INTO the project are
+    the receiving end. A record can describe its producing package impeccably
+    and still name a deployed file that is not in the project.
+
+    BP-1500d-2, "the record still reads after the project is moved". Assessed
+    most carefully, because a position pointing outside the project is, loosely
+    described, a record that has stopped meaning what it said. It is not the same
+    thing. -2's verdict is a comparison between two locations -- true where
+    written, still true where read -- and this entry is false in both. Its
+    reading would have to already reject the entry before the move for the move
+    to change anything, and rejecting it before the move is precisely what no
+    existing record requires. -2's own negative control points the other way: a
+    record "keyed to the location the record was written in", i.e. carrying too
+    much context rather than escaping.
+
+  THE PARENT IS THE CLOSEST CALL, AND IT IS WHY THIS SITS UNDER BP-1500d-1
+  RATHER THAN ELSEWHERE. The parent's clause -- entries "name the artifacts that
+  are actually present in that project" -- is the right sentence, and this AC is
+  a refinement of it rather than a new subject. Two things stop the parent from
+  reaching this on its own, and the second is the one that matters. First, its
+  it_requirements pin that clause's gloss to the entry set being non-empty, which
+  measures quantity, not location. Second, and decisively: an entry whose position
+  steps out of the project still ARRIVES at a real file, so any reading that asks
+  "is something there?" is satisfied by it. Following the parent's clause to the
+  letter -- present IN THAT PROJECT -- is what catches this, and that reading has
+  to be specified, because the weaker one is both easier to write and green.
+
+  THE PROOF SHAPE, AND THE THREE WAYS IT CAN GO VACUOUS. This AC's Then clauses
+  are written against the three shortcuts available to an implementer here, all
+  of which produce a green run.
+    - Existence-only reading. Asking whether a file is present at the end of each
+      position passes on the exact entry this AC rejects, and passes MORE readily
+      in the self-host layout, where the place a position escapes to is a
+      directory full of real files. Hence the clause requiring the arrival point
+      itself be tested for being inside the project.
+    - Reading nothing. A per-entry check over a record with no entries is green.
+      Hence the clause requiring each clean run to report the set of entries it
+      examined and that set to be non-empty. This is the same defence the parent
+      already carries for its own vacuity risk, restated here because this AC's
+      reading is a different one.
+    - Closing it by refusing. Rejecting the destination outright, or dropping the
+      offending entry, or substituting some other position for it, each converts
+      this into a build that refuses more than it should -- which BP-1500d-3's
+      it_requirements forbid by name, and which has already been shipped once in
+      this family. Hence the clause requiring an ordinary build, with every
+      managed file inside the project, to still succeed and still record those
+      files. Two acceptable outcomes are offered in the first Then clause so the
+      implementer is not forced toward a refusal to satisfy the criterion.
+
+  ON THE ACCEPTABLE-OUTCOMES CLAUSE, since a reviewer will reasonably ask whether
+  it weakens the AC. It does not, because the second Then clause binds regardless
+  of which outcome the build chooses: no entry may point outside the project, in
+  either case. What the first clause avoids is prescribing HOW -- failing the
+  build, as -3 does for its own trigger, and omitting the untruthful entry are
+  both honest, and choosing between them is an implementation judgement that
+  belongs with the coder and the it-po, not in the behaviour. What is NOT
+  acceptable, and is excluded by the clauses that follow, is recording the file
+  as though it sat inside the project.
+
+  MEASURED FIGURES, WITH METHOD AND DENOMINATOR -- AND A WARNING ABOUT THEIR
+  SHELF LIFE. Measured 2026-09-07 on branch fix/carried-followups, built from
+  origin/main at 004bf9e87. Reported by the run that found the defect: a build
+  whose managed file escapes the receiving project by a relative parent step
+  exits 0, writes a record carrying 472 output-mapping entries, and leaves the
+  record's failure field empty -- the denominator being every output mapping that
+  build produced, i.e. the full record, of which one entry is the escaping one.
+  The comparison figure, from the same family's earlier measurements on the same
+  date: an ordinary out-of-package build also produces 472 entries with an empty
+  failure field, which is exactly why the escaping build's report is
+  indistinguishable from a healthy one. The 472 is a property of this repository's
+  current template inventory on this date and will move with any change to it; it
+  is recorded to convey that the record is FULL rather than empty, and no test
+  should assert on the number. Independently confirmed on the same date that the
+  path library does not normalise a step back out of a directory: relativizing
+  such a destination against the project root succeeds and yields a position that,
+  followed, arrives outside the project.
+
+  WHY THE ABSOLUTE AND RELATIVE FORMS DIVERGE, stated once so nobody re-derives
+  it. The two are the same intent expressed two ways, and the build treats them
+  as unrelated: the absolute form has no expression as a position inside the
+  project, so relativizing it raises, the whole record is discarded, and -3's
+  exit path fires. The relative form relativizes without complaint. There is no
+  error, no warning, and nothing for any exit path to consume -- which is why
+  this one has to be caught by looking at where a position LEADS rather than by
+  catching a failure. It is the same defect wearing the successful build's
+  clothes, and it is strictly the more dangerous of the two: the absolute form
+  costs a build, the relative form costs the truth of every check that later
+  reads the record.
+
+  FOR THE IT PO. Three things this record deliberately leaves open. (1) The
+  concrete configuration key that delivers the escape is not named in the
+  criteria, on purpose -- BP-1500d-3 names two candidates in its own test_spec
+  and pins one, and the same discipline applies here; whichever is chosen, carry
+  -3's config-was-read proof, because the build reads its configuration from a
+  path inside the project's tool directory and a fixture that writes the
+  top-level path configures nothing and returns a false green. (2) The choice
+  between the two acceptable outcomes needs to be made once, in it_requirements,
+  and then held -- a test that accepts either on a per-run basis cannot detect a
+  build that flips between them. (3) The negative control needs a record whose
+  escaping entry the reading did not itself create; hand-editing the record the
+  real build wrote is the cheapest honest way, and is the same delete-and-restore
+  attribution discipline the rest of this family uses.

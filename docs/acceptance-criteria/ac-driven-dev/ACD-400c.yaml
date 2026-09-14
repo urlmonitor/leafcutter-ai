@@ -1,0 +1,93 @@
+id: ACD-400c
+components:
+  - ac_driven_dev
+title: "Nothing gets built until someone has said yes to it"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A requirement only joins the buildable queue once a person has approved it.
+
+  The queue that decides what the build system works on next admits approved work
+  and nothing else — not half-written ideas, not requirements still under review,
+  and not records whose approval was never recorded at all. Because that admission
+  rule is written down and proven, it cannot be widened or narrowed without the
+  change being visible.
+depends_on: [ACD-400]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+    relevance: "The admission rule lives here as an unspecified one-liner: `_is_approved` (line 189) returns `ac.get('readiness', '') == 'approved'`, applied in the main filter loop at line 1000. No acceptance criterion anywhere in the store governs it."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "CONTRADICTS the shipped rule. Its Then clause enumerates the admission test as exhaustive — 'only files with level L2 or L3 AND work_status: todo AND status: active are included' — and omits approval entirely. Reconciling it is ACD-400e's job, not this one's."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-2.yaml
+    relationship: related
+    status: exists
+    relevance: "An APPROVED criterion in another component that defines itself by contrast with this unwritten rule: 'readiness does not filter the set (unlike the normal ready-batch scan)'. The contrast it draws is real but currently rests on nothing."
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100g.yaml
+    relationship: related
+    status: exists
+    relevance: "Specifies the bulk approval TOOL (approve_acs.py) that produces the approved state — the producer, not the consumer. Adjacent, not overlapping."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400c-1, ACD-400c-2, ACD-400c-3]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+documentation_triggers: []
+documentation_rationale: "The single written statement of the selection rules is owned by ACD-400e; a second reference-doc entry here would recreate the divergence ACD-400e exists to end."
+notes: |
+  AUTHORED 2026-09-08 by PO v3 at BrainCandy's request, as stage 1 of PO -> BA -> IT-PO.
+  Placed under the EXISTING ACD-400 rather than a new L0 — see the ACD-400e notes for
+  the placement reasoning, which covers all three new siblings.
+
+  WHAT THE GAP ACTUALLY IS. Verified by reading the code on this branch, not inferred.
+  `scan_ac_store.py` applies four admission tests in sequence (lines 994-1001): leaf
+  level, work_status, `status: active`, and `_is_approved`. The first three are
+  specified by ACD-400a-1. The fourth is not specified anywhere. It was added later
+  and never reached the store.
+
+  THREE CONSEQUENCES THE BA SHOULD DECOMPOSE AGAINST, IN ORDER OF SHARPNESS:
+
+  1. A one-line edit to `_is_approved` redirects every subsequent build and no test
+     objects. Confirmed: no test in `unit_tests/` exercises `_is_approved` or asserts
+     that an unapproved record is withheld. `unit_tests/ac_store/test_readiness_gate.py`
+     sounds like the missing test and is not — it covers `classify_readiness()` in
+     `goal_to_epic.py` (ACD-1200b-1/-2), a different surface with a different job.
+     That near-miss is worth naming in the L2s so nobody cites it as existing coverage.
+
+  2. ABSENT MEANS EXCLUDED, AND THAT IS A DECISION, NOT A DEFAULT. `ac.get("readiness", "")`
+     treats a record with no readiness field identically to a rejected one. The
+     docstring calls this "conservative", which is a defensible product choice — but it
+     is a choice, and it is the direct cause of the large invisible population that
+     ACS-100g's bulk-approval tool exists to work around. The L2s must state the
+     absent-field verdict explicitly and prove it, rather than letting it stay an
+     artefact of a default argument.
+
+  3. EXCLUDED WORK VANISHES ENTIRELY — IT IS NOT EVEN REPORTED AS BLOCKED. The approval
+     test runs BEFORE ready/blocked classification (line 1000 precedes line 1008), so an
+     unapproved record appears in neither list and in no count. This is the shape
+     ACS-1100 (honest coverage answers, `scope: standing`) exists to forbid: an answer
+     that saw a fraction looks exactly like one that saw everything.
+     DELIBERATELY NOT AUTHORED HERE. Making the scanner report its exclusions is a
+     change to what the queue OUTPUTS, not to how it SELECTS, and it is a distinct
+     capability. ACS-1100 is a standing contract that this tree inherits rather than
+     duplicates. Flagged to the user as a recommended follow-up; do not silently pull
+     it into an L2 under this L1.
+
+  DO NOT TOUCH THE FAST LANE. BO-2400f-2 (approved, done) makes fast-lane selection
+  deliberately readiness-agnostic, and BO-2400f-12-ii states as a hard constraint that
+  "readiness, priority, req_status and status must not appear anywhere in the
+  producibility decision." Two selectors, two deliberately opposite rules. Any L2 that
+  unifies them contradicts an approved criterion in another component. What this L1
+  fixes is that only one of the two rules is currently written down.

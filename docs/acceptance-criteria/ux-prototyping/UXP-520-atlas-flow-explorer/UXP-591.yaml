@@ -1,7 +1,7 @@
 id: UXP-591
 components:
   - ux_prototyping
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A person can explore product-truth flows visually in the Atlas"
 component: ux-prototyping
@@ -25,7 +25,12 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+- reason: '2026-09-07 business-analyst: covered_by drift repair. UXP-593 declares
+    depends_on [UXP-591] but was absent from this list.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-07'
 superseded_by: null
 covered_by:
   - UXP-520
@@ -37,6 +42,7 @@ covered_by:
   - UXP-603
   - UXP-604
   - UXP-605
+  - UXP-593
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

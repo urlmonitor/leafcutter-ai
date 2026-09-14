@@ -101,6 +101,26 @@ const PHASE_RESULT_SCHEMA = {
     status: { type: 'string', enum: PHASE_STATUS_VALUES },
     result_status: { type: 'string' },
     message: { type: 'string' },
+    // handoff_target (BO-3000a). The driver's ONLY source for the identity of
+    // the agent a handoff is addressed to is this field on the handing-off
+    // agent's OWN result — the driver never infers it from the ticket body.
+    // Declared here so an agent returning `status: "handoff"` has a
+    // structural cue to name the field the driver actually routes on, rather
+    // than following a template that tells it WHAT it owes the ticket
+    // (the `### <agent>` task-breakdown convention) without ever telling it
+    // WHO the driver should re-dispatch. See the `if`/`then` below, which
+    // makes this field REQUIRED exactly when `status` is `"handoff"` without
+    // touching the top-level `required: ['status']` — every reply that is
+    // valid today stays valid.
+    handoff_target: {
+      type: 'string',
+      description:
+        "REQUIRED when status is 'handoff': the name of the phase agent that " +
+        "must act before this phase can proceed, exactly as it appears in " +
+        "phaseOrder (e.g. 'test-writer', 'python-coder'). Absent, empty, or " +
+        "not a recognised phase agent causes the driver to refuse the " +
+        "handoff and halt rather than guess a re-dispatch target.",
+    },
     // Test-evidence fields (BO-2000e-2 second satisfaction route). Populated by
     // the test-writer phase; ignored for every other phase. Both are optional so
     // that a phase agent which omits them leaves the coder guard CLOSED — absent
@@ -116,6 +136,19 @@ const PHASE_RESULT_SCHEMA = {
     },
   },
   required: ['status'],
+  // Conditionally require handoff_target only when status is "handoff", so no
+  // currently-valid reply (any non-handoff status omitting the field) becomes
+  // invalid. NOTE: whether the E2 engine's schema enforcement honours
+  // JSON-Schema if/then conditionals is unverified from this repo — mirrors
+  // build-feature.js's own unverified note on the same construct.
+  //
+  // TWIN: mirrors build-feature.js PHASE_RESULT_SCHEMA. Keep in sync.
+  if: {
+    properties: { status: { const: 'handoff' } },
+  },
+  then: {
+    required: ['handoff_target'],
+  },
 }
 
 const CLASSIFY_SCHEMA = {
@@ -277,6 +310,127 @@ function sortByCanonicalPriority(phases) {
   return [...phases].sort(
     (a, b) => getPriority(a.agent) - getPriority(b.agent)
   );
+}
+
+/**
+ * From a ticket's phases, return those whose STATUS still owes this drive work.
+ *
+ * Pure function (no module state) so it is unit-testable in isolation, and a
+ * named function rather than an inline filter because the `failed` half of the
+ * predicate is a deliberate decision that has to be readable and testable.
+ *
+ * `needed` is obvious. `failed` is here because the signoff skill's own state
+ * machine says `failed` -> `signed_off` after rework, and until KI-BO-20260907-1555
+ * this driver did not implement that edge: the dispatch set was
+ * `filter(p => p.status === "needed")`, so a phase that exhausted the
+ * failure-adjudication ladder was enumerated by the planner and then silently
+ * discarded. Nothing anywhere transitioned it back, which made `failed` a
+ * write-only terminal state and left re-running the drive a no-op — GE-120
+ * ticket 36 reached four `failed` phases and zero `needed` ones, and its
+ * re-drive dispatched no phase agent at all while still correctly reporting
+ * those phases as outstanding.
+ *
+ * Re-dispatching a `failed` phase is safe in both directions:
+ *   - On success the agent SETS `signed_off` (signoff skill step 1) rather than
+ *     find-replacing the literal `needed`, so the `failed` row is cleared and
+ *     the phase does not come back on the next drive.
+ *   - On failure it stays `failed`, which is where it already was.
+ * The within-drive retry ladder is unchanged and still caps attempts; what a
+ * re-drive costs is one more attempt per failed phase, which is what an
+ * operator re-running a drive is asking for.
+ *
+ * NOT included: `signed_off` (terminal — a downstream agent hands work back by
+ * resetting the row to `needed`, which this predicate already selects) and
+ * `not_needed` (the ticket says the phase does not apply). Widening to either
+ * would re-run passed work every drive.
+ *
+ * TWIN: mirrors build-feature.js. Keep in sync with that file.
+ *
+ * @param {Array<{agent: string, status: string}>} orderedPhases
+ * @returns {Array<{agent: string, status: string}>}
+ */
+function selectDispatchableByStatus(orderedPhases) {
+  return (orderedPhases || []).filter(
+    (p) => p && (p.status === "needed" || p.status === "failed")
+  );
+}
+
+/**
+ * Absorb phases the ticket's record says became `needed` AFTER the drive began.
+ *
+ * BO-3701 (build-ticket.js's half of the BO-3700 twin divergence). This
+ * driver used to compute its phase list once, before any phase ran, and then
+ * iterate that captured array. A phase promoted to `needed` mid-drive was
+ * therefore never dispatched — the list it would have joined had already been
+ * fixed. `architect-review` promotes `adr-author` exactly this way whenever
+ * it concludes an ADR is required, so the driver routinely created a blocker
+ * it then refused to clear, and reported the ticket incomplete because
+ * "adr-author is still needed and was never dispatched".
+ *
+ * The signal was never missing. The post-dispatch read-back already returns
+ * `needed_phases`, and the driver already receives and parses it after every
+ * phase — it simply fed the COMPLETION decision and never the DISPATCH
+ * decision. This function is the wire between the two; it adds no new
+ * dispatch, no new schema field and no new agent call.
+ *
+ * Mutates `pending` in place and re-sorts it, because a promoted phase
+ * usually has an EARLIER canonical priority than the phase that promoted it
+ * (adr-author is 2; architect-review, its decider, is 4). Appending without
+ * re-sorting would run it after the coder that depends on it, which is the
+ * same failure wearing a different hat.
+ *
+ * Four things are deliberately NOT absorbed:
+ *   - a name that is not a known phase agent (records are agent-written
+ *     text; getPriority() sorts an unregistered name LAST rather than
+ *     throwing, so a name that reached the sort would run AFTER commit and
+ *     pull-request — excluding it here, before it ever reaches the sort, is
+ *     what BO-3701's criteria require);
+ *   - a phase already attempted in this drive (no loops, no re-runs);
+ *   - a phase already planned or pending (no duplicates);
+ *   - a deferred phase — kept for parity with the twin, though build-ticket.js
+ *     always passes an empty `deferred` list (see the Phase 3 comment on
+ *     `deferredPhases`: this driver has nothing to defer, since it drives one
+ *     standalone ticket rather than an epic member).
+ *
+ * An unreadable read-back (`record.readable !== true`) MUST leave `pending`
+ * exactly as it stood — this function returns `[]` before looking at
+ * `pending` at all, so "could not read the record" never collapses to
+ * "nothing left to run" (BO-3701).
+ *
+ * TWIN: mirrors build-feature.js absorbPromotedPhases(). Keep in sync.
+ *
+ * @param {object} record — the read-back reply; ignored unless readable === true
+ * @param {Array<{agent: string, status: string}>} pending — mutated in place
+ * @param {Set<string>} known — every phase already planned, pending or attempted
+ * @param {Set<string>} attempted — phases dispatched in this drive
+ * @param {Array<string>} deferred — phases this drive must not dispatch
+ * @returns {Array<string>} the names newly absorbed, for logging
+ */
+function absorbPromotedPhases(record, pending, known, attempted, deferred) {
+  if (!record || record.readable !== true) return [];
+  const reported = Array.isArray(record.needed_phases) ? record.needed_phases : [];
+  const deferredSet = new Set(deferred || []);
+  const added = [];
+
+  for (const raw of reported) {
+    if (typeof raw !== "string") continue;
+    const agentName = raw.trim();
+    if (agentName === "") continue;
+    if (!phaseOrder.includes(agentName)) continue;
+    if (deferredSet.has(agentName)) continue;
+    if (attempted.has(agentName)) continue;
+    if (known.has(agentName)) continue;
+    known.add(agentName);
+    pending.push({ agent: agentName, status: "needed" });
+    added.push(agentName);
+  }
+
+  if (added.length > 0) {
+    const resorted = sortByCanonicalPriority(pending);
+    pending.length = 0;
+    pending.push(...resorted);
+  }
+  return added;
 }
 
 // ---------------------------------------------------------------------------
@@ -1178,8 +1332,12 @@ const CODER_PHASES = new Set(["python-coder", "sql-coder", "frontend-coder"]);
 // Phase 2 — Guard: compute the phases this drive will dispatch
 // -------------------------------------------------------------------------
 
+// selectDispatchableByStatus keeps the phases whose status still owes work —
+// `needed` AND `failed` (KI-BO-20260907-1555: a failed phase used to be dropped
+// here and no later drive could ever re-run it). See that function for why
+// re-dispatching a failed phase terminates.
 const neededPhases = sortByCanonicalPriority(
-  orderedPhases.filter((p) => p.status === "needed")
+  selectDispatchableByStatus(orderedPhases)
 );
 
 // -------------------------------------------------------------------------
@@ -1255,8 +1413,27 @@ const unverifiedReasons = {};
 const dispatchedAgents = [];
 let lastRecord = null;
 
-for (const currentPhase of neededPhases) {
+// BO-3701 — the pending set is a WORK-LIST, not a snapshot.
+//
+// This used to be `for (const currentPhase of neededPhases)`, iterating an
+// array fixed before the first phase ran. A phase promoted to `needed` by a
+// phase that was itself still running could therefore never be dispatched.
+// `pendingPhases` is re-derived after every dispatch from the record
+// read-back this driver already performs — see absorbPromotedPhases().
+//
+// `neededPhases` is left intact and still names the OPENING set: the
+// completion decision reports against `plannedPhaseNames`, which starts as
+// that set and grows only as promotions are genuinely absorbed.
+//
+// TWIN: mirrors build-feature.js's `pendingPhases` work-list. Keep in sync.
+const pendingPhases = [...neededPhases];
+const plannedPhaseNames = new Set(neededPhases.map((p) => p.agent));
+const attemptedPhases = new Set();
+
+while (pendingPhases.length > 0) {
+  const currentPhase = pendingPhases.shift();
   const phaseName = currentPhase.agent;
+  attemptedPhases.add(phaseName);
   retryCounts[phaseName] = retryCounts[phaseName] || 0;
 
   // -----------------------------------------------------------------------
@@ -1268,7 +1445,18 @@ for (const currentPhase of neededPhases) {
   // coder would otherwise write its own tests.
   // -----------------------------------------------------------------------
   if (CODER_PHASES.has(phaseName) && !hasTestRequirements) {
-    const testWriterRan = neededPhases.some((p) => p.agent === "test-writer");
+    // BO-3701: read from plannedPhaseNames (the live set, grown by
+    // absorbPromotedPhases as phases are promoted mid-drive), not from
+    // neededPhases (the frozen opening snapshot). test-writer's canonical
+    // priority (5) precedes every CODER_PHASES member (6+) and pendingPhases
+    // stays sorted by priority, so by the time a coder's turn is reached, a
+    // test-writer named anywhere in plannedPhaseNames — whether present at
+    // the start or absorbed as a mid-drive promotion — has already been
+    // dispatched. This affects only the wording below ("ran but reported no
+    // evidence" vs "was never scheduled"); the guard returns
+    // `status: "blocked"` either way, so no dispatch outcome changes — only
+    // the diagnosis text does.
+    const testWriterRan = plannedPhaseNames.has("test-writer");
     return {
       status: "blocked",
       message:
@@ -1361,6 +1549,27 @@ for (const currentPhase of neededPhases) {
     } else {
       lastRecord = null;
     }
+
+    // BO-3701 — the one line that makes the read-back's `needed_phases` mean
+    // something for dispatch. It has always been reported here; until now it
+    // fed only the completion decision, so a phase promoted mid-drive was
+    // named as outstanding in the final report and never actually run.
+    const promoted = absorbPromotedPhases(
+      phaseRecord,
+      pendingPhases,
+      plannedPhaseNames,
+      attemptedPhases,
+      deferredPhases
+    );
+    if (promoted.length > 0) {
+      log(
+        `'${phaseName}' promoted ${JSON.stringify(promoted)} to needed in ` +
+        `${ticketPath}. Added to this drive's pending set and ordered ` +
+        `by canonical priority, so a phase whose priority precedes its own ` +
+        `promoter still runs before the phases that depend on it (BO-3700).`
+      );
+    }
+
     const verdict = adjudicatePhaseAgainstRecord(phaseRecord, phaseName);
 
     // ------------------------------------------------------------------
@@ -1405,7 +1614,7 @@ for (const currentPhase of neededPhases) {
     }
 
     // ------------------------------------------------------------------
-    // Handoff routing (BO-3000)
+    // Handoff routing (BO-3000, BO-3000a)
     // ------------------------------------------------------------------
     // `handoff` is a valid PHASE_RESULT_SCHEMA status meaning "another
     // agent must act before I can proceed" — it is NOT a success and must
@@ -1413,23 +1622,65 @@ for (const currentPhase of neededPhases) {
     // branch a handoff result was indistinguishable from `status: "ok"`:
     // the loop advanced to the next phase in phaseOrder and the named
     // agent was never re-dispatched (see BO-3000 for the live incident).
-    // Kept deliberately identical to the build-feature.js handler.
+    //
+    // BO-3000a: the ONLY place the driver looks for the identity of the
+    // agent a handoff is addressed to is the `handoff_target` field the
+    // handing-off agent's own result carries. This driver does NOT read the
+    // ticket body's `### <agent>` task-breakdown section to infer a target —
+    // that section is ambiguous by construction (13 agents carry
+    // `requires_ticket_section: true` and routinely appear together on one
+    // ticket), and it would convert a DELIBERATE targetless halt —
+    // python-coder's contract-shrinkage guard and test-writer's test-drift
+    // rule both emit `(status: handoff)` naming no agent on purpose, meaning
+    // "blocked, needs user authorization" — into a spurious re-dispatch of
+    // whichever agent happened to have a task section on the ticket. See
+    // BO-3000a's notes for the full record.
+    //
+    // TWIN: mirrors build-feature.js's handoff branch. Keep in sync.
     if (resultStatus === "handoff") {
       const handoffTarget = phaseResult.handoff_target;
       const normalizedTarget =
         typeof handoffTarget === "string" ? handoffTarget.trim() : "";
-      const isKnownAgent =
-        normalizedTarget !== "" && phaseOrder.includes(normalizedTarget);
 
-      if (!isKnownAgent) {
+      // Case (a): the result was read and named NO target at all — the key
+      // absent, empty, blank, or not a string. This is also what a
+      // DELIBERATE targetless halt looks like, and it must refuse
+      // identically whether or not the ticket's body names agents
+      // elsewhere: the driver never reads the ticket body to resolve this.
+      if (normalizedTarget === "") {
         return {
           status: "blocked",
           message:
-            `Phase '${phaseName}' returned 'status: handoff' but named no ` +
-            `recognizable handoff_target ('${handoffTarget}'). Refusing to ` +
+            `Phase '${phaseName}' returned 'status: handoff' but its result ` +
+            `was read and named no handoff target (handoff_target was ` +
+            `${JSON.stringify(handoffTarget)}). Refusing to guess a ` +
+            `re-dispatch target and refusing to advance to the next phase ` +
+            `in phaseOrder. This may be a deliberate targetless halt (a ` +
+            `contract-shrinkage guard or test-drift stop asking for user ` +
+            `authorization) rather than an omission — inspect '${phaseName}'` +
+            `'s message and the ticket's ## Comments for what it needs ` +
+            `before re-running /build-ticket.`,
+          ticket_path: ticketPath,
+          failing_phase: phaseName,
+          blocker_detail: phaseResult,
+          classification: "halt",
+        };
+      }
+
+      // Case (b): a target was named, but it is not an agent this driver
+      // recognises. Reproduce the value it was given verbatim — never
+      // resolve it to some other agent, so a misspelt agent is
+      // distinguishable from one that does not exist.
+      if (!phaseOrder.includes(normalizedTarget)) {
+        return {
+          status: "blocked",
+          message:
+            `Phase '${phaseName}' returned 'status: handoff' naming ` +
+            `'${normalizedTarget}' as its handoff_target, which is not an ` +
+            `agent this driver recognises as a phase agent. Refusing to ` +
             `guess a re-dispatch target and refusing to advance to the ` +
-            `next phase in phaseOrder. Inspect '${phaseName}'’s message ` +
-            `and the ticket's ## Comments for the intended target agent, ` +
+            `next phase in phaseOrder. Check '${normalizedTarget}' for a ` +
+            `misspelling or a name that does not exist, fix the emitter, ` +
             `then re-run /build-ticket.`,
           ticket_path: ticketPath,
           failing_phase: phaseName,
@@ -1601,7 +1852,11 @@ return await concludeTicket({
   recordPath: ticketPath,
   title,
   record: lastRecord,
-  basePhases: neededPhases.map((p) => p.agent),
+  // BO-3701: the opening set PLUS anything genuinely promoted mid-drive. A
+  // phase that became needed and was dispatched must be accounted for by the
+  // completion decision like any other; reporting only the opening set would
+  // let a promoted phase pass unexamined.
+  basePhases: [...plannedPhaseNames],
   deferredPhases,
   completedPhases,
   skippedPhases,

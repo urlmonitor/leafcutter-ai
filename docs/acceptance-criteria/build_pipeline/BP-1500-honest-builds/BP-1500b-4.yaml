@@ -1,0 +1,219 @@
+id: BP-1500b-4
+title: "Files the build never produced are left untouched, and recognised as such without an exception list"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given a project's installed tree holds, alongside the artifacts the package
+    produced, all three of the following, and none of them appears in any record
+    of what the build has ever produced:
+      - a machine-local settings file the adopter edited on this machine, which
+        the package does not ship and never has,
+      - a lock file written at run time by a scheduled task,
+      - the link entries the build itself created to point one part of the
+        installed tree at another,
+  When the install is rebuilt and the orphan sweep runs,
+  Then all three are still present afterwards, with their contents unchanged,
+  And none of them is named in the report as an orphan, as removed, or as a
+    candidate for removal,
+  And the sweep reaches this outcome by recognising that it did not produce
+    them, not by consulting an exception list naming these particular files, so
+    a fourth file of the same kinds appearing tomorrow is also left alone,
+  And the sweep never satisfies itself by emptying the installed tree and
+    rewriting it, because the adopter's own files live in that tree alongside
+    the produced ones.
+depends_on:
+  - BP-1500b
+  - BP-1500b-2
+doc_links:
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The build step that creates the link entries named in the Given, and the step whose blast radius this AC bounds."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The self-hosting boundary convention that produces the mixed installed tree -- package-produced artifacts and project-owned files in the same directory. That mixture is the reason a sweep here can destroy the adopter's work."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "READ KI-BP-009 BEFORE IMPLEMENTING THIS AC. Severity high, status open, empirically confirmed 2026-08-25. It records that the build ALREADY destroys adopter-owned work on the DEFAULT path -- `_cleanup_stale_paths` rmtree's a real .claude/skills directory an adopter created and prints a green checkmark, and under --clean the artifact sweep deletes through the skills symlink. This AC's data-loss concern is therefore a live defect to fix, not a hazard to avoid introducing."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The build_pipeline component's detail_ref. Describes the shim layer that creates the link entries named in the Given, and the mixed-ownership installed tree those links produce."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The keep/remove decision must be a PROVENANCE test -- 'did this build produce this path' -- evaluated per file from the recomputed producible set and the build's provenance record. It must not be a name test, an extension test, a directory-membership test, or a lookup in any list of protected filenames. Adding `settings.local.json` and `scheduled_tasks.lock` to a protected-names constant satisfies the Given and fails the third Then clause; it is the same hand-maintained-list shortcut BP-1500b-2 forbids on the positive side, merely moved to the negative side."
+  - "DEFAULT-DENY ON REMOVAL. A path the sweep cannot positively attribute to the package is KEPT. Uncertainty resolves to keep, always. If the sweep believes such a path should go, it may name it as a candidate for a human to decide -- it may not remove it. This asymmetry is deliberate: every other AC under this L1 fails by leaving a dead file behind, which is the status quo; this one fails by destroying a live file, which is worse than the defect being fixed."
+  - "VERIFIED NEGATIVE CONTROL THAT MUST PASS, measured on the reporting machine 2026-09-07: `/home/henzeh/projects/leafcutter/.claude/settings.local.json` is a real file (345 bytes, hand-edited 2026-06-22, NOT a symlink) and `/home/henzeh/projects/leafcutter/.claude/scheduled_tasks.lock` is a real file (112 bytes, 2026-08-17, NOT a symlink); `grep -c settings.local.json` against .build_manifest.json returns 0 for both. Under a rule of 'not in the manifest and not a shim symlink, therefore orphan' BOTH ARE DELETED ON THE FIRST REBUILD. That rule is rejected; any implementation must be checked against these two exact files before it is called done."
+  - "Never delete-and-rewrite a directory. Per-file decisions only, and never `rmtree` a directory that can contain a file the build did not produce. The fourth Then clause reaches the build's CURRENT behaviour on its face, not only a hypothetical future sweep -- see the coexistence constraint below."
+  - "COEXISTENCE CONSTRAINT -- REDIRECTED 2026-09-08, THE REPAIR IS NOW OWNED BY BP-1500g AND IS CITED HERE RATHER THAN CARRIED HERE. The build already empties and rewrites part of the installed tree on the default path. `.claude/skills` appears in BOTH `_PRE_CONSOLIDATION_PATHS` (scripts/build.py:1769) and the shim map, so `_cleanup_stale_paths` (:1844) rmtree's a real `.claude/skills` directory an adopter created, reports `removed stale: .claude/skills` with a success marker, and `_install_shims` re-symlinks over it -- confirmed empirically 2026-08-25 in KI-BP-009 and reproduced a third time on 2026-09-08 against that day's main. THAT DEFECT IS NO LONGER THIS AC'S TO FIX: the owner split it out as BP-1500g on 2026-09-08, and its repair is specified by BP-1500g-1 (survives the ordinary no-option build), BP-1500g-1-i (survives the opt-in removal mode), BP-1500g-1-ii (a run that took the adopter's content is not a successful run) and BP-1500g-2 (the package's own capabilities still arrive in the same project after the same run). WHAT REMAINS THIS AC'S OBLIGATION: the sweep specified here must not reintroduce the behaviour, and the ownership convention BP-1500g's implementer chooses is a constraint on this sweep's provenance rule -- read BP-1500g-1 before implementing, and raise a finding if the two cannot agree rather than resolving it quietly in one of them. Sequencing note that has NOT changed: adding a correct orphan sweep to a build that is still deleting adopter directories does not deliver this AC's parent outcome. If BP-1500g has not landed when this AC is closed, say so in the ticket and cite BP-1500g rather than filing it afresh."
+  - "`--dry-run` must list exactly what a real run would remove, and remove nothing, so an adopter can inspect the blast radius of a newly-default destructive step before it happens. For an AC whose failure mode is data loss this is the only pre-flight an adopter has."
+  - "The build-created link entries (agents/, commands/, hooks/, skills/, workflows/, settings.json) ARE attributable to the build and are therefore not the hard case -- but they must be recognised as links the build owns and left in place, not removed and recreated inside the same run in a way that makes the report claim a removal. A report that names a link as removed is indistinguishable, to a reader, from one that lost the adopter's file."
+  - "The provenance classifier must be exercisable as a pure function over (current sources, installed tree listing, provenance record) so the negative controls can run against realistic inputs without a real deletion. Requiring a live tree to test a data-loss guard is how the guard ends up under-tested."
+test_spec:
+  - name: test_bp_1500b_4_an_adopter_edited_settings_local_json_survives_a_default_rebuild_byte_for_byte
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python scripts/build.py --target-dir <root>  (no flags)"
+    description: "Seed the installed tree with a real hand-edited settings.local.json (a plain file, not a symlink, absent from the build manifest -- the exact shape measured on the reporting machine), run a no-flag build subprocess, and assert the file is present with identical bytes and is not named in the report as an orphan, a removal, or a candidate."
+  - name: test_bp_1500b_4_a_runtime_written_lock_file_survives_and_is_not_named_as_a_candidate
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Same construction for scheduled_tasks.lock -- a plain file written at run time, absent from the manifest, not a link. Survives untouched and unnamed."
+  - name: test_bp_1500b_4_the_build_created_link_entries_survive_and_are_not_reported_as_orphans
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The shim links (agents/, commands/, hooks/, skills/, workflows/, settings.json) are present and still point where they pointed, and none appears in the report as removed. Also fails an implementation that removes and recreates a link within the run while reporting the removal."
+  - name: test_bp_1500b_4_a_fourth_unattributable_file_never_seen_before_is_also_left_alone
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "THE NO-EXCEPTION-LIST CONTROL, mirroring BP-1500b-2's positive-side control. Plant a file whose basename contains a uuid4 hex minted inside the test body, of none of the three named kinds, absent from the manifest and not a link. It survives. A protected-names list cannot contain a name that did not exist when the list was written, so an exception-list implementation passes the first three entries and fails here."
+  - name: test_bp_1500b_4_the_rejected_naive_rule_would_delete_the_adopter_files_and_the_implemented_rule_does_not
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "The negative control stated as a differential. Run both classifiers over the same realistic listing: the rejected 'not in the manifest and not a shim symlink, therefore orphan' rule marks settings.local.json and scheduled_tasks.lock for deletion; the implemented rule keeps both. Documents WHY the AC exists in a form that stays red if the rule ever regresses to the naive one."
+  - name: test_bp_1500b_4_an_unattributable_path_is_kept_and_offered_as_a_candidate_never_removed
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Default-deny asserted directly: a path the classifier cannot attribute either way is present after the run, and if it appears in the report at all it appears as a candidate for a human, not as a removal."
+  - name: test_bp_1500b_4_the_sweep_never_removes_a_directory_wholesale_when_it_holds_an_unattributed_file
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A managed directory containing both a genuine orphan and an adopter-owned file: the orphan goes, the directory and the adopter's file remain. Fails any rmtree-then-recreate implementation, which would pass a test that only checked the orphan was gone."
+  - name: test_bp_1500b_4_a_default_no_flag_build_does_not_delete_a_real_adopter_owned_skills_directory
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    covers:
+      - BP-1500g-1
+    surface_invoked: "python scripts/build.py --target-dir <root>  (no flags)"
+    description: "THE COEXISTENCE TEST, and the one that is RED TODAY against the current build. Replace the .claude/skills shim with a real directory holding an adopter-authored skill, run an ordinary no-flag build, and assert the directory and its contents survive. KI-BP-009 confirmed empirically on 2026-08-25 that today's build rmtree's it via _cleanup_stale_paths and reports success. REDIRECTED 2026-09-08 -- this entry now covers BP-1500g-1, not this AC. This AC's test_rationale asked that if the owner moved the repair elsewhere the entry be dropped deliberately and its destination named rather than left to evaporate; the owner moved it to BP-1500g on 2026-09-08 and it is kept here, retargeted, because it is the only entry exercising this AC's fourth Then clause as a property of the rebuild rather than of the sweep function. Deleting it would have weakened this AC as well. It stays red until BP-1500g-1 is implemented and it is the shared regression guard between the two records; the IT PO authoring BP-1500g-1's own test contract should add an equivalent descriptor under that AC's name rather than move this one again."
+  - name: test_bp_1500b_4_dry_run_lists_exactly_what_a_real_run_removes_and_deletes_nothing
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Over a mixed tree: the dry-run candidate list is byte-identical to the real run's removal list, and the dry run leaves every file in place. The adopter's only pre-flight against a newly-default destructive step."
+test_rationale: |
+  THE FAILURE MODE HERE IS DATA LOSS, WHICH INVERTS THE USUAL COVERAGE
+  ARGUMENT. For every other AC in this batch an under-tested implementation
+  leaves a dead file on disk -- the status quo, recoverable, embarrassing. For
+  this one it deletes the adopter's hand-edited settings. So the contract is
+  weighted toward negative controls (six of nine entries assert that something
+  SURVIVED) rather than toward proving the happy path works, and it is the
+  only AC in the batch with a differential test that runs the REJECTED rule
+  alongside the implemented one.
+
+  THAT DIFFERENTIAL ENTRY EARNS ITS PLACE. Ordinary survival tests go green
+  the moment the implementation is right and stay green while the reason is
+  forgotten; a year later someone simplifies the classifier back toward "not
+  in the manifest, therefore orphan" and every survival test that used a
+  fixture missing the awkward properties passes. Encoding the rejected rule as
+  executable code, run over the same input, keeps the counter-example alive in
+  the suite rather than only in this file's notes.
+
+  THE UUID ENTRY IS LOAD-BEARING FOR THE SAME REASON AS BP-1500b-2's. An
+  exception list naming settings.local.json, scheduled_tasks.lock and the six
+  shim links passes the first three entries perfectly and deletes the fourth
+  such file the day one appears. Only a name that did not exist when the
+  implementation was written can tell a general rule from a memorised one, and
+  the AC's own notes say so.
+
+  THE COEXISTENCE ENTRY IS RED AGAINST TODAY'S BUILD AND SHOULD STAY IN THE
+  CONTRACT EVEN THOUGH IT LOOKS LIKE SOMEONE ELSE'S BUG. It is the only entry
+  that tests the AC's fourth Then clause as a property of the REBUILD rather
+  than of the new sweep function, and that is the clause's plain reading. An
+  implementer who takes the narrow reading ships a correct sweep bolted onto a
+  build that is still deleting the adopter's skills directory with a green
+  checkmark, and the L1's outcome will not have been delivered. If the owner
+  decides that repair belongs elsewhere, drop this ONE entry deliberately and
+  say where it went -- do not let it evaporate.
+
+  RUNTIME. Nine entries, most of them real build subprocesses over small
+  trees. Comfortably inside the done-proof pytest budget as fixed by PR #706
+  (30s collection floor plus 300s per linked test file). This contract was NOT
+  shaped by the retired 60s ceiling and must not be trimmed toward it.
+delivers_to:
+  agent: python-coder
+  contract: "A per-path provenance verdict consumed by the sweep before any deletion: classify(installed_path) -> one of {produced_by_this_package (removable if absent from the current producible set), not_produced (keep, never removable), unattributable (keep; may be reported as a candidate for a human, never removed)}. The sweep in BP-1500b-1 must obtain this verdict for every candidate and must treat anything other than produced_by_this_package as a veto; BP-1500b-3's report must not name a kept path as a removal."
+expects_from:
+  ac_id: BP-1500b-2
+  contract: "The provenance lookup over .build_manifest.json -- was_ever_produced(installed_path) -> bool -- together with the recomputed producible set. The manifest is used here for provenance only, never as the producible set; and per BP-1500b-2 an entry whose recorded source path has vanished yields orphan evidence rather than a reason to keep."
+origin_agent: BrainCandy
+created: 2026-09-07
+created_by_ticket: null
+amended_by:
+  - action: reestimate
+    agent: it-po
+    date: '2026-09-08'
+    reason: "ONE FIELD TOUCHED: estimated_complexity L -> M. Criteria, title, depends_on, priority, it_requirements, test_spec, test_rationale, delivers_to, expects_from, doc_links and notes ALL UNCHANGED. This AC is NOT narrowed and NOT superseded; its provenance rule, its default-deny asymmetry and its no-exception-list control are all still required of the sweep. WHY THE ORIGINAL L NO LONGER HOLDS. The 2026-09-07 enrichment states its own reason in writing: `Complexity raised to L accordingly: a correct sweep bolted onto a build still destroying adopter directories does not deliver the outcome.` The L was therefore carrying the default-path repair -- `_cleanup_stale_paths` versus the shim install -- on top of this AC's own provenance classifier. On 2026-09-08 the owner split that repair out as BP-1500g; the BA redirected the COEXISTENCE it_requirement to CITE BP-1500g rather than carry it, and retargeted the one test entry to covers: [BP-1500g-1]. The work that justified the L is now specified by BP-1500g-1, -1-i, -1-ii and -2, and is estimated there (L on BP-1500g-1, M on the others). WHAT REMAINS HERE, AND WHY IT IS M AND NOT S: a per-file provenance classifier over (current sources, installed tree listing, provenance record), a default-deny veto wired into the sweep's removal path, and a dry-run whose output matches the real run exactly -- multiple functions across a small number of files, with a nine-entry test contract. Two obligations that survive the split are estimating constraints rather than build work: the sweep must not reintroduce BP-1500g's behaviour, and BP-1500g's chosen ownership convention constrains this AC's provenance rule. Neither is code this AC writes. RE-ESTIMATE ONLY -- if a reviewer judges the residual classifier work still L on its own merits, raise it; the change here is strictly the removal of double-counted scope, not a claim that the remaining work is small."
+  - action: scope_redirect
+    agent: business-analyst
+    date: '2026-09-08'
+    reason: "TWO FIELDS TOUCHED, BOTH BY EXPLICIT INSTRUCTION FROM THIS AC'S OWN test_rationale AND FROM BP-1500g's HANDOFF SECTION. Criteria, title, depends_on, priority and all other test_spec entries are UNCHANGED, and this AC is NOT superseded and NOT narrowed -- its provenance rule, its default-deny asymmetry and its no-exception-list control all remain required of the sweep. (1) The COEXISTENCE it_requirement now CITES BP-1500g for the default-path data-loss repair instead of carrying it, and states what remains this AC's obligation: the sweep must not reintroduce the behaviour, and BP-1500g's chosen ownership convention constrains this AC's provenance rule. (2) The test_spec entry test_bp_1500b_4_a_default_no_flag_build_does_not_delete_a_real_adopter_owned_skills_directory now declares covers: [BP-1500g-1] and its description records the redirect. This AC's test_rationale said: 'If the owner decides that repair belongs elsewhere, drop this ONE entry deliberately and say where it went -- do not let it evaporate.' The owner decided on 2026-09-08 that it went to BP-1500g. The entry is retained rather than deleted because it is the only one exercising this AC's fourth Then clause as a property of the rebuild rather than of the sweep function; deleting it would have weakened this AC. It is now the shared regression guard between the two records."
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-07'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (L), it_requirements, test_spec, test_rationale, delivers_to, expects_from, and two doc_links. Criteria, title and depends_on unchanged. The substantive finding this enrichment adds: the data-loss risk this AC guards against is NOT latent. KI-BP-009 (high, open, empirically confirmed 2026-08-25) records that an ordinary no-flag build already rmtree's a real .claude/skills directory an adopter created -- .claude/skills sits in both _PRE_CONSOLIDATION_PATHS and the shim map -- and reports it with a success marker. The AC's fourth Then clause ('never satisfies itself by emptying the installed tree and rewriting it') reaches that behaviour on its plain reading, so no sixth L2 was needed; it is carried as a coexistence it_requirement plus one test entry that is red against today's build. Complexity raised to L accordingly: a correct sweep bolted onto a build still destroying adopter directories does not deliver the outcome."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  PRIORITY IS critical, ONE STEP ABOVE THE PARENT'S high, AND DELIBERATELY SO.
+  Every other AC under this L1 fails by leaving a dead file in place, which is
+  the status quo. This one fails by deleting a live file the adopter owns, which
+  is worse than the defect being fixed. The parent's own notes say so: "wiping it
+  converts a cleanup defect into data loss."
+
+  THE NEGATIVE CONTROL IS NOT HYPOTHETICAL -- IT IS THE BRIEF'S OWN RULE APPLIED
+  TO THIS MACHINE. The decomposition brief proposed the derivation "an installed
+  path in neither the template account nor output_mappings, and not a shim
+  symlink, is an orphan". Checked against the reporting machine's installed tree
+  on 2026-09-07:
+
+    .claude/settings.local.json    present; occurrences in the build manifest: 0
+    .claude/scheduled_tasks.lock   present; occurrences in the build manifest: 0
+
+  Neither is a link, so the "not a shim symlink" escape does not cover them.
+  Implemented literally, that rule DELETES the adopter's machine-local settings
+  and a live lock file on the first rebuild. That is why this is an L2 with its
+  own criteria and not a line in a test plan.
+
+  The three categories in the Given are the real inhabitants of that tree, not
+  invented ones: settings.local.json (adopter-owned), scheduled_tasks.lock
+  (run-time state), and the build-created links agents/ commands/ hooks/ skills/
+  workflows/ settings.json.
+
+  WHY THE THIRD Then CLAUSE MATTERS AS MUCH AS THE FIRST. An exception list
+  naming these three files would pass a test written from this AC's Given and
+  would then delete the fourth such file the moment one appears. It is the same
+  hand-maintained-list failure BP-1500b-2 forbids on the positive side, and it
+  has to be forbidden on the negative side too or the shortcut simply moves.

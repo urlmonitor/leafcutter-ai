@@ -1,0 +1,129 @@
+id: INF-700a-1-ii
+components:
+  - infrastructure
+  - knowledge_system
+  - build_orchestration
+title: "A routing step that cannot finish says so where the work is reported, and changes nothing about the work"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-1.yaml"
+criteria: |
+  Given a unit of work has completed successfully and the routing step that
+    follows it cannot finish — the declared sink cannot be read, or a
+    destination file cannot be written,
+  When the driver reports the unit of work finished,
+  Then the reported result names the routing step as having not completed and
+    states what it could not do,
+  And the outcome the driver reports for the work itself, and the status the
+    driver exits with, are the same as they would have been had the routing
+    step written every record — so no unit of work is failed, retried or
+    blocked by a knowledge step,
+  And a record the routing step could not write is not recorded as written: a
+    later run, once the cause is removed, writes it,
+  And a unit of work during which the routing step did not run at all is
+    reported as a third case, distinct both from a routing step that ran and
+    wrote nothing because there was nothing to write, and from one that ran and
+    failed,
+  And a unit of work that FAILED still reports which of those three cases its
+    routing step fell into, so a failed drive is not also a silent one.
+depends_on: [INF-700a-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "AGENT REASSIGNED FROM workflow-architect TO python-coder for the reason given on INF-700a-1: workflow-architect is is_ticket_phase false with null selection_criteria and cannot be dispatched as a ticket phase; python-coder is the registry's declared owner of templates/workflows-js/ and of its pytest-over-Node-harness coverage."
+  - "WHERE THE RECEIPT IS STORED — IT PO decision, three layers in priority order, answering the gitignore problem directly. LAYER 1, PRIMARY AND ALWAYS PRESENT: the driver's returned result payload. The three-case value is a field on the object the driver reports, in band, structured, requiring no filesystem and no directory. This is literally what the criteria ask for (the reported result names the routing step as having not completed), so the storage question mostly dissolves. LAYER 2, DURABLE AFTER PROCESS EXIT: the run journal in the run's transcript directory, which the workflow engine already writes per ADR-024 and which BO-1000c-1a establishes is readable after the run process exits and is NOT written by the workflow body itself. The routing outcome rides the existing per-step outcome record; nothing new is created. LAYER 3: nothing. There is no third file."
+  - "THE RECEIPT MUST NOT LIVE IN debugging/logs/ AND MUST NOT CREATE A DIRECTORY. That directory is gitignored (.gitignore:60) and absent from every fresh clone and every consumer install. That absence is the correct answer for the SINK and for INF-700a-2's last-run marker, where no run recorded in this tree is a true statement. It is the wrong answer for a receipt: a receipt whose absence is indistinguishable from a step that never had one is the precise silence this AC closes. If the transcript directory is unavailable for any reason, degrade to layer 1 — never to nothing, and never by creating a directory to have somewhere to write."
+  - "FAIL-OPEN IS MANDATORY AND IS NOT A LICENCE TO BE SILENT. The package's standing rule is that a knowledge step never blocks an agent's primary output (INF-700b-1's requirement, ADR-034's fail-open branch). The defect this AC closes is the OTHER half of that rule: the fail-open branch in signoff section 7 has been the only reachable path since the feature shipped, and it left no countable trace, so nobody knew. Proceeding must leave a receipt."
+  - "THE THREE CASES ARE A PARTITION, decided by data rather than presentation: (a) the routing step ran and completed — figures reported; (b) it ran and could not complete — figures reported plus what failed; (c) it did not run — reported as not run. Case (c) must not be rendered as (a) with zeros, which is precisely how an unwired pipeline reads as a healthy one."
+  - "EXIT STATUS EQUALITY IS THE TESTABLE FORM of 'the same as they would have been'. Assert the driver's status for a unit of work with a failing routing step equals its status for the same unit of work with a succeeding one — not that it equals success, because the clause must also hold for work that failed on its own merits."
+  - "DO NOT ADD THE ROUTING STEP'S FAILURE TO THE UNIT OF WORK'S FAILURE COUNT or to any gate that decides whether the work merges. The routing step's own exit statuses (a sink that cannot be read, a destination write that failed) already exist and are documented by INF-700c-3; consume them, do not re-derive them."
+  - "'NOT RECORDED AS WRITTEN' IS ALREADY THE ROUTING STEP'S BEHAVIOUR — INF-400c-2-ii requires an event it could not handle to stay out of the idempotency record so a later run sees it again. This AC asserts the property end to end from the driver, and must not re-implement retention in the driver."
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to:
+  agent: documentation-expert
+  contract: "The three routing outcomes a driver can report (completed / could not complete / did not run) and the guarantee that none of them changes the unit of work's own outcome — described by INF-700a-4's reference"
+expects_from:
+  ac_id: INF-700a-1
+  contract: "The routing figures in the driver's reported result, which this AC extends with the two non-success cases"
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_driver_exit_status_is_equal_with_a_failing_and_a_succeeding_routing_step
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive the same unit of work twice under the engine harness, once with every destination writable and once with a destination write forced to fail; assert the driver's exit status is EQUAL between the two runs. Equality between runs, not equality to success, so the clause also holds for work that failed on its own merits."
+  - name: test_a_failed_unit_of_work_still_reports_its_routing_case
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Drive a unit of work that fails on its own merits, with the routing step both succeeding and failing. Assert the routing case is present in the reported result in both variants and that the work's own outcome is unchanged by which case occurred. A failed drive must not also be a silent one."
+  - name: test_the_three_routing_cases_are_distinguishable_by_a_data_field
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Produce all three cases (ran and completed; ran and could not complete; did not run) and assert the reported result carries a distinct enumerated value for each. Assert specifically that did-not-run is NOT equal to completed-with-zero-figures — rendering (c) as (a) with zeros is exactly how an unwired pipeline reads as a healthy one."
+  - name: test_the_could_not_complete_case_states_what_it_could_not_do
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the completion path dispatched through the workflow engine harness"
+    description: "With the declared sink unreadable, and separately with a destination file unwritable, assert the reported result names the routing step as not completed and carries the specific cause, and that the two causes are distinguishable from each other."
+  - name: test_a_record_the_routing_step_could_not_write_is_written_by_a_later_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Fail a destination write, then remove the cause and drive a second unit of work; assert the destination now holds the learning and holds it exactly once. Asserts INF-400c-2-ii's retention end to end from the driver without the driver re-implementing it."
+  - name: test_the_routing_failure_does_not_enter_the_unit_of_work_failure_count
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With a failing routing step on an otherwise clean unit of work, assert the driver's failure count and any merge-deciding gate value are identical to the run with a succeeding routing step. Fail-open means the knowledge step cannot fail, retry or block the work."
+test_rationale: |
+  The three-case partition is the AC and it is decided by data, so the third
+  descriptor asserts on an enumerated field rather than on rendered text: a
+  test that greps the reported prose passes on a driver that prints the words
+  and computes nothing. The exit-status descriptors are written as equality
+  between two runs rather than equality to zero, because the clause must hold
+  for work that failed on its own merits, and asserting success would make the
+  test wrong for exactly the case the AC's last clause adds. Every descriptor
+  drives a real completion path through the harness — the failure this AC
+  closes is that signoff's fail-open branch has been the only reachable path
+  since the feature shipped and left no countable trace, and no test that
+  inspects source could have noticed that.
+notes: |
+  Boundary against INF-700b-1-ii. That AC owns the receipt left when an AGENT's
+  capture attempt fails — the emitting side, at sign-off time, counted by
+  INF-700b-3's capture-health report. This AC owns the receipt left when the
+  ROUTING step fails after the work is done. They are different failures at
+  different times with different readers, and a project can have either without
+  the other.
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary

@@ -178,6 +178,8 @@ const PUSH_SCHEMA = {
     branch: { type: 'string' },
     pr_url: { type: 'string' },
     pr_opened: { type: 'boolean' },
+    compare_url: { type: 'string' },
+    pr_command: { type: 'string' },
     message: { type: 'string' },
   },
   required: ['status'],
@@ -834,22 +836,35 @@ Worktree root: ${worktreeRoot}
 Target file:   ${target_file}
 Test file:     ${testFile}
 
+DO NOT USE git stash. The stash stack is shared with every other session in this
+repository and an unqualified pop takes the top entry, which may not be yours — that
+recipe has already destroyed a concurrent session's uncommitted work. Revert through two
+files in /tmp instead.
+
 Run these as single, simple commands, in order:
 
-1. git -C "${worktreeRoot}" stash push -- "${target_file}"
-2. AC_ENFORCE_STRICT=1 python -m pytest "${testFile}" -v
-   EXPECTED: FAIL. Record the result as red_without_fix (true when it fails).
-3. git -C "${worktreeRoot}" stash pop
+1. cp "${worktreeRoot}/${target_file}" "/tmp/quickfix-${ac_id}-fixed.bak"
+2. git -C "${worktreeRoot}" show "HEAD:${target_file}" > "/tmp/quickfix-${ac_id}-head.orig"
+   This must exit 0 and leave a non-empty file. If it does not, STOP here and report
+   red_without_fix=false with the reason — nothing has been overwritten yet, and the fix is
+   still in place. Never redirect git show straight over "${target_file}": the shell
+   truncates the target before git runs, so a failed lookup would destroy the fix.
+3. cp "/tmp/quickfix-${ac_id}-head.orig" "${worktreeRoot}/${target_file}"
 4. AC_ENFORCE_STRICT=1 python -m pytest "${testFile}" -v
+   EXPECTED: FAIL. Record the result as red_without_fix (true when it fails).
+5. cp "/tmp/quickfix-${ac_id}-fixed.bak" "${worktreeRoot}/${target_file}"
+6. AC_ENFORCE_STRICT=1 python -m pytest "${testFile}" -v
    EXPECTED: PASS. Record the result as green_with_fix_restored.
 
-Then run: git -C "${worktreeRoot}" status --porcelain
-and confirm "${target_file}" is modified again — the fix must be back in the working tree.
-Set fix_restored accordingly.
+Then run: diff -q "/tmp/quickfix-${ac_id}-fixed.bak" "${worktreeRoot}/${target_file}"
+and set fix_restored=true only when it exits 0 with no output. Do not infer the restore
+from git status — a path showing as modified only proves it differs from HEAD, which a
+partial or corrupted restore does too.
 
-RESTORING THE FIX IS MANDATORY. If step 3 fails for any reason, say so explicitly and set
-fix_restored=false rather than continuing — the run must not proceed to commit with the fix
-still stashed. Report which stash entry holds it.
+RESTORING THE FIX IS MANDATORY, on the failing path as much as the passing one: run step 5
+even when step 4 came out green. If the restore fails for any reason, say so explicitly and
+set fix_restored=false rather than continuing — the run must not proceed to commit with the
+fix reverted. Name /tmp/quickfix-${ac_id}-fixed.bak as the file that holds it.
 
 Set status="ok" only when red_without_fix=true AND green_with_fix_restored=true AND
 fix_restored=true.`,
@@ -862,8 +877,8 @@ if (!mutationResult || mutationResult.status === 'blocked' ||
     status: 'blocked',
     phase: 'Green Phase (mutation proof)',
     message: mutationResult
-      ? `Mutation proof did not complete cleanly.\n\n  red without fix:      ${mutationResult.red_without_fix}\n  green with fix back:  ${mutationResult.green_with_fix_restored}\n  fix restored:         ${mutationResult.fix_restored}\n\n${mutationResult.message || ''}\n\nIf fix_restored is false the fix is still stashed — recover it with "git -C ${worktreeRoot} stash list" and "git -C ${worktreeRoot} stash pop" before doing anything else.`
-      : 'Mutation-proof agent returned null — check "git -C ' + worktreeRoot + ' stash list" before continuing; the fix may still be stashed.',
+      ? `Mutation proof did not complete cleanly.\n\n  red without fix:      ${mutationResult.red_without_fix}\n  green with fix back:  ${mutationResult.green_with_fix_restored}\n  fix restored:         ${mutationResult.fix_restored}\n\n${mutationResult.message || ''}\n\nIf fix_restored is false the fix is NOT in the working tree — recover it with "cp /tmp/quickfix-${ac_id}-fixed.bak ${worktreeRoot}/${target_file}" before doing anything else.`
+      : `Mutation-proof agent returned null — the fix may have been left reverted. Compare "${worktreeRoot}/${target_file}" against "/tmp/quickfix-${ac_id}-fixed.bak" and copy it back if they differ, before continuing.`,
     halt_reason: 'mutation_proof_incomplete',
     test_file: testFile,
     ac_id,
@@ -1028,8 +1043,15 @@ Run single, simple commands only.
 
 4. If no PR exists, ASK THE USER whether to open one, showing the title and a summary.
    Opening a PR is outward-facing, so it stays behind an explicit confirmation.
-   If the user declines, return status="ok" with pr_opened=false, pr_url="" and a message
-   giving the compare URL so they can open it themselves later.
+   If the user declines (or there is no interactive user to ask), return status="ok" with
+   pr_opened=false, pr_url="", AND ALSO return:
+     - compare_url: the compare URL for this branch, e.g.
+       https://github.com/<org>/<repo>/compare/main...${activeBranch}?expand=1
+       Derive <org>/<repo> from git -C "${worktreeRoot}" remote get-url origin.
+     - pr_command: the exact command that would open the PR, e.g.
+       gh pr create --base main --head "${activeBranch}" --title "<title>" --body-file <path>
+   These two fields are how the caller opens the PR themselves later without re-deriving
+   anything — do not omit them just because the message text also mentions the compare URL.
 
 5. On confirmation, write the PR body to a FILE with the Write tool (for example
    /tmp/quick-fix-pr-body-${ac_id}.md) and pass it with --body-file:
@@ -1059,9 +1081,34 @@ if (!pushResult || pushResult.status === 'blocked') {
 // Done
 // ---------------------------------------------------------------------------
 
+// pr_opened=false covers two different endings: a PR already existed (pr_url is
+// populated, nothing left to do) and no PR exists at all (pr_url is empty — the
+// confirmation gate in step 4 above was declined or unanswered). Only the second
+// shape is an outstanding action owned by the caller; the first is done.
+const prNotOpened = !pushResult.pr_opened && !pushResult.pr_url
+const prOpenCommand = pushResult.pr_command ||
+  `gh pr create --base main --head "${activeBranch}" --title "<title>" --body-file <path>`
+const outstandingAction = prNotOpened
+  ? {
+      type: 'pr_not_opened',
+      owner: 'caller',
+      reason: 'Opening a pull request is outward-facing and stays behind an explicit ' +
+        'confirmation gate. No confirmation was given during this run, so quick-fix ' +
+        'intentionally stopped short of opening one — the caller must open it.',
+      branch: activeBranch,
+      compare_url: pushResult.compare_url || '',
+      command: prOpenCommand,
+    }
+  : null
+
 return {
   status: 'ok',
-  message: `/quick-fix complete.\n\n  AC:        ${ac_id} — ${ac_title}\n  Test:      ${testFile}  [green, mutation-proved]\n  Fix:       ${target_file}\n  Changelog: ${changelogResult.entry_path}\n  Commit:    ${commitResult.commit_sha || '(see git log -1)'}\n  Worktree:  ${worktreeRoot}${selfIsolated ? ' (self-isolated)' : ' (in place)'}\n  Branch:    ${activeBranch}\n  PR:        ${pushResult.pr_url || 'none — not opened'}`,
+  action_required: prNotOpened,
+  outstanding_action: outstandingAction,
+  message: `/quick-fix complete.\n\n  AC:        ${ac_id} — ${ac_title}\n  Test:      ${testFile}  [green, mutation-proved]\n  Fix:       ${target_file}\n  Changelog: ${changelogResult.entry_path}\n  Commit:    ${commitResult.commit_sha || '(see git log -1)'}\n  Worktree:  ${worktreeRoot}${selfIsolated ? ' (self-isolated)' : ' (in place)'}\n  Branch:    ${activeBranch}\n  PR:        ${pushResult.pr_url || 'none — not opened'}` +
+    (prNotOpened
+      ? `\n\n  *** ACTION REQUIRED ***\n  No pull request was opened. Opening it is now YOUR responsibility.\n  Compare: ${outstandingAction.compare_url || '(derive from branch above)'}\n  Command: ${outstandingAction.command}`
+      : ''),
   ac_id,
   ac_path,
   parent_ac_path,

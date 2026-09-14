@@ -16,7 +16,7 @@ criteria: |
   are run, so a single-screen tweak does not spin up a whole journey and a backend job does not
   draft a screen. None of these agents exist yet; this family tracks the work to build them.
 depends_on:
-  - UXP-490
+  - UXP-800
 doc_links:
   - path: docs/product-truth/flows/leafcutter/author-product-truth.flow.json
     relationship: implemented-by-step
@@ -25,7 +25,8 @@ delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+  - reason: "2026-09-07 business-analyst: reparented from UXP-490 to UXP-800 by a horizontal split (ac-tree-split Pattern A). UXP-490 had nine L1 children against a 3-7 rule; the agents that draft the artifacts are production machinery, not the review-and-see axis UXP-490 keeps. Id unchanged."
 superseded_by: null
 covered_by:
   - UXP-540

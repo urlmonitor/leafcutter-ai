@@ -66,6 +66,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - BO-2500b-1-i
+  - BO-2500b-1-ii
 implemented_by:
   - "templates/scripts/commit_guardian/check_done_proof.py"
   - "scripts/commit_guardian/commit_guardian.json"

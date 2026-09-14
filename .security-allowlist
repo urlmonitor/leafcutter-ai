@@ -117,6 +117,14 @@ ENTROPY_HIGH:memory/feedback_po_ba_itpo_bo3100_3200_delegation_boundary.md:*
 # changes, and pinned line numbers would silently void themselves on the first
 # re-capture.
 ENTROPY_HIGH:tests/fixtures/harvest_learnings/unroutable_corpus_28.json:*
+# INF-400c-4-iii fixture: 33 synthetic telemetry lines (mix of phase-probe lines
+# and knowledge_captured records) used to assert that phase-telemetry and
+# knowledge-emission streams are drained separately. Same shape as the
+# unroutable_corpus_28.json entry above (timestamp + agent + component +
+# destination + entry_kind) which trips the same entropy heuristic; no
+# credential material. Glob rather than per-line for the same reason: the
+# fixture is regenerated when the corpus legitimately changes.
+ENTROPY_HIGH:tests/fixtures/harvest_learnings/agent_telemetry_33_lines.jsonl:*
 
 # GE-120c-1's out-of-process harness declares the build system's own output-root
 # substitution marker as a module constant (_OUTPUT_ROOT_TOKEN) so it can detect an
@@ -171,3 +179,64 @@ ENTROPY_HIGH:docs/reference/false-green-mechanisms.md:*
 # Duplicated to the workspace root per the dual-update rule.
 ENTROPY_HIGH:docs/reference/proof-claims-and-completeness.md:*
 ENTROPY_HIGH:changelogs/2026-09-01-0915-a-claimed-kind-of-proof-is-a-declaration-not-evidence-now-legible-on-three-surfaces.md:*
+
+# ADR-042 and ADR-043 (EPIC-TruthfulProjectRecord) cite AC-store and doc paths in their
+# related_docs frontmatter lists, e.g. long hyphenated
+# docs/acceptance-criteria/.../UXP-*.yaml paths. Ordinary cross-reference prose, not
+# credentials -- same pattern as the other ADR/doc-path entries above. Glob, not
+# per-line: both ADRs' related_docs/related_code lists grow as the epic proceeds.
+ENTROPY_HIGH:docs/architecture/adrs/ADR-042-product-truth-checker-outcome-vocabulary.md:*
+ENTROPY_HIGH:docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md:*
+
+# unit_tests/product_truth/test_uxp_700d_1.py repeats a long CamelCase test class name
+# in both its module docstring and its class definition -- same "CamelCase class
+# names" false-positive pattern as the other test files globbed above. The name
+# itself is deliberately NOT reproduced here: quoting it makes this allowlist trip
+# the very scanner it suppresses (same lesson as the template-marker entry above).
+# Glob, not per-line: the file's docstring and class layout can still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700d_1.py:*
+
+# unit_tests/ac_store/test_uxp700d2_reachability.py's TestCase class name is a long
+# CamelCase identifier -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/ac_store/test_uxp700d2_reachability.py:*
+
+# GE-127a-1's ordinary-commit fixture. The flagged lines are a keyword argument
+# whose name and value are both long uppercase/underscore identifiers -- the
+# ablation switch that removes check-file-size from the generated pre-commit
+# config to prove the descriptors are not vacuous. High entropy, no secret.
+# Glob, not per-line: the fixture is called from two places today and the line
+# numbers shift whenever a helper is added above them.
+ENTROPY_HIGH:unit_tests/commit_guardian/_ge_127a_1_ordinary_commit_fixture.py:*
+
+# unit_tests/product_truth/test_uxp_700c_1_i.py's TestCase class name is a long
+# CamelCase identifier -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700c_1_i.py:*
+
+# unit_tests/product_truth/test_uxp_700b_2.py's TestCase class names are long
+# CamelCase identifiers -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700b_2.py:*
+
+# GE-127c-1's dividing-advice descriptor. The flagged line is a long CamelCase
+# test-class name -- the same false-positive pattern as the entries above, and
+# not reproduced here for the same reason: quoting it would trip the scanner
+# this entry suppresses. Glob, not per-line: the class sits mid-file and its
+# line number moves whenever anything is added above it.
+# The file is named for the split: GE-127c-1's tests were divided into four
+# when the widened size gate refused the original 579-line single file.
+ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127c_1_dividing_advice.py:*
+
+# unit_tests/product_truth/test_uxp_700e_3_i.py's TestCase class names are long
+# CamelCase identifiers -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700e_3_i.py:*

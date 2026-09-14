@@ -1,0 +1,88 @@
+id: ACS-1400c-1
+components:
+  - ac_store
+title: "Every existing gap gets a stated disposition, and the pass succeeds with gaps deliberately left standing"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing a parent that simply omits a child it has, a
+    deliberately parked tree carrying the author-set parked signal, a parent whose
+    coverage list resolves to no record at all, and a retired parent,
+  When the one-off adjudicated pass is run over that store,
+  Then every one of those records appears in the pass's report,
+  And each carries exactly one stated disposition — repaired, or left as it is —
+    together with the reason that disposition was reached,
+  And no record that the store-wide check reports as a gap is absent from the
+    report,
+  And the pass completes successfully while records remain that the store-wide
+    check still reports as gaps, provided each of those carries a stated reason.
+depends_on:
+  - ACS-1400c
+  - ACS-1200a
+doc_links:
+  - path: scripts/ac_store/fix_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "THE TOOL THIS AC MAKES SAFE — READ IT IN FULL FIRST. Re-verified 2026-09-08: it appends every orphan the scan reports to every parent it names, with no adjudication of any kind, no abstention channel and no exclusion for parked trees. Run today it repairs all 47. Note that even its --dry-run mode prints 'Would add' for all 47, so the cautious-looking path still presents the unsafe plan as the plan. Its docstring's claim that the hook 'now blocks all commits that touch AC files' is false, and its stated population of '583+' bears no relation to the store's current state."
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "THE HAND-OFF AND THE READY-MADE PATTERN — DO NOT INVENT A SECOND ABSTENTION FORMAT. That approved record abstains on precisely this population, names this work as outside its own scope, and already states the shape: abstain rather than disambiguate, classify by entry RESOLUTION rather than entry shape or the level field, and make the abstention an outcome of the detection pass so byte stability follows from never opening the file."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Holds the matching negative for the parked exemption — an unmarked childless tree is still blocked and still reported. The third Then here is the same obligation for this pass: the exemption must not become a way for a record to vanish from the report."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1400c-1-i
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  THE DELIVERABLE OF THIS L1 IS THE ADJUDICATION, NOT THE WRITE — and this is the
+  record that says so. Every other AC under ACS-1400c describes a way of not
+  doing damage; this one describes the thing that is actually produced.
+
+  THE LAST Then IS THE MOST IMPORTANT LINE IN THIS RECORD. "Done" is NOT zero
+  gaps. A store where the check reports labelled deliberate exclusions is a
+  healthy store. Any criterion binding success to a count of zero would force the
+  six wrong repairs in order to achieve it, and the six are precisely the records
+  the store paid a hook bypass to create. Written this way, a pass that repairs a
+  handful and states a reason for leaving the rest is a complete success.
+
+  ABSTENTION IS REPORTED, NEVER SILENT. A record left alone must appear in the
+  report naming the record and the reason. A silently skipped record is invisible,
+  and invisibility one level down is the same defect this entire tree exists to
+  remove.
+
+  RE-MEASURED 2026-09-08, AND THE ARITHMETIC IS WORSE THAN "MOSTLY SAFE". Running
+  the real scan and classifying each parent's coverage list by whether its entries
+  resolve to real records: 12 of the 47 sit under a parent with an empty coverage
+  list, 25 under a parent whose entries resolve to nothing at all, and 10 under a
+  parent that already names other real children. Cross-cutting that, three of
+  those 10 sit under parents that are themselves retired and two more are retired
+  children of an active parent, so the unambiguously-safe repair population is
+  smaller still. An implementation that promises to clear 47 is promising the
+  damage.
+
+  NO FIGURE APPEARS IN THE CRITERION, DELIBERATELY. Inherited from the L0: a
+  criterion pinned to a number is falsified by the next commit that changes it,
+  and every population above is described by a signal on the record rather than
+  by a checked-in list of ids.
+
+  NOTHING IN THIS TREE WRITES THE FINISHED-STATE FIELD — see ACS-1400c-3-i, where
+  the refusal is made falsifiable.

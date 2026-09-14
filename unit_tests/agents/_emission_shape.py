@@ -29,12 +29,35 @@ Both ``registry_path`` and ``repo_root`` are injectable so tests can prove the
 discovery step generalizes to a declared surface it was never told about by
 name (descriptor 5), without touching the real registry file.
 
-OPTIONAL-FIELD CONTRACT:
+OPTIONAL-FIELD CONTRACT — TWO VIEWS, NOT ONE:
 INF-400b-2-ii's ``delivers_to.contract`` names exactly one field as optional
-across every producer: ``ticket``. That is a fact asserted by the AC itself
-(and restated in SKILL.md section 7 step 4's prose), not something this
-helper invents — ``OPTIONAL_KEYS`` exists to encode that one contract fact,
-not to accumulate ad hoc exceptions.
+across every producer: ``ticket``. INF-700b-1 then added a second field,
+``text``, with a DELIBERATE ASYMMETRY: ``text`` is REQUIRED OF THE PRODUCER
+(every emitting agent must populate it with non-empty prose going forward)
+but OPTIONAL TO THE CONSUMER (the 28 real records already on disk before
+INF-700b-1 landed carry no ``text`` and must stay readable — a missing
+``text`` there is a classification, per INF-700c-1, never a parse error).
+
+A single "required keys" view cannot express both halves of that asymmetry:
+excluding only ``ticket`` correctly states what a producer/template surface
+must declare (``text`` included), but incorrectly rejects every pre-existing
+consumer record for lacking ``text``; excluding both ``ticket`` and ``text``
+correctly states what a consumer read-path must tolerate, but would let a
+producer surface silently drop ``text`` and still "pass". Hence two named,
+non-interchangeable views:
+
+  * ``PRODUCER_OPTIONAL_KEYS`` / ``producer_required_keys()`` — excludes only
+    ``ticket``. Use this for anything checking what a producer (SKILL.md
+    section 7, or a v3 agent template) must declare, including cross-surface
+    parity (``check_parity``).
+  * ``CONSUMER_OPTIONAL_KEYS`` / ``consumer_required_keys()`` — excludes
+    ``ticket`` AND ``text``. Use this for anything checking whether an
+    already-written record on disk conforms to the documented shape.
+
+There is deliberately no bare ``required_keys`` name left to import — that
+name is what let INF-400b-2-ii's parity check and INF-700b-1's consumer-shape
+check share one constant despite needing different answers, and picking the
+wrong one silently flips which half of the asymmetry a test actually proves.
 """
 
 from __future__ import annotations
@@ -54,8 +77,15 @@ DEFAULT_REGISTRY_PATH = REPO_ROOT / "config" / "agent_registry.json"
 NORMATIVE_SKILL_RELPATH = "templates/skills/signoff/SKILL.md"
 DEPLOYED_SKILL_RELPATH = ".claude/skills/signoff/SKILL.md"
 
-# The single field INF-400b-2-ii's delivered contract names as optional.
-OPTIONAL_KEYS = frozenset({"ticket"})
+# The single field INF-400b-2-ii's delivered contract names as optional to a
+# PRODUCER (SKILL.md section 7 / a v3 agent template).
+PRODUCER_OPTIONAL_KEYS = frozenset({"ticket"})
+
+# INF-700b-1 additionally makes `text` optional to a CONSUMER (a record
+# already written to disk) while it remains required of every producer — see
+# the module docstring's "TWO VIEWS, NOT ONE" section for why this cannot be
+# collapsed into PRODUCER_OPTIONAL_KEYS.
+CONSUMER_OPTIONAL_KEYS = frozenset({"ticket", "text"})
 
 _V3_DESCRIPTION_MARKER = "v3"
 
@@ -165,9 +195,25 @@ def extract_emission_object(path: Path) -> dict[str, Any]:
     return obj
 
 
-def required_keys(emission_object: dict[str, Any]) -> frozenset[str]:
-    """Return the required (non-optional) key set of a parsed emission object."""
-    return frozenset(k for k in emission_object if k not in OPTIONAL_KEYS)
+def producer_required_keys(emission_object: dict[str, Any]) -> frozenset[str]:
+    """Return the key set a PRODUCER surface must declare (excludes only ``ticket``).
+
+    Use for anything checking what SKILL.md section 7 or a v3 agent template
+    itself declares — including cross-surface parity (``check_parity``).
+    ``text`` is included here: INF-700b-1 makes it required of every producer.
+    """
+    return frozenset(k for k in emission_object if k not in PRODUCER_OPTIONAL_KEYS)
+
+
+def consumer_required_keys(emission_object: dict[str, Any]) -> frozenset[str]:
+    """Return the key set a CONSUMER record must satisfy (excludes ``ticket`` and ``text``).
+
+    Use for anything checking whether an already-written record on disk
+    conforms to the documented shape. ``text`` is excluded here: a record
+    written before INF-700b-1 landed has no ``text`` and that is a
+    classification (ineligible-to-write, INF-700c-1), never a parse error.
+    """
+    return frozenset(k for k in emission_object if k not in CONSUMER_OPTIONAL_KEYS)
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +237,7 @@ def check_parity(surfaces: list[EmissionSurface]) -> ParityResult:
         except EmissionBlockError as exc:
             problems.append(f"{surface.label}: {exc}")
             continue
-        parsed[surface.label] = required_keys(obj)
+        parsed[surface.label] = producer_required_keys(obj)
 
     if problems:
         return ParityResult(ok=False, required_key_sets=parsed, problems=problems)

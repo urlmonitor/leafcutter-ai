@@ -142,6 +142,12 @@ _DELETED_FILE_RE = re.compile(
 )
 _TEST_FILE_RE = re.compile(r"(^|/)(test_[^/]+\.py|[^/]+_test\.py)$")
 
+# Per-file diff-section boundary, used to attribute a weakening match to the
+# specific file it occurred in (see _split_by_file / _find_weakened_files
+# below) rather than only reporting the violation label and the unrelated
+# list of production files.
+_FILE_HEADER_RE = re.compile(r"^diff --git a/.*? b/(?P<path>.*)$", re.MULTILINE)
+
 
 def _find_deleted_tests(diff: str) -> list[str]:
     """Return names of test functions removed and never re-added.
@@ -178,12 +184,66 @@ def _find_deleted_test_files(diff: str) -> list[str]:
     return sorted(deleted)
 
 
+def _split_by_file(diff: str) -> list[tuple[str, str]]:
+    """Split a unified diff into per-file ``(path, chunk)`` sections.
+
+    Args:
+        diff: The full text of a (possibly multi-file) unified diff.
+
+    Returns:
+        A list of ``(post-image path, chunk text)`` pairs in diff order.
+        Each chunk runs from its ``diff --git`` header up to (but not
+        including) the next file's header, so it holds exactly the hunks
+        belonging to that one file.
+    """
+    headers = list(_FILE_HEADER_RE.finditer(diff))
+    chunks: list[tuple[str, str]] = []
+    for index, match in enumerate(headers):
+        start = match.start()
+        end = headers[index + 1].start() if index + 1 < len(headers) else len(diff)
+        chunks.append((match.group("path"), diff[start:end]))
+    return chunks
+
+
+def _find_weakened_files(weakening_diff: str) -> list[str]:
+    """Return paths of files that actually hold a test-weakening change.
+
+    ``_scan_diff`` detects weakening PATTERNS across the whole diff without
+    tracking which file each match came from, so the guard's report could
+    name the production files it saw but never the file the weakening
+    itself lived in -- telling the author what they changed, not what they
+    broke. This walks the same diff per-file and re-applies the same
+    detectors (single-line patterns, deleted-test correlation, deleted test
+    files) scoped to each file's own chunk, so every violation can be
+    attributed to a real path.
+
+    Args:
+        weakening_diff: The same diff text ``_scan_diff`` judges weakening
+            against (already merge-scoped when applicable).
+
+    Returns:
+        Sorted, de-duplicated list of repo-relative paths.
+    """
+    deleted_test_names = set(_find_deleted_tests(weakening_diff))
+    weakened: set[str] = set()
+    for path, chunk in _split_by_file(weakening_diff):
+        if any(pattern.search(chunk) for pattern, _label in _COMPILED_WEAKENING_PATTERNS):
+            weakened.add(path)
+            continue
+        removed_here = set(_REMOVED_TEST_DEF_RE.findall(chunk))
+        if removed_here & deleted_test_names:
+            weakened.add(path)
+    weakened.update(_find_deleted_test_files(weakening_diff))
+    return sorted(weakened)
+
+
 @dataclass
 class ScanResult:
     """Result of scanning the staged diff."""
     has_production_changes: bool = False
     production_files: list[str] = field(default_factory=list)
     violations: list[tuple[str, str]] = field(default_factory=list)  # (label, context)
+    weakened_files: list[str] = field(default_factory=list)
 
     @property
     def is_contract_shrinking(self) -> bool:
@@ -420,6 +480,11 @@ def _scan_diff(diff: str, weakening_diff: str | None = None) -> ScanResult:
     for path in _find_deleted_test_files(weakening_diff):
         result.violations.append(("test file deleted", path))
 
+    # --- File attribution: which file(s) hold the weakening, not just the
+    # production files it was concurrent with (see _find_weakened_files).
+    if result.violations:
+        result.weakened_files = _find_weakened_files(weakening_diff)
+
     return result
 
 
@@ -497,6 +562,10 @@ def main() -> int:
     ]
     for label, context in scan.violations:
         lines.append(f"  - {label}: {context!r}")
+    lines.append("")
+    lines.append("Test files weakened:")
+    for filepath in scan.weakened_files:
+        lines.append(f"  - {filepath}")
     lines.append("")
     lines.append("Production files modified:")
     for filepath in scan.production_files:

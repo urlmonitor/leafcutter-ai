@@ -188,3 +188,155 @@ a stalled repo is a different risk from a false green.
 - L1 `criteria` is customer-benefit language with no engineering jargon. The
   technical findings, hazards, and verified code references go in `notes`, where
   the BA and IT PO read them.
+
+## ACD-400c/d/e scanner selection rules: framing note for the BA/IT-PO (2026-09-08, PO)
+
+Three new L1s grafted onto the EXISTING `ACD-400` (loose files in
+`ac-driven-dev/`, alongside `ACD-400a.yaml`), origin_agent BrainCandy, readiness
+draft, priority medium, roadmap_phase phase_1. Subject: the two selection rules
+in `scripts/ac_store/scan_ac_store.py` that decide what the whole build system
+works on next, neither of which any acceptance criterion governs.
+
+- **ACD-400c** — the approval gate (`_is_approved`, line 189). UNSPECIFIED.
+- **ACD-400d** — the ordering rule (`_sort_ready`, lines 353-370). MIS-specified.
+- **ACD-400e** — one true written account; reconciles the records that disagree.
+  `depends_on` names c and d as genuine build-order prerequisites.
+
+**Read the `notes` on all three before decomposing — they carry the verified
+findings.** Four points that generalise beyond this tree:
+
+1. **UNSPECIFIED AND MIS-SPECIFIED ARE DIFFERENT GAPS AND WARRANT DIFFERENT
+   WORK.** BrainCandy's brief described both rules as ungoverned. One is. The
+   other is described by `ACD-400a` and `ACD-400a-1`, and what they say is false
+   — a two-key sort (complexity, id) against a shipped three-key sort (priority,
+   complexity, id). Before framing any "no AC covers X" gap, check whether an AC
+   covers X *wrongly*; a wrong statement is worse than silence, and it needs a
+   reconciliation owner that a pure specification AC does not provide.
+
+2. **A THIRD L1 EARNS ITS PLACE WHEN TWO SIBLINGS EACH OWN HALF OF THE SAME
+   FILE.** `ACD-400a-1` is wrong in both directions at once. Hanging the repair
+   as an L2 under each rule L1 produces two changes to one record, each fixing
+   half, with a guaranteed conflict. Reconciliation as its own L1 depending on
+   both is the clean shape. This is the shotgun-surgery smell applied to the AC
+   store rather than to code.
+
+3. **`test_readiness_gate.py` IS NOT COVERAGE FOR THE SCANNER'S APPROVAL GATE.**
+   It covers `classify_readiness()` in `goal_to_epic.py` (ACD-1200b-1/-2), a
+   different surface. Name-similar tests are the easiest false-green in this
+   repo; grep the import, not the filename.
+
+4. **TWO SELECTORS, TWO DELIBERATELY OPPOSITE READINESS RULES — DO NOT UNIFY
+   THEM.** `BO-2400f-2` (approved, done) makes fast-lane selection
+   readiness-agnostic and `BO-2400f-12-ii` forbids readiness, priority,
+   req_status and status from the producibility decision. `BO-2400f-2` even
+   defines itself by contrast — "unlike the normal ready-batch scan" — so an
+   approved criterion in another component currently rests on a rule nobody
+   wrote down. Any L2 that harmonises the two selectors contradicts an approved AC.
+
+**Flagged to the user, NOT authored, and must not be pulled into an L2 here:**
+the approval test runs before ready/blocked classification (line 1000 precedes
+line 1008), so an excluded record appears in neither list and in no count. That
+is an `ACS-1100` (honest coverage answers, `scope: standing`) obligation about
+what the scanner OUTPUTS, not about how it SELECTS. Inherited, not duplicated.
+
+**Placement candidates rejected** (do not re-litigate): `ACS-1000` is not an L0
+despite its folder name — the file is `level: L2`. `ACS-1100` is `scope:
+standing` and explicitly not a home for other surfaces. `ACS-100` is at nine L1s,
+over the 7-cap. `ACD-1800`/`ACD-1600` concern what a unit of work is, not which
+one is picked. `ACD-400a` itself is full at five L2s and forbids an override.
+`ACD-400` now carries five L1s against the 7-cap; no `child_limit_override` is
+authored and none may be added.
+
+## ACD-2200 / ACD-2300 adoption + backfill: framing note for the BA and IT PO (2026-09-09, PO)
+
+Two NEW sibling root L0s, `origin_agent: BrainCandy`, `readiness: draft`,
+`priority: medium`, four L1s each (three free slots in each; no
+`child_limit_override` is authored and none may be added):
+
+- `ACD-2200-adoption-floor/` — *"Turn the standards on in a codebase that was not
+  built under them."* `roadmap_phase: phase_1` (claim argued in its notes).
+- `ACD-2300-backfill-existing-code/` — *"Code that already exists gets the
+  requirements and the proof it never had."* Deliberately **unphased**, flagged for
+  the user; `depends_on: [ACD-2200]`.
+
+Full evidence, confidence labels and the rejected alternatives live in the two
+L0s' `notes`. **Read those before decomposing.** Five things generalise beyond
+this pair.
+
+1. **ONE REQUEST CAN BE TWO L0s WHEN THE REGISTER ALREADY SEQUENCES IT.** The
+   brief asked for backfill tooling. `KI-CG-20260908-gate-test-ac-tags` ends
+   "Ratchet first, backfill opportunistically" — so the floor and the backfill are
+   independently shippable and already ordered by evidence. Splitting on that seam
+   also avoided a single L0 at exactly the 7-L1 cap with zero headroom.
+
+2. **A DISAGREEMENT BETWEEN TWO STORE RECORDS — RESOLVED 2026-09-09 BY RETIRING
+   `ACD-800`.** `ACD-800` promised to backfill `(implemented_by, work_status)`
+   from "text similarity and keyword heuristics". `ACS-1300`'s L0 forbids any
+   record **in its own tree** from writing `work_status`, a refusal it marks "not
+   to be revisited". Note the precision: that scoping means the two never
+   literally contradicted each other — they were two trees holding incompatible
+   philosophies about one field, only one of which had written its philosophy
+   down as a binding rule. That was still enough. BrainCandy retired `ACD-800`
+   and all ten descendants ("retire as it will not work properly"): `status:
+   deprecated`, `req_status: superseded`, **no successor named**. `ACD-2300` is
+   not its successor — it deliberately authors **no** field reconciler and
+   inherited nothing. The second, independent ground for retirement stands on its
+   own: `ACD-800`'s method presumes a history of done TICKETS, which an adopting
+   project does not have.
+   **Two things a reader must not conclude from this.** First, link repair is not
+   unowned — the case where a test already carries a `# covers:` tag and the
+   record forgot it belongs to `ACS-1300a`, by exact mechanical id-to-id join.
+   Second, and more important, **the hazard was not removed with the
+   requirement**. `ACD-800` was believed unbuilt; it is not.
+   `scripts/ac_store/cross_reference_audit.py` shipped in
+   `EPIC-ACDrivenDevelopment` ticket 05, is in the build deploy-manifest (so it is
+   installed into every consumer), and line 457 still executes
+   `ac_data["work_status"] = "done"`. Retiring the spec withdrew the only
+   requirement governing a live tool. Deciding the code's fate is an open
+   follow-up — see `ACD-800`'s notes.
+
+3. **CHECK WHETHER AN AC COVERS YOUR GAP FOR A DISJOINT POPULATION.** The brief's
+   "connect existing tests to existing ACs" reads as already-owned by `ACS-1300a`
+   — and is, for tests that ALREADY carry a tag (exact mechanical join, 549
+   records). The unowned population is the 5,566 test functions with **no tag at
+   all**, where there is no join key and the link must be *proposed*. Same
+   sentence, disjoint populations, different risk. `ACD-2300b` is scoped to the
+   second only. Generalises the ACD-400 lesson one step: before framing a gap,
+   check not only whether an AC covers it *wrongly* but whether one covers a
+   *neighbouring population* under wording that sounds identical.
+
+4. **`implemented_by` DOES NOT NEED A RECONCILER — AUTHOR IN THE DIRECTION WHERE
+   THE EVIDENCE ALREADY EXISTS.** A criterion derived from a function knows the
+   function, so the implementation evidence is a by-product of authoring and can
+   never be empty. A criterion matched to code afterwards always can. That is why
+   the field lives inside `ACD-2300a` rather than in a fourth L1. It is the
+   structural fix for the phantom-done shape recorded at
+   `KI-CG-20260908-gate-ac-done-on-merge`.
+
+5. **THE GUARANTEE L1 IS NOT OPTIONAL AND ITS NEGATIVE ARMS ARE THE LOAD-BEARING
+   HALF.** `ACD-2300d` exists because the cheapest implementation of `a`, `b` and
+   `c` satisfies all three while violating every safety property. Precedent:
+   `ACS-1300c` and `TQ-400e`. Every clause is a promise about what does **not**
+   happen, so each needs a behaviour where the tool is fed untrustworthy evidence
+   and correctly refuses to write — proved by **running it**, per CLAUDE.md's
+   "Gate / Workflow ACs — Verify Behaviorally, Not by Grep".
+
+**Inherited, not restated** (do not author children for these): `ACS-1100`
+(state your denominator), `ACS-1300`'s byte-stability and abstention-over-action
+rules and its absolute `work_status` refusal, `TQ-400e-1`'s do-not-write rule,
+`GE-127b`'s per-file ratchet as the worked example of ONE standard's floor, and
+`TQ-500`/`GE-120`/`GE-126` for "an adopted standard must be able to fail".
+`BP-1600a-2` is a precondition **in this repository only**, not a general
+dependency — an adopting project gets the wiring from the install and still faces
+`ACD-2200`'s problem.
+
+**Do not bake a measured figure into any criteria block in either tree.** Every
+number (5,566 / 499 / 252 / 49 / 354 / 549 / ~87) is a property of THIS repository
+on one day. Both capabilities must work on a repository nobody here has counted.
+
+**Identifier.** Highest taken ACD root is now `ACD-2300`. Established free
+2026-09-09 by four checks, none a directory listing (loose namespace-root records
+`ACD-1400`–`ACD-1405` are invisible to one): store-wide `^id: ACD-` scan (highest
+was `ACD-2100`); whole-worktree grep excluding `.git`; a grep of the shared main
+working tree; `git grep` against `origin/main`. Re-verify at merge time —
+id allocation here is known-broken (KI-ACD-008).

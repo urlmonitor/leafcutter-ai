@@ -1,0 +1,87 @@
+id: ACS-1600c
+title: "Looking costs you nothing; changing is something you ask for"
+component: ac-store
+components:
+  - ac_store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  A tool examines by default and alters only when told to.
+
+  Pointing a tool at your requirements record and running it never changes the
+  record. Altering anything takes a separate, deliberate instruction given at the
+  moment you mean it. There is no setting whose default is to modify, and no path
+  by which a run intended as a look becomes a run that rewrote something.
+depends_on:
+  - ACS-1600
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1400-complete-child-links/ACS-1400c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MOTIVATING NEAR-MISS IN THIS COMPONENT, AND THE REASON THIS PROPERTY IS
+      A REQUIREMENT RATHER THAN A HABIT. A sibling repair tool in this same
+      directory performs a bulk store repair with no adjudication whatsoever and is
+      one command away from undoing a deliberate decision across dozens of records.
+      That is what this class of tool looks like when nobody wrote the rule down.
+      Its remediation is ACS-1400c's and must not be restated here.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120g.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECEDENT FOR HOW TO TEST A CRITERION THAT IS GREEN ON ARRIVAL, AND THE
+      SOURCE OF THE MUTATION DISCIPLINE THIS RECORD REQUIRES. That record was half
+      shipped before it was specified and its notes carry the falsifying mutation
+      and its seeding step. Copy the method, not the content; its subject is a
+      different one.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  GREEN ON ARRIVAL — SAY SO OR THIS RECORD CERTIFIES ITSELF. The governed tool
+  already behaves this way: it examines without changing anything unless an
+  explicit flag is given. An ordinary red-baseline run against this criterion will
+  therefore come up GREEN and prove nothing at all. Whoever decomposes it must
+  carry a falsifying mutation — remove the guard, confirm the test goes red — and
+  must state in the record that the behaviour predates the specification. This is
+  the second occurrence of that hazard in the store; GE-120g is the first and its
+  notes state the rule in full.
+
+  WHY SPECIFY SOMETHING THAT ALREADY WORKS. Three reasons, and the first is the
+  weakest:
+    1. An unwritten safety property is one refactor away from being an accident.
+       Nothing today would fail if the default flipped.
+    2. It is the property that makes ACS-1600b's counter-argument answerable. The
+       opt-in is what people point at when they defend the finished-state write, so
+       it must be a REQUIREMENT the project holds rather than a courtesy the
+       implementation happens to offer. A defence resting on a property nobody
+       promised is not a defence.
+    3. The tool installs into every consumer project. A default that changes their
+       requirements record on first run is a far worse first contact than one that
+       reports.
+
+  BOUNDARY WITH ACS-1600e, DELIBERATE. This one owns the SWITCH: nothing changes
+  unless you asked. That one owns the ARTIFACT: before you throw the switch you can
+  read what would happen. A tool satisfying this criterion with no account of its
+  intentions leaves the user consenting blind, which is consent in form only.
+  Neither closes the other.
+
+  NOT IN SCOPE HERE, AND DELIBERATELY NOT ORPHANED. Whether this tool should be
+  invoked automatically — by a hook, a workflow or continuous integration — is not
+  this criterion's question and no L2 here may answer it. It is run by hand today
+  and nothing in the project calls it. If that is to change, it is a separate
+  decision with its own record, and this criterion's default-to-examine guarantee
+  becomes MORE load-bearing, not less, on the day it does.

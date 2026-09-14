@@ -1,0 +1,143 @@
+id: BP-600d-5
+title: "Quick-fix reports a not-opened PR as an outstanding action owned by the caller"
+component: build-pipeline
+components:
+  - build_pipeline
+status: active
+level: L2
+req_status: active
+readiness: approved
+priority: high
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given /quick-fix has completed its fix, test, changelog and commit phases on an
+    isolated feature branch, and the close phase has reached the confirmation gate
+    that guards opening a pull request,
+  When the run ends with no pull request having been opened — because no
+    interactive user was present to answer the gate, or because the user declined
+    — and the workflow returns its terminal result to the caller,
+  Then the result marks the absent pull request as an EXPLICIT OUTSTANDING ACTION
+    owned by the caller, in the structured result itself and not only in the prose
+    message, so that a caller reading only the structured fields can tell that an
+    action is required of them and can distinguish this run from one that left
+    nothing to do,
+  And the result carries what the caller needs in order to act — the branch, and
+    the compare URL or the exact command that would open the pull request,
+  And the workflow still does not open the pull request unattended: the
+    confirmation gate is unchanged and remains the only route to an outward-facing
+    PR creation,
+  And a run for which a pull request already exists, a run whose push failed and
+    halts as blocked, and a run in which a pull request was opened, each report
+    exactly as they do today,
+  And the bug symptom ("When /quick-fix finishes without opening a pull request, the caller is not told that anything is outstanding. The run returns status: 'ok' with pr_url: '' and a multi-line '/quick-fix complete.' message whose eighth line reads 'PR: none — not opened'. Observed 2026-09-08 on run wf_c7bb170c-822: the fix, AC, test, changelog and commit all landed correctly, the result reported status ok, and the PR was simply never created. The caller only discovered it by reading the raw payload's empty pr_url field and opening the PR by hand. Nothing in the result distinguishes 'finished, nothing left to do' from 'finished, and you must now open the PR yourself'.") must not occur
+depends_on:
+  - BP-600d
+  - BP-600d-4
+  - BP-600d-4-i
+doc_links:
+  - path: templates/workflows-js/quick-fix.js
+    relationship: implements
+    status: exists
+    relevance: "Close phase (push-and-pr step 4) and the terminal return at the end of the script."
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: implements
+    status: exists
+    relevance: >-
+      Phase 7.4 carries the matching prose. The skill states that a behavioural
+      change must land in both surfaces — "a change made only in the JS leaves
+      this file lying to the next reader."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    Do NOT make quick-fix open a PR unattended. The confirmation gate in the
+    Close phase is deliberate and must survive this change untouched.
+  - >-
+    The not-opened state must be legible from the STRUCTURED result, not only
+    from the prose message — a caller that reads the payload and never reads the
+    message must still be able to tell an action is required of it.
+  - >-
+    The result must carry the branch and either the compare URL or the exact
+    command that would open the PR, so the caller can act without re-deriving
+    anything.
+  - >-
+    The already-a-PR-exists path and the push-failed status "blocked" path must
+    be unchanged, and a run that DOES open a PR must still report cleanly as
+    done.
+  - >-
+    Dual-surface rule: templates/workflows-js/quick-fix.js and
+    templates/skills/quick-fix/SKILL.md are two surfaces of the same workflow.
+    Either change both as a declared scope expansion, or change the JS and
+    report the SKILL.md Phase 7.4 mirror as a required follow-up — never leave
+    the two disagreeing silently.
+test_spec:
+  - name: test_no_pr_run_reports_outstanding_action_in_structured_result
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A close phase that returns pr_opened=false with an empty pr_url produces a
+      terminal result whose structured fields mark the missing PR as an
+      outstanding caller-owned action, not an incidental empty field.
+    covers:
+      - BP-600d-5
+  - name: test_no_pr_result_carries_branch_and_compare_url_or_command
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The no-PR terminal result carries the branch plus the compare URL or the
+      exact PR-opening command, so the caller can act from the result alone.
+    covers:
+      - BP-600d-5
+  - name: test_pr_opened_and_pr_exists_and_push_failed_paths_unchanged
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A run that opens a PR, a run where a PR already exists, and a run whose
+      push failed each report exactly as before — no outstanding-action marker
+      is attached to any of them.
+    covers:
+      - BP-600d-5
+  - name: test_close_phase_still_gates_pr_creation_on_confirmation
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The Close-phase prompt still requires explicit user confirmation before
+      any PR is opened — the fix must not turn the gate into an unattended
+      PR creation.
+    surface_invoked: templates/workflows-js/quick-fix.js
+    covers:
+      - BP-600d-5
+test_required: true
+test_rationale: >-
+  A grep for a new string in quick-fix.js would pass on dead code, which is the
+  exact phantom-done shape this repo's gate/workflow rule forbids. The tests must
+  therefore assert on what a run actually RETURNS in the no-PR case — the terminal
+  result object built from a close-phase payload with pr_opened=false and an empty
+  pr_url — and must equally assert that the three neighbouring paths (PR opened, PR
+  already exists, push failed) return what they return today, since the failure mode
+  being fixed is a mis-shaped report rather than mis-shaped work.
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/workflows/test_bp_600d_5.py"
+implemented_by:
+  - "templates/workflows-js/quick-fix.js"
+  - "templates/skills/quick-fix/SKILL.md"
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix. Root cause: Phase 7 step 4 instructs the Close agent to ask the user for confirmation before opening a PR. In a background workflow run there is no interactive user to ask, so the agent takes the declined/unanswered path by construction and returns pr_opened=false with an empty pr_url. The terminal return at :1062 then treats that as an ordinary success: status is 'ok', the empty pr_url is passed through verbatim, and the not-opened state is rendered only as prose inside a report whose first line says 'complete.'. DESIRED: quick-fix should still NOT open the PR unattended — that gate is correct and outward-facing actions should stay behind it. What must change is that ending without a PR is reported as an EXPLICIT OUTSTANDING ACTION OWNED BY THE CALLER, not as an incidental empty field. The result must make it unmistakable, in a way a caller cannot skim past, that a PR was deliberately not opened and that opening it is now the caller's responsibility, and must carry what the caller needs to act — the branch, and the compare URL or the exact command. A caller reading only the structured result, without reading the prose, must still be able to tell that an action is required of them. CONSTRAINTS: (1) Do NOT make quick-fix open a PR unattended — the confirmation gate is deliberate and must survive. (2) The existing already-a-PR-exists path and the push-failed 'blocked' path must be unchanged. (3) Do NOT regress the case where a PR IS opened — that must still report cleanly as done. (4) DUAL-SURFACE RULE, read this before deciding scope: templates/workflows-js/quick-fix.js and templates/skills/quick-fix/SKILL.md are two real surfaces of the same workflow, and the skill file states explicitly that a behavioural change must land in BOTH — 'a change made only in the JS leaves this file lying to the next reader.' SKILL.md Phase 7.4 currently carries the matching prose. This may put the change over quick-fix's own one-file constraint and trip the Phase 3.5 scope-expansion gate; that is expected and is flagged deliberately rather than discovered. Judge it: either handle both surfaces as a declared expansion, or change the JS and report the SKILL.md mirror as a required follow-up — but do not silently leave the two disagreeing. (5) Verify behaviourally: assert on what a run actually returns in the no-PR case, not on the presence of a string in the source.

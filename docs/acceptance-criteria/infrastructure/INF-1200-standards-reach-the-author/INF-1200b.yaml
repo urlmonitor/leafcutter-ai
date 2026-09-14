@@ -1,0 +1,104 @@
+id: INF-1200b
+title: "Say it once, and everyone who needs it has it"
+component: infrastructure
+components:
+  - infrastructure
+  - commit_guardian
+  - template_compiler
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  One decision, in one place, and nobody has to be told twice.
+
+  Setting a standard for a kind of file — or changing one, or covering a kind
+  of file that was not covered before — is a single statement in a single
+  place. Nothing else has to be revised for every specialist that works on that
+  kind of file to be correct afterwards.
+depends_on:
+  - INF-1200
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECEDENT FOR THIS EXACT PROMISE, ONE SUBJECT OVER. INF-1100a made a
+      project's own declaration the single source of truth every specialist
+      resolves its work LOCATION from. This criterion makes the same promise
+      about the standards the work must MEET. Follow that record's shape rather
+      than inventing a second one; do not restate its subject.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Where the standards are declared today, per kind of file, alongside a
+      default. It already has the shape a single source of truth needs — the
+      gap is that nothing carries it outward. Whether this stays the one place
+      is a technical decision, not a decision this record makes.
+  - path: scripts/build.py
+    relationship: related
+    status: exists
+    relevance: >-
+      Holds the one working instance of carrying a declared standard outward,
+      and also the evidence of why it does not generalise: it is a hand-written
+      one-off for a single value, sitting beside another hand-written one-off
+      for an unrelated value.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+  - reference-doc
+origin_agent: product-owner-v3
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-1200b-1
+  - INF-1200b-2
+implemented_by: []
+change_target:
+  - config
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  User-authored intent: BrainCandy. Framed by product-owner-v3, 2026-09-09.
+
+  THIS IS THE KEYSTONE AND THE CRITERION THE USER ACTUALLY ASKED FOR. Their
+  words were "it must be easy to control these things from a single source of
+  truth". They meant it operationally, not architecturally: one edit, one
+  place, and every specialist that touches that kind of file is correct
+  thereafter.
+
+  THE FAILURE MODE TO DESIGN AGAINST IS AN IMPLEMENTATION THAT PASSES EVERY
+  OTHER CRITERION IN THIS TREE. It is entirely possible to end up with every
+  specialist correctly informed, every kind of file covered, and every figure
+  faithful — by hand-editing each specialist's instructions once. That
+  satisfies a, c, d and f on the day it ships and fails this one, because the
+  next standard costs the same work again. If the acceptance shape does not
+  distinguish those two worlds, this L1 has not been decomposed; the
+  distinguishing question is what a person must do to add a standard for a kind
+  of file that has none, and the answer must be "state it in the one place".
+
+  MEASURED, 2026-09-09, AND IT IS THE WHOLE ARGUMENT. Carrying a declared
+  standard outward is currently a purpose-written step per value, and naming it
+  is currently a hand edit per specialist. Two hand-written steps exist for two
+  unrelated values. Nothing walks the standards declaration and nothing walks
+  the record of which specialist owns which kinds of file, although both
+  records exist and both are already machine-readable. The join that answers
+  "which specialists must be told what" is computable today and is computed
+  nowhere.
+
+  THE HOW-TO TRIGGER IS DELIBERATE AND IS A REPLACEMENT, NOT AN ADDITION. If
+  this promise lands, "how do I set a standard for a new kind of file" becomes
+  a one-step answer, and any existing instruction that tells someone to also go
+  and update specialist instructions must be DELETED rather than left standing
+  beside the new one.
+
+  WHAT THIS RECORD DOES NOT DECIDE. Whether the one place is where the
+  standards live today, and how the statement travels, are technical decisions
+  for enrichment. The promise here is the property, not the route. What it does
+  rule out is a route that leaves a second place needing to agree.

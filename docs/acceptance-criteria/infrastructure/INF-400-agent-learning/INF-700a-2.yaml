@@ -1,0 +1,126 @@
+id: INF-700a-2
+components:
+  - infrastructure
+  - knowledge_system
+title: "A loop that has never run is distinguishable from a loop with nothing to do"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a.yaml"
+criteria: |
+  Given the count of knowledge waiting to be written reads zero in a project
+    where the routing step runs after every unit of work, and also reads zero
+    in a project where it has never run at all — because a record carrying no
+    learning text is not outstanding, and every record retained today carries
+    none,
+  When a person asks whether captured learnings are reaching their surfaces,
+  Then an answer is available that states when the routing step last completed
+    in this tree, and over which sink, reported separately from how many
+    records are waiting,
+  And a tree in which the routing step has never completed is reported as
+    never having run, not as having nothing to do and not as an error,
+  And where that answer rests on state that version control does not carry,
+    the absence of that state is reported as no run recorded in this tree,
+    rather than as a stale figure or as a zero indistinguishable from a
+    healthy one,
+  And the answer states, for the sink it names, whether that sink exists —
+    so a routing step running happily against a path no producer writes to is
+    visible as that, and not as a quiet success,
+  And the answer names no figure that is also produced by the capture-health
+    report, and says which of the two a reader should consult for which
+    question.
+depends_on:
+  - INF-700a
+  - INF-700a-1
+  - INF-700c-2
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE CLAUSE THIS AC REPLACES, and why it had to be replaced. INF-700a's own L1 criteria say an unwired pipeline 'shows up as a number someone can see'. That was true when the 28 retained records read as a permanent backlog. It stopped being true on 2026-08-26 when INF-700c-1 and INF-700c-2 landed: a textless record is ineligible and is not outstanding, the corpus reports zero, and the run exits 0. The waiting count is now zero for a healthy loop AND for a loop with no caller. The visibility the L1 asks for therefore cannot come from that count and must come from run recency. Do not restore a non-zero backlog to recreate the signal — INF-700c's hard constraint forbids exactly that."
+  - "THE GITIGNORE TRAP, and the honest way around it. debugging/logs/ is excluded from version control (.gitignore:60), so any last-run marker written there is absent from a fresh clone and from every consumer install. That does NOT make the marker wrong — 'never run in this tree' is the correct answer for a fresh clone. What is forbidden is reporting that absence as an error, as a zero, or as a run that happened. Do not solve this by committing runtime state into the tracked tree; INF-700c-2 rejected that shape for the same reason."
+  - "NON-COLLISION WITH INF-700b-3, whose it_requirements already settle the rules: different inputs (that report reads the capture-attempt ledger; this reads the routing side), different denominators (that counts AGENT RUNS, this counts RECORDS and run timestamps), shared surface allowed but shared number forbidden. This AC adds a third figure to that surface — routing-run recency — and the same three rules apply to it. Never derive any of the three from another."
+  - "THE SINK-EXISTENCE CLAUSE IS NOT DECORATIVE. The condition it makes visible is the live one: the reader's default names a file that has never existed, so a run today reports a confident zero over a path with no producer. After INF-400c-4 the same shape is reachable by a misconfiguration. Reporting whether the named sink exists costs one stat call and is the only thing distinguishing a working loop from a loop pointed at nothing."
+  - "MUST NOT READ THE HARVESTER'S ROUTING COUNTERS AS A HEALTH SIGNAL, per INF-700b-3's constraint — skipped_unknown and no_learning_text describe the shape of the corpus, not whether the loop is running."
+  - "THE ANSWER MUST BE OBTAINABLE FROM A PRODUCTION ENTRY POINT A PERSON CAN RUN, not only from an importable function. INF-700a-3's how-to is required to give the steps to establish whether the routing step has ever completed in the tree the reader is standing in, and a how-to cannot give a step that is an import. A subcommand or flag on the existing harvester CLI is sufficient and preferable to a new script — one more entry point is one more thing the how-to has to get right in two layouts."
+  - "THE SINK-EXISTENCE FIELD MUST BE A STAT, NOT AN INFERENCE FROM THE LAST RUN. Reporting the sink as existing because a previous run read it is how a stale figure gets reported as a current one; the criteria ask what is true now. Stat the path at answer time, and report the resolved path alongside the boolean so a reader can tell an unemitted-to sink from a misconfigured one."
+  - "THE MARKER MUST NOT BE CREATED BY THE ANSWER. Reading the status must not write, create or touch the last-run marker or its directory — for the same reason INF-400c-4-iv forbids the reader creating the sink. A status query that creates the marker turns the first query into a run that never happened, and never-run then becomes unreachable forever after."
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to:
+  agent: documentation-expert
+  contract: "A routing-side status answer — last completed run and its sink, whether that sink exists, and a distinct never-run case — that INF-700a-4's reference describes and INF-700a-3's how-to tells a reader how to obtain"
+expects_from:
+  - ac_id: INF-700a-1
+    contract: "The per-completion routing invocation whose completions this answer reports the recency of"
+  - ac_id: INF-700c-2
+    contract: "The resting state that makes the waiting count read zero for the retained corpus — the reason the waiting count can no longer serve as the loop-is-running signal"
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_a_never_run_tree_and_a_ran_after_every_unit_of_work_tree_report_differently
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The discriminating pair the AC names. Build two temp trees: one where the routing step ran after each of five units of work, one where it has never run. Assert both report a waiting count of zero AND that their status answers differ. An answer that cannot tell these two trees apart fails, whatever else it reports."
+  - name: test_an_absent_run_marker_reports_no_run_recorded_and_is_not_an_error
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Fresh-clone simulation: no debugging/ directory at all. Assert the answer carries the never-run value, that the value is not a zero timestamp and not an empty string, that the exit status is not an error status, and that querying created neither the marker nor its directory."
+  - name: test_the_answer_reports_whether_the_named_sink_exists_and_names_it
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the routing-status query run through its production CLI entry point via subprocess"
+    description: "Run in two trees, one with the declared sink present and one with it absent, holding the last-run state identical. Assert the existence field differs between them and the resolved sink path appears in both answers. A routing step running happily against a path no producer writes to must be visible as that."
+  - name: test_the_recency_answer_changes_after_a_completion_path_runs
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Pipe the real producer into the real consumer: query the status in a fresh tree and assert never-run; drive one completion path to completion under the engine harness; query again and assert the answer now reports a completed run over the declared sink. Fails if the completion path does not actually record its run, or if the status reads a source the driver does not write."
+test_rationale: |
+  The first descriptor is the AC's own stated discriminating pair and is the
+  only test that can distinguish this feature from doing nothing, because the
+  waiting count reads zero in both trees. The fourth crosses the producer /
+  consumer seam deliberately: a status answer tested only against
+  hand-constructed marker files passes while nothing in the pipeline ever
+  writes one, which is a smaller copy of the defect the whole INF-700a family
+  exists to close. The second asserts three separate not-this properties (not
+  an error, not a zero, not created by the query) because each of the three is
+  a plausible implementation and each defeats the criterion in a different way.
+notes: |
+  The discriminating pair to test, stated so it is not lost: a tree where the
+  routing step ran after every one of five units of work and a tree where it has
+  never run both report a waiting count of zero. Any answer that cannot tell
+  those two trees apart has not satisfied this criterion, whatever else it
+  reports.
+
+  Scope. This AC does not ask for a durable, cross-machine record of every run.
+  It asks that a person standing in one tree can find out what happened in that
+  tree, and that "I have no record" is said out loud rather than rendered as a
+  clean zero.
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary

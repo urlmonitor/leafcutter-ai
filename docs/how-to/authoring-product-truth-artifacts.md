@@ -171,19 +171,32 @@ the `.md`.**
    It checks schema conformance, that `index.json` mirrors each artifact,
    entity-registry membership, step/branch id uniqueness,
    `acceptance_scenarios.for` resolution, `impl_summary` correctness, mock-data
-   invariants, and classifier `outcome` consistency. Unresolved `implements` AC
-   ids are warnings (a seed flow may reference not-yet-authored ACs); everything
-   else is a hard failure.
+   invariants, and classifier `outcome` consistency. An unresolved `implements`
+   AC id is now a hard failure (UXP-700c-1): every pointer is re-resolved
+   against the AC store *as it stands right now*, and a broken one is reported
+   as `[pointer] <flow id> <step/branch kind> '<node id>': AC pointer '<ac id>'
+   does not resolve in the AC store` — naming the artifact holding the pointer,
+   the position within it, and the target that failed to resolve. (The same
+   pointer also still produces the older `[impl]` WARNING from the impl-status
+   rollup check; the two are independent checks over the same data, and the
+   WARNING alone no longer means the run is safe to ignore.) Do **not** leave
+   `implements` pointing at an AC id that does not exist yet — author or
+   restore the AC first, or drop the pointer until it does.
 
 3. The validator is wired into the commit gates alongside the AC gates, so a
-   malformed artifact blocks the commit.
+   malformed artifact blocks the commit — including a dangling `implements`
+   pointer.
 
 ---
 
 ## Verification
 
-- The validator exits 0 (warnings about unresolved AC ids are acceptable for
-  seeds).
+- The validator exits 0. It also prints `resolved N pointer(s)` naming exactly
+  how many `implements` pointers it re-checked against the AC store on this
+  run — so a run that resolved none (e.g. an empty store) is distinguishable
+  from a run that resolved some and found none broken. A run with even one
+  unresolved pointer exits non-zero; there is no "acceptable to leave dangling"
+  case any more.
 - Your artifact appears in `index.json` under `artifacts[]` and in each derived
   index (`by_component`, `by_entity`, `by_flow`) it belongs to.
 - For a flow, the generated `.md` rendering reflects your steps and branches.

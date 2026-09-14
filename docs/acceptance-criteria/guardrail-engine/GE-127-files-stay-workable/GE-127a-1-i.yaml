@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
@@ -46,7 +46,7 @@ doc_links:
       component's sanctioned fail-open (an internal error yielding a warning and a
       clean exit so a script bug never blocks an unrelated commit); it is a
       successful-looking verdict for a check that never happened.
-  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4-ii.yaml
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2-ii.yaml
     relationship: related
     status: exists
     relevance: >-
@@ -91,18 +91,18 @@ it_requirements:
     only "$schema" and "_comment" excluded). This record adds neither: it changes how one
     unmeasurable input is reported inside check_file_size.py. The manifest entry that makes
     the gate reachable is declared once, on GE-127a-1, and inherited here. Do NOT mint a
-    config_schema_fragment key to satisfy the structured-spec validator — BP-100n-4-ii
+    config_schema_fragment key to satisfy the structured-spec validator — BP-1600a-2-ii
     records that BP-100k-4 and BP-100k-4-i both declared keys
     (hook_trigger_reachability, hook_trigger_reachability_indeterminate) that were never
     created, and commit_guardian.json's 36 top-level keys still contain neither. A second
     imaginary key makes the machine-checked spec less trustworthy than no spec at all.
   - >-
-    REUSE BP-100n-4-ii's VERDICT VOCABULARY AND EXIT-STATUS CONTRACT UNCHANGED — THIS IS THE
+    REUSE BP-1600a-2-ii's VERDICT VOCABULARY AND EXIT-STATUS CONTRACT UNCHANGED — THIS IS THE
     PIN THE BA ASKED FOR AND IT IS DECIDED. The criteria deliberately name no exit status
     and the BA's notes ask the IT PO to choose. Chosen: an "INDETERMINATE: reason=<text>"
     line naming which of the two situations occurred, with exit 2, alongside exit 0 for a
     clean run and exit 1 for a length that WAS measured and found over. That is the existing
-    contract on check_hook_trigger_reachability and the one BP-100n-4-ii pins; using it here
+    contract on check_hook_trigger_reachability and the one BP-1600a-2-ii pins; using it here
     means the two guards speak one language and an author can tell a measurement failure
     from a size finding by the status alone. The alternative the BA names — treating an
     unmeasurable file as an ordinary finding — is rejected because it collapses exactly the
@@ -121,7 +121,7 @@ it_requirements:
     text in the encoding the standard reads" and "the file cannot be opened at all" are
     different facts about the world and the outcome must say which occurred. Collapsing them
     costs the author the only information that distinguishes a genuinely binary file from a
-    permissions or path problem. This is BP-100n-4-ii's two-disk-situations rule applied
+    permissions or path problem. This is BP-1600a-2-ii's two-disk-situations rule applied
     here.
   - >-
     A STAGED DELETION IS OUT OF SCOPE AND MUST NOT BE RESOLVED SILENTLY WHILE FIXING THE READ
@@ -292,7 +292,7 @@ amended_by:
     hook_trigger_reachability and hook_trigger_reachability_indeterminate; neither is among
     the 36 top-level keys, still) is recorded in it_requirements so it is not repeated here.
     VERDICT VOCABULARY PINNED, WHICH THE BA EXPLICITLY DEFERRED TO THE IT PO: reuse
-    BP-100n-4-ii''s contract unchanged — "INDETERMINATE: reason=<text>" with exit 2 alongside
+    BP-1600a-2-ii''s contract unchanged — "INDETERMINATE: reason=<text>" with exit 2 alongside
     exit 0 clean and exit 1 for a measured finding. The alternative the BA named (treat an
     unmeasurable file as an ordinary finding) is rejected on the record because it collapses
     the third clause''s distinction. SCOPE HAZARD CARRIED FORWARD RATHER THAN RESOLVED
@@ -304,8 +304,13 @@ amended_by:
     the BA''s named mutation, one the paired readable run, one the deletion boundary, one
     the registered hook entry point and one the deployed copy in a cold process.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_ge_127a_1_i_named_situations.py"
+  - "unit_tests/commit_guardian/test_ge_127a_1_i_verdict_floor.py"
+  - "unit_tests/commit_guardian/test_ge_127a_1_i_entry_points.py"
+implemented_by:
+  - "templates/scripts/commit_guardian/check_file_size.py"
+  - "templates/scripts/commit_guardian/_file_size_ratchet.py"
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -352,7 +357,7 @@ notes: |
   readable as text" and "the file cannot be opened at all" are different facts
   about the world. Collapsing them into one message costs the author the only
   information that distinguishes a genuinely binary file from a permissions or
-  path problem. This is BP-100n-4-ii's rule for the two disk situations, applied
+  path problem. This is BP-1600a-2-ii's rule for the two disk situations, applied
   here.
 
   ONE STATE DELIBERATELY LEFT OUT OF SCOPE, AND FLAGGED RATHER THAN SMUGGLED IN.

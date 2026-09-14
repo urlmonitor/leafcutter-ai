@@ -18,9 +18,13 @@ criteria: |
   something else -- is a design decision for the BA and IT PO and is
   deliberately not fixed by this criterion.
 
-  When it has not run, the learnings still waiting are visible and countable
-  rather than accumulating in silence, so an unwired pipeline shows up as a
-  number someone can see instead of a discovery made months later. Until the
+  When it has not run, that is something a person can find out by asking,
+  rather than something discovered months later. A loop that is quiet because
+  every learning has already been written down and a loop that is quiet
+  because nobody ever set it going must not look alike: anyone standing in a
+  project can establish whether captured learnings have in fact been reaching
+  their surfaces there, and "this has never happened here" is an answer the
+  system gives plainly rather than dressing it up as a clean result. Until the
   trigger exists, every surface that documents this loop states plainly that
   capture is manual: no document may imply an automatic capture that does not
   happen (ADR-034, "Until the harvester has a caller, capture is not automatic
@@ -30,8 +34,13 @@ criteria: |
   mismatch, the entry_kind vocabulary, and silent-discard behaviour are already
   covered by the INF-400c L2/L3 set -- do not restate them. In particular
   INF-400c-2-ii covers one individual event that cannot be routed, whereas the
-  visibility wanted here is the pending backlog when the routing step has not
-  run at all.
+  visibility wanted here is whether the routing step has run in this project at
+  all. That visibility must not be re-sited onto the count of learnings still
+  waiting: since INF-700c-1 and INF-700c-2, a record carrying no learning is not
+  outstanding, so that count reads the same for a healthy loop and for one with
+  no caller -- and it is produced only by a run, which a loop with no caller
+  never has. Recreating a non-zero waiting count to carry the signal is
+  forbidden by INF-700c's hard constraint.
 depends_on:
   - INF-700
   - INF-400c
@@ -44,9 +53,29 @@ doc_links:
     status: exists
 origin_agent: BrainCandy
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - reason: "BA decomposition, 2026-09-07. Decided the trigger point this criterion deliberately left open: the routing step runs once per completed unit of work, at the driver's completion step, on every path that completes work (INF-700a-1, INF-700a-1-i). Rejected per-phase-agent (the phase agents are the emitters; ADR-011 chose deferred harvest to batch the write away from them), scheduled (the package ships no scheduler, and a cron the user installs is the manual invocation this criterion rejects), and finalization-only (single tickets, the fast lane and quick-fix never finalize). ESCALATION TO THE PO — one clause of this L1 has gone stale and is not corrected here, because L1 criteria are the PO's: 'the learnings still waiting are visible and countable ... an unwired pipeline shows up as a number someone can see' no longer holds. INF-700c-1 and INF-700c-2 merged on 2026-08-26; a textless record is now ineligible and is not outstanding, so the waiting count reads zero for a healthy loop and for a loop with no caller alike, and can no longer carry that signal. The signal is re-sited on run recency by INF-700a-2, which states the replacement explicitly. Restoring a non-zero backlog to recreate the old signal is forbidden by INF-700c's hard constraint."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "PO correction of a stale clause, 2026-09-07, in response to the BA escalation above. WHAT CHANGED: the clause 'the learnings still waiting are visible and countable ... an unwired pipeline shows up as a number someone can see' is withdrawn and replaced by an outcome sited on whether the loop has run in this project at all. WHY IT HAD TO GO, two reasons, the second decisive. (1) INF-700c-1 and INF-700c-2 merged 2026-08-26 and redefined what 'waiting' means: a record carrying no learning is ineligible and is not outstanding, so over the real 28-record corpus the count reads zero and the run exits 0 -- a drained loop and a loop nobody calls are indistinguishable by that figure. (2) The figure is computed by the routing step, during a run. This L1 is the criterion for making something run it. In the exact case the clause described -- nothing invokes it -- no run happens and no figure is produced at all. The old clause asked an unwired pipeline to announce itself through a number that only a wired pipeline emits, so it was unsatisfiable in principle, not merely outdated by INF-700c. VERDICT ON THE PROPOSED REPLACEMENT: run recency, as stated in INF-700a-2, is ACCEPTED. It is the right shape because it is a property of the invocation this L1 is about, observable without the loop having anything to do, and it discriminates the pair that matters -- a tree harvested after five units of work versus a tree never harvested, both reporting zero waiting. Two conditions on it, both already honoured by INF-700a-2 and restated here so they survive a rewrite: absence of a record must be reported as 'never run in this tree', never as an error, a zero, or a stale run, because debugging/logs/ is gitignored and absent from a fresh clone; and the recency answer must not be derived from, or restated as, the waiting count or INF-700b-3's capture-health figures. WHAT IS NOT ACCEPTED: restoring a non-zero backlog to recreate the old signal, forbidden by INF-700c's hard constraint. ALSO CORRECTED: the Note-for-BA paragraph named 'the pending backlog when the routing step has not run at all' as the wanted visibility -- the same stale premise one layer down -- and now names the run-recency question instead, with the prohibition attached so a future BA does not re-site the signal back onto the count. UNCHANGED: the first paragraph, the ADR-034 manual-capture statement, and the INF-400c scope boundary all still hold."
+    by: product-owner
+    at: 2026-09-07
+  - reason: "BA addition, 2026-09-07, in response to an IT PO escalation on INF-700a-1. CRITERIA UNCHANGED — this entry records a fifth L2 (INF-700a-5) taking the L1's last free slot, and nothing in the L1 body is edited; the PO correction above stands untouched. WHAT THE FIFTH L2 CLOSES: the family said WHEN the routing step runs and nothing about WHERE its writes end up. Four of the five completion paths run inside an isolated working directory and finalize-feature removes its own at step 7, after merging at step 4; the destinations are tracked memory files and documentation pages. So INF-700a-1's 'those three destination files each contain the learning text' was satisfiable for a few seconds in a directory about to be reclaimed, with green tests and total production loss — the phantom-done shape this feature exists to eliminate, reappearing inside it. INF-700a-5 states durability as an outcome (the learning is readable in the merged tree after the working directory is gone), requires it to arrive through a commit the completion path already makes, and explicitly REJECTS an unattended commit inside the routing step, writing to the main checkout, post-merge-only routing, and durable-emission-with-deferred-routing, each with its reason. INF-700a-5-i covers a publication that fails or conflicts, and requires the loss to be announced before the working directory is removed. INF-700a-5-ii covers a record emitted after the routing step has read the sink, which is discarded with the sink because the sink itself does not outlive the working directory. THIS L1 IS NOW AT ITS CHILD CAP (5 of 5); any further behaviour under it needs a split, not a sixth child."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA note, 2026-09-07. CRITERIA UNCHANGED — nothing in this L1's body is edited and the PO correction above stands untouched. This entry records that BrainCandy settled the sink question underneath this family (the knowledge-emission sink resolves against the repository, one per repository, shared by every working directory and surviving every teardown), and what that settled in the L2/L3 set. THREE CONSEQUENCES. (1) The trigger contradiction escalated on INF-700a-1 CLOSES. The routing step now runs in the driver's completion sequence BEFORE the phase that publishes the unit of work's own output, which is compatible with INF-700a-5's requirement that the writes ride a commit the path already makes and add no commit of their own. The cost of routing early — the publishing phases emit after the sink has been read — is a one-run deferral rather than a discard, because the sink outlives the working directory. (2) INF-700a-5's rejection of durable-emission-with-deferred-routing was reopened, because it rested on the fact being fixed, and re-decided on the merits: adopted for that residual, rejected as the whole mechanism on an unbounded and invisible tail. (3) INF-700a-5-ii's severity claim inverts from a loss to a delay and the record was rewritten accordingly. NO SIXTH CHILD WAS ADDED: this L1 stays at 5 of 5 and every change landed inside the existing five and their descendants. ONE NEW HAZARD WAS FOUND AND SPECIFIED RATHER THAN ABSORBED — a repository-scoped sink lets the record of having already routed something outlive the branch its write went to, so an abandoned branch can leave a durable claim that a learning was written with no merged tree holding it. INF-700a-5 now carries a criterion forbidding that."
+    by: business-analyst
+    at: 2026-09-07
+  - reason: "BA note, 2026-09-07, same day, superseding the ANCHOR named in the entry above and recording one addition. CRITERIA STILL UNCHANGED. THE ANCHOR: the entry above says the sink resolves against the repository. It does not. Two objections raised in review of that choice were accepted — 'the repository' is ambiguous in a consumer install because the package subdirectory is a clone nested inside the consumer's, and the common git directory is reported relative from a main checkout and absolute from a working directory, which reproduces the original relative-path defect in exactly the layout a developer tests in. The sink is now an ABSOLUTE PATH FIXED WHEN THE PACKAGE IS BUILT INTO A PROJECT, taken from the project root the build was pointed at and written into the configuration the build deploys. Nothing discovers it at run time. Every conclusion in the entry above survives unchanged, because all of them turn on one sink outliving every isolated working directory of the project, which this delivers more directly; read 'install' for 'repository' throughout it and in the same-day entries on INF-700a-1, INF-700a-5, INF-700a-5-i and INF-700a-5-ii. WHAT THE NEW ANCHOR COSTS, stated because it is a genuine trade: durability was automatic under the old one and is contingent under this one — a working directory that has the build run inside it gets a sink of its own. INF-400c-4-v carries that as a criterion. ONE ADDITION: INF-700a-5-iii, a third L3 under INF-700a-5, covering two units of work completing at once over the one shared sink — the learning written once and not lost between them, with the duplicate-versus-loss asymmetry stated so the mechanism can be judged. That race could not exist while each working directory had its own sink; it arrives with the sharing, on a system where parallel working directories are routine. THIS L1 REMAINS AT 5 OF 5 CHILDREN — the addition is a grandchild, and no split is needed."
+    by: business-analyst
+    at: 2026-09-07
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-700a-1
+  - INF-700a-2
+  - INF-700a-3
+  - INF-700a-4
+  - INF-700a-5
 implemented_by: []
 documentation_triggers:
   - how-to

@@ -1,0 +1,137 @@
+id: INF-700a-1-i
+components:
+  - infrastructure
+  - knowledge_system
+  - build_orchestration
+title: "No way of finishing work is left quietly without a routing step"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-1.yaml"
+criteria: |
+  Given more than one thing in this package drives a unit of work to
+    completion and reports a result — an epic drive, a single-ticket drive,
+    the fast lane, the quick-fix path and feature finalization each do,
+  And a knowledge record emitted during work driven by any one of them is
+    equally a learning that should reach its surface,
+  When each of those paths is run to completion in a tree whose declared sink
+    holds one record carrying learning text and naming one destination,
+  Then on every one of those paths that destination contains that learning
+    text by the time the path reports its result,
+  And where a path is deliberately not given a routing step, it is named as
+    excluded in the same place the wired paths are wired, together with the
+    reason and the path whose routing step covers its emissions instead,
+  And no path both completes a unit of work and leaves an emitted record
+    unrouted while not appearing on that exclusion list,
+  And a WORKFLOW ARTEFACT added later that completes a unit of work without
+    either harvesting or being listed as excluded is detected rather than
+    discovered: something fails when it appears — where the set that can be
+    detected is the set of workflow artefacts, because that is the set the
+    detection is able to enumerate for itself,
+  And the residual is stated rather than assumed away: a way of completing a
+    unit of work that ships only as a skill or only as a command, carrying no
+    workflow artefact, is NOT reached by that detection and would appear
+    unnoticed. The detection says which kinds of artefact it examined and which
+    kinds it cannot see, in its own output, so a reader of a passing run cannot
+    conclude that every future way of completing work is covered.
+depends_on: [INF-700a-1]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "AGENT REASSIGNED FROM workflow-architect TO python-coder for the reason given on INF-700a-1: workflow-architect is is_ticket_phase false with null selection_criteria and cannot be dispatched as a ticket phase, and python-coder is the registry's declared owner of templates/workflows-js/ and of the pytest-over-Node-harness tests that cover it."
+  - "COMPLEXITY RAISED M TO L. Five workflow files, a new declaration artefact, a new build-time guard with its own wiring and deploy-manifest entry, and five per-path behavioural tests. That is four-plus files and well past 200 lines. Sizing it M invites a single-file change that wires one path."
+  - "THE COMPLETION PATHS TO ENUMERATE, as they stand at 2026-09-07: build-epic, build-ticket, fast-lane-ship, quick-fix and finalize-feature. build-feature is the user-facing entry point that resolves to one of the first two and is not itself a completion path. plan-feature and create-ticket produce specifications rather than completing built work — if they are excluded, they still have to appear on the exclusion list with that reason, because agents emit knowledge during AC authoring (the product-owner, business-analyst and it-po templates all carry an emission block) and an unlisted omission is indistinguishable from an oversight."
+  - "PARTIAL WIRING IS THE PREDICTED FAILURE, and the exclusion list is what makes it visible. A change that wires the epic drive and leaves quick-fix alone would satisfy INF-700a-1 as written for the path it tested. The list must be a single artefact a reader can hold against the set of drivers, not a comment in each file."
+  - "THE LAST CLAUSE NEEDS A MECHANISM, and choosing it is an IT PO call. The two shapes that work here are a test that enumerates the completion-path artefacts and asserts each is either wired or listed, or a commit-time check over the same set. Whichever is chosen must derive its list of paths from the artefacts rather than from a hand-maintained copy, or the guard goes stale the first time a path is added — which is the failure it exists to catch."
+  - "PER-PATH BEHAVIOURAL COVERAGE, not one test times five names. Each path must be driven far enough that the destination file is asserted afterwards. Where a path cannot be run in the unit layer, the substitute is asserting the routing result is consumed in that path's guarded control flow — never asserting the call string appears in its source."
+  - "THE MECHANISM THAT FAILS — IT PO decision on the clause the BA left to me. A BUILD-TIME GUARD INVOKED FROM build.py, with the same shape and the same abort semantics as the existing _check_command_reachability_guard (scripts/build.py, called before any write, aborts the build on a verdict). Not a commit hook and not a test alone. Reasons: build.py runs in CI ahead of pytest, so an unwired new path blocks the merge rather than producing a test failure someone can mark xfail; a commit hook only sees the files in that commit's index and would miss a path added in a commit that does not stage the guard's data; and this repository has a working, tested precedent for exactly this enumerate-the-artefacts-and-abort shape."
+  - "THE GUARD IS ALSO TESTED THROUGH ITS OWN ENTRY POINT, in unit_tests/build_guards/ alongside test_command_reachability_guard.py, with a positive run and a must-block negative run. The guard is the thing that catches the next unwired path; a guard that cannot block is inert and a positive-path test cannot tell the difference."
+  - "WHERE THE LIST LIVES — a new top-level section in config/guardrail_gates.yaml, carrying wired paths and excluded paths, each exclusion with a reason and the path whose routing step covers its emissions instead. That file is the deployed guardrail-policy SSOT the guard layer already reads, it ships through build.py so a consumer install sees the same list, and it is a single artefact a reader can hold against the set of drivers — which a comment in each workflow file is not. TRAP, documented in this repository's CLAUDE.md and previously shipped as a branch-invisible failure: unit_tests/commit_guardian/test_check_ac_schema.py asserts the non-policy top-level keys of guardrail_gates.yaml equal the change_target enum, so the new section name must be added to that test's _NON_CHANGE_TARGET_SECTIONS set IN THE SAME COMMIT."
+  - "THE ENUMERATION DERIVES FROM THE ARTEFACTS; ONLY THE EXCLUSIONS ARE HAND-WRITTEN. The guard globs templates/workflows-js/*.js for the candidate set and checks each against the config's two lists. A path present in neither list is the failure. Do NOT let the candidate set itself come from the config — that is the hand-maintained copy the criteria forbid, and it goes stale the first time a path is added, which is the exact event the guard exists to catch."
+  - "THE THREE NON-COMPLETION PATHS MUST STILL BE LISTED, WITH REASONS. build-feature.js is a user-facing entry point that resolves to build-epic or build-ticket and completes nothing itself. plan-feature.js and create-ticket.js produce specifications rather than completed built work — but agents emit knowledge during AC authoring (the product-owner, business-analyst and it-po templates all carry an emission block), so their exclusion must name which path's routing step picks those emissions up. An unlisted omission is indistinguishable from an oversight, which is the whole point of the list."
+  - "THE GUARD AND ITS CONFIG MUST BE IN THE BUILD DEPLOY MANIFEST. A guard that build.py imports but that the deploy map does not carry raises ModuleNotFoundError from the deployed layout; once it is a required gate that crash blocks every merge. This repository shipped exactly that with done_proof.py. Verify by running the guard from a built temp target, not from the source tree."
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: INF-700a-1
+  contract: "The routing invocation at a driver's completion step and the figures it puts into the reported result, which each completion path must carry"
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by:
+  - reason: "BA amendment, 2026-09-07, on an IT PO observation. The last clause said 'a path added later that completes a unit of work' is detected when it appears; the mechanism the IT PO specified enumerates workflow artefacts. Those coincide today — all five completion paths are workflow artefacts — but they are not the same set, and a completion path shipped only as a skill or only as a command carries no workflow artefact and slips the enumeration. The criterion therefore promised coverage the mechanism cannot deliver, which is the failure mode this AC exists to catch, one level up: an unwired path that nobody notices because a guard reported green. BOTH REMEDIES APPLIED, not one. The clause is narrowed to the set the detection can enumerate for itself, so it is checkable; and the residual is added as its own clause requiring the detection to state, in its PASSING output, which artefact kinds it examined and which it cannot see. Narrowing alone would have left a true criterion and a false impression. The mechanism itself, the enumerate-from-artefacts rule, and the exclusion list are unchanged and remain the IT PO's."
+    by: business-analyst
+    at: 2026-09-07
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_each_of_the_five_completion_paths_writes_the_learning_to_its_destination
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Parametrised over build-epic, build-ticket, fast-lane-ship, quick-fix and finalize-feature. For each, drive the path to completion under the engine harness in a temp tree whose declared sink holds one record carrying learning text and naming one destination; assert that destination contains the text by the time the path reports its result. Five parametrised cases, each asserting a file, not one test naming five paths."
+  - name: test_the_guard_derives_its_candidate_set_from_the_workflow_artefacts
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "Run the guard against the real templates/workflows-js/ directory and assert it reports having examined every .js file present there, by count and by name. A guard whose candidate set comes from its config would report only the names already listed and passes vacuously."
+  - name: test_a_new_completion_path_with_neither_wiring_nor_an_exclusion_blocks_the_build
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the guard invoked from build.py through its real entry point, run as a subprocess against a temp target"
+    description: "The must-block negative control and the AC's last clause. Add a synthetic completion-path artefact to a temp copy of templates/workflows-js/ that neither harvests nor appears in the exclusion list; run build.py; assert it aborts non-zero and that the message names the new artefact. This is the something that fails when a path is added later."
+  - name: test_removing_a_path_from_the_exclusion_list_makes_the_guard_block
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Delete one excluded entry from the config section and assert the guard now blocks and names that path. Proves the guard reads the single list artefact rather than embedding a second copy of it, which is what would let the list and the guard drift apart."
+  - name: test_wiring_only_one_path_still_blocks
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The predicted partial-wiring failure, as a test. In a temp target where only build-epic is wired and the other four are neither wired nor excluded, assert the guard blocks and names all four. A guard that reports only the first missing path lets a fixer close them one build at a time without ever seeing the scale."
+  - name: test_a_passing_guard_run_states_which_artefact_kinds_it_cannot_see
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The residual clause. Run the guard on a fully-wired temp target and assert its PASSING output names the artefact kind it enumerated and names the kinds outside its reach — a completion path shipped only as a skill or only as a command. Assert on the passing run specifically: a limitation disclosed only in a failure message is invisible to every reader who sees a green build, which is every reader who matters here."
+test_rationale: |
+  The first descriptor is deliberately five parametrised cases rather than one
+  test, because a single test asserting over a list of five names passes when
+  the loop body silently no-ops for four of them. The guard tests run build.py
+  as a subprocess against a temp target rather than importing the guard
+  function, because the failure this repository has actually shipped is a guard
+  that exists, is tested in isolation, and is never reached from the deployed
+  entry point. The second descriptor is the anti-vacuous-pass check: a guard
+  reading its candidate set from its own config would pass every other test
+  here and catch nothing, so it must be made to state what it examined.
+notes: |
+  This is the anti-partial-wiring criterion. It exists because the defect being
+  closed is not "the harvester is hard to call" but "nobody noticed it was never
+  called", and a fix that wires one of five paths reproduces that condition at
+  four fifths strength while looking, from the wired path, exactly like success.
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary

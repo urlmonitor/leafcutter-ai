@@ -1,0 +1,70 @@
+id: ACS-1400c-5
+components:
+  - ac_store
+title: "A person can run the adjudicated pass and read what it decided for every record"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a person who has not worked on the requirement store before and has only
+    the written guide,
+  When they follow it to run the adjudicated pass against the real store and read
+    what comes back,
+  Then they can state, for any record in the report, whether it was repaired or
+    left alone and why,
+  And they correctly conclude that a run finishing with records still left alone
+    is a successful run rather than an incomplete one,
+  And the guide tells them how to supply the adjudication the pass requires and
+    what happens if they do not,
+  And the guide states that the pass does not change any record's finished state
+    and names where that decision is made instead.
+depends_on:
+  - ACS-1400c
+  - ACS-1400c-1
+  - ACS-1400c-2
+  - ACS-1400c-4
+doc_links:
+  - path: scripts/ac_store/fix_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "THE TOOL THE GUIDE DOCUMENTS, AND ITS CURRENT DOCSTRING IS ACTIVELY MISLEADING — it asserts the pre-commit hook 'now blocks all commits that touch AC files until these are fixed', which is false, and cites a population figure with no relation to the store's current state. A guide written from the existing docstring will teach the wrong urgency. Write from the behaviour, and correct the docstring while you are there."
+  - path: docs/acceptance-criteria/ac-store/ACS-1400-complete-child-links/ACS-1400b-5.yaml
+    relationship: related
+    status: exists
+    relevance: "THE ADJACENT GUIDE — coordinate, do not duplicate. That one covers reading the recurring store-wide report; this one covers running the one-off pass and supplying its adjudication. Both teach the same deliberate-versus-drift judgement, which should be stated once and referenced, not written twice in two voices."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - docs
+risk_surface: internal
+notes: |
+  THE DOCUMENTATION AC FOR ACS-1400c'S `how-to` TRIGGER. Intended author is the
+  documentation expert; the agent assignment is left for the IT PO to set.
+
+  THE ABSTENTIONS ARE THE OUTPUT THAT MATTERS MOST HERE, and they are the part a
+  reader is most likely to misread as failure. Hence the second Then, which is not
+  a nicety: a reader who believes the pass is incomplete while records remain will
+  go looking for a way to clear them, and the way to clear them is the unsafe bulk
+  repair this L1 exists to prevent. The guide has to actively teach that a run
+  leaving records alone is the run working correctly.
+
+  THE THIRD Then IS THERE BECAUSE THE REFUSAL WILL LOOK LIKE A BUG. ACS-1400c-1-i
+  makes the tool refuse a repair with no adjudication behind it. To someone who
+  ran it a year ago and remembers it just working, that refusal reads as breakage
+  unless the guide explains it as the point.
+
+  NO SEQUENCE DIAGRAM. One pass over one store, one actor. The L1 says so and
+  re-reading the tool confirms it.

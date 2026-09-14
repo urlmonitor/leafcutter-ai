@@ -383,8 +383,8 @@ names no extension, and an L2 beneath it that enumerates extensions is at the
 wrong altitude. The motivating measurements are in that record's notes rather
 than its criteria.
 
-**BP-100n-4 IS A PRECONDITION, NOT SCOPE — the sharpest hazard for the BA.**
-BP-100n-4 (approved, high, phase_1) owns the uninvoked-gate census and its
+**BP-1600a-2 IS A PRECONDITION, NOT SCOPE — the sharpest hazard for the BA.**
+BP-1600a-2 (approved, high, phase_1) owns the uninvoked-gate census and its
 day-one triage is what registers this script. Every GE-127 record carries it as a
 `depends_on` doc_link for exactly this reason. An L2 here that restates the
 census, repeats its counts, or proposes a second reachability guard is
@@ -403,3 +403,221 @@ files and 59 documents above 400 raw lines (measured in-worktree at authoring,
 per-file count, no exclusions). They differ because the counting rule discards
 documentation blocks before counting — and that difference is itself GE-127d's
 subject. Carry both labels; upgrade neither.
+
+## GE-120g: the THIRD polarity on the GE-120 axis, and GE-120 is now FULL (2026-09-07, PO)
+
+New L1 `GE-120-green-means-checked/GE-120g.yaml`, `origin_agent: BrainCandy`,
+`readiness: draft`, `priority: medium`, `roadmap_phase: phase_1`,
+`components: [commit_guardian]`. Title: *"Being looked at leaves your work
+untouched, and only an objection stops you."* Full evidence, the mutation
+recipe and the boundaries live in that record's `notes` — read it before
+decomposing.
+
+**THE TRIAGE QUESTION THIS ADDS, AND IT IS NOT ASKED ANYWHERE ELSE IN THE STORE.**
+Every one of GE-120a..f, and all of GE-126, presumes a check whose ANSWER is the
+thing under test — absent, wrong, unearned, or misattributed. GE-120g is the case
+where the answer was RIGHT and did not decide the outcome: the gate printed a clean
+pass and the commit was refused anyway, by the act of checking rather than by any
+verdict. Before filing the next guardrail defect, ask *was the check's answer wrong,
+or was it right and overridden?* That question is the whole boundary between
+GE-120a-f and GE-120g, and getting it wrong is what produced the phantom citation
+this record repairs (`run_hook.py` cited in `GE-127a-1.implemented_by` with no
+criterion constraining it and no descriptor exercising it).
+
+Note the polarity precedent is IN-TREE and predates this: GE-120e's own notes say
+"the L0 says green must mean it was checked; this L1 says red must mean you did
+something wrong." GE-120 has always hosted both sides. GE-120g is the third
+position on the red side — *red must mean something said no*. A new L0 was
+considered and rejected: one L1 is below the three-child floor, and it would state,
+beside an approved high-priority unbuilt L0, a promise that L0 already implies.
+
+**SPLIT ON A VOCABULARY THE MANIFEST ALREADY CARRIES, AND CHECK THAT IT IS TOTAL.**
+The reusable move here: `commit_guardian.json` already tags every entry with
+`tier`. Measured in-worktree 2026-09-07 — **62 registered entries, 56 `judgment`,
+6 `transform`, ZERO untiered**, and 62 of 62 dispatch through the one shared runner.
+Totality is what makes the rule opt-out-free: there is no third category to fall
+into, so a check that needs to look *and* fix declares transform rather than earning
+an exception. Prefer an existing total vocabulary over minting an axis.
+**GE-120e's "54 checks are registered in the hook manifest" is STALE** (measured
+2026-08-17, it is 62). Re-measure; do not cite it.
+
+**GE-120 IS NOW AT THE CAP — 7 L1s (a..g) against a hard cap of 7**, and every
+GE-120a..f is at the 5-L2 cap (GE-120c on a live `child_limit_override: 6`). The
+remaining room in this family is **GE-126's two free L1 slots**; after those, split
+the tree (`ac-tree-split`) rather than raising a cap. GE-120f's note that "the two
+free slots at L1 are the only room in this family" is now down to two total, both in
+GE-126.
+
+**Freeze status, re-verified for the third time: EXPIRED.** `test_ge_122e_1.py` was
+read in full on 2026-09-07 (not the notes about it) and all 6 tests were run green
+*after* adding `GE-120g.yaml` and appending to `GE-120.yaml`'s `covered_by`. The
+assertion is a one-directional id-stability set difference plus "every YAML under
+the folder declares a `GE-120*` id". GE-126's L0 notes still describe the old
+byte-identity freeze and are wrong. Standing rule holds: read the guard test.
+
+**A RECORD MAY BE AUTHORED GREEN-ON-ARRIVAL — SAY SO IN `notes` OR IT LANDS
+LOOKING HONESTLY TESTED.** Half of GE-120g's criterion already shipped in PR #728
+before it was specified, and zero tests assert the property
+(`grep -rn "PYTHONDONTWRITEBYTECODE\|_hook_env" unit_tests/ tests/` returns one hit,
+and it is a test harness setting the variable for its own subprocess, not an
+assertion). An ordinary red-baseline run will therefore come up GREEN and prove
+nothing. GE-120g's notes carry the mutation that manufactures a real red baseline
+**and its seeding step**, which is the part that is easy to lose: the fixture must be
+a repo where `__pycache__` under the deployed script directory is TRACKED, seeded by
+running one hook FIRST and then `git add -A`. **This repository cannot be that
+fixture** — its own `.gitignore` excludes `__pycache__/` and `*.pyc` (lines 41-42),
+so the mutation is silently inert here and a "mutation proof" run in-repo is a false
+green about a false red. Generalise: when you author a spec for behaviour that
+already ships, the notes must state that it is green on arrival and must carry a
+falsifying mutation, or the record certifies itself.
+
+**SILENCE≠PASS, again, this time in the AC hooks' own test seam.** Both
+`check_ac_parent_covered_by.py` and `check_ac_limits.py` read `HOOK_TEST_FILES`, and
+its docstring specifies **absolute** paths. Relative paths yield exit 0 with no
+output — indistinguishable from a pass, and that is exactly how this run's first
+verification attempt read. Establish a positive control before believing silence:
+`scripts/ac_store/scan_ac_orphans.py parent-links` names real orphans (47 store-wide
+on 2026-09-07) and feeding one to `check_ac_parent_covered_by` makes it BLOCK with
+exit 1; feeding `GE-120c.yaml` to `check_ac_limits` makes it print its override
+notice. Both controls were run here before the clean results on `GE-120g` were
+believed. Same family as the `scan_ac_orphans.py --component` trap recorded above.
+
+**OUT OF SCOPE AND DELIBERATELY NOT ORPHANED — two fences, both in GE-120g's
+doc_links.** (1) The `try/except OSError` arm of PR #728 (an unlaunchable interpreter
+reports a reason instead of raising out of a hook) is GE-120a's subject verbatim;
+GE-120a is at the 5-L2 cap, so it is recorded as a known, uncovered, already-shipped
+behaviour rather than folded in. Raise it with the user. (2) The residual gap the fix
+itself names — the build deploys no `.gitignore`, so a fresh consumer install tracks
+whatever is written beside the deployed scripts — belongs to **BP-900** (approved,
+critical). An L2 under GE-120g that proposes deploying a `.gitignore` is in the wrong
+tree.
+
+**Identifier.** `GE-128` was verified free on 2026-09-07 by four methods and
+deliberately NOT taken: the next free **suffix** under the chosen parent is correct,
+because `derive_parent_id()` returns `None` for a root-shaped id and both
+`check_ac_parent_covered_by.py` and `scan_ac_orphans.py` derive parentage from id
+shape alone. Third application of the GE-122e-1 rule (after GE-118c). Highest taken
+root in this component remains **GE-127**. `GE-119`, `GE-121` and `GE-124` stay
+retired.
+
+> **Superseded 2026-09-14: `GE-128` has now been TAKEN** by the tree below. The two
+> notes recording it as "verified free and deliberately not taken" (this section and
+> `GE-120g.yaml`) are historical from that date. Highest taken root is now **GE-128**.
+> This is NOT the `GE-121` situation — those notes say only that the id was free and
+> unused, so reusing it creates no ambiguity, unlike `GE-121`, whose live prose cites
+> it repeatedly as a rejected candidate that would resolve to the wrong thing.
+
+## GE-128 tests-declare-what-they-prove: framing note for the BA/IT-PO (2026-09-14, PO)
+
+New root L0 `GE-128-tests-declare-what-they-prove/`, five L1 children GE-128a–e,
+`origin_agent: BrainCandy`, readiness draft, priority medium, `roadmap_phase:
+phase_1`, `component: guardrail-engine`, `components: [commit_guardian,
+testing_quality]`, `change_target: code`, `risk_surface: contract_boundary`.
+Subject: the `check-test-ac-tags` gate — 5,566 test functions across 595 of 597
+files carry no `# covers:` tag, the gate is registered NOWHERE so it has never run,
+and its mode resolves to `warn` only because `test_ac_tag_enforcement` is ABSENT
+from config. One key away from refusing essentially all test work. Full evidence,
+the cut rationale and the inherited constraints live in the L0's `notes` — read
+that and the two register entries (`KI-CG-20260909-dormant-gate-registration-census`
+and `KI-CG-20260909-gate-test-ac-tags`) before decomposing.
+
+**THE OVERLAP THAT SHAPED THE TREE, AND IT IS THE MOST IMPORTANT THING HERE.**
+**ACD-2200 already owns the ratchet as a GENERIC CROSS-STANDARD POLICY** —
+ACD-2200b ("existing shortfalls never block your work, new ones are refused at the
+door") and ACD-2200c ("the tolerated backlog is counted and never grows"), active,
+`phase_1`, four L1s with no children yet. A tree here headlined "the ratchet" would
+be a duplicate at a lower altitude. Resolution taken: **the subject is the
+DECLARATION, not the ratchet.** The obligation — a test names what it proves — is
+unowned; the ratchet is merely how it is adopted, and adoption is ACD-2200's.
+GE-128a therefore states only what the generic rule cannot (what the counted
+quantity IS here, and that it is held per file) and carries ACD-2200b as a
+`depends_on` doc_link rather than re-arguing it. **Any criterion in this tree that
+argues FOR grandfathering, or restates the adoption ladder, is duplicating an
+approved record and must be withdrawn.**
+
+**STORE DEFECT FILED, NOT FIXED: `GE-127b` is a per-gate ratchet authored
+2026-09-01, eight days before ACD-2200 generalised the same rule, and carries no
+fence to it.** The two sit side by side with no stated relationship. Not this
+tree's to repair; the next person to touch either should join them up.
+
+**L1 CUT — BY GUARANTEE, NOT BY DEFECT. Do NOT re-cut at L1.**
+- **GE-128a** — THE OBLIGATION AND ITS COUNTED QUANTITY. Keystone. Per-file
+  undeclared count compared against the file's own previous state; three arms
+  (higher → refuse; same-or-lower → allow even though still undeclared; no previous
+  version → **GE-128b's call, not this one's**). Reuse candidate: the shared ratchet
+  helper GE-127b shipped — the register recommends reusing it rather than growing a
+  second implementation.
+- **GE-128b** — REARRANGEMENT IS NOT NEW DEBT. Two opposite failures in one
+  mechanism: the refactor punished (moving an undeclared test raises the
+  destination's count), and **the new-file loophole, which is the load-bearing
+  half** — "no previous version → out of scope" lets every new test file be created
+  wholly undeclared forever. Note GE-127b decided the same edge the OTHER way and
+  was right to, because a separate threshold governs new files there and there is
+  no such second rule here. Copy the reasoning, not the conclusion.
+- **GE-128c** — A DECLARATION NAMES SOMETHING REAL. The guard on the guard, and
+  non-optional: without it the cheapest way to satisfy GE-128a across the backlog
+  is a script writing plausible names above 5,566 tests. **NO CRITERION IN THIS
+  TREE MAY SPECIFY A BULK BACKFILL** — a refusal, not a sequencing preference. The
+  register's "do not attempt a bulk backfill" instruction is converted here into a
+  property, because an instruction binds whoever read it and a property binds the
+  implementation. ~87 declaration identifiers already name records that do not
+  exist, accumulated by hand — that is the shape a mechanical pass mass-produces.
+- **GE-128d** — A RETIRED REQUIREMENT NAMED BY A LIVE TEST IS A SIGNAL. **The
+  user's explicit instruction, encoded as a property:** the notice is the live-code
+  hazard staying visible and is resolved by deciding the code's fate, NEVER by
+  deleting the tag. Does not demand the notice BLOCK — block-vs-announce stays a
+  per-stage L2 decision under this component's standing rule; the unit is
+  visibility.
+- **GE-128e** — ACTIONABILITY. Three distinct messages (no declaration / names
+  nothing / names something retired) with three different next steps. Bounded by
+  this component's anti-precedent: never describe dispatching an authoring agent
+  unless a test proves it happens.
+
+**THE ONE POINT WHERE THIS TREE TOUCHES ACS-1600.** Six `# covers:` tags in
+`tests/ac_store/test_cross_reference_audit.py` name ACD-800 L2s being retired in an
+open PR, so GE-128d is about to fire on them. The code they exercise is deployed
+into every consumer project, so the honest answer is the third one: give it a
+current requirement. **ACS-1600 (ac-store, authored the same day) is that
+requirement, and those tags should be re-pointed at it.** That re-pointing is
+ACS-1600's business and is NOT authored in this tree.
+
+**HOSTS EXAMINED AND REJECTED (do not re-litigate).** GE-117 ("every piece of code
+declares which requirement and which component it serves") is the nearest subject —
+the same act for SOURCE — rejected at five L1s of seven and on consumer: GE-117's
+value is knowing why code exists, a test's declaration is load-bearing for
+done-claims. GE-126 has the family's only two free L1 slots but owns whether a
+check's answer about its own work is honest, not what rule it enforces. GE-120 is
+at the 7-L1 cap with every GE-120a–f at the 5-L2 cap. TQ-100 owns which failures
+may block, at five L1s. **TQ-100b owns DECLARATION RECOGNITION** (what shape counts,
+malformed reported not dropped, id-shaped strings excluded, all recognisers
+agreeing) — this tree CONSUMES that and must not restate it. Real hazard, not a
+formality: the quantity GE-128a ratchets is produced by a recogniser TQ-100b-5 is
+making uniform, so a change in recognition moves every file's count at once.
+
+**PRECONDITION, NOT SCOPE: BP-1600a-2** owns registering this gate, exactly as for
+GE-127. Every criterion assumes the gate runs; an L2 restating the census
+duplicates an approved high-priority record. The config key is in scope only as a
+consequence of the ratchet existing — what must not survive is a mode nobody chose.
+
+**INHERITED, NOT REPEALED:** the fail-open-on-internal-error convention, and
+GE-120's line over it. **For a ratchet that matters twice over** — an unreadable
+previous version silently becomes a count of zero and turns the whole file into new
+debt.
+
+**CAPS AND ID.** Five L1s of seven, two slots reserved; no `child_limit_override`
+and none may be added. `GE-128` established free 2026-09-14 by the four
+independent checks this file prescribes; the only hits were the two prose notes
+above, no record. Re-verify at merge time.
+
+**SILENCE≠PASS, a fourth instance, observed while authoring this tree.** In a
+worktree whose `scripts/commit_guardian` is a SYMLINK into `../.leafcutter/`,
+`check_ac_limits.py` invoked with `HOOK_TEST_FILES` set to an absolute path exits 0
+and prints nothing **even on a known violation** — `ACS-100.yaml` carries nine L1s
+against a cap of seven and produced no output, and `GE-120c.yaml` printed no
+override notice. Cause is the documented deployed-layout no-op: `_find_project_root`
+walks up from `__file__` through the resolved symlink and lands in the install tree,
+so the store is unreachable. **A green from that invocation in a worktree proves
+nothing.** The positive control that DOES work here is
+`scripts/ac_store/scan_ac_orphans.py parent-links`, which reported 22 parents with
+orphaned children store-wide on 2026-09-14 — establish it before believing any clean
+result, and verify child caps by parsing the store directly.

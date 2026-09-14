@@ -32,12 +32,14 @@ origin_agent: BrainCandy
 created: 2026-08-14
 amended_by: []
 superseded_by: null
+child_limit_override: 6
 covered_by:
   - GE-120a-1
   - GE-120a-2
   - GE-120a-3
   - GE-120a-4
   - GE-120a-5
+  - GE-120a-6
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -59,3 +61,47 @@ notes: |
   the manifest rather than from this list): check_ac_parent_covered_by.py
   (observed skipping on a failed helper import), check_ac_schema.py (observed
   degrading to manual field validation when the schema file is unreachable).
+
+  CHILD-LIMIT WAIVER — AUDITED, AUTHORISED, AND RECORDED AS A DECISION RATHER THAN
+  A CONVENIENCE. Read this before adding a seventh L2 or citing this as precedent.
+
+    WHAT WAS WAIVED, AND BY WHOM. `child_limit_override: 6` was added to this record
+    on 2026-09-07. BrainCandy authorised it explicitly at a confirmation gate ("Raise
+    GE-120a's cap with an override"), for one named child and one only: GE-120a-6,
+    "a check that could not be started at all names what could not be started". The
+    waiver is not a standing allowance for this record. A seventh L2 needs its own
+    decision, and the honest answer at seven is almost certainly a tree split rather
+    than a second bump.
+
+    WHY THE BEHAVIOUR BELONGS HERE. PR #728 changed the shared launcher so that a
+    check whose launch target cannot be started at all reports a named reason and
+    refuses, instead of an unhandled error escaping the commit. It shipped with no
+    acceptance criterion, cited against GE-127a-1 where nothing constrains it. A PO
+    judged it this record's subject VERBATIM — "a check that cannot run says so" —
+    and that judgement is what fixes the parent; the cap is a shape constraint and
+    does not get to reassign subject matter.
+
+    THE ALTERNATIVE HOMES WERE CHECKED AND CLOSED, NOT SKIPPED.
+      - GE-120g has two free L2 slots. It is CLOSED BY SUBJECT, not by capacity: its
+        subject is inspection side-effects and refusal provenance, and both the PO and
+        the BA who decomposed it fenced this behaviour out in writing rather than
+        absorbing it. Free capacity under the wrong parent is not capacity.
+      - A Roman-suffixed L3 under an existing GE-120a-* child would have needed no
+        waiver at all, since an L2 parent carries no hard child cap. It was considered
+        FIRST for exactly that reason and rejected on four counts recorded in
+        GE-120a-6's notes — decisively, that GE-120a-1 is work_status: done, so hanging
+        an unbuilt constraint on it would reopen a completed node and make a done
+        composite false. Buying a free slot with a false done is the worse trade.
+      - A sibling L1 under GE-120 is mechanically unavailable: GE-120 holds seven L1s
+        (a..g) against a hard cap of seven. So "split instead of waiving" has nowhere
+        to put the halves without first creating a new L0, which is a far larger
+        structural move than a one-slot audited waiver for an already-shipped behaviour.
+      - Every one of GE-120a..f is at its five-L2 cap (GE-120c already at six on a live
+        `child_limit_override`, which is the precedent in this family for a bump of
+        exactly this size).
+
+    WHAT THE WAIVER COSTS, STATED SO IT IS NOT DISCOVERED LATER. The check-time audit
+    line fires on every commit that stages this subtree, by design — it is meant to be
+    read, not silenced. This record now sits one over the shape the tree standard
+    considers navigable, and that is a real, accepted cost, taken because the
+    alternative was either an orphaned already-shipped behaviour or a false done.

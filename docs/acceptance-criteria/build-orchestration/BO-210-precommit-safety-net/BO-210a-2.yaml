@@ -179,9 +179,9 @@ amended_by:
     dead gate stays dead, which is why it is mandatory rather than advisory.
 
 
-    NO SECOND CENSUS. BP-100n-4 owns the reachability census and its constraint against a
+    NO SECOND CENSUS. BP-1600a-2 owns the reachability census and its constraint against a
     parallel guard applies unchanged; these descriptors assert the OUTCOME an unreached id
-    must produce and count nothing. BP-100n-4-ii fixes its summary at four numbers and gains
+    must produce and count nothing. BP-1600a-2-ii fixes its summary at four numbers and gains
     no fifth population from this.
 - reason: scope-addition-criteria-changed-reapproval-required
   by: business-analyst
@@ -220,7 +220,7 @@ amended_by:
     FOURTH CASE, DISTINCT — check-ac-limits names no registered hook id at all; the script
     check_ac_limits.py IS invoked, but under the id check-ac-tree-limits (302/304). So the
     script gates while the id on this array names nothing, which is precisely the id-versus-
-    entry-line distinction BP-100n-4 warns a name-to-id comparison gets wrong. Counting that
+    entry-line distinction BP-1600a-2 warns a name-to-id comparison gets wrong. Counting that
     case, four of the seven approved ids name no hook that runs under that id.
 
 
@@ -233,13 +233,13 @@ amended_by:
 
 
     DELIBERATELY NOT DONE, AND WHY. (1) No blocking_hook_ids-versus-emitted-config cross-check
-    was added as a new AC or as a new population in the BP-100n-4 family: BP-100n-4-ii fixes
+    was added as a new AC or as a new population in the BP-1600a-2 family: BP-1600a-2-ii fixes
     its census summary at exactly four numbers, so a fifth population would contradict an
     approved L3. The requirement belongs here, in the AC that owns the array. (2) No second
-    reachability census is specified. BP-100n-4 owns the census and its constraint "do not
+    reachability census is specified. BP-1600a-2 owns the census and its constraint "do not
     build a second reachability guard beside it, or the two will disagree about how many gates
     exist" applies unchanged; the added clause therefore states the OUTCOME an unreached id
-    must produce and does not restate, re-enumerate, or re-count anything BP-100n-4 enumerates.
+    must produce and does not restate, re-enumerate, or re-count anything BP-1600a-2 enumerates.
     (3) Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", the reached-at-
     commit-time clause is written as a commit that violates the hook and is blocked by it —
     verification runs through the registered surface, never by grepping the config or the

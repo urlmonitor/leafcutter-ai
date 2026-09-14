@@ -88,3 +88,54 @@ notes: |
   itself made unmergeable — the operator learned the truth from GitHub, not from the lane.
   Any future required check the lane can evaluate falls under the same claim without
   amending this criterion.
+
+  COVERAGE ASSESSMENT 2026-09-07 -- THIS RECORD IS THE RIGHT ONE AND ITS PROOF DOES
+  NOT REACH THE LANE. Recorded here rather than authored as a new AC, because the
+  criterion above already says exactly the right thing and a second record saying it
+  again would not help. Nothing was changed on this record but these notes: criteria,
+  it_requirements, test_spec, work_status and readiness are as their owners left them.
+
+  WHAT WAS FOUND. The lane's terminal payload is built at one site, which is what this
+  criterion's second constraint asks for and is a genuinely good design. But that site
+  is called exactly once, and the list of unsatisfied required checks it is handed at
+  that one call is a literal empty list written into the source -- a constant, never a
+  value computed from anything the run observed. The blocked branch is therefore
+  unreachable in the running lane. It is not that the lane evaluates its checks and
+  finds them all satisfied; it is that the lane has no expression anywhere that could
+  ever produce a non-empty list. Verified 2026-09-07 against
+  templates/workflows-js/fast-lane-ship.js on branch fix/carried-followups, built from
+  origin/main at 004bf9e87, by locating every reference to the payload builder and to
+  the field it populates -- one definition, one call, no other writer. Denominator: all
+  references in that file and in unit_tests/, which is the whole of the lane's source
+  and its tests.
+
+  WHY THE TESTS ARE GREEN ANYWAY, AND WHY THAT IS THE INTERESTING PART. The covering
+  test extracts the payload-building function from the real on-disk source and runs it
+  under node with a non-empty list passed in. That proves the function is correct, and
+  it is. It cannot prove the lane ever passes it a non-empty list, and the lane does
+  not. So the record is a pure function that is provably right and provably never fed
+  the input that makes it matter -- the shape this repo files under phantom-done, with
+  the unusual twist that the dead part is a branch rather than a whole function.
+
+  THE CRITERION IS NOT AT FAULT; ITS PROOF OBLIGATION IS. Applying the test this repo
+  uses -- can the covering proof go green while the defect stands? -- the answer is yes,
+  and this record's own it_requirements already anticipated it in words: "The covering
+  test must construct A RUN STATE with a known-unsatisfied required check and assert the
+  terminal payload's status." A run state is not a function argument. The shipped proof
+  constructs the argument. That is a one-word gap between what was asked for and what
+  was accepted, and it is the whole difference between a guarantee and a decoration.
+
+  THE MINIMAL AMENDMENT, PROPOSED NOT MADE -- it_requirements is the it-po's field.
+  Sharpen that constraint so it cannot be satisfied by invoking the builder directly:
+  the covering proof must drive the lane to its terminal payload from a run state in
+  which a required check is unsatisfied, and observe the payload the LANE returns. Pair
+  it with the standing anti-vacuity rule this family already uses elsewhere: in the same
+  proof, show a run that reaches the same site with every check satisfied and returns
+  ok, so the two verdicts are attributable to the run state rather than to a payload
+  builder called twice with different arguments. If no run state can currently produce a
+  non-empty list -- which is what was measured -- then that, and not the payload
+  builder, is the work, and this record's work_status should be revisited by whoever
+  owns it. Not changed here: this agent was asked not to move work_status or readiness
+  on any existing record.
+
+  FILED SEPARATELY as an extension to KI-BO-20260831-1520.

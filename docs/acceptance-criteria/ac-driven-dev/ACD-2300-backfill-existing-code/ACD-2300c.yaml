@@ -1,0 +1,94 @@
+id: ACD-2300c
+components:
+  - ac_driven_dev
+  - ac_store
+  - testing_quality
+readiness: draft
+priority: medium
+title: "A requirement with nothing proving it is visible rather than assumed"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Requirements nobody proves are named out loud and get proof written for them.
+
+  Requirements that no test actually proves are listed rather than left looking
+  the same as the proven ones, and each is either connected to proof that already
+  exists or queued for proof to be written. Being unproven becomes a stated fact
+  about the record instead of a silence that reads like agreement.
+depends_on:
+  - ACD-2300
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE OPPOSITE END OF THE SAME POPULATION — DO NOT MERGE. ACS-1300's notes
+      already draw this boundary for a neighbouring tree and it applies here
+      unchanged: TQ-400d works through finished records that CANNOT be proven, while
+      this L1 finds records nothing currently proves and gets proof written. The two
+      account for the same population from opposite ends and neither subsumes the
+      other. Check TQ-400d's disposition before specifying what happens to a record
+      that turns out to be unprovable rather than merely unproven.
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECONDITION FOR THIS L1's LIST BEING TRUE, AND THE REASON IT CANNOT BE
+      BUILT NAIVELY. A record can be genuinely proven today by a passing test and
+      still appear to have nothing proving it, because the link was never recorded —
+      549 records were measured in exactly that state on 2026-09-01. A list of
+      unproven requirements built before that rot is repaired names hundreds of
+      records that are already proven, and every one of them is a false alarm that
+      teaches the reader to ignore the list.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+notes: |
+  WHY "VISIBLE" AND "GETS PROOF" ARE ONE L1 RATHER THAN TWO. They were considered
+  as separate children and merged deliberately: a list of unproven requirements that
+  nothing acts on becomes wallpaper within a release, and writing proof without
+  first knowing what is unproven is undirected. The seam that matters in this tree
+  is between PROPOSING and VERIFYING, and that seam is ACD-2300d's, not a second
+  cut here.
+
+  THE FALSE-ALARM HAZARD IS THE FIRST THING TO SIZE — see doc_links. This L1's
+  output is only as true as the recorded links it reads, and those links are
+  measurably rotten in this repository. Two consequences for the BA: the list must
+  distinguish "no proof exists" from "no proof is recorded", and this L1's practical
+  sequencing sits after ACS-1300a and ACD-2300b rather than before them. That
+  sequencing is deliberately NOT expressed as a depends_on edge, because the
+  distinction itself is valuable immediately and a project that never repairs its
+  links still benefits from being told which of the two situations it is in.
+
+  "QUEUED FOR PROOF TO BE WRITTEN" IS THE HANDOFF AND IT IS THE PART MOST LIKELY TO
+  BE OVER-BUILT. This L1 does not write tests. The repository already has a
+  test-authoring path and a build loop that consumes ready records; the value here
+  is that unproven records ENTER that path instead of sitting outside it. A
+  decomposition that grows a second test-writing mechanism inside this tree has
+  duplicated the pipeline the whole capability exists to feed.
+
+  THE SILENCE THIS CLOSES IS THE ADOPTER'S WORST MOMENT. For a project that has just
+  adopted, nearly everything is unproven, and a store where unproven and proven look
+  identical converts that from a known starting position into a false impression of
+  coverage. That is the same false-green family the rest of this work addresses,
+  arriving through the front door on day one — which is why this L1 matters most at
+  precisely the moment its list is longest and least pleasant to read.
+
+  INHERITED, NOT RESTATED: any count this L1 publishes is bound by ACS-1100's
+  standing rule — state the total it was measured against and what was excluded. The
+  worked example of why is in ACS-1300's notes, where a stale denominator beside a
+  recomputed numerator made a ratio read as more complete than it was, inside the
+  evidence section of a tree about records that say false things.

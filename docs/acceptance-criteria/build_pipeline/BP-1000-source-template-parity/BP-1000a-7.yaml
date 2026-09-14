@@ -1,0 +1,73 @@
+id: BP-1000a-7
+components:
+  - build_pipeline
+title: "A text artifact the build writes lands holding exactly its content's bytes, on every platform"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+criteria: |
+  Given a build phase deploys a text artifact whose content uses LF line endings
+  When the build's shared text writer writes that artifact to disk, on any platform
+  Then the file on disk holds exactly the UTF-8 bytes of that content, with no
+    newline translation applied
+  And when a forced re-run finds an existing file whose bytes differ from the
+    content only in its line endings, the writer rewrites it rather than counting
+    it as unchanged
+  And a file already byte-identical to the content is still skipped, so a re-run
+    over a correct install causes no churn
+  And the bug symptom ("deployed text artifacts land CRLF on Windows while their
+    templates are LF, and a re-run reports them unchanged instead of repairing
+    them") must not occur
+depends_on:
+  - BP-1000a
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000a.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The compare-before-write guard must compare BYTES, not decoded text. A text-mode read applies universal-newline translation on every platform, so a CRLF file and its LF content compare equal and the divergence can never be seen, let alone repaired."
+  - "The writer must emit the content's bytes untranslated. A text-mode write translates LF to os.linesep, which is CRLF on Windows."
+  - "The documented contract of the writer is unchanged: it already promises a byte-identical comparison; this criterion makes the code honour it rather than adding new behaviour."
+  - "Genuinely identical files must still be skipped and counted as up to date, so the fix introduces no mtime churn on a correct install."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-13
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_1000a_7_write_bytes.py
+implemented_by:
+  - scripts/build_phases.py
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_write_emits_exactly_the_bytes_of_its_content
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    description: "Writing LF content through the build's text writer leaves a file whose bytes equal the content's UTF-8 encoding exactly -- no CR inserted."
+  - name: test_forced_rewrite_repairs_a_line_ending_only_divergence
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    description: "An existing file holding the CRLF spelling of the content is rewritten to the LF bytes on a forced run, instead of being counted unchanged. Fails on every platform against the text-mode comparison, since read_text normalises CRLF everywhere."
+  - name: test_byte_identical_file_is_still_skipped
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    description: "A file already byte-identical to the content is skipped and counted as up to date, so the byte comparison introduces no churn."
