@@ -95,6 +95,118 @@ doc_links:
       The harness that executes the deployed checks out of process from a real separate
       working copy. Feeding a known-bad input through a real entry point needs exactly
       that machinery — extend it rather than growing a second one.
+  - path: docs/testing/test-angles.verification.flow.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE ONE INSTANCE DOCUMENT OF THE VOCABULARY, AND THE PROOF THAT IT HAS NO READER.
+      Re-verified 2026-09-14: a search of scripts/, templates/ and unit_tests/ for
+      "verification_flow.schema.json" returns nothing, and this file is the only document
+      written against it. Its own summary states the defect class in the repository's own
+      words. The reader this tree builds must be built against these field names.
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The set-cover taxonomy the test_spec `angle` values below are drawn from, and the source
+      of the distinction those descriptors turn on: `type` is the test LEVEL, `angle` is the
+      KIND OF PROOF. Every leaf in this tree carries at least one `reachability` and one
+      `deployed` descriptor, because those are the two angles this defect class hides behind.
+  - path: docs/known-issues/testing-quality.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-TQ-007 — OVERLAPPED, NOT DISCHARGED, recorded here so the relationship is not
+      re-litigated below. KI-TQ-007 asks "what invokes this?"; this tree asks "can what is
+      invoked refuse?". readme_read_guard answers the first correctly and the second not at
+      all. Of KI-TQ-007's four Detection steps this tree discharges step 3 only — "does the
+      production entry point produce the observable effect" — turning it from a review-round
+      habit into a standing machine-enforced requirement. Steps 1 and 2 are already partly
+      discharged by unit_tests/commit_guardian/test_hook_registration_inventory.py (2026-09-14)
+      and by BP-1600a-2; step 4 is KI-CG-026's. Note that KI-TQ-007's originally-stated remedy,
+      "a registration test on every hook AC", was corrected TWICE in its own entry (do not
+      assert against the gitignored .pre-commit-config.yaml; per-AC is the wrong unit) and must
+      not be cited in its uncorrected form.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    TREE-WIDE BOUNDARY — THIS TREE READS THE REGISTRATION SURFACE; BP-1600a-2 READS DISK, AND
+    THE TWO MUST NOT MERGE. Every record below takes its population from the checks the
+    registration surface names when it is read. A check registered NOWHERE never touches that
+    surface and is structurally invisible here — that case is BP-1600a-2's (readiness approved,
+    work_status todo), reported there and never re-derived, duplicated or double-reported in
+    this tree. Do not build a disk walk in any record below this one, and do not read this tree
+    as covering the registered-nowhere case, because it cannot see it.
+  - >-
+    THE LIVENESS POPULATION IS THE INVOKED SUBSET OF BP-1600a-2's CENSUS, AND THAT IS HOW THE
+    TWO RECORDS COMPOSE WITHOUT FORKING. BP-1600a-2 partitions the gate scripts on disk into
+    three classes: invoked at commit time, registered-and-deliberately-switched-off, and invoked
+    by nothing. This tree examines the FIRST class only — a check reached by no entry line has
+    no "entry point the protected surface invokes", so there is nothing to put an input through
+    and nothing to observe. Read that subset from the registry in effect at run time; never
+    recite it, and never grow a second census beside BP-1600a-2's.
+  - >-
+    ANTI-GREP BINDS EVERY test_spec DESCRIPTOR IN THIS TREE. No descriptor may be satisfied by
+    asserting that a string appears in a file, that a declaration parses, or that a field is
+    populated. Every descriptor hands a real check a real known-bad input through a real entry
+    point and observes the refusal. This repository has repeatedly shipped grep-only tests that
+    passed on dead code; a grep-only descriptor here reproduces, one level up, the exact defect
+    the tree exists to catch.
+  - >-
+    RUN THE DEPLOYED COPY, AND CONFIRM THE CHECK ACTUALLY SAW ITS INPUT BEFORE READING ITS
+    VERDICT. templates/scripts/commit_guardian/ is canonical; scripts/commit_guardian/ and
+    .leafcutter/scripts/commit_guardian/ are build outputs that build.py overwrites. Several of
+    these hooks read the git index or HOOK_TEST_FILES and ignore argv entirely, so passing a
+    path on the command line does not make a hook look at it and a clean exit proves nothing.
+    Any descriptor that invokes a hook must first establish that the hook saw its input, and
+    only then trust the exit status.
+  - >-
+    AC_ENFORCE_STRICT=1 ON EVERY PYTEST INVOCATION THIS TREE SPECIFIES. Without it
+    pytest_ac_enforcement xfail-masks tests covering not-done ACs — and on the day each
+    descriptor below is written it covers, by definition, a not-done AC. A green run without
+    that variable is a false read, not a pass.
+  - >-
+    ANTI-VACUITY PAIRING IS MANDATORY, NOT STYLISTIC. Nearly every guarantee in this tree is
+    satisfied by a tool that does nothing: "no unproven check was reported" is trivially true
+    of a reporter that reports nothing. Every absence-asserting clause must be asserted in the
+    SAME RUN as a case that genuinely IS reported. Copy the pairing shape ACS-1300a-3 and
+    ACS-1400c-3 use. A pair split across two tests is not coverage.
+  - >-
+    ANY NEW MODULE A HOOK OR GATE IN THIS TREE IMPORTS MUST BE IN THE BUILD DEPLOY MANIFEST.
+    build_commit_guardian copies every file in templates/scripts/commit_guardian/ verbatim, so
+    a new sibling inside that directory needs no deploy entry. A module imported from OUTSIDE it
+    — anything under scripts/ac_store/, scripts/build_helpers.py, or elsewhere — MUST be added
+    to the deploy map in scripts/build_phases.py in the same change, or the deployed hook raises
+    ModuleNotFoundError at runtime while unit tests importing from the source tree stay green.
+    That is precisely this tree's own defect class; do not reproduce it while specifying its fix.
+    Every leaf below carries a `deployed`-angle descriptor for this reason.
+  - >-
+    REUSE config/verification_flow.schema.json's VOCABULARY; NEVER MINT A SECOND ONE. The names
+    already exist: negative_control.input, negative_control.command, negative_control.expected_result,
+    the negative_control.not_applicable + reason alternative, currently.state over the four values
+    passing / failing / blocked / unverified, currently.observed, currently.evidence, and
+    entry_point — defined there as "the real production way in that this check invokes (CLI,
+    hook, workflow dispatch, deployed script). NOT an internal helper import". Build the reader
+    against these names. A synonym set beside them is how a vocabulary with one reader becomes a
+    vocabulary with none, which is the history this family is built on.
+  - >-
+    DAY-ONE BLAST RADIUS IS THE CORRECT OUTCOME AND IS IN SCOPE, NOT A FOLLOW-UP. On the commit
+    that lands this tree most checks will report that no refusal has ever been demonstrated,
+    because none has. Each must be declared, repaired, or exempted on a ground the exemption
+    rule accepts, in the same change. Landing the tree quiet by pre-suppressing its findings
+    proves nothing, and a postponement is not a ground.
+  - >-
+    NO POPULATION FIGURE MAY BE ENCODED IN ANY IMPLEMENTATION OR TEST EXPECTATION BELOW THIS
+    RECORD. The parent records the count as disputed and forbids one. Every figure is measured
+    by the run at run time; every assertion is count-and-membership over the run's own emitted
+    output. A literal that happens to be correct today is wrong on the day the next check is
+    added, which is the day this tree exists for.
+  - >-
+    Must follow the repo error-handling policy throughout: specific-exception try/except around
+    subprocess, filesystem and JSON I/O; log at WARNING or higher or re-raise; no bare or blind
+    excepts. A swallowed error must never become an empty population or an absent record — that
+    is the precise fail-open shape GE-120f-2-i exists to make impossible.
 delivers_to: null
 expects_from: null
 documentation_triggers:

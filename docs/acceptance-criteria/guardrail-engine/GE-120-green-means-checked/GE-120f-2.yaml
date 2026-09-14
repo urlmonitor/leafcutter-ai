@@ -93,8 +93,191 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: related
     status: exists
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: Source of the `angle` values on the descriptors below.
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The deployed layout the report must be produced from. A report computed in the source
+      tree and never produced by the deployed copy is a report nothing at commit or CI time
+      ever sees.
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - >-
+    THE SECOND FAILING CLASS IS LOAD-BEARING AND MUST BE IMPLEMENTED FIRST. Naming a check
+    whose declared rejection was not observed is the easy half — that check at least tried. The
+    class that changes behaviour is never-attempted (`currently.state: unverified`). If
+    never-attempted does not fail the run, the whole regime is discharged by never asking, and
+    the difference between a guard that refuses and a guard that has never been given anything
+    to refuse survives into every report the system produces.
+  - >-
+    ENUMERATE, IN THE TICKET, EVERY SURFACE THAT STATES WHAT IS PROTECTING THE WORK — THIS IS
+    THE LEAST-SPECIFIED CLAUSE IN THE RECORD AND THE MOST LIKELY TO BE PARTIALLY IMPLEMENTED.
+    The criterion says an undemonstrated check appears in NO statement the system makes about
+    what is protecting the work. Candidate surfaces to enumerate and then either cover or
+    explicitly exclude with a stated reason: the run's own summary; the commit-guardian README
+    and docs/pre-commit-hooks.md; any generated hook inventory or coverage rollup; and any
+    agent-facing or CI-facing summary that counts registered gates. The enumeration itself is a
+    deliverable — a clause covering one surface and silently missing three is the same
+    coverage-by-omission the parent L1 was amended on 2026-09-07 to stop.
+  - >-
+    EVERY FIGURE THE RUN STATES IS DERIVED FROM THE RUN'S OWN PER-CHECK RECORDS. No figure may
+    be a literal, a carried-forward value, or a count of anything the run did not itself
+    observe. The parent records the population count as disputed and forbids one below it;
+    GE-120f-3 owns the stated figure and its movement, and this record must not restate that —
+    it owns only that the run states nothing it did not measure.
+  - >-
+    A CHECK'S CLASS IS DERIVED FROM ITS OWN RECORD AND NOTHING ELSE. Never from a family-level
+    summary, never from a group's worst member, never from a directory or naming resemblance. A
+    demonstrated check that inherits a neighbour's finding is the same shape as quoting a
+    disputed population figure as though it were measured.
+  - >-
+    CONSUME GE-126b-5-i's EXEMPTION VERDICT; DO NOT RE-DERIVE IT. What counts as a ground, that
+    a groundless exemption is refused, and that a postponement is not a ground are all that
+    record's clauses. This record states only the consequence for its own failing classes: an
+    accepted exemption falls into neither of them and does not by itself fail the run. Keep ONE
+    exemption vocabulary — the schema's `negative_control.not_applicable` + `reason`.
+  - >-
+    THE STANDING FAIL-OPEN CONVENTION IS NOT REPEALED HERE, AND MUST NOT BE FLATTENED. This
+    component deliberately does not hard-block when a guard hits an internal error while still
+    running (GE-116a-1-iii). The line this record draws is narrower: a run that COMPLETED and
+    observed that a check did not refuse is not an internal error, and reporting it as a success
+    is the failure. The could-not-reach-a-verdict case is GE-120f-2-i's and is not decided here.
+  - >-
+    DO NOT ENCODE THE EXPECTED DAY-ONE LIST. Record the first run's output as evidence on the
+    implementing ticket, never as a test assertion — an expected list becomes false on the day
+    the guards are repaired, which is the day the run starts earning its place. Assert by
+    count-and-membership over the run's own reported classes.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation; the report must be produced by the DEPLOYED
+    copy out of process. Any module imported from outside templates/scripts/commit_guardian/
+    goes into the scripts/build_phases.py deploy map in the same change.
+  - >-
+    Error-handling policy: specific-exception try/except around I/O and subprocess calls,
+    logged at WARNING or higher or re-raised. A swallowed read error must never empty a failing
+    class — an empty failing class is the greenest possible result and is exactly what
+    GE-120f-3's examined-none clause exists to refuse.
+test_spec:
+  - name: test_ge120f2_all_three_record_values_land_in_their_correct_classes_in_one_run
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE PAIRING — ALL THREE IN ONE INVOCATION. A fixture population holding one check whose
+      rejection was NOT observed, one whose attempt has NEVER been made, and one whose rejection
+      WAS observed. In that single run assert: the first two are each named together with the
+      input they declared and the rejection they declared, the run fails, and the third appears
+      in NO failing class. NAMED MUTATION (mandatory, run it): build the failing set from the
+      registered population minus the exempt, ignoring each check's record. Under that injection
+      the demonstrated check is named as not demonstrated; this descriptor must go RED naming
+      it, and return to green on revert. Without that injection the third assertion has no red
+      baseline and no evidential value.
+  - name: test_ge120f2_an_undemonstrated_check_is_absent_from_the_protection_statement_a_demonstrated_one_is_present
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE MOST MISLEADING GREEN IN THE RECORD — today no undemonstrated check appears in a
+      protection statement only because the statement counts every registered check without
+      asking. Over each surface enumerated in this AC's it_requirements, after one run in which
+      one fixture check is never-attempted and another is observed: assert the observed one
+      APPEARS and the never-attempted one is ABSENT, in the same run. NAMED MUTATION
+      (mandatory, run it): count a check as protection from the moment it is registered. Under
+      that injection every never-demonstrated check appears; this descriptor must go RED naming
+      at least one, and return to green on revert.
+  - name: test_ge120f2_an_accepted_exemption_falls_in_no_failing_class_and_does_not_by_itself_fail_the_run
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Two runs over fixture populations differing in one member. Population A holds only checks
+      that demonstrated plus one carrying an exemption GE-126b-5-i's rule accepts: the exempt
+      check is named in no failing class and the run ACCEPTS. Population B is A plus one
+      never-attempted check: the run REFUSES and the exempt check is still named in no failing
+      class. The acceptance half is what stops this being satisfied by a run that always
+      refuses. Consume the exemption verdict from GE-126b-5-i's code path; a re-implementation
+      of its rule inside the test would pass while production used a different rule.
+  - name: test_ge120f2_a_checks_class_comes_from_its_own_record_never_from_a_neighbours
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      A fixture group holding one never-attempted check and one demonstrated check that share a
+      directory, a naming prefix and a config section. Assert the demonstrated one is in no
+      failing class. NAMED MUTATION (mandatory, run it): derive one check's class from a
+      family-level summary — mark every check in a group as not demonstrated when any member is.
+      Under that injection the demonstrated check inherits its neighbour's finding; this
+      descriptor must go RED, and return to green on revert.
+  - name: test_ge120f2_every_figure_in_the_report_moves_with_the_population_and_none_is_constant
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      Run over two fixture populations of different sizes and different class distributions.
+      Assert every numeric figure the report states differs between the two runs unless the two
+      populations genuinely agree on it, and that each figure is reproducible by counting the
+      run's own per-check records. A figure that is identical across both runs and not
+      reproducible from the records is a literal and fails. This is the mechanical form of "the
+      run states nothing about how many checks have the condition beyond the figures it measured
+      itself".
+  - name: test_ge120f2_the_deployed_copy_produces_the_named_classes_and_the_run_outcome
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED reporter produces the named failing classes and the run
+      outcome in a cold process with the source tree off the import path — a helper outside
+      templates/scripts/commit_guardian/ without a scripts/build_phases.py deploy-map entry
+      surfaces here as ModuleNotFoundError rather than passing. Over the repository's REAL
+      registration surface, assert every check the surface names appears in exactly one class
+      and that the class membership is count-and-membership derived from the run's output, never
+      compared against a hard-coded day-one list. Invoke pytest with AC_ENFORCE_STRICT=1.
+  - name: test_ge120f2_the_report_reaches_the_gate_that_invoked_the_run
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      the gate named in GE-120f-1's it_requirements — a hooks_manifest entry line invoked via
+      python .leafcutter/scripts/commit_guardian/run_hook.py, or the ci.yml job that runs it
+    description: >-
+      PRODUCTION ENTRY POINT. The named classes appear in the gate's own output stream and the
+      gate's outcome is the run's outcome, not an advisory note beside a success. A report
+      computed by a function nothing at commit or CI time calls is inert — the shape KI-CG-021
+      records, where a main() hardened over six review rounds was called by no runner.
+test_rationale: |
+  Both of this record's absence-asserting clauses are GREEN on arrival, and both greens are
+  vacuous: nothing is reported at all today, so no demonstrated check is currently mis-named and
+  no undemonstrated check currently appears in a protection statement. The second is the more
+  misleading of the two, because the reason it is green is that the protection statement counts
+  every registered check without asking. Each therefore carries an executable injection rather
+  than a note.
+
+  The exemption descriptor is written as a two-population pair specifically so the acceptance
+  half is asserted: without it the clause is satisfied by a run that always refuses, which is
+  the same inert shape one level up and is GE-120f-1-ii's subject.
+
+  The figures descriptor does not assert any number. It asserts that no number is constant
+  across two differently-shaped populations and that every number is reproducible from the
+  run's own records — the only form of "states nothing it did not measure" that a literal
+  cannot satisfy, and the only form compatible with the parent's standing rule that no figure
+  may be stated below it.
+
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", no descriptor reads
+  the reporter's source; each executes it and asserts on emitted output and exit status. The
+  deployed descriptor runs the built copy so a missing deploy-map entry cannot hide behind a
+  source-tree import, and the reachability descriptor exists because a correct report that no
+  gate consumes is the exact defect this tree is about. AC_ENFORCE_STRICT=1 on every invocation.
 delivers_to:
   - agent: python-coder
     ac_id: GE-120f-2-i

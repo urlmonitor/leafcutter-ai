@@ -90,8 +90,192 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: related
     status: exists
-assigned_agent: documentation-expert
-estimated_complexity: S
+  - path: "templates/skills/create-hook/SKILL.md"
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE LOAD-BEARING SURFACE, FOUND AT ENRICHMENT AND NOT PREVIOUSLY LINKED ON THIS RECORD —
+      AND THE REASON assigned_agent IS llm-expert RATHER THAN documentation-expert. This skill
+      is what a check author in this repository actually follows: it writes the hook script, it
+      writes the commit_guardian.json config key AND the hooks_manifest entry, and it adds the
+      documentation-index row. Verified 2026-09-14 — its Inputs table lists hook_name, hook_id,
+      hook_display_name, hook_description, hook_files_pattern, hook_types, hook_stages,
+      config_section_key, config_defaults and pass_filenames, and has NO field for the
+      declaration at all. So on the day GE-120f-4's gate lands, an author who follows this
+      procedure EXACTLY is refused by a gate the procedure never warned them about — which is
+      this record's agreement clause failing, on the one surface that will actually be followed.
+      A how-to page corrected while this skill is left alone satisfies the prose clauses and
+      fails the agreement clause.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The hook documentation index that create-hook's final step writes a row into. Named here
+      so the surfaces an author passes through are enumerated rather than assumed; whether the
+      rule needs stating here as well as in the how-to is the implementer's call, but the
+      enumeration is a deliverable.
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: Source of the `angle` values on the descriptors below.
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    AGENT ASSIGNMENT CHANGED AT ENRICHMENT — documentation-expert TO llm-expert, AND THE REASON
+    IS THE SURFACE, NOT A PREFERENCE. This record spans three surfaces and only one agent can be
+    assigned. (1) templates/skills/create-hook/SKILL.md — the procedure a check author in this
+    repository actually follows, and the one whose omission breaks the agreement clause. The
+    agent registry's llm-expert selection rule fires on it literally: "files_touched contains
+    templates/skills/*/SKILL.md". documentation-expert does not own that surface and would
+    delegate to how-to-author, which writes under docs/. (2) docs/how-to/managing-pre-commit-hooks.md
+    and templates/scripts/commit_guardian/README.md — prose that documentation-expert's rule also
+    fires on, and that llm-expert can write. (3) the agreement test, which is Python. The
+    containment runs one way only: llm-expert can write the markdown in (2), documentation-expert
+    cannot write the skill body in (1). Hence llm-expert. THE OTHER TWO SURFACES ARE NOT WAIVED
+    — see the two constraints below.
+  - >-
+    SURFACE (2) IS STILL OWED, AND A DOCUMENTATION SIGN-OFF IS STILL EXPECTED. The criterion is
+    that the rule sits where the author is ALREADY LOOKING, which in this repository is more than
+    one place. Enumerate the surfaces an author of a new check passes through — at minimum
+    templates/skills/create-hook/SKILL.md, docs/how-to/managing-pre-commit-hooks.md,
+    templates/scripts/commit_guardian/README.md and docs/pre-commit-hooks.md — and state, for
+    each, whether the rule is written there or deliberately not and why. The enumeration is a
+    deliverable. If the implementing ticket can carry a documentation-expert phase alongside the
+    llm-expert phase, take it; if it cannot, the llm-expert phase owns all of (2).
+  - >-
+    SURFACE (3) IS PYTHON AND IS NOT OPTIONAL. The agreement descriptor below is an executable
+    cross-artifact test and must be authored by test-writer / python-coder in the same ticket.
+    This record is NOT done when the prose is written: without that test every clause here is
+    satisfiable by writing sentences, and sentences about a guarantee are exactly what this
+    repository already has too many of. Do not set test_required: false on this record for being
+    change_target: docs.
+  - >-
+    THE STANDING CAUTION ON templates/scripts/commit_guardian/README.md. It has described at
+    least one check as live with enforcement when that was not the case, and the residual is
+    still live: check-ticket-signoff-parity IS now registered (BP-1100g-5-i, 406375c88) but its
+    entry carries no --enforce while README line 46 still states "current config uses --enforce".
+    Do not silently correct that here — it is a documentation-versus-config discrepancy about one
+    gate, out of scope for this record and named in BP-1600a-2's it_requirements — but do not
+    reproduce its shape either. A page that describes the state of the family is a page that can
+    be wrong about the family.
+  - >-
+    USE THE NAMES THE MACHINE READS, TAKEN FROM THE LIVE SOURCE, NOT A SYNONYM SET. The document
+    must use config/verification_flow.schema.json's own names for the known-bad input
+    (negative_control.input), its observable rejection (negative_control.expected_result), the
+    exemption and its ground (negative_control.not_applicable + reason), the four state values
+    (currently.state: passing / failing / blocked / unverified) and the entry point (entry_point).
+    A second vocabulary beside the first is how a rule with one reader becomes a rule with none,
+    and it is the exact history of the vocabulary this family is built on.
+  - >-
+    THE DOCUMENT DESCRIBES THE REQUIREMENT AS IN FORCE, WHICH MEANS THE GATE MUST ALREADY EXIST.
+    This clause passes trivially the moment the text is written, so it is the one to distrust. Its
+    real content is a sequencing constraint: the document must not land before GE-120f-4's gate
+    and describe an intention. Every gate the document says exists must resolve to a registered,
+    reachable entry — that is what the fourth descriptor below asserts, and it is what stops this
+    record shipping as a description of forthcoming work.
+  - >-
+    SCOPE BOUNDARY, STATED SO IT IS NOT DISCHARGED ON THE WRONG SURFACE.
+    docs/reference/false-green-mechanisms.md is a different document with a different author and
+    a recommended new entry of its own. This record is not satisfied by writing there, and
+    writing there does not satisfy it. The deliverable here is the procedure the next check
+    author reads.
+  - >-
+    NO COUNT OF INSTANCES MAY APPEAR IN ANYTHING THIS RECORD PRODUCES. Records authored the same
+    day disagree about how many instances of this shape exist and the parent records the figure
+    as disputed. The document states the rule and the procedure; how widespread the defect is
+    belongs to whatever measures it, with the date and the state it was measured at.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation the agreement descriptors specify, and the
+    gate side of the agreement must be exercised as the DEPLOYED copy — a document checked
+    against a source-tree gate that the commit path never loads agrees with nothing that runs.
+test_spec:
+  - name: test_ge120f5_an_author_following_the_written_procedure_and_omitting_the_declaration_is_refused
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      THE AGREEMENT DESCRIPTOR, AND THE ONLY CLAUSE IN THIS RECORD NOT SATISFIABLE BY WRITING
+      SENTENCES. Build a fixture registration exactly as the written procedure instructs —
+      driving the field set from create-hook's own Inputs table parsed at run time, not from a
+      literal in the test — with the declaration omitted, put it through the DEPLOYED
+      registration gate, and assert refusal. In the same run build one exactly as instructed WITH
+      the declaration and assert acceptance. NAMED MUTATION, BOTH DIRECTIONS, both mandatory:
+      (a) change the written procedure so the declaration reads as recommended rather than
+      required, leaving the gate unchanged — this descriptor must go RED; (b) leave the document
+      as written and relax the gate to accept a registration without a declaration — it must go
+      RED again. The defect is the gap, not its direction.
+  - name: test_ge120f5_the_create_hook_input_set_covers_every_field_the_gate_requires
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      THE LOAD-BEARING SURFACE. Take the required-field set from the GATE's own requirement at
+      run time — never from a literal in the test — and assert every one of those fields is
+      present in create-hook's declared inputs. Paired: over a fixture copy of the skill with the
+      declaration field removed, the same check must go red. Today create-hook's Inputs table
+      carries no declaration field at all, so this descriptor is red on arrival, which is this
+      record's red baseline.
+  - name: test_ge120f5_the_document_uses_the_machine_read_names_and_a_synonym_version_fails
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      Extract the field names and state values from config/verification_flow.schema.json AT RUN
+      TIME — so the expectation moves when the schema moves and the test carries no vocabulary of
+      its own — and assert each appears in the written procedure. PAIRED AND MANDATORY: run the
+      same check against a fixture document that says the same things in its own synonyms, and
+      assert it FAILS. Without the paired fixture this descriptor is a presence grep and proves
+      nothing. Under the synonym injection every other clause in this record stays green — the
+      rule is stated, the place is named, the procedures agree — and only this one goes red.
+  - name: test_ge120f5_every_gate_the_document_says_exists_resolves_to_a_registered_reachable_entry
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/<the gate GE-120f-4 registers>
+    description: >-
+      THE IN-FORCE CLAUSE, MADE FALSIFIABLE. For every gate the document tells an author about,
+      resolve it against the registration surface and invoke it through the production hook path:
+      it must be registered, present on an emitted entry line, and executable. Paired with a
+      fixture document naming a gate that does not exist, which must FAIL. This is what stops the
+      document landing before the gate and describing an intention — the clause that would
+      otherwise pass trivially the moment the text is written.
+test_rationale: |
+  Every clause of this record except one is satisfiable by writing sentences, and sentences about
+  a guarantee are exactly what this repository already has too many of. So the test contract is
+  built entirely around the clauses that are properties of TWO artifacts and can therefore be
+  exercised.
+
+  The agreement descriptor carries both directions of its injection because the defect is the gap
+  and not its direction: a document that overstates the gate misleads the author, a gate that
+  overstates the document blocks them, and either is the divergence this clause exists to catch.
+  It has the most history here — a check documented as taking a remediation action its own code
+  never takes, believed by authors for months, is this component's recorded anti-precedent, and a
+  documented-but-dead procedure is worse than none because authors believe they are covered.
+
+  The create-hook descriptor exists because that skill, not the how-to page, is what a check
+  author in this repository actually follows, and it is red on arrival: its Inputs table has no
+  declaration field, verified 2026-09-14. Driving the expected field set from the gate's own
+  requirement rather than from a literal is what keeps it true when the requirement moves.
+
+  The vocabulary descriptor is paired with a synonym fixture deliberately. Read alone, "the
+  machine's names appear in the document" is a presence grep, which this tree forbids everywhere
+  else; the synonym fixture supplies the red baseline that makes it a real assertion, and the
+  injection turns only this clause red while every other clause stays green.
+
+  The in-force descriptor is the one to distrust, because it passes the moment the text exists.
+  Resolving every named gate through the production hook path converts it from a claim about
+  wording into a claim about reachability, which is the only form that can fail.
+
+  AC_ENFORCE_STRICT=1 on every invocation, and the gate side is exercised as the deployed copy —
+  a document checked against a source-tree gate that the commit path never loads agrees with
+  nothing that runs.
 delivers_to: null
 expects_from:
   - ac_id: GE-120f-4

@@ -69,8 +69,144 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: related
     status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Defines the deployed layout. Out-of-process invocation against that layout is what makes
+      the entry-point requirement enforceable rather than aspirational — a run that imports part
+      of a check and calls it has already lost the distinction this record exists to draw.
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the `angle` values below. This record's whole subject is the `reachability`
+      angle applied to the guards rather than to the tests.
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - >-
+    THE ENTRY POINT IS THE ONE THE PROTECTED SURFACE INVOKES, TAKEN FROM THE INVOCATION
+    PERFORMED — never from the declaration, never from a helper import. Adopt
+    config/verification_flow.schema.json's own wording for the field rather than minting a
+    second one: entry_point is "the real production way in that this check invokes (CLI, hook,
+    workflow dispatch, deployed script). NOT an internal helper import", and the known-bad
+    input is required to be fed "through the SAME entry point". Reuse those names.
+  - >-
+    THE STATED ENTRY POINT IS A FACT ABOUT THE RUN, NOT ABOUT THE REGISTRY. Build the
+    per-check statement of which entry point was used from the invocation the process actually
+    performed — the command it executed, captured at the call site — and never from the entry
+    point a declaration or a registry entry names. This is the same substitution GE-126c-5
+    forbids one axis over: a statement built from what the author intended rather than from
+    what the process did.
+  - >-
+    PROCESS BOUNDARY IS A SMELL, NOT THE CRITERION. Do not implement this as "the invocation
+    must cross a process boundary". A check the protected surface legitimately invokes
+    in-process would fail such a rule, and a check invoked out of process through a way in
+    nobody uses would pass it. The observable is WHICH invocation the protected surface
+    performs. The boundary descriptor below exists to make that mis-implementation go red.
+  - >-
+    THE REPORT MUST BE READABLE WITHOUT OPENING THE CHECK. The entry point used for any named
+    check is recoverable from the run's emitted output alone. A reader who has to open the
+    check to find out how it was invoked cannot tell a demonstration from a reach-inside, which
+    is the condition this record removes.
+  - >-
+    A REACH-INSIDE REFUSAL IS ITS OWN REPORTED CLASS, NOT AN ERROR AND NOT A DEMONSTRATION.
+    Report it under wording distinct from both "rejection observed" and "rejection not
+    observed", because its remedy is different from either: the check's decision logic works
+    and its service path does not reach it. readme_read_guard is exactly this shape seen from
+    the other side.
+  - >-
+    EXTEND GE-120f-1's RUNNER; ADD NO SECOND OBSERVATION. This record produces no new record
+    value — it constrains which invocations may produce one and requires the invocation used to
+    be stated. Anything that reads like a second liveness pass beside the first is wrong.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation, and run the DEPLOYED copy out of process
+    through GE-120c-1's harness. Any module imported from outside templates/scripts/commit_guardian/
+    must be added to the deploy map in scripts/build_phases.py in the same change.
+  - >-
+    Error-handling policy: specific-exception try/except around subprocess and I/O, logged at
+    WARNING or higher or re-raised. A failed invocation is `blocked`, never a silent absence
+    and never a `passing`.
+test_spec:
+  - name: test_ge120f1i_a_reach_inside_refusal_and_an_entry_point_refusal_are_distinguished_in_one_run
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE PAIRING — BOTH HALVES IN ONE INVOCATION. A fixture pair: check A whose deciding
+      function refuses the declared input while the entry point the protected surface invokes
+      does not (the readme_read_guard shape), and check B that refuses through its entry point.
+      In one run assert A records the rejection as NOT observed and is named as a refusal
+      obtained without using the check's entry point, while B records the rejection as observed.
+      NAMED MUTATION (mandatory, run it against the copy the run loads or it will not land):
+      obtain the observation by importing the check and calling the part of it that decides,
+      rather than by invoking the entry point. Under that injection A records observed; this
+      descriptor must go RED naming A, and return to green on revert.
+  - name: test_ge120f1i_the_stated_entry_point_is_the_one_invoked_not_the_one_declared
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      A fixture check whose declaration NAMES entry point X while the run in fact invokes Y.
+      Assert the run states Y. NAMED MUTATION (mandatory, run it): build the statement of which
+      entry point was used from the entry point the declaration names. Under that injection the
+      run reports the intended way in for every check whatever it did, the wrong-way-in case
+      becomes indistinguishable from the right one, and ONLY this descriptor goes red — the
+      parent's clauses stay green because a record is still written and still moves under
+      alteration. That asymmetry is why this record is a separate file.
+  - name: test_ge120f1i_the_entry_point_for_any_named_check_is_recoverable_from_the_report_alone
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Parse ONLY the run's emitted output — no access to the check files, the registry, or the
+      declarations — and recover the entry point used for every check the run named. Assert the
+      recovered set is non-empty and equals the set the run actually invoked, captured
+      independently at the call sites. A report from which the entry point cannot be recovered
+      fails, even when every record in it is correct.
+  - name: test_ge120f1i_in_process_invocation_by_the_protected_surface_is_not_penalised
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE PROXY THAT MUST NOT BECOME THE CRITERION. In one run: a fixture check the protected
+      surface legitimately invokes IN PROCESS records the rejection observed, and a fixture
+      check invoked OUT OF PROCESS through a way in the protected surface never uses records
+      the rejection not observed and is named as a reach-inside. Pins the rule to which
+      invocation the surface performs, not to how it is performed. An implementation that
+      tests for a process boundary fails this descriptor in both directions at once.
+  - name: test_ge120f1i_deployed_runner_states_entry_points_when_loaded_in_a_cold_process
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED runner emits the per-check entry-point statement in a cold
+      process with the source tree off the import path — a helper placed outside
+      templates/scripts/commit_guardian/ without a scripts/build_phases.py deploy-map entry
+      surfaces here as ModuleNotFoundError rather than passing. Invoke pytest with
+      AC_ENFORCE_STRICT=1.
+test_rationale: |
+  This record is separable from its parent for exactly one reason, and the descriptors are
+  shaped around it: the parent is fully satisfied by a run that puts the declared input through
+  SOMETHING, and the cheapest something is the part of the check that decides, imported and
+  called. That satisfies every parent clause including the alter-and-revert pair, and it
+  certifies as demonstrated precisely the guard whose deciding part is correct and whose
+  service path never reaches it — the worked example, and the reason the L1 exists.
+
+  So the pairing descriptor and the stated-entry-point descriptor each carry an injection whose
+  red is visible HERE and nowhere else; if either injection turns the parent red too, the
+  descriptors have been written too broadly and this record has no independent evidential value.
+
+  The boundary descriptor is included because the obvious implementation of "not a helper
+  import" is "must cross a process boundary", which is wrong in both directions and would
+  otherwise ship green. Per CLAUDE.md's grep rule, no descriptor asserts on source text; each
+  executes the runner and reads its emitted output. AC_ENFORCE_STRICT=1 on every invocation.
 delivers_to: null
 expects_from:
   ac_id: GE-120f-1

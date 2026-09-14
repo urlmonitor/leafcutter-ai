@@ -103,8 +103,266 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: related
     status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE BOUNDARY THAT MATTERS MOST ON THIS RECORD, AND THE ONE AN IMPLEMENTER WILL CROSS BY
+      ACCIDENT. This record's criteria fire AT THE POINT OF REGISTRATION and are explicit that
+      the requirement is "satisfied only by what is read from the registration surface". A check
+      registered NOWHERE never touches that surface: it is structurally invisible here and it is
+      not a gap in this record. That case is BP-1600a-2's (readiness approved, work_status todo)
+      — "a guard whose input is the registry cannot see what the registry omits" — and it takes
+      its population from the gate scripts present on DISK. Do NOT build a disk walk in this
+      record: it would fork BP-1600a-2's census, and this family has already had to unpick
+      exactly that fork once (GE-120c-6 / BP-1600a-2, user decision 2026-09-07). Equally, do not
+      read this record as covering the registered-nowhere case, because it cannot. The two are
+      complementary and must not be merged.
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: Source of the `angle` values on the descriptors below.
+  - path: "templates/scripts/commit_guardian/_package_surface_registry.py"
+    relationship: describes
+    status: exists
+    relevance: >-
+      WHY THIS RECORD DECLARES package_surface. WATCHED_REGISTRIES watches commit_guardian.json
+      on hooks_manifest.hooks BY ID and on the document's own top level BY MAPPING KEY (metadata
+      exclusions are only "$schema" and "_comment"). Registering this record's gate adds a
+      watched id, and any new top-level config section it needs adds a watched mapping key, so
+      check-package-surface-declaration refuses the commit unless a cited AC declares
+      package_surface: true. That is a measured consequence, not a formality.
+  - path: "templates/skills/create-hook/SKILL.md"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PROCEDURE THIS GATE WILL REFUSE, AND THE REASON GE-120f-5 IS NOT OPTIONAL. Verified
+      2026-09-14: this skill is what actually writes a new hooks_manifest entry, and its Inputs
+      table has no field for the declaration at all. On the day this gate lands, an author
+      following create-hook exactly produces a registration the gate refuses. Do not fix the
+      skill from this record — that is GE-120f-5's agreement clause and its assigned surface —
+      but sequence the two so the gate does not land alone.
 assigned_agent: python-coder
-estimated_complexity: M
+estimated_complexity: L
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    hooks_manifest:
+      type: object
+      description: >-
+        hooks_manifest.hooks gains one entry for this record's registration gate, carrying the
+        same fields its siblings carry (id, name, entry, language, pass_filenames, and either
+        always_run or a files trigger). The gate inspects the WHOLE registration surface rather
+        than a staged file list, so it follows check_hook_trigger_reachability's precedent and
+        declares always_run with no files key — a gate whose own trigger could fail to match is
+        the defect shape it exists to police. Each policed entry additionally carries the
+        `negative_control` object defined by GE-120f-1, whose shape is copied verbatim from
+        config/verification_flow.schema.json $defs/negative_control and is never re-invented.
+        A new TOP-LEVEL config section for this gate is a watched mapping key on the same
+        registry; prefer reusing an existing section over adding one, and if one is added it is
+        covered by this record's package_surface declaration.
+  reference_file_path: "templates/scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - >-
+      THE BOUNDARY, STATED WHERE AN IMPLEMENTER WILL READ IT. This gate reads the REGISTRATION
+      SURFACE and only the registration surface. It must NOT list the gate-script directory, must
+      NOT report a script that no registry entry names, and must NOT fail on one. A script the
+      registry never mentions is BP-1600a-2's finding — "a guard whose input is the registry
+      cannot see what the registry omits" — and reporting it here forks a census this family has
+      already had to unpick once. The consequence runs the other way too and must be stated
+      plainly to the next reader: GE-120f as a whole cannot see a check that is registered
+      nowhere, so nothing in this tree may be cited as covering that case.
+    - >-
+      IMPLEMENT THE FINAL CLAUSE FIRST. Passing this gate places a check among those whose
+      refusal has never been demonstrated (`currently.state: unverified`), NEVER among the
+      protected, and passing it is never reported as a demonstration. Without that clause this
+      record becomes the defect it is part of catching — a family where every check carries a
+      declaration, none has ever refused anything, and the whole set reads as fully protected.
+      This is the one place in the tree where existence is legitimately the subject, and it is
+      safe only because of that clause.
+    - >-
+      THE POPULATION IS WHATEVER THE REGISTRATION SURFACE HOLDS WHEN IT IS READ — NEVER A SET OF
+      IDENTIFIERS WRITTEN INTO THE GATE. A gate carrying a list of check ids satisfies every
+      other clause and fails the inheritance clause, because the next check is not in the list.
+      Reuse GE-120c-6's already-stated mechanism rather than growing a second one: an exemption
+      must be a property read from the candidate or from a declared record, never a match
+      against an identifier written into the thing applying the rule, "so a guard added tomorrow
+      inherits the rule instead of inheriting an exemption by resemblance". Scope each
+      declaration to the rule it applies to, so an exemption from one rule does not silently
+      become an exemption from the other.
+    - >-
+      MACHINE-READ ONLY. A declaration written in prose beside the check — in its docstring, in
+      the commit_guardian README, in docs/pre-commit-hooks.md, or in a note — does not satisfy
+      the requirement. This is not a straw man: prose beside the check is where this repository
+      has repeatedly recorded what a guard does, including one guard whose written description
+      claims a remediation its code never performs.
+    - >-
+      ENFORCE ON THE GATE THAT ACTUALLY RUNS. The registration surface has more than one
+      would-be enforcement point and they are not equivalent — the emitted entry lines in the
+      generated commit-time configuration are what run, while a config section present in
+      commit_guardian.json and named by no entry line runs nothing. KI-TQ-007 records ten
+      scripts carrying a dedicated config section while being invoked by nothing, and notes that
+      "the presence of configuration reads as evidence of registration". Name every enforcement
+      point you touch in the ticket and state which one is load-bearing; a rule added only to an
+      inert one is a no-op wearing a commit.
+    - >-
+      HOST AND DEPLOYMENT. Put the gate and its helpers inside templates/scripts/commit_guardian/,
+      which build_commit_guardian copies verbatim, so no deploy-map entry is needed. Anything
+      imported from OUTSIDE that directory MUST be added to the deploy map in
+      scripts/build_phases.py in the same change, or the deployed gate raises ModuleNotFoundError
+      at commit time while source-tree unit tests stay green — and once this gate is required,
+      that crash blocks every merge. Canonical is templates/; scripts/commit_guardian/ is a build
+      output build.py overwrites.
+    - >-
+      SEVERAL COMMIT-GUARDIAN HOOKS READ THE GIT INDEX OR HOOK_TEST_FILES AND IGNORE argv. Any
+      test of this gate must first establish that the gate actually SAW the registration surface
+      it was meant to judge, and only then read the exit code. An exit 0 from a hook handed no
+      files proves nothing, and this tree cannot afford to prove nothing.
+    - >-
+      DAY-ONE TRIAGE OF THE ALREADY-REGISTERED FAMILY IS IN SCOPE, NOT A FOLLOW-UP, AND IS WHY
+      THIS RECORD IS SIZED L. Every check the surface already names must be declared, repaired,
+      or exempted on a ground GE-126b-5-i's rule accepts, in the same change. Take the set from
+      the gate's own first run, never from a count written anywhere. Landing the gate green by
+      exempting the existing population is the failure GE-120f-4-i exists to prevent, and a
+      postponement is not a ground.
+    - >-
+      A NEWLY REGISTERED GATE GOES LIVE ON THE SAME COMMIT AND THE EXISTING REACHABILITY
+      PREDICATE IMMEDIATELY JUDGES IT. This gate's own hooks_manifest entry starts running at
+      commit time and is simultaneously evaluated by BP-100k-4's predicate. Resolve any finding
+      that produces; do not silence it with enabled:false, which records a deliberate documented
+      decision and never a gate that turned out to be inconvenient on its first run.
+    - >-
+      AC_ENFORCE_STRICT=1 on every pytest invocation. Without it pytest_ac_enforcement
+      xfail-masks these tests, every one of which covers a not-done AC on the day it is written.
+    - >-
+      Error-handling policy: specific-exception try/except around registry and file I/O, logged
+      at WARNING or higher or re-raised; no bare or blind excepts. An unreadable registration
+      surface is an indeterminate refusal, never a silent acceptance — a gate that fails open on
+      its own input cannot police anything.
+test_spec:
+  - name: test_ge120f4_a_registration_without_a_declaration_is_refused_and_one_with_it_is_accepted_in_one_run
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE PAIRING — BOTH HALVES IN ONE INVOCATION. Through the gate's production entry point
+      against a fixture registration surface: a registration carrying no declaration is refused,
+      the refusal names the check and states what the declaration must contain; a registration
+      carrying a well-formed declaration is accepted. Before reading either exit code, establish
+      that the gate actually SAW the fixture surface — these hooks read the git index or
+      HOOK_TEST_FILES and ignore argv, so a clean exit from a gate handed nothing proves nothing.
+  - name: test_ge120f4_a_check_registered_after_the_gate_exists_is_subject_to_it_without_the_gate_being_edited
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      THE ANTI-LITERAL DESCRIPTOR. Add a NOVEL check id to a FIXTURE registration surface —
+      never a real check name, so the assertion does not expire the day that check is declared —
+      change nothing else, and assert the gate refuses it with no edit to the gate. NAMED
+      MUTATION (mandatory, run it): apply the requirement only to a set of check identifiers
+      written into the gate. Under that injection the newly registered check is admitted while
+      every existing one is still policed; this descriptor must go RED naming the admitted
+      check, and return to green on revert.
+  - name: test_ge120f4_a_prose_only_declaration_does_not_satisfy_the_gate_while_a_machine_read_one_does
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      PAIRED IN ONE RUN: a fixture check whose docstring and README row describe exactly what it
+      rejects, but whose registration entry carries no declaration, is REFUSED; a fixture check
+      with no prose at all but a machine-read declaration is ACCEPTED. NAMED MUTATION (mandatory,
+      run it): satisfy the requirement from any statement found in the check's own text
+      describing what it rejects. Under that injection the prose-only check is admitted with
+      nothing machine-readable to put through it; this descriptor must go RED naming it, and
+      return to green on revert.
+  - name: test_ge120f4_a_check_accepted_at_registration_is_counted_never_demonstrated_and_never_as_protected
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      THE FINAL CLAUSE, AND THE ONE TO IMPLEMENT FIRST. Register a fixture check with a valid
+      declaration, observe the gate accept it, then run GE-120f-1's liveness run over the same
+      surface and assert that check's record reads never-attempted and it is named in
+      GE-120f-2's never-demonstrated class — not among the protected, and not reported as
+      demonstrated anywhere. NAMED MUTATION (mandatory, run it): on acceptance at registration,
+      write the check's record as the rejection having been observed. Under that injection every
+      newly registered check reads as demonstrated on the strength of its own declaration; this
+      descriptor must go RED. It is the same injection GE-120f-1's pairing descriptor carries,
+      deliberately — it is the single substitution that would defeat both records at once, so
+      confirm it turns BOTH red.
+  - name: test_ge120f4_the_gate_reads_the_registration_surface_and_does_not_walk_the_gate_script_directory
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE BOUNDARY DESCRIPTOR — THIS IS WHAT KEEPS THIS RECORD FROM DUPLICATING BP-1600a-2. In
+      one run over a fixture: a novel check_*.py file present in the gate-script directory with
+      NO registry entry naming it is reported by this gate not at all and does not fail it,
+      while a registration carrying no declaration IS refused. An implementation that walks disk
+      here reports the unregistered script and fails this descriptor. The unregistered case
+      stays BP-1600a-2's.
+  - name: test_ge120f4_the_deployed_gate_runs_from_the_built_layout_in_a_cold_process
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED gate and every module it imports load and run in a cold
+      process with the source tree off the import path — a helper placed outside
+      templates/scripts/commit_guardian/ without a scripts/build_phases.py deploy-map entry
+      surfaces here as ModuleNotFoundError rather than passing. Once this gate is required, that
+      crash would block every merge, which is why it is asserted rather than assumed. Invoke
+      pytest with AC_ENFORCE_STRICT=1.
+  - name: test_ge120f4_the_real_registration_surface_passes_the_gate_through_its_registered_hook_id
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/<this gate's script>
+    description: >-
+      PRODUCTION ENTRY POINT, AND THIS AC's OWN RED BASELINE. After the day-one triage, run the
+      gate as a subprocess through the registered hook path over the repository's REAL
+      registration surface: it passes, its verdict is the commit outcome rather than an advisory
+      note, and its id appears on an emitted entry line so BP-1600a-2's census does not report
+      this new gate as invoked by nothing. All three assertions are red today. A gate registered
+      only in a config section that no entry line executes fails this descriptor — that is the
+      shape KI-TQ-007 records, where configuration presence reads as evidence of registration.
+test_rationale: |
+  This record's subject is necessarily EXISTENCE — that a declaration is present at the moment of
+  registration — which is the one shape every other record in this tree forbids, because asserting
+  that a declaration exists reproduces the defect one level up. It is safe only because of its
+  final clause, so the descriptor covering that clause carries the injection that would otherwise
+  turn the whole tree into a family where every check has a declaration, none has ever refused
+  anything, and the set reads as fully protected. That injection is deliberately the same one
+  GE-120f-1 carries: it is the single substitution that defeats both records at once, and the
+  test must confirm both go red under it.
+
+  The inheritance descriptor uses a FIXTURE registration surface and a novel id rather than a real
+  check name, because an assertion naming a real check expires the day that check is declared —
+  and a test that expires quietly is how a gate stops catching the nineteenth hook.
+
+  The boundary descriptor exists because the natural over-reach here is to walk the gate-script
+  directory "while we are in there". That would fork BP-1600a-2's census, and this family has
+  already spent one amendment cycle unpicking exactly that fork. Asserting that an unregistered
+  script is reported by this gate NOT AT ALL, in the same run as a genuine refusal, is what makes
+  the boundary checkable rather than a note.
+
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", no descriptor reads the
+  gate's source or the registry as text; each executes the gate and asserts on its emitted output
+  and exit status, and each first establishes that the gate saw its input, since several hooks in
+  this component ignore argv entirely. AC_ENFORCE_STRICT=1 on every invocation.
 delivers_to:
   - agent: python-coder
     ac_id: GE-120f-4-i

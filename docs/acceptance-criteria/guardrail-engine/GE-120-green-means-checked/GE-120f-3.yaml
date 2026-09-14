@@ -96,8 +96,192 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: related
     status: exists
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: Source of the `angle` values on the descriptors below.
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The deployed layout the figure must be stated from. A count computed only in the source
+      tree says nothing about what the deployed run examines.
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - >-
+    THE POPULATION IS THE INVOKED SUBSET OF BP-1600a-2's CENSUS, READ AT RUN TIME — AND THAT
+    RESOLVES THE BOUNDARY THE criteria LEAVE TO "whichever record owns the enumeration".
+    BP-1600a-2 (approved) partitions the gate scripts on disk into invoked-at-commit-time,
+    registered-and-deliberately-switched-off, and invoked-by-nothing. This run's population is
+    the FIRST class only: a check reached by no entry line has no entry point the protected
+    surface invokes, so there is nothing to put an input through and its absence here is not a
+    gap. A script the registry never mentions stays BP-1600a-2's finding and must NOT be
+    reported by this run as never-demonstrated — reporting it in both places is the fork this
+    family has already had to unpick once (GE-120c-6 / BP-1600a-2, 2026-09-07).
+  - >-
+    DO NOT GROW A SECOND CENSUS. Consume BP-1600a-2's enumeration; do not list the gate-script
+    directory here and do not carry a population of your own. Two independently-derived
+    populations will disagree about how many guards exist, and this record's whole subject is a
+    figure that can be trusted.
+  - >-
+    THE STATED FIGURE COUNTS INVOCATIONS PERFORMED, NEVER INTENTIONS. It counts checks whose
+    declared input the run actually put through an entry point — not the checks it set out to
+    examine, not the size of the population it read. A check in the population that could not
+    be invoked at all is reported as unresolved and is excluded from the examined figure.
+  - >-
+    THE FIGURE MUST MOVE IN BOTH DIRECTIONS OR THE REQUIREMENT IS VACUOUS. A requirement to
+    state a number is satisfied by printing one, and a number written into the run stays
+    correct-looking on a run that examined nothing. Requiring it to MOVE when the population
+    moves is the only form a literal cannot satisfy, and it is required both ways: an
+    implementation that adds newly-found checks to a base constant grows correctly and never
+    shrinks. Both directions are asserted in one descriptor below for that reason.
+  - >-
+    DERIVE THE VERDICT FROM THE EXAMINATION, NOT FROM THE FINDINGS LIST — THIS IS THE MOST
+    LIKELY WAY THIS SHIPS BROKEN. A run that put an input through nothing has an empty findings
+    list, and an empty findings list is the greenest possible result. Reporting nothing wrong is
+    not the same statement as finding nothing wrong. A run that examined none fails as a run
+    that reached no verdict, states that it examined none, and does not report that no check was
+    found wanting. Follow GE-126e-2's empty-run wording rather than diverging from it.
+  - >-
+    REBUILD THE FINDINGS FROM THIS RUN'S OBSERVATIONS EVERY TIME. Never carry findings forward
+    from a previous run, a cached artifact, or a committed rollup. A finding that survives its
+    subject is how a stale figure gets quoted as current, and it makes the leaving-the-population
+    clause unfalsifiable.
+  - >-
+    NO FIGURE MAY BE ENCODED IN THE IMPLEMENTATION OR IN ANY TEST EXPECTATION, AND THE
+    VARYING-POPULATION CLAUSES MUST BE WRITTEN AS FIXTURES, NEVER AS AN EXPECTED LIST. An
+    assertion that today's population is fully demonstrated passes forever and catches nothing
+    on the day the next check is added — which is the day this run exists for. That is
+    GE-120c-6's standing instruction and it applies here unchanged. The parent records the
+    count as disputed and forbids one below it.
+  - >-
+    THE SCHEMA ALREADY MODELS THE ROLLUP AND SAYS TO REGENERATE IT RATHER THAN HAND-EDIT IT.
+    config/verification_flow.schema.json carries a derived per-state rollup over the four values;
+    reuse those names and that rule rather than minting a second summary vocabulary.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation; the figure must be stated by the DEPLOYED
+    copy out of process. Any module imported from outside templates/scripts/commit_guardian/
+    goes into the scripts/build_phases.py deploy map in the same change.
+  - >-
+    Error-handling policy: specific-exception try/except around directory listing, registry
+    reads and subprocess calls, logged at WARNING or higher or re-raised. A swallowed read error
+    must never become an empty population — that is precisely the examined-none case, and it
+    must reach the caller as a refusal rather than as a clean small number.
+test_spec:
+  - name: test_ge120f3_the_stated_figure_rises_when_one_check_joins_and_falls_when_one_leaves
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      THE DECISIVE ANTI-LITERAL DESCRIPTOR — WRITE THIS ONE FIRST, AND KEEP BOTH DIRECTIONS IN
+      ONE TEST. Over a fixture population, execute the run and capture the stated examined
+      figure and the reported classes from its own output. Add ONE further check to the
+      population, change nothing else, re-run: the stated figure is exactly one greater and the
+      newly joined check appears in one reported class. Then remove one check, change nothing
+      else, re-run: the stated figure is exactly one smaller and that check appears in NO
+      reported class. Every number is read from the run's output, never from a literal expected
+      value. NAMED MUTATION for the leaving arm (mandatory, run it): carry findings forward from
+      the previous run instead of rebuilding them from this run's observations. Under that
+      injection the removed check keeps appearing and the figure does not fall; this descriptor
+      must go RED, and return to green on revert.
+  - name: test_ge120f3_the_figure_counts_invocations_performed_not_checks_set_out_to_examine
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      One run over a fixture population in which every member is invocable except one, which
+      cannot be invoked at all. Assert the stated examined figure is the population size minus
+      one, the uninvocable member is reported as unresolved, and — the pairing half — every
+      other member still receives its record in that same run. Then run over a population where
+      all are invocable and assert the figure equals the population size. A run that states the
+      population size as the examined figure passes the second and fails the first.
+  - name: test_ge120f3_a_run_that_examined_none_fails_as_unresolved_and_does_not_report_nothing_wanting
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE INJECTION THAT MUST BE EXECUTED RATHER THAN DESCRIBED, BECAUSE THE NATURAL
+      IMPLEMENTATION IS THE DEFECTIVE ONE. Over a population through which no input could be
+      put: the run fails as a run that reached no verdict, states that it examined none, and
+      does NOT report that no check was found wanting. Paired in the same test with a non-empty
+      population that does report a finding, so the descriptor cannot be satisfied by a run that
+      always refuses. NAMED MUTATION (mandatory, run it): derive the run's verdict from the
+      findings list alone, so an empty findings list reads as a clean result. Under that
+      injection the empty run reports that nothing is wrong and hands back acceptance; this
+      descriptor must go RED, and return to green on revert.
+  - name: test_ge120f3_the_stated_figure_never_exceeds_examined_plus_unresolved
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Over three fixture populations of different sizes and different unresolved counts, assert
+      the invariant holds in every run AND that the figures differ between the runs — so an
+      implementation carrying a constant satisfies the invariant and still fails the descriptor.
+      Every figure is read from the run's own output.
+  - name: test_ge120f3_a_script_the_registry_never_mentions_is_not_in_this_runs_population
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE BOUNDARY DESCRIPTOR — THIS IS WHAT KEEPS GE-120f AND BP-1600a-2 FROM FORKING. Place a
+      novel gate script in a fixture gate-script directory with NO registry entry naming it. In
+      one run assert: this run neither counts it in the examined figure nor names it in any of
+      its own reported classes, AND a registered-and-invoked check in the same fixture IS
+      counted and IS classified. The unregistered script remains BP-1600a-2's finding. A run
+      that reports it here has grown a second census and must fail this descriptor.
+  - name: test_ge120f3_the_deployed_copy_states_the_figure_and_the_figure_moves_there_too
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED run states the examined figure in a cold process with the
+      source tree off the import path, and the add-one/remove-one movement holds in the deployed
+      copy as well as in the source tree. A helper outside templates/scripts/commit_guardian/
+      without a scripts/build_phases.py deploy-map entry surfaces here as ModuleNotFoundError
+      rather than passing. Invoke pytest with AC_ENFORCE_STRICT=1.
+  - name: test_ge120f3_the_figure_is_emitted_through_the_gate_that_invokes_the_run
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      the gate named in GE-120f-1's it_requirements — a hooks_manifest entry line invoked via
+      python .leafcutter/scripts/commit_guardian/run_hook.py, or the ci.yml job that runs it
+    description: >-
+      PRODUCTION ENTRY POINT. The stated figure and the reported classes appear in the gate's
+      own output stream, and the examined-none case makes the gate's outcome non-zero rather
+      than producing a quiet clean run. A figure computed by a function nothing at commit or CI
+      time calls is inert.
+test_rationale: |
+  A requirement to state how many checks were examined is satisfied by printing a number, and a
+  number written into the run is a legal answer that proves nothing — it stays correct-looking
+  on a run that examined nothing. So the first descriptor holds both movement directions in one
+  test and reads every figure from the run's own output: no implementation carrying a literal,
+  however that literal is spelled, can pass it, and an implementation that adds newly-found
+  checks to a base constant passes the growth half and fails the shrink half.
+
+  The examined-none descriptor is the one this record most likely ships broken on, because an
+  empty findings list is the greenest possible result and deriving the verdict from it is the
+  natural implementation. That injection is therefore mandatory to execute rather than describe,
+  and it is paired with a population that genuinely reports a finding so it cannot be satisfied
+  by a run that always refuses.
+
+  The boundary descriptor exists because this record's Given defers the population to "whichever
+  record owns the enumeration", and the honest resolution — the invoked subset of BP-1600a-2's
+  disk census — is only checkable by asserting that an unregistered script is absent from THIS
+  run's classes while a registered one is present. Without it, an implementer reading the Given
+  literally builds a disk walk and forks a census this family has already had to unpick once.
+
+  No descriptor asserts any population figure, per the parent's disputed-count rule; every
+  assertion is a relation between two runs or a relation between a run's own numbers. Per
+  CLAUDE.md's grep rule none reads source text. AC_ENFORCE_STRICT=1 on every invocation.
 delivers_to: null
 expects_from:
   - ac_id: GE-120f-1
