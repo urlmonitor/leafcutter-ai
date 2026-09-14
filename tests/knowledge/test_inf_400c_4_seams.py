@@ -182,7 +182,10 @@ def test_two_units_of_work_emitting_at_once_lose_no_record_and_interleave_none(t
     # angle: boundary
     target_dir = tmp_path / "install"
     deployed_root = target_dir / ".leafcutter"
-    harvester_path = _deploy_harvester(deployed_root)
+    # Call kept for its side effect (deploying the harvester into the fixture
+    # install); this test drives the sink directly and never invokes it, so the
+    # returned path is deliberately not bound.
+    _deploy_harvester(deployed_root)
     declared_sink = target_dir / "debugging" / "logs" / "knowledge_emissions.jsonl"
     declared_sink.parent.mkdir(parents=True, exist_ok=True)
     declared_sink.touch()
