@@ -4,14 +4,20 @@ description: "Field-by-field reference for the four product-truth schemas — Fl
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-07-14
+last_updated: 2026-09-09
 components:
   - ux_prototyping
 related_docs:
   - docs/how-to/authoring-product-truth-artifacts.md
   - docs/architecture/components/ux-prototyping.md
   - docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
+  - docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
   - docs/product-truth/README.md
+  - docs/explanation/traceability-guardrails.md
+  - docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+  - docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-554.yaml
+related_code:
+  - docs/product-truth/scripts/product_ownership.py
 ---
 
 # Product-truth schema reference
@@ -188,9 +194,78 @@ The `outcome` must be consistent with `expected{}` — the validator
 
 ---
 
+## Validator run outcome — `validate_product_truth.py` (not the classifier `outcome` above)
+
+`validate_product_truth.py` prints one JSON object as its **last** stdout line
+(independent of logging), reporting on the run itself rather than on any single
+artifact. This is a different vocabulary from the per-example classifier
+`outcome` field documented above — the two are deliberately distinct enums so
+that reading a value on one axis can never be mistaken for the other.
+
+```json
+{"outcome": "checked-and-sound", "examined": 14, "unreadable": []}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `outcome` | enum | `checked-and-sound` (every journey read and no problems found) \| `nothing-examined` (zero journeys were read) \| `degraded` (at least one journey exists but could not be read — see `unreadable`) \| `failed` (a real validation failure was found). |
+| `examined` | int | Count of journeys the run actually read. |
+| `unreadable` | string[] | Store-relative path of each journey file that could not be parsed (empty when nothing was unreadable). |
+
+The exit code is `0` for every outcome except `failed` — one malformed journey
+file degrades the run and is named in `unreadable`, but does not stop it
+(the project's fail-open convention; see
+[Traceability guardrails, Hole 7](../explanation/traceability-guardrails.md#the-holes)
+and
+[GE-120](../acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml)).
+The per-file read that can produce `degraded` lives once in
+`generate_product_truth.py::load_flows()`, shared by the generator and this
+validator, so both callers skip-and-continue on the same file the same way.
+
+---
+
+## Ownership predicate — `product_ownership.py` (project's own record vs. example content)
+
+`docs/product-truth/scripts/product_ownership.py` is the single, pure,
+product-root-derived predicate that decides which `index.json` `artifacts[]`
+records belong to the project's own record versus an example product (today
+only `fern-and-fig`). It exists because
+[ADR-022](../architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md)
+is a hard constraint on the example content **continuing to exist and remain
+referenceable** — separation from the project's own record must never become
+deletion — and
+[UXP-554](../acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-554.yaml)'s
+mock mode likewise depends on the example content staying resolvable by name.
+
+**Ownership rule:** the product root is the first `/`-delimited segment of an
+artifact's `id` (`<product>/<name>`) — never anything inside the artifact's
+content. Editing a title, summary, or tag cannot move an artifact between
+products (this is what makes ownership immune to content edits).
+
+| Symbol | Type | Notes |
+|---|---|---|
+| `PROJECT_PRODUCT` | `str` | The project's own product root (`"leafcutter"`). |
+| `product_of_artifact_id(artifact_id)` | `str -> str` | Returns the id's product-root segment. |
+| `is_example_artifact_id(artifact_id)` | `str -> bool` | `True` when the id's product root is not `PROJECT_PRODUCT`. |
+| `own_record_artifacts(artifacts)` | `list[dict] -> list[dict]` | Filters `artifacts[]` down to the project's own record. |
+| `artifacts_for_product(artifacts, product)` | `list[dict], str -> list[dict]` | By-name lookup for a given product root — keeps example content reachable, never deleted. |
+
+**CLI:** `python docs/product-truth/scripts/product_ownership.py` prints the
+project's own record's artifact ids, one per line; `--product <name>` prints
+that product's artifact ids instead (e.g. `--product fern-and-fig`).
+
+`UXP-700d-2` (the work store) and `UXP-700d-4` (per-type population counts)
+import this module verbatim rather than re-deriving the predicate — see the
+module's own DECISION HISTORY block for the rationale.
+
+---
+
 ## See Also
 
 - [How to author a Flow, Mockup, or Mock Data artifact by hand](authoring-product-truth-artifacts.md)
 - [UX Prototyping component](../architecture/components/ux-prototyping.md)
 - [ADR-023](../architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md)
+- [ADR-022 — Mockups are the real application in mock mode](../architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md) — the hard constraint the ownership predicate implements (separation, never deletion, of example content).
+- [UXP-554 — fixture drift guard](../acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-554.yaml) — mock mode's own dependency on the example content staying resolvable by name.
+- [Traceability guardrails — Hole 7, "Silence does not mean pass"](../explanation/traceability-guardrails.md#the-holes)
 - `docs/product-truth/schemas/` — the authoritative schema files.

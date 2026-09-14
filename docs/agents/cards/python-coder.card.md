@@ -46,7 +46,7 @@ new Python files (excluding .sql files — defer those to sql-coder).**
 |---------|--------|----------------|-------------|
 | 1 | Root CLAUDE.md | always | Project instructions, error handling policy, shell conventions |
 | 2 | Per-folder README.md | on-demand | Module-level context when cwd overlaps edited module folder |
-| 5 | [signoff SKILL.md](../../../templates/skills/signoff/SKILL.md); [doc-enforcer SKILL.md](../../../templates/skills/doc-enforcer/SKILL.md); complexity-reduction; collector-enforcer | on-demand | Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement |
+| 5 | [signoff SKILL.md](../../../.claude/skills/signoff/SKILL.md); [doc-enforcer SKILL.md](../../../.claude/skills/doc-enforcer/SKILL.md); complexity-reduction; collector-enforcer | on-demand | Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement |
 | 6 | Agent frontmatter | spawn-scoped | Model: sonnet, tools: Bash/Read/Edit/Write/Agent, signoff: true, config_keys, portable: true |
 | 7 | skills_config.json + settings.json | spawn-scoped | test_command, collector_enforcer_paths, file_size_limit_py |
 | 8 | Ticket frontmatter | ticket-scoped | Agents map, files_touched, depends_on, ACs, Agent Contracts section |
@@ -1784,6 +1784,7 @@ flowchart TD
 - GE-127e-2: Two different oversized files are not given the same advice, and changing what is in a file changes the advice it gets
 - GE-127e-3: The refusal offers only help that actually arrives, and a bare verdict is preferred to a promise nothing keeps
 - GE-127e-3-i: Guidance that could not be produced is said so plainly, and whether guidance exists never moves the commit verdict in either direction
+- GE-127e-3-ii: Every tool named by an instruction a refusal sends the author to actually exists
 - GE-127e-4: Everything needed to choose arrives with the refusal, the division is offered as a starting point, and declining it costs nothing
 - INF-1000a-1: Detect stale fixtures when a required field is added to a schema
 - INF-1000a-1-i: Schema file with no required-field changes passes without scanning fixtures

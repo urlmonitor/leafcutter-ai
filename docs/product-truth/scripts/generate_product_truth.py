@@ -59,6 +59,16 @@ import yaml
 
 logger = logging.getLogger("generate_product_truth")
 
+# Re-exported so every existing caller keeps importing these from this module.
+from product_truth_derivations import (  # noqa: F401  # re-exported for callers
+    _ARTIFACT_SUMMARY_LENGTH,
+    _ELLIPSIS,
+    _preserve_entry_asof,
+    build_by_component,
+    build_by_entity,
+    derive_artifact_summary,
+)
+
 STORE = Path(__file__).resolve().parent.parent
 AC_STORE = STORE.parent / "acceptance-criteria"
 
@@ -247,43 +257,8 @@ def build_by_ac(flows: dict, run_date: str | None = None) -> dict:
     return dict(sorted(by_ac.items()))
 
 
-def build_by_component(artifacts: list) -> dict:
-    """Group artifact ids by component and type."""
-    type_key = {"flow": "flows", "mock_data": "mock_data", "mockup": "mockups"}
-    result: dict[str, dict] = {}
-    for artifact in artifacts:
-        key = type_key.get(artifact.get("type"))
-        if key is None:
-            continue
-        bucket = result.setdefault(artifact["component"], {"flows": [], "mock_data": [], "mockups": []})
-        bucket[key].append(artifact["id"])
-    for component in result:
-        for key in result[component]:
-            result[component][key] = sorted(result[component][key])
-    return dict(sorted(result.items()))
 
 
-def build_by_entity(flows: dict, mocks: dict) -> dict:
-    """Map each entity to its canonical mock-data and the flows that use it."""
-    result: dict[str, dict] = {}
-
-    def bucket(entity: str) -> dict:
-        return result.setdefault(entity, {"canonical_mock_data": {}, "flows": {}})
-
-    for mock in mocks.values():
-        for entity in mock.get("entities", {}):
-            bucket(entity)["canonical_mock_data"][mock["component"]] = mock["id"]
-    for flow in flows.values():
-        for entity in flow.get("entities", []):
-            flows_by_component = bucket(entity)["flows"].setdefault(flow["component"], [])
-            if flow["id"] not in flows_by_component:
-                flows_by_component.append(flow["id"])
-    for entity in result:
-        result[entity]["canonical_mock_data"] = dict(sorted(result[entity]["canonical_mock_data"].items()))
-        result[entity]["flows"] = {
-            component: sorted(ids) for component, ids in sorted(result[entity]["flows"].items())
-        }
-    return dict(sorted(result.items()))
 
 
 def build_by_flow(flows: dict, flow_paths: dict, ac_map: dict, run_date: str | None = None) -> dict:
@@ -412,12 +387,31 @@ def build_ac_map() -> dict:
     return ac_map
 
 
-def load_flows() -> tuple[dict, dict]:
-    """Return ({flow_id -> flow}, {flow_id -> store-relative path})."""
+def load_flows(unreadable: list[str] | None = None) -> tuple[dict, dict]:
+    """Return ({flow_id -> flow}, {flow_id -> store-relative path}).
+
+    A journey file that fails to parse as JSON is skipped (fail-open, GE-120 /
+    GE-116a-1-iii) rather than allowed to crash the whole run: its
+    store-relative path is appended to *unreadable* when the caller supplies a
+    list, and generation/validation proceeds over the remaining, well-formed
+    journeys. This is the single reader both the generator and the validator
+    consume, so both inherit the same skip-and-continue semantics from one
+    place. A genuine OSError (missing/unreadable file, permissions, disk
+    failure) still propagates unchanged -- only a malformed-CONTENT error
+    degrades instead of failing closed; that distinction matches the AC's own
+    Given clause ("cannot be read because its file is malformed").
+    """
     flows: dict[str, dict] = {}
     paths: dict[str, str] = {}
     for path in sorted((STORE / "flows").rglob("*.flow.json")):
-        flow = _load_json(path)
+        try:
+            flow = _load_json(path)
+        except json.JSONDecodeError:
+            rel = path.relative_to(STORE).as_posix()
+            logger.warning("skipping unreadable journey %s (invalid JSON) -- examining the rest", rel)
+            if unreadable is not None:
+                unreadable.append(rel)
+            continue
         flows[flow["id"]] = flow
         paths[flow["id"]] = path.relative_to(STORE).as_posix()
     return flows, paths
@@ -472,29 +466,6 @@ def write_flows(flows: dict, flow_paths: dict, ac_map: dict, check: bool, run_da
     return changed
 
 
-def _preserve_entry_asof(new_entries: list[dict], existing_truth: list, run_date: str) -> list[dict]:
-    """Return new_entries with asof preserved from existing_truth where content matches.
-
-    For each new entry, locate the stored entry with the same (flow, node) key.
-    If the non-asof fields are identical, keep the stored asof; otherwise stamp
-    with run_date. This is a pure helper — no I/O.
-    """
-    if not isinstance(existing_truth, list):
-        return new_entries
-    existing_by_key: dict[tuple, dict] = {}
-    for ex in existing_truth:
-        if isinstance(ex, dict):
-            key = (ex.get("flow"), ex.get("node"))
-            existing_by_key[key] = ex
-    result = []
-    for entry in new_entries:
-        key = (entry.get("flow"), entry.get("node"))
-        existing = existing_by_key.get(key)
-        if existing is not None and _without_asof(existing) == _without_asof(entry) and "asof" in existing:
-            result.append({**_without_asof(entry), "asof": existing["asof"]})
-        else:
-            result.append(entry)
-    return result
 
 
 def write_ac_product_truth(ac_map: dict, by_ac: dict, check: bool, run_date: str) -> bool:
@@ -525,6 +496,11 @@ def write_ac_product_truth(ac_map: dict, by_ac: dict, check: bool, run_date: str
             if not check:
                 _write_text(path, new_text)
     return changed
+
+
+
+
+
 
 
 def write_index(
@@ -559,6 +535,29 @@ def write_index(
     for artifact in index.get("artifacts", []):
         if artifact.get("type") == "flow" and artifact["id"] in by_flow:
             artifact["impl_summary"] = by_flow[artifact["id"]]["impl_summary"]
+
+    # Derive each flow artifact's `summary` from the journey's own, authoritative
+    # summary rather than leaving a second, separately-typed description sitting
+    # beside it (UXP-700e-2). Recomputed on every run like every other derived
+    # field here, so editing the journey is the only edit needed to change both.
+    for artifact in index.get("artifacts", []):
+        if artifact.get("type") == "flow" and artifact["id"] in flows:
+            derived = derive_artifact_summary(flows[artifact["id"]].get("summary", ""))
+            stored = artifact.get("summary")
+            if stored is not None and stored != derived:
+                # Name the journey and show BOTH texts. A caller told only that
+                # "something changed" cannot tell a second, separately authored
+                # description from an ordinary edit to the journey, which is the
+                # whole distinction this AC is about (UXP-700e-2).
+                logger.warning(
+                    "second authored description for %s: index holds %r, but the "
+                    "journey's own summary derives %r — the index copy is not "
+                    "authored, it is derived; regenerate to replace it",
+                    artifact["id"],
+                    stored,
+                    derived,
+                )
+            artifact["summary"] = derived
 
     # Rebuild by_ac and preserve per-entry asof from the existing index.
     new_by_ac = build_by_ac(flows, run_date)
@@ -641,3 +640,22 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+"""
+====================================================================
+DECISION HISTORY
+====================================================================
+- 2026-09-09 17:05 [python-coder]: UXP-700b-1-i -- load_flows() no longer lets
+  json.JSONDecodeError from one malformed journey file crash the whole read.
+  It now catches the decode error per-file, logs a warning, appends the
+  store-relative path to an optional *unreadable* out-list, and continues
+  over the remaining well-formed journeys (fail-open, GE-120 / GE-116a-1-iii).
+  The signature stays backward compatible (`unreadable` defaults to None and
+  the return value is still the same 2-tuple) so generate()'s own call site,
+  and unit_tests/portability/test_uxp_700c_3_i.py's `_flows, paths =
+  gpt.load_flows()` unpacking, are unaffected; validate_product_truth.py
+  (the sole other caller) now passes a list to observe which journeys were
+  skipped. A genuine OSError still propagates unchanged -- only malformed
+  CONTENT degrades instead of failing closed. (#EPIC-TruthfulProjectRecord/12)
+====================================================================
+"""

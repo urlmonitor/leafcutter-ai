@@ -1,0 +1,97 @@
+id: INF-1200e
+title: "You can see who has not been told"
+component: infrastructure
+components:
+  - infrastructure
+  - agent_registry
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  An uninformed specialist shows up as a gap you can act on, not as silence.
+
+  Anyone who works on a kind of file that has a standard, but has never been
+  told that standard, is named. Being uninformed no longer looks exactly the
+  same as there being no standard to know.
+depends_on:
+  - INF-1200
+doc_links:
+  - path: config/agent_registry.json
+    relationship: related
+    status: exists
+    relevance: >-
+      One half of what makes the gap countable — who owns which kinds of file.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      The other half — which kinds of file carry a standard. Both records are
+      machine-readable today and nothing reads them together, which is the
+      whole reason the gap is currently invisible.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      SAME FAMILY OF DEFECT, DIFFERENT SUBJECT — FENCED. BP-1600 owns a check
+      working out its own subject matter from what is really there rather than
+      from a list, and its census counts things that run nowhere. This
+      criterion counts audiences that were told nothing. The shapes rhyme and
+      the populations do not overlap: a fully registered, fully running
+      standard can still have an audience of nobody. Cite BP-1600, do not
+      restate it, and do not propose a second reachability census.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner-v3
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-1200e-1
+  - INF-1200e-2
+implemented_by: []
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
+notes: |
+  User-authored intent: BrainCandy. Framed by product-owner-v3, 2026-09-09.
+
+  SILENCE IS THE FAILURE MODE THIS WHOLE TREE IS EXPOSED TO, AND THIS IS THE
+  ONLY RECORD THAT CLOSES IT. Today a specialist that was told nothing and a
+  specialist for which no standard exists produce identical evidence: nothing.
+  Every other criterion in this tree can therefore be reported satisfied by
+  something that covers one pairing and stops — which is precisely the state
+  the store is in now, and it has looked fine for as long as it has existed.
+
+  INHERITED AND NOT REPEALED. This project's standing rule that a check which
+  could not do its job must say so, rather than reporting success, applies here
+  in its natural form: a delivery that reached nobody must not be
+  indistinguishable from a project with no standards. That rule was written
+  about checks; this is its equivalent on the telling side, and it is being
+  applied, not re-litigated.
+
+  A DECISION THIS RECORD DELIBERATELY LEAVES OPEN. Whether an uninformed
+  specialist should merely be REPORTED or should actually STOP something is not
+  settled here, and there is no blanket default in this project for that
+  question. Decide it explicitly at enrichment, per surface, and record the
+  reasoning. What is not open is visibility: the condition must be nameable.
+
+  THE ACCEPTANCE SHAPE WITH TEETH, AND THE NEGATIVE ARM THAT IS MANDATORY.
+  Every positive arm of this criterion is satisfied by something that reports
+  every specialist as a gap all the time. The mandatory negative arm is that a
+  specialist which HAS been told the standards for what it owns does not appear
+  in the report. Without it, this L1 is discharged by a mechanism that says
+  "everyone" and means nothing.
+
+  A CAUTION FROM THIS STORE'S OWN HISTORY. Several checks in this project have
+  reported clean for weeks while examining nothing at all, and each time the
+  clean result was believed. Whatever produces this report needs a positive
+  control — a known-uninformed pairing it demonstrably finds — before a clean
+  result from it is worth anything. Three such pairings exist on disk today.

@@ -1,0 +1,442 @@
+id: INF-1200b-2
+title: "Strip every standard an author could have written into a specialist's instructions and every specialist is still correct"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the standards the project declares, and the specialists the ownership
+    record assigns kinds of file to,
+  When every reference to a standard, a kind of file's standard, or a figure of
+    a standard is removed from the instructions their authors write, the
+    declaration is left untouched, and the project is put back together,
+  Then every specialist still begins work with the standards for the kinds of
+    file the ownership record assigns it stated in its material, unchanged from
+    what it was before the removal,
+  And given the declared value of one of those standards is then changed, with
+    no authored instructions touched,
+  When the project is put back together again,
+  Then every specialist that owns the affected kind of file begins work with the
+    changed standard stated in its material,
+  And given a specialist is newly added to the ownership record as an owner of a
+    kind of file that carries a standard, with no authored instruction of its own
+    mentioning any standard,
+  When it begins work,
+  Then that kind of file's standards are stated in its material, so being
+    informed is a consequence of being an owner rather than of somebody having
+    remembered.
+depends_on:
+  - INF-1200b
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200b-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE SAME PROMISE FROM THE OPPOSITE DIRECTION, AND NEITHER IMPLIES THE OTHER.
+      INF-1200b-1 measures the change required to ADD a standard. This measures whether
+      any authored instruction is load-bearing for standards at all. A design could
+      make adding cheap while leaving legacy hand-written statements in place that
+      quietly override; a design could hold no authored statements while still
+      requiring a per-kind step to add one. Both are failures and each is caught by
+      only one of the two records.
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600a-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      AN OBLIGATION TO SATISFY, NOT TO RESTATE, AND THE ONE MOST AT RISK FROM THIS
+      RECORD. INF-600a-4 requires every figure a specialist's instructions refer to to
+      be declared by that specialist. Removing authored references and supplying
+      standards from outside must keep that true rather than route around it — if the
+      generalised delivery introduces figures no specialist declares, this record has
+      been satisfied by breaking an approved one. Raise that as a contradiction rather
+      than resolving it silently.
+  - path: templates/agents/python-coder.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The only authored instruction set in the project that refers to a standard today,
+      and therefore the entire population the removal arm operates on at the moment.
+      It is also the pairing INF-1200f-2 requires to be no worse off afterwards; that
+      preservation obligation binds any change made to satisfy this record.
+  - path: config/agent_registry.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Supplies the audience. The third arm — a newly added owner that is correct
+      without anyone writing anything about standards for it — is the operational form
+      of the user's request, and it is answerable from this record alone.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      The declaration that must remain untouched while the authored references are
+      removed. If the removal requires a compensating edit here, the standards were
+      being defined in two places and this record has found it.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". Every arm here is an
+      observation of a specialist beginning work after the project has been put back
+      together, not an inspection of a template's text before it has been.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. "PUT THE PROJECT BACK TOGETHER" IS THIS DOCUMENT'S SUBJECT, AND THE ONLY
+      REASON THE REMOVAL ARM IS EXECUTABLE. It records that templates/agents/*.md are
+      compiled by build.py into .claude/agents/, so the removal experiment has a
+      well-defined shape: strip the authored side, re-run the compile, read the output.
+      Without a compile step there would be nothing to put back together and the arm
+      would collapse into a text diff.
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Channel 6 is the agent template — frontmatter and body — resolved at
+      spawn. This record's third arm turns on that channel being populated for an
+      agent NOBODY has written a standards statement for, so the placement mechanism
+      must be able to fill a brief with no authored anchor naming a standard. That is
+      the constraint the b-2/f-2 tension turns on and it is costed in
+      it_requirements below.
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. This record removes authored references and
+    generalises the carrier. It adds no hooks_manifest.hooks id, no new top-level key to
+    commit_guardian.json, no entry to config/agent_registry.json's agents list, no
+    skill_registry entry and no paths.json surface. Note the measured nuance on the registry:
+    the newly-added-owner arm adds an OWNED EXTENSION to an existing agent entry, which is a
+    field inside an entry, not a new id in the `agents` list_ids container — unwatched. The
+    declaration stays untouched by construction, since the arm requires it. Plain-list spec
+    form; no config_schema_fragment invented for a key that will never exist.
+  - >-
+    THE b-2 / f-2 TENSION, COSTED EXPLICITLY — THIS IS THE BIGGEST IMPLEMENTATION RISK IN THE
+    TREE AND NEITHER L1 STATES IT. This record requires that NO hand-authored instruction
+    carry a standard: strip every reference to a standard, a kind of file's standard or a
+    figure of one from the instructions their authors write, rebuild, and every specialist is
+    still correct. INF-1200f-2 requires that the one working pairing's SEVERAL in-context
+    references survive at NO FEWER POINTS, including one embedded mid-instruction as a
+    stop-and-ask trigger. Both hold only if the derived mechanism can place content at
+    MULTIPLE, SEMANTICALLY-CHOSEN POINTS inside one brief. That is materially harder than
+    injecting one block, and it is the difference between a two-day change and a
+    design problem. Read the two records together before choosing a design; an implementer
+    who reads only this one will build the single block, and an implementer who reads only
+    f-2 will leave the hand edit in place.
+  - >-
+    THE FAILURE MODE, STATED PLAINLY BECAUSE EVERY COUNT ANYONE RUNS WILL CALL IT PROGRESS.
+    The cheap build — one derived standards block at the top of every brief — satisfies this
+    record completely: no authored statement remains, every specialist is correct, and a
+    newly added owner is correct with nothing written about it. It quietly fails INF-1200f-2.
+    And the numbers all improve: specialists informed rises from one to three, kinds of file
+    covered rises from one to two or more, standards carried rises from one to four, and
+    INF-1200e's uninformed-pairing census falls toward zero. The only thing that got worse is
+    the one thing that already worked, and no count in this tree can see it. INF-1200f-2 is
+    the only record that can, which is why its at-no-fewer-points and trigger arms are HARD
+    GATES on this record's implementation and not a stylistic preference. Do not build the
+    single block.
+  - >-
+    THE ADMISSIBLE SHAPE, AND WHY THE TWO OBVIOUS ONES BOTH FAIL. A
+    `{{config.file_size_limit_py}}`-style placeholder left at the working pairing's five
+    points is an authored reference to a figure of a standard for a kind of file, so this
+    record's removal arm strips it and that specialist goes silent — RED. A single derived
+    block with the five points deleted fails f-2. What satisfies both is a placement marker
+    that names NO standard, NO kind of file and NO figure: it declares only that a decision
+    point exists here and that the standards governing what this specialist owns belong at
+    it. The carrier fills every such marker from the join produced by INF-1200b-1. Adding a
+    standard adds no marker; adding a kind of file to an owner's ownership adds no marker; so
+    b-1's change-set arm is unaffected. The design choice is the implementer's — what is NOT
+    open is that a design which cannot place at several points inside one brief fails f-2 and
+    must be rejected at design time rather than discovered at f-2's descriptor.
+  - >-
+    THE INF-600a-4 CONTRADICTION, RAISED RATHER THAN RESOLVED SILENTLY, AS THIS RECORD'S OWN
+    doc_link DEMANDS. Measured in this worktree: templates/agents/python-coder.md declares the
+    config key `file_size_limit_py` at lines 36 and 38 of its `config_requirements` block,
+    with source `build_injected`. That declaration is itself a reference to a figure of a
+    standard for a kind of file, so this record's removal arm reaches it — while INF-600a-4,
+    which is approved, requires every figure a brief refers to to be declared by that
+    specialist. THE DISPOSITION: replace the per-standard key declaration with ONE declaration
+    of the derived standards CHANNEL (a single build_injected input covering "the standards
+    for the kinds of file I own"), which names no standard, no kind of file and no figure — so
+    it survives the removal AND keeps INF-600a-4 satisfied. If an implementer finds this
+    cannot be done without either leaving a per-standard key declared or introducing figures
+    no specialist declares, that is a genuine contradiction between two approved records and
+    must be raised, never resolved by weakening either.
+  - >-
+    THE REMOVAL IS A REVERSIBLE EXPERIMENT, NOT A REFACTORING INSTRUCTION — BUT THE
+    PLACEHOLDER REPLACEMENT IS A REAL EDIT. Keep the two apart. The arm's removal is run over
+    the project as it stands and reverted, exactly as GE-127e-2's paired runs are. What DOES
+    ship is the conversion of the five authored `{{config.file_size_limit_py}}` occurrences
+    into placement markers, which is a real, permanent, tracked edit to
+    templates/agents/python-coder.md.
+  - >-
+    AGENT-BOUNDARY HANDOFF, NAMED SO A CODER DOES NOT REWRITE AGENT BEHAVIOUR PROSE. Four of
+    the five occurrences are mechanical substitutions a python-coder may make: lines 36 and 38
+    (the config_requirements declaration), line 286 (the `## File-Size Limit (plan before
+    writing)` section) and line 674 (the warn-tier context-capsule completion signal). Line 145
+    is DIFFERENT — it is the `trigger:` value of the `File-Size Limit` behaviour entry, which
+    states what makes the agent stop and ask. If converting it requires RE-WORDING that
+    instruction rather than substituting the figure's source, that re-wording is llm-expert's
+    surface (templates/agents/*.md behavioural prose) and must be handed off, not performed by
+    the coder. f-2's trigger arm is what will catch a silent rewrite; the handoff is what
+    prevents one.
+  - >-
+    THE THIRD ARM IS THE USER'S REQUEST IN ITS PLAINEST FORM AND MUST BE EXERCISED ON A REAL
+    ADDITION. A specialist newly added to the ownership record as an owner of a covered kind
+    of file, with no authored instruction of its own mentioning any standard, begins work with
+    that kind of file's standards stated. Measured: fifty-seven of the registry's sixty agents
+    declare no owns_file_extensions at all, so the fixture — take one of them and assign it a
+    covered extension — is real and costs one field. Do not synthesise a new agent for this;
+    a synthetic agent reproduces the carrier's own assumptions about what an agent looks like.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    registry and declaration reads and around every brief write; log at WARNING or higher or
+    re-raise; no bare or blind excepts. A brief whose markers failed to resolve must fail the
+    build loudly rather than shipping with an unresolved token or an empty region — an
+    unresolved marker in a deployed brief is a specialist silently uninformed, which is the
+    exact condition INF-1200e-1's fourth arm exists to catch downstream and which should never
+    have got that far.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT. templates/agents/ and templates/scripts/commit_guardian/ are
+    canonical and tracked; .claude/agents/ and scripts/commit_guardian/ are untracked build
+    outputs overwritten by build.py. Edit the canonical side only and re-run `python
+    scripts/build.py --target-dir .` as part of the change (ADR-001). The removal experiment
+    must strip the CANONICAL side and rebuild — stripping the build output alone proves
+    nothing, since the next build restores it.
+test_spec:
+  - name: test_inf_1200b_2_stripping_every_authored_standard_reference_leaves_every_brief_unchanged
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE REMOVAL ARM, AND IT IS THE ONLY ARM IN THIS TREE THAT CANNOT BE PASSED BY AN
+      IMPLEMENTATION THAT IS MERELY CORRECT. In a controlled copy of the package, remove every
+      reference to a standard, a kind of file's standard, or a figure of a standard from
+      templates/agents/*.md; leave
+      templates/scripts/commit_guardian/commit_guardian.json untouched; run build.py against
+      a temporary target. Every specialist's compiled brief still states the standards for the
+      kinds of file the ownership record assigns it, UNCHANGED from what it stated before the
+      removal — asserted as content equality against the pre-removal briefs, not as
+      non-emptiness. A reversible experiment, run over the project as it stands and reverted.
+  - name: test_inf_1200b_2_changing_the_declared_value_moves_every_owners_brief_with_no_authored_edit
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      With the authored references still removed, change the declared value of one standard in
+      the declaration and touch no authored instruction. Rebuild. Every specialist that owns
+      the affected kind of file states the CHANGED value, and specialists that own other kinds
+      of file are unaffected. This is what separates "the removal left the briefs alone" from
+      "the briefs are now static text the removal happened not to touch".
+  - name: test_inf_1200b_2_a_newly_added_owner_is_told_without_anyone_writing_anything_about_it
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      Take a real registry agent that declares no owns_file_extensions today — fifty-seven of
+      sixty do — assign it a kind of file that carries a standard, write no authored
+      instruction of its own mentioning any standard, and rebuild. Its compiled brief states
+      that kind of file's standards. This is the user's request in its plainest form: being
+      informed is a consequence of being an owner rather than of somebody having remembered.
+      Use a real agent rather than a synthetic one, so the fixture cannot reproduce the
+      carrier's own assumptions about what an agent looks like.
+  - name: test_inf_1200b_2_the_restore_one_hand_authored_statement_injection_reds_the_removal_and_declaration_arms_while_five_siblings_stay_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's FIRST NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE EXPERIMENT.
+      MUTATION: pick one specialist that owns a kind of file carrying a standard. Restore a
+      hand-authored, currently-correct statement of that standard into that specialist's own
+      instructions, and exclude that specialist from the derived delivery. Under that
+      injection: that specialist remains correctly and faithfully informed, so INF-1200a-1,
+      INF-1200c-1 and INF-1200f-1 all STAY GREEN for it; the removal arm of this record must go
+      RED, because stripping authored references now silences that specialist; and the
+      change-the-declaration arm must go RED, because that specialist's figure no longer moves
+      with the declaration. All outcomes must be observed and all must revert. The three green
+      outcomes are load-bearing and must be asserted, not assumed: they are the evidence that
+      this record catches a world in which every other criterion reports success. If the
+      removal arm stays green under this injection, the removal was not reaching authored
+      instructions and the arm is measuring nothing.
+  - name: test_inf_1200b_2_the_opt_in_flag_injection_reds_the_removal_and_new_owner_arms_while_an_opted_in_specialist_stays_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's SECOND NAMED MUTATION, CARRIED VERBATIM. MUTATION: make the derived delivery
+      emit a specialist's standards only when that specialist's authored instructions already
+      mention standards — an "opt-in" flag. Under it the removal arm goes RED and the
+      newly-added-owner arm goes RED, while a specialist that already opted in stays green.
+      All three outcomes observed together, all reverted. Opt-in is a plausible, defensible
+      design and it reintroduces the hand edit under a different name; the surviving green is
+      what shows the design looks healthy from inside.
+  - name: test_inf_1200b_2_the_deployed_brief_of_a_specialist_with_no_authored_standard_statement_still_carries_its_standards
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/build.py --target-dir <temporary target root>"
+    description: >-
+      PRODUCTION ENTRY POINT FOR THE KEYSTONE. Run build.py as a real subprocess and assert
+      that the DEPLOYED brief at <target>/.claude/agents/<owner>.md — the file a dispatch
+      resolves, per Channel 6 of agent_knowledge_plane.md — carries the standards for a
+      specialist whose authored template contains no statement of any standard, in a cold
+      process. A carrier that resolves markers only in memory, or a marker left unresolved in
+      the written file, fails here and nowhere else; an unresolved token shipped in a
+      deployed brief is a specialist silently uninformed.
+test_rationale: |
+  The failure mode this record exists to exclude is the one the PO named as passing every
+  other criterion in the tree: hand-edit each specialist once, and a, c, d and f are all
+  satisfied on the day it ships. The only observation that separates that world from the one
+  the user asked for is what happens when the hand edits are taken away — in one world nothing
+  changes, in the other every specialist goes silent. So the load-bearing descriptor is a
+  reversible removal run over the real project and a rebuild, and its assertion is CONTENT
+  EQUALITY against the pre-removal briefs rather than non-emptiness. Non-emptiness would pass
+  on a carrier that emits a standards heading with nothing under it.
+
+  Both of the BA's mutations are carried verbatim, and both are mixed-outcome. The first
+  restores one hand-authored statement and excludes that specialist from the derived delivery;
+  its three stay-green siblings — a-1, c-1 and f-1 for that specialist — are asserted
+  explicitly rather than assumed, because they are the evidence that this record catches a
+  world every other criterion reports as a success. The second is the opt-in flag, whose
+  surviving green (an already-opted-in specialist) is what shows why the design looks healthy
+  from inside. An injection run that reddens everything has destroyed the property the BA
+  built in and is a failure of the descriptor.
+
+  The newly-added-owner descriptor uses a REAL registry agent that declares no
+  owns_file_extensions — fifty-seven of sixty do — rather than a synthetic one, per CLAUDE.md's
+  real-artifact rule: a synthetic agent authored for the test reproduces the carrier's own
+  assumptions about what an agent looks like, which is the documented shape of this project's
+  worst phantom-done incident.
+
+  No descriptor inspects templates/agents/*.md text. Per CLAUDE.md "Gate / Workflow ACs —
+  Verify Behaviorally, Not by Grep", asserting that a template no longer contains
+  `{{config.file_size_limit_py}}` would be green on a build that ships a brief with an
+  unresolved marker and tells the specialist nothing at all — which is precisely the outcome
+  this record's removal arm is meant to make impossible.
+delivers_to:
+  - agent: python-coder
+    ac_id: INF-1200f-2
+    contract: >-
+      The multi-point placement mechanism: the ability to fill several
+      semantically-chosen points inside ONE compiled brief from the b-1 join, driven by
+      markers that name no standard, no kind of file and no figure. f-2 consumes this as the
+      only shape in which its at-no-fewer-points and stop-and-ask-trigger arms can hold while
+      this record's removal arm also holds. A single derived block satisfies this record and
+      fails f-2; the two must be built together.
+expects_from:
+  ac_id: INF-1200b-1
+  contract: >-
+    The build-time join from (specialist id) to the set of (kind of file, standard) pairs
+    that specialist owns, computed from config/agent_registry.json's owns_file_extensions and
+    the per-kind declarations in templates/scripts/commit_guardian/commit_guardian.json as
+    they stand at compile time, with no per-specialist and no per-standard enumeration in the
+    carrier.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: no hooks_manifest id, no new
+    top-level key on commit_guardian.json (the declaration is untouched by the arm''s own
+    construction), and the newly-added-owner arm adds an owned EXTENSION to an existing agent
+    entry — a field inside an entry, not a new id in the watched `agents` list_ids container.
+    No fictional fragment minted. COMPLEXITY L. THE b-2/f-2 TENSION IS COSTED HERE IN FULL AND
+    IS THE BIGGEST IMPLEMENTATION RISK IN THE TREE: both records hold only if the derived
+    mechanism can place content at multiple, semantically-chosen points inside one brief, which
+    neither L1 states; the cheap build (one derived block) satisfies this record, quietly fails
+    f-2, and every count anyone runs — specialists informed 1→3, kinds covered 1→2+, standards
+    carried 1→4, e''s census →0 — calls it progress. The admissible shape (a marker naming no
+    standard, no kind of file and no figure) is stated as a constraint with the two obvious
+    designs shown to fail. THE INF-600a-4 CONTRADICTION IS RAISED, NOT RESOLVED SILENTLY: the
+    `file_size_limit_py` declaration at python-coder.md lines 36/38 is itself a reference to a
+    figure and is reached by the removal; the disposition is one declaration of the derived
+    CHANNEL, and an implementer who cannot achieve that must raise the contradiction. AGENT
+    BOUNDARY NAMED: four of the five occurrences are mechanical substitutions; line 145 is the
+    stop-and-ask `trigger:` value and any RE-WORDING of it is llm-expert''s surface and must be
+    handed off. BOTH BA MUTATIONS CARRIED VERBATIM WITH THEIR STAY-GREEN HALVES ASSERTED
+    EXPLICITLY — a-1/c-1/f-1 green under the first, an opted-in specialist green under the
+    second. declares_side_effect true. test_spec: six executing descriptors, two carrying the
+    BA''s mutations, one on the deployed brief through the production entry point.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE FAILURE MODE THIS RECORD EXISTS TO EXCLUDE IS THE ONE THE PO NAMED AS PASSING
+  EVERY OTHER CRITERION IN THE TREE. It is entirely possible to end up with every
+  specialist correctly informed, every kind of file covered, and every figure faithful,
+  by hand-editing each specialist's instructions once. That world satisfies a, c, d and
+  f on the day it ships. The only observation that separates it from the world the user
+  asked for is what happens when you take the hand edits away: in one world nothing
+  changes, in the other every specialist goes silent.
+
+  THE REMOVAL IS A THOUGHT EXPERIMENT MADE EXECUTABLE, AND THAT IS THE POINT. It is not
+  a refactoring instruction and no permanent deletion is being specified — the arm is a
+  reversible experiment run over the project as it stands, exactly as GE-127e-2's
+  paired runs are. What makes it worth the trouble is that it is the only arm in this
+  tree that cannot be passed by an implementation that is merely correct.
+
+  THE THIRD ARM IS THE USER'S REQUEST IN ITS PLAINEST FORM. "All agents working on that
+  kind of file know about this" is a claim about agents that exist, agents that will
+  exist, and agents nobody thought about when the standard was set. An owner added to
+  the ownership record and correct thereafter, with nothing written about it, is that
+  claim discharged.
+
+  WHY THIS IS NOT INF-1200c. c asks whether the audience is complete. This asks where
+  the statement lives. A project could inform its complete audience entirely by hand
+  and pass c; a project could hold zero authored statements and still miss half its
+  owners, passing this and failing c. The two are orthogonal and both are needed.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: pick one specialist that owns a kind of file carrying a standard. Restore a
+  hand-authored, currently-correct statement of that standard into that specialist's
+  own instructions, and exclude that specialist from the derived delivery. Under that
+  injection:
+    - that specialist remains correctly and faithfully informed, so INF-1200a-1,
+      INF-1200c-1 and INF-1200f-1 all STAY GREEN for it;
+    - the removal arm of this record must go RED, because stripping authored references
+      now silences that specialist;
+    - the change-the-declaration arm must go RED, because that specialist's figure no
+      longer moves with the declaration.
+  All outcomes must be observed and all must revert. If the removal arm stays green
+  under this injection, the removal was not reaching authored instructions and the arm
+  is measuring nothing.
+
+  A SECOND, CHEAPER MUTATION WORTH RUNNING IF THE FIRST IS AWKWARD TO STAGE. MUTATION:
+  make the derived delivery emit a specialist's standards only when that specialist's
+  authored instructions already mention standards — an "opt-in" flag. Under it the
+  removal arm goes RED and the newly-added-owner arm goes RED, while a specialist that
+  already opted in stays green. Opt-in is a plausible, defensible design and it
+  reintroduces the hand edit under a different name.
+
+  MEASURED, 2026-09-09, IN THIS WORKTREE. Exactly one specialist's authored instructions
+  refer to a standard, in several places including a trigger that makes it stop and ask
+  before producing over-length work. That single file is the whole surface the removal
+  arm currently touches, and INF-1200f-2 requires it to come out of this no less useful
+  than it went in.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. Both
+  mutations above are written to be turned directly into test descriptors.

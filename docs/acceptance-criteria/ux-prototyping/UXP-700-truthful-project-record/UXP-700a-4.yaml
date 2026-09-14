@@ -46,8 +46,9 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by:
-  - UXP-700a-4-i
-implemented_by: []
+- UXP-700a-4-i
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700a-4.md
 change_target:
   - code
   - pipeline
@@ -79,3 +80,4 @@ notes: |
   is the current state.
 
   Mutation proof for the derivation clause lives in UXP-700a-4-i.
+target_epic: EPIC-TruthfulProjectRecord

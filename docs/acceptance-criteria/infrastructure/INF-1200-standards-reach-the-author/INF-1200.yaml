@@ -1,0 +1,298 @@
+id: INF-1200
+title: "The standards your work must meet reach whoever is about to do it"
+component: infrastructure
+components:
+  - infrastructure
+  - injection_builder
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Standards reach the author before the work, not after it.
+
+  Your project decides things like how long a file of a given kind may get.
+  Today those decisions live where they are enforced, and the usual way anyone
+  finds out about one is to be turned away once the work is already written.
+  After this goal, a standard for a kind of file is stated once, in one place,
+  and everyone who works on that kind of file knows it before they begin.
+  Setting a new standard, or covering a new kind of file, is a single decision
+  that takes effect everywhere — nobody goes round updating each specialist by
+  hand, nobody is held to a figure different from the one they were given, and
+  anyone still uninformed is visible rather than silently missed.
+depends_on: []
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE HOME TERRITORY, AND THE PLACEMENT ARGUMENT. This document is the
+      canonical account of every channel through which a specialist receives
+      what it knows before it starts work. This goal adds a subject to that
+      plane — the standards a kind of file must meet — and its whole value is
+      delivered on the injection side, before execution, which is what this
+      document governs. Any decomposition that satisfies a criterion here by
+      changing what happens after the work is written has left this territory
+      and has almost certainly landed in GE-127's instead.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, DELIBERATELY NOT ABSORBED AND DELIBERATELY NOT WIDENED. GE-127
+      owns whether a file is REFUSED — the crossing event, the ratchet over
+      files already oversized, which kinds of file the refusal covers, the
+      refusal's honesty and its usefulness. This goal owns whether the person
+      or agent about to write that file was TOLD beforehand. Being warned in
+      advance and being stopped afterwards are different goods with different
+      beneficiaries: the first is worth something even when nothing is ever
+      refused. Neither record may be closed as a duplicate of the other, and no
+      criterion here may be discharged by changing what a refusal does.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SHARPEST ADJACENCY — READ BEFORE DECOMPOSING INF-1200c OR INF-1200d.
+      GE-127c owns the REACH OF THE ENFORCEMENT: which kinds of file the size
+      standard is applied to at all. This goal owns the REACH OF THE TELLING:
+      given whatever set enforcement covers, everyone who works on those kinds
+      of file hears about it. The two are independent in both directions — a
+      standard can be enforced over a kind of file nobody was told about, and a
+      standard can be broadcast to everyone while covering half the project. A
+      criterion here that argues about WHICH kinds of file should be covered is
+      in GE-127c's tree and must be rewritten.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND EASY TO BLUR WITH INF-1200f. GE-127d owns one gate's
+      self-description: that its published account of itself matches what it
+      actually does, and that a figure it quotes about a file is one you can
+      arrive at yourself. This goal's fidelity criterion owns a different pair
+      of surfaces — the figure sitting in a specialist's own working
+      instructions versus the figure that will be applied to its output. The
+      two come apart cleanly: perfectly accurate published documentation
+      alongside a stale figure in a specialist's instructions satisfies GE-127d
+      and fails INF-1200f, and the reverse also holds.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. BP-1600a-2 owns whether a check is REGISTERED — the census of
+      standards that exist on disk and are wired to nothing. This goal owns
+      whether the audience for a standard was informed of it. The two are
+      genuinely independent and the store must not let them merge: a standard
+      can be fully registered and enforced while no specialist has ever been
+      told it, and a standard can be described to every specialist while
+      running nowhere. A criterion here that is satisfied by registering
+      something is mis-scoped and duplicates an approved, high-priority record.
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECEDENT, NOT THE HOST. INF-1100 established in this very component
+      that a project's own declaration is the single source of truth a
+      specialist obeys, and that the resulting figures in compiled instructions
+      are proven correct rather than assumed. Its subject is WHERE work is put.
+      This goal's subject is WHAT the work must satisfy. INF-1100 is approved
+      and was deliberately not widened to absorb this — see notes.
+  - path: docs/acceptance-criteria/agent-registry/AR-100-technology-ownership/AR-100.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE JOIN THIS GOAL CONSUMES AND MUST NOT RE-SPECIFY. AR-100 owns that
+      every kind of file in your codebase genuinely has an owning specialist.
+      This goal takes that ownership as given and asks a further question of it:
+      does that owner know the standards for what it owns. If ownership is
+      wrong, this goal faithfully tells the wrong specialist — that failure is
+      AR-100's, not this tree's. No criterion here may re-decide ownership.
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600a-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      OPPOSITE DIRECTION, SAME SEAM. INF-600a-4 requires that every figure a
+      specialist's instructions refer to is declared by that specialist —
+      hygiene running from the instructions outward. This goal runs the other
+      way: from the standard outward to every specialist that must receive it.
+      They are complementary and a decomposition here should satisfy
+      INF-600a-4 rather than contradict or restate it.
+  - path: config/agent_registry.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Carries, per specialist, the kinds of file it owns. One half of the join
+      that makes "which specialists must be told what" answerable today.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Carries the per-kind standards themselves. The other half of the same
+      join. Both halves exist; nothing reads them together.
+delivers_to: null
+expects_from: null
+origin_agent: product-owner-v3
+created: 2026-09-09
+amended_by:
+  - reason: "Authored from BrainCandy's request for guardrail knowledge to be injected into agents by file type from a single source of truth. Origin intent: BrainCandy."
+superseded_by: null
+covered_by:
+  - INF-1200a
+  - INF-1200b
+  - INF-1200c
+  - INF-1200d
+  - INF-1200e
+  - INF-1200f
+implemented_by: []
+change_target:
+  - prompt
+  - config
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  User-authored intent: BrainCandy. Framed by product-owner-v3, 2026-09-09.
+  L0 and L1 only — no Gherkin, no technical requirements and no test contracts
+  were written here, by design.
+
+  WHAT THE USER ASKED FOR, AND WHAT THEY DID NOT. The request was: "Injecting
+  guardrails into agents based on file types. It must be easy to control these
+  things from a single source of truth, where I say 400 lines for tsx files, and
+  all agents working on tsx know about this." Read carefully, this is NOT a
+  request for a new standard, a new check, or a stricter one. Every constraint
+  named already exists and is already configured. The request is that the
+  constraints the project ALREADY holds work to should reach the party about to
+  produce the work — declared in one place, per kind of file, automatically true
+  of every specialist that owns that kind of file, and automatically true of
+  standards added later. Any decomposition that ends up authoring a new
+  guardrail has answered a question nobody asked.
+
+  WHY A NEW L0 AND NOT AN AMENDMENT. Four existing records were examined as
+  hosts. Each was rejected on scope, and each is fenced in doc_links rather than
+  quietly left adjacent.
+
+    - INF-1100 ("Agents always do their work where your project keeps it") is
+      the closest structural match in the store and is the reason this goal is
+      credible at all: it already established the pattern of a project
+      declaration being the one source of truth a specialist obeys, with the
+      resulting figures in compiled instructions proven rather than assumed. Its
+      promise, in its own words, is about work LOCATION. Widening an approved
+      L0's stated promise from "where your work goes" to "and also every
+      standard it must meet" changes what an approved record promises after the
+      fact, and buries the more valuable half of the new capability inside a
+      goal whose title does not mention it. Precedent followed, promise not
+      widened.
+    - INF-100 ("Agents work without manual intervention") reads close on its
+      criteria line — context loaded, no handholding — but its three children
+      are unrelated point defects (which account opens a pull request, how one
+      script resolves a checkout root, how another finds its configuration).
+      Hanging a cross-cutting capability under a grab-bag of point fixes
+      inverts containment, which is the standing objection this store already
+      recorded when GE-120 was kept off GE-118.
+    - GE-127 is the enforcement half of the same subject and is fenced hard.
+      See its doc_link above; the boundary is stated there and repeated in
+      every child of this tree that touches it.
+    - AR-100 owns the ownership join this goal consumes. It answers "who owns
+      .tsx"; this goal asks "and does that owner know the .tsx rules". Using an
+      answer is not the same as owning the question.
+
+  THE ALTITUDE TEST THIS GOAL HAD TO PASS. An earlier framing was scoped to
+  file-size limits reaching coding specialists. It was lifted, because the
+  outcome survives swapping the standard: a project that capped tangledness or
+  folder crowding instead, and told nobody, has exactly the same defect. The
+  title therefore names no standard, no kind of file and no specialist. A
+  criterion in this tree that reads as being about one number, one file type or
+  one specialist is at the wrong altitude.
+
+  THE MEASURED SHAPE OF THE GAP — IT IS A GRID WITH ONE CELL FILLED. Verified in
+  this worktree on 2026-09-09. Treat the labels as given; do not upgrade them.
+
+    - READ FROM SOURCE, NOT DISPUTED — THE WORKING CELL. One standard (a line
+      limit) for one kind of file (Python) is read at build time out of the
+      guardrail configuration and threaded into one specialist's instructions,
+      which refer to it in five places including a stop-and-ask trigger. For
+      that one pairing, the figure the specialist is told IS the figure that
+      will be enforced, from a single declaration. This is the shape to
+      generalise. It is correct and must be preserved, not replaced.
+    - READ FROM SOURCE — THE FILE-TYPE AXIS. The build-time step reads exactly
+      one kind of file. The same configuration section names two, with distinct
+      limits. Nothing tells anyone about the second.
+    - MEASURED BY GREP OVER ALL SPECIALIST TEMPLATES — THE SPECIALIST AXIS.
+      Exactly one specialist template mentions the size standard at all. Two
+      other specialists own kinds of file the project's own ownership record
+      assigns them, and are told nothing.
+    - READ FROM SOURCE — THE GENERALITY GAP. The build-time step is a
+      hand-written one-off sitting beside another hand-written one-off for an
+      unrelated value. Nothing walks the ownership record or the standards
+      declaration. Every additional value therefore costs both a new one-off
+      and a hand edit of the right specialist templates. This is the fact that
+      makes INF-1200b the keystone: an implementation where declaring a new
+      limit still requires editing specialist instructions has NOT delivered
+      the user's "single source of truth", even if every specialist ends up
+      correct on the day it ships.
+    - READ FROM SOURCE — THE FUTURE-STANDARDS CASE IS ALREADY HERE, TWICE OVER.
+      Three further standards are fully configured with thresholds of their own
+      (code tangledness, a separate one for database code, and folder
+      crowding). None is registered to run, and no specialist anywhere is told
+      any of their figures. They are the concrete instance of "guardrails we
+      add later" and of INF-1200e's silent-gap case simultaneously. NOTE THE
+      FENCE: making them RUN is BP-1600a-2's work and is out of scope here.
+      They matter to this tree only as an audience that has never been
+      addressed.
+    - READ FROM SOURCE — THE USER'S OWN EXAMPLE IS NOT COVERED AT ALL. The kind
+      of file named in the request appears in neither the covered-kinds list
+      nor the per-kind limits. Being ABLE to say it is the point; the specific
+      figure is a decision for the user at approval, not a criterion here.
+      Following GE-127c's precedent, no criterion in this tree names a file
+      extension.
+
+  L1 CUT — BY GUARANTEE, NOT BY DEFECT, AND NOT BY AXIS OF THE GRID ALONE.
+    - INF-1200a — TIMING. You are told before you write, not refused after.
+      This is the criterion that keeps the whole tree out of GE-127; if it is
+      dropped, everything left here collapses into enforcement.
+    - INF-1200b — SINGLE DECLARATION. THE KEYSTONE. One edit, one place, and
+      every affected specialist is correct thereafter with nothing else
+      touched. This is the criterion the user actually asked for and the one
+      most likely to be quietly satisfied by an implementation that produces
+      correct specialists via six hand edits.
+    - INF-1200c — REACH ACROSS SPECIALISTS. Everyone who owns a kind of file is
+      told that kind of file's standards.
+    - INF-1200d — REACH ACROSS STANDARDS AND ACROSS TIME. A standard added
+      later arrives at its audience without anyone rewiring the delivery.
+    - INF-1200e — DETECTABILITY OF THE GAP. An uninformed specialist is a
+      countable, reportable condition rather than silence.
+    - INF-1200f — FIDELITY. What a specialist was told is what its work will be
+      judged against, and stays so as the standard changes.
+
+  WHY c AND d ARE NOT ONE L1, since the merge is tempting. They are the two
+  axes of the grid and they have different populations and different mechanics:
+  c is answered by walking the ownership record, d by walking the standards
+  declaration. Merged, an implementer satisfies whichever axis is cheaper —
+  which is precisely how the store arrived at one filled cell.
+
+  WHY b AND f ARE NOT ONE L1. A design in which each specialist's instructions
+  still name the value they want, with the figures filled in automatically,
+  satisfies f (no drift) and fails b (adding a kind of file still means editing
+  a specialist). That is today's design, generalised. The negative case proves
+  independence.
+
+  SILENCE IS THE FAILURE MODE — WHY INF-1200e EXISTS AT ALL. Today a specialist
+  that was told nothing is indistinguishable from one for which no standard
+  exists. Both are silent. Every other criterion in this tree can be reported as
+  satisfied by a system that covers one specialist and calls it done, unless the
+  uninformed ones can be named. This component's standing convention that a
+  check which could not run must say so, rather than reporting success, applies
+  here unchanged and in its natural form: a delivery that reached nobody must
+  not look like a project with no standards.
+
+  IDENTIFIER. INF-1200 was established free on 2026-09-09 rather than by listing
+  directories, because folder listings under-report taken ids in this store and
+  this component in particular files INF-700 inside the INF-400 folder and
+  INF-900 inside the INF-600 folder. Checks run: a recursive grep for the
+  literal INF-1200 across the whole worktree excluding version-control internals
+  returned no hits, and the highest L0 hundred otherwise in use is INF-1100. Per
+  standing rule, RE-VERIFY at merge time rather than trusting this paragraph —
+  id allocation in this store is known-broken (KI-ACD-008).
+
+  PRIORITY AND READINESS ARE AUTHORING DEFAULTS, NOT JUDGEMENTS. Every record in
+  this tree is draft/medium. The user sets both at the approval gate.
