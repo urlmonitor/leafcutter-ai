@@ -87,7 +87,55 @@ doc_links:
       a loop that never consults it. Every arm above counts the engagements a real run
       actually made and reads the delivery outcome that run actually produced.
 delivers_to: null
-expects_from: null
+expects_from:
+  - ac_id: INF-800f
+    contract: >-
+      A restructuring specialist a supervisor can engage as part of an ordinary workflow.
+      Added by the IT PO at enrichment: this record's bound COUNTS ENGAGEMENTS OF THAT PARTY,
+      so it is blocked on INF-800f exactly as BO-3800b-1 is. The dependency was reachable only
+      transitively through BO-3800d; it is stated here so the blockage is visible on the
+      record that carries it.
+it_requirements:
+  - "HELD — DELIBERATELY NOT ENRICHED FOR TEST COVERAGE. No assigned_agent, no
+    estimated_complexity and no test_spec are authored, on purpose. Blocked on INF-800f
+    (infrastructure; readiness reviewed, covered_by empty, nothing built): the restructuring
+    craft exists today only as templates/workflows/code-refactoring-specialist.md, a slash
+    command with no entry in config/agent_registry.json, no position in the phaseOrder twins
+    in templates/workflows-js/build-feature.js and build-ticket.js, and no defined result
+    contract. Every arm here COUNTS ENGAGEMENTS OF THAT PARTY, so a test_spec would have to
+    name a dispatch key that does not exist — the BP-100k-4 mistake this store has already
+    made once. WHAT WOULD UNBLOCK IT: INF-800f landing with the specialist's agent id, its
+    position in both phaseOrder twins, and the shape of the result it returns (needed here so
+    'the specialist ran and left the file short' is distinguishable from 'the specialist could
+    not be engaged'). The three named mutations lift verbatim into descriptors at that point."
+  - "THE BOUND IS SETTLED AT ONE. The criteria require a bound that exists and is at least
+    one; the value is this enrichment's and it is ONE specialist engagement per delivery."
+  - "BOUND REASONING, RECORDED SO IT IS NOT RE-LITIGATED. (a) This record's own notes: a file
+    that resists restructuring resists it identically on the second and tenth attempt, so a
+    higher bound buys cost rather than outcomes. (b) Every attempt engages the most expensive
+    party in the ladder, so the bound is the main lever on what a hard file costs before it is
+    reported. (c) Precedent on the same seam: the existing recovery beside this one retries
+    the commit exactly once — templates/skills/precommit-autofix/SKILL.md states 'The retry cap
+    is exactly one. A second hook failure after the retry is always surfaced' — and a
+    restructuring handoff allowed MORE attempts than the mechanical recovery next to it would
+    make the expensive path the loosely-bounded one."
+  - "DO NOT REUSE MAX_RETRIES. templates/workflows-js/build-feature.js carries MAX_RETRIES = 2
+    for a DIFFERENT population: mechanical phase failure, where a transient failure genuinely
+    can succeed on a re-run. A restructure that ran and fell short is not transient. The bound
+    here is its own named constant, declared in both phase-loop twins, and must not be
+    conflated with the mechanical retry cap."
+  - "THE BOUND'S SCOPE IS ONE DELIVERY, as the criteria state — not one ticket and not one
+    run. A later, unrelated delivery refusal in the same ticket gets its own budget, and a
+    single delivery may never accumulate one."
+  - "THE BOUND IS A CEILING ON FAILURE, NEVER A QUOTA TO SPEND. A counted loop that engages the
+    specialist `bound` times and evaluates the file only afterwards satisfies every other arm,
+    costs the full bound on the easy cases, and is named mutation (3) THE SPENT QUOTA. With the
+    bound at one this injection is cheap to write and easy to miss, because one engagement then
+    looks like both designs."
+  - "REACHING THE BOUND MUST NOT DELIVER. The standard is not relaxed, waived, bypassed, marked
+    satisfied, or exempted for the named file because attempts ran out. GE-127b's warning is
+    binding: an exception is a decision to be taken explicitly and recorded, never defaulted
+    into existence, and letting the change through after N attempts is the most likely default."
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by: []

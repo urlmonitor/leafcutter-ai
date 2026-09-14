@@ -69,6 +69,34 @@ expects_from:
       for the case where the disposition is present and one of the other two is not, and it
       requires that case to surface as a stop rather than as a handoff carrying an invented
       demand.
+it_requirements:
+  - "HELD — DELIBERATELY NOT ENRICHED. No assigned_agent, no estimated_complexity and no
+    test_spec are authored, on purpose. Blocked on INF-800f (infrastructure; readiness
+    reviewed, covered_by empty, nothing built)."
+  - "WHY THIS ONE IS HELD EVEN THOUGH HALF OF IT LOOKS TESTABLE TODAY — THE REASONING IS
+    RECORDED BECAUSE IT IS NOT OBVIOUS. Two of this record's arms sit entirely on shipped
+    machinery: 'the run stops, reporting that the refusal was read and carried no usable
+    demand, reproducing the value it was given' and 'read-and-said-nothing-usable is never
+    reported as could-not-be-read' are BO-3000a's delivered refusal behaviour one field over,
+    and could be driven through the harness now. The record's FIRST Then cannot be: 'no
+    restructuring specialist is engaged' is a negative assertion, and this store's own
+    standing discipline — BP-900c-4-i, reused by BO-3800b-2's paired arm and by GE-127e-2 —
+    is that a single-run negative is satisfied by a run that engages nobody at all. Making it
+    non-vacuous requires a paired run in which a WELL-FORMED refusal does engage the
+    specialist, and that run cannot exist before INF-800f. A test_spec covering only the stop
+    arms would leave the record's load-bearing arm uncovered while looking complete, which is
+    the shape its own named mutation (THE HELPFUL DEFAULT) exists to catch."
+  - "WHAT WOULD UNBLOCK IT: INF-800f landing with the specialist's agent id and its position
+    in the phaseOrder twins in templates/workflows-js/build-feature.js and build-ticket.js —
+    enough to construct the paired well-formed run. The brief's shape, which BO-3800c-1 needs,
+    is not required here: this record only needs the engagement to be POSSIBLE so that its
+    absence is a fact rather than a tautology."
+  - "CONSTRAINT THAT SURVIVES THE HOLD. Reuse BO-3000a's shipped refusal behaviour — dispatch
+    nobody, reproduce the value you were given rather than resolving it, and tell 'no usable
+    result was obtained' apart from 'a result was obtained and named nothing'. Do not build a
+    second refusal path beside it. Per the project error handling policy a swallowed read or
+    parse error on the refusal must never become a demand of zero, a standing default, or an
+    unnamed file; it routes to the stop."
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by: []

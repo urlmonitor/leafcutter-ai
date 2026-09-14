@@ -82,7 +82,50 @@ doc_links:
       and on one whose values are never filled in. Every arm above is read from the account a
       real stopped run actually produced.
 delivers_to: null
-expects_from: null
+expects_from:
+  - ac_id: INF-800f
+    contract: >-
+      A restructuring specialist a supervisor can engage as part of an ordinary workflow.
+      Added by the IT PO at enrichment: this record's account must state THAT THAT PARTY was
+      engaged and HOW MANY TIMES, and must tell 'could not be engaged at all' apart from
+      'engaged and returned nothing usable' — three facts that presuppose an engageable
+      identity with a defined result. The dependency was reachable only transitively through
+      BO-3800d; it is stated here so the blockage is visible on the record that carries it.
+it_requirements:
+  - "HELD — DELIBERATELY NOT ENRICHED FOR TEST COVERAGE. No assigned_agent, no
+    estimated_complexity and no test_spec are authored, on purpose. Blocked on INF-800f
+    (infrastructure; readiness reviewed, covered_by empty, nothing built). The account's
+    required contents name the specialist, the number of times it was engaged, and the
+    difference between 'could not be engaged' and 'engaged and returned nothing usable' — all
+    three presuppose an identity in config/agent_registry.json, a position in the phaseOrder
+    twins, and a defined result shape, none of which exist. Writing descriptors against them
+    now is the BP-100k-4 mistake this store has already made once. WHAT WOULD UNBLOCK IT:
+    INF-800f landing with the agent id, its position in both phaseOrder twins, and the result
+    contract that makes 'returned nothing usable' a real state rather than a guess."
+  - "THE ACCOUNT'S SURFACE IS SETTLED: the driver's existing 'Halt & Surface to User' rung —
+    the same stop surface BO-3000a's refusals already use — in both phase-loop twins. No new
+    reporting surface is created. Three reasons: the adjudication ladder in
+    docs/architecture/agent_delivery_workflows.md already ends there and this record's own
+    doc_links call it the obvious home; a second surface would force a reader to know which
+    failure class to look in, which is the confusion the told-apart arm exists to prevent; and
+    BO-3000a's refusals already carry the reproduce-the-value-you-were-given discipline on that
+    surface, so the two kinds of stop are read side by side rather than in two idioms."
+  - "THE PARTIAL-PROGRESS DECISION IS NOT OVERTURNED. The Business Analyst decided in this
+    record's notes that a file the specialist improved without reaching the demand KEEPS that
+    improvement at the stop. The IT PO endorses it and adds the implementation consequence: no
+    rollback, revert, stash or checkout of the specialist's edits may run at the stop, and the
+    account must state where the file now stands and that those edits remain — so the hazard
+    the decision accepts (a stopped run leaves the file in a state nobody chose) is answered by
+    the account rather than by a rollback that would have to distinguish two authors inside one
+    working tree, which this tree has already established is not observable."
+  - "THE ENGAGEMENT COUNT MUST BE READ, NOT HARD-CODED. BO-3800d-1's bound is settled at one,
+    so at a fell-short stop the count is always 1 today. An account that prints a literal 1
+    satisfies the arm and silently goes wrong the first time the bound moves. The count must
+    come from what the run actually did."
+  - "ERRORS FOLLOW THE PROJECT ERROR HANDLING POLICY, and the three endings must survive it: a
+    swallowed failure to reach the specialist must not be reported as the specialist falling
+    short. That collapse costs the reader the one fact that says whether the file is hard or
+    the machinery is broken, and the two are fixed in different components."
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by: []

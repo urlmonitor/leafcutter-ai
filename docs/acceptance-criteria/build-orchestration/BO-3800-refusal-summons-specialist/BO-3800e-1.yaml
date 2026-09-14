@@ -85,6 +85,98 @@ doc_links:
       same ticket without this capability.
 delivers_to: null
 expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - "THE BO-210a SEAM IS DECIDED: route on the DISPOSITION the refusal states, never on the
+    hook id, and leave blocking_hook_ids unchanged. The full decision and its reasoning are
+    recorded on BO-3800b-2's it_requirements. It binds here because keying the new class on
+    a hook id reddens this record's first arm BY CONSTRUCTION: check-file-size is a single
+    hook id that emits BOTH dispositions, so a hook-keyed route sends every author-clearable
+    refusal from that same hook to the specialist as well."
+  - "blocking_hook_ids must be unchanged by this work. That list answers which hooks GATE a
+    commit; a disposition does not change whether a hook gates — it gates either way. Giving
+    the list a second job destroys the 'sole authority on which hooks gate a commit' property
+    BO-210a is approved and active on."
+  - "The disposition must be read from the refusal's own output. Its ABSENCE must resolve to
+    the existing route and never to the new one. This is the second arm's entire subject and
+    it governs every gate in the guardrail suite, all of which state no disposition today."
+  - "THE BASELINE MUST BE MEASURED, NOT DERIVED FROM BO-210c's TEXT. 'Exactly as today' is a
+    comparison against what the unmodified driver observably does now on a gating-hook
+    refusal, captured by running it through the same harness on the same fixture. Do not
+    build the expected baseline from BO-210 or BO-210c's criteria: BO-210c is work_status
+    todo, and templates/skills/precommit-autofix/SKILL.md Step 4a.3 instructs the commit
+    agent — a depth-1 phase agent under ADR-019 — to dispatch the originating coder with the
+    Agent tool, while its own re-dispatch prompt tells that agent it is 'running at depth 2'
+    and that any Agent call it makes 'will be silently dropped'. If the measured baseline
+    turns out to engage nobody, that is a finding to escalate before this record is frozen
+    around it, not a behaviour to preserve."
+  - "The comparison run must be produced by the same driver with the new branch not taken, in
+    the same harness, on the same fixture. A hand-written list of expected agents is not a
+    baseline — it makes the arm assert the test author's belief rather than the previous
+    behaviour."
+  - "No observable work may be added on the author-clearable path: same parties, same order,
+    same delivery outcome, and no extra file read, registry read or subprocess."
+  - "Errors follow the project error handling policy. A delivery outcome that cannot be read
+    must surface as a named stop, never as an absent disposition."
+test_required: true
+test_spec:
+  - name: test_author_clearable_refusal_dispatch_record_is_identical_to_the_baseline_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive the same ticket and the same author-clearable refusal through the unmodified driver and the changed driver; the ordered list of agents dispatched and the delivery outcome are identical. Equality against the baseline is what makes 'no restructuring specialist appeared' assertable without naming one."
+  - name: test_refusal_stating_no_disposition_at_all_matches_the_baseline_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A refusal carrying no disposition field at all — the shape every standard that refuses today has — produces the same parties, the same order and the same outcome as the baseline run."
+  - name: test_absent_disposition_is_not_read_as_the_specialist_case
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A disposition field that is absent, empty or blank takes the existing route. This is the arm that catches an implementation reading absence as the new class — it passes arm one, where the field is present and says author."
+  - name: test_over_broad_summons_injection_reddens_both_arms_here
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Named mutation THE OVER-BROAD SUMMONS — act on any refusal without reading the stated disposition and without requiring one. Both arms here go RED; BO-3800a-1 and BO-3800e-2 STAY GREEN. The declared coupling to BO-3800b-2's paired arm is reported, not suppressed; the stay-green halves naming BO-3800b-1, BO-3800c-1, BO-3800d-1 and BO-3800d-2 are deferred with those records (INF-800f)."
+  - name: test_a_hook_absent_from_the_gating_list_still_engages_nobody
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Drive a refusal from a hook that is not in blocking_hook_ids and observe that nothing is engaged at all — proving the gating list is still the sole authority on which hooks gate, and the new route is selected only after that list has said the hook gates. Asserted from a run, never by reading the config file."
+  - name: test_the_negative_promise_is_reachable_from_the_drivers_own_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "Every arm above is driven through unit_tests/prompt_assembly/_driver_harness.py executing build-feature.js's own top-level body — not an extracted helper, not a source scan."
+test_rationale: >-
+  This record is specifiable TODAY, before INF-800f, because every one of its assertions is
+  an EQUALITY AGAINST A BASELINE RUN rather than a statement about the specialist. "No
+  restructuring specialist appears in the record of parties the run engaged" is proved by
+  showing the dispatch record is identical, element for element and in order, to the record
+  the unmodified driver produced on the same fixture — which requires no knowledge of the
+  specialist's agent id, its phaseOrder position, or the shape of its result. That is the
+  BP-900c-4-i construction the store already uses: compare two runs and require the answer to
+  hold, rather than assert a single run against a hand-written expectation. A weaker shape is
+  insufficient in a specific and already-demonstrated way: an assertion that the routing
+  table has no entry mapping these hooks to the specialist is a grep on configuration and
+  stays green on a run that engages one by another path, and BO-3800e-1's own notes name that
+  as the likely wrong test. The baseline itself carries a caveat recorded in it_requirements
+  and it is load-bearing: it must be MEASURED from the unmodified driver, not reconstructed
+  from BO-210c's criteria, because BO-210c is unbuilt and its specified mechanism dispatches
+  from depth 1 to depth 2, which ADR-019 says is silently dropped. Freezing an assumed
+  baseline would make this record certify a behaviour nobody has observed.
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by: []

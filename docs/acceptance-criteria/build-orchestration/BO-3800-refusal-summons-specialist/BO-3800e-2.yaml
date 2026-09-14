@@ -69,6 +69,72 @@ doc_links:
       actually did, compared against the same run without the capability.
 delivers_to: null
 expects_from: null
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - "Nothing may be resolved, read, warmed or probed on account of this capability until a
+    refusal has actually stated a disposition naming a craft. No registry lookup, no
+    configuration pre-read, no reachability probe of the specialist at the start of a ticket
+    or a batch, and no eager construction of a brief."
+  - "The zero-extra-work arm and the timing arm are separate evidence and the timing arm may
+    never stand in for the other. A registry lookup is fast and the clock will not see it.
+    Additional observable work on an accepted run must be EXACTLY ZERO — no extra file read,
+    no extra subprocess, no extra registry read, no extra dispatch — asserted from what the
+    harness observed the run actually do."
+  - "Timing budget: on five paired runs of the same accepted fixture on the same machine, the
+    median duration must not regress by more than 2%. A green clock is no evidence at all for
+    the zero-extra-work arm and must never be reported as such."
+  - "The phase loop is a declared TWIN across templates/workflows-js/build-feature.js and
+    templates/workflows-js/build-ticket.js. The no-cost guarantee must hold in both and be
+    asserted from a run of each."
+  - "The cost promise is INHERITED from GE-127f's 'zero addition costs nothing' decision, not
+    restated. No arithmetic, threshold or comparison from the guardrail side may be
+    re-expressed here."
+test_required: true
+test_spec:
+  - name: test_accepted_run_dispatch_record_is_identical_to_the_baseline_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive a ticket in which every delivery attempt is accepted through the unmodified driver and the changed driver; the ordered list of agents dispatched is identical, which is how 'no restructuring specialist appears' is asserted without naming one."
+  - name: test_accepted_run_reads_no_extra_file_and_makes_no_extra_dispatch
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "On an accepted run the set of file reads, enumerations and dispatches the harness observed is identical to the baseline's — the arm that catches a registry lookup or configuration pre-read the clock cannot see."
+  - name: test_eager_probe_injection_reddens_the_no_extra_work_arm
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Named mutation THE EAGER PROBE — resolve and engage the specialist at every delivery attempt before the verdict is consulted, using the result only if the verdict names it. The no-extra-work arm and the nobody-engaged arm go RED; BO-3800a-1 STAYS GREEN. The declared coupling that also reddens both arms of BO-3800e-1 is reported, not suppressed."
+  - name: test_accepted_run_median_duration_does_not_regress_against_the_baseline
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Five paired runs of the same accepted fixture; the median duration with the capability is within 2% of the median without it. Secondary evidence only — this test passing proves nothing about the zero-extra-work arm."
+  - name: test_the_no_cost_path_is_reachable_from_the_drivers_own_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "Every arm above is driven through unit_tests/prompt_assembly/_driver_harness.py executing build-feature.js's own top-level body — not an extracted helper, not a source scan."
+test_rationale: >-
+  Like BO-3800e-1, this record is specifiable before INF-800f because every assertion is an
+  equality against a baseline run of the unmodified driver on the same fixture — no agent id,
+  no dispatch key and no payload shape is named. The record needs two kinds of evidence, not
+  one, and the reason is recorded in its own notes: the resolve-and-warm implementations it
+  exists to exclude are FAST, so a duration comparison alone stays green on all of them. The
+  work arm therefore asserts on the reads, enumerations and dispatches the harness observed,
+  and the timing arm is explicitly demoted to secondary evidence. A weaker shape — asserting
+  that the dispatch call sits inside a conditional in the driver source — is inadmissible: it
+  is a structural read and stays green on a condition that is always true.
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by: []

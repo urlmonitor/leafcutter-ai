@@ -1,5 +1,5 @@
 id: BO-3800c-1
-title: "What the specialist is given is the file and the demand the refusal stated, and both move when the refusal's move — never a second derivation"
+title: "What the specialist is given is the file and the demand the refusal stated, and both move when the refusal's do — never a second derivation"
 component: build-orchestration
 components:
   - build_orchestration
@@ -109,6 +109,36 @@ expects_from:
       disposition that applies. This record consumes those three facts verbatim and derives
       none of them by a second route. Their UNAVAILABILITY is floored by BO-3800c-1-i and
       must reach this record as a named stop, never as a supplied or defaulted demand.
+it_requirements:
+  - "HELD — DELIBERATELY NOT ENRICHED. No assigned_agent, no estimated_complexity and no
+    test_spec are authored, on purpose. Blocked on INF-800f (infrastructure; readiness
+    reviewed, covered_by empty, nothing built). Every arm of this record asserts the CONTENT
+    OF THE PAYLOAD the specialist receives — 'what the specialist is given names that file
+    and states that demand' — so a test_spec here would have to name the brief's field names
+    and the dispatch call that carries them. Neither exists: the restructuring craft is
+    templates/workflows/code-refactoring-specialist.md, a slash command reachable by a human
+    at a terminal and by nothing else, with no entry in config/agent_registry.json, no
+    position in the phaseOrder twins, and no defined input or result contract. Naming those
+    fields now is the BP-100k-4 mistake this store has already made once — declared config
+    keys that were never created — and a spec built on invented field names is less
+    trustworthy than no spec."
+  - "WHAT WOULD UNBLOCK IT: INF-800f landing with the specialist's agent id, its position in
+    the phaseOrder twins in templates/workflows-js/build-feature.js and build-ticket.js, and
+    — the field this record specifically needs — the SHAPE OF THE BRIEF the driver hands it,
+    so 'what the specialist is given' names a real structure. With that in hand the three
+    moving arms and the disagreeing-demand arm are directly expressible and the two named
+    mutations lift verbatim into descriptors."
+  - "CONSTRAINT THAT SURVIVES THE HOLD. The fixture constraint recorded in this record's own
+    notes is binding on whoever enriches it later: the refusal is an INPUT, and the
+    disagreeing-demand arm must be built on a refusal the test SUPPLIES directly. If the only
+    way to construct the disagreement is to compute a second demand, the fixture has crossed
+    the seam into GE-127f-1's inequality, GE-127f-2's definition of what was added, or
+    GE-127d's counting rule, and must be rebuilt."
+  - "SECOND CONSTRAINT THAT SURVIVES THE HOLD. Coverage must be read from what the specialist
+    ACTUALLY RECEIVED in a run that actually engaged it. A test that calls a brief-building
+    helper directly, or that reads the payload's construction in source, stays green on a
+    payload that is built and never handed to anyone — the fast-lane-build.js shape this
+    tree's own doc_links already name as inadmissible."
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by: []

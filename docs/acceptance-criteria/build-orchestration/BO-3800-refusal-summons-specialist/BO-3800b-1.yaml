@@ -106,6 +106,32 @@ expects_from:
     contract: >-
       A restructuring specialist a supervisor can engage as part of an ordinary workflow,
       with its own identity, tool set, invocation path and sign-off protocol.
+it_requirements:
+  - "HELD — DELIBERATELY NOT ENRICHED. No assigned_agent, no estimated_complexity and no
+    test_spec are authored for this record, on purpose. It is blocked on INF-800f
+    (infrastructure; readiness reviewed, covered_by empty, nothing built). The restructuring
+    craft exists today only as templates/workflows/code-refactoring-specialist.md — a slash
+    command reachable by a human at a terminal and by nothing else. It has NO entry in
+    config/agent_registry.json, NO position in the phaseOrder twins in
+    templates/workflows-js/build-feature.js and build-ticket.js, and NO defined result
+    contract. Every arm of this record asserts WHICH PARTY the run engaged, so a test_spec
+    here would have to name a dispatch key, an agent id or a result field that does not
+    exist. That is the BP-100k-4 mistake this store has already made once — declared config
+    keys that were never created — which leaves a spec less trustworthy than no spec."
+  - "WHAT WOULD UNBLOCK IT: INF-800f landing with (a) the specialist's agent id registered in
+    config/agent_registry.json, (b) its position in the phaseOrder twins in
+    templates/workflows-js/build-feature.js and templates/workflows-js/build-ticket.js, and
+    (c) the shape of the result it returns to the driver. With those three facts in hand this
+    record is enrichable in a single pass and nothing else about it changes. Its named
+    mutations, including their must-go-red and must-stay-green lists, are already written to
+    be lifted verbatim into descriptors."
+  - "CONSTRAINT THAT SURVIVES THE HOLD AND MUST BE HONOURED WHEN IT IS LIFTED: the engaging
+    party is the depth-0 driver that owns the phase loop, never the delivery step. ADR-019 —
+    an agent at depth 1 cannot invoke the Agent tool and such calls are silently dropped, so
+    an ask placed inside the delivery step engages nobody and complains about nothing."
+  - "SECOND CONSTRAINT THAT SURVIVES THE HOLD: the routing seam is decided on BO-3800b-2's
+    it_requirements — route on the disposition the refusal states, never on the hook id, and
+    leave blocking_hook_ids unchanged."
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by: []

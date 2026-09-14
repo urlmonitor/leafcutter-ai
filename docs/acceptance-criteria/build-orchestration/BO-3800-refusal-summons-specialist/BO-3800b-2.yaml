@@ -112,7 +112,85 @@ delivers_to:
       this half, a build that engages both satisfies BO-3800b-1 entirely while leaving the
       author racing the standard — which is the behaviour the user asked for a specialist to
       prevent.
-expects_from: null
+expects_from:
+  - ac_id: INF-800f
+    contract: >-
+      A restructuring specialist a supervisor can engage as part of an ordinary workflow,
+      with its own identity, tool set, invocation path and sign-off protocol. Added by the IT
+      PO at enrichment: this record was authored with expects_from null, but both halves of
+      its paired arm turn on a NAMED party appearing or not appearing in the run's dispatch
+      record, so it is blocked on INF-800f exactly as its sibling BO-3800b-1 is. The
+      dependency was reachable only transitively through BO-3800b's depends_on; it is stated
+      here so the blockage is visible on the record that carries it.
+it_requirements:
+  - "HELD — DELIBERATELY NOT ENRICHED FOR TEST COVERAGE. No assigned_agent, no
+    estimated_complexity and no test_spec are authored, on purpose. Blocked on INF-800f
+    (infrastructure; readiness reviewed, covered_by empty, nothing built): the restructuring
+    craft exists today only as templates/workflows/code-refactoring-specialist.md, a slash
+    command reachable by a human at a terminal and by nothing else, with no entry in
+    config/agent_registry.json, no position in the phaseOrder twins in
+    templates/workflows-js/build-feature.js and build-ticket.js, and no defined result
+    contract. Both halves of this record's paired arm turn on which NAMED party appears in
+    the run's dispatch record, so a test_spec here would have to name an agent id or a
+    dispatch key that does not exist — the BP-100k-4 mistake this store has already made
+    once, which leaves a spec less trustworthy than no spec. WHAT WOULD UNBLOCK IT: INF-800f
+    landing with (a) the specialist's agent id in config/agent_registry.json, (b) its
+    position in both phaseOrder twins, and (c) the shape of the result it returns to the
+    driver. The record's named mutations and their must-go-red / must-stay-green lists are
+    already written to be lifted verbatim into descriptors at that point."
+  - "THE BO-210a SEAM — DECIDED HERE, AS THIS RECORD'S doc_links ASKED. DECISION: the new
+    class is a route selected AFTER blocking_hook_ids has already said the hook gates, keyed
+    on the DISPOSITION the refusal states and read from the refusing hook's own output. It is
+    NOT keyed on the hook id, and blocking_hook_ids is neither extended nor consulted for the
+    disposition."
+  - "SEAM REASONING, GROUND 1 — A HOOK-ID KEY CANNOT EXPRESS THE SPLIT AT ALL. check-file-size
+    is ONE hook id, and GE-127f-3 makes the disposition a function of the SIZE of the demand
+    rather than of which hook refused, so that single hook id emits BOTH dispositions. A
+    hook-keyed route therefore sends every check-file-size refusal to the same party. Sending
+    them all to the specialist is BO-3800e-1's over-broad summons in miniature: it reddens
+    BO-3800e-1's first arm by construction while leaving every positive arm of this tree
+    green, which is the exact wrong build BO-3800e-1 exists to exclude. Sending them all to
+    the author deletes this record."
+  - "SEAM REASONING, GROUND 2 — EXTENDING blocking_hook_ids WOULD BREAK A LIVE APPROVED
+    REQUIREMENT. That list answers one question: which hooks GATE a commit. A disposition does
+    not change whether a hook gates — check-file-size gates either way. Teaching the list
+    about dispositions gives it a second job and destroys the 'single blocking_hook_ids list
+    that is the sole authority on which hooks gate a commit' property BO-210a is approved and
+    req_status active on. The two questions — does this hook gate, and who is engaged to clear
+    it — stay separate, which is how BO-210a's own artifact already separates them: a single
+    gating list, and a per-hook route beside it."
+  - "SEAM REASONING, GROUND 3 — READING THE DISPOSITION FROM THE HOOK'S OWN OUTPUT IS REUSE,
+    NOT A NEW MECHANISM. BO-210c already reads the originating agent identity from the hook's
+    own output (templates/skills/precommit-autofix/SKILL.md Step 4a.1 parses an
+    AUTOFIX_AGENT line out of the raw hook text). Carrying the disposition on the same channel
+    is the same shape one field over, and it is the only shape consistent with BO-3000a's
+    no-inference rule and with BO-3800c-1's carry-don't-reconstruct arm. A configuration-keyed
+    route would be a SECOND derivation of a fact the refusal already states, and the two can
+    disagree."
+  - "WHAT THE SEAM DECISION DOES NOT DECIDE: where the per-disposition route is written, and
+    what the disposition values are called. GE-127f-3 owns the disposition vocabulary and
+    INF-800f owns the party's name. This decides only the KEY the route is selected on, and
+    that the gating list is untouched. It is takeable now, without INF-800f, precisely because
+    it is about where the branch reads its INPUT rather than about who is dispatched."
+  - "RECONCILIATION THAT MUST HAPPEN IN THE SAME CHANGE, NOT BE DISCOVERED LATER. BO-210c's
+    originator re-dispatch fires for every structural-category hook in blocking_hook_ids, and
+    check-file-size is one of the seven. For a refusal whose disposition names a craft the
+    author is not being asked to supply, that re-dispatch must NOT fire. Adding the specialist
+    route without SUPPRESSING BO-210c's route for that disposition produces a run in which
+    both are engaged — this record's named mutation (1) THE BELT AND BRACES, and the build a
+    careful implementer reaches for first."
+  - "RISK FOUND AT ENRICHMENT AND NOT RESOLVED HERE — ESCALATED. This record's Given assumes
+    the originating coder 'appears in the ordered record of parties the run engaged', i.e.
+    that the DRIVER can observe it. Today it cannot: BO-210c's re-dispatch is specified to
+    happen inside the commit agent via the precommit-autofix skill, and
+    templates/skills/precommit-autofix/SKILL.md Step 4a.3 instructs that agent to use the
+    Agent tool while its own re-dispatch prompt tells the agent it spawns that it is 'running
+    at depth 2' and that any Agent call it makes 'will be silently dropped'. Under ADR-019 the
+    commit agent is itself the depth-1 phase agent, so the Step 4a.3 dispatch is the dropped
+    call. BO-210c is also work_status todo. Before this record is built, establish by
+    measurement what the driver actually dispatches today on a gating-hook refusal. If the
+    answer is nobody, both halves of the paired arm need re-examination and BO-210c needs a
+    defect raised against it — neither is this enrichment's to decide."
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by: []

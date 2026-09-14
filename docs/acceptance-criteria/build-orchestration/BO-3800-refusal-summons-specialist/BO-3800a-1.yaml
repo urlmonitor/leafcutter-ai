@@ -106,6 +106,129 @@ expects_from:
       the handing-off phase not recorded as completed, the drive not advanced — consumed
       whole rather than re-implemented. This record supplies the trigger BO-3000a cannot:
       a refusal, which emits no handoff and names no target.
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - "The hold and the re-offer must be adjudicated by the depth-0 driver that owns the
+    phase loop (templates/workflows-js/build-feature.js and its declared twin
+    build-ticket.js), never inside the delivery phase agent. ADR-019: an agent at depth 1
+    cannot invoke the Agent tool and such calls are silently dropped, so an implementation
+    placed inside the delivery step produces a run in which nothing happens and nothing
+    complains — indistinguishable from this record not being built."
+  - "Reuse BO-3000a's delivered holding behaviour whole — target re-dispatched before any
+    later phase runs, the handing-off phase not recorded as completed, the drive not
+    advanced. Do not stand up a second holding mechanism beside it."
+  - "The phase loop and its phaseOrder array are declared TWINS across
+    templates/workflows-js/build-feature.js and templates/workflows-js/build-ticket.js. An
+    adjudication branch added to one must be added to the other in the same change, and the
+    parity must be asserted by driving the same refusal through both, not by comparing
+    source text."
+  - "The refusal path must not mutate the working tree. No reset, stash, checkout, clean or
+    restore may run between the refusal and the second delivery attempt."
+  - "The second delivery attempt must run the same gate chain as the first: no hook skipped,
+    no allowlist or exemption entry added for the named file, no override or bypass flag set,
+    and nothing marked waived for the remainder of the run."
+  - "IDENTITY IS OUT OF SCOPE HERE AND MUST STAY OUT. These arms hold whoever performed the
+    restructuring; the party's identity is BO-3800b-1's and is blocked on INF-800f. Coverage
+    for this record therefore uses a STAND-IN restructuring step supplied by the fixture and
+    never a named agent id, so nothing here has to be rewritten when INF-800f fixes the name."
+  - "Errors follow the project error handling policy. A delivery outcome that cannot be read
+    or parsed must surface as a named stop, never as an absent disposition that silently
+    resumes the ordinary route."
+  - "The branch must cost nothing on a delivery that is not refused. No lookup, read or
+    resolution may happen before a refusal has actually stated a disposition (BO-3800e-2's
+    population)."
+test_required: true
+test_spec:
+  - name: test_held_refusal_leaves_the_authors_change_byte_identical
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive a delivery refusal whose stated disposition names a restructuring craft; the working tree the author left is byte-identical afterwards — not reverted, rolled back, stashed, discarded or re-derived."
+  - name: test_held_refusal_does_not_record_the_delivery_phase_completed
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the refusal the delivery phase is not recorded as completed in the ticket record the run actually wrote."
+  - name: test_no_phase_after_delivery_runs_while_the_change_is_held
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "No phase ordered after delivery appears in the run's dispatch record between the refusal and the re-offer."
+  - name: test_second_delivery_attempt_carries_the_authors_original_change
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Once the stand-in restructuring step has run and the file meets the demand, delivery is attempted a second time carrying the author's original change, with nothing re-authored, re-staged or re-derived."
+  - name: test_second_attempt_is_judged_by_the_same_unsuppressed_standard
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The second attempt runs the same gate chain as the first — named file not exempted, no hook skipped, no override set — and completes only because the file now meets the demand."
+  - name: test_the_re_offer_never_precedes_the_restructuring_step
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A run inspected after the refusal and before any restructuring shows no second delivery attempt; in the completed run the restructuring step precedes the re-offer in the ordered dispatch record."
+  - name: test_discard_injection_reddens_only_the_hold_arms
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Named mutation (1) THE DISCARD — reset the working tree before anyone is asked. The change-still-present and second-attempt-carries-the-change arms go RED; the ordering arm and both arms of BO-3800e-1 and BO-3800e-2 STAY GREEN. The stay-green halves naming BO-3800b-1 and BO-3800b-2 are deferred with those records (INF-800f)."
+  - name: test_forced_pass_injection_reddens_only_the_same_standard_arms
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Named mutation (2) THE FORCED PASS — deliver on the second attempt without consulting the standard, or exempt the named file for the rest of the run. The judged-by-the-same-standard and completes-because-the-file-meets-the-demand arms go RED; the hold arms and BO-3800e-1 STAY GREEN."
+  - name: test_dropped_retry_injection_reddens_only_the_second_attempt_arms
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Named mutation (3) THE DROPPED RETRY — hold the change and ask, then end the run without re-offering. The second-attempt and completes arms go RED; the change-still-present and phase-not-recorded-completed arms and BO-3800e-1/e-2 STAY GREEN."
+  - name: test_the_hold_branch_behaves_identically_in_both_phase_loop_twins
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    surface_invoked: templates/workflows-js/build-ticket.js
+    description: "The same refusal driven through build-ticket.js produces the same hold, the same non-completion and the same re-offer, proving the declared twins have not drifted — asserted from two runs, not from comparing source text."
+  - name: test_hold_and_re_offer_are_reachable_from_the_drivers_own_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "Every arm above is driven through unit_tests/prompt_assembly/_driver_harness.py executing build-feature.js's own top-level body — not an extracted helper, not a source scan."
+test_rationale: >-
+  The claim is a SEQUENCING property about a run, so the only admissible evidence is a run.
+  unit_tests/prompt_assembly/_driver_harness.py executes build-feature.js's own top-level
+  body and reports the agents a run actually dispatched, the records it wrote and the order
+  of both; BO-3000a — whose holding behaviour this record consumes whole — is already proved
+  on that surface, so it is the right one here. A direct-import unit test against an
+  extracted adjudication helper would be insufficient twice over: it cannot show the branch
+  is reached from the driver's real control flow, and it cannot show that no later phase ran,
+  which is the arm that separates a hold from a pause. A source-reading test is inadmissible
+  outright — fast-lane-build.js passed exactly that shape while never executing its gates.
+  TWO DELIBERATE LIMITS, RECORDED SO THEY ARE NOT MISTAKEN FOR OVERSIGHTS. First, the
+  restructuring step is a STAND-IN supplied by the fixture and is never a named agent: this
+  record explicitly holds whoever did the work, and the party's identity belongs to
+  BO-3800b-1, which is held pending INF-800f. Second, the stay-green halves of the three
+  named mutations are asserted here only against this record's own sibling arms and against
+  BO-3800e-1 and BO-3800e-2. The halves naming BO-3800b-1, BO-3800b-2, BO-3800c-1 and
+  BO-3800d-1 are deferred with those records and must be added to descriptors 7-9 when
+  INF-800f lands. Until then the tree's separability evidence is PARTIAL, and the
+  must-stay-green lists in the notes above remain the authority on what is still owed.
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by: []
