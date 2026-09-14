@@ -32,6 +32,7 @@ covered_by:
   - BP-1000a-4
   - BP-1000a-5
   - BP-1000a-6
+  - BP-1000a-7
 implemented_by: []
 documentation_triggers:
   - component-diagram

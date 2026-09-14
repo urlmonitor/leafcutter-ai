@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-10
+last_updated: 2026-09-13
 components:
   - build_pipeline
 related_docs:
@@ -4420,7 +4420,7 @@ Identical AST shape to a sibling-module load, so the scanner demanded a deployed
 ### KI-BP-20260910-1240 — build.py writes CRLF on Windows and then cannot see that it did, so every deployed script silently diverges from its template and a plain re-run never repairs it
 
 - **Severity:** high
-- **Status:** open
+- **Status:** partially resolved — the shared writer `_write()` is fixed (BP-1000a-7), which clears the commit-blocking hook-parity case; ~20 other text-mode writers remain (see Fix direction)
 - **Occurrences:** 1 (found 2026-09-10 while landing EPIC-TruthfulProjectRecord)
 - **First seen:** 2026-09-10 · **Last seen:** 2026-09-10
 - **Where:** `scripts/build_phases.py` `_write()` · every `check-hook-parity` / `check-output-drift` consumer
@@ -4436,7 +4436,7 @@ b'a\r\nb\r\n'
 'a\nb\n'          # the CRLF is invisible from here
 ```
 
-**Why it is worse than a cosmetic diff.** Three consequences compound. (1) The repair the hook advertises is a no-op, so the contributor is told to run a command that cannot work. (2) `--force` DOES repair it, because it skips the comparison entirely — so the working fix is undocumented and the documented fix is broken. (3) `.build_manifest.json` records the hash of what the build believes it wrote; when the build skips a file it never refreshes that entry, so `check-output-drift` later reports the file as hand-edited. A contributor following the error messages is walked toward editing hashes inside a build-integrity manifest to make a drift check pass — which is exactly the action that should never be taken, arrived at by following the tool's own advice.
+**Why it is worse than a cosmetic diff.** Three consequences compound. (1) The repair the hook advertises is a no-op, so the contributor is told to run a command that cannot work. (2) `--force` does NOT repair it either, despite appearances. A forced run reaches the compare-before-write guard, whose text-mode read normalises the CRLF file to LF, compares equal, and skips the write. (This entry originally claimed `--force` was the working repair; that was wrong. The repairs observed while filing it came from byte-copying templates over the deployed copies by hand, and from `--force` refreshing `.build_manifest.json`, which is a different defect.) (3) `.build_manifest.json` records the hash of what the build believes it wrote; when the build skips a file it never refreshes that entry, so `check-output-drift` later reports the file as hand-edited. A contributor following the error messages is walked toward editing hashes inside a build-integrity manifest to make a drift check pass — which is exactly the action that should never be taken, arrived at by following the tool's own advice.
 
 **Detection.**
 
@@ -4444,12 +4444,12 @@ b'a\r\nb\r\n'
 python -c "import pathlib,tempfile; p=pathlib.Path(tempfile.mkdtemp())/'t'; p.write_text('a\nb\n',encoding='utf-8'); print(p.read_bytes())"
 # b'a\r\nb\r\n' on Windows, b'a\nb\n' on Linux
 python scripts/build.py --target-dir .        # reports "unchanged", repairs nothing
-python scripts/build.py --target-dir . --force # actually repairs
+python scripts/build.py --target-dir . --force # also reports "unchanged": the guard compares decoded text
 ```
 
 Any `check-hook-parity` failure that survives a plain `build.py` re-run on Windows is this.
 
-**Fix direction.** Give `_write()` an explicit `newline=""` (or write bytes) so the build emits exactly the bytes it was handed on every platform, and make the compare-before-write guard compare BYTES rather than decoded text — the guard exists to answer "is what is on disk what I would write", and a comparison that normalises the one difference the writer introduces cannot answer it. Landing the writer fix alone will rewrite every deployed artifact once, which is expected and should be done deliberately rather than folded into an unrelated change. Until then, `--force` is the working repair and the error messages that name a plain re-run are wrong.
+**Fix direction.** *Landed for the shared writer (BP-1000a-7, 2026-09-13):* `_write()` in `scripts/build_phases.py` now encodes once, compares `read_bytes()` against those bytes, and writes with `write_bytes()`, so the guard and the writer act on the same value with no newline translation. Every commit-guardian script, config and manifest is deployed through it, so the hook-parity failure that blocked commits is gone: after the fix a deployed `run_hook.py` holds zero CRLFs and is byte-identical to its template. *Still open:* the build has roughly twenty other text-mode writers with the identical defect that do not route through `_write()` — among them `generate_agent_cards.py` (every tracked `docs/agents/cards/*.card.md`), `build.py`'s `LEAFCUTTER_VERSION` write, the CLAUDE.md glossary and roadmap-phase injections (`build_glossary.py`, `build_roadmap_phase.py`), and the scaffold writers (`build_ac_store_scaffold.py`, `build_architecture_scaffold.py`, `build_config_scaffolds.py`, `build_precommit.py`). On Windows these leave every freshly built checkout showing dozens of tracked files as modified, purely by line endings. The right fix is one shared byte-exact writer that every phase calls, not twenty local patches — which is why it was scoped out of the quick-fix rather than folded in.
 
 **Pattern:** the writer and the change-detector disagree about what a file's content IS, so the component's self-check validates a normalised view of its own output rather than the output. **Related:** `GE-120` (green means it was checked — here the build reports "unchanged" about a file it corrupted), and `docs/reference/false-green-mechanisms.md`.
 
