@@ -6,8 +6,8 @@ priority: medium
 title: "Unrelated tickets produce no matches (false-positive prevention)"
 component: ac-driven-dev
 level: L2
-status: active
-req_status: active
+status: deprecated
+req_status: superseded
 work_status: todo
 criteria: |
   Given an AC with title "Required fields reject missing values at commit time"
@@ -27,9 +27,35 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "RETIRED 2026-09-09 with the whole ACD-800 tree, on BrainCandy's decision ('retire as it will not work properly'). Considered separately for survival as a safety constraint; see notes."
+    by: product-owner
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+notes: |
+  RETIRED 2026-09-09 with the whole ACD-800 tree. Decision, mechanism and the
+  live-code hazard are recorded once, in ACD-800's notes — read those.
+
+  CONSIDERED SEPARATELY FOR SURVIVAL, AND WHY IT STILL GOES. This is the only
+  child of ACD-800 that is a SAFETY constraint rather than a capability — it
+  requires the matcher to produce no match for an unrelated ticket. A safety
+  constraint is normally worth keeping even when the feature around it is
+  dropped, so it was assessed on its own.
+  It does not survive, for one reason: it constrains the retired matcher and
+  nothing else. "The AC does NOT appear in the matches list for that unrelated
+  ticket" is unsatisfiable and unfalsifiable once no matches list is produced.
+  Keeping it would leave an active requirement whose subject does not exist —
+  which is the same species of dishonest record this retirement is removing.
+  THE PRINCIPLE IT ENCODES IS NOT LOST, and is not left to be re-derived. It is
+  carried forward in a stronger, evidence-general form by ACD-2300d, whose
+  guarantee is that a subject which cannot be established stays UNLINKED and is
+  REPORTED as unlinked — an abstention that must be visible, rather than merely
+  the absence of a false positive. That is the better form of this idea: this
+  record's negative arm is satisfied by a tool that matches nothing at all,
+  whereas ACD-2300d's is not.
+
+  BUILT, DESPITE THE FIELDS. Covered by a green test tagged
+  `# covers: ACD-800a-2` in tests/ac_store/test_cross_reference_audit.py.

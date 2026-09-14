@@ -155,7 +155,9 @@
       "writes": [
         "Diff"
       ],
-      "expands_to": "leafcutter/python-coder-internal",
+      "expands_to": [
+        "leafcutter/python-coder-internal"
+      ],
       "implements": [
         "BO-2000b"
       ],

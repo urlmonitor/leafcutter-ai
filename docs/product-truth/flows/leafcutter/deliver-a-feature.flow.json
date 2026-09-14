@@ -25,7 +25,9 @@
       "label": "Plan",
       "human": "Say what you want; the ACs get authored.",
       "order": 1,
-      "expands_to": "leafcutter/define-a-feature",
+      "expands_to": [
+        "leafcutter/define-a-feature"
+      ],
       "implements": [
         "ACD-300"
       ],
@@ -37,7 +39,9 @@
       "label": "Build",
       "human": "The wired ticket is driven through its phase agents.",
       "order": 2,
-      "expands_to": "leafcutter/how-acs-are-built",
+      "expands_to": [
+        "leafcutter/how-acs-are-built"
+      ],
       "implements": [
         "BP-300"
       ],
@@ -49,7 +53,9 @@
       "label": "Finalize",
       "human": "The PR is merged and the epic/ticket is closed.",
       "order": 3,
-      "expands_to": "leafcutter/finalize-feature",
+      "expands_to": [
+        "leafcutter/finalize-feature"
+      ],
       "implements": [
         "FIN-100"
       ],

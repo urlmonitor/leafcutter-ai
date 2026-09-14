@@ -89,7 +89,7 @@ A reviewable user journey; machine-readable for agents and human-readable via
 | `consumes` | string[] | Named artifacts/fields required from UPSTREAM. A `consumes` with no matching upstream `produces` is a broken handoff. |
 | `reads` / `writes` | string[] | Entities the step touches. |
 | `implements` | string[] | **AUTHORED** link: AC ids derived from this step's `acceptance_scenarios`. Source of truth for flow↔AC linkage. |
-| `expands_to` | string | Id of a child flow this step drills into (C4-style). When set, `impl_status` derives from the child flow's rollup, taking precedence over `implements`. |
+| `expands_to` | string[] (a single string is still read) | Ids of the child flows this step drills into (C4-style). Being reshaped from one id to a list: a single id is read as a list of one, and the generator writes it back as a list, so the older shape disappears as journeys are regenerated (UXP-700e-3-i). When set, `impl_status` derives from the child flows' combined rollup (all done → done, none started → not_started, otherwise in_progress), taking precedence over `implements`. |
 | `impl_status` | enum | **DERIVED** (`not_started` \| `in_progress` \| `done`) from the `work_status` of every AC in `implements` (or the child flow's rollup). Never hand-edited. |
 | `impl_asof` | string | Date `impl_status` was last recomputed. |
 
@@ -99,6 +99,10 @@ A reviewable user journey; machine-readable for agents and human-readable via
 carries the same `human`, `screen`, `agent`, `produces`, `consumes`, `reads`,
 `writes`, `implements`, `impl_status`, `impl_asof` fields, plus `from` (the step
 id it branches from) and `condition`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `outcome_kind` | enum `alternative` \| `failure` \| `exit` | What the branch leads to: another valid route to the goal, a failure that is recovered from or reported, or an end to the journey before its goal. Being introduced (UXP-700e-3-i): optional, and a branch without one is reported by the validator as a `[to-be-filled]` warning, never as an error. |
 
 ### `acceptance_scenarios[]`
 

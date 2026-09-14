@@ -92,9 +92,17 @@ notes: |
        sentence is reproduced here because the temptation is stronger in this tree,
        not weaker: a backfill run that has just observed a criterion, its code and
        its passing test is one field away from a completion badge, and it will have
-       assembled everything that makes awarding one look obviously correct. Note the
-       live contradiction raised in ACD-2300's notes: ACD-800 promises the opposite.
-       This L1 is where that promise is refused for this tree.
+       assembled everything that makes awarding one look obviously correct. The
+       disagreement raised in ACD-2300's notes was resolved on 2026-09-09 in this
+       tree's favour: ACD-800, which promised the opposite, is retired (status
+       deprecated, no successor). This L1 remains where the refusal is made
+       falsifiable, and that has become MORE important rather than less — ACD-800's
+       implementation shipped and is still deployed
+       (scripts/ac_store/cross_reference_audit.py line 457 writes work_status),
+       so the behaviour this L1 refuses is live in the repository even though no
+       requirement asks for it any more. This L1's guarantee is what a future
+       implementer will be checked against; the retired record no longer competes
+       with it.
 
     3. NEVER RECORDS PROOF IT DID NOT SEE, AND ABSTAINS OUT LOUD. Trap 1's general
        form. The abstention must be REPORTED, never a silent skip — ACS-1300's
