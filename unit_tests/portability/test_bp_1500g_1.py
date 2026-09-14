@@ -37,12 +37,14 @@ if str(_THIS_DIR) not in sys.path:
 
 from _bp1500g1_harness import (  # noqa: E402
     fresh_scratch_adopter,
+    fresh_scratch_adopter_with_symlink_disabled,
     is_discoverable,
     new_marker_bytes,
     plant_capability_at_discoverable_location,
     plant_capability_through_discoverable_symlink,
     replace_shim_with_real_directory,
     run_build,
+    run_build_with_symlink_disabled,
 )
 
 
@@ -361,6 +363,210 @@ def test_bp_1500g_1_copy_strategy_still_protects_genuine_adopter_content_inside_
 
 
 # ====================================================================
+# SECOND-REVIEW-ROUND DEFECTS (2026-09-14) -- the "copy" carve-outs above
+# were added keying on the DECLARED `shim_strategy`. ADR-041 §1 names the
+# exact error these two tests reproduce: ownership must be decided from
+# what the build RECOMPUTES about reality, never from a declared value
+# that may not match it. `shim_strategy: "auto"` (the DEFAULT) can produce
+# a real, copied canonical path identical in content to what `"copy"`
+# produces -- via `_create_shim`'s own `except (OSError, PermissionError):
+# ... return "copy (symlink failed)"` fallback -- but every carve-out added
+# above tests the literal string `strategy == "copy"`, so `"auto"` never
+# matches it even after it has genuinely degraded to a copy.
+# ====================================================================
+
+
+def test_bp_1500g_1_second_build_under_auto_strategy_after_a_genuine_symlink_failure_does_not_falsely_block(
+    tmp_path: Path,
+) -> None:
+    # covers: BP-1500g-1
+    # angle: reachability
+    """SECOND-REVIEW-ROUND DEFECT A, direction A (the "second build refuses
+    forever" shape, now reproduced for `shim_strategy: "auto"` -- the
+    DEFAULT value, not merely the explicit `"copy"` opt-in the two tests
+    above already cover).
+
+    `resolve_removal_verdict` (`scripts/build_ownership.py:215`) and
+    `resolve_shim_ownership_veto` (`scripts/build_ownership.py:272`) each
+    carve out `if strategy == "copy"`. `install_shims`'s pre-removal guard
+    (`scripts/build_helpers.py:1480`) carves out `strategy != "copy"`. All
+    three read the DECLARED `config["shim_strategy"]` value, which stays the
+    literal string `"auto"` for the whole run even when `_create_shim`
+    (`scripts/build_ownership.py:575-586`) has just taken its real
+    `except (OSError, PermissionError): ... shutil.copytree(...); return
+    "copy (symlink failed)"` branch -- the function KNOWS it copied
+    (its own return value says so), but nothing downstream ever asks it.
+
+    This test forces that fallback HONESTLY, not by asserting a hypothetical:
+    `run_build_with_symlink_disabled` (see its own docstring for exactly
+    what is patched -- only the single stdlib primitive `os.symlink`, in a
+    disposable subprocess wrapper, never any production decision function)
+    makes the real `canonical.symlink_to(...)` call raise a genuine
+    `OSError`, so the build's own real control flow takes the real copy
+    fallback. Two such builds in a row reproduce ADR-041's "every build
+    after the first fails" consequence: confirmed via a real subprocess run
+    against this worktree at HEAD b9fb441bd -- the second build exits 1 and
+    prints `Build cannot complete cleanly` naming every co-claimed path
+    (`.claude/agents`, `.claude/skills`, `.gemini`,
+    `scripts/commit_guardian`, etc.), even though every one of them holds
+    nothing but the package's own prior (degraded-to-copy) output.
+    """
+    target_root = fresh_scratch_adopter_with_symlink_disabled(tmp_path)
+
+    result = run_build_with_symlink_disabled(target_root)
+
+    assert result.returncode == 0, (
+        "A second build under the DEFAULT shim_strategy (\"auto\") -- after "
+        "a genuine symlink-creation failure forced the FIRST build to "
+        "degrade to its copy fallback, leaving nothing but the package's "
+        "own prior output at every co-claimed path -- exited non-zero. "
+        "ADR-041 names this exact error: ownership decided from the "
+        "DECLARED strategy string (\"auto\" != \"copy\") rather than from "
+        "what the build actually did on the previous run. This is a false, "
+        "PERMANENT build failure for every adopter on a platform where "
+        "symlink creation fails -- exactly the population "
+        "`shim_strategy: auto` exists to serve.\n"
+        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    combined = result.stdout + result.stderr
+    assert "Build cannot complete cleanly" not in combined, (
+        "The second auto-strategy build (after a genuine symlink failure) "
+        f"reports a blocked conflict against its own prior output.\n{combined}"
+    )
+    assert "cannot remove stale path" not in combined, (
+        "The second auto-strategy build reports one or more paths as "
+        f"unremovable adopter-owned conflicts.\n{combined}"
+    )
+
+
+def test_bp_1500g_1_auto_strategy_still_protects_genuine_adopter_content_inside_a_claimed_container_after_a_symlink_failure(
+    tmp_path: Path,
+) -> None:
+    # covers: BP-1500g-1
+    # angle: real_artifact
+    """SECOND-REVIEW-ROUND DEFECT A, direction B -- the guard against
+    over-correcting direction A into "under a degraded-to-copy `auto`
+    build, delete anything", which would reopen KI-BP-009 for the exact
+    population direction A's fix must not break: adopters on a platform
+    where symlink creation genuinely fails.
+
+    Confirmed via a real subprocess run against this worktree at HEAD
+    b9fb441bd that the DATA-LOSS half of this defect does NOT presently
+    reproduce for `"auto"`: `resolve_shim_ownership_veto`'s `if strategy ==
+    "copy": return None` carve-out does NOT match `"auto"`, so under
+    `"auto"` the veto still runs, computes `owns_installed_path` on the
+    real (non-empty, from the copy fallback) container, gets
+    `"adopter_owned"`, and `continue`s BEFORE `install_shims`'s
+    `strategy != "copy"`-gated `shutil.rmtree()` is ever reached
+    (`scripts/build_helpers.py:1460-1485`) -- so the container is left
+    completely untouched, not destroyed. The observed failure mode for
+    `"auto"` is therefore the false-refusal of direction A above, not
+    direction B's destruction -- but this test exists as the SAME kind of
+    guard the two `shim_strategy: copy` tests above already carry, so that
+    a fix which naively widens the `"copy"`-only carve-outs to also match
+    `"auto"` (rather than keying on the ACTUAL degraded-to-copy method,
+    per ADR-041 §1) cannot silently swap the current over-protective
+    refusal for the worse, silent, unconditional-delete failure mode that
+    already exists on the explicit `"copy"` side of this same code.
+    """
+    target_root = fresh_scratch_adopter_with_symlink_disabled(tmp_path)
+    marker_dir = target_root / ".claude" / "skills" / "adopter-owned-widget-under-auto-strategy"
+    marker_dir.mkdir(parents=True)
+    marker_md = marker_dir / "SKILL.md"
+    marker_content = new_marker_bytes("adopter-owned-widget-under-auto-strategy")
+    marker_md.write_bytes(marker_content)
+
+    result = run_build_with_symlink_disabled(target_root)
+
+    assert result.returncode == 0, (
+        "A second auto-strategy build (after a genuine symlink failure) "
+        "with a genuinely adopter-authored subdirectory inside the "
+        "degraded-to-copy .claude/skills container exited non-zero -- see "
+        "the direction-A sibling test above for the false-refusal half of "
+        f"this same defect.\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    assert marker_md.is_file(), (
+        "The adopter's own subdirectory inside the degraded-to-copy "
+        ".claude/skills container did not survive a rebuild under "
+        "shim_strategy: auto after a genuine symlink failure -- KI-BP-009's "
+        "shape, reopened under the auto-degraded-to-copy path."
+    )
+    assert marker_md.read_bytes() == marker_content, (
+        "The adopter's content changed byte for byte across the rebuild."
+    )
+
+
+def test_bp_1500g_1_no_shims_build_is_not_refused_for_a_reconciliation_contradiction_it_cannot_create(
+    tmp_path: Path,
+) -> None:
+    # covers: BP-1500g-1
+    # angle: reachability
+    """SECOND-REVIEW-ROUND DEFECT B: the ADR-041 §3 reconciliation
+    (`build.py:2064-2076`) runs UNCONDITIONALLY, using the FULL claim set
+    from `assemble_claim_set(shim_map, file_shims)`, BEFORE `args.no_shims`
+    is ever consulted (`build.py:2094`). `--no-shims` means the reclaim half
+    of the run never executes -- so refusing a removal because "it would
+    also be reclaimed this run" is refusing a contradiction THIS run cannot
+    possibly create.
+
+    ADR-041 Context §4 records that ten of `_PRE_CONSOLIDATION_PATHS`'s
+    eleven entries are co-claimed by `shim_map` or `file_shims` -- so this
+    is not an edge case, it is the common shape: a `--no-shims` build with
+    ANY genuine, safe removal candidate among those ten paths is refused
+    for a contradiction that will never occur on that run.
+
+    This test builds the SAME real, run-time contradiction the pre-existing
+    `test_bp_1500g_1_the_build_refuses_when_a_same_run_would_both_remove_and_reclaim_a_path`
+    test above constructs (a fresh build's `.claude/skills` symlink replaced
+    by a real, EMPTY directory -- `owns_installed_path` correctly verdicts
+    this `"package_produced"`, a genuinely safe removal candidate, and it is
+    also `shim_map`-claimed), against TWO real subprocess builds:
+
+      1. WITH shims enabled (no flag) -- the CONTROL. The refusal must
+         still fire here; this is not a request to weaken the
+         reconciliation itself. Confirmed via a real subprocess run against
+         this worktree at HEAD b9fb441bd: exits 1, names `.claude/skills`.
+      2. WITH `--no-shims` -- the SUBJECT. Confirmed RED via a real
+         subprocess run against the same HEAD: this build ALSO exits 1 and
+         prints the identical `ADR-041 §3` refusal message naming
+         `.claude/skills`, even though `--no-shims` means the shim-install
+         step that would have re-claimed it never runs this pass at all --
+         the exact "reconciliation refusal ignores --no-shims" defect.
+    """
+    control_root = fresh_scratch_adopter(tmp_path / "control")
+    replace_shim_with_real_directory(control_root, ".claude/skills")
+    control_result = run_build(control_root)
+    assert control_result.returncode != 0, (
+        "CONTROL regressed: a run whose own stale-cleanup step would remove "
+        ".claude/skills while the SAME run's shim-install step re-claims it "
+        "no longer refuses with shims enabled -- do not weaken the "
+        "reconciliation itself while fixing the --no-shims case below.\n"
+        f"stdout:\n{control_result.stdout}\nstderr:\n{control_result.stderr}"
+    )
+    assert ".claude/skills" in (control_result.stdout + control_result.stderr)
+
+    subject_root = fresh_scratch_adopter(tmp_path / "subject")
+    replace_shim_with_real_directory(subject_root, ".claude/skills")
+
+    subject_result = run_build(subject_root, "--no-shims")
+
+    assert subject_result.returncode == 0, (
+        "A --no-shims build was refused for a removal/reclaim reconciliation "
+        "contradiction, even though --no-shims means the shim-install step "
+        "that would have re-claimed the path never runs on this pass -- so "
+        "this run cannot possibly create the contradiction it was refused "
+        "for. The reconciliation check runs unconditionally, before "
+        "args.no_shims is consulted (build.py:2064 vs :2094).\n"
+        f"stdout:\n{subject_result.stdout}\nstderr:\n{subject_result.stderr}"
+    )
+    combined = subject_result.stdout + subject_result.stderr
+    assert "scheduled for BOTH removal" not in combined, (
+        "The --no-shims build still reports the removal/reclaim "
+        f"contradiction refusal.\n{combined}"
+    )
+
+
+# ====================================================================
 # DECISION HISTORY
 # ====================================================================
 # - 2026-09-08 [test-writer/fast-lane BP-1500g-1 build set]: Initial RED
@@ -386,4 +592,32 @@ def test_bp_1500g_1_copy_strategy_still_protects_genuine_adopter_content_inside_
 #   `rmtree`s the whole container under copy strategy + force=True,
 #   destroying a genuinely adopter-authored subdirectory placed inside a
 #   copy-managed container even before any fix to (2) is attempted.
+# - 2026-09-14 [test-writer/second-review-round, HEAD b9fb441bd]: Added
+#   three regression tests for two further defects, both the SAME
+#   underlying error per ADR-041 §1 (ownership decided from a DECLARED
+#   value, never from what the build actually recomputed). (A) The three
+#   `strategy == "copy"` / `strategy != "copy"` carve-outs added for the
+#   explicit `"copy"` config value (tests above) do not match the DEFAULT
+#   `"auto"` value even after `_create_shim`'s own `except (OSError,
+#   PermissionError):` branch has genuinely degraded that run to a copy --
+#   confirmed RED via two real subprocess builds with `os.symlink`
+#   monkeypatched to fail (narrowest possible seam, documented in
+#   `run_build_with_symlink_disabled`'s own docstring): the second build
+#   exits 1 and reports every co-claimed path as an unremovable conflict.
+#   The DATA-LOSS direction of this same defect was checked and does NOT
+#   presently reproduce for `"auto"`: `resolve_shim_ownership_veto` still
+#   runs (unlike under explicit `"copy"`) and blocks BEFORE
+#   `install_shims`'s `rmtree` is reached, so adopter content inside the
+#   container is left untouched, not destroyed -- confirmed via the same
+#   real-subprocess method; the guard test for this direction currently
+#   passes on its content-survival assertion and is RED only on the
+#   exit-code assertion it shares with direction A's fix requirement. (B)
+#   The ADR-041 §3 reconciliation in `build.py` (:2064-2076) runs BEFORE
+#   `args.no_shims` is consulted (:2094), using the unconditional full claim
+#   set -- so a `--no-shims` build with a genuine, safe removal candidate
+#   among the ten co-claimed `_PRE_CONSOLIDATION_PATHS` entries (ADR-041
+#   Context §4) is refused for a contradiction that run cannot possibly
+#   create. Confirmed RED via a real subprocess run; a control build with
+#   shims enabled against the identical scenario confirms the reconciliation
+#   itself must not be weakened -- it still correctly refuses.
 # ====================================================================

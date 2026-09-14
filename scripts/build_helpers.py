@@ -60,6 +60,7 @@ from build_colors import info as _info
 from build_colors import success as _success
 from build_colors import warn as _warn
 from build_ownership import resolve_shim_ownership_veto, _create_shim, _create_file_shim
+from build_shim_probe import resolve_effective_shim_strategy
 from build_precommit_install import install_hooks  # noqa: F401 — re-exported for build.py's existing import
 
 # ---------------------------------------------------------------------------
@@ -1409,6 +1410,18 @@ def install_shims(
     - ``"copy"``: always use file copies (safe on all platforms).
     - ``"auto"`` (default): try symlinks first, fall back to copies on error.
 
+    ADR-041 review (second round): the declared ``config["shim_strategy"]``
+    is resolved through ``build_shim_probe.resolve_effective_shim_strategy``
+    before use here, exactly as ``build.py``'s ``main()`` already does for
+    its removal-side ownership decisions -- a real, disposable symlink probe,
+    not the declared string, so under ``"auto"`` this function's own veto
+    (``resolve_shim_ownership_veto``) and pre-removal guard (below) agree
+    with what THIS run can actually do, even after a genuine symlink failure
+    has degraded it to copies. Before this fix the two sides disagreed:
+    the claim side kept believing "auto" meant symlinks long after a real
+    failure proved otherwise, vetoing this build's own prior (degraded)
+    output as if it were foreign content.
+
     ADR-041 review defect 2b: the directory-shim loop's pre-removal step
     does NOT ``shutil.rmtree()`` an existing canonical directory when
     *strategy* is ``"copy"`` (unlike symlink/auto, where an existing
@@ -1438,8 +1451,7 @@ def install_shims(
     """
     if config is None:
         config = {}
-
-    strategy = config.get("shim_strategy", "auto")
+    strategy = resolve_effective_shim_strategy(config.get("shim_strategy", "auto"), target_root)
     if output_root is None:
         output_root = target_root / config.get("output_root", ".leafcutter")
 

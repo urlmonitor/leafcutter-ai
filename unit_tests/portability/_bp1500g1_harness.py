@@ -111,6 +111,86 @@ def run_build(
     )
 
 
+_SYMLINK_DISABLED_WRAPPER_TEMPLATE = '''
+import os
+import runpy
+import sys
+
+
+def _disabled_symlink(*_args, **_kwargs):
+    raise OSError(
+        "symlink creation disabled by test harness -- simulating a platform "
+        "that refuses CreateSymbolicLink (e.g. Windows without Developer "
+        "Mode / SeCreateSymbolicLinkPrivilege, or a restricted corporate "
+        "environment), which is the documented reason `shim_strategy: "
+        "auto` exists: try a symlink, fall back to a copy on failure."
+    )
+
+
+os.symlink = _disabled_symlink
+sys.path.insert(0, os.path.dirname({build_script!r}))
+sys.argv = [{build_script!r}] + sys.argv[1:]
+runpy.run_path({build_script!r}, run_name="__main__")
+'''
+
+
+def run_build_with_symlink_disabled(
+    target_dir: Path,
+    *extra_args: str,
+    timeout: int = 180,
+    build_script: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run a REAL ``build.py`` as a subprocess with the single stdlib
+    primitive ``os.symlink`` monkeypatched to always raise ``OSError`` --
+    forcing ``_create_shim`` / ``_create_file_shim``'s real ``try:
+    canonical.symlink_to(...) except (OSError, PermissionError):`` branch to
+    take its genuine copy fallback, exactly as it would on a platform that
+    refuses symlink creation.
+
+    WHAT IS PATCHED AND WHY (so a reader knows exactly which part of this
+    run is simulated and which part is real): ONLY ``os.symlink`` -- the
+    single OS-level primitive ``pathlib.Path.symlink_to`` calls internally
+    (verified against this interpreter's own ``pathlib`` source:
+    ``os.symlink(target, self, target_is_directory)``, looked up on the
+    ``os`` module at CALL time, not bound at import time, so a pre-import
+    monkeypatch of the module attribute is picked up by every later
+    caller). The patch is applied inside a disposable wrapper script that
+    is executed as a FRESH subprocess's ``__main__`` via
+    ``runpy.run_path(..., run_name="__main__")`` -- never inside this test
+    process, and never by patching anything inside ``scripts/`` itself.
+    Every production decision function (``_create_shim``,
+    ``_create_file_shim``, ``install_shims``, ``resolve_shim_ownership_veto``,
+    ``resolve_removal_verdict``, ``main()``) runs completely UNPATCHED and
+    reacts to the resulting genuine ``OSError`` exactly as it would react to
+    a real platform refusal -- this is the narrowest possible seam that
+    makes the real code path (not a hypothetical) take its copy fallback.
+
+    Defaults to this worktree's own ``scripts/build.py``, matching
+    `run_build`. Pass ``build_script`` to point at a copied package's
+    ``build.py`` instead (see `temporary_package_skill_template`).
+    """
+    script = build_script if build_script is not None else BUILD_SCRIPT
+    wrapper_src = _SYMLINK_DISABLED_WRAPPER_TEMPLATE.format(build_script=str(script))
+    wrapper_fd = tempfile.NamedTemporaryFile(
+        mode="w", suffix="_bp1500g1_symlink_disabled_wrapper.py", delete=False
+    )
+    try:
+        wrapper_fd.write(wrapper_src)
+    finally:
+        wrapper_fd.close()
+    wrapper_path = Path(wrapper_fd.name)
+    atexit.register(lambda: wrapper_path.unlink(missing_ok=True))
+    try:
+        return subprocess.run(
+            [sys.executable, str(wrapper_path), "--target-dir", str(target_dir), *extra_args],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    finally:
+        wrapper_path.unlink(missing_ok=True)
+
+
 def fresh_scratch_adopter(
     root: Path, *extra_args: str, build_script: Path | None = None
 ) -> Path:
@@ -132,6 +212,34 @@ def fresh_scratch_adopter(
     assert result.returncode == 0, (
         "Initial scratch build failed (fixture setup, not the behaviour "
         f"under test).\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    return target_root
+
+
+def fresh_scratch_adopter_with_symlink_disabled(
+    root: Path, *extra_args: str, build_script: Path | None = None
+) -> Path:
+    """Same contract as `fresh_scratch_adopter`, but the initial build is run
+    via `run_build_with_symlink_disabled` -- so a fresh scratch adopter's
+    very FIRST build already has ``os.symlink`` failing, forcing every
+    ``shim_strategy: auto`` shim it installs to take the real copy fallback
+    from the start (the ``strategy`` recorded in the adopter's own build
+    state stays ``"auto"`` throughout -- only the OS call fails, never the
+    configured value).
+
+    Asserts the initial build exits 0, matching `fresh_scratch_adopter` --
+    a symlink-disabled FIRST build degrading cleanly to copies is itself
+    part of what ``shim_strategy: auto`` promises, not the behaviour under
+    test in this build set's `auto`-carve-out regression tests.
+    """
+    target_root = root / "adopter_project"
+    target_root.mkdir(parents=True, exist_ok=True)
+    result = run_build_with_symlink_disabled(target_root, *extra_args, build_script=build_script)
+    assert result.returncode == 0, (
+        "Initial scratch build (symlink disabled, shim_strategy auto) "
+        "failed to degrade cleanly to its copy fallback -- fixture setup, "
+        "not the behaviour under test.\n"
+        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
     return target_root
 

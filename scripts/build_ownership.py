@@ -151,6 +151,13 @@ def owns_installed_path(path: Path) -> str:
         return "unattributable"
 
 
+# resolve_effective_shim_strategy moved to build_shim_probe.py (BP-1500g-1
+# second-review-round, probe-hardening pass) -- this file was at its
+# 400-line new-file cap with no margin left for the fix. See that module's
+# own docstring and decision history for the full account; build.py and
+# build_helpers.py both import it from there now.
+
+
 def resolve_removal_verdict(
     full: Path,
     output_root: Path,

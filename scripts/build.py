@@ -106,6 +106,7 @@ from build_ownership import (
     run_migration_report,
     assemble_claim_set,
 )
+from build_shim_probe import resolve_effective_shim_strategy
 from build_glossary import build_glossary
 from build_propagation_audit import (
     propagation_audit,
@@ -2061,12 +2062,13 @@ def main(argv: list[str] | None = None) -> int:
     # the content survives, but the run does not report success.
     _blocked_conflicts: list[str] = []
 
-    # ADR-041 §3 reconciliation, BEFORE any action this run -- see
-    # compute_removal_candidates's docstring in build_ownership.py.
+    # ADR-041 §3 reconciliation -- recomputed effective strategy (see
+    # build_shim_probe.py), never declared; claim set empty under --no-shims.
     _shim_strategy = config.get("shim_strategy", "auto")
-    _claim_set = assemble_claim_set(shim_map, file_shims)
+    _eff_strategy = resolve_effective_shim_strategy(_shim_strategy, target_root)
+    _claim_set = set() if args.no_shims else assemble_claim_set(shim_map, file_shims)
     _removal_candidates = compute_removal_candidates(
-        target_root, output_root, _shim_strategy, _PRE_CONSOLIDATION_PATHS, _claim_set
+        target_root, output_root, _eff_strategy, _PRE_CONSOLIDATION_PATHS, _claim_set
     )
     _reconciliation_conflicts = paths_scheduled_for_both_removal_and_claim(
         _removal_candidates, _claim_set
@@ -2078,7 +2080,7 @@ def main(argv: list[str] | None = None) -> int:
     print()
     _heading("Stale file cleanup")
     stale_count = _cleanup_stale_paths(
-        target_root, output_root, args.dry_run, _blocked_conflicts, _shim_strategy
+        target_root, output_root, args.dry_run, _blocked_conflicts, _eff_strategy
     )
     if stale_count == 0 and not _blocked_conflicts:
         print(f"  {DIM}(no stale files found){RESET}")
@@ -2143,12 +2145,10 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-09-14 [python-coder/ADR-041 review-defects pass]: Wired ADR-041
-#   §3's removal/claim reconciliation into main(); moved _run_migration_
-#   report to build_ownership.run_migration_report. Full account (all four
-#   touched files) is build_ownership.py's own decision history --
-#   consolidated there rather than repeated once per file.
-#   (#BP-1500g-1/adr-041-review)
+# - 2026-09-14 [python-coder/ADR-041 review + second-review-round + probe-
+#   hardening]: Wired §3 reconciliation into main(); removal-side strategy
+#   is the recomputed effective one (build_shim_probe.py). Full account:
+#   build_ownership.py / build_shim_probe.py histories. (#BP-1500g-1/adr-041-review)
 # - 2026-08-26 [python-coder/BP-900g-8 review-fix]: Registered
 #   scripts/release/check_changelog_presence.py in both
 #   _get_source_deployable_scripts() and _get_source_paths_for_guard() (source
