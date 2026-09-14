@@ -189,8 +189,52 @@ def _permission_label_response() -> dict:
     than via real execution: the workspace-setup-permission gate is not what
     this ticket's fix touches, and stubbing it lets every test below focus its
     real execution on the pause-store seam alone.
+
+    RETIRED as of ACD-2100b-5: the Pre-Stage-0 gate no longer makes an
+    agent() dispatch (no "resolve-workspace-setup-permission" label exists to
+    answer any more) -- it consumes a pre-computed verdict from
+    `args.workspace_setup_permission` instead. Kept only because it is
+    harmless to leave in `label_responses` (the harness simply never matches
+    it); `_granted_workspace_setup_permission()` below is what actually
+    unblocks the gate now.
     """
     return {"output": json.dumps(_load_real_registry()), "exit_code": 0}
+
+
+_PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
+
+
+def _real_preflight_verdict(cwd: Path, agent_id: str = "worktree-agent") -> dict:
+    """Run the REAL, on-disk scripts/worktree/check_workspace_setup_permission.py
+    (this repository's own copy, never a hand-typed stand-in for its output
+    shape -- 2h.2 Fixture Authenticity Rule) as a real subprocess with `cwd`
+    set to `cwd`, and return its parsed verdict.
+    """
+    proc = subprocess.run(
+        [sys.executable, str(_PREFLIGHT_SCRIPT), "--agent-id", agent_id],
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT,
+    )
+    if not proc.stdout.strip():
+        raise AssertionError(
+            "Pre-flight script produced no stdout.\n"
+            f"returncode={proc.returncode}\nstderr={proc.stderr[:2000]!r}"
+        )
+    return json.loads(proc.stdout)
+
+
+def _granted_workspace_setup_permission() -> dict:
+    """The real verdict for THIS repository's own root -- a 'permitted'
+    outcome for the default 'worktree-agent' id, sourced from actually
+    running the real pre-flight script. ACD-2100a-4 is not about this gate --
+    it is computed against THIS repository's own root (never the fixture,
+    which deliberately carries no `.leafcutter/config/agent_registry.json`
+    of its own) so every fixture below can drive the workflow past Pre-Stage-0
+    to the pause-store dispatches this file actually exercises.
+    """
+    return _real_preflight_verdict(_WORKTREE_ROOT)
 
 
 def _build_valid_resume_answer(record: dict) -> dict:
@@ -475,7 +519,10 @@ def test_pause_record_written_from_a_worktree_lands_in_the_project_store():
         payload = _run_plan_feature_real(
             fixture["worktree_path"],
             label_responses={"resolve-workspace-setup-permission": _permission_label_response()},
-            args={"run_id": run_id},
+            args={
+                "run_id": run_id,
+                "workspace_setup_permission": _granted_workspace_setup_permission(),
+            },
         )
 
         real_calls = _real_calls(payload)
@@ -527,10 +574,13 @@ def test_pause_record_is_found_by_a_second_process_started_elsewhere():
 
         run_id = "acd2100a4-seam-run"
         permission = {"resolve-workspace-setup-permission": _permission_label_response()}
+        workspace_setup_permission = _granted_workspace_setup_permission()
 
         # Process 1: real headless write from inside the worktree.
         payload1 = _run_plan_feature_real(
-            fixture["worktree_path"], label_responses=permission, args={"run_id": run_id}
+            fixture["worktree_path"],
+            label_responses=permission,
+            args={"run_id": run_id, "workspace_setup_permission": workspace_setup_permission},
         )
         writes1 = _write_shaped_calls(payload1)
         assert writes1, (
@@ -556,7 +606,11 @@ def test_pause_record_is_found_by_a_second_process_started_elsewhere():
         payload2 = _run_plan_feature_real(
             fixture["project_dir"],
             label_responses=permission,
-            args={"run_id": run_id, "resume_answer": answer},
+            args={
+                "run_id": run_id,
+                "resume_answer": answer,
+                "workspace_setup_permission": workspace_setup_permission,
+            },
         )
 
         reads2 = _read_shaped_calls(payload2)
@@ -592,6 +646,7 @@ def test_reported_write_failure_matches_what_is_on_disk():
         fixture = _make_worktree_fixture(Path(tmp))
         _assert_worktree_has_no_installed_leafcutter(fixture["worktree_path"])
         permission = {"resolve-workspace-setup-permission": _permission_label_response()}
+        workspace_setup_permission = _granted_workspace_setup_permission()
         leafcutter_dir = fixture["project_dir"] / ".leafcutter"
         original_mode = leafcutter_dir.stat().st_mode
 
@@ -602,7 +657,10 @@ def test_reported_write_failure_matches_what_is_on_disk():
             leafcutter_dir.chmod(0o555)  # read + traverse, no write: mkdir() fails
             payload_unwritable = _run_plan_feature_real(
                 fixture["worktree_path"], label_responses=permission,
-                args={"run_id": run_id_unwritable},
+                args={
+                    "run_id": run_id_unwritable,
+                    "workspace_setup_permission": workspace_setup_permission,
+                },
             )
         finally:
             leafcutter_dir.chmod(original_mode)
@@ -625,7 +683,12 @@ def test_reported_write_failure_matches_what_is_on_disk():
         # record IS present on disk.
         run_id_writable = "acd2100a4-failure-writable"
         payload_writable = _run_plan_feature_real(
-            fixture["worktree_path"], label_responses=permission, args={"run_id": run_id_writable}
+            fixture["worktree_path"],
+            label_responses=permission,
+            args={
+                "run_id": run_id_writable,
+                "workspace_setup_permission": workspace_setup_permission,
+            },
         )
         record_path_writable = (
             fixture["project_dir"] / ".leafcutter" / "paused_runs" / f"{run_id_writable}.json"
@@ -662,7 +725,12 @@ def test_pause_write_is_reached_from_the_workflow_entry_point():
         run_id = "acd2100a4-reach-run"
 
         payload = _run_plan_feature_real(
-            fixture["worktree_path"], label_responses=permission, args={"run_id": run_id}
+            fixture["worktree_path"],
+            label_responses=permission,
+            args={
+                "run_id": run_id,
+                "workspace_setup_permission": _granted_workspace_setup_permission(),
+            },
         )
 
         writes = _write_shaped_calls(payload)

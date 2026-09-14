@@ -97,6 +97,7 @@ _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
+_PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
 
 _TIMEOUT = 60  # seconds; includes real `git worktree add` and real subprocess I/O.
 
@@ -278,6 +279,36 @@ def _assert_not_inside_any_repository(path: Path) -> None:
         "directories), or the shared resolution snippet's ADR-001 "
         "child-probe fallback could accidentally succeed against it."
     )
+
+
+def _real_preflight_verdict(cwd: Path, agent_id: str = "worktree-agent") -> dict:
+    """Run the REAL, on-disk scripts/worktree/check_workspace_setup_permission.py
+    (this repository's own copy, never a hand-typed stand-in for its output
+    shape -- 2h.2 Fixture Authenticity Rule) as a real subprocess with `cwd`
+    set to `cwd`, and return its parsed verdict.
+
+    Computed PER SCENARIO (root / worktree / unrelated), each with its own
+    `cwd`, because this AC is precisely about proving the startup path
+    resolves correctly from all three -- the same
+    `resolve_repo_root()`/`_buildRepoRootResolutionSnippet()` three-strategy
+    resolution this script and the workflow already share (git-common-dir,
+    then child-probe, then sibling-probe) is what a caller running the real
+    plan-feature skill would invoke to obtain this verdict at each starting
+    directory in production.
+    """
+    proc = subprocess.run(
+        [sys.executable, str(_PREFLIGHT_SCRIPT), "--agent-id", agent_id],
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT,
+    )
+    if not proc.stdout.strip():
+        raise AssertionError(
+            "Pre-flight script produced no stdout.\n"
+            f"returncode={proc.returncode}\nstderr={proc.stderr[:2000]!r}"
+        )
+    return json.loads(proc.stdout)
 
 
 # ---------------------------------------------------------------------------
@@ -590,17 +621,39 @@ def _drive_three_scenarios(tmp_path: Path, run_prefix: str) -> dict:
 
     label_responses = _label_responses_forcing_first_question()
 
+    # Computed PER SCENARIO, from `cwd` set to that scenario's own starting
+    # directory -- exactly what the plan-feature skill's real pre-flight
+    # step would do in production before invoking this workflow. See
+    # _real_preflight_verdict()'s own docstring for why all three are
+    # expected to resolve to a granted verdict via the shared
+    # git-common-dir / child-probe / sibling-probe resolution.
+    verdict_root = _real_preflight_verdict(project_dir)
+    verdict_worktree = _real_preflight_verdict(run_worktree)
+    verdict_unrelated = _real_preflight_verdict(unrelated_dir)
+
     payload_root = _run_plan_feature_real(
         project_dir, label_responses,
-        {"run_id": f"{run_prefix}-root", "userInput": f"Add a feature --component {run_prefix}root"},
+        {
+            "run_id": f"{run_prefix}-root",
+            "userInput": f"Add a feature --component {run_prefix}root",
+            "workspace_setup_permission": verdict_root,
+        },
     )
     payload_worktree = _run_plan_feature_real(
         run_worktree, label_responses,
-        {"run_id": f"{run_prefix}-worktree", "userInput": f"Add a feature --component {run_prefix}wt"},
+        {
+            "run_id": f"{run_prefix}-worktree",
+            "userInput": f"Add a feature --component {run_prefix}wt",
+            "workspace_setup_permission": verdict_worktree,
+        },
     )
     payload_unrelated = _run_plan_feature_real(
         unrelated_dir, label_responses,
-        {"run_id": f"{run_prefix}-unrelated", "userInput": f"Add a feature --component {run_prefix}unrel"},
+        {
+            "run_id": f"{run_prefix}-unrelated",
+            "userInput": f"Add a feature --component {run_prefix}unrel",
+            "workspace_setup_permission": verdict_unrelated,
+        },
     )
 
     return {

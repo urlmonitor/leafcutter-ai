@@ -86,11 +86,23 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
+_PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
 
 _TIMEOUT = 40  # seconds; includes real git I/O.
 
-# The startup check's own registry-read dispatch -- its presence proves the
-# check was actually reached (all four conditions read the registry first).
+# RETIRED as of ACD-2100b-5: the Pre-Stage-0 gate no longer makes an agent()
+# dispatch to read the registry at all -- the read now happens externally,
+# in scripts/worktree/check_workspace_setup_permission.py, invoked by the
+# plan-feature skill BEFORE this workflow runs, with its verdict passed
+# through `args.workspace_setup_permission`. No call under this label can
+# ever appear in `payload["calls"]` any more. See
+# `_EXPECTED_OUTCOME_BY_CONDITION` and `test_all_four_startup_check_conditions_
+# stop_the_run_at_the_check` below for how "the check was reached and
+# correctly classified" is now proven instead (classification: test_drift --
+# production correctly moved this check external per ACD-2100b-5, done; the
+# test's own observation mechanism needed updating to match, mirroring what
+# test_acd_2100b_1.py / test_acd_2100b_2.py / test_acd_2100b_3.py already did
+# for the sibling reporting tests).
 _REGISTRY_READ_LABEL = "resolve-workspace-setup-permission"
 
 # The two labels that only ever fire AFTER the permission gate resolves a
@@ -138,6 +150,19 @@ _CONDITIONS: tuple[tuple[str, str | None], ...] = (
     ("agent_absent", _AGENT_ABSENT_REGISTRY_JSON),
     ("agent_denied", _AGENT_DENIED_REGISTRY_JSON),
 )
+
+# The outcome the REAL pre-flight script (scripts/worktree/
+# check_workspace_setup_permission.py) is expected to classify each fixture
+# as -- see that script's own `build_verdict()`/`_resolve_agent_outcome()`
+# for the definitions. Used as a test-construction sanity check: if the real
+# verdict computed for a condition does not match here, this fixture is not
+# exercising the Given it claims to.
+_EXPECTED_OUTCOME_BY_CONDITION = {
+    "unreadable": "read_failure",
+    "uninterpretable": "parse_failure",
+    "agent_absent": "agent_not_found",
+    "agent_denied": "permission_denied",
+}
 
 
 def _make_repo_fixture(tmp_path: Path, *, registry_content: str | None) -> Path:
@@ -427,6 +452,35 @@ def _fs_snapshot(tmp_root: Path) -> list:
     )
 
 
+def _real_preflight_verdict(repo_dir: Path, agent_id: str) -> dict:
+    """Run the REAL, on-disk scripts/worktree/check_workspace_setup_permission.py
+    (this repository's own copy, never a hand-typed stand-in for its output
+    shape -- 2h.2 Fixture Authenticity Rule) against `repo_dir` and return its
+    parsed verdict. Mirrors test_acd_2100b_1.py's identically-named helper.
+
+    ACD-2100b-5 moved the Pre-Stage-0 workspace-setup permission check OUT of
+    plan-feature.js's sandboxed body entirely -- the workflow makes no
+    agent() dispatch for it any more and only ever consumes a pre-computed
+    verdict via `args.workspace_setup_permission`. Computing that verdict for
+    real, from each condition's own fixture, is what proves the check itself
+    (now external) still classifies each of the four Given conditions
+    correctly -- see `_EXPECTED_OUTCOME_BY_CONDITION`.
+    """
+    proc = subprocess.run(
+        [sys.executable, str(_PREFLIGHT_SCRIPT), "--agent-id", agent_id],
+        cwd=str(repo_dir),
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT,
+    )
+    if not proc.stdout.strip():
+        raise AssertionError(
+            "Pre-flight script produced no stdout.\n"
+            f"returncode={proc.returncode}\nstderr={proc.stderr[:2000]!r}"
+        )
+    return json.loads(proc.stdout)
+
+
 def _run_condition(tmp_root: Path, registry_content: str | None) -> dict:
     """Build the Given for one of the four conditions, run the REAL workflow
     entry point against it, and capture the run's own dispatch record PLUS
@@ -434,13 +488,19 @@ def _run_condition(tmp_root: Path, registry_content: str | None) -> dict:
     after the run exits.
     """
     repo_dir = _make_repo_fixture(tmp_root, registry_content=registry_content)
+    verdict = _real_preflight_verdict(repo_dir, agent_id=_PROBE_AGENT_ID)
 
     worktree_before = _git_worktree_snapshot(repo_dir)
     branch_before = _git_branch_snapshot(repo_dir)
     tree_before = _fs_snapshot(tmp_root)
 
     payload = _run_plan_feature_real(
-        repo_dir, label_responses={}, args={"workspace_setup_agent": _PROBE_AGENT_ID}
+        repo_dir,
+        label_responses={},
+        args={
+            "workspace_setup_agent": _PROBE_AGENT_ID,
+            "workspace_setup_permission": verdict,
+        },
     )
 
     worktree_after = _git_worktree_snapshot(repo_dir)
@@ -449,6 +509,7 @@ def _run_condition(tmp_root: Path, registry_content: str | None) -> dict:
 
     return {
         "payload": payload,
+        "verdict": verdict,
         "repo_dir": repo_dir,
         "worktree_before": worktree_before,
         "worktree_after": worktree_after,
@@ -479,22 +540,39 @@ class TestFourStartupCheckConditionsAlwaysHalt(unittest.TestCase):
         # angle: criterion
         """AC-1: driving the real workflow entry point with each of the four
         Given conditions in turn, every run stops at the startup check -- the
-        check's own registry-read dispatch runs (proving the check was
-        reached), no step after the check runs, and the run's own returned
-        result reflects a halt.
+        check (now external per ACD-2100b-5, see `_real_preflight_verdict`)
+        classifies this exact fixture with the outcome the condition names
+        (proving the check was reached and reasoned about THIS registry, not
+        a hardcoded default), no step after the check runs, and the run's own
+        returned result reflects a halt.
+
+        (classification: test_drift -- ACD-2100b-5 correctly moved the
+        registry read out of this workflow's own agent() dispatches into an
+        external pre-flight script; the prior assertion here observed a
+        "resolve-workspace-setup-permission" dispatch that no longer exists
+        under that design. Mirrors the same update test_acd_2100b_1.py /
+        test_acd_2100b_2.py / test_acd_2100b_3.py already made to their own
+        sibling reporting tests.)
         """
         for name, registry_content in _CONDITIONS:
             with self.subTest(condition=name):
                 with tempfile.TemporaryDirectory(prefix=f"acd2100b4_{name}_") as tmp:
                     outcome = _run_condition(Path(tmp), registry_content)
                     payload = outcome["payload"]
+                    verdict = outcome["verdict"]
 
-                    registry_read_calls = _calls_with_label(payload, _REGISTRY_READ_LABEL)
-                    self.assertTrue(
-                        registry_read_calls,
-                        f"[{name}] the startup check's own registry-read dispatch never "
-                        f"ran -- cannot prove the check executed at all. "
-                        f"calls={payload.get('calls')}",
+                    self.assertEqual(
+                        verdict.get("outcome"), _EXPECTED_OUTCOME_BY_CONDITION[name],
+                        f"[{name}] the pre-flight check's own real classification of "
+                        f"this fixture did not match the expected outcome -- cannot "
+                        f"prove the check was reached and correctly classified this "
+                        f"registry. verdict={verdict!r}",
+                    )
+                    self.assertIsNot(
+                        verdict.get("permits"), True,
+                        f"[{name}] the pre-flight verdict unexpectedly grants "
+                        f"permission; this fixture is supposed to deny it. "
+                        f"verdict={verdict!r}",
                     )
 
                     downstream_calls = _calls_with_any_label(payload, _DOWNSTREAM_LABELS)

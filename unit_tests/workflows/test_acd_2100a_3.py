@@ -73,6 +73,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
+_PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
 
 _TIMEOUT = 40  # seconds; includes real `git worktree add` I/O.
 _MIS_ASSIGNMENT_LABEL = "workspace-setup-mis-assignment"
@@ -144,6 +145,36 @@ def _assert_worktree_has_no_installed_registry(worktree_path: Path) -> None:
         "unfixed code -- the exact construction hazard this AC's test_rationale "
         f"warns about. Found: {sorted(p.name for p in worktree_path.iterdir())}"
     )
+
+
+def _real_preflight_verdict(cwd: Path, agent_id: str = "worktree-agent") -> dict:
+    """Run the REAL, on-disk scripts/worktree/check_workspace_setup_permission.py
+    (this repository's own copy, never a hand-typed stand-in for its output
+    shape -- 2h.2 Fixture Authenticity Rule) as a real subprocess with `cwd`
+    set to `cwd`, and return its parsed verdict.
+
+    ACD-2100b-5 moved the Pre-Stage-0 workspace-setup permission check OUT of
+    plan-feature.js's sandboxed body and into this script, invoked by the
+    plan-feature skill BEFORE the workflow runs, with its verdict passed
+    through `args.workspace_setup_permission`. This is exactly the seam
+    ACD-2100a-3 is about: computing the verdict for real, from `cwd` set to
+    the fixture worktree under test, is what proves the check resolves the
+    project's registry correctly even when invoked from inside a worktree
+    that holds no `.leafcutter/` of its own.
+    """
+    proc = subprocess.run(
+        [sys.executable, str(_PREFLIGHT_SCRIPT), "--agent-id", agent_id],
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT,
+    )
+    if not proc.stdout.strip():
+        raise AssertionError(
+            "Pre-flight script produced no stdout.\n"
+            f"returncode={proc.returncode}\nstderr={proc.stderr[:2000]!r}"
+        )
+    return json.loads(proc.stdout)
 
 
 # ---------------------------------------------------------------------------
@@ -366,10 +397,23 @@ def test_registry_read_succeeds_from_a_worktree_with_no_installed_support_files(
         fixture = _make_worktree_fixture(Path(tmp), registry_bytes=registry_bytes)
         _assert_worktree_has_no_installed_registry(fixture["worktree_path"])
 
+        verdict = _real_preflight_verdict(
+            fixture["worktree_path"], agent_id="custom-worktree-agent"
+        )
+        assert verdict.get("permits") is True, (
+            "Test construction error: the real pre-flight check, run from "
+            "inside the fixture worktree, did not grant permission for "
+            f"'custom-worktree-agent' -- cannot prove the criterion this test "
+            f"exists to prove. verdict={verdict!r}"
+        )
+
         payload = _run_plan_feature_real(
             fixture["worktree_path"],
             label_responses={},
-            args={"workspace_setup_agent": "custom-worktree-agent"},
+            args={
+                "workspace_setup_agent": "custom-worktree-agent",
+                "workspace_setup_permission": verdict,
+            },
         )
 
         mis_assignment_calls = _calls_with_label(payload, _MIS_ASSIGNMENT_LABEL)
@@ -416,8 +460,17 @@ def test_startup_check_registry_read_is_reached_from_the_workflow_entry_point():
         fixture = _make_worktree_fixture(Path(tmp), registry_bytes=registry_bytes)
         _assert_worktree_has_no_installed_registry(fixture["worktree_path"])
 
+        verdict = _real_preflight_verdict(fixture["worktree_path"])
+        assert verdict.get("permits") is True, (
+            "Test construction error: the real pre-flight check, run from "
+            "inside the fixture worktree, did not grant permission for the "
+            f"default 'worktree-agent' id. verdict={verdict!r}"
+        )
+
         payload = _run_plan_feature_real(
-            fixture["worktree_path"], label_responses={}, args={}
+            fixture["worktree_path"],
+            label_responses={},
+            args={"workspace_setup_permission": verdict},
         )
 
         setup_related = _calls_with_any_label(payload, _SETUP_RELATED_LABELS)
@@ -474,8 +527,17 @@ def test_registry_read_uses_the_real_on_disk_registry_file():
         )
         _assert_worktree_has_no_installed_registry(fixture["worktree_path"])
 
+        verdict = _real_preflight_verdict(fixture["worktree_path"])
+        assert verdict.get("permits") is True, (
+            "Test construction error: the real pre-flight check, fed this "
+            "repository's own real, verbatim registry from inside the "
+            f"fixture worktree, did not grant permission. verdict={verdict!r}"
+        )
+
         payload = _run_plan_feature_real(
-            fixture["worktree_path"], label_responses={}, args={}
+            fixture["worktree_path"],
+            label_responses={},
+            args={"workspace_setup_permission": verdict},
         )
 
         mis_assignment_calls = _calls_with_label(payload, _MIS_ASSIGNMENT_LABEL)

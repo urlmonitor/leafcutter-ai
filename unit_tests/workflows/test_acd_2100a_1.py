@@ -68,6 +68,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
+_PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
 
 _TIMEOUT = 40  # seconds; includes real `git worktree add` I/O.
 _PERMISSION_LABEL = "resolve-workspace-setup-permission"
@@ -205,9 +206,54 @@ def _permission_label_response() -> dict:
     workflow dispatches unconditionally -- out of scope for THIS AC (that is
     ACD-2100a-3's registry-read call site), so it is supplied directly rather
     than exercised through the same cwd-relative bug.
+
+    RETIRED as of ACD-2100b-5: the Pre-Stage-0 gate no longer makes an
+    agent() dispatch at all (no "resolve-workspace-setup-permission" label
+    exists to answer any more) -- it consumes a pre-computed verdict from
+    `args.workspace_setup_permission` instead. Kept only because it is
+    harmless to leave the `_PERMISSION_LABEL` key in `label_responses` (the
+    harness simply never matches it); `_real_preflight_verdict()` below is
+    what actually unblocks the gate now.
     """
     registry = json.loads(_REAL_REGISTRY_PATH.read_text(encoding="utf-8"))
     return {"output": json.dumps(registry), "exit_code": 0}
+
+
+def _real_preflight_verdict(cwd: Path, agent_id: str = "worktree-agent") -> dict:
+    """Run the REAL, on-disk scripts/worktree/check_workspace_setup_permission.py
+    (this repository's own copy, never a hand-typed stand-in for its output
+    shape -- 2h.2 Fixture Authenticity Rule) as a real subprocess with `cwd`
+    set to `cwd`, and return its parsed verdict.
+
+    ACD-2100a-1 is not about the Pre-Stage-0 workspace-setup permission gate
+    (that is ACD-2100a-3's concern) -- it is run against THIS repository's
+    own real, on-disk `.leafcutter/config/agent_registry.json` (which grants
+    'worktree-agent' shell permission) so every scenario below can drive the
+    workflow past that gate to the worktree-setup resolution this file
+    actually exercises, without depending on any permission state the
+    fixture itself constructs.
+    """
+    proc = subprocess.run(
+        [sys.executable, str(_PREFLIGHT_SCRIPT), "--agent-id", agent_id],
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT,
+    )
+    if not proc.stdout.strip():
+        raise AssertionError(
+            "Pre-flight script produced no stdout.\n"
+            f"returncode={proc.returncode}\nstderr={proc.stderr[:2000]!r}"
+        )
+    return json.loads(proc.stdout)
+
+
+def _granted_workspace_setup_permission() -> dict:
+    """The real verdict for THIS repository's own root -- a 'permitted'
+    outcome for the default 'worktree-agent' id, sourced from actually
+    running the real pre-flight script rather than a fabricated literal.
+    """
+    return _real_preflight_verdict(_WORKTREE_ROOT)
 
 
 # ---------------------------------------------------------------------------
@@ -417,7 +463,7 @@ def test_worktree_step_runs_the_in_repo_copy_from_an_untracked_cwd():
         payload = _run_plan_feature_real(
             fixture["parent_dir"],
             label_responses={_PERMISSION_LABEL: _permission_label_response()},
-            args={},
+            args={"workspace_setup_permission": _granted_workspace_setup_permission()},
         )
         setup_calls = _setup_calls(payload)
         assert setup_calls, (
@@ -460,7 +506,7 @@ def test_worktree_step_invocation_is_reached_from_the_workflow_entry_point():
         payload = _run_plan_feature_real(
             fixture["parent_dir"],
             label_responses={_PERMISSION_LABEL: _permission_label_response()},
-            args={},
+            args={"workspace_setup_permission": _granted_workspace_setup_permission()},
         )
         setup_calls = _setup_calls(payload)
         assert setup_calls, (
@@ -529,7 +575,7 @@ def test_wrong_copy_execution_is_observable_and_blocks():
         payload = _run_plan_feature_real(
             fixture["parent_dir"],
             label_responses={_PERMISSION_LABEL: _permission_label_response()},
-            args={},
+            args={"workspace_setup_permission": _granted_workspace_setup_permission()},
         )
         setup_calls = _setup_calls(payload)
         assert setup_calls, (
