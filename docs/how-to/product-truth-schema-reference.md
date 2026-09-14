@@ -215,6 +215,13 @@ that reading a value on one axis can never be mistaken for the other.
 | `outcome` | enum | `checked-and-sound` (every journey read and no problems found) \| `nothing-examined` (zero journeys were read) \| `degraded` (at least one journey exists but could not be read — see `unreadable`) \| `failed` (a real validation failure was found). |
 | `examined` | int | Count of journeys the run actually read. |
 | `unreadable` | string[] | Store-relative path of each journey file that could not be parsed (empty when nothing was unreadable). |
+| `resolved_labels` | int | How many journey labels (one component each, plus tags) resolved against `docs/acceptance-criteria/index.yaml` and the tag shape (UXP-700e-3). `0` for a record with no labels. |
+| `bounds` | object | One entry per declared size bound (`product_truth_bounds.BOUNDS`), keyed by bound name: `measured` (artifacts measured against it), `exceeded`, `holdouts` (artifacts still on a shape version older than the bound's), and `enforcement` — `warning-period` while any holdout remains, `blocking` once none does. Derived from the artifacts on every run; no date or flag changes it (UXP-700e-1, UXP-700e-1-ii). |
+
+`--tighten BOUND` asks the validator to hold a bound as blocking. While any
+artifact is still on an older shape version, the request is refused: the run
+exits `1` and a `REFUSED:` line names the holdouts. Once none remains, the run
+proceeds, and any artifact over the bound fails it.
 
 The exit code is `0` for every outcome except `failed` — one malformed journey
 file degrades the run and is named in `unreadable`, but does not stop it
