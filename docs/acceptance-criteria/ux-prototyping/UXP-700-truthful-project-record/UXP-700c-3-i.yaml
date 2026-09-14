@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 criteria: |
@@ -39,9 +39,11 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/portability/test_uxp_700c_3_i.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260909-UXP-700c-3-i.md
+- docs/product-truth/scripts/generate_product_truth.py
+- docs/product-truth/scripts/product_truth_index_checks.py
 change_target: code
 risk_surface: contract_boundary
 test_required: true
