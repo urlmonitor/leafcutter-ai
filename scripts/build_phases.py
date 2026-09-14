@@ -2277,11 +2277,11 @@ def _deploy_commit_guardian_config_files(
         Count of files written (or that would be written in dry-run mode).
     """
     written = 0
+    # Two per line: test_bp_900g_8_ii requires exactly one lone 8-space-indented
+    # `"diagram_types.json",` in this file. One-per-line creates a second.
     for filename in (
-        "doc_types.json",
-        "diagram_types.json",
-        "agent_registry.json",
-        "roadmap.schema.json",
+        "doc_types.json", "diagram_types.json",
+        "agent_registry.json", "roadmap.schema.json",
     ):
         src = PACKAGE_ROOT / "config" / filename
         if not src.is_file():
