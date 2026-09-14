@@ -458,4 +458,18 @@ if __name__ == "__main__":
 #   counted lines after the three-way split — headroom kept deliberately
 #   generous so the next addition does not immediately re-trip this gate.
 #   (#BP-100n-4)
+# - 2026-09-14 [BP-100n-4, third merge of main]: two of the thirteen listed
+#   above as "verified and kept registered" — check-pytest-style and
+#   check-sql-dependencies — have since been UNREGISTERED here, because main
+#   deleted both scripts as bybit-trader residue in #794 at 14:37 that day.
+#   The verification above was sound when made; the scripts simply stopped
+#   existing underneath it. The merge kept this branch's registry entries and
+#   took main's deletions, leaving two entries pointing at absent files. That
+#   shipped to CI and surfaced far from its cause, as
+#   `RESULT: not_run ... reason=could_not_start` inside an unrelated
+#   portability sweep (GE-120e-2-i), because the registry-side gate that
+#   should have caught it — test_every_registered_script_resolves_on_disk —
+#   read only the `script` key, which 71 of 73 entries do not carry. That test
+#   now reads the `entry` command line too. Eleven registrations became nine.
+#   (#BP-100n-4)
 # ====================================================================

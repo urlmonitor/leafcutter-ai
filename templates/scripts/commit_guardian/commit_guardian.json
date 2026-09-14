@@ -32,6 +32,17 @@
       ".sh"
     ]
   },
+  "doc_length": {
+    "_comment": "check_doc_length.py — Length limits for docs/**.md (2026-09-14). severity 'block' (was the 'warn' default, under which this gate ALWAYS exited 0 — the reason three known-issues registers reached ~4,500 lines against a 300-line limit without one commit being stopped). Blocking is survivable only because the gate now ratchets exactly as check-file-size does for code (GE-127a-1 crossing refusal + GE-127b-1 growth ratchet, merge-aware, INDETERMINATE on an unresolvable previous value): a doc may not CROSS its limit, and a doc already over may not GROW, but shrinking or holding steady always passes. That matters here — 59 of 339 tracked docs are already over, and an absolute block would freeze every one of them including the append-heavy registers. max_lines/max_lines_adr/max_sections/excluded_files are pinned to their previous implicit defaults, so this change alters ENFORCEMENT only, not which docs are judged or where the thresholds sit. max_sections has zero current violations (the registers use ### per entry, not ##), so its dimension blocks with no grandfathered population.",
+    "severity": "block",
+    "max_lines": 300,
+    "max_lines_adr": 400,
+    "max_sections": 25,
+    "excluded_files": [
+      "README.md",
+      "CHANGELOG.md"
+    ]
+  },
   "complexity": {
     "_comment": "check_complexity.py — Cyclomatic complexity for Python functions",
     "max_score": 15,
@@ -1284,19 +1295,6 @@
         "_comment": "BP-100n-4 day-one triage: blocks commits when a staged file would push a directory over its file-count limit. Already carries a dedicated 'folder_density' config section."
       },
       {
-        "id": "check-pytest-style",
-        "tier": "judgment",
-        "name": "Check Pytest-Style Test Functions",
-        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_pytest_style.py",
-        "language": "system",
-        "stages": [
-          "pre-commit"
-        ],
-        "pass_filenames": false,
-        "change_set_source": "handed_by_commit_path",
-        "_comment": "BP-100n-4 day-one triage: rejects top-level pytest-style def test_*() functions in unit_tests/live_trader/ that are not unittest.TestCase methods. Self-scans via git diff --cached --name-only; a repository with no unit_tests/live_trader/ files simply finds nothing to flag on every run."
-      },
-      {
         "id": "check-root-files",
         "tier": "judgment",
         "name": "Check Root Directory Files",
@@ -1321,19 +1319,6 @@
         "pass_filenames": false,
         "change_set_source": "handed_by_commit_path",
         "_comment": "BP-100n-4 day-one triage: enforces SQL cyclomatic complexity limits on staged SQL files. Already carries a dedicated 'sql_complexity' config section."
-      },
-      {
-        "id": "check-sql-dependencies",
-        "tier": "judgment",
-        "name": "Check SQL Dependency Tags",
-        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_sql_dependencies.py",
-        "language": "system",
-        "stages": [
-          "pre-commit"
-        ],
-        "pass_filenames": false,
-        "change_set_source": "handed_by_commit_path",
-        "_comment": "BP-100n-4 day-one triage: enforces 'Dependencies:' header tags on staged SQL views/materialized views for the dependency-resolved load pipeline. Self-scans via git diff --cached when no args given."
       },
       {
         "id": "check-test-ac-tags",
@@ -1519,7 +1504,30 @@
       "canonical": "templates/scripts/commit_guardian/commit_guardian.json",
       "legacy": "templates/commit-guardian/commit_guardian.json"
     },
-    "excluded_scripts": [],
+    "excluded_scripts": [
+      "check_outcome.py",
+      "check_v2_ac_store_alignment.py"
+    ],
+  "_excluded_scripts_comment": [
+    "KI-TQ-007. Files matching hook_script_patterns that are NOT hooks, and so",
+    "must not be counted as unregistered gates by check_hook_parity.py or by",
+    "unit_tests/commit_guardian/test_hook_registration_inventory.py.",
+    "",
+    "check_outcome.py — has no main() and no __main__ block. It is the GE-120",
+    "machine-readable outcome vocabulary (OUTCOME_OK / OUTCOME_COULD_NOT_CHECK /",
+    "OUTCOME_NOTHING_TO_INSPECT / OUTCOME_NOT_RUN), imported by run_hook.py — the",
+    "dispatcher every registered hook runs through — and by check_contract_shrinking,",
+    "check_doc_frontmatter and check_ac_parent_covered_by. It is the most-executed",
+    "file in this directory and matched the orphan scan only via its check_ prefix.",
+    "",
+    "check_v2_ac_store_alignment.py — a real script with a real caller, but not a",
+    "pre-commit gate: templates/agents/ac-validator.md step 2c runs it with",
+    "--ticket <path> and treats a non-zero exit as a blocker finding. Listed here",
+    "rather than registered, because the pre-commit stage is not its entry point.",
+    "Note its inline `implements AC-XX-NNN` input form is nearly retired (4 tickets,",
+    "all finished June 2026 work); if that form is formally dropped, remove step 2c",
+    "from ac-validator.md FIRST, then delete the script and this entry."
+  ],
     "hook_script_patterns": [
       "check_*.py",
       "run_hook.py",

@@ -3,21 +3,14 @@ title: 'Agent Reference: sql-view-creator'
 type: reference
 status: active
 created: 2026-05-07
-last_updated: 2026-05-07
+last_updated: 2026-09-14
 components:
-- infrastructure
 - infrastructure
 related_docs:
 - docs/agents/conventions.md
 - docs/architecture/adrs/ADR-033-agent-model-tiers.md
-- docs/how-to/database/create-view.md
-- docs/database-domain.md
-- tickets/09_done/EPIC-CodingAgents/19_sql_view_creator.md
 related_code:
 - .claude/agents/sql-view-creator.md
-- sql_functions/views/
-- sql_functions/materialized_views/
-- unit_tests/sql_functions/
 description: 'Overview of Agent Reference: sql-view-creator.'
 ---
 # Agent Reference: `sql-view-creator`
@@ -110,7 +103,7 @@ summarises the rules; the how-to is authoritative on conflicts.
 
 Key rules the agent enforces:
 
-- Metadata header (`Object Name:`, `Dependencies:`, `Goal:`, `Business Context:`, `Performance Sensitivity:`, `Frequency:`, `Architecture:` mermaid). Enforced by `check-sql-dependencies` pre-commit hook.
+- Metadata header (`Object Name:`, `Dependencies:`, `Goal:`, `Business Context:`, `Performance Sensitivity:`, `Frequency:`, `Architecture:` mermaid). Convention only — no pre-commit hook enforces it.
 - `DECISION HISTORY` block at the bottom of every SQL file.
 - `WITH NO DATA` for materialized views (avoids blocking DB setup on initial schema load).
 - `UNIQUE INDEX` on every materialized view and CAG (required for `CONCURRENTLY` refresh / CAG internal hypertable).

@@ -195,7 +195,6 @@ flowchart TD
 - ACD-1200b-4: Non-interactive run with an approval flag clears the readiness gate; without a flag and without a TTY it fails clearly
 - ACD-1200b-5: A supported approval mechanism promotes reviewed leaf ACs to approved without hand-editing YAML
 - ACD-1200b-5-i: Approval mechanism leaves already-approved and non-reviewed leaves unchanged
-- ACD-1200b-5-ii: Promotion preserves a multi-line amended_by history, and success is never reported for output the mechanism cannot itself parse
 - ACD-1200c-1: AC depends_on relationships are propagated to ticket depends_on fields
 - ACD-1200c-1-i: Circular dependency among leaf ACs is detected and reported before ticket generation
 - ACD-1200c-2: Multi-hop dependency chains produce transitive ticket ordering
@@ -1239,9 +1238,6 @@ flowchart TD
 - BP-100n-1: A deployed output the build recorded writing but that is absent from disk is reported and fails the run — deletion is the most complete drift there is, and it is the only kind the gate ignores
 - BP-100n-2: A guard skips a check only because the configuration declares the capability off — never because the capability's output happens to be absent, which is the failure the guard exists to catch
 - BP-100n-3: The build-equality guard covers every platform the build can emit, taken from the build's own platform set — a guard that proves equality only for the platforms it chose to enable proves nothing about the rest
-- BP-100n-4: The population of commit gates the reachability check walks is taken from the gate scripts present on disk, so a script the registry never mentions is reported as invoked by nothing — a guard whose input is the registry cannot see what the registry omits
-- BP-100n-4-i: A script that is deliberately not a gate is recorded as one with a stated ground and the check honours it; a record that states no ground is itself refused and the script it names stays reported
-- BP-100n-4-ii: The check states how many gate scripts it compared, and a run that compared none is an unresolved run that fails — a comparison that never happened must not be able to look like a comparison that found nothing wrong
 - BP-100n-5: A finished record's declaration that names parts of a real configuration file is read back against that file, and a named part that is not there is reported by name and fails the run — a declaration checked only for shape is a check that never opened anything
 - BP-100n-5-i: A declaration whose shape the check cannot interpret, and a named file it cannot open, are each reported as their own unresolved condition — never folded into the conforming class and never into each other
 - BP-1100a-3: The surface a generated ticket names contains the file the requirement says will change

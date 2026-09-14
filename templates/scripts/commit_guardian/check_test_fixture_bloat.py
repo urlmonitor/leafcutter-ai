@@ -30,7 +30,8 @@ Usage (direct / programmatic):
 
 # 2026-06-04 [Claude]: Created for EPIC-TestFixtureConvention/02.
 # Implements AST-based inline-data bloat detection for staged test files.
-# Follows check_pytest_style.py pattern for staged-file enumeration.
+# Staged-file enumeration follows the `git diff --cached` + AST pattern that
+# check_pytest_style.py used; that script was deleted as bybit-trader residue.
 
 import ast
 import subprocess

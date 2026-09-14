@@ -38,6 +38,7 @@ covered_by:
   - BO-1800c
   - BO-1800d
   - BO-1800e
+  - BO-1800f
 implemented_by: []
 notes: |
   Strategic capability from ADR-018 (agent isolation topology). Intended to
