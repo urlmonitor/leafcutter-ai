@@ -16,6 +16,7 @@ related_docs:
   - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
   - docs/architecture/diagrams/c3-001-interactive-pause-resume-run-lifecycle.md
   - docs/architecture/components/ac-driven-dev.md
+  - docs/how-to/resume-a-paused-plan-feature-run.md
 related_code:
   - templates/workflows-js/plan-feature.js
 tags:
@@ -167,6 +168,9 @@ pause runs on. Read them together, not instead of one another.
 
 ## Cross-References
 
+- [How to resume a paused /plan-feature run](../../how-to/resume-a-paused-plan-feature-run.md)
+  — the operator procedure for Exit 2: listing waiting runs, seeing which of these five
+  points each is stopped at, and giving the resume invocation.
 - [AC-Driven Development](../components/ac-driven-dev.md) — the component page for the
   route whose decision points this diagram depicts.
 - [ADR-024 — Interactive Pause and Resume](../adrs/ADR-024-interactive-pause-resume.md) —
