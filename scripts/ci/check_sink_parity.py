@@ -81,27 +81,48 @@ own build-time declaration (``<deployed-root>/config/knowledge_sink.json`` ->
 key ``"knowledge_emission_sink"``). All four must resolve to exactly that
 value for the check to pass.
 
+Before any per-surface inspection, the declaration itself is checked against
+two further, independently-exercisable failure branches (AC INF-400c-4) that
+fire regardless of whether every surface agrees with it:
+
+- Branch 2 -- the declared sink IS the install's own
+  ``"operational_telemetry_stream"`` (the same declaration's other key).
+  This is the settlement discriminator: an implementation that "ends" the
+  emitter/reader disagreement by repointing everything at the shared
+  operational file is rejected outright, even with unanimous surface
+  agreement.
+- Branch 3 -- the declared sink is not an ABSOLUTE path. A relative declared
+  value lets each process finish the resolution against its own current
+  working directory, reproducing the per-working-directory split this AC
+  exists to end, even with unanimous, verbatim surface agreement.
+
 Exit codes::
 
     0   Exactly four surfaces were inspected and every one resolves -- via a
-        real invocation, never a literal -- to the project's declared sink.
-    1   At least one surface fails: it carries a literal destination of its
-        own, its resolved value does not match the declared sink, or its
-        instruction paragraph could not be parsed. stdout names every
-        failing surface by id.
+        real invocation, never a literal -- to the project's declared sink,
+        and the declared sink itself violates neither branch 2 nor branch 3.
+    1   Either the declared sink itself violates branch 2 or branch 3 (in
+        which case per-surface inspection is skipped entirely and stdout
+        names the violation as ``FAIL declared-sink: ...``), or at least one
+        surface fails: it carries a literal destination of its own, its
+        resolved value does not match the declared sink, or its instruction
+        paragraph could not be parsed. stdout names every failing surface by
+        id.
     2   Usage/environment error: --target-dir does not exist, or the
         deployed tree is missing one or more of the four canonical surface
         files, the deployed harvest_learnings.py, or
-        config/knowledge_sink.json (a target that was never actually built).
+        config/knowledge_sink.json (a target that was never actually built,
+        or was built before the ``operational_telemetry_stream`` key
+        existed).
 
-Stdout contract (all modes): a line of the exact form ``Inspected N
-surfaces: <comma-separated ids>`` where N MUST equal 4 whenever all four
-canonical files were found -- a check that silently found none must never
-report success. This line is only ever printed once the environment check
-(exit code 2) has already confirmed all four canonical files, the deployed
-harvester, and the declaration exist, so by the time it prints, N is always
-4. On failure, additionally one line per failing surface:
-``FAIL <surface-id>: <reason>``.
+Stdout contract: a line of the exact form ``Inspected N surfaces:
+<comma-separated ids>`` where N MUST equal 4 whenever all four canonical
+files were found AND the declared sink itself passes branches 2 and 3 -- a
+check that silently found none must never report success. This line is
+skipped entirely when the declaration itself is rejected (branch 2 or 3),
+since no surface is inspected in that case; the ``FAIL declared-sink: ...``
+line is printed instead. On a per-surface failure, one line per failing
+surface: ``FAIL <surface-id>: <reason>``.
 """
 
 from __future__ import annotations
@@ -261,7 +282,9 @@ def _inspect_surface(
             surface_id,
             False,
             f"carries a destination of its own ({literal_match.group(1)!r}) "
-            "instead of resolving the declared sink at emit time",
+            "instead of resolving the declared sink at emit time -- the "
+            f"surface resolves to {literal_match.group(1)!r} while the "
+            f"install's declared sink is {declared_sink!r}",
         )
 
     return SurfaceResult(
@@ -272,14 +295,16 @@ def _inspect_surface(
     )
 
 
-def _verify_deployed_tree_complete(target_dir: Path) -> tuple[Path, str, list[str]]:
+def _verify_deployed_tree_complete(
+    target_dir: Path,
+) -> tuple[Path, str, str, list[str]]:
     """Verify the deployed tree has everything this check needs to inspect.
 
-    Returns ``(harvester_path, declared_sink, missing)``. ``missing`` is a
-    list of human-readable descriptions of anything absent; when it is
-    non-empty the caller must exit 2 without attempting any inspection.
-    ``declared_sink`` is ``""`` when the declaration itself is missing or
-    unreadable.
+    Returns ``(harvester_path, declared_sink, operational_stream, missing)``.
+    ``missing`` is a list of human-readable descriptions of anything absent;
+    when it is non-empty the caller must exit 2 without attempting any
+    inspection. ``declared_sink`` and ``operational_stream`` are ``""`` when
+    the declaration itself is missing, unreadable, or does not name that key.
     """
     deployed_root = _deployed_root(target_dir)
     harvester_path = deployed_root / "scripts" / "knowledge" / "harvest_learnings.py"
@@ -296,20 +321,67 @@ def _verify_deployed_tree_complete(target_dir: Path) -> tuple[Path, str, list[st
         missing.append(f"knowledge_sink.json ({config_path})")
 
     if missing:
-        return harvester_path, "", missing
+        return harvester_path, "", "", missing
 
     try:
         config_data = json.loads(config_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        return harvester_path, "", [f"{config_path} could not be read: {exc}"]
+        return harvester_path, "", "", [f"{config_path} could not be read: {exc}"]
 
     declared_sink = config_data.get("knowledge_emission_sink")
     if not isinstance(declared_sink, str) or not declared_sink:
-        return harvester_path, "", [
+        return harvester_path, "", "", [
             f"{config_path} does not declare a 'knowledge_emission_sink'"
         ]
 
-    return harvester_path, declared_sink, []
+    operational_stream = config_data.get("operational_telemetry_stream")
+    if not isinstance(operational_stream, str) or not operational_stream:
+        return harvester_path, "", "", [
+            f"{config_path} does not declare an 'operational_telemetry_stream'"
+        ]
+
+    return harvester_path, declared_sink, operational_stream, []
+
+
+def _settlement_violation(declared_sink: str, operational_stream: str) -> str | None:
+    """Return a failure reason if *declared_sink* itself violates the settlement.
+
+    Two independent, mechanically-checkable branches, both required by AC
+    INF-400c-4 regardless of whether every emit surface agrees with the
+    declared value:
+
+    Branch 2 -- the declared value IS the operational telemetry stream. The
+    AC's required settlement is that the EMITTERS move onto a knowledge-only
+    stream and the reader stays; repointing everything at the shared
+    operational file "ends the disagreement" while producing the outcome the
+    AC rejects, so it must fail even when every surface agrees with it.
+
+    Branch 3 -- the declared value is not an ABSOLUTE path. A relative
+    declared value lets each process finish the resolution against its own
+    current directory, reproducing the original per-working-directory split
+    the AC exists to end, even when every surface agrees with it verbatim.
+
+    Returns ``None`` when neither branch fires. Pure function: no I/O, no
+    shared-state mutation.
+    """
+    if Path(declared_sink) == Path(operational_stream):
+        return (
+            f"declared knowledge-emission sink {declared_sink!r} IS the "
+            f"operational telemetry stream {operational_stream!r} -- the "
+            "required settlement moves the EMITTERS onto a knowledge-only "
+            "stream; repointing everything at the shared operational file "
+            "is the settlement this AC rejects, even though every surface "
+            "agrees with it"
+        )
+    if not Path(declared_sink).is_absolute():
+        return (
+            f"declared knowledge-emission sink {declared_sink!r} is not an "
+            "absolute path -- a relative declared value lets each process "
+            "finish the resolution against its own current directory, "
+            "reproducing the per-working-directory split this AC exists to "
+            "end, even though every surface agrees with it verbatim"
+        )
+    return None
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -338,7 +410,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: --target-dir {target_dir} does not exist", file=sys.stderr)
         return 2
 
-    harvester_path, declared_sink, missing = _verify_deployed_tree_complete(target_dir)
+    harvester_path, declared_sink, operational_stream, missing = _verify_deployed_tree_complete(
+        target_dir
+    )
     if missing:
         print(
             "ERROR: deployed tree is incomplete -- this target was never "
@@ -346,6 +420,11 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    settlement_failure = _settlement_violation(declared_sink, operational_stream)
+    if settlement_failure is not None:
+        print(f"FAIL declared-sink: {settlement_failure}")
+        return 1
 
     results = [
         _inspect_surface(surface_id, _surface_path(target_dir, relative_parts), harvester_path, target_dir, declared_sink)
@@ -385,4 +464,18 @@ if __name__ == "__main__":
 #   invokes both directly from the package source clone) -- confirmed no
 #   scripts/ci/*.py file appears in any build_phases*.py deploy_map before
 #   adding this one. (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-i)
+# - 2026-09-14 [python-coder/INF-400c-4]: Added the two remaining parity
+#   failure branches this AC's own test_spec requires and INF-400c-4-i's
+#   narrower scope did not cover: branch 2 (the declared sink IS the
+#   operational telemetry stream -- the settlement discriminator that
+#   rejects repointing everything at the shared operational file even when
+#   every surface agrees) and branch 3 (the declared sink is not an absolute
+#   path, which lets each process finish resolution against its own current
+#   directory). Both are checked once against the declaration itself
+#   (`_settlement_violation`), before any per-surface inspection, so they
+#   fire regardless of surface agreement. Also hardened branch 1's failure
+#   message for a self-carried literal to additionally name the declared
+#   sink it disagrees with, so the reported failure names both resolved
+#   values and which side produced each, per the AC's own wording.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4)
 # ====================================================================

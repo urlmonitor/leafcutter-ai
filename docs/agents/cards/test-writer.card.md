@@ -146,7 +146,6 @@ flowchart TD
 
 ### test-writer
 
-- ACD-800a-2: Unrelated tickets produce no matches (false-positive prevention)
 - BO-510-3: Validation test fails when any agent entry or template lacks the produces field
 - BO-510-3-i: New agent template added without produces field is caught by validation
 - BO-610-3-i: Empty change_target or risk_surface field is rejected
