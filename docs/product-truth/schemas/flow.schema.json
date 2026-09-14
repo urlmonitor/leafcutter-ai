@@ -102,7 +102,7 @@
     "shape_version": {
       "type": "integer",
       "minimum": 1,
-      "description": "Which iteration of the journey-shape conventions this journey declares it is written to. Optional: a journey that omits it predates every shape rule and is only ever warned about, never blocked (validate_product_truth._check_shape_version_bounds)."
+      "description": "Which iteration of the journey-shape conventions this journey declares it is written to. Optional: a journey that omits it predates every size bound and is only warned about, never blocked; a bound blocks every journey only once none is left on an older version (product_truth_bounds, UXP-700e-1-ii)."
     },
     "tags": {
       "type": "array",
