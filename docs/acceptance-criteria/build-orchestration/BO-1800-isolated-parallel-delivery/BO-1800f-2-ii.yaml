@@ -1,7 +1,7 @@
 id: BO-1800f-2-ii
 components:
   - build_orchestration
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "What the copy's own commits took away is reported apart from what the copy's starting state never had"
 component: build-orchestration
@@ -26,10 +26,100 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
     status: exists
-assigned_agent: null
-estimated_complexity: null
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Attribution must be computed from whether any of the copy's OWN commits touched the
+     path, over the range between the copy's base and its tip — not inferred from the
+     shape or size of the removal, and not guessed. The two cases are numerically
+     identical and can only be told apart by looking at the copy's history."
+  - "The two categories must be structurally separate in the output — distinct findings
+     carrying an explicit category — not one list distinguished by wording, and not a
+     single total. A reader who has to infer the category from prose is the manual
+     interpretation step this L1 exists to remove."
+  - "A path that is BOTH touched by the copy's commits AND absent from the copy's base
+     must be reported once, under the copy's-own-commits category, rather than appearing
+     in both lists or being dropped from both. Overlap is the case an implementation
+     built from two independent filters gets wrong."
+  - "The report must be produced whenever the examination runs — on the refusal path and
+     on the clean path alike — so that a delivery which is about to be refused can be
+     understood before it is re-run. A report available only after a refusal cannot be
+     used to decide whether to declare."
+  - "Each finding names its path; a category with a count and no paths does not satisfy
+     this record, since acting on either category requires knowing which files are in
+     it."
+  - "The two categories call for opposite responses and the report must say which is
+     which in the reader's terms: a removal by the copy's own commits is a decision for
+     whoever owns the copy and may simply need declaring, while an absence caused by a
+     base predating the content is never the copy's to take away. Reporting them
+     symmetrically, with no guidance, is how a reader arrives at the wrong response in
+     either direction."
+test_spec:
+  - name: test_a_removal_by_the_copys_own_commit_is_attributed_to_the_copy
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "File A, removed by one of the copy's commits, is reported in the
+      copy's-own-commits category."
+  - name: test_an_absence_caused_by_an_older_base_is_attributed_to_base_staleness
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "File B, introduced on the shared branch after the cut and never touched
+      by the copy, is reported in the base-predates-it category."
+  - name: test_both_cases_in_one_delivery_are_reported_as_separate_findings
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "One fixture carrying both A and B yields two findings in two distinct
+      categories. A report holding one combined count of absent lines fails."
+  - name: test_a_path_both_touched_and_absent_from_the_base_is_reported_once
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The overlap case appears exactly once, under the copy's-own-commits
+      category — not in both categories and not dropped from both."
+  - name: test_every_finding_names_its_path
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Each finding in each category carries the affected path; a category
+      reduced to a count fails."
+test_rationale: |
+  One fixture must carry both cases at once. Two separate single-case fixtures are each
+  satisfied by an implementation that labels everything with one category — it reports A
+  correctly in the first fixture and B wrongly in the second only if the second checks the
+  label, and if it does, the two tests are already the combined fixture with extra steps.
+  The combined fixture also makes the separation assertion meaningful: there is nothing to
+  separate in a single-case report.
+
+  test_both_cases_in_one_delivery_are_reported_as_separate_findings is the assertion an
+  implementation that detects removals correctly but cannot explain them fails. That is the
+  point of the record — the existing manual audit already produces the numbers, and what it
+  lacks is the distinction that tells the reader which of two opposite responses is right.
+
+  test_a_path_both_touched_and_absent_from_the_base_is_reported_once is not in the
+  criteria's Then clauses and is here because the natural implementation — two independent
+  filters over the removal set — double-reports it, and the natural fix for double-
+  reporting (an if/elif in the wrong order) drops it. Neither is visible from the two
+  single-case fixtures.
+
+  Real git repositories in tmpdirs are required: attribution is derived from the copy's
+  commit history over a real range, and a mocked history cannot falsify the overlap case.
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-1800f-2
+  contract: "The removal finding set BO-1800f-2 produces, plus the copy's base and tip
+    shas needed to attribute each removal. This record specifies the attribution field of
+    that finding set and how the findings are grouped for the reader."
 origin_agent: BrainCandy
 created: 2026-09-14
 amended_by: []

@@ -1,7 +1,7 @@
 id: BO-1800f-1-ii
 components:
   - build_orchestration
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A replay that cannot complete cleanly stops the delivery and restores the copy"
 component: build-orchestration
@@ -28,10 +28,115 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
     status: exists
-assigned_agent: null
-estimated_complexity: null
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Restoration must be unconditional and must run on every abnormal exit from the
+     replay, including a timeout, an interrupt, and an unexpected exception — not only
+     on the conflict branch. A restore reachable only from the conflict branch leaves
+     the copy mid-replay on exactly the paths nobody anticipated."
+  - "Restoration must be verified, not assumed. After restoring, the copy's commit set,
+     its worktree status and the absence of leftover in-progress state
+     (.git/rebase-merge, .git/rebase-apply, MERGE_HEAD, CHERRY_PICK_HEAD) must be
+     re-checked, and a restoration that did not fully succeed must be reported as such
+     rather than reported as a clean refusal."
+  - "No automatic conflict resolution of any kind on this path: no ours/theirs strategy
+     option, no rerere replay, no union merge driver, and no agent dispatched to resolve
+     the overlap. Automatic resolution is the documented origin of the bad-replay case
+     that BO-1800f-2 exists to catch, so resolving here would defeat the sibling record
+     rather than help it."
+  - "The refusal must name EVERY path whose region could not be replayed, not the first
+     one and not a count. A reader given one path of four resolves that one, re-runs,
+     and meets the next — which is the same manual-diligence loop this L1 exists to
+     remove."
+  - "Uncommitted work in the copy must be preserved. If the replay requires a clean
+     worktree, the step must refuse up front and say so rather than stashing: the shared
+     stash stack is not per-worktree, and a stash pushed here can be popped by a
+     concurrent session in another worktree."
+  - "The copy must be returned to its pre-replay commits, which is a stronger
+     requirement than 'no conflict markers on disk'. A working tree that looks clean
+     while the branch ref has moved is the mid-replay state this record exists to
+     prevent; both must be asserted."
+test_spec:
+  - name: test_conflicting_replay_delivers_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The copy and the shared branch's advanced state edit the same region of
+      the same file; the run halts and the remote holds no new refs afterwards."
+  - name: test_copy_is_restored_to_its_pre_replay_commit_set
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "rev-list of the branch after the halt equals the pre-replay rev-list,
+      and no .git/rebase-merge, .git/rebase-apply, MERGE_HEAD or CHERRY_PICK_HEAD
+      remains."
+  - name: test_no_tracked_file_contains_conflict_markers_after_the_halt
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Every tracked file in the copy is scanned for conflict markers after
+      the halt; none is found."
+  - name: test_halt_names_every_conflicting_path
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Fixture conflicts on two distinct files; both paths appear in the
+      refusal. A report naming only the first fails."
+  - name: test_the_overlap_is_not_resolved_on_the_runs_own_initiative
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "After the halt the conflicting file holds the copy's pre-replay
+      content exactly — neither the shared branch's side, nor a merged blend, nor a
+      marker-bearing file."
+  - name: test_an_unexpected_failure_mid_replay_still_restores_the_copy
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The replay is interrupted by an injected failure that is not a
+      conflict; the copy is still returned to its pre-replay commit set with no
+      in-progress state left behind."
+test_rationale: |
+  The fixture must arrange a GENUINE overlapping edit — the same region of the same file
+  changed on both sides — because git auto-merges non-overlapping edits to the same file
+  without complaint. A fixture that edits different regions produces a clean replay, and
+  every assertion below then passes on an implementation that has no conflict handling
+  at all.
+
+  test_copy_is_restored_to_its_pre_replay_commit_set and
+  test_no_tracked_file_contains_conflict_markers_after_the_halt are deliberately separate
+  because they fail independently: an implementation that runs `git rebase --abort`
+  correctly passes both, one that merely cleans the working tree passes the second and
+  fails the first, and one that stops at the conflict without aborting fails both while
+  still correctly refusing to deliver. Collapsing them into a single "copy is clean"
+  assertion loses that discrimination.
+
+  test_the_overlap_is_not_resolved_on_the_runs_own_initiative asserts on file CONTENT
+  rather than on the absence of a strategy flag in the command line, because the
+  prohibited behaviours include rerere and a merge driver configured elsewhere, neither
+  of which appears at the call site.
+
+  test_an_unexpected_failure_mid_replay_still_restores_the_copy is not in the criteria's
+  Then clauses and is here as the edge the criteria imply: restoration written only into
+  the conflict branch satisfies every other descriptor in this list and still abandons
+  the copy mid-replay on the failure nobody planned for.
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-1800f-1
+  contract: "The replay of the copy's commits onto the shared branch's current state
+    that BO-1800f-1 performs. This record specifies the disposition when that replay
+    cannot complete without a decision, so it constrains the same operation rather than
+    a separate code path."
 origin_agent: BrainCandy
 created: 2026-09-14
 amended_by: []

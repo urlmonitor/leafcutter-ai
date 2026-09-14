@@ -1,7 +1,7 @@
 id: BO-1800f-2
 components:
   - build_orchestration
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A delivery that would still take away what the shared branch has does not leave the copy"
 component: build-orchestration
@@ -29,9 +29,129 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
     status: exists
-assigned_agent: null
-estimated_complexity: null
-delivers_to: null
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE DECLARATION SURFACE IS A `Removes:` COMMIT TRAILER, and this record is where it
+     comes into existence. No mechanism for declaring an intended removal exists today;
+     guardrail_gates.yaml's surgical_removal_guard is a different sense of the word (it
+     records the removal of an AGENT NAME from four config lists) and is not reusable.
+     The declaration is one or more git trailer lines — `Removes: <repo-relative path>`
+     — on any commit in the set being delivered. The examining step unions the declared
+     paths across that set and adjudicates each observed removal against the union.
+     Rationale, alternatives and costs are in this record's notes; the shape must not be
+     changed without revisiting them."
+  - "Declared paths are EXACT repo-relative paths. A trailing-slash directory form may
+     authorize removals strictly beneath that directory; wildcards and globs must be
+     rejected. A blanket token in the manner of check_structural_change.py's
+     [NO-ARCH-UPDATE] must NOT be accepted here: BO-1800f-2-i's fixture is built
+     specifically to fail any behaviour that allows all removals once any one has been
+     declared."
+  - "The declaration unit is a PATH; the detection unit is a removed line attributed to
+     a path. Declaring a path authorizes every removal within it, up to and including
+     the whole file. An undeclared path with any net line removal against the shared
+     branch refuses the delivery. This is what lets the same rule cover BO-1800f-2's
+     40-line partial removal and BO-1800f-2-i's whole-file deletion without a second
+     code path."
+  - "A declared path that matches no removal in the delivery must be reported as a
+     declaration error, not silently ignored. A mistyped or non-repo-relative path in a
+     trailer otherwise fails silently, producing a refusal the author reads as a false
+     positive."
+  - "Currency must not short-circuit the examination. A delivery whose base already
+     equals the shared branch's current tip must still be examined in full. Treating
+     'we brought it up to date' as proof of safety is precisely the failure this record
+     is a sibling rather than a child in order to catch."
+  - "The comparison must be against the shared branch's state as read at delivery time
+     by BO-1800f-1, not against a merge-base, a cut-time base, or the branch's own
+     first commit. A comparison against the merge-base reports the branch's own diff and
+     is structurally incapable of seeing the class of loss this record exists to
+     prevent, which is the same defect BO-1800f's notes record in BO-900a-1's
+     commits-ahead metric."
+  - "Refusal must precede every outward-facing action: no push, no force-push, no PR
+     opened, no branch created on the remote. Assert on the remote's refs, not on the
+     workflow's reported status."
+  - "Same shared-module and dual-copy constraints as BO-1800f-1: one implementation
+     under scripts/build_orchestration/ (auto-deployed by
+     build_build_orchestration_scripts), invoked from all three delivery workflows, each
+     of which exists as both templates/workflows-js/<name>.js and
+     .leafcutter/workflows/<name>.js and must be changed in both copies."
+  - "The refusal text must be actionable without a second tool run: it names the path,
+     states that its removal was not declared, and states how to declare it. The
+     existing manual audit's output needs a human to interpret it before it means
+     anything, and that interpretation step is where the enforcement is currently lost."
+test_spec:
+  - name: test_undeclared_line_removal_introduced_during_the_replay_is_refused
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The 40-line removal is introduced AFTER the delivery is brought up to
+      date, simulating a bad conflict resolution; the delivery is refused and the remote
+      holds no new refs."
+  - name: test_refusal_names_the_file_and_says_the_removal_was_undeclared
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The refusal contains the affected path and states that what it takes
+      away was never declared — not a bare count of removed lines."
+  - name: test_an_add_only_delivery_identical_in_all_other_respects_is_delivered
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The paired second fixture, differing only in that it adds lines,
+      passes the examination and proceeds. A behaviour that refuses every delivery fails
+      here."
+  - name: test_a_delivery_already_at_the_shared_branch_tip_is_still_examined
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A delivery whose base equals the current tip but which removes lines
+      from an undeclared file is refused; currency is not accepted as proof of safety."
+  - name: test_removals_are_measured_against_the_delivery_time_tip_not_the_merge_base
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "The shared branch gains content after the cut that the delivery lacks;
+      a merge-base comparison reports clean while a delivery-time-tip comparison reports
+      the loss. Asserts the latter."
+test_rationale: |
+  The ordering of the fixture is the whole test. The removal must be introduced AFTER the
+  delivery has been brought up to date. Build the fixture the other way round — stale
+  branch, removal present from the start — and an implementation that treats "we rebased"
+  as proof of safety passes, which is the exact behaviour this record is a sibling of
+  BO-1800f-1 rather than a child in order to rule out.
+
+  The add-only pair is not optional and is not a nicety. With only the refusal half, a
+  gate that refuses every delivery scores full marks; with only the add-only half, a gate
+  that refuses nothing does. Neither can pass both, so the pair is what makes the record
+  unsatisfiable by accident, and no inspection of source text can satisfy either half.
+
+  test_removals_are_measured_against_the_delivery_time_tip_not_the_merge_base is here
+  because the plausible wrong implementation is not "no check" but "a check against the
+  wrong reference". BO-1800f's own notes record the neighbouring instance of that error:
+  BO-900a-1 measures commits AHEAD of origin/main, which cannot detect the condition its
+  L1 promises to warn about. A fixture where the two references disagree is the only way
+  to tell the two implementations apart.
+
+  All fixtures need real git repositories in tmpdirs with a remote that advances between
+  cut and delivery, and the assertions on "nothing left the copy" must read the REMOTE's
+  refs rather than the workflow's self-reported status.
+delivers_to:
+  agent: python-coder
+  contract: "A removal finding set: for each path the delivery would take away content
+    from, {path, removed_line_count, declared: bool, attribution}. Consumed by
+    BO-1800f-2-i (which adjudicates declared vs undeclared per path) and BO-1800f-2-ii
+    (which reports attribution as two separate categories)."
 expects_from:
   ac_id: BO-1800f-1
   contract: "The up-to-date delivery this record examines. BO-1800f-1 establishes currency; this record is evaluated on the result, which is what makes the guarantee hold even when currency is correct."
@@ -69,3 +189,59 @@ notes: |
   behaviour that refuses every delivery passes the first half and fails the second,
   and a behaviour that refuses nothing does the reverse, so neither can satisfy this
   record and no source-text inspection can satisfy either half.
+
+  -- IT PO, 2026-09-14 (technical enrichment; nothing above this line was altered) --
+
+  THE DECLARATION MECHANISM: a `Removes: <repo-relative path>` git trailer on any commit
+  in the set being delivered, unioned across that set. The BA confirmed no declaration
+  mechanism exists today and that surgical_removal_guard is a different sense of
+  "removal"; that finding is upheld. Three candidates were weighed.
+
+    1. Ticket/AC `files_touched`. REJECTED on three counts. It declares intent to TOUCH,
+       and reading touch as authorization-to-remove collapses the rule to "any removal
+       inside a file the work legitimately edits is allowed" -- which is the third row of
+       BO-1800f-2-i's four-way table, the one its mixed fixture exists to fail. It is
+       also unavailable on the paths that actually failed: two of the four recorded
+       occurrences were on branches with no ticket drive, and the AC store cannot carry
+       the field at all, since config/ac_store_schema.json is additionalProperties:false
+       and has no files_touched property. Making it work would mean a NEW `files_removed`
+       field on the ticket schema plus its validator and hook, and would still leave the
+       bare `git worktree add` path undeclarable.
+    2. A dedicated declaration file. REJECTED as the highest-cost option with no
+       capability the trailer lacks. It is a new artifact surface: a deploy-manifest
+       entry, a schema, a validator, a hook, and a teaching burden on every authoring
+       agent. It lives in the tree, so it must be created and then cleaned up, and it is
+       invisible at the place a reviewer actually looks -- the diff.
+    3. A commit-message convention. CHOSEN. There is direct precedent on both sides of
+       it: check_structural_change.py already treats a commit-message token
+       ([NO-ARCH-UPDATE]) as an authoritative declaration a gate honours, and
+       Co-Authored-By trailers are already mandated here, so agents already emit
+       trailers. It is available on EVERY branch regardless of ticket, AC or epic, which
+       is what covers all three worktree-creating paths named in the known issue. It is
+       path-scoped, which is the only shape that separates the four behaviours in
+       BO-1800f-2-i. It travels with its commit through BO-1800f-1's replay, so currency
+       and declaration do not fight. And it lands in the PR next to the removal it
+       authorizes, which is the review trail the known issue says is missing.
+
+  WHAT IT COSTS, stated so it is chosen with eyes open:
+    - Retro-declaration is awkward. A removal discovered at delivery time cannot be
+       declared without amending a commit or adding an empty one. This is why the rule
+       unions trailers across the delivery set rather than requiring the trailer to sit
+       on the commit that performed the removal -- an empty trailing commit must be
+       accepted. Amending an already-pushed commit is worse, and this gate does not make
+       that case better.
+    - Free text is fragile. A mistyped or absolute path silently declares nothing. The
+       only defences are that the refusal names the exact undeclared path, and that a
+       declared path matching no removal is reported as a declaration error rather than
+       ignored. Both are it_requirements above.
+    - The union rule is slightly loose: `Removes: X` on the first commit authorizes X's
+       removal introduced by the seventh. Per-commit attribution would be tighter and
+       would produce false refusals once a replay moves hunks between commits. Loose and
+       correct was preferred over tight and wrong.
+    - No globs means deleting a forty-file directory needs the directory form or forty
+       lines. Accepted deliberately: a glob re-opens the blanket-allow hole.
+
+  This is a NEW CONVENTION and is the input BO-1800f's two held L2 documentation slots
+  were waiting on. The reference-doc trigger should document the trailer's syntax,
+  scope and error cases; the sequence-diagram trigger should show the delivery boundary
+  as read-tip -> replay -> adjudicate -> refuse-or-push.
