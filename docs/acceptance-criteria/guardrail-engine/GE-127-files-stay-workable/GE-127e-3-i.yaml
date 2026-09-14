@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -341,33 +341,39 @@ amended_by:
 - reason: technical-enrichment
   by: it-po
   at: 2026-09-08
-  note: 'criteria untouched. UNAVAILABILITY VOCABULARY DECIDED, WHICH THE BA EXPLICITLY LEFT TO
-    THE IT PO: the LINE SHAPE and naming discipline of GE-127a-1-i / BP-1600a-2-ii are reused —
-    one machine-readable token, `reason=`, and a specific reason naming the situation that
-    actually occurred — and the EXIT STATUS is deliberately not. A failure to MEASURE leaves the
-    verdict unknown, which is what exit 2 means; a failure to DESCRIBE leaves the verdict
-    perfectly known (measured, over) and only the advice missing, and this record positively
-    requires the commit to be refused. So the run exits with the ordinary finding status and
-    carries the could-not-be-described line INSIDE that file''s refusal block. Routing it to
-    exit 2 would move the verdict (which this record''s title forbids), collapse GE-127a-1-i''s
-    third clause by making a known-over file report as indeterminate, and structurally suppress
-    the refusal block — main()''s exit-2 paths print to stderr and return immediately. This is
-    NOT a third verdict set: the guard already emits "EMPTY HISTORY: reason=<text>" in the same
-    grammar at exit 0, so the house rule is one shared line grammar with the status decided by
-    the verdict, not by the token. PACKAGE SURFACE FALSE, AND MEASURED: neither watched
-    container on commit_guardian.json gains an entry; `check-file-size` and `file_size` already
-    exist and anything nested in `file_size` is unwatched. No fictional config_schema_fragment.
-    COMPLEXITY S: the code is a wrapped failure path plus a printed line, matching GE-127a-1-i''s
-    sizing for the same shape one step earlier. STRUCTURAL REQUIREMENT ADDED: the verdict must be
-    fixed BEFORE the description step runs, so no outcome of that step can change whether the
-    commit completes — the quiet version of the defect already recorded on this guard''s
-    measurement step. Reason text must distinguish its causes (unparseable content, a part set
-    under GE-127e-1''s half threshold, no extractor for the kind) rather than share one sentence.
-    declares_side_effect false: every Then clause reports to a stream and sets an exit status.
-    test_spec: eight executing descriptors, three carrying the BA''s named mutations verbatim
-    (two of them failing by the commit outcome), one seam descriptor that makes the vocabulary
-    decision falsifiable across three statuses, two boundary descriptors that stop the fix
-    overshooting, one through the registered hook entry point and one on the deployed copy.'
+  note: 'criteria untouched. UNAVAILABILITY VOCABULARY DECIDED, WHICH THE BA EXPLICITLY
+    LEFT TO THE IT PO: the LINE SHAPE and naming discipline of GE-127a-1-i / BP-1600a-2-ii
+    are reused — one machine-readable token, `reason=`, and a specific reason naming
+    the situation that actually occurred — and the EXIT STATUS is deliberately not.
+    A failure to MEASURE leaves the verdict unknown, which is what exit 2 means; a
+    failure to DESCRIBE leaves the verdict perfectly known (measured, over) and only
+    the advice missing, and this record positively requires the commit to be refused.
+    So the run exits with the ordinary finding status and carries the could-not-be-described
+    line INSIDE that file''s refusal block. Routing it to exit 2 would move the verdict
+    (which this record''s title forbids), collapse GE-127a-1-i''s third clause by
+    making a known-over file report as indeterminate, and structurally suppress the
+    refusal block — main()''s exit-2 paths print to stderr and return immediately.
+    This is NOT a third verdict set: the guard already emits "EMPTY HISTORY: reason=<text>"
+    in the same grammar at exit 0, so the house rule is one shared line grammar with
+    the status decided by the verdict, not by the token. PACKAGE SURFACE FALSE, AND
+    MEASURED: neither watched container on commit_guardian.json gains an entry; `check-file-size`
+    and `file_size` already exist and anything nested in `file_size` is unwatched.
+    No fictional config_schema_fragment. COMPLEXITY S: the code is a wrapped failure
+    path plus a printed line, matching GE-127a-1-i''s sizing for the same shape one
+    step earlier. STRUCTURAL REQUIREMENT ADDED: the verdict must be fixed BEFORE the
+    description step runs, so no outcome of that step can change whether the commit
+    completes — the quiet version of the defect already recorded on this guard''s
+    measurement step. Reason text must distinguish its causes (unparseable content,
+    a part set under GE-127e-1''s half threshold, no extractor for the kind) rather
+    than share one sentence. declares_side_effect false: every Then clause reports
+    to a stream and sets an exit status. test_spec: eight executing descriptors, three
+    carrying the BA''s named mutations verbatim (two of them failing by the commit
+    outcome), one seam descriptor that makes the vocabulary decision falsifiable across
+    three statuses, two boundary descriptors that stop the fix overshooting, one through
+    the registered hook entry point and one on the deployed copy.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
 superseded_by: null
 covered_by: []
 implemented_by: []

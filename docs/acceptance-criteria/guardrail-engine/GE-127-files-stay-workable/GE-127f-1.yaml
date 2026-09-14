@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -470,48 +470,53 @@ expects_from:
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-09-14
-    note: 'criteria UNTOUCHED, as are title, level, component, components, depends_on, status,
-      req_status, work_status, priority, roadmap_phase, change_target, risk_surface and notes.
-      PACKAGE SURFACE FALSE, AND MEASURED IN THIS WORKTREE: the two containers
-      WATCHED_REGISTRIES binds on commit_guardian.json were read — `check-file-size` is already
-      a hooks_manifest.hooks id and `file_size` is already a top-level key, and the only thing
-      this record could configure (line_limits) is nested inside it and invisible to the
-      watcher. Nothing is registered; the plain-list spec form is correct and the BP-100k-4
-      fictional-key precedent is not repeated. GE-127f-3''s threshold is NOT pre-declared here.
-      COMPLEXITY M: this changes the THRESHOLD inside GE-127b-1''s shipped comparison and the
-      four quantities the refusal carries; it builds no new engine (contrast GE-127e-1, L) but
-      touches the ratchet, the gate and two fixture modules. THREE DISPOSALS MADE EXPLICIT, all
-      in it_requirements. (1) GE-127b-1''s delivered boundary descriptor
-      test_ge_127b_1_an_oversized_file_left_at_exactly_its_previous_length_commits goes RED
-      under this record''s third arm; it is a deliberate narrowing recorded on GE-127b''s
-      amended_by, is reconciled by GE-127f-2 (which owns "added") by pinning its fixture to a
-      change adding no MEASURED lines rather than by deletion or weakening, and the surviving
-      shape is GE-127f-2''s "adding only unmeasured content is free" arm. (2) THE BLANK-LINE /
-      HASH-COMMENT MANOEUVRE IS NOT CLOSED HERE: reclassifying which lines count is GE-127d''s
-      call and no second counting rule is written into this comparison; instead every arm in
-      which the commit completes is required BY FIXTURE CONSTRAINT to reach its end state by
-      whole constituent definitions leaving the file. Ground truth re-stated correctly from the
-      probe: count_content_lines strips triple-quoted regions and block comments ONLY — hash
-      comments and blank lines DO count. (3) THE DOCSTRING-ONLY LOOPHOLE is named as a known,
-      accepted consequence of counting additions in the file''s own unit, with the reasoning
-      required to be carried into the module''s DECISION HISTORY so a future reader meets the
-      argument rather than the surprise. THE FIXTURE-LIST TRAP that bit this repository today
-      is stated as a requirement: _ge_127a_1_ordinary_commit_fixture.py (PRODUCTION_MODULES)
-      and _ge_127c_1_scope_fixture.py each hand-enumerate the modules copied beside
-      check_file_size.py, nothing checks either against the real import graph, and a missing
-      entry surfaces as "baseline commit failed" with the real ModuleNotFoundError only in a
-      captured traceback. declares_side_effect false — DERIVED, not authored by opinion: the
-      Then clauses assert commit outcomes and printed text, no durable artifact; confirmed by
-      running derive_declares_side_effect over this record (False). test_spec: eight executing
-      descriptors on real commits, two carrying the BA''s named mutations verbatim with their
-      MUST-STAY-GREEN halves intact, one dedicated two-injection proof recording the stay-green
-      halves (including EVERY arm of GE-127f-2) as REQUIRED observations and declaring that an
-      injection reddening everything is a FAILURE of the descriptor, one seam guard on
-      GE-127a-1''s silence, one registered-hook entry point and one deployed cold process.
-      Hook-running commits are pinned to the 180s build-class timeout after a 30s flake today.'
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-14
+  note: 'criteria UNTOUCHED, as are title, level, component, components, depends_on,
+    status, req_status, work_status, priority, roadmap_phase, change_target, risk_surface
+    and notes. PACKAGE SURFACE FALSE, AND MEASURED IN THIS WORKTREE: the two containers
+    WATCHED_REGISTRIES binds on commit_guardian.json were read — `check-file-size`
+    is already a hooks_manifest.hooks id and `file_size` is already a top-level key,
+    and the only thing this record could configure (line_limits) is nested inside
+    it and invisible to the watcher. Nothing is registered; the plain-list spec form
+    is correct and the BP-100k-4 fictional-key precedent is not repeated. GE-127f-3''s
+    threshold is NOT pre-declared here. COMPLEXITY M: this changes the THRESHOLD inside
+    GE-127b-1''s shipped comparison and the four quantities the refusal carries; it
+    builds no new engine (contrast GE-127e-1, L) but touches the ratchet, the gate
+    and two fixture modules. THREE DISPOSALS MADE EXPLICIT, all in it_requirements.
+    (1) GE-127b-1''s delivered boundary descriptor test_ge_127b_1_an_oversized_file_left_at_exactly_its_previous_length_commits
+    goes RED under this record''s third arm; it is a deliberate narrowing recorded
+    on GE-127b''s amended_by, is reconciled by GE-127f-2 (which owns "added") by pinning
+    its fixture to a change adding no MEASURED lines rather than by deletion or weakening,
+    and the surviving shape is GE-127f-2''s "adding only unmeasured content is free"
+    arm. (2) THE BLANK-LINE / HASH-COMMENT MANOEUVRE IS NOT CLOSED HERE: reclassifying
+    which lines count is GE-127d''s call and no second counting rule is written into
+    this comparison; instead every arm in which the commit completes is required BY
+    FIXTURE CONSTRAINT to reach its end state by whole constituent definitions leaving
+    the file. Ground truth re-stated correctly from the probe: count_content_lines
+    strips triple-quoted regions and block comments ONLY — hash comments and blank
+    lines DO count. (3) THE DOCSTRING-ONLY LOOPHOLE is named as a known, accepted
+    consequence of counting additions in the file''s own unit, with the reasoning
+    required to be carried into the module''s DECISION HISTORY so a future reader
+    meets the argument rather than the surprise. THE FIXTURE-LIST TRAP that bit this
+    repository today is stated as a requirement: _ge_127a_1_ordinary_commit_fixture.py
+    (PRODUCTION_MODULES) and _ge_127c_1_scope_fixture.py each hand-enumerate the modules
+    copied beside check_file_size.py, nothing checks either against the real import
+    graph, and a missing entry surfaces as "baseline commit failed" with the real
+    ModuleNotFoundError only in a captured traceback. declares_side_effect false —
+    DERIVED, not authored by opinion: the Then clauses assert commit outcomes and
+    printed text, no durable artifact; confirmed by running derive_declares_side_effect
+    over this record (False). test_spec: eight executing descriptors on real commits,
+    two carrying the BA''s named mutations verbatim with their MUST-STAY-GREEN halves
+    intact, one dedicated two-injection proof recording the stay-green halves (including
+    EVERY arm of GE-127f-2) as REQUIRED observations and declaring that an injection
+    reddening everything is a FAILURE of the descriptor, one seam guard on GE-127a-1''s
+    silence, one registered-hook entry point and one deployed cold process. Hook-running
+    commits are pinned to the 180s build-class timeout after a 30s flake today.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
 superseded_by: null
 covered_by: []
 implemented_by: []

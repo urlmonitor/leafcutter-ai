@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -361,29 +361,35 @@ amended_by:
 - reason: technical-enrichment
   by: it-po
   at: 2026-09-01
-  note: 'criteria untouched. THE RULE DECISION THE BA DEFERRED IS TAKEN, AND IT IS "KEEP THE RULE,
-    PUBLISH IT": discard triple-quoted blocks in both quote styles and C-style block comments, count
-    everything else including blank lines and hash comments. Two grounds — the rule is defensible on
-    the merits (a file is hard to work in because of how much there is to reason about), and changing
-    it changes the population. Re-measured at b846121c9: 200 of 845 tracked .py files are over 400
-    under the rule in force, 314 over 400 raw, so adopting the raw count here would add 114 Python
-    files to GE-127b-1''s ratchet inside a transparency fix. Both figures reproduce the BA''s exactly,
-    and the L0''s 312 differs only by walk scope, as this record''s notes already state. PACKAGE
-    SURFACE FALSE, MEASURED: no hooks_manifest id and no new top-level mapping key; if the rule is
-    later made configurable its keys go NESTED under the existing file_size section at
-    commit_guardian.json line 13, which the mapping_keys container at dotted path "" does not see. No
-    config_schema_fragment minted; the BP-100k-4 / BP-100k-4-i fictional-key precedent is not repeated.
-    ONE MEASUREMENT FUNCTION, four call sites (this record, GE-127a-1''s threshold, GE-127b-1''s two
-    ratchet measurements), with the published statement DERIVED from it rather than maintained beside
-    it — the hand-written-sentence failure is the BA''s injection 2 and this tree has shipped it once
-    already. ORDERING WITH GE-127d-1 WIRED EXPLICITLY: the published statement becomes one more surface
-    that record compares, and whichever lands second joins the other''s surface list rather than adding
-    a parallel check. declares_side_effect false: every Then clause reports to a stream and sets an exit
-    status. test_spec: eight executing descriptors carrying both of the BA''s named mutations, plus an
-    asymmetry descriptor the criteria do not name but the kept rule makes necessary (deleting blank
-    lines and hash comments moves the number, deleting docstrings does not, and the incumbent refusal
-    forbids both in one breath), plus the registered hook entry point and the deployed copy in a cold
-    process.'
+  note: 'criteria untouched. THE RULE DECISION THE BA DEFERRED IS TAKEN, AND IT IS
+    "KEEP THE RULE, PUBLISH IT": discard triple-quoted blocks in both quote styles
+    and C-style block comments, count everything else including blank lines and hash
+    comments. Two grounds — the rule is defensible on the merits (a file is hard to
+    work in because of how much there is to reason about), and changing it changes
+    the population. Re-measured at b846121c9: 200 of 845 tracked .py files are over
+    400 under the rule in force, 314 over 400 raw, so adopting the raw count here
+    would add 114 Python files to GE-127b-1''s ratchet inside a transparency fix.
+    Both figures reproduce the BA''s exactly, and the L0''s 312 differs only by walk
+    scope, as this record''s notes already state. PACKAGE SURFACE FALSE, MEASURED:
+    no hooks_manifest id and no new top-level mapping key; if the rule is later made
+    configurable its keys go NESTED under the existing file_size section at commit_guardian.json
+    line 13, which the mapping_keys container at dotted path "" does not see. No config_schema_fragment
+    minted; the BP-100k-4 / BP-100k-4-i fictional-key precedent is not repeated. ONE
+    MEASUREMENT FUNCTION, four call sites (this record, GE-127a-1''s threshold, GE-127b-1''s
+    two ratchet measurements), with the published statement DERIVED from it rather
+    than maintained beside it — the hand-written-sentence failure is the BA''s injection
+    2 and this tree has shipped it once already. ORDERING WITH GE-127d-1 WIRED EXPLICITLY:
+    the published statement becomes one more surface that record compares, and whichever
+    lands second joins the other''s surface list rather than adding a parallel check.
+    declares_side_effect false: every Then clause reports to a stream and sets an
+    exit status. test_spec: eight executing descriptors carrying both of the BA''s
+    named mutations, plus an asymmetry descriptor the criteria do not name but the
+    kept rule makes necessary (deleting blank lines and hash comments moves the number,
+    deleting docstrings does not, and the incumbent refusal forbids both in one breath),
+    plus the registered hook entry point and the deployed copy in a cold process.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -298,40 +298,46 @@ expects_from:
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-09-14
-    note: 'criteria UNTOUCHED, as are title, level, component, components, depends_on, status,
-      req_status, work_status, priority, roadmap_phase, change_target, risk_surface and notes.
-      PACKAGE SURFACE FALSE, AND MEASURED IN THIS WORKTREE: both containers WATCHED_REGISTRIES
-      binds on commit_guardian.json were read — `check-file-size` is already a hooks_manifest.hooks
-      id and `file_size` is already a top-level key. This record adds a floor and two reason texts
-      to an existing outcome and registers nothing; no config_schema_fragment is invented (the
-      BP-100k-4 fictional-key precedent). COMPLEXITY S: three branches and two reason texts on an
-      already-pinned verdict contract — BP-1600a-2-ii''s "INDETERMINATE: reason=<text>" with exit
-      2, the same one GE-127a-1-i and GE-127b-1-i reuse — plus the requirement that the added-line
-      step signal unavailability as something other than the value 0 so the caller can branch on it
-      rather than on falsiness. THE DISPOSALS RELEVANT HERE: the genuine-zero arm is required to
-      stay PERMISSIVE and be named distinctly on the exit-0 path without borrowing the
-      INDETERMINATE token, because it is the surviving shape of GE-127b-1''s delivered boundary
-      descriptor and refusing it would break that descriptor and GE-127f-2''s last arm at once;
-      the blank-line/hash-comment question and the docstring-only consequence are GE-127d''s and
-      GE-127f-2''s respectively and are deliberately NOT restated here. THE FIXTURE-LIST TRAP that
-      bit this repository today is stated as a requirement and is sharpest on this record, whose
-      own subject is an unreachable input: a missing entry in
-      _ge_127a_1_ordinary_commit_fixture.py''s PRODUCTION_MODULES or in _ge_127c_1_scope_fixture.py
-      would look exactly like the condition under test. declares_side_effect false — DERIVED, not
-      authored by opinion: the Then clauses assert commit outcomes and printed text, no durable
-      artifact; confirmed by running derive_declares_side_effect over this record (False).
-      test_spec: six executing descriptors driving the real gate as a subprocess with the
-      unavailability constructed by breaking the real input, one carrying the BA''s named mutation
-      verbatim with BOTH of its required stay-green observations intact — the genuine-zero arm
-      green, and every arm of GE-127f-1 and GE-127f-2 green in a run where the input IS available
-      — and declaring that an injection reddening everything is a FAILURE of the descriptor; the
-      two refusing arms asserted BY CONTRAST rather than against literals; one registered-hook
-      entry point at exit 2 and one deployed cold process. Hook-running commits pinned to the 180s
-      build-class timeout after a 30s flake today, which on this record would otherwise be
-      mistaken for the very refusal being asserted.'
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-14
+  note: 'criteria UNTOUCHED, as are title, level, component, components, depends_on,
+    status, req_status, work_status, priority, roadmap_phase, change_target, risk_surface
+    and notes. PACKAGE SURFACE FALSE, AND MEASURED IN THIS WORKTREE: both containers
+    WATCHED_REGISTRIES binds on commit_guardian.json were read — `check-file-size`
+    is already a hooks_manifest.hooks id and `file_size` is already a top-level key.
+    This record adds a floor and two reason texts to an existing outcome and registers
+    nothing; no config_schema_fragment is invented (the BP-100k-4 fictional-key precedent).
+    COMPLEXITY S: three branches and two reason texts on an already-pinned verdict
+    contract — BP-1600a-2-ii''s "INDETERMINATE: reason=<text>" with exit 2, the same
+    one GE-127a-1-i and GE-127b-1-i reuse — plus the requirement that the added-line
+    step signal unavailability as something other than the value 0 so the caller can
+    branch on it rather than on falsiness. THE DISPOSALS RELEVANT HERE: the genuine-zero
+    arm is required to stay PERMISSIVE and be named distinctly on the exit-0 path
+    without borrowing the INDETERMINATE token, because it is the surviving shape of
+    GE-127b-1''s delivered boundary descriptor and refusing it would break that descriptor
+    and GE-127f-2''s last arm at once; the blank-line/hash-comment question and the
+    docstring-only consequence are GE-127d''s and GE-127f-2''s respectively and are
+    deliberately NOT restated here. THE FIXTURE-LIST TRAP that bit this repository
+    today is stated as a requirement and is sharpest on this record, whose own subject
+    is an unreachable input: a missing entry in _ge_127a_1_ordinary_commit_fixture.py''s
+    PRODUCTION_MODULES or in _ge_127c_1_scope_fixture.py would look exactly like the
+    condition under test. declares_side_effect false — DERIVED, not authored by opinion:
+    the Then clauses assert commit outcomes and printed text, no durable artifact;
+    confirmed by running derive_declares_side_effect over this record (False). test_spec:
+    six executing descriptors driving the real gate as a subprocess with the unavailability
+    constructed by breaking the real input, one carrying the BA''s named mutation
+    verbatim with BOTH of its required stay-green observations intact — the genuine-zero
+    arm green, and every arm of GE-127f-1 and GE-127f-2 green in a run where the input
+    IS available — and declaring that an injection reddening everything is a FAILURE
+    of the descriptor; the two refusing arms asserted BY CONTRAST rather than against
+    literals; one registered-hook entry point at exit 2 and one deployed cold process.
+    Hook-running commits pinned to the 180s build-class timeout after a 30s flake
+    today, which on this record would otherwise be mistaken for the very refusal being
+    asserted.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
 superseded_by: null
 covered_by: []
 implemented_by: []
