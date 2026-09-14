@@ -516,9 +516,16 @@ def write_index(
     ``asof`` stamps inside ``by_flow[*].impl_summary`` and ``by_ac[*][i]`` are
     preserved from the existing ``index.json`` when the non-asof content is
     unchanged, preventing spurious date-only diffs on re-runs.
+
+    A missing ``index.json`` is rebuilt from the sources rather than crashing
+    (UXP-700a-2): this is the store's single writer, so it is the one thing that
+    can restore the index without anyone hand-authoring JSON. It starts from an
+    index declaring zero artifacts, and every derived lookup below is then
+    written into it, present and empty. A second run finds that file and writes
+    nothing, because the compare-before-write check sees identical text.
     """
     index_path = STORE / "index.json"
-    index = _load_json(index_path)
+    index = _load_json(index_path) if index_path.exists() else {"artifacts": [], "entity_registry": []}
 
     by_flow = build_by_flow(flows, flow_paths, ac_map, run_date)
 
@@ -569,7 +576,7 @@ def write_index(
     index["by_ac"] = new_by_ac
 
     new_text = json.dumps(index, indent=2, ensure_ascii=False) + "\n"
-    if new_text != _read_text(index_path):
+    if not index_path.exists() or new_text != _read_text(index_path):
         if not check:
             _write_text(index_path, new_text)
         return True
