@@ -240,6 +240,42 @@ pre-commit time. The right end state is one scanner with one definition and a te
 asserting the two gates agree on a fixture set covering all four shapes: sync, async,
 file-level, composite.
 
+**Update 2026-09-14 — the `test_required` half of the symptom above is stale; the
+composite half is not, and now has fresh evidence.** Re-read `check_staged_done_proofs`
+directly rather than trusting the symptom text as filed: it now DOES read `test_required`
+(`if data.get("test_required") is False: continue`, with a docstring describing the
+exemption as mirroring `check_all_done_acs` / `check_changed_done_acs`) — that part of this
+entry's "Symptom" no longer matches the code and should be read as historical. **The
+composite half is unchanged and still real**: `check_staged_done_proofs` has no
+`covered_by`/composite fallback of any kind — it is a flat `ac_id_str not in
+all_covered_ids` check with nothing else — while its two CI-authoritative siblings resolve
+a composite's verdict through `verify_done_eligible`'s built-in `_verify_composite_eligible`
+path. So a composite can be genuinely eligible by the authoritative CI definition and still
+be **uncommittable locally**, exactly as this entry's "Consequence" section already says.
+
+Fresh evidence for the composite half, found today and not depending on either the
+`BO-1500*` records this entry originally cited or on the tickets they came from: all five
+`L1` composites in `EPIC-StartingNewWorkTheProperWayAlways`'s own AC family —
+`ACD-2100a` through `ACD-2100e` — carry `work_status: todo` in the store right now, while
+every one of their `covered_by` children (`ACD-2100a-1` through `-5`, `ACD-2100b-1` through
+`-5`, etc.) is `work_status: done`. None of the five declares `test_required: false` (the
+field is simply absent, so the existing exemption does not apply to them either). This is
+the epic that shipped the fix for three other entries in `ac-driven-dev.md` today, and even
+it left its own five composites stuck at `todo` — consistent with "composites are
+structurally unreachable via the fast pre-commit gate," not with any one ticket's oversight.
+
+**A tension worth recording rather than resolving here.** A prior store-wide sweep (cited
+in this repo's `CLAUDE.md`, "AC-store commits — stage the parent alongside the child") found
+20 composites falsely marked `done` with unfinished children — so a gate that makes
+composite-done hard to reach is, in one reading, protective. But the gap this entry
+describes does not distinguish "protect against a false composite done" from "no composite
+may ever be marked done through the sanctioned local gate" — the current effect is the
+latter, unconditionally, for every composite regardless of whether its children are
+genuinely finished. That is a materially different (and stricter) policy than "verify
+before allowing," and nothing in this file's history suggests anyone chose it on purpose.
+Whoever picks up the "Fix direction" above should decide which of the two was intended
+before implementing it, not just port the CI-authoritative behaviour over unexamined.
+
 ---
 
 ### KI-CG-004 — moved to `security-scanner`
@@ -3680,8 +3716,8 @@ control reads a real file, finds real content, and answers a question about the 
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Occurrences:** 2
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-14
 - **Where:** `templates/scripts/commit_guardian/verify_precommit_active.py` — the `--json`
   payload assembled in `run_checks()`, and the `check_c_git_hook` / `check_hook_freshness`
   branches that feed it
@@ -3744,3 +3780,19 @@ never-attempted from attempted-and-passed). `docs/reference/false-green-mechanis
 **Pattern:** a probe whose human-readable output distinguishes "could not determine" from a
 verdict, and whose machine-readable output does not — so the consumer built to act on it is
 the one consumer that cannot tell.
+
+**Second occurrence, 2026-09-14 — same defect, sharper consequence.** Re-verified directly
+against the current code before logging this as a recurrence rather than a new entry: the
+fallback this entry describes is still at `resolve_hooks_path()` (`verify_precommit_active.py`
+~line 359, `_resolve_git_commondir(cwd)` raising `FileNotFoundError` when no `.git` exists at
+`cwd`) with `run_checks()`'s `except (OSError, configparser.Error)` catching it and falling
+back to `hooks_dir = cwd / ".git" / "hooks"` (~line 629) — unchanged since 2026-09-01. Today's
+run returned `{"git_hook": false}` for a worktree probed from outside its own root, while
+`check-done-proof` had blocked a commit **on that same worktree minutes earlier** — direct,
+time-adjacent proof the hooks were live and the probe's `false` was the "could not look" case
+this entry names, not "not installed". Re-running under `env --chdir=<worktree root>` returned
+`failing_checks: []`, matching the original 2026-09-01 reproduction exactly. Filed here as a
+second occurrence rather than a new KI id after confirming the mechanism, evidence shape, and
+even the operator's own recovery step (`env --chdir=`) are identical to the entry above — a
+duplicate id would have fragmented one defect across two entries for no analytical benefit.
+No remediation has landed; the "Remediation" section above still describes the fix needed.
