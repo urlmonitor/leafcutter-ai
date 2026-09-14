@@ -2324,16 +2324,25 @@ def run(
     # the same back-port gap; this is the other half.
     #
     # Prefix assignment mirrors assemble_epic_folder: topo_order[i] -> NN_<base>.
+    #
+    # The loop variable is deliberately NOT named ac_id: that name is this
+    # function's parameter, holding the goal AC the caller asked for, and the
+    # Master_Plan block further down still reads it. A statement-level `for
+    # ac_id in topo_order` leaks past the loop and leaves the goal id set to
+    # whichever leaf happened to sort last, so the plan attributes the whole
+    # epic to that leaf. (The dict comprehension above is safe — comprehension
+    # targets are scoped to the comprehension — which is exactly what makes the
+    # asymmetry easy to miss.)
     ac_to_epic_filename: dict[str, str] = {
         ac_id: f"{i:02d}_{Path(ticket_path).name}"
         for i, (ac_id, ticket_path) in enumerate(
             zip(topo_order, ticket_paths, strict=True), start=1
         )
     }
-    for ac_id in topo_order:
-        ticket_file = epic_folder / ac_to_epic_filename[ac_id]
+    for leaf_ac_id in topo_order:
+        ticket_file = epic_folder / ac_to_epic_filename[leaf_ac_id]
         _translate_ticket_depends_on(
-            ticket_file, dep_graph.get(ac_id, []), ac_to_epic_filename
+            ticket_file, dep_graph.get(leaf_ac_id, []), ac_to_epic_filename
         )
 
     # --- target_epic stamping (ACD-1200d-1) ---

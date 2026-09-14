@@ -197,6 +197,75 @@ class TestEpicDependsOnResolves(unittest.TestCase):
             )
             self._assert_every_dependency_resolves(_epic_folder(inbox))
 
+    def test_ac_route_master_plan_credits_the_goal_not_the_last_leaf(self) -> None:
+        # covers: TKT-017
+        # angle: regression
+        """The translation loop must not clobber the goal id it runs beside.
+
+        TKT-017's first landing wrote the loop as `for ac_id in topo_order`.
+        `ac_id` is run()'s own parameter — the goal AC the caller named — and a
+        statement-level loop target outlives its loop, so by the time the
+        Master_Plan block read it, it held whichever leaf sorted last. The epic
+        was then published as belonging to that leaf: source_ac named a child of
+        the goal, and the Goal paragraph claimed the tickets were derived from
+        the leaves beneath a record that has no leaves beneath it.
+
+        The dependency assertions above cannot see this — they passed on the
+        clobbering version — because the damage lands in a file they skip.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store_root = _seed_store(root)
+            inbox = root / "tickets" / "00_inbox"
+            inbox.mkdir(parents=True)
+
+            proc = subprocess.run(  # noqa: S603
+                [
+                    sys.executable, str(_GOAL_TO_EPIC),
+                    "--ac", _GOAL_ID,
+                    "--store-root", str(store_root),
+                    "--inbox-dir", str(inbox),
+                    "--approved-only",
+                ],
+                capture_output=True, text=True, timeout=300,
+            )
+            self.assertEqual(
+                0, proc.returncode,
+                f"generation failed, so the assertions below would be vacuous.\n"
+                f"stdout={proc.stdout}\nstderr={proc.stderr}",
+            )
+
+            plan = _epic_folder(inbox) / "Master_Plan.md"
+            self.assertTrue(
+                plan.is_file(),
+                "Master_Plan.md was not written, so this test would pass "
+                "vacuously on an epic that credits nobody at all.",
+            )
+            text = plan.read_text(encoding="utf-8")
+            end = text.find("\n---", 3)
+            frontmatter = yaml.safe_load(text[3:end]) if end != -1 else {}
+
+            self.assertEqual(
+                _GOAL_ID,
+                (frontmatter or {}).get("source_ac"),
+                "Master_Plan.md credits the wrong AC. source_ac must name the "
+                "goal the caller asked for, not a leaf beneath it.\n"
+                f"frontmatter: {frontmatter}",
+            )
+            for leaf in _LEAF_IDS:
+                self.assertNotIn(
+                    f"implements AC {leaf}:",
+                    text,
+                    f"the Goal paragraph attributes the epic to leaf {leaf} "
+                    f"instead of goal {_GOAL_ID} — the loop variable leaked.",
+                )
+            self.assertIn(
+                f"implements AC {_GOAL_ID}:",
+                text,
+                "the Goal paragraph names no goal AC at all, so the "
+                "assertions above would hold for the wrong reason.",
+            )
+
     def tearDown(self) -> None:
         """Remove fixture tickets the assembly may have written outside tmp."""
         stray = _REPO_ROOT / "tickets" / "00_inbox"
