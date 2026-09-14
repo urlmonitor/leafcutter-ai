@@ -231,7 +231,7 @@ test_rationale: >-
   code and the tempting reader is an import, which both changes the result under
   import side-effects and converts GE-120h-1-i's unreadable-place outcome into a
   crash.
-declares_side_effect: true
+declares_side_effect: false
 delivers_to:
   agent: python-coder
   contract: >-
