@@ -1,0 +1,141 @@
+id: GE-120h
+title: "A check the package says protects you is actually switched on"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Advertised means running — never a protection that was never switched on.
+
+  Every check the package presents as protecting you — written up in its
+  documentation, listed with how serious it is, given its own settings — is
+  actually switched on and runs on your work. When one of them is not, that is
+  announced plainly rather than left for you to stumble over, so nothing can
+  look like protection you are not in fact getting.
+depends_on:
+  - GE-120
+doc_links:
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: related
+    status: exists
+    relevance: >-
+      ONE OF THE FOUR FALSE SIGNALS. The package's own hook index lists checks
+      with a seriousness rating, which reads to any adopter as a statement that
+      the check is live. For the affected checks it is not. The other three
+      signals point the same wrong way: a populated settings block in config.py,
+      a populated entry in commit_guardian.json, and auto-fix routing wired to
+      handle the check's failures.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: configures
+    status: exists
+    relevance: >-
+      THE ONLY SIGNAL THAT ACTUALLY DECIDES ANYTHING. Being named in
+      hooks_manifest.hooks is what causes a check to run; a settings block
+      elsewhere in this same file does not. The whole defect is that three
+      other places say "live" and only this one list is consulted, and the
+      four are allowed to disagree in silence.
+  - path: unit_tests/commit_guardian/test_hook_registration_inventory.py
+    relationship: related
+    status: exists
+    relevance: >-
+      EXISTING DETECTION, ALREADY ON MAIN — the condition is measured, not
+      alleged. Holds a shrink-only ratchet of 14 hook scripts present on disk
+      with no hooks_manifest entry (18 at 2524993b9 on 2026-09-14, then 16
+      after two bybit-trader residue scripts were deleted). It fails on any
+      NEW orphan and also fails if the list goes stale, so the number can only
+      come down. Do NOT restate 14 as a permanent figure — read the baseline.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-CG-021 — the whole-collection uniqueness pass is registered in no hook
+      config and no CI workflow and has never run. The named instance of this
+      class in the guardrail register.
+  - path: docs/known-issues/testing-quality.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-TQ-007 — six review rounds verified a component without once asking
+      what invokes it. Why the gap survives review: everything a reader checks
+      says live, and nothing prompts the one question that would catch it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      NEAREST SIBLING AND THE ONE MOST LIKELY TO ABSORB THIS BY MISTAKE.
+      GE-120a is about a check that RAN, could not do its job, and reported
+      success anyway. Here the check never started, because nothing ever asked
+      it to. GE-120a's subject presupposes execution; this one denies it.
+      GE-120a is also at a live child_limit_override: 6 against a cap of five,
+      so it has no capacity either.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120h-1
+  - GE-120h-2
+  - GE-120h-3
+  - GE-120h-4
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS THE LIMIT CASE OF GE-120, NOT A NEW GOAL.
+    The L0 promise is that green must never mean "it could not run". These
+    checks do not reach even that far — they never run at all, in this
+    repository or in any project that installed the package, and nothing
+    anywhere reports their absence. Every other L1 under GE-120 concerns a
+    check that executed and then misreported; this is the degenerate end of
+    the same axis, where the misreport is the silence of a check that was
+    never invited. It belongs under this L0 by subject.
+
+  THE FOUR-SIGNAL PROBLEM IS THE POINT — do not decompose this as "register
+  the missing checks".
+    Registering the current orphans is a one-time cleanup and the ratchet test
+    already forces it downward. The durable benefit is that the four places a
+    reader consults (documentation with a seriousness rating, a settings block
+    in config.py, an entry in commit_guardian.json, autofix routing) cannot
+    silently disagree with the one list that actually causes execution. A
+    decomposition that only drains the backlog leaves the next orphan free to
+    appear with the same four reassurances.
+
+  CAPACITY — RESOLVED 2026-09-14 BY AN AUDITED WAIVER.
+    GE-120 held seven L1s (a..g), all status: active, against the ACS-100c-1
+    hard cap of seven. This record is the eighth. BrainCandy granted
+    `child_limit_override: 8` on GE-120 at a confirmation gate; the reasoning
+    and the explicit "eight is the ceiling, not room to grow" limit are recorded
+    in GE-120's own notes. The authoring agent flagged the cap and declined to
+    self-grant the waiver, which is the correct precedent (see GE-120a).
+    Alternatives were checked, not skipped:
+      - GE-126 ("checks answer truthfully") has two free L1 slots (a..e), and
+        was the only nearby record with real capacity. Rejected by SUBJECT on
+        the same reasoning GE-120f and GE-120g both recorded: GE-126 owns the
+        INTERROGATION surface — what a check tells you when you hand it your
+        own file or run a copy yourself. This defect fires during an ordinary
+        commit with nobody interrogating anything, which is GE-120's surface.
+        Free capacity under the wrong parent is not capacity.
+      - A sibling L0 for the registration axis was rejected as splitting a theme
+        this L0 already owns.
+      - Every GE-120a..f is at its five-L2 cap (GE-120a already at six on a
+        live override), so a Roman-suffixed L3 under an existing L2 would need
+        a parent whose composite is honest; GE-120a-1 is done and must not be
+        reopened.
+
+  NOT PRESCRIBING THE MECHANISM. Whether the four signals are reconciled by a
+    generated index, a startup assertion, an expanded inventory test, or a
+    check-of-checks is BA/IT-PO territory. This record states only that the
+    disagreement must not be able to persist unseen.
+
+  Authored at the PO stage; L1 only. BA decomposes to L2/L3.

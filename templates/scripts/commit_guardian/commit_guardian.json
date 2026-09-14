@@ -1267,6 +1267,86 @@
         "change_set_source": "handed_by_commit_path",
         "always_run": true,
         "_comment": "GE-127a-1: registers the long-documented (README.md line 41) but previously unreachable check-file-size gate. always_run: true because the script resolves its own staged-file set via `git diff --cached --name-status` and filters to covered extensions internally, mirroring check-build-drift/check-hook-trigger-reachability rather than a files regex. Refuses a commit that takes a covered file from under to over its permitted length (GE-127a-1), refuses one that grows an already-oversized file further per the GE-127b-1 ratchet, and exits 2 INDETERMINATE (GE-127a-1-i / GE-127b-1-i) when a file's length cannot be established or the previous-length source cannot be resolved."
+      },
+      {
+        "id": "check-folder-density",
+        "tier": "judgment",
+        "name": "Check Folder Density (GE-120h-3 — cap non-markdown files per directory)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_folder_density.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "script": "check_folder_density.py",
+        "description": "Refuses a commit that takes a directory from at-or-under to over the permitted count of non-markdown files (folder_density.max_files, default 15).",
+        "_comment": "GE-120h-3: documented live at README.md line 42 and configured since the initial extract, but named by no hooks_manifest entry and therefore never run. always_run with no files key because main() resolves its own staged set via get_staged_files() (`git diff --cached`) and ignores argv; a files regex would be a filter the script never consults, which check-hook-trigger-reachability flags as a contradiction. Safe to register as-is: _classify_folders raises a violation only when a folder crosses the threshold IN THIS COMMIT (after > limit and before <= limit), so the 113 directories already over 15 classify as warnings. Verified against a real staged set, where templates/scripts/commit_guardian (109) and unit_tests/commit_guardian (142) both reported PRE-EXISTING rather than blocking."
+      },
+      {
+        "id": "check-test-fixture-bloat",
+        "tier": "judgment",
+        "name": "Check Test Fixture Bloat (ADR-028 — oversized inline test data)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_test_fixture_bloat.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "script": "check_test_fixture_bloat.py",
+        "description": "Warns (or blocks, once armed) when a staged test_*.py carries inline fixture data over the ADR-028 thresholds.",
+        "_comment": "GE-120h-3: written for EPIC-TestFixtureConvention/02 and never registered. always_run with no files key because main() enumerates staged test files itself via `git diff --cached --name-only`. INERT ON REGISTRATION, DELIBERATELY: `test_fixture_bloat` is NOT among this file's top-level keys, so main() resolves config = {} (:327-337), `enabled` defaults to False (:339), and every violation path returns 0 (:392-394). That absence is load-bearing — it is what makes registering this zero-risk. Adding the test_fixture_bloat block with enabled: true is a separate, deliberate step to be reviewed on its own merits; do not 'complete' the config as though the key were missing by oversight."
+      },
+      {
+        "id": "check-sql-complexity",
+        "tier": "judgment",
+        "name": "Check SQL Complexity (GE-120h-3 — SQL cyclomatic complexity ceiling)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_sql_complexity.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "script": "check_sql_complexity.py",
+        "description": "Refuses a staged .sql file whose keyword-derived complexity score exceeds sql_complexity.max_score (default 75).",
+        "_comment": "GE-120h-3: documented live at README.md line 38 and carrying autofix routing in precommit-autofix.json, but named by no hooks_manifest entry. always_run with no files key because get_staged_files() resolves the staged set itself and filters to .sql internally. Vacuous in this repository (zero tracked .sql) and that is the point — the gate exists for the consumer projects README.md line 38 has been promising it to. Unlike the deleted check_sql_dependencies.py it hardcodes no schema; the threshold is config-driven and portable."
+      },
+      {
+        "id": "check-debug-scripts",
+        "tier": "judgment",
+        "name": "Check Debug Scripts (GE-120h-3 — metadata tags on debug scripts)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_debug_scripts.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "script": "check_debug_scripts.py",
+        "description": "Requires the DEBUG SCRIPT / CATEGORY / DESCRIPTION metadata tags on staged files under the configured debug-script directory.",
+        "_comment": "GE-120h-3: documented live at README.md line 32 and fully configured (debug_scripts.valid_categories / .required_tags / .exempt_dirs) but named by no hooks_manifest entry. always_run with no files key because get_staged_debug_scripts() resolves and filters the staged set itself. This also avoids the trap a path-anchored `files: ^debugging/scripts/` regex would create here (GE-120h-3-i): debugging/ is untracked in this repository, and a LOCATION-ANCHORED zero-match is classified UNREACHABLE by check-hook-trigger-reachability, not NOTHING-TO-MATCH. Vacuous here, portable and valuable in a consumer that keeps a debug-script convention."
+      },
+      {
+        "id": "check-ac-done-on-merge",
+        "tier": "transform",
+        "name": "Check AC Done On Merge (close source ACs when tickets land)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/hooks/check_ac_done_on_merge.py",
+        "language": "system",
+        "stages": [
+          "post-merge"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "script": "check_ac_done_on_merge.py",
+        "description": "After a merge, marks each source AC work_status: done for every ticket the merge moved to status: done.",
+        "_comment": "GE-120h-3: never registered in either manifest, so no AC has ever been auto-closed on merge. Unlike the four gates above it consults NEITHER argv NOR the staged set — it reads `git diff HEAD~1 HEAD` on the post-merge stage. Cannot block: main() returns 0 unconditionally (:213) and the __main__ guard swallows OSError/ValueError into sys.exit(0) (:219-224). Note the call direction: this script INVOKES scripts/ac_store/mark_ac_done.py by subprocess (:148-162); mark_ac_done.py:6 naming this hook is a back-reference, not an invocation, and has been misread as one. FIRST post-merge entry in this manifest — build_precommit.py renders the stage verbatim, but the git shim is installed by install_pre_commit_shims.collect_stages, which only setup_ticket_worktree.py calls, so an existing checkout that never ran it has no post-merge shim and this gate stays silent there. Verified present in this repository's .git/hooks/post-merge (a genuine pre-commit shim, --hook-type=post-merge)."
       }
     ]
   },
