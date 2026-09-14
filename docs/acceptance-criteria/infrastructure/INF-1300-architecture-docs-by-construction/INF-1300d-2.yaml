@@ -1,0 +1,180 @@
+id: INF-1300d-2
+title: "A place that is already taken is reported as taken, and nobody's document is overwritten"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d.yaml"
+criteria: |
+  Given a document already exists at the destination asked for,
+  When production is requested,
+  Then nothing at that destination is altered and nothing is written, and the
+    refusal names the destination and says it is occupied,
+  And given instead the destination is free but the collection already holds a
+    document at the same tier and number under a different name,
+  When production is requested,
+  Then it is refused on that ground, the refusal names the document already
+    holding that tier and number, and says which number at that tier is free,
+  And the number reported as free is one that no document in the collection uses,
+    found by looking at the collection as it stands rather than by counting
+    entries in any one folder,
+  And in neither case is any other file touched — not the intended parent's list
+    of the documents below it, not the collection's index, and not a partially
+    written file at the destination.
+depends_on:
+  - INF-1300d
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/diagrams/README.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      States the collision rule this record enforces in the collection's own words: two
+      documents collide when they resolve to the same tier-and-number pair, REGARDLESS OF
+      SLUG. So a free destination path is not evidence that the place is free, and a
+      producer that checks only whether the file exists misses the collision the collection
+      actually cares about.
+  - path: scripts/next_diagram_seq.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The project's existing answer to "which number is free", and the source of the
+      measured caution in this record's notes: it was once non-recursive, so it missed the
+      documents living in the diagrams sub-folder and restarted numbering at one. Any
+      answer given here must look at the whole collection.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the general shape of every refusal — what it says, and that it leaves nothing
+      behind. This record owns the two occupancy conditions that trigger one. The
+      leaves-nothing-behind clause is restated here because a half-written file at an
+      occupied destination would destroy the document already there, which is the one place
+      in this tree where a partial write is not merely untidy but destructive.
+  - path: docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The project's established position that a uniqueness claim is made over the whole
+      collection rather than over the folder in front of you. The free-number claim in this
+      record is the same shape of claim and must be computed the same way.
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Places the producing script's source under templates/scripts/, so the occupancy check
+      and the free-number lookup behave the same in a consumer collection as in this one.
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: safety
+test_required: true
+it_requirements:
+  - "Occupancy must be tested before anything is written. The destination must never be opened in a mode that truncates or creates it as part of deciding whether it is free."
+  - "The collision test is the tier-and-number pair over the whole collection, matching the rule docs/architecture/diagrams/README.md states, not path existence. A free path at an occupied pair is still occupied."
+  - "The free number reported must be computed over the whole collection including every sub-folder. scripts/next_diagram_seq.py already does this recursively after BP-1401; reuse that allocation rather than re-deriving it, and do not reintroduce a single-folder scan. Reporting a number that turns out to be taken is worse than reporting none, because the author will use it."
+  - "Both refusals must leave the project byte-identical: no partially written file at the destination, no reciprocal entry in the intended parent, no index entry, no temporary file. A zero-length file at an occupied destination has already destroyed the document that was there."
+  - "The occupied-destination refusal must name the destination; the pair-collision refusal must name the document already holding the pair and the free number. Both must be distinguishable from a vocabulary refusal and from a missing-field refusal without reading source."
+  - "Filesystem errors while scanning the collection must follow the project error handling policy in CLAUDE.md, and a scan that cannot complete must refuse rather than report a free number it could not establish."
+  - "The collection scan must report how many documents it inspected, per ADR-037's mandatory inspected count, so a scan that resolved zero files cannot be mistaken for a scan that found no collision."
+test_spec:
+  - name: test_occupied_destination_is_refused_and_its_contents_are_untouched
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Place a document at the destination and record its bytes. Request production there. Assert the destination's bytes are unchanged, that the refusal names the destination and says it is occupied, and that a whole-project snapshot difference is empty."
+  - name: test_tier_and_number_collision_under_a_different_slug_is_refused
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Leave the requested path free but place a document at the same tier and number under a different slug, in a sub-folder of the collection. Request production; assert it is refused and the refusal names the colliding document. A producer that only checks path existence passes everything else and fails here."
+  - name: test_reported_free_number_is_free_across_the_whole_collection
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Take the number the refusal reports as free and scan every document in the temporary collection, including every sub-folder, for that tier-and-number pair. Assert no document uses it. Seed the collection with documents at several depths so a single-folder scan produces a wrong answer."
+  - name: test_neither_refusal_writes_anything_anywhere
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "For both occupancy conditions, hash every file in the temporary project before and after the run and assert the difference is empty - no new file, no changed parent, no index entry, no zero-length file at the destination."
+  - name: test_free_number_claim_matches_the_projects_own_allocator
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Run the project's real scripts/next_diagram_seq.py against the same temporary collection and assert the number the refusal reported agrees with it, so the two answers to 'which number is free' cannot drift apart."
+test_rationale: >-
+  This is the only failure in the tree that destroys someone else's work, so the observation
+  cannot stop at the refusal message: a refusal that says the destination is occupied while
+  having already truncated the file there is a passing message over a destroyed document.
+  Hence the whole-project snapshot on both arms. The second arm has to seed a collision at a
+  different depth under a different slug, because the obvious implementation - check whether
+  the destination file exists - passes every other clause in this record and fails only
+  there. Comparing the reported free number against the project's real allocator rather than
+  against a number the test computed itself is what stops the test and the producer sharing
+  a single wrong idea of where the collection is.
+delivers_to:
+  agent: python-coder
+  ac_id: INF-1300d-3
+  contract: "Two further refusal reasons INF-1300d-3's contract must hold for, each with its own observed case: an occupied destination, and a tier-and-number collision under a different slug. Both leave the project byte-identical."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE CASE THE L1 CALLS EASY TO MISS, AND IT IS THE ONLY FAILURE IN THIS TREE THAT DESTROYS
+  SOMEONE ELSE'S WORK. Every other wrong outcome here produces a bad document or no
+  document. Overwriting produces a good document and silently deletes the one that was
+  there, and nothing downstream will ever report it.
+
+  THE SECOND CONDITION IS THE ONE AN IMPLEMENTER WILL NOT THINK OF. Checking whether the
+  destination file exists is obvious. The collection's rule is stricter and is stated in its
+  own README: two documents collide on the tier-and-number pair whatever they are called. So
+  a destination that is free as a path can still be a place that is taken, and a producer
+  that writes there creates a collision the collection's own convention forbids — which is
+  not caught by the naming check, because that check validates the shape of a name and has
+  no view of the collection.
+
+  A MEASURED CAUTION ABOUT THE FREE NUMBER. The project's existing sequence allocator once
+  scanned only the top of the architecture tree, so it missed every document in the diagrams
+  sub-folder and confidently reported numbers that were already in use — a fix recorded in
+  its own history. Reporting a free number is therefore a claim about the WHOLE collection,
+  and the clause is written that way rather than assuming any one folder is the collection.
+  Reporting a number that turns out to be taken is worse than reporting none, because the
+  author will use it.
+
+  FALSIFIABILITY. Two scratch collections. In the first, place a document at the destination
+  and record its contents; request production there; the record is falsified if the
+  destination's contents change at all, if anything is written anywhere, or if the refusal
+  does not name the destination. In the second, place a document at the same tier and number
+  under a different name, leave the requested path free, and request production; falsified
+  if a document is produced, and falsified if the refusal does not name the document already
+  holding that pair. Then take the number the refusal reports as free and check it against
+  every document in the collection including every sub-folder — falsified if any document
+  already uses it. In both collections, snapshot the whole tree before and after and require
+  the difference to be empty; a refusal that leaves a zero-length file at the destination has
+  overwritten the document that was there, and an observation that only reads the refusal
+  message cannot see it.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

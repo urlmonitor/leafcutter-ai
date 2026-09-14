@@ -12,6 +12,7 @@
     "readiness": { "type": "string", "enum": ["draft", "reviewed", "approved"] },
     "superseded_by": { "type": ["string", "null"], "description": "id of the artifact replacing this one when status=deprecated." },
     "version": { "type": "integer", "minimum": 1 },
+    "shape_version": {"type": "integer", "minimum": 1, "description": "Which iteration of the record's shape conventions this dataset declares it is written to. Optional: one that omits it predates every size bound and is only warned about, never blocked; a bound blocks every dataset only once none is left on an older version (product_truth_bounds, UXP-700e-1-ii)."},
     "reusable": { "type": "boolean", "description": "true if other flows/components may reuse this dataset." },
     "realization": { "type": "string", "enum": ["built", "spec", "mock"], "description": "Origin of the dataset: mock = sample/demo product content (the default meaning for mock-data); spec = aspirational shape for a not-yet-built dataset; built = mirrors a real on-disk dataset. OPTIONAL — absent defaults to 'built'. Parallels flow.realization." },
     "tags": { "type": "array", "items": { "type": "string" } },

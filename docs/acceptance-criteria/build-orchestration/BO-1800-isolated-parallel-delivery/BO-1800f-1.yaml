@@ -1,0 +1,207 @@
+id: BO-1800f-1
+components:
+  - build_orchestration
+readiness: approved
+priority: medium
+title: "A delivery is replayed onto the shared branch as it stands at the moment of delivery"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f.yaml"
+criteria: |
+  Given a copy was made from the shared branch when the shared branch was at state S1,
+    and by the time the copy's work is finished the shared branch is at state S2,
+    and S2 contains a file that S1 did not contain and that this copy has never edited,
+  When the workflow prepares the finished work to leave the copy,
+  Then the state it treats as the shared branch is S2 -- the state the shared branch
+    is actually in at that moment -- and not S1 or any other state recorded earlier
+    in the run, even when such an earlier state is available without consulting the
+    shared branch,
+  And the copy's own commits are replayed on top of S2 before any part of the
+    delivery leaves the copy,
+  And the prepared delivery contains the file that S2 introduced,
+  And every change the copy made is present in the prepared delivery unchanged.
+depends_on: [BO-1800f]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "ONE shared implementation, not three. Every delivery path must reach the same
+     currency step through a single module; a per-workflow copy is a path that can
+     silently diverge from the others and is the shape of defect this record exists to
+     remove."
+  - "The module must live under scripts/build_orchestration/. That directory's build
+     phase (build_build_orchestration_scripts in scripts/build_phases.py) copies EVERY
+     .py file it contains, so a new module reaches consumer installs with no manifest
+     edit. scripts/commit_guardian/ is the wrong home here: its deploy_map is a
+     hardcoded list, and CLAUDE.md (`New Hook / Gate Dependencies Must Be in the Build
+     Deploy-Manifest`) records a required gate that shipped crashing because a module
+     was added there without the matching entry."
+  - "The shared branch's current state must be established by an operation that updates
+     the ref the rest of the step reads. `git fetch origin main` updates FETCH_HEAD and
+     NOT refs/remotes/origin/main; the known issue records this producing a clean audit
+     twice in one session. Whatever is used, the resolved sha must be re-read from the
+     remote at delivery time and must not be taken from a value recorded earlier in the
+     run, from refs/remotes/origin/main as it stood at cut time, or from FETCH_HEAD
+     left by an earlier fetch."
+  - "Must not require a ticket, an AC id, an epic folder, or a worktree-registry entry.
+     Two of the four recorded occurrences were on branches with no ticket drive, and a
+     branch made by a bare `git worktree add ... origin/main` must be gated identically
+     to one made by scripts/setup_ticket_worktree.py or by the fast lane's worktree
+     step. A gate that keys off ticket metadata leaves the paths that caused the
+     incident ungated."
+  - "The step is a delivery-boundary step ONLY. It must not run on a timer, in the
+     background, or at any point while implementation agents are still working in the
+     copy: restating a copy's history underneath a running agent trades silent deletion
+     for silent corruption of in-flight work, which is why BO-1800f scoped the
+     guarantee to the moment of delivery."
+  - "Every delivery path must both invoke the step and HALT on its refusal. The three
+     call sites are templates/workflows-js/finalize-feature.js (before the push/PR
+     step around its existing `Push the branch manually` guidance), the Commit -> Pull
+     Request boundary of templates/workflows-js/fast-lane-ship.js, and the close step
+     of templates/workflows-js/quick-fix.js (Phase 7.1 in
+     templates/skills/quick-fix/SKILL.md). A call site that invokes the step and
+     proceeds regardless is a no-op, and is indistinguishable from an uninvoked one by
+     any test that only checks the call is present."
+  - "All three workflow scripts are build outputs as well as sources:
+     templates/workflows-js/<name>.js is canonical and .leafcutter/workflows/<name>.js
+     is regenerated from it. A change to only one copy is either silently reverted by
+     the next build or leaves the tracked output stale. Both copies of each of the
+     three files must move together."
+  - "Must complete within 30 seconds inclusive of one network round-trip, and must fail
+     rather than hang: every network and subprocess call carries an explicit timeout,
+     and a timeout is reported as could-not-verify (BO-1800f-1-i), never as verified
+     clean."
+  - "Must report three distinguishable outcomes — verified-current, refused, and
+     could-not-verify — and never collapse could-not-verify into either of the other
+     two. Per the project error handling policy (CLAUDE.md rules 1-3) every git,
+     network and filesystem call is wrapped and either logged at WARNING or above or
+     re-raised."
+  - "Must be idempotent: a second invocation on an already-replayed, unchanged delivery
+     produces the same verdict and makes no further change to the copy."
+test_spec:
+  - name: test_shared_branch_tip_is_read_at_delivery_time_not_at_cut_time
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Real origin repo in a tmpdir advances from S1 to S2 after the copy is
+      cut; the state the step treats as the shared branch is S2's sha, not S1's."
+  - name: test_a_stale_local_record_of_the_shared_branch_is_not_substituted
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "refs/remotes/origin/main and FETCH_HEAD are both left pinned at S1
+      while the real remote is advanced to S2; the step still resolves S2. An
+      implementation that re-reads either local record resolves S1 and fails."
+  - name: test_prepared_delivery_contains_a_file_introduced_after_the_cut
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A file added to the shared branch between cut and delivery, never
+      edited by the copy, is present in the prepared delivery tree."
+  - name: test_every_change_the_copy_made_survives_the_replay_byte_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Each file the copy's commits wrote has byte-identical content after
+      the replay, and the copy's commit count is unchanged."
+  - name: test_each_delivery_workflow_halts_before_its_push_step_when_the_gate_refuses
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "templates/workflows-js/{finalize-feature,fast-lane-ship,quick-fix}.js"
+    description: "Each of the three workflows is run under
+      unit_tests/_workflow_engine_harness.py with the gate's label answering refused;
+      the push/pull-request agent is never dispatched. Asserts the verdict is consumed
+      in control flow, not merely that the call exists."
+  - name: test_gate_runs_on_a_branch_with_no_ticket_and_no_ac
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A tmpdir branch created by a bare `git worktree add ... origin/main`,
+      carrying no ticket file, AC id or epic folder, is resolved and adjudicated
+      normally rather than skipped."
+test_rationale: |
+  Every descriptor here needs a real git repository in a tmpdir with a remote that
+  ADVANCES between the moment the copy is cut and the moment of delivery. Without that
+  advance, a correct implementation and one that reuses a locally-recorded state are
+  indistinguishable and both pass, which is the trap the record's own falsifiability
+  note names.
+
+  test_a_stale_local_record_of_the_shared_branch_is_not_substituted is the load-bearing
+  one and is not a restatement of the first. The recorded failures were not a missing
+  comparison; they were a comparison against a stale local picture. The known issue
+  identifies the exact mechanism — `git fetch origin main` updates FETCH_HEAD, not
+  refs/remotes/origin/main — so the fixture must pin BOTH local records at S1 and leave
+  them usable. An implementation that reads either one passes every other test in this
+  list.
+
+  test_each_delivery_workflow_halts_before_its_push_step_when_the_gate_refuses exists
+  because the engine can be entirely correct and the defect remain live if nothing calls
+  it, or if a caller invokes it and proceeds anyway. A grep for the call string passes on
+  both. The Node harness executes the workflow body and records dispatches, so asserting
+  that the push agent is absent from the recorded dispatch list is a behavioural
+  assertion about control flow, per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally,
+  Not by Grep".
+delivers_to:
+  agent: python-coder
+  contract: "A prepared delivery, described by {worktree_path, branch, replayed_tip_sha,
+    shared_branch_sha, shared_branch_ref_source}, where replayed_tip_sha is the copy's
+    commits replayed onto shared_branch_sha and shared_branch_sha was read from the
+    remote at delivery time. Consumed by BO-1800f-2, which adjudicates what this
+    prepared delivery would take away. The dependency is ORDERING only — BO-1800f-2 is a
+    co-equal sibling under BO-1800f, not a child of this record — so this contract must
+    not be read as BO-1800f-2 being satisfied whenever this record is."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800f-1-i
+  - BO-1800f-1-ii
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Scope. This is the currency half of BO-1800f, and it is scoped to the moment of
+  delivery. It does not ask for the copy to be kept current while work is in
+  progress; BO-1800f's own notes record why (restating a copy's history underneath
+  running agents trades silent deletion for silent corruption of in-flight work).
+
+  Why the criteria insist on the state "at that moment". The recorded failures were
+  not caused by a missing comparison -- they were caused by comparing against a
+  locally-held picture of the shared branch that was itself out of date. CLAUDE.md
+  records an audit that reported clean for exactly this reason: the tree and the
+  picture it was compared against were stale in the same way, so they agreed. A
+  behaviour that re-reads a stale local record satisfies a naively-worded criterion
+  while reproducing the defect, so the clause above rules it out explicitly.
+
+  Falsifiability. The fixture must advance the shared branch between the moment the
+  copy is made and the moment of delivery. Without that advance, a correct
+  implementation and one that reuses a locally-recorded state are indistinguishable,
+  and any test built on such a fixture passes on both. With it, the introduced file
+  is absent from the prepared delivery under the incorrect implementation. The
+  assertions are on the prepared delivery's content and on the copy's history, so
+  no test that only inspects source text can satisfy this record.

@@ -1,0 +1,317 @@
+id: BO-3800
+title: "When a standard turns work away, the right craft is brought in to finish it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+  - commit_guardian
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A refusal brings in the right specialist — your change waits, then lands.
+
+  When work is turned away at the last step for not meeting a standard, the only
+  party present today is whoever happened to be making the change. They satisfy
+  the standard themselves, under pressure, and the cheapest thing that clears the
+  bar is rarely the right thing — which is how a rule meant to improve the code
+  ends up making it worse.
+
+  After this goal, a refusal that calls for a particular craft brings in someone
+  who has it. The change is held rather than lost or forced through, the
+  specialist is told exactly what is being asked of which file, and the work is
+  delivered once the standard is genuinely met. When it cannot be met, you are
+  told plainly and promptly rather than left in a loop or handed a quiet pass.
+depends_on:
+  - INF-800f
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800f.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      HARD PRECONDITION — THIS GOAL CANNOT BE BUILT BEFORE IT, AND IT IS NOT
+      RE-SPECIFIED OR ABSORBED HERE. INF-800f ("Refactoring specialist recognized as a
+      first-class agent", readiness reviewed, covered_by empty, nothing built) is what
+      makes the restructuring craft reachable by anything other than a human typing a
+      slash command; its own criteria promise "discoverable in the agent registry, with a
+      defined tool set, a clear invocation path, and its own sign-off protocol …
+      supervisors can dispatch it as part of a ticket workflow". That last clause is
+      precisely the capability this goal consumes. Today the craft exists only as
+      templates/workflows/code-refactoring-specialist.md, a slash command reachable by
+      hand and by nothing else, so every criterion in this tree is unbuildable until
+      INF-800f lands. Sequence behind it. Do not decompose it here and do not restate it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE FIRST REFUSAL THIS GOAL ANSWERS, AND THE RECORD THAT ASKED FOR IT BY NAME.
+      GE-127f-3 emits a refusal carrying two computed facts — how much must leave the
+      named file, and whether that demand is one the author may discharge or one that is
+      handed to a restructuring specialist — and its expects_from names
+      `build-orchestration` with the contract this goal discharges: the change is held,
+      the specialist is asked against the named file with the named demand, the
+      specialist restructures, and delivery is retried. GE-127f-3's own notes record that
+      until this half exists, "this record's disposition is a statement in an outcome and
+      nothing acts on it", and call that a known, deliberate partial delivery. This goal
+      is the other half. It owns WHAT HAPPENS ON A REFUSAL; GE-127f and its children own
+      WHEN THERE IS ONE. No record in this tree may restate the arithmetic, the counting
+      rule, the cap, or the threshold that separates the two dispositions.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE RULE HALF OF THE SAME PROMISE, FENCED AND NOT WIDENED. GE-127f owns the
+      economics — an addition to an already-oversized file must leave it smaller than it
+      was — and its notes draw the seam this goal sits on the other side of: "a
+      commit-time gate can only REFUSE; it cannot summon anyone", so the RULE belongs in
+      the guardrail tree and the HANDOFF "lives in the supervisor / build-orchestration
+      layer and is NOT decomposed here". Read that paragraph before decomposing anything
+      below. An AC in this tree that re-expresses the size arithmetic is at the wrong
+      address, exactly as an AC in that tree specifying dispatch mechanics would be.
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE NEAREST NEIGHBOUR, DELIBERATELY NOT THE HOST, AND THE RECORD THIS GOAL NARROWS.
+      BO-210 ("A pre-commit hook failure reuses the original coder's context instead of
+      resetting it", readiness approved, req_status active) covers the same trigger — a
+      standard refusing at delivery time — and answers it in the opposite direction: its
+      value proposition is that "the agent that fixes the violation is the SAME agent type
+      that authored the work", because re-deriving the design from scratch is the waste it
+      exists to remove. That is right for a mechanical violation the author can clear in
+      place, and it is exactly wrong for the class this goal covers, where the author
+      being the fixer IS the defect. The full argument for a sibling goal rather than a
+      seventh BO-210 child is in the notes; the consequence to carry is that BO-210's
+      same-agent clause holds for every refusal EXCEPT one that asks for a craft the
+      author is not being asked to supply, and that carve-out must be reconciled with
+      BO-210's own children rather than discovered when they go red.
+  - path: docs/acceptance-criteria/build-orchestration/BO-3000a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SHIPPED MACHINERY THIS GOAL REUSES RATHER THAN REBUILDS, AND THE ONE THING IT
+      CANNOT SUPPLY. BO-3000 / BO-3000a already deliver agent-initiated handoff: a phase
+      that returns a handoff naming its target gets that target re-dispatched before any
+      later phase runs, an unrecognised or absent target refuses diagnosably, and the
+      target is NEVER inferred from prose. All of that is the correct shape for this goal
+      and must be reused, never re-implemented. What it cannot supply is the trigger:
+      BO-3000a routes a handoff that an AGENT chose to emit, and a standard that refuses
+      a change emits nothing — nobody is holding a result to put a target in. Supplying
+      that missing trigger is this goal's subject, and BO-3000a's no-inference rule is the
+      reason the demand must be carried explicitly (BO-3800c) rather than reconstructed.
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      ADJACENT AND DISTINCT. BO-3100 asks whether a step that was asked for actually ran;
+      this goal asks whether a step that nobody asked for is asked for at all. BO-3100 is
+      also at six of seven children and carries a hard constraint this tree inherits and
+      must honour: mechanical enforcement only, and verdicts from observable repository
+      state rather than an agent's account of itself.
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, NOT WIDENED. INF-800 owns performing a restructure SAFELY once one is
+      decided on — that nothing depending on the code breaks. This goal owns who is asked,
+      what they are told, and what happens to the change while they work. Neither closes
+      the other and neither may absorb the other.
+  - path: docs/acceptance-criteria/code-review/CR-100-refactoring-guidance/CR-100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. CR-100 is ADVISORY refactoring guidance produced across a review — knowing
+      what is worth refactoring and why, without noise. This goal is a COMPULSORY handoff
+      on a specific refusal, with the target and the demand already decided by the
+      standard that refused. Advice a reader may act on is a different product from work
+      that must happen before delivery continues.
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the dispatch topology this goal extends is documented, including the
+      adjudication ladder whose last rung is already the shape BO-3800d needs: retry,
+      then "Exhausted → Halt & Surface to User" rather than an unbounded loop.
+delivers_to:
+  - ac_id: GE-127f-3
+    contract: >-
+      The sequence GE-127f-3's expects_from names and deliberately does not decompose: on
+      a refusal whose stated disposition is the restructuring specialist, the author's
+      change is held, the specialist is asked against the named file with the named
+      demand, and delivery is retried once the file has been restructured — with a
+      bounded, reported end when it still cannot be met. This is the reciprocal of a
+      contract already written from the guardrail side; nothing in GE-127f-3 or any other
+      GE-127f record is amended to record it.
+expects_from:
+  - ac_id: INF-800f
+    contract: >-
+      A restructuring specialist that can be asked for by a supervisor as part of an
+      ordinary workflow — a first-class identity with a defined tool set, an invocation
+      path and its own sign-off protocol — rather than a slash command a human runs by
+      hand. Every criterion in this tree presupposes it and none of them re-specify it.
+  - ac_id: GE-127f-3
+    contract: >-
+      A refusal that names the file, states how much must leave it, and states which of
+      the two dispositions applies — author-clearable, or handed to a restructuring
+      specialist. This tree consumes those three facts as given, computes none of them,
+      and derives none of them by a second route.
+origin_agent: product-owner-v3
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3800a
+  - BO-3800b
+  - BO-3800c
+  - BO-3800d
+  - BO-3800e
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  AUTHORED 2026-09-14 AT THE PRODUCT-OWNER STAGE, AS THE OTHER HALF OF A CAPABILITY
+  WHOSE GUARDRAIL HALF IS ALREADY SPECIFIED. GE-127f-1, GE-127f-2 and GE-127f-2-i are
+  enriched and buildable; GE-127f-3 is deliberately not enriched because it is blocked
+  on this. The user's own words, which fix requirement (4) of GE-127f and are the reason
+  this goal exists rather than being an implementation note on that one:
+
+    "the agent that adds the new lines should not be the one that refactors. it should
+    be a specific agent we already have. That way the move to new file will not take
+    place at all as the refactor agent knows how to properly refactor."
+
+  WHY THIS IS A NEW L0 AND NOT A CHILD OF BO-210. BO-210 was examined as the host first,
+  because it is the only record in the store whose trigger is identical — a standard
+  refusing at delivery time, recovered by asking an agent to fix it and trying again —
+  and it has room under the child cap. It was rejected on four grounds, each
+  independently sufficient, recorded so the question is not re-litigated:
+
+    - THE TWO PROMISES ARE PRICED IN OPPOSITE DIRECTIONS. BO-210's entire selling point
+      is that the fixer is the SAME agent type that authored the work, holding the
+      original design context, so the fix is cheap and no design is re-derived. This
+      goal's selling point is that for one class of refusal the author is precisely the
+      WRONG party, and being cheap and fast is the failure mode. Folding a
+      different-agent clause into the record whose title is "reuses the original coder's
+      context" makes that title false on that arm and hands an implementer a pair it can
+      satisfy by building whichever half is cheaper. This is the same argument, in the
+      same words, that GE-127f's notes use to reject GE-127b as a host, and it applies
+      here for the same reason.
+
+    - BO-210 IS A LIVE APPROVED REQUIREMENT. readiness: approved, req_status: active,
+      priority: high, three children also approved. Its criteria are written as an
+      explicit Then clause asserting the same-agent property. A child that contradicts
+      that clause re-opens an approved requirement as a side effect of authoring a new
+      one, which is not this agent's to do.
+
+    - THE HARD DEPENDENCY DOES NOT BELONG TO BO-210. Everything here is blocked on
+      INF-800f, in another component, with nothing built. BO-210 is about routing work to
+      an agent type that already exists and already ran on this ticket. Acquiring a
+      cross-component precondition it has no other use for would make BO-210 unbuildable
+      for a reason unrelated to its own promise.
+
+    - THE SUBJECT IS DIFFERENT. BO-210 is about CONTEXT — not resetting what the fixer
+      knows. This goal is about CRAFT — the fixer optimises for structure rather than for
+      clearing a bar. A pre-commit safety net that preserved context perfectly and handed
+      the work back to the author would fully satisfy BO-210 and fully fail this goal.
+
+  THE NARROWING THIS GOAL IMPOSES ON BO-210, STATED SO IT IS RECONCILED RATHER THAN
+  DISCOVERED. After this lands, BO-210's "the agent that fixes the violation is the SAME
+  agent type that authored the work" holds for every refusal EXCEPT one whose stated
+  disposition asks for a craft the author is not being asked to supply. That carve-out is
+  recorded forward on BO-210 (doc_links plus an audit entry, criteria untouched) in the
+  same shape the Product Owner used on GE-127b for GE-127f. It must be reconciled with
+  BO-210a's routing configuration and BO-210c's re-dispatch behaviour in the change that
+  implements this, not met as a surprise. BO-3800e is the arm that keeps the reconciliation
+  honest in the other direction: everything BO-210 already covers must keep behaving as it
+  does today.
+
+  WHY NOT A CHILD OF BO-3000 / BO-3000a, WHICH ALREADY ROUTE HANDOFFS. Because they route
+  a handoff that an AGENT emitted and TARGETED. BO-3000a's central decision, taken after
+  a code review reversed its first design, is that the driver must never infer a target —
+  it is given one explicitly or it refuses diagnosably. A standard that refuses a change
+  emits no handoff and names no target; there is no result in anyone's hand to put one
+  in. That missing trigger is this goal's whole subject. The correct relationship is
+  reuse: BO-3000a's routing, refusal and no-inference behaviour is the shipped shape this
+  goal's dispatch should travel through, which is also why BO-3800c insists the demand is
+  CARRIED rather than reconstructed. BO-3000 and BO-3000a are root-id L2/L3 records with
+  no L0 above them, so they could not have hosted an L1 in any case.
+
+  WHY NOT BO-3100. BO-3100 asks whether a step that was asked for actually ran. This goal
+  asks whether a step nobody asked for gets asked for at all. BO-3100 is at six of seven
+  children and its L0 notes fence it against exactly this kind of accretion. Two of its
+  standing constraints are inherited here and must survive decomposition: mechanical
+  enforcement only — a criterion whose enforcement reduces to "an agent is told to…" must
+  be rejected at L2 — and verdicts from observable state rather than an agent's account
+  of itself.
+
+  WHAT IS HONESTLY PROVABLE HERE, AND WHAT IS NOT. THIS SHAPED EVERY TITLE ABOVE AND MUST
+  NOT BE QUIETLY WIDENED AT DECOMPOSITION. The Product Owner and Business Analyst who
+  wrote GE-127f both recorded it and it is repeated here because this is the tree where
+  the temptation lives:
+
+    - SEPARATION OF DUTIES IS INVISIBLE AT DELIVERY TIME. One change, one identity.
+      Nothing in the delivered result distinguishes lines removed by the author from
+      lines removed by a specialist. No criterion in this tree asserts that the
+      restructuring WAS performed by the specialist, and none may be added.
+    - ANTI-SHUFFLING IS INVISIBLE IN THE RESULT. Moving NEW work out of an oversized file
+      into a home of its own is the desired behaviour; moving EXISTING content out purely
+      to make a number fall is the failure; the two look identical. The protection rests
+      entirely on the specialist's judgement, which is the user's stated reason for
+      requiring one. It is a matter of who is asked, not of what a check can detect.
+
+  So what this tree promises is a SEQUENCING property: that on the refusal path the
+  specialist is actually asked, before the change is retried, with the demand intact. That
+  is a reachability-shaped claim about the run, and it is provable — by observing the
+  dispatch actually happen — where a content-shaped claim about the result would not be.
+  Every L1 above is written to be satisfiable ONLY by the handoff genuinely occurring.
+
+  THE SCAR THAT MAKES THIS NON-NEGOTIABLE. fast-lane-build.js — built specifically to
+  defeat phantom-done — passed its grep-only structural tests while NEVER EXECUTING its
+  red/green gates. A test that finds the specialist's name in a template, a workflow file
+  or a prompt would stay green on a handoff that never fires, and separation of duties is
+  the single property most likely to attract such a test. CLAUDE.md's "Gate / Workflow ACs
+  — Verify Behaviorally, Not by Grep" is binding on every record in this tree.
+
+  WHY FIVE CHILDREN AND NOT THREE OR SEVEN. The handoff decomposes into five separately
+  failable promises and no fewer: the change's fate (a), who does the work (b), what they
+  are told (c), what happens when it still does not work (d), and what must not change
+  anywhere else (e). Each can be fully satisfied while another is fully broken — a system
+  that holds and retries with the AUTHOR doing the work satisfies (a) and fails (b); one
+  that asks the right specialist with no demand attached satisfies (b) and fails (c); one
+  that gets all three right and loops forever fails (d) while looking like it works.
+  Merging (a) with (b) is the specific collapse to avoid, because it is BO-210's shape
+  wearing this goal's title. Nothing was padded to reach five and nothing was dropped to
+  stay under seven; the cap is not in play.
+
+  THE EDGE THAT MUST NOT BE DEFAULTED INTO EXISTENCE, FLAGGED AT L1 AND NOT DECIDED HERE.
+  What happens when the specialist runs and the file STILL does not meet the demand?
+  Infinite retry is wrong; a quiet pass is worse; a silent give-up that leaves the author
+  holding an unexplained refusal is worst of all, because it looks exactly like the
+  feature not existing. BO-3800d fixes the SHAPE — bounded, and reported with what was
+  asked, what was done and what is outstanding — and deliberately leaves the number and
+  the reporting surface to decomposition and enrichment. GE-127b's notes warn that a
+  behaviour left unstated here gets defaulted into existence, and this is the instance of
+  that warning in this tree. The precedent for the shape already exists in the delivery
+  topology's adjudication ladder, whose last rung is "Exhausted → Halt & Surface to User".
+
+  COMPONENTS, AND WHY commit_guardian IS NAMED ON A BUILD-ORCHESTRATION GOAL. The promise
+  spans two layers even though its children must not: the refusal is emitted by the
+  guardrail layer and acted on by the supervisor layer. This is the mirror of GE-127f,
+  which names build_orchestration alongside commit_guardian for the same reason and from
+  the other side. The scalar `component` stays build-orchestration — per that component's
+  PROJECT_CONTEXT rule, a concern about what happens DURING a drive belongs here — and the
+  work itself lands nowhere near the hook.
+
+  THE FIRST CONSUMER IS NOT THE ONLY ONE. This goal is written generically — any standard
+  whose refusal names a craft the author is not being asked to supply — and GE-127f-3 is
+  its first instance, not its definition. Nothing above names a size rule, a line count or
+  a file-length limit, and nothing should: the same handoff is what a dependency standard,
+  a security standard or a documentation standard would need, and an L0 that collapses
+  when the size rule is swapped out is at the wrong altitude.
+
+  NOT AUTHORED HERE, BY DESIGN: L2 Gherkin, it_requirements, test_spec, assigned_agent,
+  estimated_complexity and declares_side_effect. This is a Product Owner pass and its
+  jurisdiction ends at L1.

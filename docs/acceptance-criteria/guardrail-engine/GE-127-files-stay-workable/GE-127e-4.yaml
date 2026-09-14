@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -322,31 +322,37 @@ amended_by:
 - reason: technical-enrichment
   by: it-po
   at: 2026-09-08
-  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED — WITH THE DIRECTION OF TRAVEL
-    RECORDED, BECAUSE THIS IS THE RECORD WHERE A NEW SURFACE WOULD BE MOST TEMPTING: neither
-    watched container on commit_guardian.json (hooks_manifest.hooks by id, the document''s own
-    top level by mapping key) gains an entry, and both were read in this worktree. The natural
-    shape of a "good" implementation here — a report path, an output directory, a write-the
-    -analysis-to-X setting — WOULD be a new top-level key and would be refused by
-    check-package-surface-declaration; that the correct implementation registers nothing is a
-    consequence of the first arm, not a coincidence. COMPLEXITY M. TWO REQUIREMENTS ADDED THAT
-    THE CRITERIA IMPLY BUT DO NOT NAME: the prohibition is on the ARTIFACT, not merely on the
-    pointer (a run that writes an analysis nobody points at is one commit away from a refusal
-    that points at it, and is invisible to every other record in the tree), and the description
-    must be STATELESS between runs, because a gate that can tell whether its own advice was
-    taken has acquired the opinion the fourth arm exists to deny it. A cost budget is added for
-    the consequence of carrying everything in the message — bound the ENUMERATION, never the
-    coverage, so GE-127e-1''s half threshold still holds and a long message is never resolved by
-    moving content elsewhere. declares_side_effect false, and here that is substantive rather
-    than routine: this record positively FORBIDS a durable artifact, so declaring one would
-    contradict its first arm. test_spec: eight executing descriptors, three carrying the BA''s
-    named mutations verbatim (the third failing by the commit outcome), plus two companions the
-    text assertions cannot reach — a before-and-after snapshot proving no second artifact was
-    written, and a fresh-process rerun proving the gate keeps no record of what it advised —
-    then the registered hook entry point and the deployed copy.'
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED — WITH THE DIRECTION
+    OF TRAVEL RECORDED, BECAUSE THIS IS THE RECORD WHERE A NEW SURFACE WOULD BE MOST
+    TEMPTING: neither watched container on commit_guardian.json (hooks_manifest.hooks
+    by id, the document''s own top level by mapping key) gains an entry, and both
+    were read in this worktree. The natural shape of a "good" implementation here
+    — a report path, an output directory, a write-the -analysis-to-X setting — WOULD
+    be a new top-level key and would be refused by check-package-surface-declaration;
+    that the correct implementation registers nothing is a consequence of the first
+    arm, not a coincidence. COMPLEXITY M. TWO REQUIREMENTS ADDED THAT THE CRITERIA
+    IMPLY BUT DO NOT NAME: the prohibition is on the ARTIFACT, not merely on the pointer
+    (a run that writes an analysis nobody points at is one commit away from a refusal
+    that points at it, and is invisible to every other record in the tree), and the
+    description must be STATELESS between runs, because a gate that can tell whether
+    its own advice was taken has acquired the opinion the fourth arm exists to deny
+    it. A cost budget is added for the consequence of carrying everything in the message
+    — bound the ENUMERATION, never the coverage, so GE-127e-1''s half threshold still
+    holds and a long message is never resolved by moving content elsewhere. declares_side_effect
+    false, and here that is substantive rather than routine: this record positively
+    FORBIDS a durable artifact, so declaring one would contradict its first arm. test_spec:
+    eight executing descriptors, three carrying the BA''s named mutations verbatim
+    (the third failing by the commit outcome), plus two companions the text assertions
+    cannot reach — a before-and-after snapshot proving no second artifact was written,
+    and a fresh-process rerun proving the gate keeps no record of what it advised
+    — then the registered hook entry point and the deployed copy.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-FilesStayWorkable/06_TICKET-20260914-GE-127e-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |

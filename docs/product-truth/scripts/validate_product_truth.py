@@ -188,6 +188,11 @@ DECISION HISTORY
 - 2026-09-14 [python-coder]: UXP-700e-3-i -- branches without an outcome_kind are
   reported as to-be-filled warnings (product_truth_shapes._check_outcome_kinds),
   never errors, while the field is introduced. (#EPIC-TruthfulProjectRecord/44)
+- 2026-09-14 [python-coder]: UXP-700e-1 / UXP-700e-1-ii -- every declared bound
+  (product_truth_bounds.BOUNDS) is measured over journeys, datasets and screens;
+  the contract line states each bound's measured count and enforcement. --tighten
+  BOUND is refused, naming the holdouts, while any artifact is on an older shape
+  version. (#EPIC-TruthfulProjectRecord/38, /40)
 """
 from __future__ import annotations
 
@@ -217,7 +222,7 @@ from product_truth_checks import (
     _check_pointers,
     _check_product_truth,
     _check_screens,
-    _check_shape_version_bounds,
+    _check_shape_version_bounds,  # noqa: F401  # re-exported for callers
     _check_truth_evidence,
 )
 from product_truth_outcome import (  # noqa: F401  # re-exported for callers
@@ -240,6 +245,7 @@ from product_truth_outcome import (  # noqa: F401  # re-exported for callers
     _print_outcome_contract,
     _top_level_outcome,
 )
+from product_truth_bounds import check_bounds, tighten_refusal
 from product_truth_shapes import _check_outcome_kinds, count_branches  # noqa: F401
 from product_truth_label_checks import (  # noqa: F401  # re-exported for callers
     _check_labels,
@@ -500,7 +506,7 @@ def run_checks() -> dict:
     # resolve against the AC store as it stands right now. Broken pointers feed
     # the SAME `errors` list every other check already uses, so a broken
     # pointer makes the run exit non-zero exactly like every other error class.
-    _check_shape_version_bounds(flows, errors, warnings)
+    bounds = check_bounds({"flows": flows, "mock-data": mocks, "mockups": mockups}, errors, warnings)
     _check_outcome_kinds(flows, warnings)
     _check_artifact_paths(index, errors)
     _check_canonical_datasets(mocks, errors)
@@ -538,6 +544,7 @@ def run_checks() -> dict:
         "resolved_pointers": resolved_pointers,
         "unresolvable_pointers": unresolvable,
         "resolved_labels": resolved_labels,
+        "bounds": bounds,
         "empty_types": _compute_empty_types(flows, mocks, mockups),
     }
 
@@ -545,6 +552,7 @@ def run_checks() -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate the product-truth store.")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--tighten", metavar="BOUND", help="hold BOUND as blocking; refused while any artifact is on an older shape version")
     args = parser.parse_args()
     logging.basicConfig(level=logging.WARNING if args.quiet else logging.INFO, format="%(message)s")
 
@@ -557,13 +565,17 @@ def main() -> int:
         return 2
 
     report = run_checks()
+    refusal = tighten_refusal(args.tighten, report["bounds"]) if args.tighten else None
+    if refusal:
+        logger.error("REFUSED: %s", refusal)
+        return 1
     errors, warnings, checks = report["errors"], report["warnings"], report["checks"]
     examined_flows, unreadable_flows = report["examined_flows"], report["unreadable_flows"]
     empty_types = report["empty_types"]
     unresolvable = report["unresolvable_pointers"]
     top_outcome = _top_level_outcome(examined_flows, unreadable_flows, bool(errors), empty_types, len(unresolvable))
     contract = (top_outcome, examined_flows, unreadable_flows, empty_types, report["resolved_pointers"], len(unresolvable),
-                examined_by_check(checks), report["resolved_labels"])
+                examined_by_check(checks), report["resolved_labels"], report["bounds"])
 
     # Stated on EVERY run, zero included (UXP-700c-1): without it a run that
     # resolved none of the pointers it holds is indistinguishable, in the

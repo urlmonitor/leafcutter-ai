@@ -1,0 +1,203 @@
+id: BO-3800d-1
+title: "The specialist is engaged a bounded number of times for one delivery, and reaching the bound stops the run rather than letting the change through"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a bound on how many times the restructuring specialist is engaged for one
+    delivery is settled at technical enrichment and is at least one,
+  And a ticket is being driven, delivery is refused with an outcome naming one
+    file, stating a demand against it and handing that demand to a restructuring
+    specialist,
+  And the specialist runs and leaves the file still short of the demand, so the
+    standard refuses the next delivery attempt on the same terms,
+  When the run continues to adjudicate the repeated refusal,
+  Then the restructuring specialist is engaged no more times than that bound for
+    this delivery,
+  And when the bound is reached the run stops,
+  And the change is not delivered — the standard is not relaxed, waived, bypassed,
+    or declared satisfied for the named file because attempts ran out,
+  And the author's change is still present and unaltered at the stop, exactly as
+    it was while the specialist was working,
+  And given instead a run in which the specialist leaves the file meeting the
+    demand on an attempt within the bound,
+  When the run continues,
+  Then delivery is attempted again, it completes, and the specialist is not
+    engaged again — the bound is a ceiling on failure and never a number of
+    attempts to be spent.
+depends_on:
+  - BO-3800d
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE SHAPE ALREADY EXISTS AND MUST BE FOLLOWED RATHER THAN REINVENTED. §4's blocker
+      adjudication ladder already retries a failing step a bounded number of times and ends
+      at "Exhausted → Halt & Surface to User". This record is that ladder's last two rungs
+      applied to a restructuring handoff, and the bound should live where the ladder's other
+      bounds live.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE WARNING THIS RECORD ANSWERS. GE-127b's notes state that whether any condition
+      warrants an exception "is a decision to be taken explicitly and recorded, never
+      defaulted into existence". Letting the change through after N attempts is exactly such
+      an exception, and it is the most likely default: it silently reopens the standard for
+      every file that is hard to restructure, which is the population the standard exists
+      for. The not-delivered arm above is that exception being refused rather than inherited.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE PRECEDENT FOR LEAVING A NUMBER TO ENRICHMENT, FOLLOWED HERE DELIBERATELY. GE-127f-3
+      fixes that a threshold exists and is at least one measured line, and leaves its value to
+      the IT PO, because the criteria must survive the answer changing. The bound above is
+      left the same way: the criteria fix that a bound exists, that it is at least one, and
+      that reaching it stops rather than passes. A criterion here naming a number would be at
+      the wrong altitude.
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME DISCIPLINE ONE TREE OVER, AND A REASON NOT TO MERGE THEM. BO-3100 requires a
+      retry to terminate — an agent that parks identically every time must end as a visible
+      failure, not a loop — for a step that VANISHED. This record requires the same of a step
+      that RAN and did not achieve enough. Distinct trigger, same discipline, neither closes
+      the other. BO-3100's standing constraint is inherited: the verdict comes from observable
+      state, not from an agent's account of itself.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A test that finds a retry
+      counter in a workflow file, or that asserts a constant equals the bound, stays green on
+      a loop that never consults it. Every arm above counts the engagements a real run
+      actually made and reads the delivery outcome that run actually produced.
+delivers_to: null
+expects_from:
+  - ac_id: INF-800f
+    contract: >-
+      A restructuring specialist a supervisor can engage as part of an ordinary workflow.
+      Added by the IT PO at enrichment: this record's bound COUNTS ENGAGEMENTS OF THAT PARTY,
+      so it is blocked on INF-800f exactly as BO-3800b-1 is. The dependency was reachable only
+      transitively through BO-3800d; it is stated here so the blockage is visible on the
+      record that carries it.
+it_requirements:
+  - "HELD — DELIBERATELY NOT ENRICHED FOR TEST COVERAGE. No assigned_agent, no
+    estimated_complexity and no test_spec are authored, on purpose. Blocked on INF-800f
+    (infrastructure; readiness reviewed, covered_by empty, nothing built): the restructuring
+    craft exists today only as templates/workflows/code-refactoring-specialist.md, a slash
+    command with no entry in config/agent_registry.json, no position in the phaseOrder twins
+    in templates/workflows-js/build-feature.js and build-ticket.js, and no defined result
+    contract. Every arm here COUNTS ENGAGEMENTS OF THAT PARTY, so a test_spec would have to
+    name a dispatch key that does not exist — the BP-100k-4 mistake this store has already
+    made once. WHAT WOULD UNBLOCK IT: INF-800f landing with the specialist's agent id, its
+    position in both phaseOrder twins, and the shape of the result it returns (needed here so
+    'the specialist ran and left the file short' is distinguishable from 'the specialist could
+    not be engaged'). The three named mutations lift verbatim into descriptors at that point."
+  - "THE BOUND IS SETTLED AT ONE. The criteria require a bound that exists and is at least
+    one; the value is this enrichment's and it is ONE specialist engagement per delivery."
+  - "BOUND REASONING, RECORDED SO IT IS NOT RE-LITIGATED. (a) This record's own notes: a file
+    that resists restructuring resists it identically on the second and tenth attempt, so a
+    higher bound buys cost rather than outcomes. (b) Every attempt engages the most expensive
+    party in the ladder, so the bound is the main lever on what a hard file costs before it is
+    reported. (c) Precedent on the same seam: the existing recovery beside this one retries
+    the commit exactly once — templates/skills/precommit-autofix/SKILL.md states 'The retry cap
+    is exactly one. A second hook failure after the retry is always surfaced' — and a
+    restructuring handoff allowed MORE attempts than the mechanical recovery next to it would
+    make the expensive path the loosely-bounded one."
+  - "DO NOT REUSE MAX_RETRIES. templates/workflows-js/build-feature.js carries MAX_RETRIES = 2
+    for a DIFFERENT population: mechanical phase failure, where a transient failure genuinely
+    can succeed on a re-run. A restructure that ran and fell short is not transient. The bound
+    here is its own named constant, declared in both phase-loop twins, and must not be
+    conflated with the mechanical retry cap."
+  - "THE BOUND'S SCOPE IS ONE DELIVERY, as the criteria state — not one ticket and not one
+    run. A later, unrelated delivery refusal in the same ticket gets its own budget, and a
+    single delivery may never accumulate one."
+  - "THE BOUND IS A CEILING ON FAILURE, NEVER A QUOTA TO SPEND. A counted loop that engages the
+    specialist `bound` times and evaluates the file only afterwards satisfies every other arm,
+    costs the full bound on the easy cases, and is named mutation (3) THE SPENT QUOTA. With the
+    bound at one this injection is cheap to write and easy to miss, because one engagement then
+    looks like both designs."
+  - "REACHING THE BOUND MUST NOT DELIVER. The standard is not relaxed, waived, bypassed, marked
+    satisfied, or exempted for the named file because attempts ran out. GE-127b's warning is
+    binding: an exception is a decision to be taken explicitly and recorded, never defaulted
+    into existence, and letting the change through after N attempts is the most likely default."
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHAT THIS RECORD FIXES AND WHAT IT DELIBERATELY LEAVES OPEN. Fixed: that a bound exists,
+  that it is at least one, that reaching it STOPS, that stopping does not deliver, and that
+  success inside the bound ends the attempts immediately. Left to enrichment, following
+  GE-127f-3's precedent in the sibling tree: the bound's value. Two things belong in that
+  decision rather than in the criteria — a file that resists restructuring resists it
+  identically on the second and tenth attempt, so a high bound buys nothing but cost; and
+  every attempt engages a specialist, so the bound is the main lever on what a hard file
+  costs before it is reported.
+
+  WHAT THIS RECORD MUST NOT BECOME, RESTATED FROM THE L1. A claim that the file is eventually
+  always restructured successfully. Some files will not be — the nine files in this repository
+  standing above 1,500 lines are named in GE-127f's notes as exactly that population. This
+  record promises an honest stop, not a guaranteed success.
+
+  THE LAST ARM LOOKS LIKE A COURTESY AND IS NOT. "Success inside the bound ends the attempts"
+  excludes the loop-shaped implementation that engages the specialist exactly `bound` times
+  and checks afterwards. That build satisfies every other arm here, costs the full bound on
+  every refusal including the easy ones, and makes BO-3800e's cost promise false for the
+  population that is one small restructure away from compliance — which GE-127f's measured
+  census puts at 78 of the 212 oversized files.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO can lift
+  them verbatim into test descriptors.
+
+  (1) THE QUIET PASS. MUTATION: on reaching the bound, deliver the change anyway and record
+      the delivery as successful.
+      MUST GO RED: the change-is-not-delivered arm.
+      MUST STAY GREEN: every arm of BO-3800d-2 — the run still stops and still accounts for
+      itself, it merely accounts for the wrong ending — and every arm of BO-3800a-1's hold,
+      BO-3800b-1, BO-3800e-1 and BO-3800e-2. That green half is the separability evidence
+      between this record and BO-3800d-2 and must be observed rather than assumed.
+      WHY THIS ONE MATTERS MOST: BO-3800d's notes call it worse than the loop, because it
+      reopens the standard for exactly the files the standard exists for, and it looks like
+      the feature working.
+
+  (2) THE UNBOUNDED RETRY. MUTATION: engage the restructuring specialist repeatedly until the
+      file meets the demand, with no bound at all.
+      MUST GO RED: the bounded-engagements arm and the run-stops arm — the run does not
+      terminate.
+      MUST STAY GREEN: both arms of BO-3800e-1 and BO-3800e-2 — a refusal that asks for no
+      craft is unaffected by how many times this one asks.
+      EXPECTED COUPLING, TO BE REPORTED RATHER THAN SUPPRESSED: under this injection
+      BO-3800d-2's descriptors cannot reach their assertions at all, because no stop is ever
+      reached to read. That is a true consequence of an unbounded loop and NOT evidence that
+      the two records are one; record it as an unreachable result rather than as a red.
+
+  (3) THE SPENT QUOTA. MUTATION: engage the restructuring specialist exactly `bound` times on
+      every specialist-disposition refusal, and evaluate the file only after the last one.
+      MUST GO RED: the last arm — success inside the bound must end the attempts.
+      MUST STAY GREEN: every other arm of this record, every arm of BO-3800d-2, and
+      BO-3800e-1. This injection is cheap to write by accident, because a counted loop reads
+      as the natural implementation of a bound.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's, which runs after
+  this pass — including the bound's value.

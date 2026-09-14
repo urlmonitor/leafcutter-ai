@@ -891,22 +891,35 @@ Worktree root: ${worktreeRoot}
 Target file:   ${target_file}
 Test file:     ${testFile}
 
+DO NOT USE git stash. The stash stack is shared with every other session in this
+repository and an unqualified pop takes the top entry, which may not be yours — that
+recipe has already destroyed a concurrent session's uncommitted work. Revert through two
+files in /tmp instead.
+
 Run these as single, simple commands, in order:
 
-1. git -C "${worktreeRoot}" stash push -- "${target_file}"
-2. AC_ENFORCE_STRICT=1 python -m pytest "${testFile}" -v
-   EXPECTED: FAIL. Record the result as red_without_fix (true when it fails).
-3. git -C "${worktreeRoot}" stash pop
+1. cp "${worktreeRoot}/${target_file}" "/tmp/quickfix-${ac_id}-fixed.bak"
+2. git -C "${worktreeRoot}" show "HEAD:${target_file}" > "/tmp/quickfix-${ac_id}-head.orig"
+   This must exit 0 and leave a non-empty file. If it does not, STOP here and report
+   red_without_fix=false with the reason — nothing has been overwritten yet, and the fix is
+   still in place. Never redirect git show straight over "${target_file}": the shell
+   truncates the target before git runs, so a failed lookup would destroy the fix.
+3. cp "/tmp/quickfix-${ac_id}-head.orig" "${worktreeRoot}/${target_file}"
 4. AC_ENFORCE_STRICT=1 python -m pytest "${testFile}" -v
+   EXPECTED: FAIL. Record the result as red_without_fix (true when it fails).
+5. cp "/tmp/quickfix-${ac_id}-fixed.bak" "${worktreeRoot}/${target_file}"
+6. AC_ENFORCE_STRICT=1 python -m pytest "${testFile}" -v
    EXPECTED: PASS. Record the result as green_with_fix_restored.
 
-Then run: git -C "${worktreeRoot}" status --porcelain
-and confirm "${target_file}" is modified again — the fix must be back in the working tree.
-Set fix_restored accordingly.
+Then run: diff -q "/tmp/quickfix-${ac_id}-fixed.bak" "${worktreeRoot}/${target_file}"
+and set fix_restored=true only when it exits 0 with no output. Do not infer the restore
+from git status — a path showing as modified only proves it differs from HEAD, which a
+partial or corrupted restore does too.
 
-RESTORING THE FIX IS MANDATORY. If step 3 fails for any reason, say so explicitly and set
-fix_restored=false rather than continuing — the run must not proceed to commit with the fix
-still stashed. Report which stash entry holds it.
+RESTORING THE FIX IS MANDATORY, on the failing path as much as the passing one: run step 5
+even when step 4 came out green. If the restore fails for any reason, say so explicitly and
+set fix_restored=false rather than continuing — the run must not proceed to commit with the
+fix reverted. Name /tmp/quickfix-${ac_id}-fixed.bak as the file that holds it.
 
 Set status="ok" only when red_without_fix=true AND green_with_fix_restored=true AND
 fix_restored=true.`,
@@ -919,8 +932,8 @@ if (!mutationResult || mutationResult.status === 'blocked' ||
     status: 'blocked',
     phase: 'Green Phase (mutation proof)',
     message: mutationResult
-      ? `Mutation proof did not complete cleanly.\n\n  red without fix:      ${mutationResult.red_without_fix}\n  green with fix back:  ${mutationResult.green_with_fix_restored}\n  fix restored:         ${mutationResult.fix_restored}\n\n${mutationResult.message || ''}\n\nIf fix_restored is false the fix is still stashed — recover it with "git -C ${worktreeRoot} stash list" and "git -C ${worktreeRoot} stash pop" before doing anything else.`
-      : 'Mutation-proof agent returned null — check "git -C ' + worktreeRoot + ' stash list" before continuing; the fix may still be stashed.',
+      ? `Mutation proof did not complete cleanly.\n\n  red without fix:      ${mutationResult.red_without_fix}\n  green with fix back:  ${mutationResult.green_with_fix_restored}\n  fix restored:         ${mutationResult.fix_restored}\n\n${mutationResult.message || ''}\n\nIf fix_restored is false the fix is NOT in the working tree — recover it with "cp /tmp/quickfix-${ac_id}-fixed.bak ${worktreeRoot}/${target_file}" before doing anything else.`
+      : `Mutation-proof agent returned null — the fix may have been left reverted. Compare "${worktreeRoot}/${target_file}" against "/tmp/quickfix-${ac_id}-fixed.bak" and copy it back if they differ, before continuing.`,
     halt_reason: 'mutation_proof_incomplete',
     test_file: testFile,
     ac_id,

@@ -1,0 +1,97 @@
+id: INF-1300d
+components:
+  - documentation_system
+  - infrastructure
+title: "When a correct document cannot be produced, you are told plainly instead of handed a wrong one"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A refusal you can act on -- never a quietly wrong document.
+
+  If what was asked for cannot be produced correctly, you are told what was wrong
+  with the request and what to supply instead, and nothing is written. You are
+  never left holding something that looks right and is not, and never left with
+  no document and no explanation.
+depends_on: [INF-1300]
+doc_links:
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: "Section 4 step 5 is the current failure protocol -- surface to the user, do not improvise -- and it is the behaviour this record is the counterpart to."
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: "The declared vocabulary a requested diagram kind is judged against, including one entry marked deprecated in favour of another."
+  - path: scripts/build_propagation_audit.py
+    relationship: describes
+    status: exists
+    relevance: "Records what the present unhandled failure costs: a hard user-visible failure with no graceful skip."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by:
+  - INF-1300d-1
+  - INF-1300d-2
+  - INF-1300d-3
+  - INF-1300d-4
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Each refusal names what was wrong and what to supply, so the messages are the documentation; the troubleshooting entry point belongs in INF-1300a's authoring how-to rather than in a separate document that would restate them and then drift."
+notes: |
+  This L1 was NOT in the request. The request described the success path, which
+  is the commonest shape of an under-specified requirement, and it is worth
+  saying plainly what the omission would have cost: the whole present situation
+  IS an unhandled failure path. The sanctioned response to "the means is
+  unavailable" was written down -- stop and tell a human, do not improvise -- and
+  in practice it produced improvisation twice, because a person in front of a
+  blocked mandatory step and a real deadline will find a way through. Building
+  the success path and leaving the failure path to a written instruction is
+  exactly how this gap was created in the first place. Shipping the replacement
+  with the same omission would be the repeat.
+
+  THE TWO WRONG OUTCOMES THIS EXCLUDES ARE DIFFERENT AND BOTH MUST BE EXCLUDED.
+  The first is the plausible-looking wrong document: something is produced, it
+  reads fine, and it is wrong -- an unrecognised subject silently accepted, a
+  requested kind of picture quietly substituted for a similar one, an existing
+  document overwritten. This is the worse of the two, because nothing downstream
+  will notice. The second is the bare failure: nothing is produced and the author
+  is told nothing useful about why, which puts them back to improvising. A BA
+  should treat these as separate behaviours; a criterion that only forbids the
+  first leaves the second, and the second is what happens today.
+
+  A CONCRETE TRAP FOR WHOEVER SPECIFIES THIS. The declared vocabulary of diagram
+  kinds contains an entry explicitly marked as a legacy alias for another, and
+  the checking surfaces do not spell all the names identically -- BO-1800f-3's
+  enrichment records the same mismatch from the other direction. So "an
+  unrecognised kind is refused" needs a decision about what recognised means:
+  refusing a name that is real but deprecated would be wrong, and silently
+  accepting a misspelling that happens to resemble a real name would be exactly
+  the plausible-looking-wrong-document failure. Name the resolution in the
+  criteria rather than leaving it to the implementation.
+
+  ALSO IN SCOPE, and easy to miss: the case where the request is well formed but
+  the destination is already occupied. The collection treats two documents at the
+  same level and number as a collision regardless of what they are called, so
+  "the place you asked for is taken" is a refusal the author can act on, and
+  overwriting is a silent loss of someone else's work.
+
+  PRIORITY medium. The refusal behaviour matters and its absence is what produced
+  this situation, but the blocked path clears without it and BO-1800f-3 does not
+  wait on it.
+
+  Documentation triggers empty with a rationale. A refusal whose message does not
+  tell the author what to do has failed this L1 on its own terms, so the messages
+  carry the duty; a separate troubleshooting document would restate them and then
+  drift out of step with them.

@@ -63,44 +63,67 @@ MANIFEST_PATH = GUARDIAN_DIR / "commit_guardian.json"
 
 # ---------------------------------------------------------------------------
 # Ratchet baseline — hook scripts that exist on disk with no hooks_manifest
-# entry, as measured on main at 2524993b9 (2026-09-14).
+# entry. 18 at 2524993b9 (2026-09-14); 16 after check_pytest_style.py and
+# check_sql_dependencies.py were deleted as bybit-trader residue; 14 after two
+# non-hooks were listed in hook_parity.excluded_scripts; 9 now that the five
+# gates needing no code work are registered under GE-120h-3, the criterion that
+# declares the package surface check-package-surface-declaration demanded.
 #
 # THIS LIST MAY ONLY SHRINK. Every entry is a script that pre-commit never
 # runs. Adding to it would make this test the rubber stamp it exists to
 # prevent; to clear an entry, either register the script in
 # hooks_manifest.hooks or delete it, then remove the line here.
 #
-# The nine marked "settings, no runner" carry a configuration block in
-# config.py AND a section in commit_guardian.json while being invoked by
-# nothing — the exact KI-CG-021 shape, where a gate looks registered to a
-# reader because its settings are.
+# The remaining nine are all KNOWN AND WANTED — none is a candidate for
+# deletion. Each needs real work before it can be registered (a ratchet over
+# existing violations, a crash fix, or an argv fix), scheduled after the
+# file-length gate is fully integrated. GE-120h is the parent for that work;
+# note its L2s deliberately require more than draining this list, because a
+# decomposition that only registers today's orphans leaves the next one free to
+# appear with the same four reassuring signals. The comments below record what
+# each entry is waiting on, measured against the tree at this commit.
 # ---------------------------------------------------------------------------
 UNREGISTERED_BASELINE: frozenset[str] = frozenset(
     {
+        # Superseded in practice by check-done-proof (registered + required in
+        # CI). Also near-blind: _ID_REGEX is $-anchored, so a suffixed id like
+        # TQ-100b-4-i never matches — it sees 275 of 4,032 records.
         "check_ac_coverage.py",
-        # CALLS scripts/ac_store/mark_ac_done.py; nothing calls it. A first pass
-        # read mark_ac_done.py:6 ("Called by check_ac_done_on_merge.py post-merge
-        # hook") as an invoker and recorded the arrow backwards — the direction of
-        # a grep hit is not evidence. Best register-now candidate of the 18: it
-        # always exits 0, and the post-merge stage is already supported end to end
-        # (build_precommit.py:171-172, install_pre_commit_shims.collect_stages).
-        "check_ac_done_on_merge.py",
-        "check_complexity.py",  # settings, no runner
-        "check_debug_scripts.py",  # settings, no runner
-        "check_doc_coverage.py",  # settings, no runner
-        "check_doc_links.py",  # settings, no runner
-        "check_docstrings.py",  # settings, no runner
-        "check_documentation.py",  # settings, no runner
-        "check_folder_density.py",  # settings, no runner
-        "check_outcome.py",
-        "check_pytest_style.py",
-        "check_root_files.py",  # settings, no runner
-        "check_sql_complexity.py",  # settings, no runner
-        "check_sql_dependencies.py",
+        # Wanted. Nothing enforces cyclomatic complexity today (ruff.toml
+        # selects only E, F, E722 — no C901). Needs a shrink-only ratchet first:
+        # 79 over-limit functions across 50 files at max_score 15.
+        "check_complexity.py",
+        # Runs again as of this commit (the _project_root NameError is fixed),
+        # but its output is advisory and lands on the passing path, where a
+        # hook's stdout is discarded (KI-CG-026). Needs verbose: true to be
+        # worth registering.
+        "check_doc_coverage.py",
+        # Advisory, exits 0, only 13 findings. Needs verbose: true and a parser
+        # fix — it reads DECISION HISTORY lines as DOC_LINKS paths (3 of the 13).
+        "check_doc_links.py",
+        # Wanted. ruff carries no D rules, so nothing enforces docstrings.
+        # Needs an unhandled docstring_parser.ParseError caught and a ratchet
+        # over 617 violations in 74 of 127 in-scope files.
+        "check_docstrings.py",
+        # Rules 2-3 (new-file header fields) are cheap; rule 1 is the blocker —
+        # 35 of 50 directories holding tracked .py have no README.md. Has a live
+        # caller: doc-enforcer SKILL.md runs it with --report-legacy.
+        "check_documentation.py",
+        # Concept is general, allowlist is not: it still permits bybit-trader's
+        # app_launcher.py while REJECTING ruff.toml, SETUP.md, VERSION,
+        # LEAFCUTTER_VERSION, build-self.sh and requirements-dev.txt — and it
+        # fires on modify, not just add. Needs its allowlist rewritten.
+        # check_documentation.py imports its constants, so it cannot just go.
+        "check_root_files.py",
+        # Substantially superseded by done_proof.py, which reimplements the same
+        # three tag positions. Warn mode today; 5,725 untagged test functions in
+        # 642 of 644 files, so registering it verbose would be pure noise.
         "check_test_ac_tags.py",
-        "check_test_fixture_bloat.py",
+        # Registering as-is would be theatre: main() ignores argv and reads
+        # paths from stdin (:151-152), but pre-commit passes filenames as
+        # arguments and leaves stdin empty, so it would check zero files and
+        # always pass. Needs sys.argv[1:] preferred first.
         "check_ticket_test_requirements.py",
-        "check_v2_ac_store_alignment.py",
     }
 )
 

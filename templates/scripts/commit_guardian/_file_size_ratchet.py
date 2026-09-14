@@ -58,9 +58,19 @@ from __future__ import annotations
 
 import re
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 
 _SUBPROCESS_TIMEOUT_SECONDS = 15
+
+# A measurement rule: full file text in, line count out. Passed explicitly by
+# callers whose notion of "a line that counts" differs from this module's own
+# code-oriented default (check_doc_length.py strips YAML frontmatter where
+# count_content_lines strips docstrings and block comments). The parameter
+# exists so the before/after comparison is ALWAYS made with one rule applied
+# twice -- the invariant count_content_lines' docstring describes -- rather
+# than by each caller reimplementing the git plumbing around its own counter.
+Measure = Callable[[str], int]
 
 _TRIPLE_DOUBLE_QUOTE_RE = re.compile(r'""".*?"""', re.DOTALL)
 _TRIPLE_SINGLE_QUOTE_RE = re.compile(r"'''.*?'''", re.DOTALL)
@@ -262,6 +272,45 @@ def _read_blob_bytes(filepath: str, revision: str) -> bytes:
     return result.stdout
 
 
+def resolve_head_matching_paths(is_covered: Callable[[str], bool]) -> list[str]:
+    """Return every HEAD-tracked path *is_covered* accepts.
+
+    The predicate form of ``resolve_head_covered_paths`` below, for callers
+    whose covered set is not expressible as a set of file extensions --
+    check_doc_length.py's is a path prefix plus an exclusion list. Both
+    functions classify the previous-length SOURCE identically; see
+    ``resolve_head_covered_paths`` for the full contract, which this function
+    implements and that one now delegates to.
+
+    Args:
+        is_covered: Predicate deciding whether a HEAD-tracked path counts as
+            a covered file for the calling gate.
+
+    Returns:
+        The list of HEAD-tracked paths the predicate accepted. Empty means
+        empty history — a legitimate, completing result, not an error.
+
+    Raises:
+        PreviousLengthSourceError: HEAD resolves but its tree could not be
+            listed, or git itself could not be invoked.
+    """
+    head_check = _run_git(["rev-parse", "--verify", "HEAD"])
+    if head_check.returncode != 0:
+        # Unborn HEAD -- no commit exists yet. This is the EMPTY-HISTORY
+        # completing case, not a source failure: refusing it would deadlock
+        # the very first commit of every fresh consumer-project install.
+        return []
+
+    tree_listing = _run_git(["ls-tree", "-r", "--name-only", "HEAD"])
+    if tree_listing.returncode != 0:
+        raise PreviousLengthSourceError(
+            "the previous lengths could not be read: HEAD's tree could not "
+            f"be listed ({tree_listing.stderr.strip()})"
+        )
+
+    return [path for path in tree_listing.stdout.splitlines() if path.strip() and is_covered(path)]
+
+
 def resolve_head_covered_paths(checked_extensions: list[str]) -> list[str]:
     """Return every covered-extension path tracked in HEAD's tree.
 
@@ -294,29 +343,13 @@ def resolve_head_covered_paths(checked_extensions: list[str]) -> list[str]:
         PreviousLengthSourceError: HEAD resolves but its tree could not be
             listed, or git itself could not be invoked.
     """
-    head_check = _run_git(["rev-parse", "--verify", "HEAD"])
-    if head_check.returncode != 0:
-        # Unborn HEAD -- no commit exists yet. This is the EMPTY-HISTORY
-        # completing case, not a source failure: refusing it would deadlock
-        # the very first commit of every fresh consumer-project install.
-        return []
-
-    tree_listing = _run_git(["ls-tree", "-r", "--name-only", "HEAD"])
-    if tree_listing.returncode != 0:
-        raise PreviousLengthSourceError(
-            "the previous lengths could not be read: HEAD's tree could not "
-            f"be listed ({tree_listing.stderr.strip()})"
-        )
-
     extensions = {ext.lower() for ext in checked_extensions}
-    return [
-        path
-        for path in tree_listing.stdout.splitlines()
-        if path.strip() and Path(path).suffix.lower() in extensions
-    ]
+    return resolve_head_matching_paths(lambda path: Path(path).suffix.lower() in extensions)
 
 
-def get_previous_length(filepath: str, revision: str = "HEAD") -> int | None:
+def get_previous_length(
+    filepath: str, revision: str = "HEAD", measure: Measure = count_content_lines
+) -> int | None:
     """Return the line count *filepath* had at *revision*, or None if absent there.
 
     Args:
@@ -324,6 +357,11 @@ def get_previous_length(filepath: str, revision: str = "HEAD") -> int | None:
         revision: The revision to look the file up at. Defaults to
             ``"HEAD"`` — the ordinary, non-merge case. During a merge, callers
             pass each parent revision in turn (see ``resolve_previous_lengths``).
+        measure: The counting rule to apply to the blob's decoded text.
+            Defaults to ``count_content_lines``, this module's code-oriented
+            rule. A caller passing its own rule here MUST apply that same
+            rule to the file's current content, or the ratchet compares two
+            different measurements and reports growth that did not happen.
 
     Returns:
         The previous length, or None when the file has no blob at *revision*
@@ -347,7 +385,7 @@ def get_previous_length(filepath: str, revision: str = "HEAD") -> int | None:
             f"be interpreted: blob is not valid UTF-8 ({exc})"
         ) from exc
 
-    return count_content_lines(content)
+    return measure(content)
 
 
 def _merge_head_path() -> Path | None:
@@ -439,7 +477,9 @@ def resolve_parent_revisions() -> list[str]:
 
 
 def resolve_previous_lengths(
-    paths: list[str], parent_revisions: list[str] | None = None
+    paths: list[str],
+    parent_revisions: list[str] | None = None,
+    measure: Measure = count_content_lines,
 ) -> dict[str, int]:
     """Resolve each path's permitted previous length across every parent.
 
@@ -466,6 +506,10 @@ def resolve_previous_lengths(
             being written, HEAD first (see ``resolve_parent_revisions``).
             Defaults to ``["HEAD"]`` when omitted, matching the pre-merge
             -aware behaviour exactly.
+        measure: The counting rule applied to every parent blob, forwarded
+            unchanged to ``get_previous_length``. Defaults to
+            ``count_content_lines``; see that function's ``measure`` note for
+            the obligation a caller takes on by overriding it.
 
     Returns:
         Mapping of path to its permitted previous line count, for every path
@@ -481,7 +525,7 @@ def resolve_previous_lengths(
         lengths = [
             length
             for revision in revisions
-            if (length := get_previous_length(path, revision)) is not None
+            if (length := get_previous_length(path, revision, measure)) is not None
         ]
         if lengths:
             previous_lengths[path] = max(lengths)
@@ -524,5 +568,17 @@ DECISION HISTORY
   An unresolvable MERGE_HEAD path or an unreadable-but-present MERGE_HEAD
   file now raises PreviousLengthSourceError (INDETERMINATE) rather than
   being silently treated as "not merging" — fail closed on ambiguity.
+- 2026-09-14 [doc-length ratchet]: Made this module's counting rule and
+  covered-set rule pluggable so check_doc_length.py can reuse the ratchet's
+  git plumbing (merge-parent resolution, the two-situation INDETERMINATE
+  floor, empty-history classification) instead of growing a second, parallel
+  copy of it. Added the `Measure` alias and an optional `measure` parameter
+  to get_previous_length() and resolve_previous_lengths(), both defaulting to
+  count_content_lines so every existing call site is byte-for-byte unchanged;
+  added resolve_head_matching_paths(predicate) and reduced
+  resolve_head_covered_paths() to a two-line delegation to it, since a docs/
+  prefix plus an exclusion list is not expressible as a set of extensions.
+  No behaviour change for check_file_size.py — the sole in-tree caller of
+  either generalised function passes neither new argument.
 ====================================================================
 """

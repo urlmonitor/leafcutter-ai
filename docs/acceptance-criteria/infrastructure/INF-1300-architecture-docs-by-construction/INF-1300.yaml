@@ -1,0 +1,250 @@
+id: INF-1300
+components:
+  - documentation_system
+  - infrastructure
+title: "Writing an architecture document costs you the thinking, not the conventions"
+component: infrastructure
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Start from a correct document; spend your effort on what it says.
+
+  When you set out to document a part of this system, you are handed a document
+  that already satisfies everything the project asks of a document of that kind:
+  correctly named, filed where such documents live, carrying the shared
+  explanatory key, and already shaped for the kind of picture you are about to
+  draw. What is left for you is the only part that ever needed a person -- saying
+  what is true about the system. The project's conventions stop being a body of
+  knowledge each author has to hold and re-apply by hand, and the project's own
+  instruction to work this way stops being an instruction that cannot be
+  followed.
+depends_on: []
+doc_links:
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: "Section 4, 'Always scaffold first (MANDATORY)', is the rule this goal makes followable; it forbids hand-authoring and forbids improvising when the means is absent."
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: specifies
+    status: exists
+    relevance: "Repeats the same mandatory step and pins the same invocation, so the two surfaces must stay in agreement with whatever is built."
+  - path: scripts/build_propagation_audit.py
+    relationship: describes
+    status: exists
+    relevance: "Carries the missing path in EXTERNAL_DEPENDENCY_ALLOWLIST with an inline comment recording that its absence causes a hard user-visible failure and that a separate authoring ticket is required. That comment is the origin of this goal."
+  - path: docs/architecture/diagrams/README.md
+    relationship: specifies
+    status: exists
+    relevance: "The collection's own statement of its naming and numbering conventions -- part of what a produced document must satisfy."
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: specifies
+    status: exists
+    relevance: "Where architecture documents live and how the tree is organised."
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: "The declared vocabulary of diagram kinds, and the per-kind extra fields some of them require."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by:
+  - INF-1300a
+  - INF-1300b
+  - INF-1300c
+  - INF-1300d
+  - INF-1300e
+implemented_by: []
+notes: |
+  ORIGIN. This goal is the one thing that has never been done about a gap the
+  package has known about, in writing, since 2026-06-17. Two authoring surfaces
+  -- templates/skills/write-c4-diagram/SKILL.md section 4 and
+  templates/agents/architecture-diagram-author.md step 4 -- make one step
+  MANDATORY, forbid hand-authoring the parts that step produces, and forbid
+  improvising if the step cannot run. The means of performing that step has never
+  existed: no commit on any branch has ever added it, and the directory it is
+  specified to live in does not exist either. The only thing that has ever
+  touched the gap is the mechanism that stops the build guard reporting it --
+  scripts/build_propagation_audit.py's EXTERNAL_DEPENDENCY_ALLOWLIST, whose own
+  inline comment states the absence "causes a hard user-visible failure in
+  write-c4-diagram" and that "a separate authoring ticket is required to create
+  and deploy this script". This is that requirement, three months later.
+
+  WHAT THE VALUE ACTUALLY IS -- and what it is not. The value is NOT "the tool
+  exists". Three candidate benefits were weighed and they are not three phrasings
+  of one thing:
+    - The author gets a document the project will accept on the first offer,
+      instead of discovering its rules one refusal at a time (INF-1300a).
+    - The reader gets a collection that reads the same way throughout, so the
+      conventions are learned once rather than re-derived per document
+      (INF-1300b).
+    - The mandatory rule stops being a rule nobody can obey.
+  The third was DELIBERATELY NOT GIVEN AN L1. It is the cause of the other two,
+  not a separable benefit: "the rule becomes obeyable" is what a tool existing
+  MEANS, and spending a scarce L1 slot restating the goal in the goal's own terms
+  is the failure mode this cap exists to prevent. What was rescued from it is the
+  half that genuinely is separable and that nobody had named: the rule ships to
+  every adopting project, so the means must ship with it or every adopter
+  reproduces this exact failure (INF-1300e). That is a different claim from "it
+  works here", and phase_1's outcome is explicitly about working across multiple
+  repositories.
+
+  Two further benefits were added that the request did not contain, because the
+  request described only the success path. A tool that cannot always succeed and
+  says nothing useful when it fails reproduces the present situation one level
+  down, so the refusal path is a named benefit (INF-1300d). And a document can be
+  perfectly conforming, perfectly consistent, and still unreachable by anyone who
+  does not already know its filename, so being findable is a named benefit
+  (INF-1300c). Neither is implied by the other three.
+
+  PLACEMENT -- infrastructure, and NOT a new component. Stated explicitly because
+  it was a real decision with a plausible alternative.
+
+  Chosen: component: infrastructure (prefix INF, from
+  docs/acceptance-criteria/index.yaml). Its declared charter is "cross-cutting
+  infrastructure: agent context injection, pre-commit hooks, and project
+  conventions". A generator whose entire purpose is to embody a project
+  convention so authors need not re-apply it by hand is squarely the third of
+  those, and it lands beside the two INF trees of the same family: INF-200
+  (code-quality conventions) and INF-1200 (the standards your work must meet
+  reach whoever is about to do it). INF-1200 is the closest neighbour and the
+  relationship is complementary, not overlapping: INF-1200 delivers the RULE to
+  the author; INF-1300 removes the need for the author to apply the rule by hand.
+  A project could have either without the other, and each would still be worth
+  having.
+
+  Rejected -- registering a new AC-store component for documentation tooling.
+  There is no documentation namespace in index.yaml, and documentation_system
+  does exist in docs/components.json with no AC tree, so the case was real. It
+  was rejected on three grounds, the third decisive:
+    1. It would collide with BO-2200 ("Documentation stays correct and complete,
+       automatically"), which already exists, is readiness: approved, and already
+       claims documentation_system AND doc_compliance in its components list.
+       Two AC namespaces both plausibly owning "documentation" makes the next
+       author's placement decision harder than the one just made, not easier.
+    2. The store's own convention already separates the two axes: the scalar
+       component field is a NAMESPACE key, while subject taxonomy lives in the
+       components list. documentation_system is used on the components list of
+       this record and of every child, so the subject IS recorded in the axis
+       built to record it. Nothing is lost by not minting a namespace for it.
+    3. Registration is three-way, and the third leg is circular here.
+       documentation_system.detail_ref is null, so registering it as an AC
+       namespace properly would require authoring an architecture component
+       document -- which is precisely the artifact class this goal exists to
+       unblock, and which today cannot be produced by the documented path. Paying
+       that cost first would mean producing the document through the broken route
+       this goal is about.
+
+  Also rejected -- folding this into BO-2200 as a sixth L1. BO-2200's subject is
+  ENFORCEMENT: documentation is required, is actually written, and is faithful to
+  what was built. This goal's subject is PRODUCTION: a correct document can be
+  produced at all. They are the two halves that need each other -- BO-2200
+  currently guarantees that a document is demanded, in a project where a
+  conforming one cannot be produced by the sanctioned route -- but they are not
+  the same subject, and one L1 could not have carried five separable benefits.
+
+  Also rejected -- guardrail-engine. That component owns the checks. This goal
+  owns the thing that satisfies them. Placing the producer inside the namespace
+  of its own judges would make it very easy for a later author to weaken a check
+  in order to pass a generator, which is the wrong direction of accommodation.
+
+  PRIORITY: high, and not uniformly. The L0 and INF-1300a, INF-1300b and
+  INF-1300e are high; INF-1300c and INF-1300d are medium. The grounds for high:
+  BO-1800f-3 -- a live, merged, readiness: reviewed requirement under a
+  priority: high L1 -- cannot be dispatched until this path works, and its IT PO
+  enrichment says so in terms, listing only two permitted resolutions of which
+  the preferred one is "the scaffold script is authored and deployed first". This
+  is not a single blocked record either: the defect fails CLOSED on EVERY new
+  architecture document, and has done for months. The observable decay is already
+  in the store -- docs/architecture/diagrams/finalize-progress-relay-sequence.md
+  and c2-fast-lane-build-path-components.md both carry decision-history notes
+  recording that the scaffold was unavailable so the document was hand-authored,
+  and c3-done-proof-evaluation-sequence.md now has a filename that does not
+  satisfy check_diagram_naming.py's pattern and declares no parent, so a new
+  document copying its shape is refused at commit. That is the compounding harm:
+  each improvised document becomes the next author's model. The split to medium
+  on INF-1300c and INF-1300d is deliberate rather than decorative -- both are
+  real value, but the blockage above clears without either, and marking
+  everything high would make the field say nothing.
+
+  TWO DANGLING REFERENTS IN THE PINNED CONTRACT -- A BA MUST RESOLVE BOTH BEFORE
+  L2. The invocation and the output shape are already fixed by the two authoring
+  surfaces and must not be reinvented. But two things those surfaces promise
+  point at nothing that exists, and neither can be specified as written:
+    1. "The legend block ... is auto-populated by the script from ADR-015 and
+       must remain verbatim" (SKILL.md section 4 step 4; repeated in the agent
+       template step 5). ADR-015 in this repository is
+       ADR-015-guard-honors-noqa-ble001.md -- "Exception-Handling Guard Honors
+       Inline # noqa: BLE001 Suppression". It defines no legend and says nothing
+       about diagrams. Verified by reading the file. So the source of truth for
+       the content the author is FORBIDDEN to modify does not exist. Either the
+       intended ADR was never written, or the number is wrong and the real source
+       must be identified. A criterion that says "reproduce the legend from
+       ADR-015" would be unimplementable.
+    2. "--update-readme adds the doc to docs/architecture/README.md" (SKILL.md
+       section 8). docs/architecture/README.md does not exist. Verified.
+       docs/architecture/diagrams/README.md does exist, but it is a statement of
+       the naming convention, not an index -- it lists no diagrams -- and its own
+       closing line points the reader at the absent docs/architecture/README.md.
+       So INF-1300c's benefit cannot be specified until someone decides WHERE the
+       collection's index is. This is recorded as a question for the BA, not
+       answered here: choosing the index is a product decision about where
+       readers should look, not a formatting detail.
+
+  A THIRD GAP, IN THE INVOCATION ITSELF -- recorded, not resolved. The pinned
+  arguments are --tier, --diagram-type, --component, --title, --output, --date
+  and --update-readme. Three things the produced document needs are not among
+  them:
+    - The two-directional parent link. check_mermaid_parent_link enforces both a
+      prose Parent: line in the new document and the new document's path in the
+      parent's children: list, and SKILL.md section 6a makes both a MANUAL step
+      after scaffolding. A document produced purely from the pinned invocation
+      therefore does NOT pass that check.
+    - source_ticket, which SKILL.md section 6 states MUST be populated on every
+      create.
+    - The per-kind extra fields declared in config/diagram_types.json --
+      data_flow requires related_code, user_flow requires related_surfaces,
+      agent_flow requires related_agents -- which check_doc_frontmatter enforces.
+  This matters to INF-1300a specifically, whose promise is acceptance on the
+  first offer. Either the contract gains the inputs needed to keep that promise,
+  or INF-1300a's scope is bounded to the parts the pinned inputs can determine
+  and the remainder is named as the author's. That is a BA decision about
+  criteria, and it must be taken consciously -- silently shipping a generator
+  that produces a document the project still refuses would leave the author in
+  the same round-trip this goal exists to end, while appearing to have fixed it.
+
+  ROADMAP. phase_1. The current outcome is a stable MVP "portable,
+  self-onboarding, and reliable enough to use across multiple repos". A mandatory
+  instruction shipped to every adopter with no means of following it is a direct
+  hit on all three words: it is not portable (INF-1300e), it is the opposite of
+  self-onboarding (a new author's first architecture document is a sequence of
+  refusals), and it is not reliable (the documented response to the failure is to
+  stop and ask a human, on every occurrence). No roadmap change is proposed or
+  needed -- this fits the phase as it stands.
+
+  SCOPE FENCE. This goal covers producing a correct document. It does NOT cover
+  judging whether a document has since gone stale, which is drift detection and
+  belongs to the guardrail surface; BO-1800f-3's enrichment records that
+  check_mermaid_drift.py covers only the data_flow and user_flow genres and skips
+  sequences unconditionally, and that extending it has a vocabulary
+  reconciliation as a prerequisite. That work is real and is deliberately not
+  claimed here. Nor does this goal cover deciding WHICH documents a change
+  requires -- that is BO-2200's subject.
+
+  ONE CONSEQUENCE TO SCHEDULE, NOT TO FOLD IN. When this goal is delivered, the
+  EXTERNAL_DEPENDENCY_ALLOWLIST entry that hides the missing path becomes a
+  falsehood and should be removed, or the broken-reference guard will keep
+  excusing a reference that no longer needs excusing. BP-900b-1-1 owns that
+  allowlist and is already work_status: done. Flagged for the IT PO to place;
+  not authored here, because amending a done record in another component is a
+  separate call.
