@@ -1,0 +1,209 @@
+id: BO-3800c-1
+title: "What the specialist is given is the file and the demand the refusal stated, and both move when the refusal's do — never a second derivation"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket is being driven and delivery is refused with an outcome that
+    names one file, states a demand of 120 measured lines against it, and states
+    that a demand of that size is handed to a restructuring specialist,
+  When the run engages the restructuring specialist,
+  Then what the specialist is given names that file and states that demand of 120
+    measured lines,
+  And given the same run repeated with the refusal changed in one respect only —
+    it states a demand of 37 measured lines against the same file,
+  When the run engages the restructuring specialist,
+  Then what the specialist is given states 37, so the demand MOVED with the
+    refusal's,
+  And given the same run repeated with the refusal changed in one respect only —
+    it names a different covered file at the same demand,
+  When the run engages the restructuring specialist,
+  Then the file named in what the specialist is given MOVED with the refusal's,
+  And given a refusal stating a demand that disagrees with what re-running the
+    standard against the named file after the refusal would produce,
+  When the run engages the restructuring specialist,
+  Then what the specialist is given states the demand the REFUSAL stated, and not
+    the one a re-run would produce — so the demand is carried from the refusal the
+    run is acting on, and is never re-read from the file, re-computed, re-derived,
+    or recovered from anywhere else.
+depends_on:
+  - BO-3800c
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800c.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRODUCES THE THREE FACTS THIS RECORD TRANSPORTS — the file, the demand in measured
+      lines, and the disposition. They are consumed verbatim. Nothing here restates how the
+      demand is arrived at: that is GE-127f-1's inequality, GE-127f-2's definition of what
+      the change added, and GE-127d's counting rule, and none of the three may be
+      re-expressed on this side of the seam. The unit "measured lines" appears above only
+      because the refusal states it; this record does not define, count or check it.
+  - path: docs/acceptance-criteria/build-orchestration/BO-3000a.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE PRECEDENT THAT MAKES THIS RECORD NECESSARY RATHER THAN FUSSY. BO-3000a's central
+      decision, taken after code review reversed its first design, is that the driver must
+      NEVER infer a handoff's target from surrounding prose — it is told explicitly or it
+      refuses diagnosably, because inference is ambiguous exactly on the artifacts that
+      follow conventions best and converts a deliberate halt into a spurious run. The same
+      argument applies one field over: a specialist that must reconstruct the demand by
+      re-reading the file or re-running the standard is inferring, with the same failure
+      modes. The last arm above is that rule made observable.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY, AND THE ONE MOST LIKELY TO BLUR. GE-127e owns what a refusal SAYS to a human
+      and how useful it reads. This record owns that the facts it states reach the party
+      asked to act on them, intact. No clause above is discharged by improving a message and
+      none takes a position on wording, ordering or framing.
+  - path: docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE STORE'S PRECEDENT FOR TREATING THE BRIEF AS ITS OWN PROMISE, separate from the
+      fact of dispatching anyone. A correct dispatch carrying a vague brief produces
+      confident work answering the wrong question.
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE CONSTRUCTION REUSED RATHER THAN REINVENTED, VIA GE-127e-2 WHICH ALREADY REUSES IT
+      IN THIS FAMILY. Run the guard BEFORE and AFTER changing the one input in question and
+      require the answer to MOVE, because a hard-coded value passes every single-run
+      assertion. The two moving arms above are that construction; the disagreeing-demand arm
+      is the discriminator no moving pair can supply on its own.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A test that reads the
+      dispatch payload's construction in source, or that asserts a briefing function returns
+      the right fields when called directly, stays green on a run in which the payload is
+      built and never handed to anyone. Every arm above is read from what the specialist
+      actually received in a run that actually engaged it.
+delivers_to:
+  - ac_id: GE-127f-3
+    contract: >-
+      The WHAT IS ASKED half of GE-127f-3's expects_from: the named file and the named
+      demand reach the restructuring specialist as stated, so the disposition GE-127f-3
+      emits is acted on rather than merely printed.
+expects_from:
+  - ac_id: GE-127f-3
+    contract: >-
+      A refusal stating the file, the number of measured lines that must leave it, and the
+      disposition that applies. This record consumes those three facts verbatim and derives
+      none of them by a second route. Their UNAVAILABILITY is floored by BO-3800c-1-i and
+      must reach this record as a named stop, never as a supplied or defaulted demand.
+it_requirements:
+  - "HELD — DELIBERATELY NOT ENRICHED. No assigned_agent, no estimated_complexity and no
+    test_spec are authored, on purpose. Blocked on INF-800f (infrastructure; readiness
+    reviewed, covered_by empty, nothing built). Every arm of this record asserts the CONTENT
+    OF THE PAYLOAD the specialist receives — 'what the specialist is given names that file
+    and states that demand' — so a test_spec here would have to name the brief's field names
+    and the dispatch call that carries them. Neither exists: the restructuring craft is
+    templates/workflows/code-refactoring-specialist.md, a slash command reachable by a human
+    at a terminal and by nothing else, with no entry in config/agent_registry.json, no
+    position in the phaseOrder twins, and no defined input or result contract. Naming those
+    fields now is the BP-100k-4 mistake this store has already made once — declared config
+    keys that were never created — and a spec built on invented field names is less
+    trustworthy than no spec."
+  - "WHAT WOULD UNBLOCK IT: INF-800f landing with the specialist's agent id, its position in
+    the phaseOrder twins in templates/workflows-js/build-feature.js and build-ticket.js, and
+    — the field this record specifically needs — the SHAPE OF THE BRIEF the driver hands it,
+    so 'what the specialist is given' names a real structure. With that in hand the three
+    moving arms and the disagreeing-demand arm are directly expressible and the two named
+    mutations lift verbatim into descriptors."
+  - "CONSTRAINT THAT SURVIVES THE HOLD. The fixture constraint recorded in this record's own
+    notes is binding on whoever enriches it later: the refusal is an INPUT, and the
+    disagreeing-demand arm must be built on a refusal the test SUPPLIES directly. If the only
+    way to construct the disagreement is to compute a second demand, the fixture has crossed
+    the seam into GE-127f-1's inequality, GE-127f-2's definition of what was added, or
+    GE-127d's counting rule, and must be rebuilt."
+  - "SECOND CONSTRAINT THAT SURVIVES THE HOLD. Coverage must be read from what the specialist
+    ACTUALLY RECEIVED in a run that actually engaged it. A test that calls a brief-building
+    helper directly, or that reads the payload's construction in source, stays green on a
+    payload that is built and never handed to anyone — the fast-lane-build.js shape this
+    tree's own doc_links already name as inadmissible."
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3800c-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE FAILURE THIS RECORD EXCLUDES IS RECONSTRUCTION, NOT ABSENCE — AND THE LAST ARM IS THE
+  ONLY ONE THAT CATCHES IT. BO-3800c's notes name the tempting implementation exactly: not
+  "send nothing", but "send the file name and let the specialist re-run the standard to find
+  out how much". Two moving arms do not catch that build — a reconstruction that happens to
+  agree with the refusal moves when the refusal moves, so it passes both. The
+  disagreeing-demand arm is the discriminator: construct a refusal whose stated demand is
+  deliberately not what a re-derivation would produce, and require the carried value to be
+  the stated one. Building that fixture is the work of this record; a decomposition that
+  keeps only the moving arms has specified something a reconstruction satisfies.
+
+  HOW TO MAKE THE DISAGREEMENT WITHOUT RESTATING THE ARITHMETIC — CONSTRAINT ON THE FIXTURE,
+  NOT A SECOND RULE. The refusal is an INPUT to this record. The fixture must be able to
+  present a refusal stating a demand of its own choosing, independent of anything the file
+  contains, so that a re-derivation provably disagrees. It must NOT reach that disagreement
+  by re-implementing, re-tuning or contradicting GE-127f-1's inequality, GE-127f-2's
+  definition of what the change added, or GE-127d's counting rule. If the only way to
+  construct the disagreement is to compute a second demand, the fixture has crossed the seam
+  and must be rebuilt on a refusal the test supplies directly.
+
+  WHY THIS IS ONE RECORD AND NOT THREE. The two moving arms and the disagreement arm are
+  three observations of one property — that the brief is a function of the refusal — and
+  they share a single fixture family and a single mutation. GE-127e-2 is the store's
+  precedent for exactly this shape: three arms, one record, one injection, with the
+  stay-green arm named. Splitting them would produce three records that all go red together
+  under every injection either one could carry, which is the definition of a duplicate.
+
+  THE EDGE THAT IS NOT HERE. A refusal that names the specialist but carries no usable
+  demand is BO-3800c-1-i's, deliberately, because it is a failure mode with its own wrong
+  default (supply one) rather than another observation of this property.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO can
+  lift them verbatim into test descriptors.
+
+  (1) THE RECONSTRUCTION. MUTATION: give the specialist the named file only, and have the
+      brief's demand completed by re-running the standard against that file at the moment
+      the specialist is engaged.
+      MUST GO RED: the disagreeing-demand arm, necessarily and by construction; and the
+      37-line moving arm wherever the re-derivation produces a different number from the
+      one the refusal stated.
+      MUST STAY GREEN: every arm of BO-3800b-1 and BO-3800b-2 — the right party is still
+      engaged and the author still is not — and every arm of BO-3800a-1, BO-3800e-1 and
+      BO-3800e-2. That green half is the evidence that WHO is asked and WHAT THEY ARE TOLD
+      are separate promises, which is BO-3800c's entire reason for existing apart from
+      BO-3800b.
+
+  (2) THE FROZEN BRIEF. MUTATION: give the specialist a fixed brief — the named file
+      substituted into a standing instruction to restructure it — with the demand omitted
+      entirely.
+      MUST GO RED: all three moving/stated arms above.
+      MUST STAY GREEN: every arm of BO-3800a-1, BO-3800b-1, BO-3800b-2, BO-3800e-1 and
+      BO-3800e-2. This is the build BO-3800c's notes describe as fully satisfying separation
+      of duties and fully failing here: the specialist restructures to its own taste, the
+      standard refuses again for a different amount, and BO-3800d's bound becomes the normal
+      case rather than the exception.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's, which runs
+  after this pass.
