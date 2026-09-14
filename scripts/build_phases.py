@@ -66,6 +66,7 @@ from template_compiler import (
     inject_config,
     parse_frontmatter,
 )
+from build_phases_self_description import _self_desc_field_hint
 
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = PACKAGE_ROOT / "templates"
@@ -873,10 +874,16 @@ def _write(target: Path, content: str, dry_run: bool, force: bool) -> bool:
 
     Adds a compare-before-write guard: when the target already exists and the
     encoded content is byte-identical to what is already on disk, the write is
-    skipped and False is returned.  This eliminates mtime churn and spurious
-    ``git status`` entries for unchanged files.  Binary or unreadable files
-    fall through to an unconditional write (UnicodeDecodeError / OSError are
-    caught and silently ignored).
+    skipped and False is returned.  Both the guard's comparison and the actual
+    write operate on the same value -- ``content.encode("utf-8")`` -- with no
+    newline translation applied in either direction.  The file on disk is
+    therefore byte-identical to ``content`` on every platform, Windows
+    included: a line-feed in ``content`` is never widened to a carriage-return
+    + line-feed pair, and an existing file's on-disk bytes (CRLF or otherwise)
+    are compared exactly as they are, never normalised back to LF first.  This
+    eliminates mtime churn and spurious ``git status`` entries for unchanged
+    files.  Unreadable files fall through to an unconditional write (OSError
+    is caught and silently ignored).
 
     Args:
         target: Absolute path to the destination file.
@@ -893,19 +900,19 @@ def _write(target: Path, content: str, dry_run: bool, force: bool) -> bool:
     if dry_run:
         print(f"  [DRY-RUN] would write {target}")
         return True
+    data = content.encode("utf-8")
     # Compare-before-write: skip if the on-disk content is byte-identical.
     # Runs only for real writes; dry-run always returns True (intent) above.
     if target.exists():
         try:
-            existing = target.read_text(encoding="utf-8")
-            if existing == content:
+            if target.read_bytes() == data:
                 global _uptodate_count  # noqa: PLW0603
                 _uptodate_count += 1
                 return False
-        except (UnicodeDecodeError, OSError):
-            pass  # Binary or unreadable file — fall through to write.
+        except OSError:
+            pass  # Unreadable file -- fall through to write.
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
+    target.write_bytes(data)
     return True
 
 
@@ -2985,45 +2992,6 @@ def validate_agent_self_description(
         return (0, len(problems))
 
 
-def _self_desc_field_hint(field: str) -> str:
-    """Return a one-line fix hint for a missing self-description frontmatter field.
-
-    Args:
-        field: The missing frontmatter field name.
-
-    Returns:
-        A short string describing what the field should contain.
-    """
-    _HINTS = {
-        "behavioral_patterns": (
-            "Add a behavioral_patterns array listing conditional behaviors, "
-            "gates, and delegation rules. Example: "
-            "behavioral_patterns: [{name: 'Stop-and-Ask', trigger: '...', "
-            "behavior: '...', related_agent: null}]"
-        ),
-        "pre_flight_reads": (
-            "Add a pre_flight_reads list of documents the agent reads before "
-            "starting work. Example: pre_flight_reads: ['ticket body', "
-            "'cited ADRs']"
-        ),
-        "inputs": (
-            "Add an inputs list describing what the agent receives. Example: "
-            "inputs: [{name: ticket_path, type: path, description: 'Path to ticket'}]"
-        ),
-        "outputs": (
-            "Add an outputs list describing what the agent produces. Example: "
-            "outputs: [{name: 'Sign-off comment', type: comment, "
-            "description: 'status: ok | blocker'}]"
-        ),
-        "mutates": (
-            "Add a mutates list describing what the agent modifies. Example: "
-            "mutates: [{name: 'Ticket frontmatter', type: file, "
-            "description: 'agents.<name>: signed_off'}]"
-        ),
-    }
-    return _HINTS.get(field, f"Populate the '{field}' field in the agent template frontmatter.")
-
-
 def build_agent_cards(target_root: Path, config: dict[str, Any],
                       dry_run: bool, force: bool) -> int:
     """Generate .card.md files for all agent templates.
@@ -3916,4 +3884,25 @@ def clean_stale_artifacts(
 #   test_bp_900g_8.py / test_bp_900g_8_i.py / test_bp_900g_9.py. The
 #   resulting ratchet failure is a blocker for commit / a follow-up ticket.
 #   (#EPIC-TruthfulProjectRecord/04)
+# - 2026-09-13 [python-coder/BP-1000a-7]: Fixed _write()'s compare-before-write
+#   guard and the write itself to operate on raw UTF-8 bytes instead of text
+#   mode. Previously target.write_text(content, encoding="utf-8") let Python's
+#   text-mode newline translation widen every LF in content to os.linesep, so
+#   on Windows every deployed text artifact landed CRLF while its source
+#   template stayed LF, producing check-hook-parity / check-output-drift
+#   divergence. Worse, the guard's own target.read_text(encoding="utf-8")
+#   applies universal-newline translation on read on every platform,
+#   normalising the on-disk CRLF back to LF before the comparison -- so a
+#   CRLF file compared equal to LF content and was skipped as "unchanged,"
+#   meaning neither a plain re-run (write-if-absent, never reaches the guard)
+#   nor a forced re-run (reaches the guard, compares equal, skips) could ever
+#   repair it. The docstring already promised a
+#   byte-identical comparison; the implementation did not deliver it. Fix:
+#   encode content once, compare target.read_bytes() against those bytes,
+#   and write with target.write_bytes() so the guard and the writer act on
+#   the literal same value with no newline translation anywhere. Narrowed
+#   the guard's except clause to OSError only, since a bytes read cannot
+#   raise UnicodeDecodeError. Landing this rewrites every previously-CRLF-
+#   deployed artifact once, on the next build, which is expected.
+#   (#BP-1000a-7)
 # ====================================================================
