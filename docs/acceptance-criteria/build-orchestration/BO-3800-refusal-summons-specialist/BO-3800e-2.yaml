@@ -1,0 +1,188 @@
+id: BO-3800e-2
+title: "A run in which nothing is refused engages nobody extra and does no extra work on account of this capability"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket is being driven and every delivery attempt in it is accepted — no
+    standard refuses anything,
+  When the run completes,
+  Then no restructuring specialist appears anywhere in the ordered record of
+    parties the run engaged,
+  And the parties engaged and the order they were engaged in are the same as they
+    are for that same ticket before this capability exists,
+  And on account of this capability the run reads no file, engages no party and
+    runs no standard that it would not have run before this capability existed —
+    the only additional work it may do on a delivery that is not refused is none,
+  And given the same accepted run measured before and after this capability
+    exists,
+  When the two durations are compared,
+  Then the run is not measurably slower than it was.
+depends_on:
+  - BO-3800e
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE COST DISCIPLINE, INHERITED FROM THE OTHER SIDE OF THE SEAM AND APPLIED ONE LAYER
+      UP. GE-127f-1's enrichment requires the new threshold to be computed only for files
+      already judged over their permitted length, to read no file and run no subprocess that
+      was not already run, and to leave a commit that refuses nothing no measurably slower
+      than it is today. The same expectation applies to the handoff: a run in which nothing
+      is refused must ask for nobody and must not get slower. Do not restate the arithmetic
+      or the comparison — only the cost promise is inherited.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      WHY THIS IS LOAD-BEARING RATHER THAN A COURTESY. GE-127f's second user decision — "zero
+      addition costs nothing" — is what keeps an urgent one-line correction in a very large
+      file as cheap as it is today, and its notes call it the property that makes the rule
+      survivable. A capability that costs something on every run, refused or not, takes that
+      property back at the layer above.
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the capability must live — the depth-0 driver's phase loop — and therefore where
+      an eager cost would be paid: on every ticket in every batch, not only on the ones that
+      refuse. That is the reason this record's population is the run rather than the commit.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A test asserting that a
+      dispatch call sits inside a conditional is a structural read; it stays green on a
+      condition that is always true. Both arms above are read from what an accepted run
+      actually did, compared against the same run without the capability.
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - "Nothing may be resolved, read, warmed or probed on account of this capability until a
+    refusal has actually stated a disposition naming a craft. No registry lookup, no
+    configuration pre-read, no reachability probe of the specialist at the start of a ticket
+    or a batch, and no eager construction of a brief."
+  - "The zero-extra-work arm and the timing arm are separate evidence and the timing arm may
+    never stand in for the other. A registry lookup is fast and the clock will not see it.
+    Additional observable work on an accepted run must be EXACTLY ZERO — no extra file read,
+    no extra subprocess, no extra registry read, no extra dispatch — asserted from what the
+    harness observed the run actually do."
+  - "Timing budget: on five paired runs of the same accepted fixture on the same machine, the
+    median duration must not regress by more than 2%. A green clock is no evidence at all for
+    the zero-extra-work arm and must never be reported as such."
+  - "The phase loop is a declared TWIN across templates/workflows-js/build-feature.js and
+    templates/workflows-js/build-ticket.js. The no-cost guarantee must hold in both and be
+    asserted from a run of each."
+  - "The cost promise is INHERITED from GE-127f's 'zero addition costs nothing' decision, not
+    restated. No arithmetic, threshold or comparison from the guardrail side may be
+    re-expressed here."
+test_required: true
+test_spec:
+  - name: test_accepted_run_dispatch_record_is_identical_to_the_baseline_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive a ticket in which every delivery attempt is accepted through the unmodified driver and the changed driver; the ordered list of agents dispatched is identical, which is how 'no restructuring specialist appears' is asserted without naming one."
+  - name: test_accepted_run_reads_no_extra_file_and_makes_no_extra_dispatch
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "On an accepted run the set of file reads, enumerations and dispatches the harness observed is identical to the baseline's — the arm that catches a registry lookup or configuration pre-read the clock cannot see."
+  - name: test_eager_probe_injection_reddens_the_no_extra_work_arm
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Named mutation THE EAGER PROBE — resolve and engage the specialist at every delivery attempt before the verdict is consulted, using the result only if the verdict names it. The no-extra-work arm and the nobody-engaged arm go RED; BO-3800a-1 STAYS GREEN. The declared coupling that also reddens both arms of BO-3800e-1 is reported, not suppressed."
+  - name: test_accepted_run_median_duration_does_not_regress_against_the_baseline
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Five paired runs of the same accepted fixture; the median duration with the capability is within 2% of the median without it. Secondary evidence only — this test passing proves nothing about the zero-extra-work arm."
+  - name: test_the_no_cost_path_is_reachable_from_the_drivers_own_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "Every arm above is driven through unit_tests/prompt_assembly/_driver_harness.py executing build-feature.js's own top-level body — not an extracted helper, not a source scan."
+test_rationale: >-
+  Like BO-3800e-1, this record is specifiable before INF-800f because every assertion is an
+  equality against a baseline run of the unmodified driver on the same fixture — no agent id,
+  no dispatch key and no payload shape is named. The record needs two kinds of evidence, not
+  one, and the reason is recorded in its own notes: the resolve-and-warm implementations it
+  exists to exclude are FAST, so a duration comparison alone stays green on all of them. The
+  work arm therefore asserts on the reads, enumerations and dispatches the harness observed,
+  and the timing arm is explicitly demoted to secondary evidence. A weaker shape — asserting
+  that the dispatch call sits inside a conditional in the driver source — is inadmissible: it
+  is a structural read and stays green on a condition that is always true.
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHY THIS IS SEPARATE FROM BO-3800e-1, AND WHAT EACH CATCHES. BO-3800e-1's population is a
+  refusal that asks for no craft; this record's is a run with no refusal in it at all. They
+  are caught by different wrong builds. The over-broad summons — engage a specialist on every
+  refusal — reddens BO-3800e-1 and leaves this record entirely GREEN, because there is no
+  refusal in its run to trigger anything. That asymmetry is the separability evidence between
+  the two and must be observed rather than asserted. The coupling runs the other way and is
+  declared below: this record's own injection reddens BO-3800e-1 as well, necessarily,
+  because anything eager enough to cost on a clean run also fires on a refused one.
+
+  THE ARM THAT LOOKS LIKE A PERFORMANCE NOTE AND IS NOT. "No file read, no party engaged, no
+  standard run that would not have been" is the arm that excludes the resolve-and-warm
+  implementations: looking up the specialist in the registry on every ticket, pre-reading the
+  refusal path's configuration, or probing that the specialist is reachable before the
+  standard has said anything. Each of those is invisible to every other record in this tree,
+  is cheap to write while wiring a new dispatch, and turns a capability that should cost
+  nothing on the common path into a fixed tax on every drive. The duration arm alone will not
+  catch them — a registry lookup is fast — which is why the work arm is stated separately
+  from the timing arm.
+
+  WHAT THIS RECORD DOES NOT CLAIM. It does not claim the refusal path is cheap. A run that
+  genuinely needs a specialist pays for one, and BO-3800d-1's bound is where that cost is
+  governed. This record's whole population is the run in which nothing asked for anything.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift it
+  verbatim into a test descriptor.
+
+  THE EAGER PROBE. MUTATION: at every delivery attempt, resolve and engage the restructuring
+  specialist before the standard's verdict is consulted, and use its result only if the
+  verdict turns out to be a refusal naming it.
+  MUST GO RED: the no-specialist-engaged arm and the no-additional-work arm of this record.
+  MUST STAY GREEN: every arm of BO-3800a-1, BO-3800b-1, BO-3800c-1, BO-3800d-1 and
+  BO-3800d-2 — the eager build satisfies all of them, because everything they observe still
+  happens in the right order on the refusal path.
+  EXPECTED COUPLING, TO BE REPORTED RATHER THAN SUPPRESSED: both arms of BO-3800e-1 also
+  redden under this injection, because a probe that fires on every delivery necessarily fires
+  on an author-clearable refusal too. That is a true consequence of the injection and not
+  evidence that BO-3800e-1 and this record are one; the separability runs the other way, and
+  it is BO-3800e-1's own injection that demonstrates it by leaving this record green.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's, which runs after
+  this pass — including what counts as "measurably" slower and how the two runs are compared.
