@@ -56,6 +56,7 @@ from datetime import date
 from pathlib import Path
 
 import yaml
+from product_truth_shapes import combine_statuses, expansion_targets, normalise_flow_shapes
 
 logger = logging.getLogger("generate_product_truth")
 
@@ -135,14 +136,7 @@ def compute_node_impl_status(implements: list[str], ac_map: dict) -> str:
     not_started; anything else (any in_progress, or a done/not_started mix) ->
     in_progress.
     """
-    statuses = [impl_status_for_ac(ac_map.get(ac, {}).get("work_status")) for ac in implements]
-    if not statuses:
-        return "not_started"
-    if all(status == "done" for status in statuses):
-        return "done"
-    if all(status == "not_started" for status in statuses):
-        return "not_started"
-    return "in_progress"
+    return combine_statuses([impl_status_for_ac(ac_map.get(ac, {}).get("work_status")) for ac in implements])
 
 
 def compute_node_status(node: dict, ac_map: dict, flows: dict, _stack: tuple = ()) -> str:
@@ -157,12 +151,12 @@ def compute_node_status(node: dict, ac_map: dict, flows: dict, _stack: tuple = (
     deterministically; the validator ERRORs on both so this never masks a real
     authoring bug. Otherwise the status derives from `implements` via ac_map.
     """
-    child_id = node.get("expands_to")
-    if child_id:
-        child = flows.get(child_id)
-        if child is None or child_id in _stack:
-            return "not_started"
-        return flow_impl_status(compute_flow_impl_summary(child, ac_map, flows, _stack + (child_id,)))
+    child_ids = expansion_targets(node)
+    if child_ids:
+        return combine_statuses([
+            "not_started" if child_id not in flows or child_id in _stack
+            else flow_impl_status(compute_flow_impl_summary(flows[child_id], ac_map, flows, _stack + (child_id,)))
+            for child_id in child_ids])
     return compute_node_impl_status(node.get("implements", []), ac_map)
 
 
@@ -211,9 +205,9 @@ def build_parents_map(flows: dict) -> dict:
     parents: dict[str, list] = {flow_id: [] for flow_id in flows}
     for flow in sorted(flows.values(), key=lambda item: item["id"]):
         for step in flow.get("steps", []):
-            child_id = step.get("expands_to")
-            if child_id in parents:
-                parents[child_id].append({"flow": flow["id"], "step": step["id"]})
+            for child_id in expansion_targets(step):
+                if child_id in parents:
+                    parents[child_id].append({"flow": flow["id"], "step": step["id"]})
     for child_id in parents:
         parents[child_id].sort(key=lambda item: (item["flow"], item["step"]))
     return parents
@@ -222,7 +216,7 @@ def build_parents_map(flows: dict) -> dict:
 def build_expands_map(flows: dict) -> dict:
     """For every flow, the sorted child flow ids its steps drill into."""
     return {
-        flow_id: sorted({step["expands_to"] for step in flow.get("steps", []) if step.get("expands_to")})
+        flow_id: sorted({child for step in flow.get("steps", []) for child in expansion_targets(step)})
         for flow_id, flow in flows.items()
     }
 
@@ -412,7 +406,7 @@ def load_flows(unreadable: list[str] | None = None) -> tuple[dict, dict]:
             if unreadable is not None:
                 unreadable.append(rel)
             continue
-        flows[flow["id"]] = flow
+        flows[flow["id"]] = normalise_flow_shapes(flow)
         paths[flow["id"]] = path.relative_to(STORE).as_posix()
     return flows, paths
 
@@ -516,9 +510,16 @@ def write_index(
     ``asof`` stamps inside ``by_flow[*].impl_summary`` and ``by_ac[*][i]`` are
     preserved from the existing ``index.json`` when the non-asof content is
     unchanged, preventing spurious date-only diffs on re-runs.
+
+    A missing ``index.json`` is rebuilt from the sources rather than crashing
+    (UXP-700a-2): this is the store's single writer, so it is the one thing that
+    can restore the index without anyone hand-authoring JSON. It starts from an
+    index declaring zero artifacts, and every derived lookup below is then
+    written into it, present and empty. A second run finds that file and writes
+    nothing, because the compare-before-write check sees identical text.
     """
     index_path = STORE / "index.json"
-    index = _load_json(index_path)
+    index = _load_json(index_path) if index_path.exists() else {"artifacts": [], "entity_registry": []}
 
     by_flow = build_by_flow(flows, flow_paths, ac_map, run_date)
 
@@ -545,17 +546,14 @@ def write_index(
             derived = derive_artifact_summary(flows[artifact["id"]].get("summary", ""))
             stored = artifact.get("summary")
             if stored is not None and stored != derived:
-                # Name the journey and show BOTH texts. A caller told only that
-                # "something changed" cannot tell a second, separately authored
-                # description from an ordinary edit to the journey, which is the
-                # whole distinction this AC is about (UXP-700e-2).
+                # Name the journey, both texts, and the file to edit: whoever edited
+                # the index copy edited the text regeneration discards (UXP-700e-2-i).
                 logger.warning(
-                    "second authored description for %s: index holds %r, but the "
-                    "journey's own summary derives %r — the index copy is not "
-                    "authored, it is derived; regenerate to replace it",
-                    artifact["id"],
-                    stored,
-                    derived,
+                    "second authored description for %s: index holds %r, but the journey's "
+                    "own summary derives %r — the index copy is derived, not authored; edit "
+                    "the 'summary' field in %s instead, then regenerate",
+                    artifact["id"], stored, derived,
+                    flow_paths.get(artifact["id"], "the journey's own file"),
                 )
             artifact["summary"] = derived
 
@@ -572,7 +570,7 @@ def write_index(
     index["by_ac"] = new_by_ac
 
     new_text = json.dumps(index, indent=2, ensure_ascii=False) + "\n"
-    if new_text != _read_text(index_path):
+    if not index_path.exists() or new_text != _read_text(index_path):
         if not check:
             _write_text(index_path, new_text)
         return True
@@ -657,5 +655,11 @@ DECISION HISTORY
   (the sole other caller) now passes a list to observe which journeys were
   skipped. A genuine OSError still propagates unchanged -- only malformed
   CONTENT degrades instead of failing closed. (#EPIC-TruthfulProjectRecord/12)
+- 2026-09-14 [python-coder]: UXP-700e-3-i -- `expands_to` is read through
+  product_truth_shapes.expansion_targets (one id or a list) and load_flows()
+  normalises it to a list, so write_flows() writes only the new shape. A step
+  expanding into several journeys combines their rollups with the same rule a
+  node's own ACs use (combine_statuses); a dangling or cyclic child counts as
+  not_started, as before. (#EPIC-TruthfulProjectRecord/44)
 ====================================================================
 """

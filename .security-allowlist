@@ -202,3 +202,24 @@ ENTROPY_HIGH:unit_tests/ac_store/test_uxp700d2_reachability.py:*
 # Glob, not per-line: the fixture is called from two places today and the line
 # numbers shift whenever a helper is added above them.
 ENTROPY_HIGH:unit_tests/commit_guardian/_ge_127a_1_ordinary_commit_fixture.py:*
+
+# unit_tests/product_truth/test_uxp_700c_1_i.py's TestCase class name is a long
+# CamelCase identifier -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700c_1_i.py:*
+
+# unit_tests/product_truth/test_uxp_700b_2.py's TestCase class names are long
+# CamelCase identifiers -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700b_2.py:*
+
+# unit_tests/product_truth/test_uxp_700e_3_i.py's TestCase class names are long
+# CamelCase identifiers -- same false-positive pattern as the other test-class-name
+# entries above (not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
+# still shift.
+ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700e_3_i.py:*

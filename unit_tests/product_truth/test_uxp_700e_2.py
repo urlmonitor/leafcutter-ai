@@ -312,7 +312,16 @@ class TestPropagationIsTheOnlyEdit(unittest.TestCase):
 
             # Edit ONLY the authoritative description of journey A — no other
             # field, no other file.
-            edited_summary_a = _LONG_SUMMARY_A + " EDITED FOR THE PROPAGATION TEST."
+            #
+            # The edit is made to the description's OPENING (amended 2026-09-14).
+            # It used to append to the end, which only showed in the short form
+            # while the derivation cut from both ends. UXP-700e-2-i requires the
+            # short form to be the opening plus a trailing ellipsis (user
+            # decision), so an edit past the cut correctly leaves it unchanged.
+            # This test's subject is propagation -- a change to the authoritative
+            # description reaches the short form with no other edit -- and an
+            # edit inside the visible opening still proves exactly that.
+            edited_summary_a = "EDITED FOR THE PROPAGATION TEST. " + _LONG_SUMMARY_A
             flow_a["summary"] = edited_summary_a
             _write_flow(store_root, flow_a)
 

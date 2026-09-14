@@ -168,6 +168,26 @@ DECISION HISTORY
   exit 0, "resolved 117 pointer(s)", outcome "checked-and-sound" — the new
   ERROR-level check does not newly fail the live commit gate.
   (UXP-700c-1 / #EPIC-TruthfulProjectRecord/19)
+- 2026-09-14 [python-coder]: UXP-700c-1-i -- a pointer whose target is not an
+  acceptance-criterion id is now UNRESOLVABLE: never counted as resolved, never
+  reported as broken (so it no longer blocks a commit), named at WARNING with
+  its holder, position, target and reason, and enough to demote the outcome to
+  'degraded'. Both pointer counts are on the JSON line. The outcome helpers
+  moved to product_truth_outcome.py to keep this file inside its ratchet.
+  (ADR-042 Amendment 1, #EPIC-TruthfulProjectRecord/20)
+- 2026-09-14 [python-coder]: UXP-700b-2 -- every check the run performs now states
+  how many records it read, on the JSON line as examined_by_check. The figures are
+  sizes of what this run loaded, so they move by exactly one per artifact and never
+  carry over. The bookkeeping helpers moved to product_truth_outcome.py to keep
+  this file inside its ratchet. (#EPIC-TruthfulProjectRecord/14)
+- 2026-09-14 [python-coder]: UXP-700e-3 -- journeys' component labels are resolved
+  against docs/acceptance-criteria/index.yaml and their tags against a declared
+  shape (product_truth_label_checks.py). Findings warn; the run states
+  resolved_labels. With no index.yaml the check is listed as not executed.
+  (#EPIC-TruthfulProjectRecord/43)
+- 2026-09-14 [python-coder]: UXP-700e-3-i -- branches without an outcome_kind are
+  reported as to-be-filled warnings (product_truth_shapes._check_outcome_kinds),
+  never errors, while the field is introduced. (#EPIC-TruthfulProjectRecord/44)
 """
 from __future__ import annotations
 
@@ -186,7 +206,6 @@ from generate_product_truth import (
     load_mocks,
 )
 from product_truth_checks import (
-    _ARTIFACT_TYPES,
     _check_artifact_paths,
     _check_canonical_datasets,
     _check_derived_indexes,
@@ -200,6 +219,32 @@ from product_truth_checks import (
     _check_screens,
     _check_shape_version_bounds,
     _check_truth_evidence,
+)
+from product_truth_outcome import (  # noqa: F401  # re-exported for callers
+    _log_run_verdict,
+    _log_skipped_entries,
+    _OUTCOME_DEGRADED,
+    _OUTCOME_ERRORS,
+    _OUTCOME_SOUND,
+    build_examined_total,
+    examined_by_check,
+    record_check_executed,
+    record_check_not_executed,
+    record_population_checks,
+    report_outcome,
+    _TOP_OUTCOME_DEGRADED,
+    _TOP_OUTCOME_FAILED,
+    _TOP_OUTCOME_NOTHING,
+    _TOP_OUTCOME_SOUND,
+    _compute_empty_types,
+    _print_outcome_contract,
+    _top_level_outcome,
+)
+from product_truth_shapes import _check_outcome_kinds, count_branches  # noqa: F401
+from product_truth_label_checks import (  # noqa: F401  # re-exported for callers
+    _check_labels,
+    count_labels,
+    load_component_registry,
 )
 
 # jsonschema is a HARD dependency. A missing import used to warn-and-skip, which
@@ -232,21 +277,6 @@ OUTCOME_BY_COMBO = {
     (False, True, False): "mock-data-only",
     (False, False, False): "none",
 }
-
-
-# Canonical artifact-type identifiers used by the per-type emptiness report
-# (UXP-700b-1 / UXP-700b-1-ii). These match the store's own directory names.
-
-def _compute_empty_types(flows: dict, mocks: dict, mockups: dict) -> list[str]:
-    """Return the artifact types for which zero records were read.
-
-    Names exactly the types with a zero count — a type that has at least one
-    record is never included, even when other types are empty. This is the
-    per-type distinction UXP-700b-1 introduces and UXP-700b-1-ii pins on a
-    mixed (partially empty) store.
-    """
-    counts = {"flows": len(flows), "mock-data": len(mocks), "mockups": len(mockups)}
-    return sorted(name for name in _ARTIFACT_TYPES if counts[name] == 0)
 
 
 def _load_schema(name: str) -> dict:
@@ -332,124 +362,6 @@ def load_mockups() -> dict:
 
 
 
-
-
-def record_check_executed(checks: list[dict], name: str, examined: int) -> None:
-    """Append an executed-check entry recording how many records it examined.
-
-    `checks` is the per-run bookkeeping list threaded through run_checks() (and
-    built directly in unit tests). `examined` is the count of records this
-    check actually inspected — the figure build_examined_total() sums across
-    every executed entry.
-    """
-    checks.append({"name": name, "executed": True, "examined": examined})
-
-
-def record_check_not_executed(
-    checks: list[dict], name: str, reason: str, *, blocks: bool = False
-) -> None:
-    """Append a not-executed entry carrying a stated reason (GE-120, applied here).
-
-    A check whose precondition is absent (e.g. the file it reads does not
-    exist) must be visibly listed — never silently omitted, never left to
-    crash the whole run — and must contribute exactly zero to any stated
-    examined figure (see build_examined_total).
-
-    *blocks* separates the two reasons a precondition can be missing, which
-    the record cannot tell apart from the check's own point of view but which
-    mean opposite things to a caller:
-
-    * ``blocks=False`` — the input has simply not been AUTHORED yet. Expected
-      of a young record; the run stays open and exits zero (UXP-700b-2-i).
-    * ``blocks=True`` — the input was never INSTALLED, so the tooling itself
-      is incomplete and no run against it can establish the record is sound.
-      The run exits non-zero (UXP-700a-1-i).
-    """
-    checks.append({"name": name, "executed": False, "reason": reason, "blocks": blocks})
-
-
-def build_examined_total(checks: list[dict]) -> int:
-    """Sum the `examined` figure across executed checks only.
-
-    Not-executed entries (record_check_not_executed) carry no `examined` key
-    and are excluded from the sum, so an unexecuted check contributes nothing
-    to any stated examined total — AC-2 of UXP-700b-2-i.
-    """
-    return sum(entry.get("examined", 0) for entry in checks if entry.get("executed"))
-
-
-# Outcome sentinels returned by report_outcome(). Kept as named constants (not
-# inlined) so main()'s branch on the "everything executed and sound" case can't
-# accidentally match a degraded run by string coincidence.
-_OUTCOME_SOUND = "checked-and-sound"
-_OUTCOME_ERRORS = "checked-with-errors"
-_OUTCOME_DEGRADED = "checked-with-unexecuted-checks"
-
-# Top-level outcome vocabulary printed as main()'s final stdout JSON line
-# (UXP-700b-1-i / UXP-700b-1). Distinct from _OUTCOME_* above, which are the
-# internal run_checks()-bookkeeping sentinels for UXP-700b-2-i's "did every
-# check execute" question. This vocabulary answers a different question — "is
-# the run's own INPUT set complete and readable?" — and is shared with sibling
-# AC UXP-700b-1 (nothing-examined) per architect-review's sign-off note on this
-# ticket: reuse this vocabulary rather than inventing a second, locally-scoped
-# enum. `_TOP_OUTCOME_SOUND` intentionally reuses the same "checked-and-sound"
-# string as `_OUTCOME_SOUND` — both vocabularies agree that value means "fully
-# clean" — but the two constant families are otherwise independent.
-_TOP_OUTCOME_SOUND = "checked-and-sound"
-_TOP_OUTCOME_NOTHING = "nothing-examined"
-_TOP_OUTCOME_DEGRADED = "degraded"
-_TOP_OUTCOME_FAILED = "failed"
-
-
-def report_outcome(checks: list[dict], *, has_errors: bool = False) -> str:
-    """Return the outcome sentinel for a completed check run.
-
-    The checked-and-sound outcome is returned ONLY when every recorded check
-    executed and there were no errors. If ANY check is listed as not executed,
-    the outcome is never the checked-and-sound sentinel — even with zero
-    errors — because part of the record was not actually checked (AC-3).
-    """
-    if any(not entry.get("executed", True) for entry in checks):
-        return _OUTCOME_DEGRADED
-    if has_errors:
-        return _OUTCOME_ERRORS
-    return _OUTCOME_SOUND
-
-
-def _top_level_outcome(
-    examined: int, unreadable: list[str], has_errors: bool, empty_types: list[str]
-) -> str:
-    """Return the top-level outcome sentinel for main()'s final stdout JSON line.
-
-    Precedence: a real cross-reference/schema ERROR always reports 'failed'
-    (never masked by input-completeness — a run with unreadable journeys AND
-    real errors is a failure, not merely degraded). Otherwise, one or more
-    unreadable journeys reports 'degraded': the fail-open convention (GE-120 /
-    GE-116a-1-iii) means a single bad journey must not stop the work that
-    triggered the check, but the run must still be visibly distinguishable
-    from both a fully clean run and a run that examined nothing (UXP-700b-1-i).
-    Otherwise, a store in which EVERY artifact type read zero records reports
-    'nothing-examined' — a run that examined nothing must not report the same
-    outcome as a run that was checked and found sound (UXP-700b-1). Anything
-    else is 'checked-and-sound'.
-
-    PARTIAL emptiness deliberately does NOT change the verdict. A record that
-    holds journeys but no screens or example data yet is young, not defective:
-    everything present was checked and was sound, which is exactly what this
-    value claims. Which types were empty is still REPORTED, in `empty_types`,
-    so the reader can see it — it just does not withhold the clean pass. This
-    resolves the UXP-700b-1-i / UXP-700b-1-ii contradiction in -1-i's favour
-    (KI-ACD-20260909-2130); *empty_types* stays a parameter because the
-    emptiness question is answered on the same line and belongs in the same
-    place as the verdict it deliberately does not affect.
-    """
-    if has_errors:
-        return _TOP_OUTCOME_FAILED
-    if unreadable:
-        return _TOP_OUTCOME_DEGRADED
-    if examined == 0 and len(empty_types) == len(_ARTIFACT_TYPES):
-        return _TOP_OUTCOME_NOTHING
-    return _TOP_OUTCOME_SOUND
 
 
 def _check_eval(errors: list[str], checks: list[dict]) -> None:
@@ -589,22 +501,31 @@ def run_checks() -> dict:
     # the SAME `errors` list every other check already uses, so a broken
     # pointer makes the run exit non-zero exactly like every other error class.
     _check_shape_version_bounds(flows, errors, warnings)
+    _check_outcome_kinds(flows, warnings)
     _check_artifact_paths(index, errors)
     _check_canonical_datasets(mocks, errors)
 
     pointer_errors_before = len(errors)
-    resolved_pointers = _check_pointers(flows, ac_ids, mockups, errors)
-    # Anti-vacuity bookkeeping (UXP-700b-2-i): the pointer sweep states how
-    # many pointers it actually looked at -- resolved ones plus the broken
-    # ones it just appended to `errors` -- so a run over a record holding no
-    # pointers at all reads as examined=0 rather than as a silent success.
+    unresolvable: list[str] = []
+    resolved_pointers = _check_pointers(flows, ac_ids, mockups, errors, unresolvable=unresolvable)
+    # Anti-vacuity bookkeeping (UXP-700b-2-i): every pointer the sweep looked at
+    # counts as examined -- resolved, unresolvable (UXP-700c-1-i) and broken.
     record_check_executed(
-        checks, "pointers", resolved_pointers + (len(errors) - pointer_errors_before)
+        checks, "pointers", resolved_pointers + len(unresolvable) + len(errors) - pointer_errors_before
     )
 
     # Anti-phantom-done truth-evidence gate: a done/in_progress AC referenced by
     # a BUILT flow must carry real implementation evidence.
     _check_truth_evidence(flows, ac_records, errors, warnings)
+    registry = load_component_registry(AC_STORE / "index.yaml")
+    if registry is None:
+        resolved_labels = 0
+        record_check_not_executed(checks, "labels", f"precondition absent: {AC_STORE / 'index.yaml'} not found")
+    else:
+        resolved_labels = _check_labels(flows, registry, errors, warnings)
+        record_check_executed(checks, "labels", count_labels(flows))
+    record_population_checks(checks, {"flows": len(flows), "mock-data": len(mocks), "mockups": len(mockups),
+                                      "index": len(index.get("artifacts", [])), "acceptance-criteria": len(ac_records)})
 
     return {
         "errors": errors,
@@ -615,99 +536,10 @@ def run_checks() -> dict:
         "examined_flows": len(flows),
         "unreadable_flows": unreadable_flows,
         "resolved_pointers": resolved_pointers,
+        "unresolvable_pointers": unresolvable,
+        "resolved_labels": resolved_labels,
         "empty_types": _compute_empty_types(flows, mocks, mockups),
     }
-
-
-def _print_outcome_contract(
-    outcome: str, examined: int, unreadable: list[str], empty_types: list[str]
-) -> None:
-    """Print the LAST stdout line: the machine-readable outcome JSON contract.
-
-    Pinned by unit_tests/product_truth/test_uxp_700b_1_i.py — printed via
-    print(), independent of the logging module's handler configuration, so a
-    caller (or a second test in the same interpreter, where
-    logging.basicConfig() is a documented process-wide one-shot no-op) can
-    always read the run's outcome from stdout alone: {"outcome": ...,
-    "examined": <int of journeys read>, "unreadable": [<journey path>, ...],
-    "empty_types": [<artifact type read as zero records>, ...]}.
-
-    `examined` and `unreadable` answer "was the input set complete and
-    readable"; `empty_types` answers "which artifact types held nothing". They
-    are reported together, on one line, because a caller deciding whether the
-    record was really checked needs both (UXP-700b-1 / UXP-700b-1-ii).
-    """
-    print(
-        json.dumps(
-            {
-                "outcome": outcome,
-                "examined": examined,
-                "unreadable": unreadable,
-                "empty_types": empty_types,
-            }
-        )
-    )
-
-
-def _log_skipped_entries(checks: list[dict], unreadable_flows: list[str], examined_flows: int) -> None:
-    """Log every not-executed check and every unreadable journey, each with a reason.
-
-    Neither category is ever silently omitted (GE-120): a not-executed check
-    carries its own stated reason; an unreadable journey is named alongside
-    how many of the rest were still examined (UXP-700b-1-i).
-    """
-    for entry in checks:
-        if not entry.get("executed", True):
-            logger.warning("SKIPPED: check '%s' did not execute — %s", entry["name"], entry.get("reason"))
-    for journey in unreadable_flows:
-        logger.warning(
-            "SKIPPED: journey '%s' is unreadable (invalid JSON) — examined the other %d",
-            journey,
-            examined_flows,
-        )
-
-
-def _log_run_verdict(top_outcome: str, examined_flows: int, unreadable_flows: list[str], report: dict) -> None:
-    """Log the single verdict line matching *top_outcome* (assumes no errors).
-
-    Precedence mirrors `_top_level_outcome`: an unreadable journey always logs
-    DEGRADED first (even if `report["outcome"]` — the separate, internal
-    run_checks()-bookkeeping sentinel for UXP-700b-2-i — happens to be sound),
-    then a truly empty store logs NOTHING EXAMINED, then a not-fully-executed
-    but readable run logs the pre-existing DEGRADED-by-unexecuted-check
-    message, and only a fully sound, fully executed run logs OK.
-    """
-    counts, warnings = report["counts"], report["warnings"]
-    if unreadable_flows:
-        logger.warning(
-            "DEGRADED: %d journeys examined, %d unreadable (%s) — the run still completed "
-            "(fail-open, GE-120 / GE-116a-1-iii)",
-            examined_flows,
-            len(unreadable_flows),
-            ", ".join(unreadable_flows),
-        )
-    elif top_outcome == _TOP_OUTCOME_NOTHING:
-        logger.warning(
-            "NOTHING EXAMINED: the record holds no journeys yet — not the same as a "
-            "checked-and-sound run"
-        )
-    elif report["outcome"] != _OUTCOME_SOUND:
-        logger.warning(
-            "DEGRADED: %d flows, %d mock-data, %d mockups valid, but not every check "
-            "executed (%d warnings) — see SKIPPED lines above",
-            counts["flows"],
-            counts["mocks"],
-            counts["mockups"],
-            len(warnings),
-        )
-    else:
-        logger.info(
-            "OK: %d flows, %d mock-data, %d mockups, eval + index + derived data valid (%d warnings)",
-            counts["flows"],
-            counts["mocks"],
-            counts["mockups"],
-            len(warnings),
-        )
 
 
 def main() -> int:
@@ -728,12 +560,17 @@ def main() -> int:
     errors, warnings, checks = report["errors"], report["warnings"], report["checks"]
     examined_flows, unreadable_flows = report["examined_flows"], report["unreadable_flows"]
     empty_types = report["empty_types"]
-    top_outcome = _top_level_outcome(examined_flows, unreadable_flows, bool(errors), empty_types)
+    unresolvable = report["unresolvable_pointers"]
+    top_outcome = _top_level_outcome(examined_flows, unreadable_flows, bool(errors), empty_types, len(unresolvable))
+    contract = (top_outcome, examined_flows, unreadable_flows, empty_types, report["resolved_pointers"], len(unresolvable),
+                examined_by_check(checks), report["resolved_labels"])
 
     # Stated on EVERY run, zero included (UXP-700c-1): without it a run that
     # resolved none of the pointers it holds is indistinguishable, in the
     # output text, from a run that held none to resolve.
     logger.warning("resolved %d AC pointer(s)", report["resolved_pointers"])
+    for message in unresolvable:
+        logger.warning("%s", message)
 
     _log_skipped_entries(checks, unreadable_flows, examined_flows)
     for warn in warnings:
@@ -743,7 +580,7 @@ def main() -> int:
         for err in errors:
             logger.error("FAIL: %s", err)
         logger.error("%d error(s), %d warning(s)", len(errors), len(warnings))
-        _print_outcome_contract(top_outcome, examined_flows, unreadable_flows, empty_types)
+        _print_outcome_contract(*contract)
         return 1
 
     # A check that never executed leaves part of the record unchecked, so the
@@ -761,11 +598,11 @@ def main() -> int:
             len(checks),
             ", ".join(entry["name"] for entry in blocked),
         )
-        _print_outcome_contract(top_outcome, examined_flows, unreadable_flows, empty_types)
+        _print_outcome_contract(*contract)
         return 1
 
     _log_run_verdict(top_outcome, examined_flows, unreadable_flows, report)
-    _print_outcome_contract(top_outcome, examined_flows, unreadable_flows, empty_types)
+    _print_outcome_contract(*contract)
     return 0
 
 
