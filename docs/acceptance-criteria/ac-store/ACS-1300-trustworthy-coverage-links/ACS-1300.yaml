@@ -9,6 +9,7 @@ req_status: draft
 work_status: todo
 readiness: draft
 priority: medium
+roadmap_phase: phase_store_record_health
 criteria: |
   Proof that already exists is on the record, and what the record claims is real.
 
@@ -381,8 +382,19 @@ notes: |
     - Do NOT re-cut this split at L1. Decompose each of a/b/c into L2 behaviours.
 
   ==========================================================================
-  ROADMAP FLAG (unresolved — for the user at the approval gate)
+  ROADMAP FLAG — RESOLVED 2026-09-08 BY BrainCandy
   ==========================================================================
+  This tree now claims `phase_store_record_health`, a phase added for exactly
+  this subject and shared with ACS-1200, ACS-1400 and ACS-1500. The flag below
+  is kept verbatim: it named the right problem and offered only two answers,
+  and the one that was taken was neither of them.
+
+  Note the flag's own observation that "ACS-1100 claimed phase_1, which reads
+  as over-claiming" — ACS-1100 is NOT moved here. It is `scope: standing` and
+  is inherited rather than parented, so it is a different kind of record; if
+  its phase is wrong that is a separate question this ruling does not settle.
+
+  ORIGINAL FLAG, AS AUTHORED:
   No `roadmap_phase` is claimed. Phase 1's exit criteria are about clean installs,
   build idempotency and truthful build reporting; store-record health does not
   advance them, and the fourth criterion ("no false all-clear") is about the build,

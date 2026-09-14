@@ -42,8 +42,9 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by:
-  - UXP-700a-2-i
-implemented_by: []
+- UXP-700a-2-i
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700a-2.md
 change_target: code
 risk_surface: internal
 declares_side_effect: true
@@ -71,3 +72,4 @@ notes: |
   index down; this AC makes the generator able to produce one from nothing, so a record that
   loses its index, or was created before the install wrote one, is recoverable without hand
   authoring.
+target_epic: EPIC-TruthfulProjectRecord

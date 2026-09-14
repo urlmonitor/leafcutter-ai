@@ -382,6 +382,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-127e-3-i
+  - GE-127e-3-ii
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

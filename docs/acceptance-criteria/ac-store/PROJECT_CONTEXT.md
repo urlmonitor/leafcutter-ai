@@ -403,3 +403,116 @@ GENERAL LESSON WORTH REUSING BEYOND THIS TREE: a single confident integrity numb
 usually several populations with opposite correct actions. Triage per-record before
 specifying any store-wide cleanup — and check whether the tool you are about to
 commission already exists and is the hazard rather than the gap.
+
+> **ACS-1400d was SUPERSEDED on 2026-09-08 by ACS-1500** — see the next section.
+> The field split is no longer an L1 of this tree. ACS-1400a/b/c are unaffected and
+> ACS-1400c-2's abstention stands exactly as written; it now names ACS-1500 as the
+> decision that must be settled first.
+
+## ACS-1500 separate-link-relations: framing note for the BA/IT-PO (2026-09-08, PO)
+
+ACS-1500 ("Record what a requirement is made of separately from what proves it") is a
+NEW root L0 in ac-store, slug folder `ACS-1500-separate-link-relations/`, six L1
+children ACS-1500a–f, origin_agent BrainCandy, readiness draft, priority medium,
+`roadmap_phase: phase_1` (**disputed — see the roadmap flag below**). Subject: one
+field carries two relations — requirement→child and requirement→test — with no
+discriminator, so every reader guesses.
+
+**THE GOVERNANCE MAP IS NOW SEVEN TREES.** ACS-200 test coverage of live ACs
+(structurally broken); ACS-400 who may edit a definition; ACS-900 code lifecycle of a
+retired AC; ACS-1200 the parked pre-decomposition state; ACS-1300 the
+requirement→TEST link; ACS-1400 the parent→CHILD link; **ACS-1500 the fact that those
+last two are the same field.** ACS-1500 is what makes 1300 and 1400 separable.
+
+**WHY A ROOT L0 (do not re-litigate).** BrainCandy's ruling, 2026-09-08. ACS-1300a-3
+declared it "the real fix" and out of scope twice; ACS-1400 took it as an L1 and then
+ruled it back out as too large. A capability two trees declined does not get smaller
+by being attached to a third. ACS-1400d is the placeholder, now `status:
+superseded_by`, `superseded_by: ACS-1500`, `covered_by: []` permanently — **its notes
+are the handover document and ACS-1500 points back at them rather than restating
+them. Read ACS-1400d before decomposing ACS-1500.**
+
+**THREE CORRECTIONS TO THE ORIGINATING BRIEF** (measured 2026-09-08, whole store,
+branch `ac/coverage-field-split`, no sampling; 3,925 records carry an id, 1,739 hold
+coverage entries):
+
+1. **The population is not ~482 records.** 1,739 hold entries today, and all 3,925
+   are records some reader will interrogate for both relations after the split.
+2. **76 records already hold BOTH relations in one list** — legal per ac-schema.md,
+   never counted before. This is the migration's hardest case and must be the FIRST
+   case the BA writes, not an appended edge case. Examples: BP-1100e-1, BP-100k-5,
+   UXP-603, ACD-1200a-11.
+3. **`validate_ac_schema.py` is NOT a reader of this field** (zero references —
+   it validates against the JSON schema, which does need the new slot). Two readers
+   nobody had named are real and worse: `ac_coverage_resolver.py` (`_CHECKED_FIELDS`)
+   and `_ac_schema_validators.py` (`bool(assigned_agent) and not covered_by`) both
+   branch on the field's **EMPTINESS**, not its contents. Under a split, "no parts"
+   and "no proof" become two states and neither reader knows which it meant.
+   **ac-schema.md's table of five readers is roughly an order of magnitude short** —
+   ~40 files under `scripts/` and `templates/` mention the field. Re-derive from the
+   repo; a table is a claim about readers, not a guarantee.
+
+**NEITHER PROXY FOR THE RELATION IS AUTHORITATIVE — that is the whole argument for
+the split.** Across 553 unresolvable entries, resolution and shape disagree exactly
+once, and on that one (`ACD-300f` → `ACD-300f-5`) *resolution* — the proxy
+ACS-1300a-3 mandates because it is what `done_proof` does — is the one that gets it
+wrong, misfiling a genuine child link as a test link. The relation must be DECLARED
+by the author, not inferred by anybody afterwards.
+
+**MIGRATION IS IN SCOPE AND IS THREE OF THE SIX L1s.** Adding the field is ACS-1500a
+and is the cheap part. b (readers), c (existing records) and d (transition posture)
+are the migration and carry essentially all the risk. Order: a → d → b → c → e, with
+f as the acceptance. **There is no flag day available** — several readers are
+pre-commit hooks and required CI gates running from the DEPLOYED layout, so
+"all readers in one commit" can be landed neither safely nor revertibly.
+
+**L1 SPLIT (decompose each into L2; do NOT re-cut at L1).** Seam is *which part of
+the system has to change*, ordered by when.
+- **ACS-1500a** — the store can express the distinction. Schema; additive-optional
+  first (`additionalProperties: false` is enforced, so the slot must precede the
+  first record carrying it). `[reference-doc]`.
+- **ACS-1500b** — every reader asks for the relation it means, verdicts unchanged.
+  First L2 must be the ENUMERATION, derived from the repo. `[component-diagram]`.
+- **ACS-1500c** — existing records carry their meaning across; mixed lists first;
+  abstain where meaning is undecidable. `[how-to]`.
+- **ACS-1500d** — staged rollout, half-migrated store answers identically, permanent
+  back-compat for records that never move, one-commit kill-switch. Borrow the shape
+  from `phase_acbuild_1_foundation`'s exit criteria — it is the same class of change
+  and is already written down. `[how-to]`.
+- **ACS-1500e** — ac-schema.md + every authoring surface, so drift cannot refill.
+  `[reference-doc]`.
+- **ACS-1500f** — the acceptance/handback: completing a parts list stops changing
+  what is finishable, so ACS-1400c-2's abstention retires. Does NOT perform the
+  repair. `documentation_triggers: []` with a rationale.
+
+**AGENT-ASSIGNMENT LINE FOR THE IT-PO (the ACS-800f trap, second occurrence).**
+a–d and f are schema/tooling → python-coder. **ACS-1500e is prose and template
+surface (ac-schema.md, agent templates, skills) → llm-expert**, exactly as ACS-800f
+is. Do not let a uniform python-coder stamp collapse the distinction; this file
+already records that going wrong once.
+
+**COLLISION WATCH — ACS-800.** ACS-800a/b edit the same `config/ac_store_schema.json`;
+ACS-800d is the same whole-store migration shape; ACS-800e already commits to
+updating `check_ac_parent_covered_by.py`. Two staged whole-store migrations over the
+same 3,925 records, each with its own flag and kill-switch, is worse than either
+alone. Sequence or combine deliberately — **ACS-800e is the single most likely place
+for ACS-1500b to duplicate committed work.** Separately, ac-schema.md is being
+amended by ACS-1200a, ACS-1400a and ACS-1500e in the same period.
+
+**INHERITED, IN THE ADJACENT TREES' OWN FORM — DO NOT RE-DERIVE.** Byte stability
+(TQ-400e-1 owns rule and test shape: never OPENED for writing, not written-the-same —
+and at 3,925 records this is the largest-churn operation the store has contemplated);
+abstention over action; every figure states its denominator (ACS-1100). **Hard
+refusal, inherited: nothing in this tree writes `work_status`, at any level** — the
+temptation is sharper here than in 1300 or 1400 because the tree ends by making
+`done_proof`'s input unambiguous, and "now recompute every verdict" is the obvious
+next line.
+
+**ROADMAP FLAG — UNRESOLVED, FOR THE USER.** `phase_1` is claimed because the brief
+instructed it and because ACS-1400 claims it. **The PO does not agree.** Phase 1's
+exit criteria are clean install, `--validate-only`, build idempotency and truthful
+self-host reporting; store-record health advances none of them, which is exactly why
+ACS-1200 and ACS-1300 left themselves unphased. **The component now contradicts
+itself** — 1200/1300 unphased, 1400/1500 phase_1, all four store-record health. Either
+answer is fine; ACS-1400 and ACS-1500 must MATCH, being one tree split for size. One
+line in each of two L0s.

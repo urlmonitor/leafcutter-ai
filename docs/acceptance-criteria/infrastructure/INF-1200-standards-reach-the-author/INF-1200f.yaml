@@ -1,0 +1,100 @@
+id: INF-1200f
+title: "What you were told is what you will be held to"
+component: infrastructure
+components:
+  - infrastructure
+  - template_compiler
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The figure in your brief is the figure your work is judged against.
+
+  The standard someone is working to and the standard their work is measured
+  against are the same one, and stay the same one when it changes. Planning a
+  change around what you were told never ends in being stopped for a different
+  number.
+depends_on:
+  - INF-1200
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE HARDEST BOUNDARY IN THIS TREE — READ BEFORE DECOMPOSING. GE-127d owns
+      one gate's self-description: its published account of what it covers and
+      how it measures matches what it does. This owns a different pair of
+      surfaces — the figure sitting in a specialist's own working brief versus
+      the figure applied to the result. They come apart cleanly in both
+      directions: accurate published documentation alongside a stale figure in
+      a brief satisfies GE-127d and fails this; a faithfully carried figure
+      whose published description is stale fails GE-127d and satisfies this.
+      Neither may be closed as a duplicate of the other.
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600a-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME SEAM FROM THE OTHER SIDE, AND AN OBLIGATION TO SATISFY RATHER
+      THAN RESTATE. INF-600a-4 requires every figure a specialist's brief
+      refers to to be declared by that specialist. Whatever mechanism carries
+      standards outward must keep that true rather than route around it.
+  - path: templates/agents/python-coder.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The one specialist where this property already holds, and therefore the
+      behaviour to preserve rather than replace. Its brief refers to a line
+      limit in several places, including a stop-and-ask trigger, and every one
+      of those references resolves to the figure that will actually be applied.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner-v3
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-1200f-1
+  - INF-1200f-2
+implemented_by: []
+change_target:
+  - pipeline
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  User-authored intent: BrainCandy. Framed by product-owner-v3, 2026-09-09.
+
+  WHY THIS IS NOT PART OF INF-1200b, SINCE THE MERGE IS TEMPTING. b promises
+  one edit in one place; this promises no divergence between what was said and
+  what is applied. They are independent, and the negative case is the current
+  design generalised: if each specialist's brief continued to name the figure
+  it wants while the values were filled in from the declaration, this criterion
+  would hold and b would fail, because covering a new kind of file would still
+  mean editing a specialist. Both are needed.
+
+  THE DRIFT IS THE POINT, NOT THE FIRST-DAY CORRECTNESS. Any hand-built
+  arrangement is faithful on the day it is built. What this criterion is
+  actually about is the second day: the standard changes and one of the two
+  surfaces does not. This project has already lived that exact failure on an
+  adjacent surface, where a published description of a gate outlived a change
+  to the gate's behaviour by long enough for people to plan around the wrong
+  rule. A criterion satisfied by correcting today's figures is satisfied again
+  the next time they diverge — which is to say, not satisfied.
+
+  THE PRESERVATION OBLIGATION, STATED EXPLICITLY BECAUSE IT IS EASY TO LOSE IN
+  A REWRITE. One pairing already delivers this property correctly, from a
+  single declaration. Any generalisation must leave that pairing at least as
+  faithful as it is now. A rebuild that regresses the working cell while
+  covering more cells has made things worse, and a decomposition that does not
+  say so invites exactly that trade.
+
+  WHAT THIS DOES NOT CLAIM. It takes no position on whether a given standard or
+  a given way of measuring is the right one — only that one figure is in play
+  rather than two. Which figure is correct is the user's decision at approval;
+  whether the measurement is reproducible is GE-127d's subject.

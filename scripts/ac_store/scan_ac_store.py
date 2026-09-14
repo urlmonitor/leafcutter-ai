@@ -51,6 +51,17 @@ _COMPLEXITY_ORDER: dict[str, int] = {"S": 0, "M": 1, "L": 2, "XL": 3}
 _PRIORITY_ORDER: dict[str, int] = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 _DEFAULT_AC_ROOT: str = "docs/acceptance-criteria"
 
+# UXP-700d-2: the project's own product root. Any AC record whose `product`
+# field is set and differs from this value describes an example product
+# (e.g. "fern-and-fig") rather than the project's own work, and must be set
+# aside from both the ready and blocked sets. ACs with no `product` field at
+# all are the project's own record (the common case) and are never set
+# aside. This mirrors the product-root ownership predicate UXP-700d-1
+# establishes for product-truth artifacts — deliberately independent of
+# `component`/`components` (UXP-700d-2-ii), which the example criteria and
+# real criteria routinely share.
+_PROJECT_PRODUCT: str = "leafcutter"
+
 # ---------------------------------------------------------------------------
 # Type aliases
 # ---------------------------------------------------------------------------
@@ -187,6 +198,25 @@ def _is_approved(ac: AcRecord) -> bool:
         True only for readiness: approved ACs.
     """
     return ac.get("readiness", "") == "approved"
+
+
+def _is_example_content(ac: AcRecord) -> bool:
+    """Return True when the AC describes an example product, not the project's own record.
+
+    Ownership is decided by the AC's ``product`` field alone (a product-root
+    marker), never by ``component``/``components`` — the example criteria and
+    real criteria in this store routinely share a component (UXP-700d-2-ii).
+    An AC with no ``product`` field is the project's own record.
+
+    Args:
+        ac: Parsed AC dict.
+
+    Returns:
+        True when ``product`` is set and differs from the project's own
+        product root (:data:`_PROJECT_PRODUCT`).
+    """
+    product = ac.get("product")
+    return bool(product) and product != _PROJECT_PRODUCT
 
 
 # ---------------------------------------------------------------------------
@@ -443,16 +473,22 @@ def _print_human(
 def _print_json(
     ready: list[AcRecord],
     blocked: list[tuple[AcRecord, list[str]]],
+    *,
+    set_aside_count: int = 0,
 ) -> None:
     """Print JSON output conforming to AC-5 schema.
 
     Args:
         ready: Sorted list of ready AcRecords.
         blocked: List of (AcRecord, blocking_dep_ids) tuples for blocked ACs.
+        set_aside_count: Number of ACs excluded from both sets because they
+            describe an example product rather than the project's own record
+            (UXP-700d-2).
     """
     output = {
         "ready": [_to_ready_item(ac) for ac in ready],
         "blocked": [_to_blocked_item(ac, deps) for ac, deps in blocked],
+        "set_aside_count": set_aside_count,
     }
     print(json.dumps(output, indent=2))
 
@@ -989,7 +1025,12 @@ def main(argv: list[str] | None = None) -> int:
     _drain_cycles(id_index, all_records)
 
     # Filter: level + work_status + status + readiness (approved only)
+    # UXP-700d-2: ACs describing an example product (product-root marker,
+    # e.g. product: fern-and-fig) are set aside before ready/blocked
+    # classification — they must appear in neither set, and the count of
+    # what was set aside is reported in the JSON output.
     filtered: list[AcRecord] = []
+    set_aside_count = 0
     for ac in all_records:
         if args.level == "leaf" and not _is_leaf(ac):
             continue
@@ -998,6 +1039,9 @@ def main(argv: list[str] | None = None) -> int:
         if not _is_active(ac):
             continue
         if not _is_approved(ac):
+            continue
+        if _is_example_content(ac):
+            set_aside_count += 1
             continue
         filtered.append(ac)
 
@@ -1017,7 +1061,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Output
     if args.json_output:
-        _print_json(ready, blocked)
+        _print_json(ready, blocked, set_aside_count=set_aside_count)
     else:
         _print_human(ready, blocked)
 
@@ -1091,5 +1135,20 @@ DECISION HISTORY
   work_status: done. Only genuine non-ancestor deps may block an AC.
   Ancestor exclusion applies at any depth (grandparent, great-grandparent,
   …). _get_ancestor_ids() is a pure function — no try/except (Rule 4).
+- 2026-09-07 [python-coder]: Added _is_example_content() and the
+  set_aside_count JSON field (UXP-700d-2). ACs whose `product` field is set
+  and differs from the project's own product root (_PROJECT_PRODUCT =
+  "leafcutter") describe an example product (e.g. the fern-and-fig demo
+  under UXP-210/UXP-220) rather than the project's own record, and are now
+  excluded from both the ready and blocked sets in main()'s filter loop —
+  before dependency classification, so they can never surface as ready or
+  become ready when a blocker clears. The count of excluded records is
+  reported via a new set_aside_count field in the --json output.
+  Deliberately keyed on `product`, never on `component`/`components`
+  (UXP-700d-2-ii), since the example criteria and real criteria in this
+  store routinely share a component. Separation, not deletion: excluded
+  records remain fully readable via _load_ac_by_id() (ADR-022). config/
+  ac_store_schema.json gained a matching optional `product` property so the
+  marker itself does not trip schema validation. (#UXP-700d-2)
 ====================================================================
 """

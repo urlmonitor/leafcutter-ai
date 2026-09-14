@@ -1,0 +1,92 @@
+id: ACS-1500f
+components:
+  - ac_store
+title: "Completing a requirement's list of parts is an ordinary correction again"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The repair that was too dangerous to make becomes routine, and provably so.
+
+  Adding a missing part to a requirement no longer changes whether that
+  requirement can be finished. The records the reconciliation pass currently has
+  to decline are reported as ordinarily repairable, and the reason it had to
+  decline them is no longer reachable.
+depends_on:
+  - ACS-1500
+  - ACS-1500b
+  - ACS-1500c
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1400-complete-child-links/ACS-1400c-2.yaml
+    relationship: related
+    status: exists
+    relevance: "THE RECORD THIS L1 HANDS BACK TO, AND THE ACCEPTANCE TEST FOR THE WHOLE GOAL. It requires the adjudicated pass to abstain out loud on parents whose coverage list resolves to nothing, and to name the decision that must be settled first. That decision is ACS-1500. When this L1 is done, that abstention's stated reason must be unreachable — measured against the real pass on the real store, not asserted. Re-measured 2026-09-08: 25 records across 10 parents, BP-100b alone carrying 11."
+  - path: scripts/ac_store/done_proof.py
+    relationship: related
+    status: exists
+    relevance: "WHERE THE TEETH WERE. `_has_resolvable_child` is why appending a child id to a parent holding only test paths flips that parent from leaf to composite and changes what the store believes can be finished. The falsifiable form of this L1 is the negative of that: perform the append and show the composite-versus-leaf verdict does NOT move. Use the real function; a re-implementation of its rule inside the test proves nothing about production."
+  - path: scripts/ac_store/scan_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "THE MEASUREMENT INSTRUMENT FOR THE POPULATION, ALREADY CORRECT AND UNMODIFIED. `find_orphaned_children()` reports 47 orphans across 22 parents on this branch. Do NOT commission a replacement and do NOT bind this L1's success to that number reaching zero — ACS-1400's L0 is explicit that six of the 47 must never be repaired and a healthy store reports labelled deliberate exclusions."
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "THE SECOND ABSTENTION THIS GOAL DISSOLVES, and the one that named the fix. Its notes: 'A SEPARATE FIELD WOULD DISSOLVE THIS ENTIRELY.' Check its abstention too — but note it is APPROVED and already built against, so this L1 removes the NEED for its abstention, it does not license editing that record's criteria."
+assigned_agent: null
+estimated_complexity: null
+delivers_to:
+  ac_id: ACS-1400c-2
+  contract: "The condition that record abstains on is gone: a parent's list of parts can be completed without that write changing the parent's composite-versus-leaf classification, so the population it reports as permanently outstanding becomes ordinarily repairable by the existing adjudicated pass. ACS-1500 delivers the removal of the blocker; ACS-1400c performs the repair."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+documentation_triggers: []
+documentation_rationale: "This L1 introduces no new surface, command or procedure — it is the acceptance that the blocker its five siblings remove is actually gone, proved through readers and reports those siblings already document (ACS-1500b's reader map, ACS-1500c's migration how-to)."
+notes: |
+  WHY THIS IS AN L1 AND NOT JUST THE L0'S CRITERIA. Every other L1 here can land
+  green and leave the motivating population exactly as stuck as it is today,
+  because none of their acceptances mention it. This record is the handback, and
+  it is the one a reviewer should check first when asking whether the tree was
+  worth building.
+
+  IT DOES NOT PERFORM THE REPAIR, AND MUST NOT GROW INTO ONE. Completing parent
+  lists is ACS-1400c's job, it has an adjudicated pass being specified for it,
+  and there is already an unadjudicated tool (fix_ac_orphans.py) one command
+  away that would do it wrongly. This L1 proves the blocker is gone. The BA will
+  feel the pull to make it also do the repair while it is in there — refuse it,
+  the same way ACS-1300a-3 refused the mirror-image temptation.
+
+  'DONE' IS NOT ZERO ORPHANS, AND NO CRITERION MAY SAY IT IS. ACS-1400's L0 is
+  explicit: six records (KM-200a–f) must NEVER be repaired, and a store
+  reporting labelled deliberate exclusions is healthy. Binding this L1's success
+  to an orphan count of zero forces six wrong repairs and reverses a decision
+  the store paid a hook bypass to make. The success condition is that the
+  ABSTENTION REASON is unreachable, not that the report is empty.
+
+  THE POPULATION AND ITS DENOMINATOR (ACS-1100, inherited). 25 orphaned children
+  across 10 parents whose coverage lists resolve to nothing, of 47 orphans
+  across 22 parents store-wide, measured 2026-09-08. KM-KGS-100e-6 is an
+  eleventh parent in the same tree with the same underlying cause but an
+  entirely EMPTY list, so it classifies with the empty-list group of 12 instead
+  — ACS-1400c-2's notes carry that correction and it applies here unchanged. All
+  figures provisional; the count has already moved once (26 to 25) and no
+  criterion may pin one.
+
+  THE NEGATIVE IS THE PROOF. 'The verdict did not move' is trivially satisfied
+  by not performing the write. Assert it in the same run as a completion that
+  genuinely happened — the pairing discipline inherited from ACS-1300a-3 and
+  restated in ACS-1400c-2's third Then, which that record explicitly says must
+  not be split out.

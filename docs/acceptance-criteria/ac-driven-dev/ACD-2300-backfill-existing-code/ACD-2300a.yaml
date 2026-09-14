@@ -1,0 +1,106 @@
+id: ACD-2300a
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "What your code already does becomes something it must keep doing"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Behaviour already in your code is proposed as criteria you accept or reject.
+
+  Working through the code the project already has, the behaviour it exhibits is
+  written up as candidate criteria in your own terms, each one carrying the code
+  it was drawn from as its evidence. You accept, amend or reject each proposal.
+  Nothing enters the record because a tool decided it should.
+depends_on:
+  - ACD-2300
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-800.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE NEAREST EXISTING PROMISE AND THE ONE THIS L1 MUST NOT BECOME. ACD-800
+      discovers matches between EXISTING criteria and DONE TICKETS by text
+      similarity and keyword heuristics. Two things make it the wrong tool for this
+      job rather than a competitor: its evidence is a ticket history that an
+      adopting project does not have, and it matches to criteria that already exist
+      whereas this L1's whole subject is that they do not. It also promises to write
+      the finished-state field, which this tree refuses. Do not extend ACD-800 to
+      cover this and do not close either as a duplicate of the other. Its status is
+      raised for a user decision in ACD-2300's notes.
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Defines the record shape a proposal has to arrive in, including the field that
+      names the code implementing a criterion. That field is the reason this L1
+      rather than a separate reconciler owns it: a criterion drawn from a piece of
+      code knows which piece of code it came from, so the evidence is a by-product
+      of authoring rather than the output of a later matching pass.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+notes: |
+  THIS IS THE GENUINELY UNOWNED JOB IN THE BRIEF, AND THE CHECK WAS EXPLICIT.
+  Every authoring surface in this repository writes criteria from INTENT —
+  /plan-feature from a request, goal-to-epic from a goal statement, the quick-fix
+  flow from a diagnosis. None writes criteria from BEHAVIOUR THAT ALREADY SHIPS.
+  For a project adopting this way of working, intent-shaped authoring is the wrong
+  door: the intent was formed years ago and nobody is going to restate it a thousand
+  times.
+
+  IMPLEMENTATION EVIDENCE BY CONSTRUCTION — THIS IS TRAP 2's STRUCTURAL FIX AND IT
+  IS THE REASON THE FIELD LIVES HERE. BrainCandy's second trap is a reconciliation
+  pass leaving records that claim to be finished with nothing recorded as having
+  implemented them; the register puts it as "the phantom-done shape, created by the
+  tool meant to prevent it". The fix is not a better matcher. It is to author in the
+  direction where the evidence already exists: a criterion derived from a function
+  knows the function. A criterion derived that way can never carry empty
+  implementation evidence, because the evidence is what produced it. A criterion
+  matched to code afterwards always can.
+
+  WHAT THIS L1 STILL DOES NOT DO, AND MUST NOT BE DECOMPOSED INTO DOING: it does
+  not mark anything finished. Describing what code does is not the same act as
+  certifying that it is right, complete, or wanted. ACS-1300's L0 states the
+  neighbouring refusal in the same shape and this tree inherits it — see ACD-2300d,
+  which makes it falsifiable.
+
+  THE HARD PART IS ALTITUDE, NOT EXTRACTION, AND THE BA SHOULD EXPECT THIS TO BE
+  THE MAIN DESIGN QUESTION. One criterion per function produces a record with the
+  same shape as the code and no more information than reading it, plus a maintenance
+  burden proportional to the codebase. This repository's own store is evidence that
+  the useful altitude is higher: its L2 records describe behaviours a person cares
+  about, and many span several functions while many functions warrant none at all.
+  A proposal set that mirrors the call graph has failed even though every individual
+  entry is true. The user's phrasing was "goes through each function"; I have
+  deliberately NOT written that into the criteria, because walking every function is
+  a plausible METHOD and a bad OUTCOME, and the criteria state the outcome.
+
+  SCOPE CONTROL IS NOT OPTIONAL HERE AND IS SHARED WITH ACD-2300d. A run over an
+  entire codebase produces a proposal set nobody will read, and an unread proposal
+  set that gets accepted wholesale is Trap 1 with extra steps. The reviewable-batch
+  property is specified once, in ACD-2300d, and applies here; do not restate it as a
+  behaviour of this L1, but do not let decomposition assume a whole-repository run
+  either.
+
+  ACCEPTED AND REJECTED ARE BOTH ANSWERS AND BOTH MUST PERSIST. A proposal the user
+  rejects must not come back on the next run wearing the same face. Without that,
+  the second run is worse than the first — it re-litigates settled decisions and
+  trains the reviewer to accept in bulk, which is the behaviour that makes every
+  other safeguard in this tree cosmetic.

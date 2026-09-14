@@ -51,7 +51,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700b-4.md
 change_target: docs
 risk_surface: internal
 test_required: false
@@ -64,3 +65,4 @@ notes: |
   Produced because UXP-700b declares documentation_triggers: [reference-doc]. The fourth clause
   was added because an undocumented exemption is how this rule will decay: a check exempted for
   a good reason and a check nobody got round to look identical in a list.
+target_epic: EPIC-TruthfulProjectRecord

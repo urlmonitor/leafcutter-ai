@@ -1,0 +1,410 @@
+id: INF-1200e-1
+title: "An uninformed pairing is named, an informed one is not, and informedness is judged from the brief rather than from the carrier's account of itself"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the project declares a standard for a kind of file, and the ownership
+    record assigns that kind of file to a specialist whose material does not state
+    that standard,
+  When the condition is examined,
+  Then that pairing is named — the specialist, the kind of file, and the standard
+    it has not been told,
+  And given a specialist whose material states the standards for every kind of
+    file the ownership record assigns it,
+  When the same examination is made,
+  Then that specialist is not named at all,
+  And given a specialist that owns two kinds of file carrying standards, whose
+    material states one of the two,
+  When the examination is made,
+  Then it is named once, for the kind of file it was not told about, and not for
+    the one it was,
+  And given a specialist whose material once stated a standard and no longer does,
+    while whatever carried that standard reports the same work as before,
+  When the examination is made,
+  Then that specialist is named — so whether a specialist counts as told is
+    decided by reading the material that specialist begins work from, and never by
+    any account the carrier gives of what it carried.
+depends_on:
+  - INF-1200e
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      SAME FAMILY OF DEFECT, DIFFERENT SUBJECT — FENCED, AND CITED SO THE CONSTRUCTION
+      IS NOT INVENTED TWICE. BP-1600 owns a check working out its own subject matter
+      from what is really there rather than from a list, and its census counts things
+      that run nowhere. This counts audiences that were told nothing. The populations do
+      not overlap: a fully registered, fully running standard can still have an audience
+      of nobody. Reuse its shape; do not propose a second reachability census.
+  - path: config/agent_registry.json
+    relationship: related
+    status: exists
+    relevance: >-
+      One half of what makes the gap countable — who owns which kinds of file. It
+      supplies the denominator of the examination, and the count of pairings examined
+      is what INF-1200e-2 requires to be reported.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      The other half — which kinds of file carry a standard. Both records are
+      machine-readable today and nothing reads them together, which is the whole reason
+      the gap is currently invisible.
+  - path: templates/agents/python-coder.md
+    relationship: related
+    status: exists
+    relevance: >-
+      THE POSITIVE CONTROL FOR THE NEGATIVE ARM, AND THE ONLY ONE THAT EXISTS. It is the
+      single specialist whose material states a standard for a kind of file it owns.
+      Without it the negative arm has no fixture drawn from reality and can only be
+      exercised against something the test authored — which is how a report that names
+      everybody passes.
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200c-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The delivery this examination measures. Note the deliberate asymmetry: c-1
+      constrains what the delivery DOES, this constrains what can be SEEN about it, and
+      the fourth arm here holds even when the delivery is behaving perfectly and the
+      brief has been damaged downstream of it.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" and "Real-artifact
+      behavioral spot-check before declaring done". Both bind: the examination must be
+      run over the project's own two records and its own compiled briefs, in a fresh
+      process, not over fixtures whose shape the implementation was written against.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. WHERE THE THIRD INPUT COMES FROM, AND WHY THE FOURTH ARM IS IMPLEMENTABLE.
+      The examination has three inputs, not two: the ownership record, the declaration,
+      and the COMPILED BRIEFS this document says the build writes to .claude/agents/.
+      The fourth arm turns on reading that third input from disk after the build wrote
+      it, rather than reading the carrier's in-memory account of what it emitted.
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Supplies the denominator. Measured in this worktree: sixty agents, of which
+      three declare owns_file_extensions, so today's pairing population is small,
+      enumerable, and includes exactly one correctly-informed pairing — python-coder
+      and .py — which is the only positive control the negative arm has.
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED, AND IT FOLLOWS FROM THE SURFACE DECISION BELOW.
+    Under the recorded decision that the examination is a non-blocking part of the build's own
+    outcome rather than a pre-commit gate, it registers nothing: no hooks_manifest.hooks id, no
+    new top-level key on commit_guardian.json, no agent entry, no skill entry, no paths.json
+    surface. Plain-list spec form; no fictional config_schema_fragment. THE TRIGGER: if the user
+    later decides the condition must BLOCK, the natural home is a commit-guardian hook, which
+    means one watched hooks_manifest.hooks id and a per-check top-level section — at which point
+    this record must be re-declared package_surface: true with a real fragment. Do not
+    pre-emptively add either.
+  - >-
+    THE SURFACE DECISION THE L1 EXPLICITLY LEFT TO ENRICHMENT, DECIDED AND REASONED. Whether an
+    uninformed pairing should merely be REPORTED or should STOP something is settled here as:
+    REPORTED, on the delivery run's own outcome, non-blocking, and additionally runnable
+    standalone against the project as it stands. Two measured reasons, neither of them
+    preference. FIRST: the population of uninformed pairings is owned in part by two other
+    approved records — an unowned kind of file is AR-100's gap and an unregistered check is
+    BP-1600a-2's — so a gate that refuses commits on this condition would block work on a
+    condition this tree cannot fix, creating a cross-record deadlock. SECOND, and decisive: this
+    project's hook framework has NO warn tier. The manifest `tier` field takes only "judgment"
+    and "transform" and is not a severity; run_hook.py has no advisory handling; so a hook is
+    block-or-nothing and "report but do not block" is not expressible as one. What is NOT open,
+    per the L1, is visibility: the condition must be nameable, one pairing at a time, and it is.
+  - >-
+    INFORMEDNESS IS JUDGED BY READING THE BRIEF, NEVER THE CARRIER'S ACCOUNT — AND THIS IS THE
+    RECORD'S CENTRE OF GRAVITY. The examination has three inputs: config/agent_registry.json,
+    templates/scripts/commit_guardian/commit_guardian.json, and the COMPILED briefs on disk under
+    .claude/agents/. Whether a specialist counts as told is decided by reading the third. No
+    in-memory hand-off from the carrier, no emitted-standards log, no return value of the
+    injection function, and no shared data structure may be consulted. They agree until they do
+    not — a compilation step that drops content, a deployment that ships a stale brief, a marker
+    that fails to resolve — and reading the carrier's account is what an implementer reaches for
+    because the data is already in hand. It produces a report that is a restatement of the
+    delivery's intentions.
+  - >-
+    THE UNIT IS A PAIRING AND THE REPORT MUST NAME ALL THREE OF ITS PARTS. Specialist, kind of
+    file, and the standard it has not been told. A per-specialist verdict cannot express the
+    third arm — a specialist owning two covered kinds and told one of them must be named ONCE,
+    for the kind it was not told about, and not for the one it was. Model the finding as a
+    pairing from the outset; a per-specialist boolean cannot be widened into one later without
+    rewriting every consumer.
+  - >-
+    THE NEGATIVE ARM IS MANDATORY AND ITS POSITIVE CONTROL IS SINGULAR — MEASURED. Every positive
+    arm is satisfied by an examination that names every pairing all the time; such a thing is
+    never wrong and means nothing. Whether the report is worth reading is decided entirely by
+    whether it can decline to name someone. Measured in this worktree, exactly one pairing is
+    correctly informed today: templates/agents/python-coder.md states the .py line limit at five
+    points, all resolving from the declaration. That is the only positive control drawn from
+    reality that exists, and the negative arm must be exercised against it before any clean
+    result from this examination is worth anything.
+  - >-
+    THE UNINFORMED FIXTURES ARE ALSO REAL AND ARE THE POSITIVE CONTROL FOR THE POSITIVE ARM —
+    MEASURED. sql-coder owns '.sql', which carries a declared limit of 600, and its template
+    states no standard at all. Three further standards (complexity 15, sql_complexity 75,
+    folder_density 15) are fully configured and no specialist anywhere is told any of their
+    figures. Those pairings are known-uninformed and the examination must demonstrably find them
+    against the project as it stands. A census that has never been shown to find a real gap is
+    the shape CLAUDE.md records three times over.
+  - >-
+    FENCED FROM BP-1600 AND FROM INF-1200d-1-i. BP-1600 owns a check working out its own subject
+    matter from what is really there rather than from a list; reuse its shape and do not build a
+    second reachability census. The populations do not overlap — a fully registered, fully
+    running standard can still have an audience of nobody. And a standard whose audience is EMPTY
+    has no pairing at all, so this examination structurally cannot see it; that hole is
+    INF-1200d-1-i's, closed on the delivery's own outcome, and must not be closed a second time
+    here.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around all three
+    reads; log at WARNING or higher or re-raise; no bare or blind excepts. The degraded path is
+    INF-1200e-2's subject and is not optional here: a read that fails must not yield an empty set
+    of pairings that reads as "no gaps found".
+test_spec:
+  - name: test_inf_1200e_1_an_uninformed_pairing_is_named_with_its_specialist_kind_of_file_and_standard
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      With a standard declared for a kind of file whose assigned owner's compiled brief does not
+      state it, run the examination and read its outcome. That pairing is named, and all three
+      parts are present: the specialist, the kind of file, and the standard it has not been told.
+      A per-specialist verdict fails this descriptor, because it cannot say which of a
+      specialist's kinds is missing.
+  - name: test_inf_1200e_1_a_fully_informed_specialist_is_not_named_at_all
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE NEGATIVE ARM, AND IT IS THE ONE CARRYING THIS RECORD. For a specialist whose material
+      states the standards for every kind of file the ownership record assigns it, the examination
+      does not name it at all. Exercised against the ONE positive control that exists in reality —
+      the single pairing correctly informed today — rather than against a fixture the test
+      authored, because a report that names everybody passes every positive arm and is never
+      wrong.
+  - name: test_inf_1200e_1_a_partly_told_specialist_is_named_once_for_the_kind_it_was_not_told_about
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      For a specialist owning two kinds of file that carry standards, whose material states one of
+      the two, the examination names it ONCE — for the kind of file it was not told about — and not
+      for the one it was. Two assertions on one outcome: the presence of exactly one finding for
+      that specialist, and the identity of the kind of file that finding names.
+  - name: test_inf_1200e_1_a_brief_that_lost_its_standard_downstream_is_named_even_though_the_carrier_reports_the_same_work
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      THE FOURTH ARM, AND THE SUBTLE ONE. Build normally so the carrier does its work and reports
+      it, then damage the compiled brief on disk so a standard it stated is gone — the realistic
+      causes are a compilation step that drops content, a deployment that ships a stale brief, and
+      a marker that fails to resolve, so use one of those rather than deleting a line by hand where
+      possible. Run the examination. That specialist is named. Whether a specialist counts as told
+      is decided by reading the material it begins work from, never by any account the carrier gives
+      of what it carried.
+  - name: test_inf_1200e_1_the_name_everyone_injection_reds_the_negative_and_partial_arms_and_leaves_the_first_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's FIRST NAMED MUTATION, CARRIED VERBATIM. MUTATION: name every pairing of a specialist
+      and a kind of file it owns, regardless of what that specialist's material states. Under that
+      injection the first arm must STAY GREEN, the negative arm must go RED, and the partially-told
+      arm must go RED. Both greens and both reds must be observed and all must revert. This is the
+      report that says "everyone" and means nothing, and it is what an examination degenerates into
+      the first time somebody makes it pass in a hurry.
+  - name: test_inf_1200e_1_the_carriers_account_injection_reds_only_the_fourth_arm
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's SECOND NAMED MUTATION, CARRIED VERBATIM. MUTATION: decide whether a specialist counts
+      as told by consulting the carrier's own record of what it emitted, rather than the material
+      the specialist begins work from. Under that injection the first three arms must STAY GREEN —
+      the carrier's account is accurate whenever nothing downstream has gone wrong — and the fourth
+      arm must go RED. Both outcomes must be observed and both must revert. AN INJECTION RUN THAT
+      REDDENS THE FIRST THREE MEANS THE FIXTURE IS NOT EXERCISING A HEALTHY DELIVERY and the result
+      is not the one this mutation is for.
+  - name: test_inf_1200e_1_the_examination_finds_the_known_uninformed_pairings_in_the_project_as_it_stands
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/build.py --target-dir <temporary target root>"
+    description: >-
+      PRODUCTION ENTRY POINT AND POSITIVE CONTROL IN ONE. Run the examination through the surface it
+      actually runs on — the build's own outcome, per the recorded surface decision — against the
+      project as it stands, and assert it finds the pairings measured as uninformed today (a
+      database-code owner told nothing about its declared limit; three further configured standards
+      whose figures reach nobody) and does NOT name the one pairing measured as informed. An
+      examination that only ever runs in a test harness is inert, and a census that has never been
+      shown to find a real gap is the shape this project's root instructions record three times
+      over.
+test_rationale: |
+  Today a specialist that was told nothing and a specialist for which no standard exists produce
+  identical evidence: nothing. Every other criterion in this tree can therefore be reported
+  satisfied by something that covers one pairing and stops — which is precisely the state the
+  project is in, and it has looked fine for as long as it has existed. So the descriptors here are
+  built around the two things that make a census worth reading: that it can decline to name someone,
+  and that it reads the truth from the brief rather than from the thing that was supposed to write
+  it.
+
+  The negative arm is exercised against the ONE positive control that exists in reality. Measured in
+  this worktree, exactly one pairing is correctly informed — python-coder and .py, stated at five
+  points, all resolving from the declaration — and the known-uninformed pairings are equally real: a
+  database-code owner with a declared limit of 600 and no statement of it, plus three fully
+  configured standards whose figures reach nobody. Both halves of the control are therefore drawn
+  from the project rather than authored, per CLAUDE.md's real-artifact rule.
+
+  The fourth arm is the one that is not redundant with the others, and it is asserted by damaging the
+  compiled brief AFTER a healthy build rather than by constructing a broken delivery. There are two
+  places the truth could be read from — the material the specialist begins work from, and the
+  carrier's own record of what it emitted — and they agree until they do not. Reading the carrier's
+  account is easier, it is what an implementer reaches for because the data is already in hand, and
+  it produces a report that is a restatement of the delivery's intentions. This project's own history
+  is the argument: three separate defences reported clean for days or weeks while examining nothing,
+  and each time the clean result was believed because it came from the thing that was supposed to
+  know.
+
+  Both of the BA's mutations are carried verbatim and both are mixed-outcome. The first keeps the
+  first arm GREEN while reddening the negative and partial arms; the second keeps the first THREE
+  green and reddens only the fourth, with the explicit failure condition that an injection reddening
+  the first three means the fixture is not exercising a healthy delivery. Neither stay-green half may
+  be dropped: they are what distinguish a report that discriminates from one that says "everyone".
+delivers_to:
+  - agent: python-coder
+    ac_id: INF-1200e-2
+    contract: >-
+      The examination's outcome object: the set of named pairings, the count of pairings examined,
+      and the per-input read status for each of its three inputs (ownership record, declaration,
+      compiled briefs). e-2 requires that outcome to state an inability and which input caused it,
+      to carry a coverage count greater than zero on a healthy run, and to be distinguishable
+      between a run that examined everything and found nothing and a run that examined nothing.
+expects_from:
+  ac_id: INF-1200b-1
+  contract: >-
+    The set of (specialist, kind of file, standard) pairings the build-time join yields, which is
+    the DENOMINATOR of this examination — which pairings OUGHT to exist. Informedness itself is
+    never taken from this contract: it is decided by reading the compiled brief on disk, which is
+    the fourth arm's whole subject.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. THE SURFACE DECISION THE L1 LEFT OPEN IS SETTLED AND REASONED: the
+    examination REPORTS, on the delivery run''s own outcome, non-blocking, and additionally runnable
+    standalone. Two measured reasons — (1) the population of uninformed pairings is partly owned by
+    AR-100 (unowned kinds) and BP-1600a-2 (unregistered checks), so blocking commits on it would
+    deadlock work this tree cannot fix; (2) DECISIVE AND MEASURED: this project''s hook framework has
+    no warn tier at all — the manifest tier field takes only judgment and transform and is not a
+    severity, and run_hook.py has no advisory handling — so a hook is block-or-nothing and "report
+    but do not block" is not expressible as one. PACKAGE SURFACE FALSE follows from that decision:
+    nothing is registered. THE TRIGGER IS NAMED: if the user later wants it to block, the home is a
+    commit-guardian hook, which means one watched hooks_manifest.hooks id plus a per-check top-level
+    section, and this record must then be re-declared package_surface true with a real fragment. No
+    fictional fragment minted now. COMPLEXITY L. THE EXAMINATION HAS THREE INPUTS, NOT TWO — the
+    third is the compiled briefs on disk, and reading them rather than the carrier''s account is the
+    fourth arm and the record''s centre of gravity. THE UNIT IS A PAIRING, stated so a per-specialist
+    boolean is excluded at design time rather than discovered at the third arm. BOTH POSITIVE
+    CONTROLS ARE MEASURED AND REAL: exactly one informed pairing exists (python-coder / .py, five
+    reference points) and the uninformed ones are sql-coder with a declared 600-line limit it is
+    never told, plus complexity 15, sql_complexity 75 and folder_density 15 reaching nobody. BOTH BA
+    MUTATIONS CARRIED VERBATIM WITH THEIR STAY-GREEN HALVES INTACT AND THE SECOND''s FAILURE
+    CONDITION STATED. declares_side_effect FALSE: every Then clause here is about what the
+    examination''s outcome states, a stream, not about a file the work writes — the same reading
+    GE-127a-1 applies. test_spec: seven executing descriptors, two carrying the BA''s mutations and
+    one running the examination against the project as it stands as its own positive control.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  SILENCE IS THE FAILURE MODE THE WHOLE TREE IS EXPOSED TO AND THIS L1 IS THE ONLY ONE
+  THAT CLOSES IT. Today a specialist that was told nothing and a specialist for which no
+  standard exists produce identical evidence: nothing. Every other criterion here can be
+  reported satisfied by something that covers one pairing and stops — which is precisely
+  the state the project is in now, and it has looked fine for as long as it has existed.
+
+  THE NEGATIVE ARM IS MANDATORY AND IT IS THE ONE CARRYING THIS RECORD. Every positive
+  arm is satisfied by an examination that names every pairing all the time. Such a thing
+  is trivially correct on the positive arm, is never wrong, and means nothing. Whether
+  the report is worth reading is decided entirely by whether it can decline to name
+  someone.
+
+  THE FOURTH ARM IS THE SUBTLE ONE AND IT IS NOT REDUNDANT WITH THE OTHERS. There are two
+  places the truth could be read from: the material the specialist actually begins work
+  from, and the carrier's own record of what it emitted. They agree until they do not —
+  a compilation step that drops content, a deployment that ships a stale brief, a
+  template that fails to resolve a value. Reading the carrier's account is easier, it is
+  what an implementer reaches for because the data is already in hand, and it produces a
+  report that is a restatement of the delivery's intentions. This project's own history
+  is the argument: it records three separate defences that reported clean for days or
+  weeks each while examining nothing, and each time the clean result was believed
+  because it came from the thing that was supposed to know.
+
+  THE POSITIVE CONTROL IS NOT OPTIONAL AND THE FIXTURES ARE REAL. Measured 2026-09-09 in
+  this worktree: three standards are fully configured with thresholds and have no
+  audience at all; one further kind of file carries a distinct configured limit and its
+  owner is told nothing; exactly one pairing of a kind of file and a specialist is
+  correctly informed. The examination must find the uninformed ones and must not name the
+  informed one, against the project as it stands, before a clean result from it is worth
+  anything.
+
+  A DECISION THIS RECORD DELIBERATELY LEAVES OPEN, PER THE L1. Whether an uninformed
+  pairing should merely be reported or should actually stop something is not settled
+  here, and there is no blanket default in this project. Decide it explicitly at
+  enrichment, per surface, and record the reasoning. What is not open is visibility: the
+  condition must be nameable, and it must be nameable one pairing at a time.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO can
+  lift them verbatim into test descriptors.
+
+  (1) MUTATION: name every pairing of a specialist and a kind of file it owns,
+      regardless of what that specialist's material states. Under that injection the
+      first arm must STAY GREEN, the negative arm must go RED, and the partially-told
+      arm must go RED. Both greens and both reds must be observed and all must revert.
+      This is the report that says "everyone" and means nothing, and it is what an
+      examination degenerates into the first time somebody makes it pass in a hurry.
+
+  (2) MUTATION: decide whether a specialist counts as told by consulting the carrier's
+      own record of what it emitted, rather than the material the specialist begins work
+      from. Under that injection the first three arms must STAY GREEN — the carrier's
+      account is accurate whenever nothing downstream has gone wrong — and the fourth arm
+      must go RED. Both outcomes must be observed and both must revert. An injection run
+      that reddens the first three means the fixture is not exercising a healthy
+      delivery and the result is not the one this mutation is for.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. Both
+  mutations above, including which arms must stay green, are written to be turned
+  directly into test descriptors.

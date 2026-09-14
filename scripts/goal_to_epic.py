@@ -2311,6 +2311,31 @@ def run(
 
     print(f"EPIC folder created: {epic_folder}")
 
+    # --- depends_on translation (TKT-017) ---
+    # Assembly renames every ticket with an NN_ prefix recording build order.
+    # Sibling references must be rewritten to the names assembly actually
+    # produced, or check-doc-frontmatter refuses the commit and the epic cannot
+    # land at all.
+    #
+    # This mirrors build_epic_from_ids() Steps 7-8 exactly. BO-2600a-5 added the
+    # translation to that function and did not back-port it here, so the DEFAULT
+    # route -- the one /build-ac drives -- has been emitting epics whose tickets
+    # depend on files that do not exist. TKT-016 fixed the implemented_by half of
+    # the same back-port gap; this is the other half.
+    #
+    # Prefix assignment mirrors assemble_epic_folder: topo_order[i] -> NN_<base>.
+    ac_to_epic_filename: dict[str, str] = {
+        ac_id: f"{i:02d}_{Path(ticket_path).name}"
+        for i, (ac_id, ticket_path) in enumerate(
+            zip(topo_order, ticket_paths, strict=True), start=1
+        )
+    }
+    for ac_id in topo_order:
+        ticket_file = epic_folder / ac_to_epic_filename[ac_id]
+        _translate_ticket_depends_on(
+            ticket_file, dep_graph.get(ac_id, []), ac_to_epic_filename
+        )
+
     # --- target_epic stamping (ACD-1200d-1) ---
     # Back-reference each included leaf AC to the epic it now belongs to. Use
     # the actual assembled folder name (e.g. "EPIC-RecogniseEveryDetailPage…")

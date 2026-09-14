@@ -180,6 +180,8 @@ flowchart TD
 - ACD-2000b-5: Reference doc describes how a requirement is taken, handed back, and reclaimed
 - ACD-2100d-4: A reference page states which copy of the route runs and where a repair has to land
 - ACD-2100e-2: A how-to guide takes an operator from a waiting run back to a running one
+- ACD-400e-1a: One written account of how work is chosen, stating all five verdicts in a form a reader and a check can both use
+- ACD-400e-4: The account states how the fast lane's approval posture differs from the backlog queue's, and the difference is demonstrable
 - ACS-1200a-3: The written back-link rule matches the enforced one
 - ACS-1200d-4: The how-to tells you how to park an idea and how to take it back out
 - ACS-1300a-4: Someone who did not build the repair can preview it, run it, and read what it did
@@ -231,6 +233,7 @@ flowchart TD
 - BP-100b-9: Consolidated output root doc lists .claude/workflows/ as a shimmed output
 - BP-1100a-5: The guidance on getting a generated ticket's surface right describes the derivation that actually runs
 - BP-1200a-2: The CI test command is documented as the single authoritative way to run the suite from a clean checkout
+- BP-1500b-5: Reference documentation lets a reader predict what the sweep removes and what it will never touch
 - BP-1500d-5: The published reference tells an adopter where their record lives and how to tell an inert check from a passing one
 - BP-200c-4: Agents README documents llm-expert in the phase agents table
 - BP-300a-7: debug.md falls back to prose skill for older Claude Code runtimes
@@ -266,6 +269,7 @@ flowchart TD
 - GE-120d-5: The how-to states what a prepared working copy guarantees and how to confirm it
 - GE-120e-5: The attribution rule is written where the next check author decides how to get their diff
 - GE-120f-5: The rule is written where the next check author is already looking, in the vocabulary the machine reads, and the written procedure and the enforced procedure say the same thing
+- GE-120g-3: The guidance a check author reads states what declaring a role commits the check to, and states that a refusal comes from an objection
 - GE-122a-3: The numbering rules for all four namespaces are written down in one place
 - GE-122b-3: An author with no prior knowledge can find out how to get a number
 - GE-122b-4: Which locations must carry a number, and which need not, is written down

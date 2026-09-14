@@ -3159,143 +3159,21 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     return written
 
 
-def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
-                             dry_run: bool, force: bool) -> int:
-    """Deploy knowledge scripts to ``<target_root>/scripts/knowledge/``.
+# Re-export build_knowledge_scripts / build_knowledge_sink_declaration so
+# callers (build.py, tests) can import them from either module. Extracted to
+# build_phases_knowledge.py 2026-09-09 to relieve the GE-127b-1 file-size
+# ratchet (see this module's own DECISION HISTORY, bottom of file, for why).
+from build_phases_knowledge import (  # noqa: E402, F401  # re-exported for callers
+    build_knowledge_scripts,
+    build_knowledge_sink_declaration,
+)
 
-    Copies ``scripts/knowledge/harvest_learnings.py`` from the package source
-    to the consumer project. This script is referenced by the knowledge-harvester
-    agent but was not previously deployed by any build phase (Class B gap,
-    EPIC-BuildGuardFalsePositive/03).
-
-    Files are copied verbatim (no template compilation). The compare-before-write
-    guard prevents mtime churn on unchanged files.
-
-    Args:
-        target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary (accepted for interface parity; not consumed).
-        dry_run: When True, logs intent but writes nothing.
-        force: When True, overwrites existing files.
-
-    Returns:
-        Count of files written (or that would be written in dry-run mode).
-
-    # DECISION HISTORY
-    # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]:
-    #   Added build_knowledge_scripts() phase. Deploys harvest_learnings.py from
-    #   package source scripts/knowledge/ to consumer scripts/knowledge/. Closes
-    #   the Class B deploy gap for knowledge-harvester agent.
-    #   (#EPIC-BuildGuardFalsePositive/03)
-    """
-    knowledge_src = PACKAGE_ROOT / "scripts" / "knowledge"
-    deploy_scripts = ["harvest_learnings.py"]
-    output_dir = target_root / "scripts" / "knowledge"
-    written = 0
-
-    for script_name in deploy_scripts:
-        src_file = knowledge_src / script_name
-        if not src_file.is_file():
-            # BP-900g-9 (n_location_rule: all).
-            record_deploy_failure("build_knowledge_scripts", script_name, src_file)
-            continue
-
-        output_path = output_dir / script_name
-
-        if not _should_overwrite(output_path, force):
-            continue
-
-        if _files_content_identical(src_file, output_path):
-            global _uptodate_count  # noqa: PLW0603
-            _uptodate_count += 1
-            continue
-
-        if dry_run:
-            print(f"  [DRY-RUN] would copy scripts/knowledge/{script_name}")
-            written += 1
-        else:
-            try:
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src_file, output_path)
-            except OSError as exc:
-                _log.warning(
-                    "build_knowledge_scripts: failed to copy %s → %s: %s",
-                    src_file,
-                    output_path,
-                    exc,
-                )
-                raise
-            print(f"  scripts/knowledge/{script_name}")
-            written += 1
-
-    return written
-
-
-def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
-                                      dry_run: bool, force: bool) -> int:
-    """Declare this install's absolute knowledge-emission sink path.
-
-    Writes ``config/knowledge_sink.json`` under the consolidated output root
-    (bound to ``target_root`` here per the internal-phase calling convention
-    -- see ``_run_phases``), recording the absolute path THIS build fixes as
-    the project's knowledge-emission sink: ``<project_root>/debugging/logs/
-    knowledge_emissions.jsonl``, where ``project_root`` is exactly one level
-    above the consolidated output root this function itself was called with
-    (``output_root == project_root / output_root_name``). This is
-    deliberately the historical CWD-relative default's own path, anchored
-    absolutely -- and deliberately NOT ``build_feedback``'s
-    ``<output_root>/debugging/logs/`` (which that phase creates eagerly on
-    every build): the sink is a durable operational log the project owns,
-    not a build artifact that ``.leafcutter`` gets wiped and regenerated
-    around, and its parent directory must not already exist merely because
-    a build ran (AC INF-400c-4-v: obtainable without emitting or harvesting,
-    and without conjuring anything into existence by asking).
-
-    The path is derived ENTIRELY from ``target_root`` (an absolute argument
-    ``build.py`` already resolved from ``--target-dir``) -- never discovered
-    by walking the filesystem for a repository or marker file. This is what
-    makes a nested consumer install's sink land at the consumer's own root
-    and a workspace install's sink land beside the rest of that install's
-    deployed content, rather than beside the package sources, in every
-    install shape (AC INF-400c-4-v).
-
-    A NOTE is always printed alongside the write: a build has no reliable way
-    to tell whether the directory it was pointed at is an already-installed
-    project's own root or a separate, isolated working directory of a
-    DIFFERENT install that already has its own sink elsewhere, so every build
-    states plainly which is being declared rather than silently doing the
-    wrong one only some of the time (AC INF-400c-4-v: "a second sink produced
-    in silence is the original defect restored in full").
-
-    Args:
-        target_root: Absolute path to the consolidated output directory
-            (bound to ``output_root`` by ``_run_phases``'s internal-phase
-            calling convention).
-        config: Merged config dictionary (accepted for interface parity; not
-            consumed).
-        dry_run: When True, logs intent but writes nothing.
-        force: When True, overwrites an existing declaration.
-
-    Returns:
-        1 if the declaration was (or would be, in dry-run mode) written; 0
-        when the on-disk declaration is already byte-identical (see
-        ``_write``'s compare-before-write guard).
-    """
-    project_root = target_root.parent
-    sink_path = project_root / "debugging" / "logs" / "knowledge_emissions.jsonl"
-    content = json.dumps({"knowledge_emission_sink": str(sink_path)}, indent=2) + "\n"
-    output_path = target_root / "config" / "knowledge_sink.json"
-
-    if _write(output_path, content, dry_run, force):
-        print(f"  config/knowledge_sink.json -> {sink_path}")
-        print(
-            "  NOTE: this build declares the knowledge-emission SINK for "
-            "THIS working directory. A separate, isolated working directory "
-            "of a project that already has an install elsewhere gets its "
-            "own, SECOND sink here rather than silently sharing the "
-            "original -- see AC INF-400c-4-v."
-        )
-        return 1
-    return 0
+# Re-export build_product_truth so build.py and every other caller keep
+# importing it from build_phases. Moved to build_phases_product_truth.py
+# 2026-09-10 to relieve the GE-127b-1 file-size ratchet.
+from build_phases_product_truth import (  # noqa: E402, F401  # re-exported for callers
+    build_product_truth,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -3714,96 +3592,19 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     return written
 
 
-def build_product_truth(target_root: Path, config: dict[str, Any],
-                        dry_run: bool, force: bool) -> int:
-    """Deploy product-truth tooling to ``<target_root>/docs/product-truth/``.
 
-    Copies the package-owned product-truth generator/validator scripts
-    (``docs/product-truth/scripts/*.py``) and their JSON schemas
-    (``docs/product-truth/schemas/*.json``) into the consumer project's
-    ``docs/product-truth/`` tree so they exist at runtime. The ``/plan-feature``
-    workflow's product-truth phase (see EPIC wiring) invokes these scripts via
-    ``python docs/product-truth/scripts/generate_product_truth.py`` relative to
-    the project root; without this phase they are absent in a consumer or fresh
-    worktree and the phase can only no-op.
 
-    Both subdirectories are copied with a shallow ``*.py`` / ``*.json`` glob so
-    that additional generator/validator scripts or schemas added later are
-    deployed automatically without editing this phase. Only the package-owned
-    ``scripts/`` and ``schemas/`` subdirectories are deployed — the
-    project-authored product-truth DATA (flows, mock-data, mockups,
-    ``index.json``) is never touched by this phase.
 
-    Files are copied verbatim (no template compilation). The compare-before-write
-    guard prevents mtime churn on unchanged files.
 
-    Args:
-        target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary (accepted for interface parity; not consumed).
-        dry_run: When True, logs intent but writes nothing.
-        force: When True, overwrites existing files.
 
-    Returns:
-        Count of files written (or that would be written in dry-run mode).
-    """
-    product_truth_src = PACKAGE_ROOT / "docs" / "product-truth"
 
-    # (source_subdir, glob, dest_subdir) triples. The glob is intentionally
-    # broad so new .py / .json files are picked up without editing this phase.
-    deploy_groups = [
-        (product_truth_src / "scripts", "*.py", "scripts"),
-        (product_truth_src / "schemas", "*.json", "schemas"),
-    ]
 
-    output_base = target_root / "docs" / "product-truth"
-    written = 0
 
-    for src_dir, pattern, dest_subdir in deploy_groups:
-        if not src_dir.is_dir():
-            # BP-900g-9 (n_location_rule: all). The glob (pattern) applies
-            # only WITHIN this declared subdir, so the subdir itself is a
-            # declared entry, not a bare directory scan — a missing one is
-            # the same dropped promise as a missing declared file. Was
-            # warn-and-continue. Record and keep going so one run reports
-            # the whole remediation set; build.py raises once at the end.
-            record_deploy_failure("build_product_truth", dest_subdir, src_dir)
-            continue
 
-        output_dir = output_base / dest_subdir
 
-        for src_file in sorted(src_dir.glob(pattern)):
-            if not src_file.is_file():
-                continue
 
-            output_path = output_dir / src_file.name
 
-            if not _should_overwrite(output_path, force):
-                continue
 
-            if _files_content_identical(src_file, output_path):
-                global _uptodate_count  # noqa: PLW0603
-                _uptodate_count += 1
-                continue
-
-            if dry_run:
-                print(f"  [DRY-RUN] would copy docs/product-truth/{dest_subdir}/{src_file.name}")
-                written += 1
-            else:
-                try:
-                    output_path.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(src_file, output_path)
-                except OSError as exc:
-                    _log.warning(
-                        "build_product_truth: failed to copy %s → %s: %s",
-                        src_file,
-                        output_path,
-                        exc,
-                    )
-                    raise
-                print(f"  docs/product-truth/{dest_subdir}/{src_file.name}")
-                written += 1
-
-    return written
 
 
 # ---------------------------------------------------------------------------
@@ -4089,4 +3890,30 @@ def clean_stale_artifacts(
 #   tell whether its target is an already-installed project's own root or a
 #   separate working directory of a different install with a sink
 #   elsewhere. (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
+# - 2026-09-09 [python-coder/bp-extract]: Extracted build_knowledge_scripts()
+#   and build_knowledge_sink_declaration() to a new sibling module,
+#   build_phases_knowledge.py, with NO behaviour change. This module measured
+#   2753 content lines (the check-file-size hook's own counter) against the
+#   400-line limit; the GE-127b-1 ratchet refuses any change that leaves an
+#   already-oversized file longer than it was, which was blocking
+#   INF-400c-4-iii (adds a build phase) and INF-400c-4-i (needs a
+#   deploy-manifest entry in this same file) from committing. Both names are
+#   re-exported here via `from build_phases_knowledge import (...)`, the same
+#   pattern already used for build_precommit_config / build_precommit.py, so
+#   build.py's existing `from build_phases import build_knowledge_scripts,
+#   build_knowledge_sink_declaration` keeps working unchanged.
+#   (#INF-400c-4-iii, #INF-400c-4-i)
+# - 2026-09-09 [python-coder/04_TICKET-20260909-UXP-700a-1-ii]: Added
+#   _scaffold_product_truth_record(), called from build_product_truth(), to
+#   write flows/mock-data/mockups/index.json write-if-absent on a fresh
+#   install (UXP-700a-1-ii's overwrite guard needs this to exist first).
+#   Left INLINE (not extracted to a sibling module) even though it grows
+#   this oversized file under GE-127b-1: test_bp_100k_2.py's
+#   _derive_extra_package_dirs() regex-scans THIS file's literal
+#   `PACKAGE_ROOT / "docs" / "product-truth"` chain to know which extra dir
+#   its synthetic-package fixture must copy; moving build_product_truth out
+#   (tried, reverted here) emptied that derivation and broke
+#   test_bp_900g_8.py / test_bp_900g_8_i.py / test_bp_900g_9.py. The
+#   resulting ratchet failure is a blocker for commit / a follow-up ticket.
+#   (#EPIC-TruthfulProjectRecord/04)
 # ====================================================================

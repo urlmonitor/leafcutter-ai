@@ -1,0 +1,80 @@
+id: ACS-1500e
+components:
+  - ac_store
+title: "Everything that writes a requirement writes the distinction, so the confusion cannot come back"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The written rule and every surface that authors records say the same thing.
+
+  The definition of the two relations and every surface that creates or updates
+  a record describe them separately, so a record written after the change cannot
+  recreate the ambiguity the change removed.
+depends_on:
+  - ACS-1500
+  - ACS-1500a
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "THE NORMATIVE SURFACE EVERY AUTHORING AGENT READS, AND CURRENTLY THE SOURCE OF THE CONFUSION. Its covered_by Scope Convention says the field holds test paths OR child ids and that 'mixing the two on one record is legal'; its Authoring agents section prescribes the parent-covered_by update protocol in terms of that one field. Both must be rewritten, or the split is undone by the next agent that follows the documented rule correctly."
+  - path: templates/agents/product-owner.md
+    relationship: related
+    status: exists
+    relevance: "ONE OF THE WRITING SURFACES, AND THIS AGENT'S OWN TEMPLATE — the parent covered_by update protocol is embedded in the prompt. The full set is larger: business-analyst.md, it-po.md, build-ac.md, ac-fulfillment-gate.md and the quick-fix and ac-tree-split skills all instruct an agent to write this field. ENUMERATE from the repo; a surface left instructing the old form is a slow permanent refill, which is precisely how the current population accumulated."
+  - path: docs/acceptance-criteria/ac-store/ACS-800-stable-ac-identity/ACS-800.yaml
+    relationship: related
+    status: exists
+    relevance: "THE PRECEDENT FOR SEPARATING THIS WORK FROM THE TOOLING WORK, AND THE AGENT-ASSIGNMENT RULE THAT GOES WITH IT. ACS-800f is the same shape one field over — authoring GUIDANCE (prose, templates, skills), explicitly NOT python — and PROJECT_CONTEXT.md records that it must stay llm-expert while its siblings are python-coder, warning against a uniform stamp. Same warning applies here."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+  - docs
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  WITHOUT THIS L1 THE TREE IS A ONE-TIME CLEANUP THAT REFILLS. The 76 mixed
+  records and the 361 test-path-only lists were not written by hand in one
+  sitting; they accumulated because the documented rule permitted them and
+  every authoring surface followed it. Convert the store and leave the rule
+  alone and the same population regrows.
+
+  AGENT ASSIGNMENT — FLAG FOR THE IT-PO, WHO SCANS FOR THIS LINE. This L1 is
+  prose and template surface: ac-schema.md plus the agent templates and skills
+  that instruct an agent what to WRITE. That is llm-expert per the IT-PO's
+  'agent assignment by technical surface' convention, NOT python-coder, exactly
+  as ACS-800f is. Its five siblings are tooling and schema and are python-coder.
+  Do not let a uniform stamp collapse the distinction — PROJECT_CONTEXT.md
+  already records this going wrong once.
+
+  ENUMERATE THE WRITING SURFACES FROM THE REPO, NOT FROM THIS RECORD. The
+  doc_links above name a starting set found by grep on 2026-09-08 and it is not
+  claimed to be complete. State the population examined against the population
+  found (ACS-1100, inherited).
+
+  ac-schema.md ALREADY CONTAINS A RULE THE CODE DOES NOT ENFORCE — its back-link
+  protocol is written as unconditional while the hook has three escape hatches,
+  and ACS-1400a and ACS-1200a are both amending the same document for their own
+  reasons. Three trees editing one reference doc in the same period; sequence
+  the edits or they will overwrite one another.
+
+  THIS L1 DOES NOT ENFORCE ANYTHING. Making the guardrails demand the new form
+  is a separate act with its own blast radius, and a required gate that rejects
+  the old form before ACS-1500c has finished converting is unshippable. Guidance
+  first, enforcement later and deliberately.

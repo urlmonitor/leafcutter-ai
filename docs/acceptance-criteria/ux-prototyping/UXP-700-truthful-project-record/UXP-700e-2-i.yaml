@@ -39,7 +39,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700e-2-i.md
 change_target: code
 risk_surface: internal
 test_required: true
@@ -72,3 +73,4 @@ notes: |
   938 characters is the measured length of the longest existing description
   (how-acs-are-built). Used as the concrete fixture value so the test exercises the real worst
   case rather than a convenient one.
+target_epic: EPIC-TruthfulProjectRecord
