@@ -1,0 +1,105 @@
+id: GE-128b
+title: "Moving your tests around is not treated as adding undeclared ones"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Rearranging tests you already have is never mistaken for adding new ones.
+
+  Moving, renaming or splitting tests that already exist is not counted as
+  introducing undeclared work, so tidying the test suite is never made more
+  expensive than leaving it alone. A file that did not exist before is judged on
+  what it contains rather than granted an allowance for having no past, so
+  starting a new file is not a way of getting undeclared tests in. A refactor is
+  not punished, and it is not a route around the rule either.
+depends_on:
+  - GE-128
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-128-tests-declare-what-they-prove/GE-128a.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE MECHANISM THIS RECORD CORRECTS. GE-128a establishes a per-file count
+      compared against the file's own previous state. Both failures here live
+      inside that comparison and neither is visible from GE-128a's own scenarios,
+      which is why they are a separate record rather than a note on it.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The per-gate register entry names the refactor edge explicitly: moving a
+      declared test between files raises one file's count and lowers another's, so
+      a per-file comparison needs the new-file case handled deliberately. Read it
+      before decomposing; do not restate its counts.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME EDGE, ALREADY DECIDED ONCE, AND DECIDED THE OTHER WAY — WHICH IS THE
+      POINT. For file size, a brand-new file has no previous size and the ratchet
+      deliberately does not apply to it, because a separate threshold governs new
+      files. Here there is no such second rule, so the same treatment would be a
+      hole rather than a hand-off. Do not copy that decision across; copy the
+      reasoning and reach the opposite conclusion knowingly.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  TWO FAILURES IN ONE MECHANISM, POINTING IN OPPOSITE DIRECTIONS. Both come from
+  the same per-file comparison and each is invisible from the other's scenarios.
+
+  FAILURE ONE — THE REFACTOR PUNISHED. A test that already carries a declaration
+  moves from one file to another. The destination file's count rises by nothing if
+  the test is declared, but a move of an UNDECLARED test raises the destination's
+  count while lowering the source's. Under a naive per-file rule the move is
+  refused although the project as a whole is unchanged. The consequence is worse
+  than an inconvenience: it makes the cheapest response "leave the tests where they
+  are", which is the opposite of what the project wants, and it teaches people that
+  the gate punishes tidying.
+
+  FAILURE TWO — THE NEW FILE AS A LOOPHOLE, AND THIS IS THE LOAD-BEARING HALF. A
+  file that did not exist at the previous version has no previous count. Treated as
+  "out of scope because there is nothing to compare against", every new test file
+  may be created wholly undeclared forever, and the standard governs only edits to
+  files that already existed. That is not a ratchet, it is an opt-out, and it is
+  the single most likely way for this tree to ship looking correct while achieving
+  nothing. The correct treatment is that a new file is judged on its contents —
+  the obligation on new work does not need a previous version to compare against,
+  only the count does.
+
+  THE TWO ARE NOT SYMMETRICAL AND MUST NOT BE SOLVED BY ONE RULE. Loosening enough
+  to fix the first opens the second. Decomposition must produce a treatment where
+  the identity of the tests matters, not only the arithmetic of the counts — the
+  question is whether a given undeclared test is NEW to the project, not whether a
+  given file's number went up.
+
+  MANDATORY NEGATIVE ARM. Every positive reading is satisfied by a rule that
+  permits everything. The two arms that prove this record is live, and they must be
+  asserted together with the positive cases in the same run:
+    - A brand-new file containing an undeclared test is REFUSED.
+    - An existing undeclared test moved verbatim from one file to another is
+      ALLOWED, with no declaration added.
+  A decomposition that produces only the second is the loophole with a test
+  certifying it.
+
+  WATCH THE INTERACTION WITH RECOGNITION. Whether two functions in different files
+  are "the same test" depends on how tests are identified, and the declaration
+  recogniser is being made uniform under TQ-100b-5. Consume that answer rather than
+  inventing a second notion of test identity here.

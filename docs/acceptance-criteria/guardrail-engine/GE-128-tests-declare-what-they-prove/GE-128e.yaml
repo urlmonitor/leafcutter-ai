@@ -1,0 +1,96 @@
+id: GE-128e
+title: "Being stopped tells you what to declare, and what to do when nothing fits"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The refusal names the test and hands you the next step.
+
+  Being stopped identifies which test is missing a declaration and what a
+  declaration looks like, and it distinguishes the two problems that look alike —
+  no declaration at all, and a declaration naming something that does not exist.
+  Where no suitable requirement exists yet, being stopped points at how one is
+  created, so the only ways forward are never just inventing a name or switching
+  the rule off.
+depends_on:
+  - GE-128
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-128-tests-declare-what-they-prove/GE-128c.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE DISTINCTION THIS MESSAGE HAS TO CARRY. GE-128c makes a name resolving to
+      nothing count as a missing declaration for the purposes of the count. The two
+      remain different PROBLEMS with different next steps, and this record is where
+      that difference reaches the person being stopped.
+  - path: docs/acceptance-criteria/ac-store/ACS-900-deprecation-hygiene/ACS-900c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MESSAGE-QUALITY PRECEDENT TO COPY IN THIS FAMILY — name the record, the
+      paths, the rule and the remedy, and emit where a person will see it rather
+      than only on the error stream. Same shape, different gate.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE ANTI-PRECEDENT THAT BOUNDS THIS RECORD. This component's register and its
+      context notes record a gate documented as dispatching an authoring agent that
+      does not, and a fail-open placeholder standing in for the promised
+      remediation. A documented-but-dead remediation path is worse than none,
+      because authors believe they are covered. Any decomposition here claiming
+      something is dispatched needs a test proving it actually happens.
+delivers_to: null
+expects_from: null
+documentation_triggers: []
+documentation_rationale: >-
+  The refusal message is itself the surface — it points at the existing
+  requirement-authoring path, which is already documented, and introduces no new
+  document or diagram of its own.
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHY ACTIONABILITY IS A SEPARATE GUARANTEE AND NOT POLISH. This standard is
+  unusual among the project's gates: the correct fix for being stopped is sometimes
+  not available to the person being stopped. If no requirement covers what the test
+  proves, the author cannot declare one honestly, and the two remaining moves are
+  both bad — invent a name, which GE-128c refuses, or switch the rule off, which is
+  how every dormant gate in this component became dormant. A refusal that leaves
+  only those two options manufactures its own circumvention.
+
+  THE THIRD OPTION MUST BE POINTED AT, AND ITS HONESTY MATTERS MORE THAN ITS
+  CONVENIENCE. Authoring a requirement is a real path in this project and the
+  refusal should name it. What it must NOT do is claim to start that path on the
+  author's behalf unless it genuinely does. This component has already shipped one
+  gate documented as dispatching an authoring agent that does nothing of the kind,
+  with a placeholder standing in for the promised behaviour — and the damage there
+  was not the missing feature, it was that people believed they were covered. Point
+  at the path, or do it; never describe doing it.
+
+  THREE DISTINCT MESSAGES, AND FLATTENING THEM LOSES THE VALUE:
+    - No declaration at all. Next step: declare the requirement this test proves.
+    - A declaration naming something that does not exist. Next step: correct the
+      name, or author the requirement — and note the name may be a typo, which is
+      the common case and the cheapest to fix if the message shows what was read.
+    - A declaration naming a retired requirement. Next step is GE-128d's and is
+      emphatically not "delete the declaration"; the message must not suggest it.
+
+  MANDATORY NEGATIVE ARM. Every positive reading is satisfied by a message that
+  prints all three explanations every time. Assert that the refusal names the
+  specific test, and that the explanation given matches which of the three
+  conditions actually occurred — a message that is always right because it says
+  everything is not actionable, it is noise.

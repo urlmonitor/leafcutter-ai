@@ -1,0 +1,112 @@
+id: GE-128d
+title: "A test pointing at a retired requirement is a question to answer, not a warning to silence"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A retired requirement named by a live test stays visible until someone decides.
+
+  When a test names a requirement the project has retired, that notice is live
+  code announcing that the thing it exercises has outlived its reason to exist,
+  and the notice persists. It is answered by deciding what becomes of the code
+  under test — given a current requirement to serve, or removed along with the
+  requirement it served. Removing the name so the notice stops is never the
+  answer, because it destroys the only signal that the question was ever asked.
+depends_on:
+  - GE-128
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-900-deprecation-hygiene/ACS-900.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME PROMISE FROM THE OTHER DIRECTION — FENCED, NOT DUPLICATED. ACS-900
+      checks at commit time that the SOURCE a retired requirement claimed has gone
+      or been reconciled. This record is the TEST-side signal of the same condition,
+      and it is the one that fires on code the retired requirement never listed as
+      its implementation. Neither reaches the other's population; neither may be
+      closed as a duplicate. A decomposition here that builds a second traversal of
+      requirement-to-source traceability is duplicating ACS-900e, which explicitly
+      forbids exactly that.
+  - path: docs/acceptance-criteria/ac-store/ACS-1600-proposals-not-verdicts/ACS-1600.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE LIVE INSTANCE THIS CRITERION IS ABOUT TO FIRE ON, AND THE ANSWER TO IT.
+      Six declarations in one test file name records being retired in an open pull
+      request; the code they exercise is a deployed tool. ACS-1600 is the current
+      requirement that tool now has, so the answer to this instance is to re-point
+      those declarations at it rather than to delete them. THAT RE-POINTING IS NOT
+      AUTHORED HERE and is not this tree's work — it is recorded so that nobody
+      resolves the notice the forbidden way while the right answer is one record
+      away.
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Where the behaviour is already documented: the status lifecycle records that
+      a retired requirement named by a test produces a warning. This record does
+      not invent the notice — it says what the notice MEANS and what may not be
+      done with it. Decomposition must derive the set of retired states from the
+      lifecycle rather than hard-coding the values common today.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE USER'S INSTRUCTION, VERBATIM IN SUBSTANCE AND ENCODED AS A PROPERTY RATHER
+  THAN AS GUIDANCE: the warning is the live-code hazard staying visible, and it is
+  resolved by deciding the tool's fate — never by removing the declarations. A rule
+  that lives only in prose is not falsifiable, and the cheapest way to make this
+  notice stop is precisely the forbidden one. That asymmetry is the whole reason
+  this is its own record.
+
+  WHY THIS IS NOT GE-128c. A name resolving to NOTHING is a missing declaration
+  (GE-128c). A name resolving to a RETIRED requirement resolves to something, and
+  to something the project deliberately decided about. Collapsing the two makes the
+  correct response to a retired requirement "delete the name", which is the exact
+  outcome this record forbids. Keep them apart at decomposition.
+
+  THE LIVE INSTANCE, AND IT IS THE MOTIVATING ONE. Six declarations in the test
+  file for a store-writing tool point at records being retired in an open, unmerged
+  pull request. Once that lands the notice fires. The code is not dead — it is
+  deployed into every consumer project — so the honest answer is the third one:
+  give it a current requirement. ACS-1600 is that requirement and the two trees
+  touch here and nowhere else.
+
+  THE GENERAL RULE WORTH CARRYING BEYOND THIS TREE. Retiring a specification is not
+  the same act as retiring the thing it specified. When the two come apart, some
+  signal has to survive the gap, and the declaration on a test is often the only
+  one. Anything that makes such a signal cheap to extinguish converts a decision
+  the project still owes into a decision nobody remembers was pending.
+
+  WHAT THIS RECORD DOES NOT DEMAND. It does not demand the notice BLOCK. Whether a
+  retired-requirement declaration refuses a commit or announces itself is a
+  per-stage decision to be taken explicitly at decomposition — this component has a
+  standing rule that there is no blanket default on block-versus-announce, and the
+  unit of THIS rule is visibility, not blocking. What it does demand is that the
+  notice cannot be ended by editing the test, and that whatever channel carries it
+  is one a person actually sees rather than one that scrolls past.
+
+  MANDATORY NEGATIVE ARM. Every positive reading is satisfied by a gate that
+  announces nothing and by one that announces everything forever. Assert in one
+  run: a test naming a retired requirement produces the notice; the same test with
+  the declaration DELETED does not make the project quieter — it registers as an
+  undeclared test under GE-128a, so the two records compose and the escape is
+  closed from both sides. That composition is the real acceptance and should be
+  written as one scenario rather than two.

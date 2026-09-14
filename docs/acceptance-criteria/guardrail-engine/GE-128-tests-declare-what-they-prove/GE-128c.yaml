@@ -1,0 +1,107 @@
+id: GE-128c
+title: "A declaration that names nothing does not count as one"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Naming a requirement satisfies the rule only when the requirement exists.
+
+  A test meets the standard by naming a requirement that is really in the
+  project's record. A name that resolves to nothing is treated as a missing
+  declaration rather than a satisfied one, so the standard can never be met in
+  bulk by manufacturing names — the cheapest way to clear the backlog is the one
+  way that must not work. Clearing the backlog stays a matter of declaring tests
+  honestly, one at a time, as the work reaches them.
+depends_on:
+  - GE-128
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE INSTRUCTION THIS RECORD CONVERTS INTO A PROPERTY. The per-gate entry says
+      plainly not to attempt a bulk backfill, because mechanically generated
+      declarations would name requirements that do not exist. An instruction binds
+      whoever read it; a property binds the implementation. Read the entry, do not
+      restate its counts, and note that it also records a pre-existing population of
+      declarations already naming nothing.
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-1-ii.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME INPUT, A DIFFERENT CONSUMER, AND FENCED SO NEITHER IS CLOSED AS A
+      DUPLICATE. TQ-100b-1-ii decides how the TEST RUNNER treats a declaration
+      naming a record absent from the store — it is enforced rather than silently
+      skipped. This record decides whether the same declaration satisfies the
+      COMMIT-TIME OBLIGATION. Two different questions about one condition; the
+      answers happen to agree in spirit and must not be merged.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2300-backfill-existing-code/ACD-2300b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME HAZARD AT THE OTHER END OF THE PIPE — FENCED, NOT DUPLICATED.
+      ACD-2300b governs a future capability that PROPOSES declarations for the
+      undeclared population and requires that a recorded link is one that was
+      verified. This record governs what the GATE will accept. Both are needed:
+      without this one, that capability's output is accepted by the gate whatever
+      its quality; without that one, this gate merely refuses bad declarations
+      without anyone producing good ones. Neither may be closed as a duplicate.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE GUARD ON THE GUARD, AND WITHOUT IT THIS WHOLE TREE IS SATISFIABLE BY A SCRIPT.
+  The cheapest implementation that clears GE-128a across the entire backlog is a
+  pass that writes a plausible-looking name above every undeclared test. It would
+  pass every positive scenario in this tree and would convert an honest, countable
+  gap into a dishonest green across thousands of records — using the standard built
+  to cure it. That is the same failure family the project's false-green register
+  catalogues: an assertion of proof recorded where an observation of evidence
+  belongs.
+
+  NO CRITERION BENEATH THIS TREE MAY SPECIFY A BULK BACKFILL OF THE EXISTING
+  POPULATION. This is a refusal, not a sequencing preference. An L2 proposing one
+  must be withdrawn rather than approved. Declarations are added as the work
+  reaches each test, by whoever can say what the test actually proves.
+
+  THE DEFECT ALREADY EXISTS AT A SMALL RATE, WHICH IS THE EVIDENCE THAT IT SCALES.
+  The register records roughly 87 distinct declaration identifiers in the test tree
+  naming a record that does not exist — accumulated by hand, without anyone trying.
+  A mechanical pass would produce that shape thousands of times. Carry the figure
+  at the confidence it was recorded and keep it out of any criteria block.
+
+  A REJECTED DECLARATION IS A MISSING ONE, NOT A SEPARATE CATEGORY. Decomposition
+  should resist inventing a third state between declared and undeclared. A name
+  resolving to nothing counts toward the same per-file quantity GE-128a ratchets,
+  which is what makes the two records compose instead of interfering. What DOES
+  differ is the message: being told "you did not declare" and "you declared
+  something that does not exist" are different problems with different next steps,
+  and that distinction is GE-128e's.
+
+  WHAT THIS DOES NOT COVER, DELIBERATELY. A declaration naming a requirement that
+  exists but is RETIRED is not a name resolving to nothing — it resolves to
+  something, and to something important. That case is GE-128d's and the two must
+  not be collapsed, because collapsing them makes the correct response to a retired
+  requirement "delete the name", which is exactly what GE-128d forbids.
+
+  MANDATORY NEGATIVE ARM. Every positive reading is satisfied by a gate that
+  refuses everything. Assert in one run: a test declaring a requirement that exists
+  is accepted, and a test declaring one that does not exist is refused with the
+  reason stated. Both, together.
