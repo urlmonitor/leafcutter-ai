@@ -1,0 +1,186 @@
+id: INF-1300d-1
+title: "A kind of picture the project does not declare is refused; one it declares but has retired is honoured under its current name"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d.yaml"
+criteria: |
+  Given the project declares a vocabulary of kinds of picture, in which one name
+    is marked as a retired alias of another,
+  When a document is requested for a name the vocabulary does not declare at all —
+    including a name that differs from a declared one by a character or two, or
+    that differs only in how the words are joined,
+  Then nothing is written anywhere, and the refusal names the value that was
+    asked for, says it is not declared, and lists the names that are,
+  And the refusal does not substitute the declared name the asked-for name
+    resembles, does not choose the closest match, and does not produce a document
+    of any kind,
+  And given instead a name the vocabulary declares but marks as retired in favour
+    of another,
+  When a document is requested for it,
+  Then the request is not refused: a document is produced, it declares the current
+    name rather than the retired one, and the run states that the substitution was
+    made and which name was used,
+  And a name that differs from a declared one only in letter case, or only in
+    surrounding whitespace, is treated as the declared name rather than as an
+    unknown one.
+depends_on:
+  - INF-1300d
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d.yaml
+    relationship: parent
+    status: exists
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      MEASURED IN THIS WORKTREE. It declares eleven names, one of which — the unseparated
+      spelling of the data-movement kind — carries an explicit note that it is a legacy
+      alias for the separated spelling and should not be used in new documents. Those two
+      names differ by a single character, which is why "refuse what is not declared" and
+      "do not refuse what is declared but retired" have to be stated together: the same
+      near-identity that makes the alias look like a typo makes a typo look like the alias.
+  - path: templates/scripts/commit_guardian/diagram_type_validators.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The check that validates a declared kind's NAME against the vocabulary. Measured: it
+      accepts the retired alias as freely as the current name, because both are declared —
+      so a document produced under the retired name passes the checks and is nonetheless
+      the wrong document to add to the collection. The substitution clause here is what
+      prevents that, and no check will do it.
+  - path: docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Records the same vocabulary mismatch from the other direction — the checking surfaces
+      do not spell the kind names identically. Named so whoever implements this reads that
+      account before deciding what "declared" means, rather than rediscovering it.
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Places the producing script's source under templates/scripts/ so a consumer install
+      inherits the same acceptance decision, read from the same declaration.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Why the near-miss and the retired alias have to be exercised against the same
+      implementation in one run: each in isolation is satisfiable by a rule the other
+      defeats, which is a false green by construction rather than by accident.
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "Acceptance is decided by membership in the declared vocabulary and by nothing else. No fuzzy, prefix, edit-distance or closest-match resolution may be applied to an undeclared name, however near it is to a declared one."
+  - "Normalisation before the membership decision is limited to case folding and stripping surrounding whitespace. Separator folding is forbidden - a name differing only in how its words are joined is a different name, which is precisely how the retired alias and its replacement differ."
+  - "A declared name carrying the deprecation marker is accepted and the document is produced under the current name it names. The substitution must be stated on the run's own output, at a severity that is not suppressed by default; a silent correction is the plausible-looking wrong document one level down."
+  - "The replacement for a retired name must be derived from the declaration rather than from a mapping held in the producer, so retiring a second name later needs no code change."
+  - "A refusal for an undeclared name must write nothing anywhere, must quote the value that was asked for, must say it is not declared, and must list the declared names - read from the declaration at that moment, not from a message template."
+  - "The refusal's message must distinguish 'not declared' from other failure reasons, so an author can tell a vocabulary problem from an occupancy or missing-field problem without reading source."
+  - "Reading the declaration must follow the project error handling policy in CLAUDE.md. A declaration that cannot be read is a refusal, never a fallback to a built-in list of names: diagram_type_validators.py's own recorded history is that such a fallback once silently disabled enforcement everywhere."
+test_spec:
+  - name: test_current_declared_name_is_produced_as_asked
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Request a document for a name the declaration carries without a deprecation marker; assert a document is produced and declares that name."
+  - name: test_retired_alias_is_produced_under_the_current_name_with_the_substitution_stated
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Request a document for the declared-but-retired name. Assert a document is produced, that its frontmatter declares the CURRENT name, and that the run's output states the substitution and names the value used. Falsified by a refusal, by the retired name appearing in the document, or by a silent substitution."
+  - name: test_near_miss_name_is_refused_and_nothing_is_written
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Request a name one character away from a declared one. Snapshot the whole temporary project before and after and assert the difference is empty; assert the refusal quotes the asked-for value, says it is not declared, and lists the declared names."
+  - name: test_near_miss_and_retired_alias_are_exercised_against_the_same_run
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "In one test, against one built implementation, request the retired alias and then the one-character-off name. Assert the first is produced-with-substitution and the second is refused. This pairing is the record's content: a rule that passes either alone defeats the other."
+  - name: test_declared_name_in_wrong_case_or_with_whitespace_is_accepted
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Request a declared name in upper case and again with surrounding whitespace; assert both are produced. Then request the same name with its separator changed and assert it is refused."
+test_rationale: >-
+  The falsifying property is a relationship between two requests, not a property of one, so
+  the fourth descriptor is the record rather than an extra: an implementation that
+  closest-matches passes the alias arm, an implementation that accepts only current names
+  passes the near-miss arm, and only running both against the same build can reject either.
+  The refusal arms snapshot the whole project rather than checking the destination, because
+  a refusal that has already written something elsewhere is exactly the failure INF-1300d
+  exists to exclude and a destination check cannot see it. A direct-import unit test over a
+  validate-name function would satisfy none of these: it cannot observe that nothing was
+  written, and it cannot observe what the document that was produced actually declares.
+delivers_to:
+  agent: python-coder
+  ac_id: INF-1300d-3
+  contract: "One of the refusal reasons INF-1300d-3's contract must hold for, exercised separately: an undeclared diagram-type name, refused with nothing written and a message naming the value, the fact that it is not declared, and the declared alternatives."
+expects_from:
+  ac_id: INF-1300d-1-i
+  contract: "Vocabulary membership resolved by reading config/diagram_types.json at the moment of the request, yielding each declared name with its description, its requires_frontmatter list and its deprecation marker, so acceptance, substitution and the listed alternatives all come from the declaration."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by:
+  - INF-1300d-1-i
+implemented_by: []
+notes: |
+  THE TRAP THE L1 NAMES, RESOLVED IN THE CRITERIA RATHER THAN LEFT TO THE IMPLEMENTATION.
+  "An unrecognised kind is refused" is not specifiable until recognised is defined, and the
+  two obvious definitions are both wrong. Refusing everything not current would refuse the
+  retired alias, which is a real declared name an author may legitimately hold — and
+  refusing it sends them to improvise, which is the behaviour this whole goal exists to
+  stop. Accepting anything that resembles a declared name would accept a typo and produce a
+  document of the wrong kind that reads perfectly and is silently wrong, which INF-1300d's
+  notes call the worse of the two failures because nothing downstream will notice.
+
+  THE LINE TAKEN: membership in the declaration decides acceptance, and nothing else does.
+  Declared and current is produced as asked. Declared and retired is produced under the
+  current name, with the substitution said out loud — silent correction would be the
+  plausible-looking wrong document again, one level down. Not declared is refused, however
+  close it looks, because closeness is exactly what a typo has. Case and surrounding
+  whitespace are normalised before membership is decided, because those differ in how the
+  value is typed rather than in which name is meant, and treating them as unknown names
+  would refuse a real request for no reason.
+
+  FALSIFIABILITY. Four requests against a scratch project. A current name: a document is
+  produced declaring it. The retired alias: a document is produced declaring the CURRENT
+  name, and the run says so — falsified if it is refused, and equally falsified if it is
+  produced declaring the retired name, or if the substitution happens without being stated.
+  A name one character away from a declared one: falsified if anything at all is written,
+  and falsified if the refusal message does not distinguish "not declared" from some other
+  failure. A declared name in the wrong case: falsified if it is refused. The near-miss and
+  the alias must both be exercised against the SAME implementation in the same run — each
+  in isolation is satisfiable by a rule the other defeats, and that pairing is the whole
+  content of this record.
+
+  FENCED. What every refusal in this tree must say and must leave behind is INF-1300d-3's.
+  How the declaration is read, and what happens when it changes, is INF-1300d-1-i's. This
+  record owns only which names are accepted, which are corrected, and which are refused.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

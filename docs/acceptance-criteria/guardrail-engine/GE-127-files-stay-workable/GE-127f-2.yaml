@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -424,52 +424,58 @@ expects_from:
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-09-14
-    note: 'criteria UNTOUCHED, as are title, level, component, components, depends_on, status,
-      req_status, work_status, priority, roadmap_phase, covered_by, change_target, risk_surface
-      and notes. PACKAGE SURFACE FALSE, AND MEASURED IN THIS WORKTREE: both containers
-      WATCHED_REGISTRIES binds on commit_guardian.json were read — `check-file-size` is already
-      a hooks_manifest.hooks id and `file_size` is already a top-level key. This record adds one
-      new INPUT and configures nothing, so it registers nothing; plain-list spec form is correct
-      and no config_schema_fragment is invented (the BP-100k-4 fictional-key precedent).
-      COMPLEXITY M: one new quantity that must agree BY CONSTRUCTION with count_content_lines on
-      both sides of the change — a `+`-line diff read is a second counting rule in disguise,
-      because the measurement rule strips multi-line triple-quoted regions a per-line read
-      cannot see — plus the amendment of a delivered descriptor in a green suite. THREE
-      DISPOSALS MADE EXPLICIT, all in it_requirements and one of them additionally executable.
-      (1) GE-127b-1''s boundary descriptor
-      test_ge_127b_1_an_oversized_file_left_at_exactly_its_previous_length_commits is NARROWED,
-      not broken: not deleted, not weakened, its fixture PINNED to a change adding no MEASURED
-      lines and its name and description amended to say so, with a dedicated seam descriptor
-      requiring it green SIMULTANEOUSLY with this record''s first arm; the surviving shape is
-      this record''s "adding only unmeasured content is free" arm. (2) THE BLANK-LINE /
-      HASH-COMMENT MANOEUVRE IS NOT CLOSED HERE — that is GE-127d''s call and no second counting
-      rule is written; instead the 560 and delete-only fixtures are constrained to reach their
-      end state by whole constituent definitions. Ground truth stated correctly from the probe:
-      count_content_lines strips triple-quoted regions and block comments ONLY; hash comments
-      and blank lines DO count. (3) THE DOCSTRING-ONLY LOOPHOLE is named as a known, accepted
-      consequence of counting additions in the file''s own unit, required to be carried into the
-      module''s DECISION HISTORY, and given a deliberately LARGE fixture on the
-      unmeasured-content arm so it is documented by an executed test rather than left to be
-      discovered. THE FIXTURE-LIST TRAP that bit this repository today is stated as a
-      requirement, and this record is the more exposed of the pair because it also amends a
-      descriptor inside one of those suites. declares_side_effect false — DERIVED, not authored
-      by opinion: the Then clauses assert commit outcomes and printed text, no durable artifact;
-      confirmed by running derive_declares_side_effect over this record (False).
-      test_spec: eight executing descriptors on real commits, one carrying the BA''s named
-      mutation verbatim with its MUST-STAY-GREEN half intact, one dedicated mutation proof that
-      records the stay-green arms as REQUIRED observations, declares an injection reddening
-      everything to be a FAILURE, and preserves the BA''s DECLARED EXPECTED COUPLING (this
-      injection also reds GE-127f-1''s refusal arms) as something to be RUN AND REPORTED rather
-      than suppressed or fixed; one seam descriptor making the GE-127b-1 reconciliation
-      executable; one registered-hook entry point and one deployed cold process. Hook-running
-      commits pinned to the 180s build-class timeout after a 30s flake today.'
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-14
+  note: 'criteria UNTOUCHED, as are title, level, component, components, depends_on,
+    status, req_status, work_status, priority, roadmap_phase, covered_by, change_target,
+    risk_surface and notes. PACKAGE SURFACE FALSE, AND MEASURED IN THIS WORKTREE:
+    both containers WATCHED_REGISTRIES binds on commit_guardian.json were read — `check-file-size`
+    is already a hooks_manifest.hooks id and `file_size` is already a top-level key.
+    This record adds one new INPUT and configures nothing, so it registers nothing;
+    plain-list spec form is correct and no config_schema_fragment is invented (the
+    BP-100k-4 fictional-key precedent). COMPLEXITY M: one new quantity that must agree
+    BY CONSTRUCTION with count_content_lines on both sides of the change — a `+`-line
+    diff read is a second counting rule in disguise, because the measurement rule
+    strips multi-line triple-quoted regions a per-line read cannot see — plus the
+    amendment of a delivered descriptor in a green suite. THREE DISPOSALS MADE EXPLICIT,
+    all in it_requirements and one of them additionally executable. (1) GE-127b-1''s
+    boundary descriptor test_ge_127b_1_an_oversized_file_left_at_exactly_its_previous_length_commits
+    is NARROWED, not broken: not deleted, not weakened, its fixture PINNED to a change
+    adding no MEASURED lines and its name and description amended to say so, with
+    a dedicated seam descriptor requiring it green SIMULTANEOUSLY with this record''s
+    first arm; the surviving shape is this record''s "adding only unmeasured content
+    is free" arm. (2) THE BLANK-LINE / HASH-COMMENT MANOEUVRE IS NOT CLOSED HERE —
+    that is GE-127d''s call and no second counting rule is written; instead the 560
+    and delete-only fixtures are constrained to reach their end state by whole constituent
+    definitions. Ground truth stated correctly from the probe: count_content_lines
+    strips triple-quoted regions and block comments ONLY; hash comments and blank
+    lines DO count. (3) THE DOCSTRING-ONLY LOOPHOLE is named as a known, accepted
+    consequence of counting additions in the file''s own unit, required to be carried
+    into the module''s DECISION HISTORY, and given a deliberately LARGE fixture on
+    the unmeasured-content arm so it is documented by an executed test rather than
+    left to be discovered. THE FIXTURE-LIST TRAP that bit this repository today is
+    stated as a requirement, and this record is the more exposed of the pair because
+    it also amends a descriptor inside one of those suites. declares_side_effect false
+    — DERIVED, not authored by opinion: the Then clauses assert commit outcomes and
+    printed text, no durable artifact; confirmed by running derive_declares_side_effect
+    over this record (False). test_spec: eight executing descriptors on real commits,
+    one carrying the BA''s named mutation verbatim with its MUST-STAY-GREEN half intact,
+    one dedicated mutation proof that records the stay-green arms as REQUIRED observations,
+    declares an injection reddening everything to be a FAILURE, and preserves the
+    BA''s DECLARED EXPECTED COUPLING (this injection also reds GE-127f-1''s refusal
+    arms) as something to be RUN AND REPORTED rather than suppressed or fixed; one
+    seam descriptor making the GE-127b-1 reconciliation executable; one registered-hook
+    entry point and one deployed cold process. Hook-running commits pinned to the
+    180s build-class timeout after a 30s flake today.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
 superseded_by: null
 covered_by:
   - GE-127f-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-FilesStayWorkable/07_TICKET-20260914-GE-127f-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |

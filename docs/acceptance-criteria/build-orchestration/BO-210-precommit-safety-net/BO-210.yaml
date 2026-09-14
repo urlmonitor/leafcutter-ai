@@ -31,13 +31,52 @@ doc_links:
   - path: "docs/architecture/agent_delivery_workflows.md"
     relationship: describes
     status: exists
+  - path: "docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      NARROWS THIS RECORD — READ BEFORE TREATING ITS SAME-AGENT CLAUSE AS UNIVERSAL.
+      BO-3800 ("When a standard turns work away, the right craft is brought in to finish
+      it") covers one class of refusal in which the author is deliberately NOT the fixer:
+      a refusal whose own stated disposition hands the work to a restructuring specialist,
+      because an author racing a standard moves lines to a neighbouring file to make a
+      number fall while a specialist optimises for structure. After BO-3800 lands, this
+      record's "the agent that fixes the violation is the SAME agent type that authored the
+      work" holds for every refusal EXCEPT one that names a craft the author is not being
+      asked to supply; where the boundary falls is stated by the refusing standard itself
+      (GE-127f-3) and is judged by neither record. This record's own promise and its three
+      children stand: nothing here is withdrawn or re-opened, and BO-3800e exists to
+      guarantee that this record's entire remaining population behaves exactly as it does
+      today. Reconcile BO-210a's routing configuration and BO-210c's re-dispatch behaviour
+      with the carve-out in the change that implements BO-3800, rather than meeting it as a
+      surprise.
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-16
-amended_by: []
+amended_by:
+  - reason: narrowed-by-later-sibling
+    by: product-owner-v3
+    at: 2026-09-14
+    note: 'criteria, title, readiness, priority, req_status, covered_by and depends_on
+      UNTOUCHED — no requirement-defining field was written. Only doc_links and this audit
+      entry were added. Recorded so a reader of this approved record is told that BO-3800
+      narrows its same-agent clause: after BO-3800 lands, "the agent that fixes the
+      violation is the SAME agent type that authored the work" holds for every refusal
+      except one whose stated disposition hands the work to a restructuring specialist,
+      because for that class the author being the fixer is the defect rather than the
+      efficiency. This record was examined as the HOST for that capability and rejected on
+      four grounds recorded in full in BO-3800''s notes — the two promises are priced in
+      opposite directions (this one sells context reuse by the same author, that one sells
+      the author being the wrong party); this record is approved and active, and a child
+      contradicting its own Then clause would re-open it as a side effect of authoring
+      elsewhere; the capability carries a hard INF-800f precondition in another component
+      that this record has no other use for; and the subject differs (CONTEXT here, CRAFT
+      there — a safety net that preserved context perfectly and handed the work back to
+      the author would satisfy this record entirely and fail that one). BO-3800e is the
+      explicit guarantee that this record''s remaining population is unchanged.'
 superseded_by: null
 covered_by: [BO-210a, BO-210b, BO-210c]
 implemented_by: []

@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -353,37 +353,43 @@ amended_by:
 - reason: technical-enrichment
   by: it-po
   at: 2026-09-08
-  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: this record''s whole effect
-    is to audit and where necessary DELETE sentences in a printed message, which registers
-    nothing; neither of the two containers WATCHED_REGISTRIES binds on commit_guardian.json
-    (hooks_manifest.hooks by id, the document''s own top level by mapping key) gains an entry,
-    and both were read in this worktree. COMPLEXITY M. THE FIRST APPLICATION WAS PARTLY
-    MEASURED AT ENRICHMENT AND THE FINDINGS ARE RECORDED IN it_requirements SO THE AUDIT STARTS
-    FROM EVIDENCE — but the verdict is left to the descriptors, because only carrying the
-    action out settles it: (a) `/code-refactoring-specialist` resolves to
-    templates/workflows/code-refactoring-specialist.md and IS deployed as a slash command, so
-    the pointer is not simply dead; (b) that workflow''s own step 1 instructs running
-    `python .agent/skills/code-analysis/scripts/analyze_structure.py`, and no file of that name
-    exists anywhere in the workspace — an unkeepable promise one level below the refusal, which
-    this criterion''s evidence bar reaches; (c) the `@documentation-expert` branch fires only
-    for `.md`, which is not in checked_extensions, so it is unreachable at every commit and
-    cannot be evidenced by carrying it out. A new doc_link to the workflow template carries
-    those facts to the implementer. GE-122c-1''s mechanical ceiling is written in as a
-    constraint: a commit-time hook can block and print, it cannot bring in an agent, so no
-    sentence may claim a specialist has been or will be engaged. Two explicit prohibitions on
-    fake enforcement: no approved-sentence allowlist or message-template fixture (the family
-    GE-122c-1''s coverage note rules out), and no self-checking of the message inside the gate
-    at commit time. declares_side_effect false: the record removes text and adds none; every
-    Then clause reports to a stream and sets an exit status. test_spec: seven executing
-    descriptors, two carrying the BA''s named mutations verbatim, one performing the first
-    application against the shipped message, one the permission arm that makes deletion
-    compliant, one through the registered hook entry point and one on the deployed copy — the
-    last being the only one that catches a sentence deleted from the template but never built.'
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: this record''s whole
+    effect is to audit and where necessary DELETE sentences in a printed message,
+    which registers nothing; neither of the two containers WATCHED_REGISTRIES binds
+    on commit_guardian.json (hooks_manifest.hooks by id, the document''s own top level
+    by mapping key) gains an entry, and both were read in this worktree. COMPLEXITY
+    M. THE FIRST APPLICATION WAS PARTLY MEASURED AT ENRICHMENT AND THE FINDINGS ARE
+    RECORDED IN it_requirements SO THE AUDIT STARTS FROM EVIDENCE — but the verdict
+    is left to the descriptors, because only carrying the action out settles it: (a)
+    `/code-refactoring-specialist` resolves to templates/workflows/code-refactoring-specialist.md
+    and IS deployed as a slash command, so the pointer is not simply dead; (b) that
+    workflow''s own step 1 instructs running `python .agent/skills/code-analysis/scripts/analyze_structure.py`,
+    and no file of that name exists anywhere in the workspace — an unkeepable promise
+    one level below the refusal, which this criterion''s evidence bar reaches; (c)
+    the `@documentation-expert` branch fires only for `.md`, which is not in checked_extensions,
+    so it is unreachable at every commit and cannot be evidenced by carrying it out.
+    A new doc_link to the workflow template carries those facts to the implementer.
+    GE-122c-1''s mechanical ceiling is written in as a constraint: a commit-time hook
+    can block and print, it cannot bring in an agent, so no sentence may claim a specialist
+    has been or will be engaged. Two explicit prohibitions on fake enforcement: no
+    approved-sentence allowlist or message-template fixture (the family GE-122c-1''s
+    coverage note rules out), and no self-checking of the message inside the gate
+    at commit time. declares_side_effect false: the record removes text and adds none;
+    every Then clause reports to a stream and sets an exit status. test_spec: seven
+    executing descriptors, two carrying the BA''s named mutations verbatim, one performing
+    the first application against the shipped message, one the permission arm that
+    makes deletion compliant, one through the registered hook entry point and one
+    on the deployed copy — the last being the only one that catches a sentence deleted
+    from the template but never built.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
 superseded_by: null
 covered_by:
   - GE-127e-3-i
   - GE-127e-3-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-FilesStayWorkable/04_TICKET-20260914-GE-127e-3.md
 change_target: code
 risk_surface: contract_boundary
 notes: |

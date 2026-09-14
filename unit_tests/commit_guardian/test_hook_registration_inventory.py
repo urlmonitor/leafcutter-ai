@@ -64,26 +64,34 @@ MANIFEST_PATH = GUARDIAN_DIR / "commit_guardian.json"
 # ---------------------------------------------------------------------------
 # Ratchet baseline — hook scripts that exist on disk with no hooks_manifest
 # entry. 18 at 2524993b9 (2026-09-14); 16 after check_pytest_style.py and
-# check_sql_dependencies.py were deleted as bybit-trader residue; 14 once two
-# non-hooks were listed in hook_parity.excluded_scripts; 6 now that BP-100n-4
-# has registered eight of them.
+# check_sql_dependencies.py were deleted as bybit-trader residue; 14 after two
+# non-hooks were listed in hook_parity.excluded_scripts; 9 once the five gates
+# needing no code work were registered under GE-120h-3, the criterion that
+# declares the package surface check-package-surface-declaration demanded; 5 now
+# that BP-100n-4 has registered four more.
+#
+# BP-100n-4 and GE-120h-3 registered overlapping sets independently and landed
+# within hours of each other. The merge took the union: GE-120h-3's five, plus
+# BP-100n-4's check-doc-links, check-root-files, check-test-ac-tags,
+# check-ticket-test-requirements and check-ticket-ac-limits (the
+# hooks/check_ac_limits.py filename-collision case, which never appeared in this
+# baseline because it lives in the hooks/ subdirectory).
 #
 # THIS LIST MAY ONLY SHRINK. Every entry is a script that pre-commit never
 # runs. Adding to it would make this test the rubber stamp it exists to
 # prevent; to clear an entry, either register the script in
 # hooks_manifest.hooks or delete it, then remove the line here.
 #
-# The remaining six are all KNOWN AND WANTED — none is a candidate for
-# deletion. check_debug_scripts needs no code work and is verified safe to
-# register, but registering it adds a package-registry entry, which
-# check-package-surface-declaration refuses unless a cited acceptance criterion
-# carries `package_surface: true`. That criterion does not exist yet, so the
-# registration is queued behind it rather than forced through. The other five
-# each need real work first — a ratchet over existing violations, a crash fix,
-# or an argv fix. check_complexity is the largest of these and is deliberately
-# withheld: it is functional, but 65 over-threshold functions remain repo-wide,
-# so registering it would block every commit. The comments below record what
-# each is waiting on, measured against the tree at this commit.
+# The remaining five are all KNOWN AND WANTED — none is a candidate for
+# deletion. Each needs real work before it can be registered (a ratchet over
+# existing violations, a crash fix, or an argv fix), scheduled after the
+# file-length gate is fully integrated. check_complexity is the largest and is
+# deliberately withheld: it is functional, but 65 over-threshold functions remain
+# repo-wide, so registering it would block every commit. GE-120h is the parent
+# for that work; note its L2s deliberately require more than draining this list,
+# because a decomposition that only registers today's orphans leaves the next one
+# free to appear with the same four reassuring signals. The comments below record
+# what each entry is waiting on, measured against the tree at this commit.
 # ---------------------------------------------------------------------------
 UNREGISTERED_BASELINE: frozenset[str] = frozenset(
     {
@@ -91,12 +99,6 @@ UNREGISTERED_BASELINE: frozenset[str] = frozenset(
         # CI). Also near-blind: _ID_REGEX is $-anchored, so a suffixed id like
         # TQ-100b-4-i never matches — it sees 275 of 4,032 records.
         "check_ac_coverage.py",
-        # READY TO REGISTER — blocked only on a package_surface AC. Fully
-        # config-driven, so portable; vacuous here because debugging/ is
-        # untracked. Must be registered always_run with no files key: a
-        # location-anchored `^debugging/scripts/` regex matching nothing is
-        # classified UNREACHABLE, not NOTHING-TO-MATCH.
-        "check_debug_scripts.py",
         # Wanted. Nothing enforces cyclomatic complexity today (ruff.toml
         # selects only E, F, E722 — no C901). Needs a shrink-only ratchet first:
         # 79 over-limit functions across 50 files at max_score 15.
@@ -118,6 +120,7 @@ UNREGISTERED_BASELINE: frozenset[str] = frozenset(
 )
 
 _SCRIPT_IN_ENTRY = re.compile(r"([A-Za-z0-9_]+\.py)")
+_ALWAYS_EXCLUDED = frozenset({"__init__.py", "README.md"})
 
 # The whole path token, not just its basename. Entries name scripts in several
 # trees — the deployed guardian dir via {{config.output_root}}, and repo-relative
@@ -145,7 +148,6 @@ def _script_token_resolves(token: str) -> bool:
             GUARDIAN_DIR / "hooks" / name,
         )
     )
-_ALWAYS_EXCLUDED = frozenset({"__init__.py", "README.md"})
 
 
 def _load_manifest() -> dict:
@@ -227,15 +229,15 @@ def test_every_registered_script_resolves_on_disk() -> None:
     Both the `script` key AND the script named on the `entry` command line are
     checked, for the reason _registered_script_names gives: an entry may declare
     its script through either convention, and this repo overwhelmingly uses the
-    second. Checking only `script` made this assertion very nearly vacuous —
-    at the time this was widened, 71 of 73 entries carried no `script` key, so
-    it was validating two of them while its own docstring promised it validated
-    every one. BP-100n-4 registered check-pytest-style and check-sql-dependencies
-    in the entry form; main deleted both scripts as bybit-trader residue in #794
-    the same day; the merge produced two entries pointing at files that no longer
+    second. Checking only `script` made this assertion very nearly vacuous — at
+    the time it was widened, 71 of 73 entries carried no `script` key, so it
+    validated two of them while its own docstring promised it validated every
+    one. BP-100n-4 registered check-pytest-style and check-sql-dependencies in
+    the entry form; main deleted both scripts as bybit-trader residue in #794 the
+    same day; the merge produced two entries pointing at files that no longer
     existed, and this test passed anyway. The failure surfaced instead as
     `RESULT: not_run ... reason=could_not_start` in an unrelated portability
-    sweep, which is a long way from the registry where the fault actually was.
+    sweep, a long way from the registry where the fault actually was.
     """
     manifest = _load_manifest()
 

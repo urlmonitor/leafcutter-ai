@@ -67,16 +67,44 @@ notes: |
   sequence-diagram trigger and BO-1800f-4 the reference-doc trigger, bringing
   this L1 to four L2 children.
 
-  ONE OPEN QUESTION ON BO-1800f-3, raised by the IT PO and not resolved:
-  its criteria fix the diagram's end points at exactly three, but BO-1800f-1-ii
-  (a replay that cannot complete cleanly stops the delivery and restores the
-  copy) is a fourth terminal disposition of this same boundary, and BO-1800f-2-ii
-  is a behavioural sibling the criteria never mention either. So either the
-  diagram will omit a real branch of the boundary it claims to draw, or the count
-  is short by one. A BA must either amend BO-1800f-3 to four end points or state
-  there why the replay-failure disposition is out of scope. BO-1800f-3's
-  test_the_diagram_has_exactly_three_end_points asserts three, faithful to the
-  text as written, and must be amended alongside any change to the count.
+  THE OPEN QUESTION ON BO-1800f-3 IS RESOLVED (BA, 2026-09-14): the diagram has
+  FOUR end points, not three. The IT PO had raised that BO-1800f-1-ii (a replay
+  that cannot complete cleanly stops the delivery and restores the copy) is a
+  fourth terminal disposition of the same boundary and that BO-1800f-2-ii was
+  never mentioned either, leaving the count short by one or the picture short of
+  a branch. The count was short. The decisive point is not that BO-1800f-1-ii
+  exists as a separate record — that alone would not make it part of this
+  picture — but that the diagram already draws the replay as one of its three
+  steps, and BO-1800f-1-ii is a terminal disposition OF THAT STEP, not of a
+  separate operation. Drawing the replay with a single outcome would have
+  asserted that the replay always completes, at the one step where this tree
+  says a human decision may be required. The alternative — keeping three and
+  scoping the replay failure out — was considered and rejected because no reason
+  could be given for it that did not also exclude BO-1800f-1-i, whose failure is
+  an end point on identical grounds one step earlier.
+
+  What moved with the decision, all inside BO-1800f-3: its criteria now fix four
+  end points, three decision branches each drawn with both outcomes, and eight
+  labelled elements; they require the three refusal terminals to be told apart in
+  the reader's terms (how far the boundary got, and what was done to the copy —
+  not touched, put back to its pre-replay commits, or needing no putting back);
+  and they reference all six behavioural criteria under this L1.
+  test_the_diagram_has_exactly_three_end_points is renamed
+  test_the_diagram_has_exactly_four_end_points and now names the four
+  dispositions, with four further descriptors added — refusal
+  distinguishability, no-delivery-after-an-incomplete-replay, the report's
+  emission points, and a behavioural-completeness check over this L1's children.
+  That last one is the mechanism that would have surfaced this drift on its own;
+  the IT PO had withheld it only because it would have been red on arrival
+  against the two unreferenced siblings, and that objection is now gone.
+
+  BO-1800f-2-ii is handled differently on purpose: it is referenced by the
+  diagram but is NOT a fifth end point, because it produces no terminal. Its own
+  requirements have the report produced on the refusal path and the clean path
+  alike, so it decorates both outcomes of the adjudication. The diagram shows
+  WHERE it is emitted — on both adjudication outcomes and on neither earlier
+  halt, since from those the examination is never reached — and deliberately not
+  what it contains, which is the reference doc's subject under BO-1800f-4.
 
   Scope. This L1 governs the boundary where work LEAVES its isolated copy toward
   the shared branch. It deliberately does NOT promise that every copy is kept

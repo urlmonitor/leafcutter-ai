@@ -182,7 +182,10 @@ def test_bp_900g_8_i_second_hop_missing_dependency_fails_the_build_naming_the_in
         encoding="utf-8",
     )
 
-    scratch_build_phases = pkg_root / "scripts" / "build_phases.py"
+    # AC_STORE_DEPLOY_MAP now lives in build_phases_ac_store.py (post
+    # build_phases.py size-limit split) -- build_phases.py itself only
+    # re-exports it.
+    scratch_build_phases = pkg_root / "scripts" / "build_phases_ac_store.py"
     original_text = scratch_build_phases.read_text(encoding="utf-8")
     scratch_build_phases.write_text(
         _inject_deploy_map_entry(
@@ -384,7 +387,10 @@ def test_bp_900g_8_i_all_three_shapes_asserted_against_the_produced_target_tree(
     scan_1.write_text(
         "import _bp900g8i_dep_b\n" + scan_1.read_text(encoding="utf-8"), encoding="utf-8"
     )
-    build_phases_1 = pkg_root_1 / "scripts" / "build_phases.py"
+    # AC_STORE_DEPLOY_MAP now lives in build_phases_ac_store.py (post
+    # build_phases.py size-limit split) -- build_phases.py itself only
+    # re-exports it.
+    build_phases_1 = pkg_root_1 / "scripts" / "build_phases_ac_store.py"
     build_phases_1.write_text(
         _inject_deploy_map_entry(
             build_phases_1.read_text(encoding="utf-8"),

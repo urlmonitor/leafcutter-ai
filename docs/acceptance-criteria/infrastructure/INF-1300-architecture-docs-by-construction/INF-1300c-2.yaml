@@ -1,0 +1,188 @@
+id: INF-1300c-2
+title: "The collection has an index at the place the instructions name, created if it is not there"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c.yaml"
+criteria: |
+  Given a project whose architecture collection has no index at the place the
+    authoring instructions name — docs/architecture/README.md,
+  When a document is produced with its listing requested,
+  Then an index is created at that place and it carries the new document's entry,
+  And the created index states the collection's conventions by referring to where
+    they are already stated rather than by repeating them, so there is one
+    statement of each convention and not two,
+  And the existing statement of the naming convention, which today refers the
+    reader onward to this index, now refers to a document that exists,
+  And the created index itself satisfies the project's own document checks,
+  And when an index is already present at that place, it is used as it stands and
+    is not replaced, re-created, or reordered.
+depends_on:
+  - INF-1300c
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Section 8 names docs/architecture/README.md as the file the listing flag updates.
+      That naming is the reason this record chooses that place rather than inventing one:
+      the instruction that reaches every author already says where readers should look.
+  - path: docs/architecture/diagrams/README.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      VERIFIED ABSENT TARGET, AND THE SECOND HALF OF THE DECISION. This file exists, states
+      the naming convention, lists no diagram, and closes by directing the reader to
+      docs/architecture/README.md — which does not exist. So the collection already has a
+      dangling pointer at the place this record fills, and the conventions this file states
+      are the ones the created index must refer to rather than restate.
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Where architecture documents live and how the tree is organised. The created index
+      sits above the genre folders, so this is the statement of layout it must agree with
+      and must not duplicate.
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Why creating the index is in scope rather than a prerequisite. A consumer install
+      inherits the skill and the script and has no index either, so a producer that assumes
+      one exists works only where someone has already created it by hand.
+  - path: docs/architecture/README.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      The file this record brings into existence. Verified absent in this worktree, and
+      already the target of two dangling references - the skill's section 7 says the script
+      auto-populates links to it, and the diagram folder README closes by pointing at it.
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "The index path is docs/architecture/README.md, relative to the project root the run resolves - not to the package install directory - so a consumer project gets its own index rather than writing into the package's."
+  - "A created index must carry docs/** frontmatter that the project's own checks accept: the base required fields plus flight_level, a type and status from the declared enums, and components values drawn from docs/components.json."
+  - "The created index must state the collection's conventions by linking to docs/architecture/diagrams/README.md and docs/reference/architecture-docs-layout.md, not by restating them. A copied convention sentence is a second statement of the same rule and is the one that goes stale."
+  - "Creation is a fallback, not a step: when an index is already present the run must open and amend it, and must not rewrite, reorder, reformat or re-create it. Detecting presence by path existence alone is sufficient here; an empty file at that path counts as present."
+  - "The producing script's source must live under templates/scripts/ so the create-if-absent behaviour reaches consumer installs; a copy only under scripts/ is build output."
+  - "Creating the index makes the skill's existing auto-populated link to docs/architecture/README.md resolve; the produced document must not be changed to point somewhere else to work around the file's current absence."
+  - "File creation and write failures must follow the project error handling policy in CLAUDE.md, and a failure to create the index must not leave a partially written index behind."
+test_spec:
+  - name: test_index_is_created_at_the_named_path_when_absent
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "In a git-initialised temporary project with no docs/architecture/README.md, run the real CLI with the listing requested. Assert the file now exists at exactly that path and carries the new document's entry."
+  - name: test_created_index_passes_the_real_frontmatter_hook
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "git add the created index and run the real scripts/commit_guardian/check_doc_frontmatter.py over it. Assert exit 0 and a non-zero inspected-file count, with a deliberately malformed control index rejected in the same harness."
+  - name: test_created_index_refers_to_conventions_rather_than_restating_them
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Assert the created index links to the existing convention statements and that no sentence stating the filename or collision convention is duplicated between the created index and docs/architecture/diagrams/README.md."
+  - name: test_existing_index_is_amended_not_replaced
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Start from a temporary project whose index already holds several entries in a deliberate order plus prose the producer did not write. Produce a document with the listing requested; assert the file is byte-identical outside the single inserted entry, its order unchanged and its prose intact."
+  - name: test_forward_reference_from_the_diagram_readme_now_resolves
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "After creation, resolve the docs/architecture/README.md link that docs/architecture/diagrams/README.md closes with, from that file's own directory, and assert it opens a real file."
+  - name: test_index_creation_is_reachable_from_the_documented_invocation
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/scripts/scaffold/new_arch_doc.py --update-readme"
+    description: "Run the exact command line the skill's section 8 prints, in a project with no index, and assert the index came into existence. Proves the create-if-absent path is reachable from the instruction rather than only from a test-only entry point."
+test_rationale: >-
+  Two temporary projects are required and the second is the one that matters. An observation
+  that starts only from nothing cannot tell 'creates an index' from 'overwrites the index' -
+  both produce a file containing the new entry - so the amend-not-replace descriptor must
+  begin from an index holding entries and prose the run had no business touching, and must
+  compare bytes rather than parsed entries. The created index is also a docs/** artifact
+  subject to the same frontmatter rules as any other, so its acceptability has to be
+  established by running the project's real hook over the staged file, in a git repository,
+  with a control that the hook rejects - the hook reports success when it inspects nothing.
+delivers_to:
+  agent: python-coder
+  ac_id: INF-1300c-1
+  contract: "An index file present at docs/architecture/README.md with valid docs/** frontmatter and an entry list ordered by (tier, number), whose conventions are stated by reference. INF-1300c-1 writes entries into this file and INF-1300c-3 updates them in place."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE PLACEMENT DECISION, TAKEN EXPLICITLY BECAUSE THE L1 FORBIDS TAKING IT SILENTLY.
+  INF-1300c's notes say the index does not exist, that choosing it is a product decision
+  about where readers should stand, and that a BA must not quietly pick the file easiest to
+  append to. The choice here is the file the authoring instruction already names —
+  docs/architecture/README.md — and the grounds are stated so they can be overruled: that
+  path is what reaches every author and every adopting project today; the existing
+  diagram-folder README already points readers to it, so choosing anywhere else leaves that
+  pointer dangling and creates a second place to look; and it sits above the genre folders,
+  which is the only position from which the whole collection is visible. The two
+  alternatives the L1 names were weighed. A per-genre index was rejected because the
+  collection already has one of those and it lists nothing, and because it cannot answer
+  "show me the architecture" without the reader already knowing which genre to open. The
+  component documents acting as the index through their lists of children was rejected
+  because those lists exist to satisfy the two-directional link check, so they would acquire
+  a second purpose that the check would then constrain — and a document with no parent would
+  be reachable from nowhere.
+
+  WHY CREATING THE FILE IS IN SCOPE RATHER THAN A PREREQUISITE. The listing behaviour cannot
+  be observed at all without a target, and a project adopting this way of working will have
+  no index either — so an implementation that assumes one exists works here after someone
+  creates it by hand and fails everywhere else, which is the failure INF-1300e exists to
+  prevent, reproduced inside INF-1300c.
+
+  THE NO-DUPLICATION CLAUSE IS LOAD-BEARING. The diagram folder's README states the naming
+  and numbering convention. An index that restates it creates the second copy, and the
+  second copy is the one that goes stale — this collection already demonstrates the pattern,
+  carrying two forward references to two documents that do not exist. Referring beats
+  repeating.
+
+  FALSIFIABILITY. Two scratch collections. In the first, with no index present, produce a
+  document with its listing requested: the record is falsified if no index appears at the
+  named place, if it lacks the entry, if it restates a convention that is already stated
+  elsewhere in the collection, or if the project's document checks reject it. In the second,
+  with an index already present holding several entries in a deliberate order, produce
+  again: falsified if the file is replaced, if its order changes, or if anything in it
+  beyond the new entry differs. The second collection is what separates "creates an index"
+  from "overwrites the index", and the two are indistinguishable when the only observation
+  starts from nothing.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

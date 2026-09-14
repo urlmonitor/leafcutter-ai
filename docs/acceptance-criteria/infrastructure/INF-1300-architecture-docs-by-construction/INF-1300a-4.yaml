@@ -1,0 +1,200 @@
+id: INF-1300a-4
+title: "Acceptance holds for every kind of picture the project declares, not for the one it was demonstrated with"
+component: infrastructure
+components:
+  - documentation_system
+  - doc_compliance
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a.yaml"
+criteria: |
+  Given the project's declared vocabulary of kinds of picture and its declared
+    tiers,
+  When a document is produced for every kind the vocabulary declares as current,
+    at every tier that kind can occupy,
+  Then every one of those documents passes the project's full set of commit-time
+    document checks unmodified, on the same terms as a single document does,
+  And the set of kinds covered is taken from the project's own declaration at the
+    moment of the observation, so a kind added to that declaration is covered
+    without anything else being edited, and a kind whose document cannot be
+    produced correctly is a failure rather than an omission,
+  And where a declared kind obliges a further field that only the author can
+    supply, the document for that kind is either produced complete because the
+    request supplied that field, or not produced at all — never produced without
+    it,
+  And a kind the declaration marks as superseded is covered by producing the
+    document its successor's rules require, not by skipping it.
+depends_on:
+  - INF-1300a
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a.yaml
+    relationship: parent
+    status: exists
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      THE DECLARATION THIS RECORD ENUMERATES, AND IT IS NOT UNIFORM. It declares eleven
+      kinds, one of them marked superseded in favour of another, and three of them obliging
+      a further field their siblings do not. So "it works" established on one kind
+      establishes nothing about the three that oblige a field or the one that is an alias.
+  - path: scripts/commit_guardian/check_mermaid_complexity.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The check whose thresholds differ BY KIND — nodes and edges for some, participants
+      and interactions for others, tables, states or classes for the rest. A skeleton
+      comfortably inside the threshold for one kind can exceed the threshold for another,
+      so this check is the concrete reason acceptance does not generalise from one kind
+      to all of them.
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Section 5 publishes a skeleton per tier and per kind, and section 2's decision tree
+      maps several kinds onto a single tier. Together they define which kind-and-tier
+      pairs are reachable, which is the set this record enumerates.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. d-1 owns what happens when a requested name is NOT in the declaration, and
+      owns the treatment of the superseded alias on the way in. This record owns only that
+      the acceptance promise is established across the declaration's whole current
+      membership. A clause here about refusing an unknown name has crossed into d-1.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The hooks manifest whose per-hook `files:` regexes define "the project's full set of
+      commit-time document checks" for a given produced path. Enumerating the check set from
+      here rather than from a written list is the same movement property this record demands
+      of the kind set.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this record's test_spec classifies against; the second arm of the enumeration clause is a real_artifact movement test."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "THE KIND SET IS READ FROM config/diagram_types.json AT RUN TIME, BY BOTH THE MEANS AND THE OBSERVATION. No list of kinds may be written into either. A hard-written list is correct on the day it is written, survives review, and stops discriminating the moment the vocabulary moves — and this vocabulary has already moved once, which is how it came to contain a deprecated alias. The falsifying arm is a movement test: add a kind to the declaration the run resolves, change nothing else, and the covered set must grow by itself."
+  - "THE DEPRECATION MARKER IS DATA, NOT A NAME. `dataflow` carries `_deprecated: true` and is described as a legacy alias for `data_flow`. Treat 'superseded' as the presence of that marker, never as a match on the literal string `dataflow`, so a future alias inherits the rule automatically. The alias is COVERED by producing the document its successor's rules require — including the successor's `requires_frontmatter` obligation — never by skipping it. Note the declaration's own inconsistency: `dataflow` declares `requires_frontmatter: []` while `data_flow` declares `[related_code]`, so reading the obligation off the alias rather than off its successor silently drops the obligation."
+  - "`none` IS IN THE DECLARATION AND IS NOT A DIAGRAM KIND. Decide explicitly whether the enumeration excludes it, and derive that exclusion from a data property of the entry rather than from its name. An enumeration that silently skips it by literal name is the same defect as a hard-written list, one entry wide."
+  - "MEASURED — THE OBLIGED-FIELD CLAUSE CANNOT BE OBSERVED THROUGH THE CHECK SET AND MUST BE ASSERTED DIRECTLY. `requires_frontmatter` is declared per kind in config/diagram_types.json (data_flow requires related_code, user_flow requires related_surfaces, agent_flow requires related_agents) and is enforced by NOTHING. Verified in this worktree: the identifier `requires_frontmatter` appears in exactly one place outside the JSON — a docstring in templates/scripts/commit_guardian/diagram_type_validators.py — and `validate_diagram_type` validates the kind NAME against the vocabulary and returns. So a document of an obliging kind that simply omits the field passes the entire check set today, and an observation built on 'the checks passed' reports a green that says nothing about the third clause. Assert the clause against config/diagram_types.json directly. Closing the enforcement gap is the guardrail surface's work and is outside INF-1300's fence; this record must not close it by adding a check."
+  - "THE SWEEP IS OVER KIND x TIER PAIRS, NOT KINDS. check_mermaid_complexity applies DIFFERENT metrics and thresholds per mermaid diagram family — nodes and edges for flowchart and C4, participants for sequence, and separate counts for erd, state and class. A skeleton comfortably inside one family's threshold can exceed another's, which is the concrete reason acceptance does not generalise from the demonstrated kind. Enumerate the reachable pairs from the tier structure and the kind declaration, and fail rather than skip when a pair cannot be produced correctly."
+  - "A KIND THAT CANNOT BE PRODUCED CORRECTLY IS A FAILURE, NOT AN OMISSION. The sweep must report per-pair results and must not be able to report 'all passed' while some pairs were never attempted; the count of pairs attempted must equal the count derived from the declaration."
+  - "All of INF-1300a-1's vacuous-green guards apply to every hook invocation in the sweep, and matter more here because the sweep runs the same hooks many times: a harness misconfiguration that silences one hook silences it for every pair at once."
+  - "Error handling per the project error-handling policy (CLAUDE.md rules 1-4)."
+test_spec:
+  - name: test_every_current_kind_at_every_reachable_tier_passes_the_full_check_set
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Parametrised from config/diagram_types.json read at run time crossed with the reachable tiers: each produced document is staged in a-1's in-tree harness and every manifest-matched judgment hook is run over it, with per-pair per-hook results."
+  - name: test_coverage_grows_when_a_kind_is_added_to_the_declaration
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "THE ARM WITH TEETH — add a synthetic kind to the diagram_types.json the run resolves, change nothing else, and the number of pairs attempted grows by itself; a hard-written enumeration in either the means or the test fails here."
+  - name: test_attempted_pair_count_equals_the_count_derived_from_the_declaration
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/scaffold/new_arch_doc.py"
+    description: "The sweep cannot report all-passed while pairs went unattempted: the attempted count is asserted equal to the count derived from the declaration crossed with the tier structure."
+  - name: test_deprecated_alias_is_covered_via_its_successors_rules
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The entry carrying the deprecation marker is produced under its successor's rules — including the successor's requires_frontmatter obligation, which the alias entry itself declares as empty — and is not skipped."
+  - name: test_obliging_kinds_are_complete_or_refused_never_produced_without_the_field
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "ASSERTED DIRECTLY AGAINST config/diagram_types.json, not through the check set which does not enforce requires_frontmatter at all: for each kind declaring an obliged field, a request supplying it produces a document carrying it, and a request omitting it produces no file and exits non-zero."
+  - name: test_emitted_skeleton_is_within_the_per_kind_complexity_thresholds
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "check_mermaid_complexity exits 0 over every produced document in the sweep, with a paired negative control per mermaid family that inflates the emitted skeleton past that family's threshold and must exit 1."
+test_rationale: >-
+  "The produced document is accepted" is satisfied on any single run by a producer that
+  handles one kind well and the rest by copying, which is the shape a producer naturally
+  grows. Three declared kinds oblige a further field, one is a deprecated alias, and
+  check_mermaid_complexity applies different metrics per mermaid family — each is capable
+  of failing while the demonstrated kind passes. The sweep must therefore be parametrised
+  from the declaration rather than from a list, and the movement descriptor is what proves
+  it: a hard-written enumeration passes the sweep on the day it is written and stops
+  discriminating silently thereafter. The third clause additionally cannot ride on the check
+  set at all — requires_frontmatter is declared in config/diagram_types.json and enforced
+  nowhere in the codebase, verified by search — so an observation built on "the checks
+  passed" would report a green that says nothing about it, and that descriptor asserts
+  against the declaration directly.
+delivers_to:
+  agent: python-coder
+  contract: "The run-time enumeration of reachable (kind, tier) pairs, derived from config/diagram_types.json crossed with the project's declared tier structure, with the deprecation marker resolved to the successor's rules and the non-diagram entry excluded by a data property rather than by name. INF-1300b-1, b-2 and b-4 each sweep the same set and must use this one enumeration rather than re-deriving it."
+expects_from:
+  ac_id: INF-1300a-1
+  contract: "The generator CLI and the in-tree scratch harness from INF-1300a-1's delivers_to, specifically the per-hook {hook_id, exit_code, examined, stderr} record, which this record invokes once per (kind, tier) pair and aggregates without losing per-pair resolution."
+notes: |
+  WHY THIS IS ITS OWN RECORD. "The produced document is accepted" is satisfied on any
+  single run by a producer that handles one kind of picture well and the rest badly, and
+  that is the shape a producer naturally grows: the first kind is built against the checks,
+  the rest are copied from it. The three kinds that oblige a further field and the one
+  that is a superseded alias are each capable of failing while the demonstrated kind
+  passes. Without this record the tree's central promise is established on a sample.
+
+  FALSIFIABILITY. Enumerate the kinds from the project's declaration — not from a list
+  written into the observation — produce a document for each at each tier it can occupy,
+  and run the full check set over every one of them. The record is falsified by any single
+  document failing any single check, and equally by an observation whose enumeration is
+  hard-written: add a kind to the declaration and change nothing else, and the coverage
+  must grow by itself. That second arm is the one with teeth. A hard-written list is
+  correct on the day it is written, survives review, and stops discriminating the moment
+  the vocabulary moves — and this vocabulary has already moved once, which is how it came
+  to contain a superseded alias.
+
+  THE THIRD CLAUSE IS THE BOUNDARY, RESTATED WHERE IT CAN BE SEEN. Three declared kinds
+  oblige a field whose value is content the author has and the producer cannot derive. The
+  resolution taken across this tree is refusal, not a placeholder — see INF-1300a-3 for why
+  a placeholder is actively harmful here and INF-1300d-4 for the refusal's own contract.
+  Stating it in this record's criteria as well is deliberate: this is the record that walks
+  the whole vocabulary, so it is the one where an implementer meets those three kinds, and
+  a coverage sweep that quietly skipped them would look complete.
+
+  A MEASURED CAUTION FOR WHOEVER IMPLEMENTS THE OBSERVATION. The obliged field is declared
+  in the project's vocabulary file but, as the checks stand in this worktree, no commit-time
+  check enforces its presence — the frontmatter check validates the kind's NAME against the
+  declaration and stops there. So a document for one of those three kinds that simply omits
+  the obliged field passes the check set today. That means the check set alone cannot
+  observe the third clause, and an observation built only on "the checks passed" will report
+  a green that says nothing about it. Assert the clause directly. This gap between what the
+  vocabulary declares and what any check enforces is recorded here as a finding, not fixed
+  here: closing it is the guardrail surface's work and is outside INF-1300's fence.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.
