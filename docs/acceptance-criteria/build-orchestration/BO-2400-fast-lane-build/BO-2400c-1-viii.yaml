@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -54,13 +54,127 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Why the content has to arrive in-band and cannot be re-read from where it was produced — the same constraint that makes an unverified reply the only thing the lane has to work from."
+  - path: docs/reference/fast-lane-prompt-caching.md
+    relationship: constrains
+    status: exists
+    relevance: "Added by the IT PO 2026-09-14, and it is an ORDERING link rather than a descriptive one. This page is what a reader consults before retiring the caching framing, and retiring that framing means deleting the CACHE_BREAKPOINT_MARKER whose check is — accidentally — the lane's only corruption detector today. This record must be implemented and green BEFORE that deletion. See the it_requirements constraint of the same name; the reasoning is stated there in full so a grep for the marker literal lands on it."
 origin_agent: BrainCandy
 created: 2026-09-14
-amended_by: []
+amended_by:
+  - agent: it-po
+    date: "2026-09-14"
+    reason: "TECHNICAL ENRICHMENT ONLY — criteria, title, level, depends_on, covered_by, declares_side_effect, change_target, risk_surface, test_required, test_rationale and notes are untouched. Added assigned_agent, estimated_complexity, it_requirements, delivers_to, expects_from, test_spec, one doc_link, and readiness draft -> reviewed. THREE THINGS THE BA COULD NOT SEE AND THIS PASS ADDS. (1) THE RECORD SPANS TWO FILES. The family's convention is a JS half and a Python half in separate records; this one cannot be split that way, because a value the lane compares against must originate where the bytes originate — so scripts/injection_builders.py must state a byte count and a digest over the exact stdout it wrote, on a channel that is not stdout, and templates/workflows-js/fast-lane-ship.js must carry, compare and act on it. n_location_rule counts only the three JS sites; the Python site is named in the constraints. (2) THE INDEPENDENCE REQUIREMENT NEEDED A MECHANISM-LEVEL STATEMENT, not just a property: the stated value must be read from a reply field distinct from the bundle text, must never be recomputed by the lane over the received text, and must never be computed by the TRANSPORTING agent over the text it is about to send — that last shape travels through the same mangling and agrees with it, and it is the plausible-looking way to get this wrong. Paired with it: the stated value must be encoded so the observed corruption cannot touch it (hex survives HTML escaping; a value containing '<' or '&' does not). (3) THE MARKER-RETIREMENT ORDERING, recorded in the constraint named 'PRECONDITION FOR RETIRING THE CACHE FRAMING' and echoed as a doc_link to docs/reference/fast-lane-prompt-caching.md. The lane's only integrity signal today is the CACHE_BREAKPOINT_MARKER check, which detects corruption only by accident of the marker containing '<' — while the caching it exists to serve is demonstrably fictional here. Deleting the marker before this record ships removes the only thing preventing a green run on a mangled prompt. The constraint carries the marker literal so a grep run ahead of that deletion lands on it. NOT CHANGED, DELIBERATELY: implemented_by stays empty. In this family it is a back-reference populated at done (BO-2400c-1-iii and -vi carry it and are both work_status: done); pre-filling it on a todo record would assert an implementation that does not exist."
 superseded_by: null
 covered_by: []
 implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    fast_lane_bundle_delivery_integrity:
+      type: object
+      description: >-
+        The bundle-dispatch reply gains producer-stated verification fields that sit
+        BESIDE the bundle text rather than inside it:
+        {bundle: str, obtained: bool, bytes: int, digest: str, digest_algorithm: str,
+        location: str|null, message: str}.
+        `bytes` and `digest` are stated by the PRODUCING step — the assemble-bundle
+        subcommand, over the exact byte sequence it wrote to stdout — and relayed
+        unchanged by the transporting agent. Neither is ever computed by the lane over
+        the text it received, and neither may be recomputed by the transporting agent
+        over the text it is about to send.
+        The lane classifies the reply, after it has already passed BO-2400c-1-iii's
+        reference-rejection, into one of three further states.
+        VERIFIED — a value re-derived over the received text equals the stated `digest`
+        AND the received length equals the stated `bytes`. Only in this state is the
+        text used as the prefix of any context-carrying dispatch.
+        DELIVERY_ALTERED — both sides are present and they disagree. The text was
+        produced and then changed between production and arrival.
+        DELIVERY_UNVERIFIABLE — the stated value is absent, empty, or not interpretable,
+        so the question cannot be answered.
+        The latter two end the run and dispatch no context-carrying agent, by the same
+        path, so an absent value is never a quieter way past the gate than a wrong one.
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "3"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "SCOPE — TWO FILES, AND THE SPLIT IS NOT THE USUAL ONE. Siblings in this family divide cleanly into a JavaScript half (BO-2400c-1-iii) and a Python half (BO-2400c-1-vi); this record cannot, because the value compared against must originate where the bytes originate. PYTHON HALF, scripts/injection_builders.py: _cmd_assemble_bundle (~729-810) and its parser (~661-728) emit the byte count and the digest over the exact stdout they wrote, on a channel that is NOT stdout — a stderr line, or a sidecar written to a path given by a new optional argument. stdout must remain 'the bundle text and nothing else', which is the contract BO-2400c-1-ii states and BO-2400c-1-iii's transport depends on; a manifest printed into stdout silently breaks both. JAVASCRIPT HALF, templates/workflows-js/fast-lane-ship.js, the three locations counted by n_location_rule: (1) the bundle-assembling dispatch prompt and its reply schema, currently ~1031-1076, which must ask for the producer's stated values as their own fields; (2) classifyContextBundle, currently ~297-390, where the comparison is performed and the two new states are computed; (3) the gate and halt payload, currently ~1077-1090, where the outcome is acted on. State the two-file split in the sign-off: a coder phase that quietly does both without saying so loses the ability to attribute a later regression to one side."
+    - "INDEPENDENCE OF THE TWO SIDES IS THE WHOLE CRITERION, AND IT IS THE EASIEST THING TO LOSE. The expected value must be read from a reply field distinct from the bundle text, and must never be a function of the received bundle bytes. A lane that derives its expected value from what arrived compares that text with itself, agrees always, and is green on every corruption — including the one measured on 2026-08-31. Two failure shapes to refuse explicitly: the lane recomputing the digest over the received text and comparing it to itself; and the transporting agent being asked to compute the digest over the text it is about to send, which travels through the same mangling and therefore agrees with the mangled result. The producing step states it; the transport relays it."
+    - "THE COMPARISON MUST FAIL ON A SAME-LENGTH ALTERATION. This rules out the instrument the known issue proposes first. A byte count alone catches the observed escaping only because escaping lengthens text, and misses a one-character substitution entirely — a quieter version of the same fault that would hand a silently altered prompt to the test-writer and the coder. A cryptographic digest over the exact received bytes satisfies the criterion. A length check, a checksum over a whitespace-stripped or normalised form, a layer-count or structural-landmark tally, and any similarity score do not. The byte count is retained ALONGSIDE the digest because BO-2400c-1-x requires the quantities to be reportable — not as the comparison."
+    - "CHOOSE A VERIFICATION VALUE THE OBSERVED TRANSPORT CANNOT MANGLE. The measured corruption is HTML entity escaping of markup characters: every '-->' arrived as '--&gt;' and the marker, which contains '<', was escaped twice. A stated value whose encoding is confined to [0-9a-f] passes that channel unchanged while the payload does not, which is exactly what makes the disagreement observable. A verification value that itself contains '<', '&', a quote, or any other escapable character can be corrupted in the same pass and agree with the corrupted text by accident."
+    - "NORMALISE-THEN-VERIFY IS PERMITTED; NORMALISE-THEN-PROCEED IS NOT. A lane that un-escapes, re-decodes or otherwise repairs a received reply is a legitimate implementation, but the repaired text must be put through the SAME comparison before any use, and the comparison result — never the fact that a repair was attempted, and never a closeness judgement about the repaired text — decides. There is no 'near enough' branch and no branch that proceeds on a repair whose result was not verified."
+    - "FAIL CLOSED ON EVERY READ, IN THE SHAPE THE LANE ALREADY USES. An absent, empty or uninterpretable stated value takes the same terminating path as a failed comparison, read with the plain-falsy convention already applied to the red-baseline gate_passed key and the review verdict_obtained check, so a producer that does not yet emit the value ends the run rather than skipping the check. No default-true, no '|| true', no optional read whose undefined result is treated as 'nothing to verify'. Version skew must be loud: the whole point of the record is that unverifiable content is not assumed intact."
+    - "DO NOT RE-SPECIFY THE MITIGATION THAT IS ALREADY DISPROVED. No additional instruction to the producer, no new heuristic on the shape of the reply, no size statement, no rejection of replies that look like a path — that last one is BO-2400c-1-iii's, it shipped, and it works. Run wf_22fae0b9-291 failed with all of those in place, at 18,190 bytes, under the size the prompt itself names, with a reply that was content and had the right shape. Anything added here that is a judgement about the received text repeats a measured failure. The only thing that separates the intact case from the corrupted one is a comparison against a value stated by the producer."
+    - "PRECONDITION FOR RETIRING THE CACHE FRAMING — READ THIS BEFORE DELETING CACHE_BREAKPOINT_MARKER. The literal '<!-- CACHE_BREAKPOINT -->' constant (fast-lane-ship.js:178, re-derived in scripts/injection_builders.py) is, today, the lane's ONLY corruption detector — and only by accident of its shape: it contains '<', the 2026-08-31 escaping mangled it, the marker check failed, and the run halted. Separately and also true: the prompt caching that marker exists to support does not and cannot exist here. 'cache_control' appears nowhere in templates/, scripts/ or config/, and the two consumers run under different agent types (test-writer and python-coder), so no provider cache anchoring on an exact prefix from the start of a request could ever span them — KI-BO-019, update of 2026-08-25. Both facts hold at once, and their ORDER is load-bearing. The moment someone acts on 'the cache is fictional, remove the marker' while this record is unbuilt, the lane loses its only integrity signal and begins completing GREEN on mangled prompts — the exact outcome the 2026-08-31 run escaped by luck. So: BO-2400c-1-viii is a PRECONDITION for retiring the caching framing, not merely a fix for a transport bug. The marker may be removed only once this record's comparison is implemented and its covering tests are green. Whoever is about to delete it will have run a grep for the marker literal first; this constraint is written to be what that grep finds."
+    - "NO GREP TESTS, AND THE HISTORY IS WHY. Roughly 25 green unit tests accumulated over a month in which this layer never ran once, and a grep test at unit_tests/workflows/test_bo2400a_runner_wiring.py:401 kept a dead reference in an orphaned file looking alive. A test that searches fast-lane-ship.js for a digest call, a field name, a state name or a statement order passes UNCHANGED on a comparison that is defined and never reached, which is not weaker evidence but no evidence. Covering tests execute the lane under unit_tests/_workflow_engine_harness.py (run_workflow_under_e2, label_responses keyed on 'fastlane-context-bundle') and assert on HarnessResult.agent_calls prompt text and on HarnessResult.result. At least one test must additionally run the assemble-bundle subcommand as a REAL SUBPROCESS and carry its actual stdout and its actual stated values through the gate: a hand-written stub with a hand-written digest proves the comparison compares, not that the producer and consumer agree about what was produced."
+delivers_to:
+  - agent: test-writer
+    contract: "The verified context bundle, delivered verbatim as the prefix of the 'test-writer-connected' dispatch prompt. Delivered ONLY in the VERIFIED state; in DELIVERY_ALTERED and DELIVERY_UNVERIFIABLE this dispatch does not occur at all."
+  - agent: python-coder
+    contract: "The same verified bundle string, byte-identical to the one delivered to the test-writer, as the prefix of the 'coder-connected' dispatch prompt. Byte-identity across the two remains BO-2400c-1-iv's property; this record adds that both copies are now known to be the bytes the producer produced, which -iv alone never established."
+  - agent: python-coder
+    contract: "To the halt path, and through it to BO-2400c-1-ix and BO-2400c-1-x: the classification outcome plus BOTH compared values (the producer-stated value and the value the lane derived from what arrived) and both quantities (stated bytes, received bytes). -ix's message obligation and -x's shortfall report are written against exactly these four data, so they must be available at the halt site rather than recomputed there."
+expects_from:
+  - ac_id: BO-2400c-1-ii
+    contract: "A command an agent can run in one Bash call — python3 <worktree>/<output_root>/scripts/injection_builders.py assemble-bundle — whose STDOUT is the assembled bundle text and nothing else. This record EXTENDS that contract with a producer-stated manifest (byte count and digest over exactly those stdout bytes) emitted on a channel that is not stdout. The stdout-carries-only-the-bundle guarantee must survive the extension: a manifest printed into stdout would corrupt the very payload it certifies."
+  - ac_id: BO-2400c-1-iii
+    contract: "The four-state classification (usable / not obtained / a reference / incomplete) and its rule that reference-rejection is evaluated before the marker check. The integrity comparison specified here is a FURTHER state, evaluated on a reply that has already been established to be content rather than a locator — a locator's digest disagreeing is a true statement about the wrong question, and would misfile occurrence one as a delivery failure."
 test_required: true
+test_spec:
+  - name: test_real_assembled_bundle_with_its_stated_value_is_verified_and_reaches_both_prompts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python3 scripts/injection_builders.py assemble-bundle"
+    description: "Run assemble-bundle as a REAL SUBPROCESS over real on-disk layer files, feed its actual stdout AND its actual producer-stated byte count and digest into the harness as the bundle dispatch's reply, and assert the lane classifies VERIFIED and both recorded context-carrying prompts carry that text byte-for-byte. A hand-written stub with a hand-computed digest does not substitute: this is the only test in which producer and consumer must agree about bytes neither side was handed by the test."
+  - name: test_html_escaped_bundle_is_refused_as_altered_in_transit
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Deliver the 2026-08-31 shape — the same assembled bundle with its markup HTML-escaped, every '-->' as '--&gt;' and the marker escaped twice — alongside the producer's stated value for the UNescaped text. The run ends and HarnessResult.agent_calls records no test-writer-connected or coder-connected dispatch. This is the test that is red today and that no amount of reference-rejection can turn green, because the reply is content."
+  - name: test_same_length_substitution_is_refused
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Deliver an alteration that changes no character of LENGTH — one character swapped for another — with the producer's stated value unchanged, and assert the run still ends. This test is what distinguishes a real comparison from a length comparison: a byte count alone passes the escaped case above and fails here, so without this entry the criterion could be satisfied by an instrument that does not hold."
+  - name: test_value_recomputed_over_the_altered_content_is_still_refused
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Deliver altered content together with a verification value recomputed over that altered content, and assert the run still ends. If either side of the comparison is derived by the lane from the text it received, this test cannot fail — it is the one that proves the comparison has two independent sides rather than one."
+  - name: test_absent_and_uninterpretable_verification_values_both_end_the_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Drive well-formed content with the stated value absent, empty, and unparseable in turn — in one test, so a branch that handles only one of them is visible — and assert every case ends the run by the same path as a failed comparison, with no context-carrying dispatch recorded."
+  - name: test_no_context_carrying_dispatch_on_any_unverified_bundle
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: ".claude/workflows/fast-lane-ship.js (top-level body under run_workflow_under_e2)"
+    description: "Across every unverified state, HarnessResult.agent_calls contains no dispatch labelled test-writer-connected or coder-connected — proving the comparison is REACHED and terminates the run, rather than being defined and skipped. This is the assertion that a grep-shaped test cannot make and that this family's 25 green tests never made."
+  - name: test_repaired_text_is_used_only_when_it_satisfies_the_same_comparison
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Deliver escaped content twice: once where un-escaping reproduces the produced bytes exactly, and once where it does not. Assert the first proceeds and carries the repaired text, and the second ends the run. A lane that normalises and proceeds passes the first case and fails the second, which is precisely the leniency the criterion's repair clause exists to forbid."
+  - name: test_producer_states_its_value_over_its_own_stdout_bytes_and_keeps_stdout_clean
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python3 scripts/injection_builders.py assemble-bundle"
+    description: "The producer-side half. Run the subcommand as a real subprocess, capture stdout as BYTES, and assert the stated byte count and digest are those of exactly that byte sequence — and, in the same test, that stdout still contains the bundle text and nothing else, so the manifest was not printed into the payload it certifies."
 test_rationale: |
   Every clause here is a property of a run, and the only instrument that can see one is a
   run. Drive the lane end to end with the producing step's reply controlled, and assert on
