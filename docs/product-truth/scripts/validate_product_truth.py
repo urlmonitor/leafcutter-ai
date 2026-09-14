@@ -175,6 +175,11 @@ DECISION HISTORY
   'degraded'. Both pointer counts are on the JSON line. The outcome helpers
   moved to product_truth_outcome.py to keep this file inside its ratchet.
   (ADR-042 Amendment 1, #EPIC-TruthfulProjectRecord/20)
+- 2026-09-14 [python-coder]: UXP-700b-2 -- every check the run performs now states
+  how many records it read, on the JSON line as examined_by_check. The figures are
+  sizes of what this run loaded, so they move by exactly one per artifact and never
+  carry over. The bookkeeping helpers moved to product_truth_outcome.py to keep
+  this file inside its ratchet. (#EPIC-TruthfulProjectRecord/14)
 """
 from __future__ import annotations
 
@@ -208,6 +213,15 @@ from product_truth_checks import (
     _check_truth_evidence,
 )
 from product_truth_outcome import (  # noqa: F401  # re-exported for callers
+    _OUTCOME_DEGRADED,
+    _OUTCOME_ERRORS,
+    _OUTCOME_SOUND,
+    build_examined_total,
+    examined_by_check,
+    record_check_executed,
+    record_check_not_executed,
+    record_population_checks,
+    report_outcome,
     _TOP_OUTCOME_DEGRADED,
     _TOP_OUTCOME_FAILED,
     _TOP_OUTCOME_NOTHING,
@@ -332,72 +346,6 @@ def load_mockups() -> dict:
 
 
 
-
-
-def record_check_executed(checks: list[dict], name: str, examined: int) -> None:
-    """Append an executed-check entry recording how many records it examined.
-
-    `checks` is the per-run bookkeeping list threaded through run_checks() (and
-    built directly in unit tests). `examined` is the count of records this
-    check actually inspected — the figure build_examined_total() sums across
-    every executed entry.
-    """
-    checks.append({"name": name, "executed": True, "examined": examined})
-
-
-def record_check_not_executed(
-    checks: list[dict], name: str, reason: str, *, blocks: bool = False
-) -> None:
-    """Append a not-executed entry carrying a stated reason (GE-120, applied here).
-
-    A check whose precondition is absent (e.g. the file it reads does not
-    exist) must be visibly listed — never silently omitted, never left to
-    crash the whole run — and must contribute exactly zero to any stated
-    examined figure (see build_examined_total).
-
-    *blocks* separates the two reasons a precondition can be missing, which
-    the record cannot tell apart from the check's own point of view but which
-    mean opposite things to a caller:
-
-    * ``blocks=False`` — the input has simply not been AUTHORED yet. Expected
-      of a young record; the run stays open and exits zero (UXP-700b-2-i).
-    * ``blocks=True`` — the input was never INSTALLED, so the tooling itself
-      is incomplete and no run against it can establish the record is sound.
-      The run exits non-zero (UXP-700a-1-i).
-    """
-    checks.append({"name": name, "executed": False, "reason": reason, "blocks": blocks})
-
-
-def build_examined_total(checks: list[dict]) -> int:
-    """Sum the `examined` figure across executed checks only.
-
-    Not-executed entries (record_check_not_executed) carry no `examined` key
-    and are excluded from the sum, so an unexecuted check contributes nothing
-    to any stated examined total — AC-2 of UXP-700b-2-i.
-    """
-    return sum(entry.get("examined", 0) for entry in checks if entry.get("executed"))
-
-
-# Outcome sentinels returned by report_outcome(). Kept as named constants (not
-# inlined) so main()'s branch on the "everything executed and sound" case can't
-# accidentally match a degraded run by string coincidence.
-_OUTCOME_SOUND = "checked-and-sound"
-_OUTCOME_ERRORS = "checked-with-errors"
-_OUTCOME_DEGRADED = "checked-with-unexecuted-checks"
-
-def report_outcome(checks: list[dict], *, has_errors: bool = False) -> str:
-    """Return the outcome sentinel for a completed check run.
-
-    The checked-and-sound outcome is returned ONLY when every recorded check
-    executed and there were no errors. If ANY check is listed as not executed,
-    the outcome is never the checked-and-sound sentinel — even with zero
-    errors — because part of the record was not actually checked (AC-3).
-    """
-    if any(not entry.get("executed", True) for entry in checks):
-        return _OUTCOME_DEGRADED
-    if has_errors:
-        return _OUTCOME_ERRORS
-    return _OUTCOME_SOUND
 
 
 def _check_eval(errors: list[str], checks: list[dict]) -> None:
@@ -552,6 +500,8 @@ def run_checks() -> dict:
     # Anti-phantom-done truth-evidence gate: a done/in_progress AC referenced by
     # a BUILT flow must carry real implementation evidence.
     _check_truth_evidence(flows, ac_records, errors, warnings)
+    record_population_checks(checks, {"flows": len(flows), "mock-data": len(mocks), "mockups": len(mockups),
+                                      "index": len(index.get("artifacts", [])), "acceptance-criteria": len(ac_records)})
 
     return {
         "errors": errors,
@@ -651,7 +601,8 @@ def main() -> int:
     empty_types = report["empty_types"]
     unresolvable = report["unresolvable_pointers"]
     top_outcome = _top_level_outcome(examined_flows, unreadable_flows, bool(errors), empty_types, len(unresolvable))
-    contract = (top_outcome, examined_flows, unreadable_flows, empty_types, report["resolved_pointers"], len(unresolvable))
+    contract = (top_outcome, examined_flows, unreadable_flows, empty_types, report["resolved_pointers"], len(unresolvable),
+                examined_by_check(checks))
 
     # Stated on EVERY run, zero included (UXP-700c-1): without it a run that
     # resolved none of the pointers it holds is indistinguishable, in the
