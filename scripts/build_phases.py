@@ -1208,7 +1208,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 
     version_known = version_str is not None
     version_ok = False
-    if version_known:
+    if version_str is not None:  # not `version_known`: mypy cannot narrow via a bool
         try:
             version_ok = Version(version_str) >= Version(_MINIMUM_VERSION)
         except InvalidVersion:
