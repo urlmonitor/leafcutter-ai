@@ -58,3 +58,5 @@ A small diff rarely contains such a byte; a merge of several PRs almost always d
 **Related.** `KI-BP-20260914-build-crashes-on-a-cp1252-stdout` (`build-pipeline.md`) is the output-side twin of this input-side defect, found the same day. Both come from implicit locale encoding on Windows, which Linux CI can never exercise.
 
 **Pattern:** a guard whose crash path and whose blocking path share an exit code, so a tool failure is indistinguishable from a finding.
+
+---

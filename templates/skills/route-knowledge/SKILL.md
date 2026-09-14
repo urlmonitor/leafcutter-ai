@@ -81,8 +81,8 @@ If the routing decision is uncertain, the skill returns a second field:
 | `memory-user` | `memory/feedback_*.md` (user-preference subtype) | Captures how Claude should behave for this specific user; corrections to agent habits or communication style |
 | `memory-project` | `memory/project_*.md` (project-context subtype) | Project-level facts that should persist across sessions: repo paths, auth quirks, naming conventions |
 | `memory-reference` | `memory/reference_*.md` (reference subtype) | Lookup data the user wants available at every spawn: API keys pattern, port numbers, environment names |
-| `CLAUDE.md-inline` | Root `CLAUDE.md` (inline entry) | Short, universal project-wide rule or fact; fits in one bullet or one paragraph; every agent must know it |
-| `CLAUDE.md-toc` | Root `CLAUDE.md` (TOC heading + link) | Content warrants its own section or file; add a heading in CLAUDE.md that links to `docs/` — do not paste full text inline |
+| `claude-md-inline` | Root `CLAUDE.md` (inline entry) | Short, universal project-wide rule or fact; fits in one bullet or one paragraph; every agent must know it |
+| `claude-md-toc` | Root `CLAUDE.md` (TOC heading + link) | Content warrants its own section or file; add a heading in CLAUDE.md that links to `docs/` — do not paste full text inline |
 | `per-folder-readme` | `<folder>/README.md` | Folder-scoped context: purpose of a directory, file conventions within that folder, or local entry-point docs |
 | `agent-frontmatter` | `leafcutter/templates/agents/<name>.md` or `PROJECT_CONTEXT.md` | Domain knowledge a specific worker agent needs at every spawn — behavioral rules, domain-specific context |
 | `adr` | `docs/architecture/adrs/ADR-NNN-*.md` | Architectural decision + rationale; use when a non-obvious design choice is made and future engineers need the "why" |
@@ -94,6 +94,18 @@ If the routing decision is uncertain, the skill returns a second field:
 | `settings-json` | `config/settings.json` (via `update-config` flow) | Hook registrations, permission flags, environment variables, feature flags |
 | `ticket-body` | `tickets/<status>/<ticket>.md` (body section) | Work-in-progress scope item, acceptance criterion, or implementation note that belongs to an active ticket |
 | `skills-config` | `config/skills_config.json` | Onboarding-time configuration values: skill auto-load decisions, skill-to-agent assignments |
+
+**Vocabulary note (AC INF-400c-5):** the `ID` column above is a member of the
+single declared `entry_kind` vocabulary at `config/entry_kind_vocabulary.json`,
+which the harvester (`scripts/knowledge/harvest_learnings.py`'s
+`_KNOWN_ENTRY_KINDS`) reads its routable set from. `claude-md-inline` and
+`claude-md-toc` were renamed from the pre-INF-400c-5 `CLAUDE.md-inline` /
+`CLAUDE.md-toc` spellings so every value in this table is expressible as a
+plain hyphenated-lowercase token — the vocabulary's own canonical form (see
+Step-14/INF-400c-5-i's normalisation rule) and the character set the
+harvester's `entry_kind` routing table can represent. Older docs/retrospectives
+still reference the pre-rename spelling; that is historical record, not a
+live routing value.
 
 ---
 
@@ -142,7 +154,7 @@ tool choices, or a correction to a default behaviour.
 **Path pattern:** `memory/feedback_<topic>.md`
 
 **Exclusion:** Do NOT use this surface for project facts that every future engineer
-should know — those belong in `CLAUDE.md-inline` (Step 4).
+should know — those belong in `claude-md-inline` (Step 4).
 
 **Example output:**
 ```json
@@ -199,7 +211,7 @@ or short paragraph in `CLAUDE.md`.
 - "The repo root is `leafcutter-ai/`, not `leafcutter/`."
 - "Pre-commit hooks run in a virtualenv at `.venv/`."
 
-**Route to:** `CLAUDE.md-inline`
+**Route to:** `claude-md-inline`
 
 **Path:** `CLAUDE.md` (root)
 
@@ -218,7 +230,7 @@ that links to the deeper doc — do NOT paste the full content inline.
 - A full table of worktree conventions.
 - The complete SSH key setup guide.
 
-**Route to:** `CLAUDE.md-toc`
+**Route to:** `claude-md-toc`
 
 **Path:** Create the full content at `docs/<appropriate-subdir>/<name>.md`, then
 add a one-line TOC entry in `CLAUDE.md` pointing to that file.
@@ -397,12 +409,12 @@ If none of the above steps match, return:
 
 ## CLAUDE.md Inline vs TOC-Link Rule
 
-When routing to `CLAUDE.md-inline` (Step 4) or `CLAUDE.md-toc` (Step 5), apply
+When routing to `claude-md-inline` (Step 4) or `claude-md-toc` (Step 5), apply
 these rules to choose between them:
 
 ### Inline rule
 
-Route to `CLAUDE.md-inline` when ALL of the following hold:
+Route to `claude-md-inline` when ALL of the following hold:
 
 1. The content fits in 1–3 sentences or a short bullet.
 2. The content is universal — every agent in every session needs it.
@@ -414,12 +426,12 @@ Route to `CLAUDE.md-inline` when ALL of the following hold:
 >
 > Decision: Short, universal fact — one bullet in `CLAUDE.md`.
 > ```json
-> { "target_surface": "CLAUDE.md-inline", "path": "CLAUDE.md", "rationale": "One-liner SSH alias fact — universal, fits inline." }
+> { "target_surface": "claude-md-inline", "path": "CLAUDE.md", "rationale": "One-liner SSH alias fact — universal, fits inline." }
 > ```
 
 ### TOC-link rule
 
-Route to `CLAUDE.md-toc` when ANY of the following hold:
+Route to `claude-md-toc` when ANY of the following hold:
 
 1. The content requires more than 3 sentences, a table, or a multi-step list.
 2. The content makes more sense as a named section in `docs/` that other docs
@@ -435,7 +447,7 @@ Route to `CLAUDE.md-toc` when ANY of the following hold:
 > entry in `CLAUDE.md`'s reference table.
 >
 > ```json
-> { "target_surface": "CLAUDE.md-toc", "path": "docs/how-to/pre-drive-checklist.md", "rationale": "Multi-step checklist — too long for inline; create dedicated how-to and link from CLAUDE.md TOC." }
+> { "target_surface": "claude-md-toc", "path": "docs/how-to/pre-drive-checklist.md", "rationale": "Multi-step checklist — too long for inline; create dedicated how-to and link from CLAUDE.md TOC." }
 > ```
 
 ---

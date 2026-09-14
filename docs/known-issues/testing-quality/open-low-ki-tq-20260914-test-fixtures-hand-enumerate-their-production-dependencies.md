@@ -57,3 +57,5 @@ Note this generalises beyond these two: any fixture that copies production modul
 - `GE-127f-1` / `-2` / `-2-i` `it_requirements` — carry this hazard forward explicitly, since that tree's implementation is likely to add another import.
 
 **Pattern:** a hand-maintained mirror of a dependency graph, with no check that the mirror still matches — surfacing as a failure attributed to whatever was running when it broke.
+
+---

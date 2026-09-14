@@ -22,14 +22,23 @@ related_docs:
 
 - **Severity:** critical as a pattern — the largest miss in the GE-122 review, and the one every
   other finding was standing on
-- **Status:** open as a pattern. The **instance** is `commit-guardian.md`'s `KI-CG-021`. The
-  **class** overlaps `build-orchestration.md`'s `KI-BO-011` (an unreachable file serving as a
-  criterion's proof) and `KI-BO-028`, but is not the same: those are about a *test* pointed at
-  dead code, this is about a *review method* that never leaves the source tree. Filed separately
-  and cross-referenced rather than folded in, because the remedy below — a registration test on
-  every hook AC — is not implied by either.
-- **Occurrences:** 1 (six rounds)
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Status:** **open as a pattern, with detection shipped and remediation under way** (updated
+  2026-09-14). The detection half is closed:
+  `unit_tests/commit_guardian/test_hook_registration_inventory.py` is on `main` and asks
+  disk → manifest for every hook script, so a new unregistered gate now fails on the day it is
+  written. The backlog it exposed is being drained — **18 → 9** (two deleted as bybit-trader
+  residue, two reclassified as non-hooks, five registered). `GE-120h` in the AC store is the
+  durable parent for the rest. The **pattern** stays open because the review-method half is not
+  fixed by a test: nothing yet forces a reviewer to ask the question, and the store's own
+  remaining nine are evidence the class persists. The **instance**, `commit-guardian.md`'s
+  `KI-CG-021`, is also still open — its code lives only on unmerged PR #495. The **class**
+  overlaps `build-orchestration.md`'s `KI-BO-011` (an unreachable file serving as a criterion's
+  proof) and `KI-BO-028`, but is not the same: those are about a *test* pointed at dead code,
+  this is about a *review method* that never leaves the source tree. Filed separately and
+  cross-referenced rather than folded in.
+- **Occurrences:** 1 (six rounds), plus 18 standing instances found when the question was
+  finally asked mechanically
+- **First seen:** 2026-08-25 · **Last seen:** 2026-09-14 (inventory measured on `main`)
 - **Where:** the adversarial review method itself; instance at PR #495's
   `check_identifier_uniqueness.py`
 
