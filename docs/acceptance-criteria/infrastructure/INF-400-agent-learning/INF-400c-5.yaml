@@ -6,7 +6,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: draft
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c.yaml"
@@ -64,6 +64,10 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: [INF-400c-5-i, INF-400c-5-ii, INF-400c-5-iii]
-implemented_by: []
+implemented_by:
+- config/entry_kind_vocabulary.json
+- scripts/knowledge/entry_kind_vocabulary.py
+- scripts/knowledge/emit_knowledge.py
+- scripts/knowledge/harvest_learnings.py
 change_target: code
 risk_surface: contract_boundary
