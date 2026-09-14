@@ -50,6 +50,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: modifies
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition — re-exports the naming helpers but defines none of them. epic_naming.py below owns this behaviour."
+  - path: scripts/ac_store/epic_naming.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns _truncate_pascal_at and _derive_epic_name — the summariser-unavailable fallback path where the name must end on a meaning-carrying word rather than an article or preposition."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: context
     status: exists

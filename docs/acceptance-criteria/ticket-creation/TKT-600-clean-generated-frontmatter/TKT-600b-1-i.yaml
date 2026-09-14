@@ -37,7 +37,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: modifies
     status: exists
-    relevance: "The caller that stages into tickets/00_inbox/ and moves afterwards — the only caller that can supply the resolved destination, and the one that currently cannot."
+    relevance: "The caller that stages into tickets/00_inbox/ and moves afterwards — the only caller that can supply the resolved destination, and the one that currently cannot. Facade only since the 2026-09-14 decomposition: that caller is now epic_tickets.py, below."
+  - path: scripts/ac_store/epic_tickets.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns _call_generate_ticket_from_ac, which passes --location-kind epic_member to the generator (its module docstring carries the TKT-600b-1-i annotation). This is the staging caller the AC's refusal rule applies to."
   - path: docs/architecture/components/ticket-lifecycle.md
     relationship: describes
     status: exists
@@ -84,14 +88,18 @@ it_requirements:
   mechanism_chosen: >-
     THE CALLER PASSES A RESOLVED FINAL DESTINATION. This is pinned, not left open,
     because the other two candidates are unsafe here for reasons visible only in
-    source. The destination is knowable: goal_to_epic.py derives epic_name at :2239
-    (and :2076) BEFORE generate_tickets_for_leaves runs at :2288, so the caller has
-    the answer in hand and simply does not pass it.
+    source. The destination is knowable: epic_name is derived at
+    scripts/ac_store/epic_pipeline.py:112 (run(), --ac mode) and :226
+    (build_epic_from_ids, --ids mode) BEFORE generate_tickets_for_leaves runs at
+    scripts/ac_store/epic_ac_phases.py:191 (--ac) / epic_pipeline.py:229 (--ids), so the
+    caller has the answer in hand and simply does not pass it.
   why_the_obvious_implementation_is_wrong: >-
     Inferring the location from tickets_root is wrong TODAY, not hypothetically.
-    goal_to_epic.py:2283 sets tickets_root = inbox_dir, so every epic ticket is
+    scripts/ac_store/epic_ac_phases.py:191 passes inbox_dir as the tickets root (pre-split
+    this was the named `tickets_root = inbox_dir`), so every epic ticket is
     generated into tickets/00_inbox/ — a NON-epic location — and only afterwards
-    moved by assemble_epic_folder (:2294) into
+    moved by assemble_epic_folder (epic_ac_phases.py:197, or epic_pipeline.py:232 in
+    --ids mode) into
     tickets/00_inbox/epics/EPIC-<Name>/NN_<base>.md. A generator that sniffs its
     tickets_root for an EPIC-* segment would therefore answer "not an epic" for
     every epic ticket and emit the phase as needed, reproducing KI-BO-20260831-1930
@@ -213,9 +221,20 @@ amended_by:
     note: >-
       Pinned the settled-location mechanism to caller-supplied resolved destination,
       with the two rejected mechanisms and the source evidence for the rejection
-      (goal_to_epic.py:2283 stages into the inbox; epic_name is known at :2239)
+      (goal_to_epic.py stages into the inbox; epic_name is known before generation)
       recorded in it_requirements. Complexity S -> M: two files must move together.
       Criteria untouched.
+      [citations retargeted 2026-09-14, no change of meaning] This note originally read
+      "goal_to_epic.py:2283 ... at :2239". Those numbers were CORRECT when written, against
+      54356a926 — but they went stale within the same day: commit 2e8756e02 (this AC's own
+      TKT-600b implementation, 2026-09-01) inserted 9 lines above them, shifting all five of
+      this record's citations down by a uniform +9 (:2076, :2239, :2283, :2288, :2294 ->
+      :2085, :2248, :2292, :2297, :2303) without the citations being updated. The 2026-09-14
+      decomposition then moved the sites out of goal_to_epic.py entirely. The prose
+      descriptions were accurate at every step, so they were followed rather than the
+      numbers; it_requirements now names the owning module, function and current line.
+      Lesson worth keeping: a bare line number into a file the same commit edits is stale on
+      arrival. Cite module + function.
 superseded_by: null
 covered_by: []
 implemented_by: []

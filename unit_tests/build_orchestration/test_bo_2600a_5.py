@@ -333,7 +333,7 @@ class TestBuildEpicFromIds(unittest.TestCase):
         _write_ac(self.ac_root, "BO-5B1", level="L2", work_status="todo")
 
         writer = _make_fake_ticket_writer(self.ac_root)
-        with patch("goal_to_epic._call_generate_ticket_from_ac", side_effect=writer):
+        with patch("epic_tickets._call_generate_ticket_from_ac", side_effect=writer):
             epic_folder = build_epic_from_ids(
                 ["BO-5B1", "BO-5A1"],   # B first (it is A's prereq)
                 store_root=self.ac_root,
@@ -404,7 +404,7 @@ class TestBuildEpicFromIds(unittest.TestCase):
             "BO-5C2": ["BO-5C1"],    # raw AC id — build_epic_from_ids must translate to ticket file
         }
         writer = _make_fake_ticket_writer(self.ac_root, dep_map=dep_map)
-        with patch("goal_to_epic._call_generate_ticket_from_ac", side_effect=writer):
+        with patch("epic_tickets._call_generate_ticket_from_ac", side_effect=writer):
             epic_folder = build_epic_from_ids(
                 ["BO-5C1", "BO-5C2"],
                 store_root=self.ac_root,
@@ -575,7 +575,7 @@ class TestBuildEpicFromIds(unittest.TestCase):
         _write_ac(self.ac_root, "BO-5D1", level="L2", work_status="todo")
 
         writer = _make_fake_ticket_writer(self.ac_root)
-        with patch("goal_to_epic._call_generate_ticket_from_ac", side_effect=writer):
+        with patch("epic_tickets._call_generate_ticket_from_ac", side_effect=writer):
             build_epic_from_ids(
                 ["BO-5D1"],
                 store_root=self.ac_root,
@@ -655,7 +655,7 @@ class TestBuildEpicFromIds(unittest.TestCase):
             "BO-5E2": ["BO-5E1"],   # raw AC id written by the (fake) ticket generator
         }
         writer = _make_fake_ticket_writer(self.ac_root, dep_map=dep_map)
-        with patch("goal_to_epic._call_generate_ticket_from_ac", side_effect=writer):
+        with patch("epic_tickets._call_generate_ticket_from_ac", side_effect=writer):
             epic_folder = build_epic_from_ids(
                 ["BO-5E1", "BO-5E2"],
                 store_root=self.ac_root,

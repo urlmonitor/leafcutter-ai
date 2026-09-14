@@ -25,6 +25,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: constrains
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The goal-path generator this AC constrains is now scripts/ac_store/epic_tickets.py, below."
+  - path: scripts/ac_store/epic_tickets.py
+    relationship: constrains
+    status: exists
+    relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators this AC constrains."
   - path: scripts/ac_store/generate_ticket_from_ac.py
     relationship: constrains
     status: exists
@@ -43,5 +48,24 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_mixed_impl_docs_config_set_still_emits_test_requirements
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "files_touched holding one implementation .py plus docs/reference/ac-schema.md plus config/agent_registry.json still generates a '## Test Requirements' section."
+  - name: test_mixed_set_stub_entry_names_the_single_implementation_file
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The section carries at least one stub entry for scripts/ac_store/generate_ticket_from_ac.py specifically — the one qualifying path among the three."
+  - name: test_docs_and_config_paths_do_not_suppress_the_section
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The discriminating assertion: an implementation that requires ALL paths to qualify (rather than ANY) would omit the section here while passing TKT-500f-6's single-file case. This is the any-vs-all boundary."
 change_target: code
 risk_surface: internal

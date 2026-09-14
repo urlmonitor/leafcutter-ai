@@ -125,6 +125,25 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/__init__.py",                  "__init__.py"),
     ("scripts/build_ac_mode_detection.py",            "build_ac_mode_detection.py"),
     ("scripts/goal_to_epic.py",                       "goal_to_epic.py"),
+    # goal_to_epic.py's 14 siblings. It imports every one of them at MODULE
+    # scope, so a deploy that ships the entry point without all fourteen does
+    # not degrade -- it raises ModuleNotFoundError on first use. Two of them
+    # (epic_ac_phases, epic_phases) arrive only transitively via epic_pipeline
+    # and are exactly as load-bearing as the twelve named directly.
+    ("scripts/ac_store/epic_ac_phases.py",            "epic_ac_phases.py"),
+    ("scripts/ac_store/epic_ac_store.py",             "epic_ac_store.py"),
+    ("scripts/ac_store/epic_assembly.py",             "epic_assembly.py"),
+    ("scripts/ac_store/epic_cli.py",                  "epic_cli.py"),
+    ("scripts/ac_store/epic_dependencies.py",         "epic_dependencies.py"),
+    ("scripts/ac_store/epic_errors.py",               "epic_errors.py"),
+    ("scripts/ac_store/epic_master_plan.py",          "epic_master_plan.py"),
+    ("scripts/ac_store/epic_naming.py",               "epic_naming.py"),
+    ("scripts/ac_store/epic_phases.py",               "epic_phases.py"),
+    ("scripts/ac_store/epic_pipeline.py",             "epic_pipeline.py"),
+    ("scripts/ac_store/epic_readiness.py",            "epic_readiness.py"),
+    ("scripts/ac_store/epic_readiness_gate.py",       "epic_readiness_gate.py"),
+    ("scripts/ac_store/epic_runtime.py",              "epic_runtime.py"),
+    ("scripts/ac_store/epic_tickets.py",              "epic_tickets.py"),
 )
 
 

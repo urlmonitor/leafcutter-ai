@@ -31,6 +31,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: modifies
     status: exists
+    relevance: "CLI facade only since the 2026-09-14 decomposition; it re-exports assemble_epic_folder but no longer defines it. The collision branch this AC specifies lives in the module below."
+  - path: scripts/ac_store/epic_assembly.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns assemble_epic_folder, including the basename-collision branch that overwrites in place and emits the WARNING this AC requires."
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
@@ -51,5 +56,42 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - tickets/00_inbox/epics/EPIC-GoalToEpicBugfixes/02_basename_collision_resolution.md
+test_spec:
+  - name: test_acd_1200a_9i_in_place_overwrite_on_collision
+    target_dir: tests/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A basename that already exists in the epic folder is overwritten in place — the Then clause that the collision resolves deterministically to the same single path."
+  - name: test_acd_1200a_9i_no_second_location_copy
+    target_dir: tests/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "No renamed sibling and no second copy is minted anywhere — the negative half of the same Then clause."
+  - name: test_acd_1200a_9i_single_file_after_run
+    target_dir: tests/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "After the run exactly one ticket file with that basename exists for the leaf AC, at the epic-folder path."
+  - name: test_acd_1200a_9i_warning_emitted_on_overwrite
+    target_dir: tests/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A WARNING naming the replaced file is emitted for each overwrite, so the replacement is observable rather than silent. Asserted via assertLogs on the 'goal_to_epic' logger, which is why epic_assembly logs through epic_runtime.get_logger() rather than __name__."
+  - name: test_acd_1200a_9i_implemented_by_after_collision
+    target_dir: tests/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "implemented_by names the single surviving epic-folder path after a collision, consistent with ACD-1200a-9."
+  - name: test_ac3_existing_folder_is_reused_in_place
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "An already-present epic folder is reused rather than duplicated or suffixed — the folder-level precondition the per-file collision rule sits inside."
 change_target: code
 risk_surface: internal

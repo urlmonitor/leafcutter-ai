@@ -34,6 +34,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: describes
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The primary surface (generate_ticket_from_ac._write_implemented_by, above) is unaffected by the split; the goal path's side of the shared canonicaliser moved to epic_phases.py below."
+  - path: scripts/ac_store/epic_phases.py
+    relationship: describes
+    status: exists
+    relevance: "Owns _relativise_backref_pair / _apply_epic_backrefs — the goal path's canonicalisation of an absolute or cross-worktree implemented_by entry to one repo-relative entry."
   - path: docs/architecture/components/ac-driven-dev.md
     relationship: describes
     status: exists

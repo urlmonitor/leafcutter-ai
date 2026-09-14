@@ -25,8 +25,8 @@ related_docs:
   the AC-coverage note below
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `scripts/goal_to_epic.py` — `run()` (`:2170`), against
-  `build_epic_from_ids()` (`:2013`); call sites at `:2344` and `:2113`
+- **Where:** `scripts/ac_store/epic_pipeline.py` — `run()` (`:60`), against
+  `build_epic_from_ids()` (`:175`); call sites at `:135` and `:237`
 - **Reported by:** customer bug report 2026-08-25
 
 **This entry deliberately covers two symptoms under one root cause.** They present as

@@ -26,6 +26,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: constrains
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The goal-path generator this AC constrains is now scripts/ac_store/epic_tickets.py, below."
+  - path: scripts/ac_store/epic_tickets.py
+    relationship: constrains
+    status: exists
+    relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators this AC constrains."
   - path: scripts/ac_store/generate_ticket_from_ac.py
     relationship: constrains
     status: exists

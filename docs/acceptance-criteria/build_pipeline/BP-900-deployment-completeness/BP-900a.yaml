@@ -22,6 +22,10 @@ doc_links:
   - scripts/ac_store/generate_ticket_from_ac.py
   - scripts/ac_store/ac_prioritizer.py
   - scripts/goal_to_epic.py
+  - path: scripts/build_phases.py
+    relationship: related
+    status: exists
+    relevance: "AC_STORE_DEPLOY_MAP is the declaration that makes this AC's minimum set actually land on a consumer install. Since the 2026-09-14 decomposition goal_to_epic.py is no longer self-contained: it imports fourteen siblings (epic_ac_phases, epic_ac_store, epic_assembly, epic_cli, epic_dependencies, epic_errors, epic_master_plan, epic_naming, epic_phases, epic_pipeline, epic_readiness, epic_readiness_gate, epic_runtime, epic_tickets) at module scope, so a deployed goal_to_epic.py without all fourteen is not a degraded script but an unimportable one (ModuleNotFoundError). All fourteen are in the map; a presence check for goal_to_epic.py alone no longer proves this AC."
   - templates/agents/build-ac.md
   - templates/skills/ac-scanner/SKILL.md
   - templates/skills/build-ac/SKILL.md
