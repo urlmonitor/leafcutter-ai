@@ -327,14 +327,23 @@ curated can falsify it.
 
 - **Severity:** critical as a pattern — the largest miss in the GE-122 review, and the one every
   other finding was standing on
-- **Status:** open as a pattern. The **instance** is `commit-guardian.md`'s `KI-CG-021`. The
-  **class** overlaps `build-orchestration.md`'s `KI-BO-011` (an unreachable file serving as a
-  criterion's proof) and `KI-BO-028`, but is not the same: those are about a *test* pointed at
-  dead code, this is about a *review method* that never leaves the source tree. Filed separately
-  and cross-referenced rather than folded in, because the remedy below — a registration test on
-  every hook AC — is not implied by either.
-- **Occurrences:** 1 (six rounds)
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Status:** **open as a pattern, with detection shipped and remediation under way** (updated
+  2026-09-14). The detection half is closed:
+  `unit_tests/commit_guardian/test_hook_registration_inventory.py` is on `main` and asks
+  disk → manifest for every hook script, so a new unregistered gate now fails on the day it is
+  written. The backlog it exposed is being drained — **18 → 9** (two deleted as bybit-trader
+  residue, two reclassified as non-hooks, five registered). `GE-120h` in the AC store is the
+  durable parent for the rest. The **pattern** stays open because the review-method half is not
+  fixed by a test: nothing yet forces a reviewer to ask the question, and the store's own
+  remaining nine are evidence the class persists. The **instance**, `commit-guardian.md`'s
+  `KI-CG-021`, is also still open — its code lives only on unmerged PR #495. The **class**
+  overlaps `build-orchestration.md`'s `KI-BO-011` (an unreachable file serving as a criterion's
+  proof) and `KI-BO-028`, but is not the same: those are about a *test* pointed at dead code,
+  this is about a *review method* that never leaves the source tree. Filed separately and
+  cross-referenced rather than folded in.
+- **Occurrences:** 1 (six rounds), plus 18 standing instances found when the question was
+  finally asked mechanically
+- **First seen:** 2026-08-25 · **Last seen:** 2026-09-14 (inventory measured on `main`)
 - **Where:** the adversarial review method itself; instance at PR #495's
   `check_identifier_uniqueness.py`
 
@@ -1609,3 +1618,53 @@ Note this generalises beyond these two: any fixture that copies production modul
 - `GE-127f-1` / `-2` / `-2-i` `it_requirements` — carry this hazard forward explicitly, since that tree's implementation is likely to add another import.
 
 **Pattern:** a hand-maintained mirror of a dependency graph, with no check that the mirror still matches — surfacing as a failure attributed to whatever was running when it broke.
+
+---
+
+### KI-TQ-20260914-tempdir-cleanup-race-fails-a-green-test-run — a real-git fixture's teardown races its own `.git/objects` and fails a suite in which every assertion passed
+
+- **Severity:** medium — it costs a full CI cycle and, worse, presents as a defect in whatever
+  change is on the branch
+- **Status:** open. Reproduced once in CI on PR #794; the same commit re-run passed unchanged.
+  Passes locally on repeated runs.
+- **Occurrences:** 1 observed (2026-09-14); expected to recur, since the cause is a race
+- **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
+- **Where:** `unit_tests/commit_guardian/test_ge_127a_1_i_entry_points.py` —
+  `TestDeployedCopyFailsClosedOnUnmeasurableFile::test_ge_127a_1_i_the_deployed_copy_fails_closed_on_an_unmeasurable_file_in_a_cold_process`;
+  the `tempfile.TemporaryDirectory` teardown, via `shutil._rmtree`
+
+**Symptom.** The suite reports `1 failed, 5914 passed` — and the one failure is not an assertion:
+
+```
+OSError: [Errno 39] Directory not empty: '/tmp/tmpftvu8oaf/.git/objects'
+  File ".../shutil.py:658", in _rmtree
+    self._rmtree(self.name, ignore_errors=self._ignore_cleanup_errors)
+```
+
+Every assertion in the test passed. The failure is the `TemporaryDirectory` context manager
+failing to delete a real git repository the fixture created, because something was still writing
+into `.git/objects` while `rmtree` walked it — git's own background housekeeping, or a not-yet-
+reaped child process.
+
+**Why it matters more than an ordinary flake.** It is attributed to the branch. On PR #794 the
+change under test was the deletion of two unrelated hook scripts, and the failure named a
+file-size gate test; the honest response is to stop and investigate, and the cost is a full
+re-run of a 17-minute suite before it can be dismissed. A flake that fails in teardown rather
+than in an assertion is also easy to misread as a genuine defect, because the test name in the
+`FAILED` line is a real test.
+
+**Cause, narrowed.** This family of tests is new: `GE-127a-1` (PR #728) introduced fixtures that
+build a temp git repo, run a real `pre-commit install`, and drive a real `git commit`, precisely
+so the gate is exercised through the commit path rather than by hand. That is the right shape —
+it is the fix for `KI-TQ-007`'s own lesson — but it means the tests now own live git repositories,
+and a live git repository is not reliably deletable the instant the last command returns.
+
+**Fix direction.** Pass `ignore_cleanup_errors=True` to the `TemporaryDirectory` in these fixtures
+(Python 3.10+, and this repo runs 3.13). A cleanup failure in a temp directory is not a test
+result and must not be reported as one; the OS reclaims `/tmp` regardless. If the leak itself is
+a concern, reap child processes explicitly before teardown rather than making the deletion a
+pass/fail condition. Apply to every fixture in `commit_guardian` that creates a real git repo —
+`_ge_127a_1_ordinary_commit_fixture.py` and `_ge_127c_1_scope_fixture.py` have the same shape.
+
+**Pattern:** teardown reported as a test outcome, so an environment race is indistinguishable from
+a defect in the change under test.

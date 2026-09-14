@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -360,6 +360,41 @@ implemented_by: []
 change_target: code
 risk_surface: contract_boundary
 notes: |
+  PARTIAL PROGRESS — THREE OF FIVE ARMS LANDED IN 5d0792d13 (PR #808), AND THIS RECORD IS
+  CORRECTLY STILL work_status: todo. Read this before concluding either that nothing
+  shipped or that this is finished; both readings are available from the bare status and
+  both are wrong.
+
+    LANDED, observed rather than asserted:
+      - Arm 1 (each of the five runs on an ordinary commit, and the commit completes) —
+        the four pre-commit gates were seen Passing in the very commit that registered
+        them; check-ac-done-on-merge is post-merge and was exercised through its deployed
+        entry point.
+      - Arm 2 (pre-existing state is reported, and does not by itself refuse) —
+        check-folder-density reported templates/scripts/commit_guardian (109 files) and
+        unit_tests/commit_guardian (142) as PRE-EXISTING against a limit of 15, and the
+        commit completed.
+      - Arm 5 (the record of advertised-but-unrun checks is smaller by exactly these five)
+        — the inventory baseline went 14 -> 9, naming none of the five.
+
+    NOT LANDED — this is what keeps the record open:
+      - Arm 4, the anti-theatre clause: for each of the five, an input that check exists to
+        refuse, put through the commit path it is now registered on, must actually be
+        refused. NONE of the five has been shown saying no. Three are vacuous in this
+        repository and a fourth is unarmed by default, so all five passing proves only that
+        they do not crash. This arm is the difference between five gates and five entries.
+      - Arm 3, the nothing-to-examine clause: a check whose subject this repository holds
+        no instance of must SAY it had nothing to examine, rather than report that it
+        examined something and found it clean. Unverified, and the early signs are that it
+        currently fails: check-sql-complexity and check-debug-scripts exit 0 silently here,
+        which is indistinguishable from a clean pass. That is GE-120a's defect appearing
+        inside the fix for GE-120h, and it may need the GE-120 outcome vocabulary
+        (OUTCOME_NOTHING_TO_INSPECT, check_outcome.py) wiring into those two scripts.
+
+    Do not mark this done on the strength of the registration commit. Registration is arm
+    1; arms 3 and 4 are the ones that distinguish a switched-on check from a decorative
+    manifest entry, and they are precisely what KI-TQ-007 is about.
+
   THIS IS THE IMMEDIATE HALF, AND IT IS DELIBERATELY NOT THE WHOLE DECOMPOSITION. The
   parent forbids "register the missing checks" as the answer; GE-120h-1 and GE-120h-2 are
   the durable rule and this record is the cleanup that rule makes observable. It is
