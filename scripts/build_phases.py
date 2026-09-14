@@ -1330,6 +1330,36 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/scan_ac_store.py",            "scan_ac_store.py"),
     ("scripts/ac_store/generate_ticket_from_ac.py",  "generate_ticket_from_ac.py"),
+    # generate_ticket_from_ac.py's own `_gtfa_*` sibling modules. The generator
+    # was decomposed from one 4035-line module into a shell plus these parts;
+    # the shell imports every one of them at module scope via
+    # importlib.import_module, so ALL of them must deploy or the deployed
+    # generator dies at import with ModuleNotFoundError. Unit tests import from
+    # source and would stay green through exactly that gap -- which is the
+    # BP-900a-1 / BP-900g-8 failure shape, so the derived closure guard in
+    # build.py is what actually enforces this list, not this comment.
+    ("scripts/ac_store/_gtfa_seams.py",              "_gtfa_seams.py"),
+    ("scripts/ac_store/_gtfa_constants.py",          "_gtfa_constants.py"),
+    ("scripts/ac_store/_gtfa_paths.py",              "_gtfa_paths.py"),
+    ("scripts/ac_store/_gtfa_config.py",             "_gtfa_config.py"),
+    ("scripts/ac_store/_gtfa_components.py",         "_gtfa_components.py"),
+    ("scripts/ac_store/_gtfa_phases.py",             "_gtfa_phases.py"),
+    ("scripts/ac_store/_gtfa_files_touched.py",      "_gtfa_files_touched.py"),
+    ("scripts/ac_store/_gtfa_store.py",              "_gtfa_store.py"),
+    ("scripts/ac_store/_gtfa_test_descriptors.py",   "_gtfa_test_descriptors.py"),
+    ("scripts/ac_store/_gtfa_tests_section.py",      "_gtfa_tests_section.py"),
+    ("scripts/ac_store/_gtfa_doc_genre.py",          "_gtfa_doc_genre.py"),
+    ("scripts/ac_store/_gtfa_contracts.py",          "_gtfa_contracts.py"),
+    ("scripts/ac_store/_gtfa_frontmatter.py",        "_gtfa_frontmatter.py"),
+    ("scripts/ac_store/_gtfa_doc_gates.py",          "_gtfa_doc_gates.py"),
+    ("scripts/ac_store/_gtfa_agents_inputs.py",      "_gtfa_agents_inputs.py"),
+    ("scripts/ac_store/_gtfa_agents_map.py",         "_gtfa_agents_map.py"),
+    ("scripts/ac_store/_gtfa_body.py",               "_gtfa_body.py"),
+    ("scripts/ac_store/_gtfa_implemented_by.py",     "_gtfa_implemented_by.py"),
+    ("scripts/ac_store/_gtfa_report.py",             "_gtfa_report.py"),
+    ("scripts/ac_store/_gtfa_cli_parser.py",         "_gtfa_cli_parser.py"),
+    ("scripts/ac_store/_gtfa_cli.py",                "_gtfa_cli.py"),
+    ("scripts/ac_store/_gtfa_decision_history.py",   "_gtfa_decision_history.py"),
     ("scripts/ac_store/_component_migration_map.py", "_component_migration_map.py"),
     ("scripts/ac_store/ac_prioritizer.py",            "ac_prioritizer.py"),
     ("scripts/ac_store/mark_ac_done.py",              "mark_ac_done.py"),
