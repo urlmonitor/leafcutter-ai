@@ -74,6 +74,15 @@ PRODUCTION_MODULES: tuple[str, ...] = (
     "config.py",
     "run_hook.py",
     "check_outcome.py",
+    # Added for GE-127e-1: check_file_size.py imports _file_description to
+    # describe a refused file's parts. This list is hand-enumerated, so it has
+    # the same failure mode as the build's deploy map one layer down -- a new
+    # import of check_file_size.py that is not added here does not fail at
+    # import time in the source tree, only inside the fixture's temp repo, as
+    # ModuleNotFoundError surfacing as "baseline commit failed". Nothing checks
+    # this list against the real import graph; if you add an import there, add
+    # it here.
+    "_file_description.py",
 )
 
 PYTHON = sys.executable
