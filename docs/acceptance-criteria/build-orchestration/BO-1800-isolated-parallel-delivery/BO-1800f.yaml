@@ -33,6 +33,8 @@ superseded_by: null
 covered_by:
   - BO-1800f-1
   - BO-1800f-2
+  - BO-1800f-3
+  - BO-1800f-4
 implemented_by: []
 documentation_triggers:
   - sequence-diagram
@@ -51,14 +53,30 @@ notes: |
   work that was already delivered, which is not a defect that degrades
   gracefully while it waits.
 
-  THE TWO REMAINING L2 SLOTS ARE DELIBERATELY HELD, NOT OVERLOOKED. This record
-  carries documentation_triggers (sequence-diagram, reference-doc), which imply
-  documentation criteria. They are NOT authored yet, by the user's decision on
-  2026-09-14: writing them now would spend both free slots on documentation
-  before the IT PO has settled the behaviour's shape, and a documentation
-  criterion written against an unsettled shape documents the wrong thing.
-  Author them after IT PO enrichment, not before. An empty slot here is a
-  decision that was taken, not one that was missed.
+  THE TWO DOCUMENTATION SLOTS WERE HELD, THEN FILLED. This record carries
+  documentation_triggers (sequence-diagram, reference-doc), which imply
+  documentation criteria. They were deliberately NOT authored when this L1 was
+  written, by the user's decision on 2026-09-14: writing them then would have
+  spent both free slots on documentation before the IT PO had settled the
+  behaviour's shape, and a documentation criterion written against an unsettled
+  shape documents the wrong thing. An empty slot there was a decision that was
+  taken, not one that was missed.
+
+  The hold was released on 2026-09-14 once BO-1800f-1 and BO-1800f-2 and their
+  L3s had been enriched and the shape was settled. BO-1800f-3 covers the
+  sequence-diagram trigger and BO-1800f-4 the reference-doc trigger, bringing
+  this L1 to four L2 children.
+
+  ONE OPEN QUESTION ON BO-1800f-3, raised by the IT PO and not resolved:
+  its criteria fix the diagram's end points at exactly three, but BO-1800f-1-ii
+  (a replay that cannot complete cleanly stops the delivery and restores the
+  copy) is a fourth terminal disposition of this same boundary, and BO-1800f-2-ii
+  is a behavioural sibling the criteria never mention either. So either the
+  diagram will omit a real branch of the boundary it claims to draw, or the count
+  is short by one. A BA must either amend BO-1800f-3 to four end points or state
+  there why the replay-failure disposition is out of scope. BO-1800f-3's
+  test_the_diagram_has_exactly_three_end_points asserts three, faithful to the
+  text as written, and must be amended alongside any change to the count.
 
   Scope. This L1 governs the boundary where work LEAVES its isolated copy toward
   the shared branch. It deliberately does NOT promise that every copy is kept
