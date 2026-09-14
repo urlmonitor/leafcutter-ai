@@ -8,7 +8,7 @@ status: active
 req_status: draft
 work_status: todo
 readiness: draft
-priority: medium
+priority: high
 roadmap_phase: phase_1
 criteria: |
   What you deliver is current, and removes nothing you did not mean to remove.
@@ -43,6 +43,22 @@ notes: |
   earlier in that same session). Every occurrence was caught only because a
   human remembered to run a manual additive-only audit -- a defence with a 100%
   hit rate and a 0% enforcement rate.
+
+  PRIORITY: high, set by the user (BrainCandy) at approval on 2026-09-14,
+  raised from the medium authoring default. The grounds are the origin entry's
+  own: severity high, four occurrences in a single session, and one near-miss
+  against work merged earlier in that same session. The harm is silent loss of
+  work that was already delivered, which is not a defect that degrades
+  gracefully while it waits.
+
+  THE TWO REMAINING L2 SLOTS ARE DELIBERATELY HELD, NOT OVERLOOKED. This record
+  carries documentation_triggers (sequence-diagram, reference-doc), which imply
+  documentation criteria. They are NOT authored yet, by the user's decision on
+  2026-09-14: writing them now would spend both free slots on documentation
+  before the IT PO has settled the behaviour's shape, and a documentation
+  criterion written against an unsettled shape documents the wrong thing.
+  Author them after IT PO enrichment, not before. An empty slot here is a
+  decision that was taken, not one that was missed.
 
   Scope. This L1 governs the boundary where work LEAVES its isolated copy toward
   the shared branch. It deliberately does NOT promise that every copy is kept
