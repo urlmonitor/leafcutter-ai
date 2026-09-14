@@ -69,7 +69,11 @@ from build_phases import (
     check_command_reachability,
     AC_STORE_DEPLOY_MAP,
 )
-from build_phases_knowledge import check_knowledge_routing_wiring_guard
+from build_phases_knowledge import (
+    _manifest_knowledge_scripts,
+    _manifest_workflow_tool_scripts,
+    check_knowledge_routing_wiring_guard,
+)
 from registry_validator import validate_agent_registry
 from project_context_discovery import (  # noqa: F401 — re-exported for callers
     find_project_contexts,
@@ -423,53 +427,6 @@ def _manifest_feedback_scripts(package_root: Path) -> set[str]:
     return result
 
 
-def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/<name>`` entries for workflow-tool scripts deployed by build_workflow_tools.
-
-    Scans the package source for the workflow-tool scripts and returns
-    manifest entries for those that exist.  Must be kept in parity with the
-    ``deploy_scripts`` list inside ``build_workflow_tools()`` in
-    ``build_phases.py`` — a mismatch trips the manifest/deploy parity guard.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/<name>`` strings for deployable workflow-tool scripts.
-    """
-    result: set[str] = set()
-    scripts_src = package_root / "scripts"
-    for fname in (
-        "add_component.py",
-        "knowledge_query.py",
-        "set_ticket_status.py",
-        "ticket_prioritizer.py",
-        "port_registry.py",
-        "live_surface_startup.py",
-        "generate_doc_index.py",
-    ):
-        if (scripts_src / fname).is_file():
-            result.add(f"scripts/{fname}")
-    return result
-
-
-def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/knowledge/<name>`` entries for knowledge scripts deployed by build_knowledge_scripts.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/knowledge/<name>`` strings for deployable knowledge scripts.
-    """
-    result: set[str] = set()
-    knowledge_src = package_root / "scripts" / "knowledge"
-    for fname in ("harvest_learnings.py",):
-        if (knowledge_src / fname).is_file():
-            result.add(f"scripts/knowledge/{fname}")
-    return result
-
-
 def _manifest_build_orchestration_scripts(package_root: Path) -> set[str]:
     """Return ``scripts/build_orchestration/<name>`` entries for all source ``.py`` files.
 
@@ -761,6 +718,17 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         # resolving _reachability_inventory.py's import of this file
         # (BO-2900d-1/-2 fast-lane build, 2026-09-07).
         "reachability_exemptions.yaml",
+        # config/entry_kind_vocabulary.json: a fixed, tracked source asset
+        # (no install-specific values) read by scripts/knowledge/
+        # entry_kind_vocabulary.py's default_vocabulary_path() via a
+        # Path(__file__)-rooted division expression. Deployed by
+        # build_knowledge_scripts (build_phases_knowledge.py), mirroring
+        # build_feedback's config/feedback_categories.yaml. AC INF-400c-5,
+        # H-1 fix: a fast-lane pr-review found it absent from every deploy
+        # manifest, so this entry was never registered and the widened
+        # closure guard would abort every build once it started analysing
+        # entry_kind_vocabulary.py's own reference to this file.
+        "entry_kind_vocabulary.json",
         # Deployed by build_ac_store's own block (added with TKT-600b), but
         # never DECLARED here -- so Set B did not contain it and the widened
         # closure correctly aborted the build once ac_coverage_resolver.py and
@@ -909,9 +877,23 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
         if (scripts_src / fname).is_file():
             source_paths.add(f"scripts/{fname}")
 
-    # knowledge scripts: source namespace equals deploy namespace.
+    # knowledge scripts: source namespace equals deploy namespace. Must stay
+    # in lockstep with _manifest_knowledge_scripts (AC INF-400c-5, H-1 fix) —
+    # test_guard_source_paths_match_deployable_set asserts the two sets are 1:1.
+    # harvest_result.py / sink_resolution.py / capture_write.py / harvest_cli.py
+    # added alongside the GE-127b-1 file-size fix that split harvest_learnings.py
+    # into these sibling modules — mirrors the same four additions in
+    # _manifest_knowledge_scripts (build_phases_knowledge.py).
     knowledge_src = package_root / "scripts" / "knowledge"
-    for fname in ("harvest_learnings.py",):
+    for fname in (
+        "harvest_learnings.py",
+        "emit_knowledge.py",
+        "entry_kind_vocabulary.py",
+        "harvest_result.py",
+        "sink_resolution.py",
+        "capture_write.py",
+        "harvest_cli.py",
+    ):
         if (knowledge_src / fname).is_file():
             source_paths.add(f"scripts/knowledge/{fname}")
 
@@ -977,6 +959,10 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
         # _get_source_deployable_scripts just above -- see that block's
         # DECISION note.
         "reachability_exemptions.yaml",
+        # config/entry_kind_vocabulary.json: mirrors the matching block in
+        # _get_source_deployable_scripts just above -- see that block's
+        # DECISION note.
+        "entry_kind_vocabulary.json",
         # Deployed by build_ac_store's own block (added with TKT-600b), but
         # never DECLARED here -- so Set B did not contain it and the widened
         # closure correctly aborted the build once ac_coverage_resolver.py and
@@ -1282,6 +1268,7 @@ _CONFIG_FILE_PHASE_BY_NAME: dict[str, str] = {
     "phase_deferral.yaml": "build_ac_store",
     "feedback_categories.yaml": "build_feedback",
     "knowledge_sink.json": "build_knowledge_sink_declaration",
+    "entry_kind_vocabulary.json": "build_knowledge_scripts",
     "reachability_exemptions.yaml": "build_config_scaffolds",
 }
 _DOCS_FILE_PHASE_BY_NAME: dict[str, str] = {

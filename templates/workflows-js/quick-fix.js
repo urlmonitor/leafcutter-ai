@@ -46,144 +46,109 @@ export const meta = {
 // flow — rather than inside one agent's head — is what makes the decision testable:
 // a harness can stub the check's answer and assert whether self-isolation actually
 // fired, which a single combined call would hide.
-const ISOLATION_CHECK_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    is_repo: { type: 'boolean' },
-    session_cwd: { type: 'string' },
-    initial_branch: { type: 'string' },
-    needs_isolation: { type: 'boolean' },
-    message: { type: 'string' },
-  },
-  required: ['status', 'is_repo', 'session_cwd', 'needs_isolation'],
+
+// Every *_SCHEMA below shares a "status" enum and trailing "message"; each call
+// site supplies only its own extra properties and which of them are required.
+function schema(properties, required = []) {
+  return {
+    type: 'object',
+    properties: {
+      status: { type: 'string', enum: ['ok', 'blocked'] },
+      ...properties,
+      message: { type: 'string' },
+    },
+    required: ['status', ...required],
+  }
 }
 
-const SELF_ISOLATE_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    worktree_root: { type: 'string' },
-    branch: { type: 'string' },
-    created: { type: 'boolean' },
-    script_path: { type: 'string' },
-    message: { type: 'string' },
-  },
-  required: ['status', 'worktree_root', 'branch'],
-}
+const ISOLATION_CHECK_SCHEMA = schema({
+  is_repo: { type: 'boolean' },
+  session_cwd: { type: 'string' },
+  initial_branch: { type: 'string' },
+  needs_isolation: { type: 'boolean' },
+}, ['is_repo', 'session_cwd', 'needs_isolation'])
 
-const GUARD_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    target_file_dirty: { type: 'boolean' },
-    dirty_files: { type: 'array', items: { type: 'string' } },
-    message: { type: 'string' },
-  },
-  required: ['status'],
-}
+const SELF_ISOLATE_SCHEMA = schema({
+  worktree_root: { type: 'string' },
+  branch: { type: 'string' },
+  created: { type: 'boolean' },
+  script_path: { type: 'string' },
+}, ['worktree_root', 'branch'])
 
-const AC_CREATION_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    ac_id: { type: 'string' },
-    ac_path: { type: 'string' },
-    parent_ac_path: { type: 'string' },
-    component_id: { type: 'string' },
-    ac_title: { type: 'string' },
-    message: { type: 'string' },
-  },
-  required: ['status', 'ac_id', 'ac_path', 'parent_ac_path'],
-}
+const GUARD_SCHEMA = schema({
+  target_file_dirty: { type: 'boolean' },
+  dirty_files: { type: 'array', items: { type: 'string' } },
+})
 
-const TEST_WRITER_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    test_file: { type: 'string' },
-    message: { type: 'string' },
-  },
-  required: ['status', 'test_file'],
-}
+const AC_CREATION_SCHEMA = schema({
+  ac_id: { type: 'string' },
+  ac_path: { type: 'string' },
+  parent_ac_path: { type: 'string' },
+  component_id: { type: 'string' },
+  ac_title: { type: 'string' },
+}, ['ac_id', 'ac_path', 'parent_ac_path'])
+
+const TEST_WRITER_SCHEMA = schema({
+  test_file: { type: 'string' },
+}, ['test_file'])
 
 // `outcome` exists because a boolean cannot carry the distinction BP-600c-2-i
 // requires. A collection error — bad import, syntax error, missing fixture —
 // is "not passed", and with only a boolean the red phase reads that as a
 // healthy red and goes on to apply a fix to a test that never ran. Three
 // states, not two: the run failed an assertion, or it never got that far.
-const TEST_RUNNER_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    passed: { type: 'boolean' },
-    outcome: { type: 'string', enum: ['passed', 'failed', 'error'] },
-    strict_command_run: { type: 'string' },
-    output_summary: { type: 'string' },
-    failure_message: { type: 'string' },
-    message: { type: 'string' },
-  },
-  required: ['status', 'passed', 'outcome', 'strict_command_run'],
+const TEST_RUNNER_SCHEMA = schema({
+  passed: { type: 'boolean' },
+  outcome: { type: 'string', enum: ['passed', 'failed', 'error'] },
+  strict_command_run: { type: 'string' },
+  output_summary: { type: 'string' },
+  failure_message: { type: 'string' },
+}, ['passed', 'outcome', 'strict_command_run'])
+
+const MUTATION_SCHEMA = schema({
+  red_without_fix: { type: 'boolean' },
+  green_with_fix_restored: { type: 'boolean' },
+  fix_restored: { type: 'boolean' },
+  output_summary: { type: 'string' },
+}, ['red_without_fix', 'green_with_fix_restored', 'fix_restored'])
+
+const FIX_SCHEMA = schema({
+  modified_files: { type: 'array', items: { type: 'string' } },
+  scope_expanded: { type: 'boolean' },
+  extra_files: { type: 'array', items: { type: 'string' } },
+}, ['modified_files'])
+
+const COMMIT_SCHEMA = schema({
+  commit_sha: { type: 'string' },
+})
+
+const CHANGELOG_SCHEMA = schema({
+  entry_path: { type: 'string' },
+  commit_sha: { type: 'string' },
+}, ['entry_path'])
+
+const PUSH_SCHEMA = schema({
+  branch: { type: 'string' },
+  pr_url: { type: 'string' },
+  pr_opened: { type: 'boolean' },
+  compare_url: { type: 'string' },
+  pr_command: { type: 'string' },
+})
+
+// Every blocked return in this file shares this envelope: status, phase, message,
+// plus whatever a call site needs beyond that (halt_reason, ac_id, detail, ...).
+function blocked(phase, message, extra = {}) {
+  return { status: 'blocked', phase, message, ...extra }
 }
 
-const MUTATION_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    red_without_fix: { type: 'boolean' },
-    green_with_fix_restored: { type: 'boolean' },
-    fix_restored: { type: 'boolean' },
-    output_summary: { type: 'string' },
-    message: { type: 'string' },
-  },
-  required: ['status', 'red_without_fix', 'green_with_fix_restored', 'fix_restored'],
-}
-
-const FIX_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    modified_files: { type: 'array', items: { type: 'string' } },
-    scope_expanded: { type: 'boolean' },
-    extra_files: { type: 'array', items: { type: 'string' } },
-    message: { type: 'string' },
-  },
-  required: ['status', 'modified_files'],
-}
-
-const COMMIT_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    commit_sha: { type: 'string' },
-    message: { type: 'string' },
-  },
-  required: ['status'],
-}
-
-const CHANGELOG_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    entry_path: { type: 'string' },
-    commit_sha: { type: 'string' },
-    message: { type: 'string' },
-  },
-  required: ['status', 'entry_path'],
-}
-
-const PUSH_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    branch: { type: 'string' },
-    pr_url: { type: 'string' },
-    pr_opened: { type: 'boolean' },
-    compare_url: { type: 'string' },
-    pr_command: { type: 'string' },
-    message: { type: 'string' },
-  },
-  required: ['status'],
+// Shared shape for the nine `if (!x || x.status === 'blocked') return {...}` guards
+// below. The mutation-proof and changelog-authoring checks build different messages
+// entirely and call `blocked()` directly instead.
+function blockedOnFailure(result, phase, agentLabel, extra = {}) {
+  if (!result || result.status === 'blocked') {
+    return blocked(phase, result ? result.message : `${agentLabel} returned null`, { detail: result, ...extra })
+  }
+  return null
 }
 
 // The routing dispatch's expected reply shape (INF-700a-1-i). `case` is the
@@ -249,12 +214,8 @@ phase('Guards')
 const diagnosis = args
 if (!diagnosis || !diagnosis.target_file || !diagnosis.root_cause) {
   log('Missing required diagnosis fields (target_file, root_cause)')
-  return {
-    status: 'blocked',
-    phase: 'Guards',
-    message: 'Diagnosis must include: target_file, location_hint, symptom, root_cause. ' +
-      'Pass them as args: { target_file, location_hint, symptom, root_cause }',
-  }
+  return blocked('Guards', 'Diagnosis must include: target_file, location_hint, symptom, root_cause. ' +
+    'Pass them as args: { target_file, location_hint, symptom, root_cause }')
 }
 
 const { target_file, location_hint, symptom, root_cause, divergence_decision } = diagnosis
@@ -287,14 +248,8 @@ if this script decides it is needed.`,
   { label: 'isolation-check', phase: 'Guards', schema: ISOLATION_CHECK_SCHEMA }
 )
 
-if (!isolationCheck || isolationCheck.status === 'blocked') {
-  return {
-    status: 'blocked',
-    phase: 'Guards (isolation-check)',
-    message: isolationCheck ? isolationCheck.message : 'Isolation-check agent returned null',
-    detail: isolationCheck,
-  }
-}
+const isolationBlock = blockedOnFailure(isolationCheck, 'Guards (isolation-check)', 'Isolation-check agent')
+if (isolationBlock) return isolationBlock
 
 // Step 0b — DECIDE, here, in control flow. This replaces the former "no isolation,
 // ever" guard, which had no answer for a non-repo cwd and offered a dead end on main
@@ -355,15 +310,9 @@ Use single, simple commands only.
     { label: 'self-isolate', phase: 'Guards', schema: SELF_ISOLATE_SCHEMA }
   )
 
-  if (!isolateResult || isolateResult.status === 'blocked') {
-    return {
-      status: 'blocked',
-      phase: 'Guards (self-isolate)',
-      message: isolateResult ? isolateResult.message : 'Self-isolate agent returned null',
-      halt_reason: 'isolation_failed',
-      detail: isolateResult,
-    }
-  }
+  const isolateBlock = blockedOnFailure(isolateResult, 'Guards (self-isolate)', 'Self-isolate agent',
+    { halt_reason: 'isolation_failed' })
+  if (isolateBlock) return isolateBlock
 
   worktreeRoot = isolateResult.worktree_root
   activeBranch = isolateResult.branch
@@ -398,14 +347,8 @@ target file being dirty is a blocker.`,
   { label: 'guard-checks', phase: 'Guards', schema: GUARD_SCHEMA }
 )
 
-if (!guardResult || guardResult.status === 'blocked') {
-  return {
-    status: 'blocked',
-    phase: 'Guards',
-    message: guardResult ? guardResult.message : 'Guard check agent returned null',
-    detail: guardResult,
-  }
-}
+const guardBlock = blockedOnFailure(guardResult, 'Guards', 'Guard check agent')
+if (guardBlock) return guardBlock
 
 log(`Guards passed. Target file clean.`)
 
@@ -494,14 +437,8 @@ Return ac_id, ac_path, parent_ac_path, component_id, ac_title.`,
   { label: 'ac-creation', phase: 'AC Creation', schema: AC_CREATION_SCHEMA }
 )
 
-if (!acResult || acResult.status === 'blocked') {
-  return {
-    status: 'blocked',
-    phase: 'AC Creation',
-    message: acResult ? acResult.message : 'AC creation agent returned null',
-    detail: acResult,
-  }
-}
+const acBlock = blockedOnFailure(acResult, 'AC Creation', 'AC creation agent')
+if (acBlock) return acBlock
 
 const { ac_id, ac_path, parent_ac_path, component_id, ac_title } = acResult
 log(`AC created: ${ac_id} at ${ac_path} (parent back-linked: ${parent_ac_path})`)
@@ -530,14 +467,8 @@ Return the absolute path to the test file you created as test_file.`,
   { label: 'test-writer', phase: 'Red Phase', schema: TEST_WRITER_SCHEMA, agentType: 'test-writer' }
 )
 
-if (!testWriterResult || testWriterResult.status === 'blocked') {
-  return {
-    status: 'blocked',
-    phase: 'Red Phase (test-writer)',
-    message: testWriterResult ? testWriterResult.message : 'test-writer returned null',
-    detail: testWriterResult,
-  }
-}
+const testWriterBlock = blockedOnFailure(testWriterResult, 'Red Phase (test-writer)', 'test-writer')
+if (testWriterBlock) return testWriterBlock
 
 const testFile = testWriterResult.test_file
 log(`Test written: ${testFile}`)
@@ -564,6 +495,20 @@ boolean:
 An error is NOT a red result. A run that never reached the assertion proves nothing about
 the bug, and treating it as a healthy red would send a fix at a test that never executed.`
 
+// Red and Green share these two failure shapes (strict-flag missing; outcome:"error").
+// Only the explanation differs between the phases; the rest is written once.
+function strictFlagMissingBlock(phase, result, explanation) {
+  return blocked(phase,
+    `${phase} was not verified under AC_ENFORCE_STRICT=1.\n\nCommand reported: ${result.strict_command_run || '(none)'}\n\n${explanation}`,
+    { halt_reason: 'strict_flag_missing', test_file: testFile, ac_id })
+}
+
+function unrunnableTestBlock(phase, haltReason, result, notARedResult, explanation) {
+  return blocked(phase,
+    `The test could not run — this is an ERROR, not ${notARedResult}.\n\nTest file: ${testFile}\nCommand: ${result.strict_command_run}\nDetail: ${result.failure_message || result.output_summary || '(none)'}\n\n${explanation}`,
+    { halt_reason: haltReason, test_file: testFile, ac_id })
+}
+
 const redResult = await agent(
   `Verify the red phase for /quick-fix.
 
@@ -577,19 +522,11 @@ Return passed=true if it passes, passed=false if it fails, plus the failure mess
   { label: 'red-verify/strict', phase: 'Red Phase', schema: TEST_RUNNER_SCHEMA, agentType: 'test-runner' }
 )
 
-if (!redResult) {
-  return { status: 'blocked', phase: 'Red Phase', message: 'Red-phase verification returned null' }
-}
+if (!redResult) return { status: 'blocked', phase: 'Red Phase', message: 'Red-phase verification returned null' }
 
 if (!redResult.strict_command_run || !redResult.strict_command_run.includes('AC_ENFORCE_STRICT=1')) {
-  return {
-    status: 'blocked',
-    phase: 'Red Phase',
-    message: `Red phase was not verified under AC_ENFORCE_STRICT=1.\n\nCommand reported: ${redResult.strict_command_run || '(none)'}\n\nWithout that prefix pytest_ac_enforcement downgrades the failure to xfail and reports a false green, so this result cannot be trusted. Re-run /quick-fix.`,
-    halt_reason: 'strict_flag_missing',
-    test_file: testFile,
-    ac_id,
-  }
+  return strictFlagMissingBlock('Red Phase', redResult,
+    'Without that prefix pytest_ac_enforcement downgrades the failure to xfail and reports a false green, so this result cannot be trusted. Re-run /quick-fix.')
 }
 
 // BP-600c-2-i: an error is not a red result. Check this BEFORE the passed
@@ -597,25 +534,14 @@ if (!redResult.strict_command_run || !redResult.strict_command_run.includes('AC_
 // the run would read a test that never executed as a healthy red and go on
 // to "fix" code against it.
 if (redResult.outcome === 'error') {
-  return {
-    status: 'blocked',
-    phase: 'Red Phase',
-    message: `The test could not run — this is an ERROR, not a red result.\n\nTest file: ${testFile}\nCommand: ${redResult.strict_command_run}\nDetail: ${redResult.failure_message || redResult.output_summary || '(none)'}\n\nA collection error, ImportError, SyntaxError, missing fixture or empty selection means the assertion was never evaluated, so this run says nothing about the bug. Fix the test so it executes, then re-run /quick-fix. No fix has been applied.`,
-    halt_reason: 'red_phase_error',
-    test_file: testFile,
-    ac_id,
-  }
+  return unrunnableTestBlock('Red Phase', 'red_phase_error', redResult, 'a red result',
+    'A collection error, ImportError, SyntaxError, missing fixture or empty selection means the assertion was never evaluated, so this run says nothing about the bug. Fix the test so it executes, then re-run /quick-fix. No fix has been applied.')
 }
 
 if (redResult.passed === true || redResult.outcome === 'passed') {
-  return {
-    status: 'blocked',
-    phase: 'Red Phase',
-    message: `Test PASSES against unmodified code — the bug may already be fixed or the test doesn't cover it.\n\nTest file: ${testFile}\nCommand: ${redResult.strict_command_run}\nOutput: ${redResult.output_summary || '(none)'}`,
-    halt_reason: 'red_phase_pass',
-    test_file: testFile,
-    ac_id,
-  }
+  return blocked('Red Phase',
+    `Test PASSES against unmodified code — the bug may already be fixed or the test doesn't cover it.\n\nTest file: ${testFile}\nCommand: ${redResult.strict_command_run}\nOutput: ${redResult.output_summary || '(none)'}`,
+    { halt_reason: 'red_phase_pass', test_file: testFile, ac_id })
 }
 
 log(`Red phase confirmed under AC_ENFORCE_STRICT=1: test fails as expected.`)
@@ -707,17 +633,16 @@ if (divergenceCheck && divergence_decision === 'continue') {
   log('Divergence acknowledged by an explicit continue decision — proceeding to the Fix phase.')
 } else if (divergenceCheck) {
   log(`Warning: test failure may diverge from diagnosed root cause.`)
-  return {
-    status: 'blocked',
-    phase: 'Red Phase (divergence warning)',
-    message: `The test failure suggests the root cause may differ from your diagnosis.\n\n  Diagnosed: ${root_cause}\n  Observed:  ${failureMsg}\n\nContinue or re-diagnose?\n\nTo continue with the diagnosis as written, re-run /quick-fix with the same args plus divergence_decision: 'continue'.\nTo re-diagnose, re-run with an updated root_cause field.`,
-    halt_reason: 'divergence_warning',
-    test_file: testFile,
-    ac_id,
-    observed_failure: failureMsg,
-    shared_content_words: sharedWords,
-    diagnosis_content_words: diagnosisWords.size,
-  }
+  return blocked('Red Phase (divergence warning)',
+    `The test failure suggests the root cause may differ from your diagnosis.\n\n  Diagnosed: ${root_cause}\n  Observed:  ${failureMsg}\n\nContinue or re-diagnose?\n\nTo continue with the diagnosis as written, re-run /quick-fix with the same args plus divergence_decision: 'continue'.\nTo re-diagnose, re-run with an updated root_cause field.`,
+    {
+      halt_reason: 'divergence_warning',
+      test_file: testFile,
+      ac_id,
+      observed_failure: failureMsg,
+      shared_content_words: sharedWords,
+      diagnosis_content_words: diagnosisWords.size,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -745,27 +670,15 @@ Report all modified files in modified_files[], excluding pre-existing build-outp
   { label: 'python-coder/fix', phase: 'Fix', schema: FIX_SCHEMA, agentType: 'python-coder' }
 )
 
-if (!fixResult || fixResult.status === 'blocked') {
-  return {
-    status: 'blocked',
-    phase: 'Fix',
-    message: fixResult ? fixResult.message : 'python-coder returned null',
-    detail: fixResult,
-  }
-}
+const fixBlock = blockedOnFailure(fixResult, 'Fix', 'python-coder')
+if (fixBlock) return fixBlock
 
 // Scope expansion check (BP-600e-1)
 if (fixResult.scope_expanded || (fixResult.extra_files && fixResult.extra_files.length > 0)) {
   log(`Scope expansion detected: ${(fixResult.extra_files || []).join(', ')}`)
-  return {
-    status: 'blocked',
-    phase: 'Fix (scope expansion)',
-    message: `python-coder reports the fix requires changes beyond ${target_file}.\n\nAdditional files needed: ${(fixResult.extra_files || []).join(', ')}\n\nOptions:\n  - Re-run /quick-fix to proceed anyway (if python-coder only modified target_file)\n  - Escalate to /build-feature for a multi-file fix`,
-    halt_reason: 'scope_expansion',
-    test_file: testFile,
-    ac_id,
-    extra_files: fixResult.extra_files,
-  }
+  return blocked('Fix (scope expansion)',
+    `python-coder reports the fix requires changes beyond ${target_file}.\n\nAdditional files needed: ${(fixResult.extra_files || []).join(', ')}\n\nOptions:\n  - Re-run /quick-fix to proceed anyway (if python-coder only modified target_file)\n  - Escalate to /build-feature for a multi-file fix`,
+    { halt_reason: 'scope_expansion', test_file: testFile, ac_id, extra_files: fixResult.extra_files })
 }
 
 log(`Fix applied to ${target_file}`)
@@ -789,44 +702,24 @@ Return passed=true if it passes, passed=false if it fails, plus the failure mess
   { label: 'green-verify/strict', phase: 'Green Phase', schema: TEST_RUNNER_SCHEMA, agentType: 'test-runner' }
 )
 
-if (!greenResult) {
-  return { status: 'blocked', phase: 'Green Phase', message: 'Green-phase verification returned null' }
-}
+if (!greenResult) return { status: 'blocked', phase: 'Green Phase', message: 'Green-phase verification returned null' }
 
 if (!greenResult.strict_command_run || !greenResult.strict_command_run.includes('AC_ENFORCE_STRICT=1')) {
-  return {
-    status: 'blocked',
-    phase: 'Green Phase',
-    message: `Green phase was not verified under AC_ENFORCE_STRICT=1.\n\nCommand reported: ${greenResult.strict_command_run || '(none)'}\n\nA default pytest run cannot distinguish a real pass from an xfail-masked failure on a not-done AC. Re-run /quick-fix.`,
-    halt_reason: 'strict_flag_missing',
-    test_file: testFile,
-    ac_id,
-  }
+  return strictFlagMissingBlock('Green Phase', greenResult,
+    'A default pytest run cannot distinguish a real pass from an xfail-masked failure on a not-done AC. Re-run /quick-fix.')
 }
 
 // BP-600c-2-i, green side: an error is not a failure to diagnose as "the fix
 // did not work" — it is a run that never happened. Say which it was.
 if (greenResult.outcome === 'error') {
-  return {
-    status: 'blocked',
-    phase: 'Green Phase',
-    message: `The test could not run — this is an ERROR, not a failing test.\n\nTest file: ${testFile}\nCommand: ${greenResult.strict_command_run}\nDetail: ${greenResult.failure_message || greenResult.output_summary || '(none)'}\n\nThe assertion was never evaluated, so this says nothing about whether the fix worked. The fix IS still applied to ${target_file}. Repair whatever stopped the test executing, then re-run /quick-fix.`,
-    halt_reason: 'green_phase_error',
-    test_file: testFile,
-    ac_id,
-  }
+  return unrunnableTestBlock('Green Phase', 'green_phase_error', greenResult, 'a failing test',
+    `The assertion was never evaluated, so this says nothing about whether the fix worked. The fix IS still applied to ${target_file}. Repair whatever stopped the test executing, then re-run /quick-fix.`)
 }
 
 if (greenResult.passed === false || greenResult.outcome === 'failed') {
-  return {
-    status: 'blocked',
-    phase: 'Green Phase',
-    message: `Test still FAILS after fix.\n\nTest file: ${testFile}\nCommand: ${greenResult.strict_command_run}\nFailure: ${greenResult.failure_message || greenResult.output_summary || '(no details)'}\n\nThe fix did not resolve the bug. Options:\n  1. Re-run /quick-fix to retry with additional context\n  2. Escalate to /build-feature\n  3. Inspect and fix manually`,
-    halt_reason: 'green_phase_fail',
-    test_file: testFile,
-    ac_id,
-    failure: greenResult.failure_message,
-  }
+  return blocked('Green Phase',
+    `Test still FAILS after fix.\n\nTest file: ${testFile}\nCommand: ${greenResult.strict_command_run}\nFailure: ${greenResult.failure_message || greenResult.output_summary || '(no details)'}\n\nThe fix did not resolve the bug. Options:\n  1. Re-run /quick-fix to retry with additional context\n  2. Escalate to /build-feature\n  3. Inspect and fix manually`,
+    { halt_reason: 'green_phase_fail', test_file: testFile, ac_id, failure: greenResult.failure_message })
 }
 
 log(`Green phase confirmed under AC_ENFORCE_STRICT=1: test passes.`)
@@ -866,14 +759,9 @@ unsure about rather than guessing.`,
 )
 
 if (relatedResult && relatedResult.outcome === 'failed') {
-  return {
-    status: 'blocked',
-    phase: 'Green Phase (related tests)',
-    message: `The fix makes its own test pass but breaks existing tests.\n\nFixed file: ${target_file}\nCommand: ${relatedResult.strict_command_run || '(not reported)'}\nBroken: ${relatedResult.failure_message || relatedResult.output_summary || '(see output)'}\n\nThe fix is still applied. Either narrow it so the neighbours survive, or escalate to /build-feature — a change that needs those tests updated is bigger than one file, which is past what /quick-fix covers.`,
-    halt_reason: 'related_tests_broken',
-    test_file: testFile,
-    ac_id,
-  }
+  return blocked('Green Phase (related tests)',
+    `The fix makes its own test pass but breaks existing tests.\n\nFixed file: ${target_file}\nCommand: ${relatedResult.strict_command_run || '(not reported)'}\nBroken: ${relatedResult.failure_message || relatedResult.output_summary || '(see output)'}\n\nThe fix is still applied. Either narrow it so the neighbours survive, or escalate to /build-feature — a change that needs those tests updated is bigger than one file, which is past what /quick-fix covers.`,
+    { halt_reason: 'related_tests_broken', test_file: testFile, ac_id })
 }
 
 if (!relatedResult || relatedResult.outcome === 'error') {
@@ -926,31 +814,22 @@ fix_restored=true.`,
   { label: 'mutation-proof', phase: 'Green Phase', schema: MUTATION_SCHEMA }
 )
 
+// The two mutation-proof failures below differ only in halt_reason and message.
+function mutationProofBlock(haltReason, message) {
+  return blocked('Green Phase (mutation proof)', message,
+    { halt_reason: haltReason, test_file: testFile, ac_id, detail: mutationResult })
+}
+
 if (!mutationResult || mutationResult.status === 'blocked' ||
     mutationResult.fix_restored !== true) {
-  return {
-    status: 'blocked',
-    phase: 'Green Phase (mutation proof)',
-    message: mutationResult
-      ? `Mutation proof did not complete cleanly.\n\n  red without fix:      ${mutationResult.red_without_fix}\n  green with fix back:  ${mutationResult.green_with_fix_restored}\n  fix restored:         ${mutationResult.fix_restored}\n\n${mutationResult.message || ''}\n\nIf fix_restored is false the fix is NOT in the working tree — recover it with "cp /tmp/quickfix-${ac_id}-fixed.bak ${worktreeRoot}/${target_file}" before doing anything else.`
-      : `Mutation-proof agent returned null — the fix may have been left reverted. Compare "${worktreeRoot}/${target_file}" against "/tmp/quickfix-${ac_id}-fixed.bak" and copy it back if they differ, before continuing.`,
-    halt_reason: 'mutation_proof_incomplete',
-    test_file: testFile,
-    ac_id,
-    detail: mutationResult,
-  }
+  return mutationProofBlock('mutation_proof_incomplete', mutationResult
+    ? `Mutation proof did not complete cleanly.\n\n  red without fix:      ${mutationResult.red_without_fix}\n  green with fix back:  ${mutationResult.green_with_fix_restored}\n  fix restored:         ${mutationResult.fix_restored}\n\n${mutationResult.message || ''}\n\nIf fix_restored is false the fix is NOT in the working tree — recover it with "cp /tmp/quickfix-${ac_id}-fixed.bak ${worktreeRoot}/${target_file}" before doing anything else.`
+    : `Mutation-proof agent returned null — the fix may have been left reverted. Compare "${worktreeRoot}/${target_file}" against "/tmp/quickfix-${ac_id}-fixed.bak" and copy it back if they differ, before continuing.`)
 }
 
 if (mutationResult.red_without_fix !== true || mutationResult.green_with_fix_restored !== true) {
-  return {
-    status: 'blocked',
-    phase: 'Green Phase (mutation proof)',
-    message: `The test is NOT coupled to the fix.\n\n  Reverting the fix left the test ${mutationResult.red_without_fix ? 'red (expected)' : 'GREEN — it passes without the fix'}.\n  Restoring the fix left the test ${mutationResult.green_with_fix_restored ? 'green (expected)' : 'RED — it fails with the fix'}.\n\nA test that passes without the fix proves nothing about the fix. Rewrite the test to assert the behaviour the fix actually changes, then re-run /quick-fix.`,
-    halt_reason: 'mutation_proof_failed',
-    test_file: testFile,
-    ac_id,
-    detail: mutationResult,
-  }
+  return mutationProofBlock('mutation_proof_failed',
+    `The test is NOT coupled to the fix.\n\n  Reverting the fix left the test ${mutationResult.red_without_fix ? 'red (expected)' : 'GREEN — it passes without the fix'}.\n  Restoring the fix left the test ${mutationResult.green_with_fix_restored ? 'green (expected)' : 'RED — it fails with the fix'}.\n\nA test that passes without the fix proves nothing about the fix. Rewrite the test to assert the behaviour the fix actually changes, then re-run /quick-fix.`)
 }
 
 log(`Mutation proof passed: reverting the fix returns the test to red; restoring it returns green.`)
@@ -1023,14 +902,8 @@ files — an isolated worktree may carry unrelated build-output drift, which sta
   { label: 'commit', phase: 'Commit', schema: COMMIT_SCHEMA, agentType: 'commit' }
 )
 
-if (!commitResult || commitResult.status === 'blocked') {
-  return {
-    status: 'blocked',
-    phase: 'Commit',
-    message: commitResult ? commitResult.message : 'commit agent returned null',
-    detail: commitResult,
-  }
-}
+const commitBlock = blockedOnFailure(commitResult, 'Commit', 'commit agent')
+if (commitBlock) return commitBlock
 
 log(`Committed: ${commitResult.commit_sha || '(sha pending)'}`)
 
@@ -1066,17 +939,10 @@ Return the path to the entry you wrote as entry_path.`,
 )
 
 if (!changelogResult || changelogResult.status === 'blocked' || !changelogResult.entry_path) {
-  return {
-    status: 'blocked',
-    phase: 'Changelog',
-    message: changelogResult
-      ? `Changelog entry was not authored: ${changelogResult.message || '(no detail)'}\n\nThe fix is committed (${commitResult.commit_sha || 'see git log -1'}) but the PR will fail the required "Changelog entry present" check without an entry.`
-      : 'changelog-agent returned null. The fix is committed but the required changelog entry is missing.',
-    halt_reason: 'changelog_missing',
-    ac_id,
-    commit_sha: commitResult.commit_sha,
-    detail: changelogResult,
-  }
+  return blocked('Changelog', changelogResult
+    ? `Changelog entry was not authored: ${changelogResult.message || '(no detail)'}\n\nThe fix is committed (${commitResult.commit_sha || 'see git log -1'}) but the PR will fail the required "Changelog entry present" check without an entry.`
+    : 'changelog-agent returned null. The fix is committed but the required changelog entry is missing.',
+    { halt_reason: 'changelog_missing', ac_id, commit_sha: commitResult.commit_sha, detail: changelogResult })
 }
 
 const changelogCommit = await agent(
@@ -1093,16 +959,9 @@ Do not stage any other file.`,
   { label: 'commit/changelog', phase: 'Changelog', schema: COMMIT_SCHEMA, agentType: 'commit' }
 )
 
-if (!changelogCommit || changelogCommit.status === 'blocked') {
-  return {
-    status: 'blocked',
-    phase: 'Changelog (commit)',
-    message: changelogCommit ? changelogCommit.message : 'commit agent returned null for the changelog entry',
-    halt_reason: 'changelog_commit_failed',
-    ac_id,
-    detail: changelogCommit,
-  }
-}
+const changelogCommitBlock = blockedOnFailure(changelogCommit, 'Changelog (commit)', 'commit agent (changelog entry)',
+  { halt_reason: 'changelog_commit_failed', ac_id })
+if (changelogCommitBlock) return changelogCommitBlock
 
 log(`Changelog entry committed: ${changelogResult.entry_path}`)
 
@@ -1155,17 +1014,9 @@ Do not merge the PR. That is the user's decision.`,
   { label: 'push-and-pr', phase: 'Close', schema: PUSH_SCHEMA }
 )
 
-if (!pushResult || pushResult.status === 'blocked') {
-  return {
-    status: 'blocked',
-    phase: 'Close',
-    message: pushResult ? pushResult.message : 'Close-phase agent returned null',
-    halt_reason: 'push_failed',
-    ac_id,
-    commit_sha: commitResult.commit_sha,
-    detail: pushResult,
-  }
-}
+const pushBlock = blockedOnFailure(pushResult, 'Close', 'Close-phase agent',
+  { halt_reason: 'push_failed', ac_id, commit_sha: commitResult.commit_sha })
+if (pushBlock) return pushBlock
 
 // ---------------------------------------------------------------------------
 // Done
