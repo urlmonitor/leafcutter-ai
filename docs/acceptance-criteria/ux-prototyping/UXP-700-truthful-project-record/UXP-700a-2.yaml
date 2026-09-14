@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -43,8 +43,9 @@ amended_by:
 superseded_by: null
 covered_by:
 - UXP-700a-2-i
+- unit_tests/product_truth/test_uxp_700a_2.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260909-UXP-700a-2.md
+- docs/product-truth/scripts/generate_product_truth.py
 change_target: code
 risk_surface: internal
 declares_side_effect: true

@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 criteria: |
@@ -38,9 +38,11 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/product_truth/test_uxp_700e_2_i.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260909-UXP-700e-2-i.md
+- docs/product-truth/scripts/product_truth_derivations.py
+- docs/product-truth/scripts/generate_product_truth.py
 change_target: code
 risk_surface: internal
 test_required: true
